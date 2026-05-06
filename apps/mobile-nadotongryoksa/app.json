@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "나도통역사",
+    "slug": "nadotongryoksa",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0b0f16"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.shinsegye.nadotongryoksa",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "음성 통역을 위해 마이크 권한이 필요합니다.",
+        "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하기 위해 음성 인식 권한이 필요합니다."
+      }
+    },
+    "android": {
+      "package": "com.shinsegye.nadotongryoksa",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0b0f16"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "extra": {
+      "apiBaseUrl": "https://metanova1004.com",
+      "webBaseUrl": "https://metanova1004.com",
+      "eas": {
+        "projectId": "25954146-4067-4c4f-9835-24382678e4b2"
+      }
+    },
+    "owner": "parkcheolhong"
+  }
+}
