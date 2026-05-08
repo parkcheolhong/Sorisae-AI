@@ -2694,9 +2694,8 @@ def _runtime_progress_root() -> Path:
     return progress_root
 
 
-def _orchestration_progress_path(run_id: str) -> Path:
-    safe_run_id = re.sub(r"[^a-zA-Z0-9_.-]+", "-", str(run_id or "unknown")).strip("-") or "unknown"
-    return _runtime_progress_root() / f"{safe_run_id}.json"
+def _orchestration_progress_path() -> Path:
+    return _runtime_progress_root() / "progress_store.json"
 
 
 def _build_progress_poll_url(run_id: str) -> str:
@@ -2712,8 +2711,17 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
     normalized["run_id"] = str(run_id or normalized.get("run_id") or "")
     normalized.setdefault("updated_at", datetime.utcnow().isoformat() + "Z")
     _ORCHESTRATION_PROGRESS_STORE[normalized["run_id"]] = normalized
-    progress_path = _orchestration_progress_path(normalized["run_id"])
-    progress_path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+    progress_path = _orchestration_progress_path()
+    persisted_payload: Dict[str, Any] = {}
+    try:
+        if progress_path.exists() and progress_path.is_file():
+            existing_payload = json.loads(progress_path.read_text(encoding="utf-8"))
+            if isinstance(existing_payload, dict):
+                persisted_payload = dict(existing_payload)
+    except Exception:
+        persisted_payload = {}
+    persisted_payload[normalized["run_id"]] = normalized
+    progress_path.write_text(json.dumps(persisted_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return normalized
 
 
@@ -2721,13 +2729,15 @@ def _load_orchestration_progress(run_id: str) -> Dict[str, Any]:
     cached = _ORCHESTRATION_PROGRESS_STORE.get(str(run_id or ""))
     if isinstance(cached, dict) and cached:
         return dict(cached)
-    progress_path = _orchestration_progress_path(run_id)
+    progress_path = _orchestration_progress_path()
     try:
         if progress_path.exists() and progress_path.is_file():
             payload = json.loads(progress_path.read_text(encoding="utf-8"))
             if isinstance(payload, dict):
-                _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(payload)
-                return dict(payload)
+                stored = payload.get(str(run_id or ""))
+                if isinstance(stored, dict):
+                    _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(stored)
+                    return dict(stored)
     except Exception:
         return {}
     return {}

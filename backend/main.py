@@ -250,7 +250,7 @@ def _start_ad_order_worker_thread() -> None:
 
     try:
         from backend.marketplace.router import run_ad_order_worker
-    except Exception as exc:
+    except Exception:
         logger.warning(f"[WARN] ad order worker import failed: {exc}")
         return
 
@@ -1031,6 +1031,8 @@ def _runtime_health_payload() -> Dict[str, Any]:
         from backend.marketplace.router import get_ad_queue_runtime_status
         queue_runtime = get_ad_queue_runtime_status()
     except Exception as exc:
+        logger.exception("Failed to load ad queue runtime status")
+        safe_queue_error = "queue_runtime_unavailable"
         queue_runtime = {
             "redis_queue": {
                 "available": False,
@@ -1038,7 +1040,7 @@ def _runtime_health_payload() -> Dict[str, Any]:
                 "note": "Redis queue 진단을 로드하지 못했습니다.",
                 "connection_id": "redis:video_render_queue",
                 "queue_name": "video_render_queue",
-                "error": str(exc),
+                "error": safe_queue_error,
             },
             "ad_worker": {
                 "available": False,
@@ -1047,7 +1049,7 @@ def _runtime_health_payload() -> Dict[str, Any]:
                 "connection_id": "redis:video_render_queue",
                 "queue_name": "video_render_queue",
                 "worker_id": "ad-render-worker-001",
-                "error": str(exc),
+                "error": safe_queue_error,
             },
         }
     redis_queue = queue_runtime.get("redis_queue", {})

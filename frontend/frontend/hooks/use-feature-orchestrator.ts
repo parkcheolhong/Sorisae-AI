@@ -358,7 +358,7 @@ function buildDefaultCatalogItem(featureId: string): FeatureCatalogItem {
     const meta = FEATURE_EXPERIENCE_META[featureId] || FEATURE_EXPERIENCE_META['ai-sheet'];
     return {
         feature_id: featureId,
-        title: meta.popupKicker.replace('AI ', 'AI '),
+        title: meta.popupKicker,
         summary: meta.launcherSummary,
         popup_mode: preset.contextTags[1] || meta.outputKind,
         status: 'enabled',
