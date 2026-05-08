@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
 
-MAIN_PATH = Path("/home/runner/work/codeAI/codeAI/backend/main.py")
+MAIN_PATH = Path(__file__).resolve().parent.parent / "backend" / "main.py"
 
 
 def _load_functions(*names: str, extra_globals: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -105,11 +105,10 @@ def test_cpu_and_gpu_snapshots_expose_only_safe_error_codes(monkeypatch):
         },
     )
 
-    monkeypatch.setattr(
-        os,
-        "getloadavg",
-        lambda: (_ for _ in ()).throw(OSError("cannot read /proc/loadavg")),
-    )
+    def _raise_loadavg_error():
+        raise OSError("cannot read /proc/loadavg")
+
+    monkeypatch.setattr(os, "getloadavg", _raise_loadavg_error)
 
     cpu_payload = namespace["_cpu_snapshot"]()
     gpu_payload = namespace["_gpu_snapshot"]()
