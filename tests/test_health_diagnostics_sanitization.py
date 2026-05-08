@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional, cast
 
 MAIN_PATH = Path(__file__).resolve().parent.parent / "backend" / "main.py"
 SAFE_DIAGNOSTIC_ERROR_CODES = {
-    "cpu_load_unavailable": "cpu_load_unavailable",
-    "gpu_runtime_unavailable": "gpu_runtime_unavailable",
-    "memory_snapshot_unavailable": "memory_snapshot_unavailable",
-    "queue_runtime_unavailable": "queue_runtime_unavailable",
+    "cpu_load_unavailable",
+    "gpu_runtime_unavailable",
+    "memory_snapshot_unavailable",
+    "queue_runtime_unavailable",
 }
 
 

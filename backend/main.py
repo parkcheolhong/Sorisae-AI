@@ -724,10 +724,10 @@ def _relative_percent(numerator: float, denominator: float) -> Optional[float]:
 
 
 _SAFE_DIAGNOSTIC_ERROR_CODES = {
-    "cpu_load_unavailable": "cpu_load_unavailable",
-    "gpu_runtime_unavailable": "gpu_runtime_unavailable",
-    "memory_snapshot_unavailable": "memory_snapshot_unavailable",
-    "queue_runtime_unavailable": "queue_runtime_unavailable",
+    "cpu_load_unavailable",
+    "gpu_runtime_unavailable",
+    "memory_snapshot_unavailable",
+    "queue_runtime_unavailable",
 }
 
 
@@ -737,7 +737,7 @@ def _sanitize_diagnostic_error(raw_error: Any, fallback: str) -> Optional[str]:
     if isinstance(raw_error, str):
         normalized = raw_error.strip().lower()
         if normalized in _SAFE_DIAGNOSTIC_ERROR_CODES:
-            return _SAFE_DIAGNOSTIC_ERROR_CODES[normalized]
+            return normalized
     return fallback
 
 
@@ -952,15 +952,15 @@ def _cpu_snapshot() -> Dict[str, Any]:
 
 def _gpu_snapshot() -> Dict[str, Any]:
     gpu_runtime = get_gpu_runtime_info()
-    gpu_runtime_payload = gpu_runtime if isinstance(gpu_runtime, dict) else {}
+    gpu_runtime_data = gpu_runtime if isinstance(gpu_runtime, dict) else {}
     gpu_error = _sanitize_diagnostic_error(
-        gpu_runtime_payload.get("error"),
+        gpu_runtime_data.get("error"),
         "gpu_runtime_unavailable",
     )
     devices = (
-        gpu_runtime_payload.get("devices", [])
+        gpu_runtime_data.get("devices", [])
     )
-    if not gpu_runtime_payload.get("available"):
+    if not gpu_runtime_data.get("available"):
         return {
             "available": False,
             "state": "warning",
