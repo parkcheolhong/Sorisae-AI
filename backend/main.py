@@ -250,7 +250,7 @@ def _start_ad_order_worker_thread() -> None:
 
     try:
         from backend.marketplace.router import run_ad_order_worker
-    except Exception:
+    except Exception as exc:
         logger.warning(f"[WARN] ad order worker import failed: {exc}")
         return
 

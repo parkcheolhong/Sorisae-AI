@@ -10,6 +10,8 @@ from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+logger = logging.getLogger(__name__)
+
 
 def _resolve_secret_key() -> tuple[str, bool]:
     configured = str(os.getenv("SECRET_KEY") or "").strip()
@@ -27,6 +29,9 @@ def _resolve_secret_key() -> tuple[str, bool]:
         except Exception:
             pass
 
+    logger.error(
+        "SECRET_KEY/SECRET_KEY_FILE is not configured; generating ephemeral runtime secret that invalidates tokens on restart."
+    )
     return secrets.token_urlsafe(48), True
 
 
@@ -37,7 +42,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-logger = logging.getLogger(__name__)
 
 
 def get_password_hash(password: str) -> str:
