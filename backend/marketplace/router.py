@@ -1059,9 +1059,10 @@ def get_ad_queue_runtime_status() -> Dict[str, Dict[str, Any]]:
     if redis_client is not None:
         try:
             queue_depth = int(redis_client.llen(VIDEO_RENDER_QUEUE_NAME))
-        except RedisError as exc:
+        except RedisError:
+            logger.exception("Failed to read Redis queue depth for health diagnostics")
             redis_available = False
-            redis_error = str(exc)
+            redis_error = "redis_queue_unavailable"
 
     with _ad_worker_lock:
         started_at = _ad_worker_runtime.get("started_at")
