@@ -6,12 +6,12 @@
 - 설계변경 요약과 PR 설명의 근거 문서를 함께 묶어 추적 가능하게 유지한다.
 
 ## 근거 문서
-- `/home/runner/work/codeAI/codeAI/README.md`
-- `/home/runner/work/codeAI/codeAI/docs/orchestrator-multigenerator-upgrade-status.md`
-- `/home/runner/work/codeAI/codeAI/docs/final_readiness_checklist.md`
-- `/home/runner/work/codeAI/codeAI/docs/admin-dashboard-ui-ux-browser-blueprint.md`
-- `/home/runner/work/codeAI/codeAI/docs/admin-dashboard-section-linkage-checklist.md`
-- `/home/runner/work/codeAI/codeAI/gpu-llm-server/reports/pr-body-2026-04-27.md`
+- `README.md`
+- `docs/orchestrator-multigenerator-upgrade-status.md`
+- `docs/final_readiness_checklist.md`
+- `docs/admin-dashboard-ui-ux-browser-blueprint.md`
+- `docs/admin-dashboard-section-linkage-checklist.md`
+- `gpu-llm-server/reports/pr-body-2026-04-27.md`
 
 ---
 
@@ -128,11 +128,11 @@ This PR consolidates the repository-wide design changes into a single operationa
 
 ## Validation Basis
 
-- Operational readiness and completion status are documented in `/home/runner/work/codeAI/codeAI/docs/final_readiness_checklist.md`.
-- Orchestrator and multi-generator alignment details are documented in `/home/runner/work/codeAI/codeAI/docs/orchestrator-multigenerator-upgrade-status.md`.
+- Operational readiness and completion status are documented in `docs/final_readiness_checklist.md`.
+- Orchestrator and multi-generator alignment details are documented in `docs/orchestrator-multigenerator-upgrade-status.md`.
 - Admin dashboard UX restructuring basis is documented in:
-  - `/home/runner/work/codeAI/codeAI/docs/admin-dashboard-ui-ux-browser-blueprint.md`
-  - `/home/runner/work/codeAI/codeAI/docs/admin-dashboard-section-linkage-checklist.md`
+  - `docs/admin-dashboard-ui-ux-browser-blueprint.md`
+  - `docs/admin-dashboard-section-linkage-checklist.md`
 - Documentation-only baseline validation for this update:
   - `npm --prefix frontend/frontend run test`
 
@@ -170,8 +170,8 @@ This PR consolidates the repository-wide design changes into a single operationa
 - 관리자 화면을 중앙 오케스트레이터 허브 기반 구조로 정리해 운영 제어와 증거 확인 흐름을 강화했다.
 
 ## Validation
-- `/home/runner/work/codeAI/codeAI/docs/final_readiness_checklist.md`
-- `/home/runner/work/codeAI/codeAI/docs/orchestrator-multigenerator-upgrade-status.md`
+- `docs/final_readiness_checklist.md`
+- `docs/orchestrator-multigenerator-upgrade-status.md`
 - `npm --prefix frontend/frontend run test`
 
 ## Reviewer Focus
