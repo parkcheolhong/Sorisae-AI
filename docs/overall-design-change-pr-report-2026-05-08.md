@@ -1,5 +1,7 @@
 # 전체 설계변경 요약 및 PR 본문 초안
 
+> Note: This document is bilingual by design. The repository-wide design summary is written in Korean for the primary working context, and the PR body draft is written in English so it can be pasted directly into GitHub pull request fields.
+
 ## 문서 목적
 - 현재 저장소 문서 기준으로 전체 설계변경 내용을 한 번에 검토할 수 있도록 정리한다.
 - 바로 복사해 사용할 수 있는 실제 PR 본문 초안을 남긴다.
