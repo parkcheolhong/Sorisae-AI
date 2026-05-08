@@ -2,7 +2,7 @@ import logging
 import os
 import bcrypt
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -67,7 +67,7 @@ def create_access_token(
 ) -> str:
     to_encode = data.copy()
     if not no_expiry:
-        expire = datetime.utcnow() + (
+        expire = datetime.now(timezone.utc) + (
             expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         to_encode.update({"exp": expire})

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from secrets import compare_digest, randbelow, token_urlsafe
 import base64
 import os
@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Optional, cast
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy.orm import Session
 from webauthn import (
     generate_authentication_options,
@@ -82,8 +82,7 @@ class UserResponse(BaseModel):
     business_registration_number: Optional[str] = None
     representative_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Token(BaseModel):
@@ -254,7 +253,7 @@ _password_recovery_store: dict[str, dict[str, object]] = {}
 
 
 def _issue_recovery_token(prefix: str) -> tuple[str, datetime]:
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     return f"{prefix}_{token_urlsafe(24)}", expires_at
 
 
@@ -273,7 +272,7 @@ def _normalize_password_recovery_scope(scope: str) -> str:
 
 
 def _purge_expired_password_recovery_sessions() -> None:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expired_tokens = [
         session_token
         for session_token, session_state in _password_recovery_store.items()
@@ -380,7 +379,7 @@ def start_passkey_registration(
         "user_id": int(user.id),
         "challenge": _to_base64url(options.challenge),
         "device_label": str(payload.device_label or "이 기기 패스키").strip() or "이 기기 패스키",
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
         "user_handle": user_handle,
         "rp_id": rp_id,
         "expected_origin": expected_origin,
@@ -403,7 +402,7 @@ def finish_passkey_registration(
         raise HTTPException(status_code=404, detail="패스키 등록 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
         _passkey_registration_store.pop(payload.registration_token, None)
         raise HTTPException(status_code=410, detail="패스키 등록 세션이 만료되었습니다")
 
@@ -430,7 +429,7 @@ def finish_passkey_registration(
     user.passkey_public_key = _to_base64url(verification.credential_public_key)
     user.passkey_device_label = str(state.get("device_label") or "이 기기 패스키")
     user.passkey_sign_count = int(verification.sign_count)
-    user.passkey_registered_at = datetime.utcnow()
+    user.passkey_registered_at = datetime.now(timezone.utc)
     db.add(user)
     db.commit()
     _passkey_registration_store.pop(payload.registration_token, None)
@@ -465,7 +464,7 @@ def start_passkey_login(
     )
     _passkey_login_store[str(user.email)] = {
         "challenge": _to_base64url(options.challenge),
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
         "credential_id": str(user.passkey_credential_id),
         "rp_id": rp_id,
         "expected_origin": expected_origin,
@@ -492,7 +491,7 @@ def finish_passkey_login(
         raise HTTPException(status_code=404, detail="패스키 로그인 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
         _passkey_login_store.pop(str(user.email), None)
         raise HTTPException(status_code=410, detail="패스키 로그인 세션이 만료되었습니다")
 
@@ -581,7 +580,7 @@ def verify_password_recovery_identity(payload: PasswordRecoveryVerifyIdentityReq
         raise HTTPException(status_code=404, detail="복구 세션을 찾을 수 없습니다")
 
     expires_at = session_state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
         _password_recovery_store.pop(payload.recovery_session_token, None)
         raise HTTPException(status_code=410, detail="복구 세션이 만료되었습니다")
 
@@ -638,7 +637,7 @@ def reset_password_via_recovery(
         raise HTTPException(status_code=403, detail="본인확인 검증이 완료되지 않았습니다")
 
     reset_expires_at = session_state.get("reset_expires_at")
-    if not isinstance(reset_expires_at, datetime) or reset_expires_at <= datetime.utcnow():
+    if not isinstance(reset_expires_at, datetime) or reset_expires_at <= datetime.now(timezone.utc):
         _password_recovery_store.pop(session_token, None)
         raise HTTPException(status_code=410, detail="재설정 토큰이 만료되었습니다")
 
