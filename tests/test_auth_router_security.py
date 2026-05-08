@@ -1,7 +1,7 @@
 import importlib
 import sys
 import types
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -50,6 +50,39 @@ def _load_auth_router(monkeypatch):
 
     fake_models.User = _StubUser
 
+    # Stub webauthn if not installed so auth_router can be imported without it
+    if "webauthn" not in sys.modules:
+        _stub_webauthn = types.ModuleType("webauthn")
+        for _name in (
+            "generate_authentication_options",
+            "generate_registration_options",
+            "options_to_json",
+            "verify_authentication_response",
+            "verify_registration_response",
+        ):
+            setattr(_stub_webauthn, _name, None)
+
+        _stub_structs = types.ModuleType("webauthn.helpers.structs")
+        for _name in (
+            "PublicKeyCredentialType",
+            "AuthenticatorAssertionResponse",
+            "AuthenticatorAttestationResponse",
+            "AuthenticatorSelectionCriteria",
+            "PublicKeyCredentialDescriptor",
+            "RegistrationCredential",
+            "AuthenticationCredential",
+            "UserVerificationRequirement",
+            "ResidentKeyRequirement",
+        ):
+            setattr(_stub_structs, _name, None)
+
+        _stub_helpers = types.ModuleType("webauthn.helpers")
+        _stub_helpers.structs = _stub_structs
+
+        monkeypatch.setitem(sys.modules, "webauthn", _stub_webauthn)
+        monkeypatch.setitem(sys.modules, "webauthn.helpers", _stub_helpers)
+        monkeypatch.setitem(sys.modules, "webauthn.helpers.structs", _stub_structs)
+
     monkeypatch.setitem(sys.modules, "backend.database", fake_database)
     monkeypatch.setitem(sys.modules, "backend.models", fake_models)
     return importlib.import_module("backend.auth_router")
@@ -96,7 +129,7 @@ def test_password_recovery_verify_identity_limits_failed_attempts(monkeypatch):
         "verified": False,
         "verification_code": "654321",
         "verification_attempts": 0,
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
     }
     payload = auth_router.PasswordRecoveryVerifyIdentityRequest(
         recovery_session_token=recovery_session_token,
@@ -123,8 +156,8 @@ def test_reset_password_requires_verified_identity(monkeypatch):
         "scope": "admin",
         "verified": False,
         "reset_token": "reset_token",
-        "reset_expires_at": datetime.utcnow() + timedelta(minutes=5),
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "reset_expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
     }
 
     with pytest.raises(HTTPException) as exc_info:
@@ -151,8 +184,8 @@ def test_reset_password_updates_hash_and_clears_session(monkeypatch):
         "verified": True,
         "identity_session_token": "identity-proof",
         "reset_token": "reset_token",
-        "reset_expires_at": datetime.utcnow() + timedelta(minutes=5),
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "reset_expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
     }
 
     response = auth_router.reset_password_via_recovery(
