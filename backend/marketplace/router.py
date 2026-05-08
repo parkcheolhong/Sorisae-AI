@@ -595,15 +595,20 @@ async def stream_marketplace_feature_orchestration(
                 ),
             )
         except Exception as exc:
+            logger.exception(
+                "Marketplace feature orchestrate stream failed run_id=%s",
+                request.run_id,
+            )
+            public_error_message = "라이브뷰 실행 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
             local_metadata["popup_state"] = "failed"
             local_metadata["last_event"] = "failed"
-            local_metadata["error"] = str(exc)
+            local_metadata["error"] = public_error_message
             local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=100, step="failed", state="failed", message=str(exc))
+            _persist_progress(percent=100, step="failed", state="failed", message=public_error_message)
             local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, "failed", str(exc))
+            local_stage_run = _apply_feature_popup_state(local_stage_run, "failed", public_error_message)
             save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("failed", {"run_id": request.run_id, "state": "failed", "message": str(exc)})
+            yield _build_feature_sse_event("failed", {"run_id": request.run_id, "state": "failed", "message": public_error_message})
             yield _build_feature_sse_event(
                 "progress",
                 _build_feature_progress_payload(
@@ -611,7 +616,7 @@ async def stream_marketplace_feature_orchestration(
                     percent=100,
                     step="failed",
                     state="failed",
-                    message=str(exc),
+                    message=public_error_message,
                 ),
             )
 

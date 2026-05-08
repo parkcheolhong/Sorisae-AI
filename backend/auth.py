@@ -10,29 +10,29 @@ from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+logger = logging.getLogger(__name__)
+
 
 def _resolve_secret_key() -> tuple[str, bool]:
     configured = str(os.getenv("SECRET_KEY") or "").strip()
     if configured:
         return configured, False
 
-    fallback_path = Path(
-        os.getenv(
-            "SECRET_KEY_FILE",
-            str(Path(os.getenv("TEMP") or "/tmp") / "codeai_jwt_secret.key"),
-        )
+    configured_file = str(os.getenv("SECRET_KEY_FILE") or "").strip()
+    if configured_file:
+        fallback_path = Path(configured_file).expanduser()
+        try:
+            if fallback_path.exists() and fallback_path.is_file():
+                cached_secret = fallback_path.read_text(encoding="utf-8").strip()
+                if cached_secret:
+                    return cached_secret, True
+        except Exception:
+            pass
+
+    logger.error(
+        "SECRET_KEY/SECRET_KEY_FILE is not configured; generating ephemeral runtime secret that invalidates tokens on restart."
     )
-    try:
-        fallback_path.parent.mkdir(parents=True, exist_ok=True)
-        if fallback_path.exists():
-            cached_secret = fallback_path.read_text(encoding="utf-8").strip()
-            if cached_secret:
-                return cached_secret, True
-        generated_secret = secrets.token_urlsafe(48)
-        fallback_path.write_text(generated_secret, encoding="utf-8")
-        return generated_secret, True
-    except Exception:
-        return secrets.token_urlsafe(48), True
+    return secrets.token_urlsafe(48), True
 
 
 SECRET_KEY, SECRET_KEY_IS_RUNTIME_FALLBACK = _resolve_secret_key()
@@ -42,7 +42,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-logger = logging.getLogger(__name__)
 
 
 def get_password_hash(password: str) -> str:
