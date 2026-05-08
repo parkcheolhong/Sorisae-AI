@@ -33,14 +33,12 @@ def test_sanitize_diagnostic_error_redacts_exception_text():
     namespace = _load_functions(
         "_sanitize_diagnostic_error",
         extra_globals={
-            "_SAFE_DIAGNOSTIC_ERROR_CODES": frozenset(
-                {
-                    "cpu_load_unavailable",
-                    "gpu_runtime_unavailable",
-                    "memory_snapshot_unavailable",
-                    "queue_runtime_unavailable",
-                }
-            ),
+            "_SAFE_DIAGNOSTIC_ERROR_CODES": {
+                "cpu_load_unavailable": "cpu_load_unavailable",
+                "gpu_runtime_unavailable": "gpu_runtime_unavailable",
+                "memory_snapshot_unavailable": "memory_snapshot_unavailable",
+                "queue_runtime_unavailable": "queue_runtime_unavailable",
+            },
         },
     )
 
@@ -48,6 +46,7 @@ def test_sanitize_diagnostic_error_redacts_exception_text():
 
     assert sanitize(PermissionError("cannot open /proc/meminfo"), "memory_snapshot_unavailable") == "memory_snapshot_unavailable"
     assert sanitize("gpu_runtime_unavailable", "memory_snapshot_unavailable") == "gpu_runtime_unavailable"
+    assert sanitize(" GPU_Runtime_Unavailable ", "memory_snapshot_unavailable") == "gpu_runtime_unavailable"
     assert sanitize(None, "memory_snapshot_unavailable") is None
 
 
@@ -56,14 +55,12 @@ def test_memory_snapshot_error_becomes_warning_payload():
         "_sanitize_diagnostic_error",
         "_memory_snapshot",
         extra_globals={
-            "_SAFE_DIAGNOSTIC_ERROR_CODES": frozenset(
-                {
-                    "cpu_load_unavailable",
-                    "gpu_runtime_unavailable",
-                    "memory_snapshot_unavailable",
-                    "queue_runtime_unavailable",
-                }
-            ),
+            "_SAFE_DIAGNOSTIC_ERROR_CODES": {
+                "cpu_load_unavailable": "cpu_load_unavailable",
+                "gpu_runtime_unavailable": "gpu_runtime_unavailable",
+                "memory_snapshot_unavailable": "memory_snapshot_unavailable",
+                "queue_runtime_unavailable": "queue_runtime_unavailable",
+            },
             "_linux_memory_snapshot": lambda: {"error": "permission denied: /proc/meminfo"},
             "_windows_memory_snapshot": lambda: None,
             "SAFE_COMPUTE_USAGE_LIMIT_PERCENT": 90,
@@ -85,14 +82,12 @@ def test_cpu_and_gpu_snapshots_expose_only_safe_error_codes(monkeypatch):
         "_cpu_snapshot",
         "_gpu_snapshot",
         extra_globals={
-            "_SAFE_DIAGNOSTIC_ERROR_CODES": frozenset(
-                {
-                    "cpu_load_unavailable",
-                    "gpu_runtime_unavailable",
-                    "memory_snapshot_unavailable",
-                    "queue_runtime_unavailable",
-                }
-            ),
+            "_SAFE_DIAGNOSTIC_ERROR_CODES": {
+                "cpu_load_unavailable": "cpu_load_unavailable",
+                "gpu_runtime_unavailable": "gpu_runtime_unavailable",
+                "memory_snapshot_unavailable": "memory_snapshot_unavailable",
+                "queue_runtime_unavailable": "queue_runtime_unavailable",
+            },
             "SAFE_COMPUTE_USAGE_LIMIT_PERCENT": 90,
             "SAFE_MEMORY_OCCUPANCY_LIMIT_PERCENT": 75,
             "_relative_percent": lambda numerator, denominator: round((numerator / denominator) * 100, 1) if denominator > 0 else None,
