@@ -24,8 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 def _default_profiler_host() -> str:
-    if os.path.exists("/.dockerenv") or os.getenv("DOTNET_RUNNING_IN_CONTAINER") == "true":
-        return "0.0.0.0"
     return "127.0.0.1"
 
 
