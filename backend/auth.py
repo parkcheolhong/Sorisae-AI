@@ -22,16 +22,33 @@ def _resolve_secret_key() -> tuple[str, bool]:
     if configured_file:
         fallback_path = Path(configured_file).expanduser()
         try:
-            if fallback_path.exists() and fallback_path.is_file():
+            if not fallback_path.exists():
+                logger.error(
+                    "SECRET_KEY_FILE is configured but does not exist: %s. Falling back to ephemeral runtime secret.",
+                    str(fallback_path),
+                )
+            elif not fallback_path.is_file():
+                logger.error(
+                    "SECRET_KEY_FILE is configured but is not a file: %s. Falling back to ephemeral runtime secret.",
+                    str(fallback_path),
+                )
+            else:
                 cached_secret = fallback_path.read_text(encoding="utf-8").strip()
                 if cached_secret:
                     return cached_secret, True
+                logger.error(
+                    "SECRET_KEY_FILE is configured but empty: %s. Falling back to ephemeral runtime secret.",
+                    str(fallback_path),
+                )
         except Exception:
-            pass
-
-    logger.error(
-        "SECRET_KEY/SECRET_KEY_FILE is not configured; generating ephemeral runtime secret that invalidates tokens on restart."
-    )
+            logger.exception(
+                "Failed to read SECRET_KEY_FILE at %s. Falling back to ephemeral runtime secret.",
+                str(fallback_path),
+            )
+    else:
+        logger.error(
+            "SECRET_KEY/SECRET_KEY_FILE is not configured; generating ephemeral runtime secret that invalidates tokens on restart."
+        )
     return secrets.token_urlsafe(48), True
 
 
