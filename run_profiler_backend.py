@@ -23,7 +23,17 @@ from backend.main import app  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
+def _is_container_runtime() -> bool:
+    return (
+        Path("/.dockerenv").exists()
+        or Path("/run/.containerenv").exists()
+        or bool(os.getenv("KUBERNETES_SERVICE_HOST"))
+    )
+
+
 def _default_profiler_host() -> str:
+    if _is_container_runtime():
+        return "0.0.0.0"
     return "127.0.0.1"
 
 
