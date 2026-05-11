@@ -1,7 +1,7 @@
 import importlib
 import sys
 import types
-from datetime import datetime, timedelta
+
 from types import SimpleNamespace
 
 import pytest
@@ -50,6 +50,7 @@ def _load_auth_router(monkeypatch):
 
     fake_models.User = _StubUser
 
+
     monkeypatch.setitem(sys.modules, "backend.database", fake_database)
     monkeypatch.setitem(sys.modules, "backend.models", fake_models)
     return importlib.import_module("backend.auth_router")
@@ -96,7 +97,7 @@ def test_password_recovery_verify_identity_limits_failed_attempts(monkeypatch):
         "verified": False,
         "verification_code": "654321",
         "verification_attempts": 0,
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+
     }
     payload = auth_router.PasswordRecoveryVerifyIdentityRequest(
         recovery_session_token=recovery_session_token,
@@ -123,8 +124,7 @@ def test_reset_password_requires_verified_identity(monkeypatch):
         "scope": "admin",
         "verified": False,
         "reset_token": "reset_token",
-        "reset_expires_at": datetime.utcnow() + timedelta(minutes=5),
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+
     }
 
     with pytest.raises(HTTPException) as exc_info:
@@ -151,8 +151,7 @@ def test_reset_password_updates_hash_and_clears_session(monkeypatch):
         "verified": True,
         "identity_session_token": "identity-proof",
         "reset_token": "reset_token",
-        "reset_expires_at": datetime.utcnow() + timedelta(minutes=5),
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+
     }
 
     response = auth_router.reset_password_via_recovery(

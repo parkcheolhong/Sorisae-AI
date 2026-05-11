@@ -723,6 +723,24 @@ def _relative_percent(numerator: float, denominator: float) -> Optional[float]:
     return round((numerator / denominator) * 100, 1)
 
 
+_SAFE_DIAGNOSTIC_ERROR_CODES = {
+    "cpu_load_unavailable",
+    "gpu_runtime_unavailable",
+    "memory_snapshot_unavailable",
+    "queue_runtime_unavailable",
+}
+
+
+def _sanitize_diagnostic_error(raw_error: Any, fallback: str) -> Optional[str]:
+    if raw_error is None:
+        return None
+    if isinstance(raw_error, str):
+        normalized = raw_error.strip().lower()
+        if normalized in _SAFE_DIAGNOSTIC_ERROR_CODES:
+            return normalized
+    return fallback
+
+
 def _linux_memory_snapshot() -> Optional[Dict[str, Any]]:
     meminfo_path = "/proc/meminfo"
     if not os.path.exists(meminfo_path):
@@ -739,7 +757,12 @@ def _linux_memory_snapshot() -> Optional[Dict[str, Any]]:
                 if number.isdigit():
                     values[key.strip()] = int(number)
     except Exception as exc:
-        return {"error": str(exc)}
+        return {
+            "error": _sanitize_diagnostic_error(
+                exc,
+                "memory_snapshot_unavailable",
+            )
+        }
 
     total_kb = values.get("MemTotal", 0)
     available_kb = values.get("MemAvailable", values.get("MemFree", 0))
@@ -761,7 +784,12 @@ def _windows_memory_snapshot() -> Optional[Dict[str, Any]]:
         if not kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
             return None
     except Exception as exc:
-        return {"error": str(exc)}
+        return {
+            "error": _sanitize_diagnostic_error(
+                exc,
+                "memory_snapshot_unavailable",
+            )
+        }
 
     total_bytes = int(status.ullTotalPhys)
     available_bytes = int(status.ullAvailPhys)
@@ -778,12 +806,18 @@ def _memory_snapshot() -> Dict[str, Any]:
     snapshot = _linux_memory_snapshot()
     if snapshot is None and os.name == "nt":
         snapshot = _windows_memory_snapshot()
-    if not snapshot:
-        return {
+    if not snapshot or snapshot.get("error"):
+        payload: Dict[str, Any] = {
             "available": False,
             "state": "warning",
             "note": "메모리 사용량을 수집하지 못했습니다.",
         }
+        if snapshot:
+            payload["error"] = _sanitize_diagnostic_error(
+                snapshot.get("error"),
+                "memory_snapshot_unavailable",
+            )
+        return payload
 
     usage_percent = snapshot.get("usage_percent")
     critical_percent = max(
@@ -868,7 +902,7 @@ def _cpu_snapshot() -> Dict[str, Any]:
     usage_percent: Optional[float] = None
     note = "CPU 부하가 정상 범위입니다."
     state = "ok"
-    error_message = ""
+    error_code: Optional[str] = None
     warning_percent = min(
         SAFE_COMPUTE_USAGE_LIMIT_PERCENT,
         int(os.getenv("RUNTIME_CPU_WARNING_PERCENT", str(SAFE_MEMORY_OCCUPANCY_LIMIT_PERCENT)) or SAFE_MEMORY_OCCUPANCY_LIMIT_PERCENT),
@@ -883,7 +917,7 @@ def _cpu_snapshot() -> Dict[str, Any]:
             getloadavg = cast(Any, getattr(os, "getloadavg"))
             load_1m = round(float(getloadavg()[0]), 2)
         except Exception as exc:
-            error_message = str(exc)
+            error_code = _sanitize_diagnostic_error(exc, "cpu_load_unavailable")
 
     if load_1m is not None and cpu_count > 0:
         load_ratio_percent = _relative_percent(load_1m, cpu_count)
@@ -911,29 +945,28 @@ def _cpu_snapshot() -> Dict[str, Any]:
         "load_ratio_percent": load_ratio_percent,
         "usage_percent": usage_percent,
     }
-    if error_message:
-        payload["error"] = error_message
+    if error_code:
+        payload["error"] = error_code
     return payload
 
 
 def _gpu_snapshot() -> Dict[str, Any]:
     gpu_runtime = get_gpu_runtime_info()
-    devices = (
-        gpu_runtime.get("devices", [])
-        if isinstance(gpu_runtime, dict)
-        else []
+    gpu_runtime_data = gpu_runtime if isinstance(gpu_runtime, dict) else {}
+    gpu_error = _sanitize_diagnostic_error(
+        gpu_runtime_data.get("error"),
+        "gpu_runtime_unavailable",
     )
-    if not gpu_runtime.get("available"):
+    devices = (
+        gpu_runtime_data.get("devices", [])
+    )
+    if not gpu_runtime_data.get("available"):
         return {
             "available": False,
             "state": "warning",
             "note": "GPU 런타임이 감지되지 않았습니다. CPU fallback 또는 드라이버 상태를 확인하세요.",
             "devices": [],
-            "error": (
-                gpu_runtime.get("error")
-                if isinstance(gpu_runtime, dict)
-                else None
-            ),
+            "error": gpu_error or "gpu_runtime_unavailable",
         }
 
     peak_usage = 0.0
@@ -1031,6 +1064,8 @@ def _runtime_health_payload() -> Dict[str, Any]:
         from backend.marketplace.router import get_ad_queue_runtime_status
         queue_runtime = get_ad_queue_runtime_status()
     except Exception as exc:
+        logger.exception("Failed to load ad queue runtime status")
+        safe_queue_error = "queue_runtime_unavailable"
         queue_runtime = {
             "redis_queue": {
                 "available": False,
@@ -1038,7 +1073,7 @@ def _runtime_health_payload() -> Dict[str, Any]:
                 "note": "Redis queue 진단을 로드하지 못했습니다.",
                 "connection_id": "redis:video_render_queue",
                 "queue_name": "video_render_queue",
-                "error": str(exc),
+                "error": safe_queue_error,
             },
             "ad_worker": {
                 "available": False,
@@ -1047,7 +1082,7 @@ def _runtime_health_payload() -> Dict[str, Any]:
                 "connection_id": "redis:video_render_queue",
                 "queue_name": "video_render_queue",
                 "worker_id": "ad-render-worker-001",
-                "error": str(exc),
+                "error": safe_queue_error,
             },
         }
     redis_queue = queue_runtime.get("redis_queue", {})
