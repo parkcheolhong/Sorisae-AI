@@ -2695,9 +2695,17 @@ def _runtime_progress_root() -> Path:
     return progress_root
 
 
+def _legacy_orchestration_progress_file_path(run_id: str) -> Path:
+    safe_run_id = re.sub(r"[^A-Za-z0-9._-]", "_", str(run_id or "unknown"))
+    return _runtime_progress_root() / f"{safe_run_id}.json"
+
+
 def _orchestration_progress_file_path(run_id: str) -> Path:
-    safe_run_id = str(run_id or "unknown")
-    file_name = f"{hashlib.sha256(safe_run_id.encode('utf-8')).hexdigest()}.json"
+    normalized_run_id = str(run_id or "unknown")
+    legacy_path = _legacy_orchestration_progress_file_path(normalized_run_id)
+    if legacy_path.exists():
+        return legacy_path
+    file_name = f"{hashlib.sha256(normalized_run_id.encode('utf-8')).hexdigest()}.json"
     return _runtime_progress_root() / file_name
 
 
