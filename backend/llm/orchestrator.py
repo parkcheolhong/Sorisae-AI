@@ -2695,8 +2695,10 @@ def _runtime_progress_root() -> Path:
     return progress_root
 
 
-def _orchestration_progress_store_path() -> Path:
-    return _runtime_progress_root() / "progress_store.json"
+def _orchestration_progress_file_path(run_id: str) -> Path:
+    safe_run_id = str(run_id or "unknown")
+    file_name = f"{hashlib.sha256(safe_run_id.encode('utf-8')).hexdigest()}.json"
+    return _runtime_progress_root() / file_name
 
 
 def _build_progress_poll_url(run_id: str) -> str:
@@ -2712,23 +2714,8 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
     normalized["run_id"] = str(run_id or normalized.get("run_id") or "")
     normalized.setdefault("updated_at", datetime.utcnow().isoformat() + "Z")
     _ORCHESTRATION_PROGRESS_STORE[normalized["run_id"]] = normalized
-    progress_path = _orchestration_progress_store_path()
+    progress_path = _orchestration_progress_file_path(normalized["run_id"])
     with _ORCHESTRATION_PROGRESS_FILE_LOCK:
-        persisted_payload: Dict[str, Any] = {}
-        try:
-            if progress_path.exists() and progress_path.is_file():
-                existing_payload = json.loads(progress_path.read_text(encoding="utf-8"))
-                if isinstance(existing_payload, dict):
-                    persisted_payload = dict(existing_payload)
-        except Exception:
-            logger.warning(
-                "Failed to read orchestration progress store from %s before write",
-                str(progress_path),
-                exc_info=True,
-            )
-            persisted_payload = {}
-        persisted_payload[normalized["run_id"]] = normalized
-        serialized_payload = json.dumps(persisted_payload, ensure_ascii=False, indent=2)
         temp_path: Optional[Path] = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -2739,7 +2726,7 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
                 suffix=".tmp",
                 delete=False,
             ) as temp_file:
-                temp_file.write(serialized_payload)
+                temp_file.write(json.dumps(normalized, ensure_ascii=False, indent=2))
                 temp_file.flush()
                 os.fsync(temp_file.fileno())
                 temp_path = Path(temp_file.name)
@@ -2754,7 +2741,12 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
                         str(temp_path),
                         exc_info=True,
                     )
-            raise
+            logger.warning(
+                "Failed to write orchestration progress file at %s",
+                str(progress_path),
+                exc_info=True,
+            )
+            return dict(_ORCHESTRATION_PROGRESS_STORE.get(normalized["run_id"], {}))
     return normalized
 
 
@@ -2762,16 +2754,14 @@ def _load_orchestration_progress(run_id: str) -> Dict[str, Any]:
     cached = _ORCHESTRATION_PROGRESS_STORE.get(str(run_id or ""))
     if isinstance(cached, dict) and cached:
         return dict(cached)
-    progress_path = _orchestration_progress_store_path()
+    progress_path = _orchestration_progress_file_path(run_id)
     try:
         with _ORCHESTRATION_PROGRESS_FILE_LOCK:
             if progress_path.exists() and progress_path.is_file():
                 payload = json.loads(progress_path.read_text(encoding="utf-8"))
                 if isinstance(payload, dict):
-                    stored = payload.get(str(run_id or ""))
-                    if isinstance(stored, dict):
-                        _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(stored)
-                        return dict(stored)
+                    _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(payload)
+                    return dict(payload)
     except Exception:
         logger.error("Failed to load orchestration progress for run_id=%s", str(run_id or ""), exc_info=True)
         return {}
