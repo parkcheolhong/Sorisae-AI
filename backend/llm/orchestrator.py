@@ -2684,6 +2684,7 @@ class OrchestrationAcceptedResponse(BaseModel):
 
 
 _ORCHESTRATION_PROGRESS_STORE: Dict[str, Dict[str, Any]] = {}
+_ORCHESTRATION_PROGRESS_FILE_LOCK = threading.Lock()
 
 
 def _runtime_progress_root() -> Path:
@@ -2694,9 +2695,13 @@ def _runtime_progress_root() -> Path:
     return progress_root
 
 
-def _orchestration_progress_path(run_id: str) -> Path:
-    safe_run_id = re.sub(r"[^a-zA-Z0-9_.-]+", "-", str(run_id or "unknown")).strip("-") or "unknown"
-    return _runtime_progress_root() / f"{safe_run_id}.json"
+def _orchestration_progress_file_path(run_id: str) -> Path:
+    normalized_run_id = str(run_id if run_id is not None else "unknown")
+    if normalized_run_id == "":
+        normalized_run_id = "unknown"
+    runtime_root = _runtime_progress_root().resolve()
+    file_name = f"{hashlib.sha256(normalized_run_id.encode('utf-8')).hexdigest()}.json"
+    return runtime_root / file_name
 
 
 def _build_progress_poll_url(run_id: str) -> str:
@@ -2712,8 +2717,44 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
     normalized["run_id"] = str(run_id or normalized.get("run_id") or "")
     normalized.setdefault("updated_at", datetime.utcnow().isoformat() + "Z")
     _ORCHESTRATION_PROGRESS_STORE[normalized["run_id"]] = normalized
-    progress_path = _orchestration_progress_path(normalized["run_id"])
-    progress_path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+    progress_path = _orchestration_progress_file_path(normalized["run_id"])
+    trusted_temp_prefix = (
+        f"progress-{hashlib.sha256(normalized['run_id'].encode('utf-8')).hexdigest()}."
+        if normalized["run_id"]
+        else "progress-unknown."
+    )
+    with _ORCHESTRATION_PROGRESS_FILE_LOCK:
+        temp_path: Optional[Path] = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=str(progress_path.parent),
+                prefix=trusted_temp_prefix,
+                suffix=".tmp",
+                delete=False,
+            ) as temp_file:
+                temp_file.write(json.dumps(normalized, ensure_ascii=False, indent=2))
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+                temp_path = Path(temp_file.name)
+            os.replace(temp_path, progress_path)
+        except Exception:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except Exception:
+                    logger.warning(
+                        "Failed to remove temporary orchestration progress file %s",
+                        str(temp_path),
+                        exc_info=True,
+                    )
+            logger.warning(
+                "Failed to write orchestration progress file at %s",
+                str(progress_path),
+                exc_info=True,
+            )
+            return dict(_ORCHESTRATION_PROGRESS_STORE.get(normalized["run_id"], {}))
     return normalized
 
 
@@ -2721,14 +2762,16 @@ def _load_orchestration_progress(run_id: str) -> Dict[str, Any]:
     cached = _ORCHESTRATION_PROGRESS_STORE.get(str(run_id or ""))
     if isinstance(cached, dict) and cached:
         return dict(cached)
-    progress_path = _orchestration_progress_path(run_id)
+    progress_path = _orchestration_progress_file_path(run_id)
     try:
-        if progress_path.exists() and progress_path.is_file():
-            payload = json.loads(progress_path.read_text(encoding="utf-8"))
-            if isinstance(payload, dict):
-                _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(payload)
-                return dict(payload)
+        with _ORCHESTRATION_PROGRESS_FILE_LOCK:
+            if progress_path.exists() and progress_path.is_file():
+                payload = json.loads(progress_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(payload)
+                    return dict(payload)
     except Exception:
+        logger.error("Failed to load orchestration progress for run_id=%s", str(run_id or ""), exc_info=True)
         return {}
     return {}
 

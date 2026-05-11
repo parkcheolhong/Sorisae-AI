@@ -32,6 +32,12 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v5
 
+            - name: Setup Python
+              if: matrix.language == 'python'
+              uses: actions/setup-python@v6
+              with:
+                  python-version: '3.13'
+
             - name: Initialize CodeQL
               uses: github/codeql-action/init@v4
               with:
