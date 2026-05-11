@@ -45,14 +45,14 @@ def _resolve_profiler_host() -> str:
             if infos and all(ipaddress.ip_address(info[4][0]).is_loopback for info in infos):
                 return requested_host
         except Exception:
-            pass
+            logger.warning("[WARN] failed to resolve localhost loopback addresses", exc_info=True)
         logger.warning("[WARN] localhost does not resolve to loopback only; fallback to 127.0.0.1")
         return "127.0.0.1"
     if requested_host in {"127.0.0.1", "::1"}:
         return requested_host
     try:
         requested_ip = ipaddress.ip_address(requested_host)
-    except ValueError:
+    except (TypeError, ValueError):
         logger.warning("[WARN] hostname profiler host=%s is not allowed; fallback to 127.0.0.1", requested_host)
         return "127.0.0.1"
     if requested_ip.is_loopback:
