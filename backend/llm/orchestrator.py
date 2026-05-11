@@ -2735,6 +2735,11 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
     normalized.setdefault("updated_at", datetime.utcnow().isoformat() + "Z")
     _ORCHESTRATION_PROGRESS_STORE[normalized["run_id"]] = normalized
     progress_path = _orchestration_progress_file_path(normalized["run_id"])
+    trusted_temp_prefix = (
+        f"progress-{hashlib.sha256(normalized['run_id'].encode('utf-8')).hexdigest()}."
+        if normalized["run_id"]
+        else "progress-unknown."
+    )
     with _ORCHESTRATION_PROGRESS_FILE_LOCK:
         temp_path: Optional[Path] = None
         try:
@@ -2742,7 +2747,7 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
                 mode="w",
                 encoding="utf-8",
                 dir=str(progress_path.parent),
-                prefix=f"{progress_path.name}.",
+                prefix=trusted_temp_prefix,
                 suffix=".tmp",
                 delete=False,
             ) as temp_file:
