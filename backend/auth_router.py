@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+
 from secrets import compare_digest, randbelow, token_urlsafe
 import base64
 import os
@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Optional, cast
-from pydantic import BaseModel, ConfigDict, EmailStr
+
 from sqlalchemy.orm import Session
 from webauthn import (
     generate_authentication_options,
@@ -253,7 +253,7 @@ _password_recovery_store: dict[str, dict[str, object]] = {}
 
 
 def _issue_recovery_token(prefix: str) -> tuple[str, datetime]:
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
     return f"{prefix}_{token_urlsafe(24)}", expires_at
 
 
@@ -272,7 +272,7 @@ def _normalize_password_recovery_scope(scope: str) -> str:
 
 
 def _purge_expired_password_recovery_sessions() -> None:
-    now = datetime.now(timezone.utc)
+
     expired_tokens = [
         session_token
         for session_token, session_state in _password_recovery_store.items()
