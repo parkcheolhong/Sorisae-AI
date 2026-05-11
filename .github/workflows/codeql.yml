@@ -36,7 +36,9 @@ jobs:
               if: matrix.language == 'python'
               uses: actions/setup-python@v6
               with:
-                  python-version: '3.13'
+                  # Use the project's supported/runtime Python version (or lowest supported)
+                  # so that CodeQL analysis reflects the actual environment.
+                  python-version: '3.11'
 
             - name: Initialize CodeQL
               uses: github/codeql-action/init@v4
