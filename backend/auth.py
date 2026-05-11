@@ -22,29 +22,59 @@ def _resolve_secret_key() -> tuple[str, bool]:
     if configured_file:
         fallback_path = Path(configured_file).expanduser()
         try:
-            if not fallback_path.exists():
-                logger.error(
-                    "SECRET_KEY_FILE is configured but does not exist: %s. Falling back to ephemeral runtime secret.",
-                    str(fallback_path),
-                )
-            elif not fallback_path.is_file():
-                logger.error(
-                    "SECRET_KEY_FILE is configured but is not a file: %s. Falling back to ephemeral runtime secret.",
-                    str(fallback_path),
-                )
-            else:
+            if fallback_path.exists():
+                if not fallback_path.is_file():
+                    raise RuntimeError(
+                        f"SECRET_KEY_FILE is configured but is not a file: {fallback_path}"
+                    )
                 cached_secret = fallback_path.read_text(encoding="utf-8").strip()
-                if cached_secret:
-                    return cached_secret, True
-                logger.error(
-                    "SECRET_KEY_FILE is configured but empty: %s. Falling back to ephemeral runtime secret.",
+                if not cached_secret:
+                    raise RuntimeError(
+                        f"SECRET_KEY_FILE is configured but empty: {fallback_path}"
+                    )
+                return cached_secret, True
+
+            fallback_path.parent.mkdir(parents=True, exist_ok=True)
+            generated_secret = secrets.token_urlsafe(48)
+            fd = os.open(str(fallback_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as secret_file:
+                    secret_file.write(generated_secret)
+                    secret_file.write("\n")
+            except Exception:
+                try:
+                    fallback_path.unlink()
+                except OSError:
+                    logger.exception(
+                        "Failed to clean up partially written SECRET_KEY_FILE at %s.",
+                        str(fallback_path),
+                    )
+                raise
+
+            try:
+                os.chmod(fallback_path, 0o600)
+            except OSError:
+                logger.exception(
+                    "Failed to set permissions on SECRET_KEY_FILE at %s.",
                     str(fallback_path),
                 )
-        except Exception:
-            logger.exception(
-                "Failed to read SECRET_KEY_FILE at %s. Falling back to ephemeral runtime secret.",
+                raise RuntimeError(
+                    f"Failed to set secure permissions on SECRET_KEY_FILE: {fallback_path}"
+                )
+
+            logger.warning(
+                "SECRET_KEY_FILE did not exist; generated and stored a new persistent secret at %s with mode 0600.",
                 str(fallback_path),
             )
+            return generated_secret, True
+        except Exception as exc:
+            logger.exception(
+                "Failed to initialize SECRET_KEY_FILE at %s. Refusing to start with an ephemeral runtime secret.",
+                str(fallback_path),
+            )
+            raise RuntimeError(
+                f"Failed to initialize SECRET_KEY from SECRET_KEY_FILE: {fallback_path}"
+            ) from exc
     else:
         logger.error(
             "SECRET_KEY/SECRET_KEY_FILE is not configured; generating ephemeral runtime secret that invalidates tokens on restart."
