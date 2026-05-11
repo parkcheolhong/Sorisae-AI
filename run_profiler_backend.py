@@ -39,12 +39,21 @@ def _default_profiler_host() -> str:
 def _resolve_profiler_host() -> str:
     requested_host = (os.getenv("BACKEND_PROFILER_HOST") or _default_profiler_host()).strip()
     allow_remote = (os.getenv("BACKEND_PROFILER_ALLOW_REMOTE", "") or "").strip().lower() in {"1", "true", "yes", "on"}
-    if requested_host in {"localhost", "127.0.0.1", "::1"}:
+    if requested_host == "localhost":
+        try:
+            infos = socket.getaddrinfo("localhost", None)
+            if infos and all(ipaddress.ip_address(info[4][0]).is_loopback for info in infos):
+                return requested_host
+        except Exception:
+            pass
+        logger.warning("[WARN] localhost does not resolve to loopback only; fallback to 127.0.0.1")
+        return "127.0.0.1"
+    if requested_host in {"127.0.0.1", "::1"}:
         return requested_host
     try:
         requested_ip = ipaddress.ip_address(requested_host)
     except ValueError:
-        logger.warning("[WARN] invalid profiler host=%s; fallback to 127.0.0.1", requested_host)
+        logger.warning("[WARN] hostname profiler host=%s is not allowed; fallback to 127.0.0.1", requested_host)
         return "127.0.0.1"
     if requested_ip.is_loopback:
         return requested_host
