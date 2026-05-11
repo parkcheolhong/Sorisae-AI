@@ -2695,29 +2695,12 @@ def _runtime_progress_root() -> Path:
     return progress_root
 
 
-def _legacy_orchestration_progress_file_path(run_id: str) -> Path:
-    safe_run_id = re.sub(r"[^A-Za-z0-9._-]", "_", str(run_id or "unknown"))
-    return _runtime_progress_root() / f"{safe_run_id}.json"
-
-
 def _orchestration_progress_file_path(run_id: str) -> Path:
-    normalized_run_id = str(run_id or "unknown")
-    safe_run_id = re.sub(r"[^A-Za-z0-9_.-]", "_", normalized_run_id).strip("._-")
-    if not safe_run_id:
-        safe_run_id = "unknown"
+    normalized_run_id = str(run_id if run_id is not None else "unknown")
+    if normalized_run_id == "":
+        normalized_run_id = "unknown"
     runtime_root = _runtime_progress_root().resolve()
-    legacy_path = _legacy_orchestration_progress_file_path(safe_run_id)
-    try:
-        resolved_legacy_path = legacy_path.resolve()
-        if resolved_legacy_path.exists() and resolved_legacy_path.is_relative_to(runtime_root):
-            return resolved_legacy_path
-    except Exception:
-        logger.warning(
-            "Ignoring unsafe legacy orchestration progress path for run_id=%s",
-            safe_run_id,
-            exc_info=True,
-        )
-    file_name = f"{hashlib.sha256(safe_run_id.encode('utf-8')).hexdigest()}.json"
+    file_name = f"{hashlib.sha256(normalized_run_id.encode('utf-8')).hexdigest()}.json"
     return runtime_root / file_name
 
 
