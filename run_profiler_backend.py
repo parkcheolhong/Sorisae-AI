@@ -37,7 +37,7 @@ def _default_profiler_host() -> str:
 
 
 def _resolve_profiler_host() -> str:
-    requested_host = (os.getenv("BACKEND_PROFILER_HOST", _default_profiler_host()) or "").strip() or "127.0.0.1"
+    requested_host = (os.getenv("BACKEND_PROFILER_HOST") or _default_profiler_host()).strip()
     allow_remote = (os.getenv("BACKEND_PROFILER_ALLOW_REMOTE", "") or "").strip().lower() in {"1", "true", "yes", "on"}
     if requested_host in {"localhost", "127.0.0.1", "::1"}:
         return requested_host
@@ -49,8 +49,8 @@ def _resolve_profiler_host() -> str:
     if requested_ip.is_loopback:
         return requested_host
     if allow_remote:
-        if requested_host == "0.0.0.0":
-            logger.warning("[WARN] profiler backend is binding to all interfaces (host=0.0.0.0)")
+        if requested_ip.is_unspecified:
+            logger.warning("[WARN] profiler backend is binding to all interfaces (host=%s)", requested_host)
         return requested_host
     logger.warning("[WARN] remote profiler host=%s blocked; set BACKEND_PROFILER_ALLOW_REMOTE=true to allow", requested_host)
     return "127.0.0.1"

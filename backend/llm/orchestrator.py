@@ -2696,7 +2696,9 @@ def _runtime_progress_root() -> Path:
 
 
 def _orchestration_progress_file_path(run_id: str) -> Path:
-    normalized_run_id = str(run_id or "").strip() or "unknown"
+    normalized_run_id = str(run_id if run_id is not None else "unknown")
+    if normalized_run_id == "":
+        normalized_run_id = "unknown"
     runtime_root = _runtime_progress_root().resolve()
     file_name = f"{hashlib.sha256(normalized_run_id.encode('utf-8')).hexdigest()}.json"
     return runtime_root / file_name
