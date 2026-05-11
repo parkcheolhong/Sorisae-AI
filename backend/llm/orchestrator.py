@@ -2728,7 +2728,33 @@ def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[s
             )
             persisted_payload = {}
         persisted_payload[normalized["run_id"]] = normalized
-        progress_path.write_text(json.dumps(persisted_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        serialized_payload = json.dumps(persisted_payload, ensure_ascii=False, indent=2)
+        temp_path: Optional[Path] = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=str(progress_path.parent),
+                prefix=f"{progress_path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temp_file:
+                temp_file.write(serialized_payload)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+                temp_path = Path(temp_file.name)
+            os.replace(temp_path, progress_path)
+        except Exception:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except Exception:
+                    logger.warning(
+                        "Failed to remove temporary orchestration progress file %s",
+                        str(temp_path),
+                        exc_info=True,
+                    )
+            raise
     return normalized
 
 
