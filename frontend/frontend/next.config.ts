@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 
+const nextDistDir = process.env.NEXT_DIST_DIR || '.next';
+
 const FRONTEND_BUILD_ID =
     process.env.CODEAI_FRONTEND_BUILD_ID
     || process.env.NEXT_BUILD_ID
@@ -33,10 +35,21 @@ const noStoreHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+    distDir: nextDistDir,
     generateBuildId: async () => FRONTEND_BUILD_ID,
     env: {
         NEXT_PUBLIC_FRONTEND_BUILD_ID: FRONTEND_BUILD_ID,
     },
+    async rewrites() {
+        const backendTarget = process.env.BACKEND_PROXY_TARGET || process.env.LOCAL_API_BASE_URL || 'http://localhost:8000';
+        return [
+            {
+                source: '/api/:path*',
+                destination: `${backendTarget}/api/:path*`,
+            },
+        ];
+    },
+
     async headers() {
         return [
             {

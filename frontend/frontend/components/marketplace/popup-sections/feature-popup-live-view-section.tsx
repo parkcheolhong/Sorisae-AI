@@ -25,7 +25,7 @@ interface FeaturePopupLiveViewSectionProps {
 export default function FeaturePopupLiveViewSection(props: FeaturePopupLiveViewSectionProps) {
     return (
         <div data-testid="marketplace-live-view-panel" className="rounded-[24px] border border-[#25304a] bg-[radial-gradient(circle_at_top,_rgba(54,118,255,0.22),_rgba(11,15,22,0.92)_55%)] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.18)] sm:rounded-[28px] sm:p-5">
-            <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                 <div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                         <div>
@@ -92,27 +92,30 @@ export default function FeaturePopupLiveViewSection(props: FeaturePopupLiveViewS
                     )}
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                    <div className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4 sm:col-span-2 xl:col-span-1">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#7fa7d8]">사용 목적 가이드</p>
-                        <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4 sm:col-span-2">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-[#7fa7d8]">사용 목적 가이드</p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
                             {props.meta.statCards.map((card) => (
-                                <div key={card.id} className="rounded-2xl border border-[#1e2a3c] bg-[#10182b] px-4 py-3">
-                                    <p className="text-xs text-[#8ea4bf]">{card.label}</p>
-                                    <p className="mt-2 text-sm font-semibold text-white">{card.note}</p>
+                                <div key={card.id} className="rounded-2xl border border-[#1e2a3c] bg-[#10182b] px-3 py-2.5">
+                                    <p className="text-[11px] text-[#8ea4bf]">{card.label}</p>
+                                    <p className="mt-1.5 text-xs font-semibold leading-5 text-white">{card.note}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
                     <div className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#7fa7d8]">현재 단계</p>
-                        <p data-testid="marketplace-live-view-current-state" className="mt-3 text-xl font-bold text-white">{props.popupStateLabel}</p>
-                        <p className="mt-2 text-xs text-[#8ea4bf]">event log 와 stage snapshot 에 맞춰 즉시 갱신됩니다.</p>
-                    </div>
-                    <div className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#7fa7d8]">경과 시간</p>
-                        <p data-testid="marketplace-live-view-elapsed" className="mt-3 text-xl font-bold text-white">{props.elapsedLabel}</p>
-                        <p className="mt-2 text-xs text-[#8ea4bf]">accepted 시점부터 스트림 종료까지 실시간으로 증가합니다.</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#7fa7d8]">실행 요약</p>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <p className="text-[11px] text-[#8ea4bf]">현재 단계</p>
+                                <p data-testid="marketplace-live-view-current-state" className="mt-1 text-lg font-bold text-white">{props.popupStateLabel}</p>
+                            </div>
+                            <div>
+                                <p className="text-[11px] text-[#8ea4bf]">경과 시간</p>
+                                <p data-testid="marketplace-live-view-elapsed" className="mt-1 text-lg font-bold text-white">{props.elapsedLabel}</p>
+                            </div>
+                        </div>
                     </div>
                     <div data-testid="marketplace-progress-panel" className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4 sm:col-span-2 xl:col-span-1">
                         <div className="flex items-center justify-between gap-3">
@@ -125,7 +128,7 @@ export default function FeaturePopupLiveViewSection(props: FeaturePopupLiveViewS
                         <p data-testid="marketplace-progress-message" className="mt-3 text-sm font-semibold text-white">{props.progressSnapshot?.message || 'progress 이벤트 대기 중'}</p>
                         <p data-testid="marketplace-progress-step" className="mt-1 text-xs text-[#8ea4bf]">{props.progressSnapshot?.step || 'accepted'}</p>
                     </div>
-                    <div className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4">
+                    <div className="rounded-2xl border border-[#2d3d56] bg-[#0d1420] p-4 sm:col-span-2">
                         <p className="text-xs uppercase tracking-[0.18em] text-[#7fa7d8]">Live Guidance</p>
                         <ul className="mt-3 space-y-2 text-xs leading-6 text-[#c7d2df]">
                             <li>• 진행률 바와 milestone을 함께 보면 stuck 상태를 빠르게 구분할 수 있습니다.</li>

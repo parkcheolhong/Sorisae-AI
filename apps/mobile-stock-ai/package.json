@@ -1,0 +1,44 @@
+{
+  "name": "mobile-stock-ai",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "eas:project:ensure": "node scripts/ensure-eas-project-id.mjs",
+    "eas:project:ensure:dry": "node scripts/ensure-eas-project-id.mjs --dry-run",
+    "release:gate:production": "node scripts/validate-production-submit-gate.mjs",
+    "release:dry-run:production-submit": "node scripts/check-production-submit-dry-run.mjs",
+    "eas:android:preview": "eas build --platform android --profile preview",
+    "eas:android:staging": "npm run eas:project:ensure && eas build --platform android --profile staging",
+    "eas:android:production": "eas build --platform android --profile production",
+    "eas:ios:preview": "eas build --platform ios --profile preview",
+    "eas:ios:staging": "npm run eas:project:ensure && eas build --platform ios --profile staging",
+    "eas:ios:production": "eas build --platform ios --profile production",
+    "eas:submit:android:staging": "npm run eas:project:ensure && eas submit --platform android --profile staging",
+    "eas:submit:ios:staging": "npm run eas:project:ensure && eas submit --platform ios --profile staging",
+    "eas:submit:android:production": "npm run eas:project:ensure && npm run release:gate:production && eas submit --platform android --profile production",
+    "eas:submit:ios:production": "npm run eas:project:ensure && npm run release:gate:production && eas submit --platform ios --profile production"
+  },
+  "dependencies": {
+    "expo": "~52.0.18",
+    "expo-asset": "~11.0.5",
+    "expo-build-properties": "~0.13.3",
+    "expo-constants": "~17.0.3",
+    "expo-file-system": "~18.0.12",
+    "expo-secure-store": "~14.0.0",
+    "expo-sharing": "~13.0.0",
+    "expo-status-bar": "~2.0.1",
+    "expo-updates": "~0.27.5",
+    "react": "18.3.1",
+    "react-native": "0.76.5"
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.12",
+    "typescript": "~5.6.3"
+  }
+}

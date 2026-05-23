@@ -9,14 +9,24 @@ function isAdminHost(request: NextRequest): boolean {
   return host.startsWith('admin.') || host.endsWith(':3005');
 }
 
+function isStaticAssetPath(pathname: string): boolean {
+  if (pathname.startsWith('/_next/') || pathname.startsWith('/admin/_next/')) {
+    return true;
+  }
+  if (pathname === '/favicon.ico') {
+    return true;
+  }
+  return /\.(?:js|mjs|css|map|json|txt|svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$/i.test(pathname);
+}
+
 function applyNoStoreHeaders(response: NextResponse): NextResponse {
   response.headers.set('Cache-Control', NO_STORE_VALUE);
   response.headers.set('Pragma', 'no-cache');
   response.headers.set('Expires', '0');
   response.headers.set('Surrogate-Control', 'no-store');
   response.headers.set('x-frontend-shell-cache-policy', 'no-store');
-   response.headers.set('x-frontend-build-id', FRONTEND_BUILD_ID);
-   response.headers.set('x-frontend-build-marker', 'codeai-frontend');
+  response.headers.set('x-frontend-build-id', FRONTEND_BUILD_ID);
+  response.headers.set('x-frontend-build-marker', 'codeai-frontend');
   return response;
 }
 
@@ -30,6 +40,11 @@ function shouldApplyNoStore(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const hasNextActionHeader = request.headers.has('next-action');
   const pathname = request.nextUrl.pathname;
+
+  // Static assets must bypass admin host redirects to keep client bundles loadable.
+  if (isStaticAssetPath(pathname)) {
+    return NextResponse.next();
+  }
 
   // 현재 앱은 서버 액션을 사용하지 않으므로, 오래된 배포/외부 스캔 요청은 진입 전에 차단한다.
   if (request.method === 'POST' && (hasNextActionHeader || BLOCKED_POST_PATHS.has(pathname))) {
@@ -72,5 +87,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+  matcher: ['/((?!_next/image).*)'],
 };

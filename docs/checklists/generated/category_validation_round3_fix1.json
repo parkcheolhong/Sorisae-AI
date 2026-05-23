@@ -1,0 +1,146 @@
+﻿[
+    {
+        "round":  "round3_fix1",
+        "category":  "보안/권한",
+        "check":  "signup",
+        "status":  "PASS",
+        "detail":  "201/200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "보안/권한",
+        "check":  "login",
+        "status":  "PASS",
+        "detail":  "200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "보안/권한",
+        "check":  "auth_me",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "운영관측/헬스",
+        "check":  "backend_health",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "API/서버",
+        "check":  "categories",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "API/서버",
+        "check":  "stats_overview",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "통역/언어",
+        "check":  "interpreter_health",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "통역/언어",
+        "check":  "interpreter_translate",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "음악/오디오",
+        "check":  "music_health",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "음악/오디오",
+        "check":  "music_compose_emotion",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "코드/개발",
+        "check":  "codegen_profiles",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:17"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "코드/개발",
+        "check":  "codegen_generate",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "브레인/학습",
+        "check":  "feature_catalog",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "오케스트레이션/에이전트",
+        "check":  "customer_stage_run_create",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "기타",
+        "check":  "campaign_strategies",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "대시보드/UI",
+        "check":  "ui_codegen",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "데이터/저장소",
+        "check":  "codegen_history",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    },
+    {
+        "round":  "round3_fix1",
+        "category":  "데이터/저장소",
+        "check":  "codegen_download",
+        "status":  "PASS",
+        "detail":  "HTTP 200",
+        "timestamp":  "2026-04-30T09:23:20"
+    }
+]

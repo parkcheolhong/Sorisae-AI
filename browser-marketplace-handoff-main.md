@@ -1,0 +1,172 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Marketplace Workspace 탐색" [ref=e3]:
+      - generic [ref=e4]: MA
+      - navigation [ref=e5]:
+        - link "홈" [ref=e6] [cursor=pointer]:
+          - /url: /marketplace
+          - generic [ref=e8]: 홈
+        - link "주문" [ref=e9] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e11]: 주문
+        - link "관리" [ref=e12] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e14]: 관리
+        - link "안내" [ref=e15] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e17]: 안내
+      - generic [ref=e18]: LIVE
+    - generic [ref=e19]:
+      - banner [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: 고객 거래 워크스페이스
+          - heading "Marketplace Workspace" [level=1] [ref=e23]
+          - paragraph [ref=e24]: 관리자 대시보드와 동일한 디자인 시스템으로 마켓 탐색/주문/운영 통계를 통합합니다.
+        - generic [ref=e25]:
+          - link "내 Marketplace" [ref=e26] [cursor=pointer]:
+            - /url: /marketplace
+          - link "직원 오케스트레이터" [ref=e27] [cursor=pointer]:
+            - /url: /admin/llm
+          - button "로그아웃" [ref=e233] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: DevAnalysis Marketplace
+            - generic [ref=e33]: 운영 API 연결 완료
+          - paragraph [ref=e34]: 프로젝트 탐색 · 주문 · 리뷰 · 통계 API 연결형 메인 화면
+          - heading "프로젝트 탐색 · 주문 · 계정을 한 화면에서 처리하는 메인 마켓" [level=2] [ref=e35]
+          - paragraph [ref=e36]: 헤더를 얇게 줄이고, 좌측 레일 + 중앙 상품 그리드 + 우측 계정/Top 패널 고정 구조로 재설계했습니다. 히어로 문구는 축소하고 상품 카드와 주문 버튼의 존재감을 높였습니다.
+          - generic [ref=e37]:
+            - link "앱 둘러보기" [ref=e38] [cursor=pointer]:
+              - /url: /marketplace
+            - link "관리자 상품 관리" [ref=e39] [cursor=pointer]:
+              - /url: /admin
+            - link "직원 오케스트레이터 열기" [ref=e40] [cursor=pointer]:
+              - /url: /admin/llm
+        - generic "핵심 기능 바로가기" [ref=e41]:
+          - generic [ref=e42]: 실제 등록 프로젝트 탐색
+          - generic [ref=e43]: legacy 코드생성기 진열 유지
+          - generic [ref=e44]: 카테고리/정렬/검색 필터
+          - generic [ref=e45]: 오케스트레이터 주문 진입
+          - generic [ref=e46]: 관리자 오케스트레이터 브리지
+          - generic [ref=e47]: Top 프로젝트/매출 통계
+          - generic [ref=e48]: 회원가입 / 내정보 패널
+          - generic [ref=e49]: 프로젝트 상세 / 데모 / GitHub 진입
+      - generic [ref=e50]:
+        - main [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - generic [ref=e54]:
+                - generic [ref=e55]: 실데이터 프로젝트 거래소
+                - paragraph [ref=e56]: 프로젝트 거래소
+                - heading "실제 등록 앱을 탐색하는 메인 마켓플레이스" [level=2] [ref=e57]
+                - paragraph [ref=e58]: 고객이 프로그램을 직접 만드는 공간이 아니라 등록된 앱을 탐색하는 앱 마켓플레이스입니다. 카테고리 필터, 검색, 정렬과 상위 앱 데이터를 한 화면에서 확인합니다.
+                - generic [ref=e59]
+              - generic [ref=e63]:
+                - paragraph [ref=e64]: Marketplace Guide
+                - heading "예전 상단 사용 안내를 현재 워크스페이스 안으로 복원" [level=2] [ref=e65]
+                - generic [ref=e66]
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - paragraph [ref=e77]: 진열 가능 상품
+                - paragraph [ref=e78]: "6"
+                - paragraph [ref=e79]: 실제 등록 프로젝트 기준
+              - generic [ref=e80]:
+                - paragraph [ref=e81]: 완료 구매
+                - paragraph [ref=e82]: "0"
+                - paragraph [ref=e83]: 결제 완료/반영 건수
+              - generic [ref=e84]:
+                - paragraph [ref=e85]: 평균 구매 금액
+                - paragraph [ref=e86]: ₩0
+                - paragraph [ref=e87]: 총 매출 ₩0
+              - generic [ref=e88]:
+                - paragraph [ref=e89]: 리뷰 수
+                - paragraph [ref=e90]: "0"
+                - paragraph [ref=e91]: 공개 상세 리뷰 기준
+            - generic [ref=e92]:
+              - generic [ref=e94]:
+                - paragraph [ref=e95]: Bridge Deck
+                - heading "주문 허브와 관리자 브리지를 전면으로 복원" [level=2] [ref=e96]
+                - paragraph [ref=e97]: 주문 진입, 직원 개입, 운영 검증 링크를 상단에서 바로 접근할 수 있게 유지하되 공개형 마켓 문구 톤에 맞춰 조정했습니다.
+              - generic [ref=e98]:
+                - generic [ref=e99]
+                - generic [ref=e105]
+                - generic [ref=e111]
+            - generic [ref=e117]:
+              - generic [ref=e118]:
+                - generic [ref=e119]
+                - generic [ref=e123]
+              - generic [ref=e126]:
+                - textbox "프로젝트 제목/설명 검색" [ref=e127]
+                - combobox "카테고리 필터" [ref=e128]
+                - combobox "정렬 기준" [ref=e129]
+              - generic [ref=e234]:
+                - button "AI/ML" [ref=e235] [cursor=pointer]
+                - button "게임" [ref=e236] [cursor=pointer]
+                - button "기타" [ref=e237] [cursor=pointer]
+                - button "데이터 분석" [ref=e238] [cursor=pointer]
+                - button "모바일 앱" [ref=e239] [cursor=pointer]
+                - button "웹 개발" [ref=e240] [cursor=pointer]
+            - generic [ref=e130]:
+              - generic [ref=e132]:
+                - paragraph [ref=e133]: 팝업형 백엔드 오케스트레이터
+                - heading "대화는 팝업에서, 실행은 백엔드에서" [level=2] [ref=e134]
+                - paragraph [ref=e135]: 공개 marketplace 본문은 기존 거래형 구조를 유지하고, 생성형 기능은 popup orchestrator 로 분리했습니다. ai-sheet 기능은 preview schema 와 final workbook 패키지까지 백엔드에서 실행됩니다.
+              - generic [ref=e136]:
+                - article [ref=e241]
+                - article [ref=e256]
+                - article [ref=e271]
+                - article [ref=e285]
+                - article [ref=e299]
+            - generic [ref=e137]:
+              - generic [ref=e139]:
+                - paragraph [ref=e140]: 기존 코드생성기 상품 진열
+                - heading "4가지 코드생성기 상품" [level=2] [ref=e141]
+                - paragraph [ref=e142]: 이전 marketplace에 있던 4가지 코드생성기 상품을 별도 진열 섹션으로 복원했습니다. 실데이터 프로젝트 목록과 함께 병행 비교할 수 있습니다.
+              - generic [ref=e143]:
+                - article [ref=e144]
+                - article [ref=e158]
+                - article [ref=e172]
+                - article [ref=e186]
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - generic [ref=e202]
+                - generic [ref=e206]
+              - generic [ref=e210]:
+                - article [ref=e313]
+                - article [ref=e342]
+                - article [ref=e371]
+                - article [ref=e400]
+                - article [ref=e429]
+                - article [ref=e458]
+            - generic [ref=e211]:
+              - generic [ref=e212]:
+                - generic [ref=e213]
+                - paragraph [ref=e216]: 총 매출 ₩0 · 리뷰 0건
+              - generic [ref=e487]:
+                - generic [ref=e488]
+                - generic [ref=e492]
+                - generic [ref=e496]
+                - generic [ref=e500]
+                - generic [ref=e504]
+                - generic [ref=e508]
+        - complementary [ref=e217]:
+          - generic [ref=e218]:
+            - generic [ref=e219]:
+              - paragraph [ref=e220]: Account
+              - heading "회원가입 / 내정보" [level=3] [ref=e221]
+              - generic [ref=e512]:
+                - generic [ref=e513]
+                - generic [ref=e516]
+                - generic [ref=e519]
+            - generic [ref=e229]:
+              - paragraph [ref=e230]: Top Projects
+              - heading "다운로드 상위 프로젝트" [level=3] [ref=e231]
+              - generic [ref=e522]:
+                - generic [ref=e523]
+                - generic [ref=e528]
+                - generic [ref=e533]
+                - generic [ref=e538]
+                - generic [ref=e543]
+                - generic [ref=e548]
+  - alert [ref=e232]

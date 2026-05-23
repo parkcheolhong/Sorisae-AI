@@ -1,24 +1,24 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useAdminPageState } from '@/app/admin/hooks/useAdminPageState';
+import { useAdminPageActions } from '@/app/admin/hooks/useAdminPageActions';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { resolveApiBaseUrl } from '@/lib/api';
 import AdminAdPreviewModal from '@/components/admin/admin-ad-preview-modal';
-import AdminAdOrdersSection from '@/components/admin/admin-ad-orders-section';
-import AdminAutoConnectGraphPanel from '@/components/admin/admin-auto-connect-graph-panel';
-import AdminCategoryManagementSection from '@/components/admin/admin-category-management-section';
-import AdminDashboardOverview from '@/components/admin/admin-dashboard-overview';
-import AdminCostSimulatorSection from '@/components/admin/admin-cost-simulator-section';
 import AdminLlmControlSummary from '@/components/admin/admin-llm-control-summary';
-import AdminManualOrchestratorSection from '@/components/admin/admin-manual-orchestrator-section';
 import AdminManagementSection from '@/components/admin/admin-management-section';
-import AdminQuickLinksSection from '@/components/admin/admin-quick-links-section';
-import AdminSampleProductsSection from '@/components/admin/admin-sample-products-section';
 import AdminStoryboardModal from '@/components/admin/admin-storyboard-modal';
 import AdminSystemSettingsPanel from '@/components/admin/admin-system-settings-panel';
 import WorkspaceChrome from '@/components/ui/workspace-chrome';
+import { buildAdminDashboardSectionsConfig } from '@/app/admin/admin-dashboard-sections-config';
+import { buildAdminLauncherRailItems } from '@/app/admin/admin-rail-builders';
+import { ADMIN_LEFT_SHORT_LABEL_OVERRIDES, ADMIN_RIGHT_SHORT_LABEL_OVERRIDES } from '@/app/admin/admin-rail-config';
+import { resolveMarketplaceSiteHref } from '@/lib/canonical-site';
+import ViewSkeleton from '@/components/ui/view-skeleton';
 import { type SharedOrchestratorStageRun } from '@shared/orchestrator-stage-card-panel';
 import {
     buildAdminDashboardOverviewAssembly,
@@ -52,6 +52,7 @@ import {
 import {
     assertAdminAlertSpeechContract,
     buildAdminAlertSpeech,
+    hasSpeechSynthesisActivation,
     speakAdminAlert,
 } from '@/lib/admin-alert-speech';
 import {
@@ -184,9 +185,6 @@ import {
 } from '@/lib/admin-dashboard-controller';
 import {
     bindAutoConnectGraphSnapshot,
-    refreshAdminStageRunAction,
-    runCostSimulationAction,
-    updateAdminStageStatusAction,
 } from '@/lib/admin-dashboard-actions';
 import {
     assertAdminDashboardStateAssemblerContract,
@@ -249,92 +247,174 @@ assertAdminAutoRecoveryContract();
 assertAdminSelfRunAnalysisContract();
 assertAdminSelfRunControlContract();
 
-
 const initialOverview: OverviewStats = { projects: 0, users: 0, purchases: 0, reviews: 0 };
 const initialRevenue: RevenueStats = { total_revenue: 0, total_purchases: 0, average_purchase_amount: 0 };
+const adminPassKmcKcbDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md';
+const adminCommercialTermsDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-terms-checklist.md';
 
 export default function AdminDashboardPage() {
     const router = useRouter();
     const apiBaseUrl = resolveApiBaseUrl();
+    const adminApiDocsHref = useMemo(() => {
+        if (typeof window === 'undefined') {
+            return `${apiBaseUrl}/docs`;
+        }
+
+        const { hostname, protocol, port } = window.location;
+        const isLocalFrontendPort = (hostname === 'localhost' || hostname === '127.0.0.1') && (port === '3000' || port === '3005') && protocol === 'http:';
+
+        if (isLocalFrontendPort) {
+            return `${protocol}//${hostname}:8000/docs`;
+        }
+
+        return `${apiBaseUrl}/docs`;
+    }, [apiBaseUrl]);
+    const marketplaceHomeHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace'), []);
+    const marketplaceOrchestratorHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace/orchestrator'), []);
     const adminCategoriesBootstrappedRef = useRef(false);
     const adminCategoryStatsBootstrappedRef = useRef(false);
-    const apiDocsHref = (() => {
-        try {
-            return new URL('/docs', apiBaseUrl).toString();
-        } catch {
-            return '/docs';
-        }
-    })();
-
-    const [authChecked, setAuthChecked] = useState(false);
-    const [authStatusMessage, setAuthStatusMessage] = useState('인증 확인 중...');
-    const [adminUser, setAdminUser] = useState<{ username: string; email: string } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<string>('');
-    const [error, setError] = useState<string | null>(null);
-    const [overview, setOverview] = useState<OverviewStats>(initialOverview);
-    const [revenue, setRevenue] = useState<RevenueStats>(initialRevenue);
-    const [topProjects, setTopProjects] = useState<TopProject[]>([]);
-    const [health, setHealth] = useState<HealthStatus | null>(null);
-    const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null);
-    const [projectQuery, setProjectQuery] = useState('');
-    const [topProjectsOpen, setTopProjectsOpen] = useState(true);
-    const [adOrdersOpen, setAdOrdersOpen] = useState(false);
-    const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
-    const [refreshSeconds, setRefreshSeconds] = useState(20);
-    const [liveLogs, setLiveLogs] = useState<LiveLogItem[]>([]);
-    const [autoConnectGraph, setAutoConnectGraph] = useState<AdminAutoConnectGraphSnapshot>({ active_connection_id: '', events: [] });
-    const [adVideoOrders, setAdVideoOrders] = useState<AdminAdVideoOrderItem[]>([]);
-    const [adVideoTotal, setAdVideoTotal] = useState(0);
-    const [adOrderMonitorSummary, setAdOrderMonitorSummary] = useState<AdminAdOrderMonitorSummary | null>(null);
-    const [adSettlementDashboard, setAdSettlementDashboard] = useState<AdminAdOrderSettlementDashboard | null>(null);
-    const [costSimulatorPanelOpen, setCostSimulatorPanelOpen] = useState(false);
-    const [costSimulatorLoading, setCostSimulatorLoading] = useState(false);
-    const [costSimulatorError, setCostSimulatorError] = useState('');
-    const [costSimulatorResult, setCostSimulatorResult] = useState<AdminCostSimulatorResponse | null>(null);
-    const [costSimulatorForm, setCostSimulatorForm] = useState({
-        monthly_orders: 100,
-        cuts_per_order: 8,
-        preview_runs_per_order: 3,
-        approved_external_cuts_per_order: 8,
-        candidates_per_cut: 1.0,
-        retry_rate: 0.25,
-        external_image_unit_cost: 0.12,
-        external_video_unit_cost: 0.0,
-        external_video_ratio: 0.0,
-        local_preview_unit_cost: 0.01,
-        local_stitch_unit_cost: 0.02,
-        storage_unit_cost: 0.005,
-        premium_ratio: 0.2,
-        currency: 'USD',
-    });
-
-    const [orchestratorCapabilitySummary, setOrchestratorCapabilitySummary] = useState<OrchestratorCapabilitySummaryResponse | null>(null);
-    const [securityGuardDetail, setSecurityGuardDetail] = useState<OrchestratorCapabilityDetailResponse | null>(null);
-    const [dashboardSelfRunStatus, setDashboardSelfRunStatus] = useState<AdminDashboardSelfRunStatus | null>(null);
-    const [voiceAlertEnabled, setVoiceAlertEnabled] = useState(true);
-    const [llmPanelHeight, setLlmPanelHeight] = useState(1800);
-    const [systemSettingsPanelOpen, setSystemSettingsPanelOpen] = useState(false);
-    const [liveLogsPanelOpen, setLiveLogsPanelOpen] = useState(false);
-    const [autoConnectGraphPanelOpen, setAutoConnectGraphPanelOpen] = useState(false);
-    const [customerOrchestratorPanelOpen, setCustomerOrchestratorPanelOpen] = useState(false);
-    const [topProjectsPanelOpen, setTopProjectsPanelOpen] = useState(false);
-    const [adminControlHubOpen, setAdminControlHubOpen] = useState(false);
-    const [healthOverviewOpen, setHealthOverviewOpen] = useState(false);
-    const [adOrdersPanelOpen, setAdOrdersPanelOpen] = useState(false);
-    const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
-    const [quickLinksPanelOpen, setQuickLinksPanelOpen] = useState(false);
-    const [llmControlPanelOpen, setLlmControlPanelOpen] = useState(false);
-    const [samplePanelOpen, setSamplePanelOpen] = useState(false);
-    const [generatorModelOverrides, setGeneratorModelOverrides] = useState<Record<string, string>>({});
-    const [adminStageRun, setAdminStageRun] = useState<AdminStageRunResponse | null>(null);
-    const [adminStageNoteDraft, setAdminStageNoteDraft] = useState('');
-    const [adminStageSubstepChecks, setAdminStageSubstepChecks] = useState<Record<string, boolean>>({});
-    const [adminStageRevisionNote, setAdminStageRevisionNote] = useState('');
-    const [adminStageUpdateLoading, setAdminStageUpdateLoading] = useState(false);
+    const {
+        authChecked,
+        setAuthChecked,
+        authStatusMessage,
+        setAuthStatusMessage,
+        adminUser,
+        setAdminUser,
+        loading,
+        setLoading,
+        refreshing,
+        setRefreshing,
+        lastUpdated,
+        setLastUpdated,
+        error,
+        setError,
+        overview,
+        setOverview,
+        revenue,
+        setRevenue,
+        topProjects,
+        setTopProjects,
+        health,
+        setHealth,
+        llmStatus,
+        setLlmStatus,
+        projectQuery,
+        setProjectQuery,
+        topProjectsOpen,
+        setTopProjectsOpen,
+        adOrdersOpen,
+        setAdOrdersOpen,
+        autoRefreshEnabled,
+        setAutoRefreshEnabled,
+        refreshSeconds,
+        setRefreshSeconds,
+        systemSettingsPanelOpen,
+        setSystemSettingsPanelOpen,
+        liveLogsPanelOpen,
+        setLiveLogsPanelOpen,
+        autoConnectGraphPanelOpen,
+        setAutoConnectGraphPanelOpen,
+        customerOrchestratorPanelOpen,
+        setCustomerOrchestratorPanelOpen,
+        topProjectsPanelOpen,
+        setTopProjectsPanelOpen,
+        adminControlHubOpen,
+        setAdminControlHubOpen,
+        healthOverviewOpen,
+        setHealthOverviewOpen,
+        adOrdersPanelOpen,
+        setAdOrdersPanelOpen,
+        subscriptionMonitorPanelOpen,
+        setSubscriptionMonitorPanelOpen,
+        categoryPanelOpen,
+        setCategoryPanelOpen,
+        quickLinksPanelOpen,
+        setQuickLinksPanelOpen,
+        llmControlPanelOpen,
+        setLlmControlPanelOpen,
+        samplePanelOpen,
+        setSamplePanelOpen,
+        liveLogs,
+        setLiveLogs,
+        autoConnectGraph,
+        setAutoConnectGraph,
+        adVideoOrders,
+        setAdVideoOrders,
+        adVideoTotal,
+        setAdVideoTotal,
+        adOrderMonitorSummary,
+        setAdOrderMonitorSummary,
+        adSettlementDashboard,
+        setAdSettlementDashboard,
+        costSimulatorPanelOpen,
+        setCostSimulatorPanelOpen,
+        costSimulatorLoading,
+        setCostSimulatorLoading,
+        costSimulatorError,
+        setCostSimulatorError,
+        costSimulatorResult,
+        setCostSimulatorResult,
+        costSimulatorForm,
+        setCostSimulatorForm,
+        orchestratorCapabilitySummary,
+        setOrchestratorCapabilitySummary,
+        securityGuardDetail,
+        setSecurityGuardDetail,
+        dashboardSelfRunStatus,
+        setDashboardSelfRunStatus,
+        voiceAlertEnabled,
+        setVoiceAlertEnabled,
+        llmPanelHeight,
+        setLlmPanelHeight,
+        generatorModelOverrides,
+        setGeneratorModelOverrides,
+        adminStageRun,
+        setAdminStageRun,
+        adminStageNoteDraft,
+        setAdminStageNoteDraft,
+        adminStageSubstepChecks,
+        setAdminStageSubstepChecks,
+        adminStageRevisionNote,
+        setAdminStageRevisionNote,
+        adminStageUpdateLoading,
+        setAdminStageUpdateLoading,
+        autoOpsEnabled,
+        setAutoOpsEnabled,
+        autoOpsLastExecutedAt,
+        setAutoOpsLastExecutedAt,
+        autoRecoveryHistory,
+        setAutoRecoveryHistory,
+        autoRecoveryRunning,
+        setAutoRecoveryRunning,
+        selfRunApproving,
+        setSelfRunApproving,
+        selfRunRetrying,
+        setSelfRunRetrying,
+        selfRunNormalizing,
+        setSelfRunNormalizing,
+        focusedSelfHealingBusy,
+        setFocusedSelfHealingBusy,
+        focusedSelfHealingModalOpen,
+        setFocusedSelfHealingModalOpen,
+        focusedSelfHealingRequestedPath,
+        setFocusedSelfHealingRequestedPath,
+        focusedSelfHealingReason,
+        setFocusedSelfHealingReason,
+        focusedSelfHealingPlan,
+        setFocusedSelfHealingPlan,
+        focusedSelfHealingApplyResult,
+        setFocusedSelfHealingApplyResult,
+        focusedSelfHealingApprovalConfirmed,
+        setFocusedSelfHealingApprovalConfirmed,
+        focusedSelfHealingSelectedOptionId,
+        setFocusedSelfHealingSelectedOptionId,
+        focusedSelfHealingMessage,
+        setFocusedSelfHealingMessage,
+        capabilityBootstrapReady,
+        setCapabilityBootstrapReady,
+    } = useAdminPageState();
     const latestDedicatedOrder = useMemo(
-        () => adVideoOrders.find((order) => order.engine_type === 'dedicated_engine') || null,
+        () => adVideoOrders.find((order: any) => order.engine_type === 'dedicated_engine') || null,
         [adVideoOrders],
     );
     const latestDedicatedProductionStages = useMemo(
@@ -351,28 +431,11 @@ export default function AdminDashboardPage() {
     );
     const latestDedicatedWorkReady = latestDedicatedProductionStages.length > 0 && latestDedicatedProductionStages.every((stage) => stage.ready);
     const updateCostSimulatorField = (key: keyof typeof costSimulatorForm, value: string) => {
-        setCostSimulatorForm((prev) => ({
+        setCostSimulatorForm((prev: any) => ({
             ...prev,
             [key]: key === 'currency' ? value : Number(value),
         }));
     };
-    const [autoOpsEnabled, setAutoOpsEnabled] = useState(true);
-    const [autoOpsLastExecutedAt, setAutoOpsLastExecutedAt] = useState<string>('');
-    const [autoRecoveryHistory, setAutoRecoveryHistory] = useState<AutoRecoveryHistoryItem[]>([]);
-    const [autoRecoveryRunning, setAutoRecoveryRunning] = useState(false);
-    const [selfRunApproving, setSelfRunApproving] = useState(false);
-    const [selfRunRetrying, setSelfRunRetrying] = useState(false);
-    const [selfRunNormalizing, setSelfRunNormalizing] = useState(false);
-    const [focusedSelfHealingBusy, setFocusedSelfHealingBusy] = useState(false);
-    const [focusedSelfHealingModalOpen, setFocusedSelfHealingModalOpen] = useState(false);
-    const [focusedSelfHealingRequestedPath, setFocusedSelfHealingRequestedPath] = useState('frontend/frontend/app/admin/page.tsx');
-    const [focusedSelfHealingReason, setFocusedSelfHealingReason] = useState('health score contract mismatch');
-    const [focusedSelfHealingPlan, setFocusedSelfHealingPlan] = useState<FocusedSelfHealingPlan | null>(null);
-    const [focusedSelfHealingApplyResult, setFocusedSelfHealingApplyResult] = useState<FocusedSelfHealingApplyResult | null>(null);
-    const [focusedSelfHealingApprovalConfirmed, setFocusedSelfHealingApprovalConfirmed] = useState(false);
-    const [focusedSelfHealingSelectedOptionId, setFocusedSelfHealingSelectedOptionId] = useState('');
-    const [focusedSelfHealingMessage, setFocusedSelfHealingMessage] = useState('');
-    const [capabilityBootstrapReady, setCapabilityBootstrapReady] = useState(false);
     const snapshotRef = useRef<AdminDashboardSnapshot | null>(null);
     const sessionWarningExpRef = useRef<number | null>(null);
     const selfRunNormalizationRef = useRef<string>('');
@@ -380,8 +443,38 @@ export default function AdminDashboardPage() {
     const autoConnectGraphApiUnavailableRef = useRef(false);
     const adMonitorApiUnavailableRef = useRef(false);
     const adSettlementApiUnavailableRef = useRef(false);
+    const panelDeepLinkHandledRef = useRef(false);
     const lastSpokenAlertSignatureRef = useRef('');
     const autoOpsSignatureRef = useRef('');
+    const [musicPanelOpen, setMusicPanelOpen] = React.useState(false);
+    const [musicEmotion, setMusicEmotion] = React.useState('happy');
+    const [musicIntensity, setMusicIntensity] = React.useState('0.7');
+    const [musicTheme, setMusicTheme] = React.useState('소리새 테마');
+    const [musicCode, setMusicCode] = React.useState('def chorus():\n    return "sing"');
+    const [musicCodeEmotion, setMusicCodeEmotion] = React.useState('creative');
+    const [musicComposeResult, setMusicComposeResult] = React.useState<Record<string, unknown> | null>(null);
+    const [musicCodeResult, setMusicCodeResult] = React.useState<Record<string, unknown> | null>(null);
+    const [musicFriendResult, setMusicFriendResult] = React.useState<Record<string, unknown> | null>(null);
+    const [musicMode, setMusicMode] = React.useState('');
+    const [musicLoading, setMusicLoading] = React.useState(false);
+    const [musicError, setMusicError] = React.useState<string | null>(null);
+    const [extrasPreviewPanelOpen, setExtrasPreviewPanelOpen] = React.useState(false);
+    const [extrasPreviewTarget, setExtrasPreviewTarget] = React.useState<'health' | 'catalog'>('health');
+    const [extrasPreviewState, setExtrasPreviewState] = React.useState<{
+        loading: boolean;
+        statusCode: number | null;
+        durationMs: number | null;
+        fetchedAt: string | null;
+        error: string | null;
+        payload: unknown;
+    }>({
+        loading: false,
+        statusCode: null,
+        durationMs: null,
+        fetchedAt: null,
+        error: null,
+        payload: null,
+    });
     const pushLiveLog = useCallback((level: LiveLogItem['level'], message: string, meta?: Partial<LiveLogItem> & { capabilityId?: string }) => {
         const connectionMeta = meta?.connection_id
             ? {
@@ -396,7 +489,7 @@ export default function AdminDashboardPage() {
                 panelId: meta?.panel_id || 'PANEL-ADMIN-DASHBOARD',
                 execution: 'observe',
             });
-        setLiveLogs((prev) => [
+        setLiveLogs((prev: any) => [
             {
                 id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                 level,
@@ -453,7 +546,13 @@ export default function AdminDashboardPage() {
         initialStepId: 'ARCH-001',
         latestDedicatedOrder,
         onOpenAdminLlm: () => router.push('/admin/llm'),
-        onOpenMarketplaceOrchestrator: () => router.push('/marketplace/orchestrator'),
+        onOpenMarketplaceOrchestrator: () => {
+            if (marketplaceOrchestratorHref.startsWith('http://') || marketplaceOrchestratorHref.startsWith('https://')) {
+                window.location.assign(marketplaceOrchestratorHref);
+                return;
+            }
+            router.push(marketplaceOrchestratorHref);
+        },
         pushLiveLog: (level, message) => pushLiveLog(level, message),
     });
 
@@ -785,40 +884,38 @@ export default function AdminDashboardPage() {
         hardRedirectToAdminLogin();
     };
 
-    const handleAdminUnauthorized = useCallback((message = '관리자 세션이 만료되었습니다. 다시 로그인하세요.') => {
-        clearAdminToken();
-        setAdminUser(null);
-        setAuthChecked(false);
-        setAuthStatusMessage(message);
-        setError(null);
-        setAdVideoOrders([]);
-        setAdVideoTotal(0);
-        hardRedirectToAdminLogin();
-    }, []);
-
-    const refreshAdminStageRun = useCallback((runId: string) => refreshAdminStageRunAction({
+    const {
+        handleAdminUnauthorized,
+        refreshAdminStageRun,
+        updateAdminStageStatus,
+        runCostSimulation,
+        applyGeneratorModelOverride,
+    } = useAdminPageActions({
         apiBaseUrl,
-        runId,
-        onUnauthorized: () => handleAdminUnauthorized(),
+        setAdminUser,
+        setAuthChecked,
+        setAuthStatusMessage,
+        setError,
+        setAdVideoOrders,
+        setAdVideoTotal,
         setAdminStageRun,
         setAdminStageSubstepChecks,
-    }), [apiBaseUrl, handleAdminUnauthorized]);
-
-    const updateAdminStageStatus = useCallback((status: 'passed' | 'failed' | 'manual_correction') => updateAdminStageStatusAction({
-        apiBaseUrl,
         adminStageRun,
         adminStageNoteDraft,
         adminStageRevisionNote,
         adminStageSubstepChecks,
-        status,
-        onUnauthorized: () => handleAdminUnauthorized(),
         pushLiveLog,
-        setAdminStageRun,
-        setAdminStageSubstepChecks,
         setAdminStageRevisionNote,
         setAdminStageNoteDraft,
         setAdminStageUpdateLoading,
-    }), [adminStageNoteDraft, adminStageRevisionNote, adminStageRun, adminStageSubstepChecks, apiBaseUrl, handleAdminUnauthorized, pushLiveLog]);
+        costSimulatorForm,
+        setCostSimulatorLoading,
+        setCostSimulatorError,
+        setCostSimulatorResult,
+        setGeneratorModelOverrides,
+        generatorEnvKeyMap: GENERATOR_ENV_KEY_MAP,
+        updateSystemSettingValue,
+    });
 
     useEffect(() => {
         if (!adminStageRun?.current_stage_id) {
@@ -895,15 +992,6 @@ export default function AdminDashboardPage() {
         };
         void syncRefinerFixerStage();
     }, [apiBaseUrl, handleAdminUnauthorized, refreshAdminStageRun, updateAdminManualExternalStageMirror]);
-
-    const runCostSimulation = useCallback(() => runCostSimulationAction({
-        apiBaseUrl,
-        costSimulatorForm,
-        onUnauthorized: () => handleAdminUnauthorized(),
-        setCostSimulatorLoading,
-        setCostSimulatorError,
-        setCostSimulatorResult,
-    }), [apiBaseUrl, costSimulatorForm, handleAdminUnauthorized]);
 
     const trackDashboardAutoConnect = useMemo(() => createDashboardAutoConnectTracker({
         registerEvent: registerAdminAutoConnectGraphEvent,
@@ -1338,7 +1426,7 @@ export default function AdminDashboardPage() {
     const filteredTopProjects = useMemo(() => {
         const query = projectQuery.trim().toLowerCase();
         if (!query) return topProjects;
-        return topProjects.filter((project) => project.title.toLowerCase().includes(query));
+        return topProjects.filter((project: any) => project.title.toLowerCase().includes(query));
     }, [projectQuery, topProjects]);
     const generatorRoleOptions = useMemo(() => {
         const installedModels = systemSettings?.summary.available_models || [];
@@ -1382,15 +1470,6 @@ export default function AdminDashboardPage() {
             }),
         ) as Record<string, string>;
     }, [systemSettings?.summary.available_models, systemSettings?.summary.default_model, systemSettingsDraft]);
-    const applyGeneratorModelOverride = useCallback((profileId: string, modelName: string) => {
-        setGeneratorModelOverrides((prev) => ({
-            ...prev,
-            [profileId]: modelName,
-        }));
-        const envKeys = GENERATOR_ENV_KEY_MAP[profileId] || [];
-        envKeys.forEach((envKey) => updateSystemSettingValue(envKey, modelName));
-    }, [updateSystemSettingValue]);
-
     const adminAlertSpeech = useMemo(
         () => buildAdminAlertSpeech(dashboardAnalysis.opsAlerts, dashboardAnalysis.orchestratorProblemCards),
         [dashboardAnalysis.opsAlerts, dashboardAnalysis.orchestratorProblemCards]
@@ -1461,7 +1540,7 @@ export default function AdminDashboardPage() {
                 await loadDashboard(true);
             }
             setAutoOpsLastExecutedAt(recoveryResult.executedAt);
-            setAutoRecoveryHistory((prev) => [recoveryResult.historyItem as AutoRecoveryHistoryItem, ...prev].slice(0, 20));
+            setAutoRecoveryHistory((prev: any) => [recoveryResult.historyItem as AutoRecoveryHistoryItem, ...prev].slice(0, 20));
         } finally {
             setAutoRecoveryRunning(false);
         }
@@ -1525,9 +1604,13 @@ export default function AdminDashboardPage() {
         if (lastSpokenAlertSignatureRef.current === signature) {
             return;
         }
-        lastSpokenAlertSignatureRef.current = signature;
+        if (!hasSpeechSynthesisActivation()) {
+            return;
+        }
         // 동일 경고를 매 refresh마다 반복 낭독하지 않도록 signature 변화가 있을 때만 읽는다.
-        speakAdminAlert(adminAlertSpeech);
+        if (speakAdminAlert(adminAlertSpeech)) {
+            lastSpokenAlertSignatureRef.current = signature;
+        }
     }, [
         adminAlertSpeech,
         authChecked,
@@ -1537,14 +1620,33 @@ export default function AdminDashboardPage() {
     ]);
 
     useEffect(() => {
+        if (panelDeepLinkHandledRef.current || !authChecked || typeof window === 'undefined') {
+            return;
+        }
+        panelDeepLinkHandledRef.current = true;
+
+        const panel = new URL(window.location.href).searchParams.get('panel');
+        if (panel !== 'subscription-monitor') {
+            return;
+        }
+
+        setSubscriptionMonitorPanelOpen(true);
+        window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+                document.querySelector('[data-testid="admin-subscription-monitor-section"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 60);
+        });
+    }, [authChecked]);
+
+    useEffect(() => {
         if (!autoOpsEnabled || !authChecked) return;
         const signature = [
             dashboardSelfRunStatus?.approval_id || '-',
             dashboardSelfRunStatus?.status || '-',
-                dashboardAnalysis.selfRunFailureInsight?.category || '-',
+            dashboardAnalysis.selfRunFailureInsight?.category || '-',
             String(systemSettingsDisconnected),
-                String(dashboardAnalysis.hasOrchestratorCapabilityError),
-                String(dashboardAnalysis.hasOrchestratorCapabilityWarning),
+            String(dashboardAnalysis.hasOrchestratorCapabilityError),
+            String(dashboardAnalysis.hasOrchestratorCapabilityWarning),
         ].join('|');
         if (autoOpsSignatureRef.current === signature) return;
         autoOpsSignatureRef.current = signature;
@@ -1560,19 +1662,6 @@ export default function AdminDashboardPage() {
         executeAutomaticRecovery,
         dashboardAnalysis.selfRunFailureInsight,
     ]);
-
-    if (!authChecked) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-[#0d1117] text-[#c9d1d9]">
-                <div className="text-center">
-                    <div className="text-3xl mb-4">🔐</div>
-                    <p className="text-gray-500">{authStatusMessage}</p>
-                </div>
-            </div>
-        );
-    }
-
-
 
     const adminManualOrchestratorAssembly = buildAdminPageManualOrchestratorAssembly({
         adminStageRun: adminStageRun as SharedOrchestratorStageRun | null,
@@ -1739,10 +1828,10 @@ export default function AdminDashboardPage() {
             void loadDashboard(true);
         },
         voiceAlertEnabled,
-        onToggleVoiceAlertEnabled: () => setVoiceAlertEnabled((prev) => !prev),
+        onToggleVoiceAlertEnabled: () => setVoiceAlertEnabled((prev: any) => !prev),
         onSpeakAdminAlert: () => speakAdminAlert(adminAlertSpeech || '현재 발성할 관리자 경고가 없습니다.'),
         autoRefreshEnabled,
-        onToggleAutoRefreshEnabled: () => setAutoRefreshEnabled((prev) => !prev),
+        onToggleAutoRefreshEnabled: () => setAutoRefreshEnabled((prev: any) => !prev),
         refreshSeconds,
         onRefreshSecondsChange: setRefreshSeconds,
         refreshing,
@@ -1867,6 +1956,194 @@ export default function AdminDashboardPage() {
         });
     };
 
+    const getMusicAuthHeaders = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return {} as Record<string, string>;
+        }
+        const token = getAdminToken() || window.localStorage.getItem('admin_token') || '';
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+        return headers;
+    }, []);
+
+    const readMusicResponsePayload = useCallback(async (res: Response) => {
+        const raw = await res.text();
+        if (!raw) {
+            return null;
+        }
+        try {
+            return JSON.parse(raw) as Record<string, any>;
+        } catch {
+            return { detail: raw };
+        }
+    }, []);
+
+    const handleAdminMusicCompose = useCallback(async () => {
+        setMusicLoading(true);
+        setMusicError(null);
+        setMusicComposeResult(null);
+        try {
+            const intensity = Number.parseFloat(musicIntensity);
+            const response = await fetch(`${apiBaseUrl}/api/marketplace/music/compose/emotion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getMusicAuthHeaders(),
+                },
+                body: JSON.stringify({
+                    emotion: musicEmotion.trim() || 'happy',
+                    intensity: Number.isFinite(intensity) ? intensity : 0.7,
+                    theme: musicTheme.trim() || undefined,
+                }),
+            });
+            const payload = await readMusicResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(String(payload?.detail || `음악 생성 실패 (${response.status})`));
+            }
+            setMusicComposeResult((payload || null) as Record<string, unknown> | null);
+            setMusicMode(String(payload?.mode || 'unknown'));
+        } catch (err: any) {
+            setMusicError(err?.message || '음악 생성 실패');
+        } finally {
+            setMusicLoading(false);
+        }
+    }, [apiBaseUrl, getMusicAuthHeaders, musicEmotion, musicIntensity, musicTheme, readMusicResponsePayload]);
+
+    const handleAdminMusicComposeFromCode = useCallback(async () => {
+        const code = musicCode.trim();
+        if (!code) {
+            setMusicError('작곡에 사용할 코드를 입력하세요.');
+            return;
+        }
+        setMusicLoading(true);
+        setMusicError(null);
+        setMusicCodeResult(null);
+        try {
+            const response = await fetch(`${apiBaseUrl}/api/marketplace/music/compose/code`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getMusicAuthHeaders(),
+                },
+                body: JSON.stringify({
+                    code,
+                    emotion: musicCodeEmotion.trim() || 'creative',
+                }),
+            });
+            const payload = await readMusicResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(String(payload?.detail || `코드 작곡 실패 (${response.status})`));
+            }
+            setMusicCodeResult((payload || null) as Record<string, unknown> | null);
+            setMusicMode(String(payload?.mode || 'unknown'));
+        } catch (err: any) {
+            setMusicError(err?.message || '코드 작곡 실패');
+        } finally {
+            setMusicLoading(false);
+        }
+    }, [apiBaseUrl, getMusicAuthHeaders, musicCode, musicCodeEmotion, readMusicResponsePayload]);
+
+    const handleAdminMusicCollaboration = useCallback(async () => {
+        setMusicLoading(true);
+        setMusicError(null);
+        setMusicFriendResult(null);
+        try {
+            const response = await fetch(`${apiBaseUrl}/api/marketplace/music/friends/demo`, {
+                method: 'POST',
+                headers: {
+                    ...getMusicAuthHeaders(),
+                },
+            });
+            const payload = await readMusicResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(String(payload?.detail || `협업 연결 실패 (${response.status})`));
+            }
+            setMusicFriendResult((payload || null) as Record<string, unknown> | null);
+            setMusicMode(String(payload?.mode || 'unknown'));
+        } catch (err: any) {
+            setMusicError(err?.message || '협업 연결 실패');
+        } finally {
+            setMusicLoading(false);
+        }
+    }, [apiBaseUrl, getMusicAuthHeaders, readMusicResponsePayload]);
+
+    const runExtrasPreviewRequest = useCallback(async (target: 'health' | 'catalog', fromRail = false) => {
+        const token = getAdminToken();
+        if (!token) {
+            setExtrasPreviewState((prev) => ({
+                ...prev,
+                loading: false,
+                statusCode: null,
+                durationMs: null,
+                fetchedAt: new Date().toISOString(),
+                error: '관리자 토큰 없음',
+                payload: null,
+            }));
+            return;
+        }
+
+        setExtrasPreviewTarget(target);
+        setExtrasPreviewPanelOpen(true);
+        setExtrasPreviewState((prev) => ({
+            ...prev,
+            loading: true,
+            error: null,
+        }));
+
+        const endpoint = target === 'health'
+            ? `${apiBaseUrl}/api/marketplace/extras/health`
+            : `${apiBaseUrl}/api/marketplace/extras/catalog`;
+        const startedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store',
+            });
+
+            const rawText = await response.text();
+            let payload: unknown = rawText;
+            try {
+                payload = rawText ? JSON.parse(rawText) : null;
+            } catch {
+                payload = rawText;
+            }
+
+            const finishedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+            setExtrasPreviewState({
+                loading: false,
+                statusCode: response.status,
+                durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
+                fetchedAt: new Date().toISOString(),
+                error: response.ok ? null : `API 응답 실패 (${response.status})`,
+                payload,
+            });
+
+            if (fromRail) {
+                pushLiveLog(response.ok ? 'success' : 'warning', `익스/카탈 인앱 프리뷰: ${target} (${response.status})`);
+            }
+        } catch (error: any) {
+            const finishedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+            setExtrasPreviewState({
+                loading: false,
+                statusCode: null,
+                durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
+                fetchedAt: new Date().toISOString(),
+                error: error?.message || '익스/카탈 프리뷰 조회 실패',
+                payload: null,
+            });
+            if (fromRail) {
+                pushLiveLog('warning', `익스/카탈 인앱 프리뷰 실패: ${target}`);
+            }
+        }
+    }, [apiBaseUrl, pushLiveLog]);
+
     const launcherLeftColumn = [
         {
             id: 'admin-control-hub',
@@ -1890,6 +2167,16 @@ export default function AdminDashboardPage() {
             onClick: () => setAutoConnectGraphPanelOpen(true),
         },
         {
+            id: 'category',
+            label: '🗂️ 마켓플레이스 카테고리 관리',
+            summary: '카테고리 등록 · 통계 · 최근 프로젝트',
+            accent: 'blue',
+            onClick: () => setCategoryPanelOpen(true),
+        },
+    ] as const;
+
+    const launcherRightColumn = [
+        {
             id: 'health-overview',
             label: '🩺 관리자 자동 건강상태 / 자가진단 / 자가개선',
             summary: 'health score · self-run · 자동 복구 · focused self-healing',
@@ -1904,21 +2191,18 @@ export default function AdminDashboardPage() {
             onClick: () => setAdOrdersPanelOpen(true),
         },
         {
-            id: 'category',
-            label: '🗂️ 마켓플레이스 카테고리 관리',
-            summary: '카테고리 등록 · 통계 · 최근 프로젝트',
-            accent: 'blue',
-            onClick: () => setCategoryPanelOpen(true),
+            id: 'manual-orchestrator',
+            label: '🧠 공용 단계 카드 오케스트레이터',
+            summary: '관리자/고객 공통 StageCardPanel · 단계별 수동 점검 · 구조 설계',
+            accent: 'emerald',
+            onClick: () => setCustomerOrchestratorPanelOpen(true),
         },
-    ] as const;
-
-    const launcherRightColumn = [
         {
-            id: 'llm-control',
-            label: '🤖 LLM 통합 제어 패널',
-            summary: '모델 · 정책 · 역할별 런타임 · 실행 정책',
-            accent: 'violet',
-            onClick: () => setLlmControlPanelOpen(true),
+            id: 'music-panel',
+            label: '🎵 음악 생성·작사·협업 패널',
+            summary: '감정 기반 작곡 · 코드 기반 작곡 · 협업 데모 연결',
+            accent: 'amber',
+            onClick: () => setMusicPanelOpen(true),
         },
         {
             id: 'live-logs',
@@ -1957,13 +2241,394 @@ export default function AdminDashboardPage() {
         },
     ] as const;
 
-    const orchestratorLauncher = {
-        id: 'manual-orchestrator',
-        label: '관리자 수동 오케스트레이션',
-        summary: '장기 분석 · 구조 설계 · 관리자 공용 오케스트레이터 · 단계별 작업 흐름',
-        accent: 'emerald',
-        onClick: () => setCustomerOrchestratorPanelOpen(true),
-    } as const;
+    const openAdminSectionFromRail = useCallback((toggleTestId: string, openSection: () => void) => {
+        openSection();
+        if (typeof window === 'undefined') {
+            return;
+        }
+        window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+                document.querySelector(`[data-testid="${toggleTestId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        });
+    }, []);
+
+    const opsExtensionRailColumn = [
+        {
+            id: 'ops-health',
+            label: '🧠 통합 건강상태 허브',
+            accent: 'emerald',
+            onClick: () => openAdminSectionFromRail('admin-health-overview-section', () => setHealthOverviewOpen(true)),
+        },
+        {
+            id: 'ops-recovery',
+            label: '🛠️ 복구 센터',
+            accent: 'amber',
+            onClick: () => router.push('/admin/recovery'),
+        },
+        {
+            id: 'ops-logs',
+            label: '📡 운영 추적 로그',
+            accent: 'blue',
+            onClick: () => openAdminSectionFromRail('admin-live-logs-section', () => setLiveLogsPanelOpen(true)),
+        },
+        {
+            id: 'ops-extras-health',
+            label: '🧪 Extras Health 프리뷰',
+            accent: 'cyan',
+            onClick: () => openAdminSectionFromRail('admin-extras-preview-section', () => {
+                void runExtrasPreviewRequest('health', true);
+            }),
+        },
+        {
+            id: 'ops-extras-catalog',
+            label: '🧬 Extras Catalog 프리뷰',
+            accent: 'violet',
+            onClick: () => openAdminSectionFromRail('admin-extras-preview-section', () => {
+                void runExtrasPreviewRequest('catalog', true);
+            }),
+        },
+        {
+            id: 'ops-system-settings',
+            label: '🧭 운영 설정 패널',
+            accent: 'slate',
+            onClick: () => setSystemSettingsPanelOpen(true),
+        },
+    ] as const;
+
+    const [opsGateBadgeState, setOpsGateBadgeState] = React.useState<{
+        gate4Passed: boolean;
+        gate5Passed: boolean;
+        checkedAt: string | null;
+        loading: boolean;
+        error: string | null;
+    }>({
+        gate4Passed: false,
+        gate5Passed: false,
+        checkedAt: null,
+        loading: true,
+        error: null,
+    });
+
+    const [controlTowerBadgeState, setControlTowerBadgeState] = React.useState<{
+        overall: string;
+        recommendedDomain: string;
+        decideIotDomain: string;
+        decideGameDomain: string;
+        decideUnknownFallback: boolean;
+        checkedAt: string | null;
+        loading: boolean;
+        error: string | null;
+    }>({
+        overall: 'unknown',
+        recommendedDomain: '-',
+        decideIotDomain: '-',
+        decideGameDomain: '-',
+        decideUnknownFallback: false,
+        checkedAt: null,
+        loading: true,
+        error: null,
+    });
+
+    const loadOpsGateBadgeState = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            setOpsGateBadgeState((prev) => ({
+                ...prev,
+                loading: false,
+                error: '관리자 토큰 없음',
+            }));
+            setControlTowerBadgeState((prev) => ({
+                ...prev,
+                loading: false,
+                error: '관리자 토큰 없음',
+            }));
+            return;
+        }
+
+        try {
+            const headers = {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            };
+
+            const apiBaseCandidates: string[] = [];
+            const pushApiBaseCandidate = (value?: string | null) => {
+                const normalized = String(value || '').trim().replace(/\/$/, '');
+                if (!normalized || apiBaseCandidates.includes(normalized)) {
+                    return;
+                }
+                apiBaseCandidates.push(normalized);
+            };
+
+            const isDirectLocalBackendUrl = (value?: string | null) => {
+                const normalized = String(value || '').trim().toLowerCase();
+                return normalized.startsWith('http://localhost:8000') || normalized.startsWith('http://127.0.0.1:8000');
+            };
+
+            pushApiBaseCandidate(apiBaseUrl);
+
+            if (typeof window !== 'undefined') {
+                pushApiBaseCandidate(window.location.origin);
+                const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+                if (!isDirectLocalBackendUrl(configuredApiUrl)) {
+                    pushApiBaseCandidate(configuredApiUrl);
+                }
+            } else {
+                pushApiBaseCandidate(process.env.NEXT_PUBLIC_API_URL);
+            }
+
+            const fetchWithApiBaseFallback = async (path: string, init?: RequestInit) => {
+                let lastError: unknown = null;
+                for (const base of apiBaseCandidates) {
+                    const url = `${base}${path}`;
+                    try {
+                        return await fetch(url, init);
+                    } catch (error) {
+                        lastError = error;
+                    }
+                }
+                throw lastError instanceof Error ? lastError : new Error('API 호출 실패');
+            };
+
+            const gate4Paths = [
+                '/api/marketplace/interpreter/health',
+                '/api/marketplace/music/health',
+                '/api/marketplace/extras/health',
+                '/api/marketplace/extras/iot/health',
+                '/api/marketplace/extras/game/health',
+            ];
+
+            const gate4Results = await Promise.allSettled(
+                gate4Paths.map(async (path) => {
+                    const response = await fetchWithApiBaseFallback(path, { headers, cache: 'no-store' });
+                    if (!response.ok) {
+                        return false;
+                    }
+                    const payload = await response.json().catch(() => null) as { status?: string } | null;
+                    return payload?.status === 'ok';
+                })
+            );
+
+            const gate4Passed = gate4Results.every((result) => result.status === 'fulfilled' && result.value === true);
+
+            const extrasHealthResponse = await fetchWithApiBaseFallback('/api/marketplace/extras/health', { headers, cache: 'no-store' });
+            const extrasHealthPayload = await extrasHealthResponse.json().catch(() => null) as {
+                circuit_breakers?: {
+                    iot?: { state?: string; failures?: number; threshold?: number };
+                    game?: { state?: string; failures?: number; threshold?: number };
+                };
+            } | null;
+
+            const cb = extrasHealthPayload?.circuit_breakers;
+            const gate5Passed = Boolean(
+                extrasHealthResponse.ok
+                && cb
+                && cb.iot?.state === 'CLOSED'
+                && cb.game?.state === 'CLOSED'
+                && Number(cb.iot?.failures ?? 1) === 0
+                && Number(cb.game?.failures ?? 1) === 0
+                && Number(cb.iot?.threshold ?? 0) === 3
+                && Number(cb.game?.threshold ?? 0) === 3
+            );
+
+            setOpsGateBadgeState({
+                gate4Passed,
+                gate5Passed,
+                checkedAt: new Date().toISOString(),
+                loading: false,
+                error: null,
+            });
+
+            const [controlTowerStateResponse, decideIotResponse, decideGameResponse, decideUnknownResponse] = await Promise.all([
+                fetchWithApiBaseFallback('/api/marketplace/extras/control-tower/state', {
+                    headers,
+                    cache: 'no-store',
+                }),
+                fetchWithApiBaseFallback('/api/marketplace/extras/control-tower/decide', {
+                    method: 'POST',
+                    headers,
+                    cache: 'no-store',
+                    body: JSON.stringify({ intent: 'iot device light on', action: 'on' }),
+                }),
+                fetchWithApiBaseFallback('/api/marketplace/extras/control-tower/decide', {
+                    method: 'POST',
+                    headers,
+                    cache: 'no-store',
+                    body: JSON.stringify({ intent: 'game economy simulation', action: 'simulate' }),
+                }),
+                fetchWithApiBaseFallback('/api/marketplace/extras/control-tower/decide', {
+                    method: 'POST',
+                    headers,
+                    cache: 'no-store',
+                    body: JSON.stringify({ intent: 'draft ad copy', action: 'generate' }),
+                }),
+            ]);
+
+            const controlTowerStatePayload = await controlTowerStateResponse.json().catch(() => null) as {
+                control_tower?: { status?: string; recommended_domain?: string };
+            } | null;
+            const decideIotPayload = await decideIotResponse.json().catch(() => null) as {
+                decision?: { selected_domain?: string };
+            } | null;
+            const decideGamePayload = await decideGameResponse.json().catch(() => null) as {
+                decision?: { selected_domain?: string };
+            } | null;
+            const decideUnknownPayload = await decideUnknownResponse.json().catch(() => null) as {
+                decision?: { fallback_applied?: boolean };
+            } | null;
+
+            setControlTowerBadgeState({
+                overall: String(controlTowerStatePayload?.control_tower?.status ?? 'unknown'),
+                recommendedDomain: String(controlTowerStatePayload?.control_tower?.recommended_domain ?? '-'),
+                decideIotDomain: String(decideIotPayload?.decision?.selected_domain ?? '-'),
+                decideGameDomain: String(decideGamePayload?.decision?.selected_domain ?? '-'),
+                decideUnknownFallback: Boolean(decideUnknownPayload?.decision?.fallback_applied),
+                checkedAt: new Date().toISOString(),
+                loading: false,
+                error: (
+                    !controlTowerStateResponse.ok
+                    || !decideIotResponse.ok
+                    || !decideGameResponse.ok
+                    || !decideUnknownResponse.ok
+                )
+                    ? '관제탑 상태 일부 실패'
+                    : null,
+            });
+        } catch (error: any) {
+            setOpsGateBadgeState((prev) => ({
+                ...prev,
+                loading: false,
+                error: error?.message || '게이트 상태 조회 실패',
+            }));
+            setControlTowerBadgeState((prev) => ({
+                ...prev,
+                loading: false,
+                error: error?.message || '관제탑 상태 조회 실패',
+            }));
+        }
+    }, [apiBaseUrl]);
+
+    useEffect(() => {
+        if (!authChecked) {
+            return;
+        }
+
+        void loadOpsGateBadgeState();
+        const intervalId = window.setInterval(() => {
+            void loadOpsGateBadgeState();
+        }, 15000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [authChecked, loadOpsGateBadgeState]);
+
+    const [opsGateNow, setOpsGateNow] = React.useState(() => Date.now());
+    useEffect(() => {
+        const tickId = window.setInterval(() => {
+            setOpsGateNow(Date.now());
+        }, 1000);
+        return () => {
+            window.clearInterval(tickId);
+        };
+    }, []);
+
+    const opsGateRailFooter = useMemo(() => {
+        const allPass = opsGateBadgeState.gate4Passed && opsGateBadgeState.gate5Passed;
+        const anyFail = !opsGateBadgeState.gate4Passed || !opsGateBadgeState.gate5Passed;
+        const bothFail = !opsGateBadgeState.gate4Passed && !opsGateBadgeState.gate5Passed;
+
+        const gate4Label = opsGateBadgeState.gate4Passed ? '✓ G4' : '✗ G4';
+        const gate5Label = opsGateBadgeState.gate5Passed ? '✓ G5' : '✗ G5';
+
+        let elapsedLabel = '-';
+        if (opsGateBadgeState.checkedAt) {
+            const diffSec = Math.floor((opsGateNow - new Date(opsGateBadgeState.checkedAt).getTime()) / 1000);
+            if (diffSec < 60) {
+                elapsedLabel = `${diffSec}초 전`;
+            } else if (diffSec < 3600) {
+                elapsedLabel = `${Math.floor(diffSec / 60)}분 전`;
+            } else {
+                elapsedLabel = `${Math.floor(diffSec / 3600)}시간 전`;
+            }
+        }
+
+        if (opsGateBadgeState.loading && !opsGateBadgeState.checkedAt) {
+            return (
+                <div data-testid="admin-ops-gate-badge" className="flex flex-col items-end gap-0.5">
+                    <span className="text-[10px] font-semibold text-slate-300 animate-pulse">G4/G5 확인 중...</span>
+                </div>
+            );
+        }
+
+        const statusTone = opsGateBadgeState.error
+            ? 'text-amber-400'
+            : bothFail
+                ? 'text-red-400'
+                : anyFail
+                    ? 'text-amber-300'
+                    : 'text-emerald-300';
+
+        const borderColor = opsGateBadgeState.error
+            ? 'border-amber-500/30'
+            : bothFail
+                ? 'border-red-500/30'
+                : anyFail
+                    ? 'border-amber-500/30'
+                    : 'border-emerald-500/30';
+
+        const dotColor = opsGateBadgeState.loading
+            ? 'bg-slate-400 animate-pulse'
+            : allPass
+                ? 'bg-emerald-400'
+                : anyFail
+                    ? 'bg-amber-400'
+                    : 'bg-red-400';
+
+        return (
+            <div
+                data-testid="admin-ops-gate-badge"
+                className={`flex flex-col gap-0.5 rounded px-1.5 py-1 border ${borderColor} bg-white/[0.03]`}
+            >
+                <div className="flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} aria-hidden="true" />
+                    <span className={`text-[10px] font-bold leading-none tracking-wide ${statusTone}`}>
+                        {gate4Label} · {gate5Label}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between gap-1.5 pl-2.5">
+                    <span className="text-[9px] text-slate-400 leading-none">
+                        {opsGateBadgeState.error ? `오류: ${opsGateBadgeState.error.slice(0, 18)}` : (allPass ? '전체 정상' : '일부 실패')}
+                    </span>
+                    <span className="text-[9px] text-slate-500 leading-none tabular-nums">{elapsedLabel}</span>
+                </div>
+                <div className="mt-1 border-t border-white/10 pt-1 pl-2.5 text-[9px] leading-tight text-slate-300">
+                    <div className="font-semibold text-slate-200">
+                        CT {controlTowerBadgeState.overall.toUpperCase()} · REC {controlTowerBadgeState.recommendedDomain}
+                    </div>
+                    <div className="text-slate-400">
+                        IOT {controlTowerBadgeState.decideIotDomain} · GAME {controlTowerBadgeState.decideGameDomain}
+                    </div>
+                    <div className="text-slate-500">
+                        UNKNOWN fallback {controlTowerBadgeState.decideUnknownFallback ? 'ON' : 'OFF'}
+                        {controlTowerBadgeState.error ? ` · 오류: ${controlTowerBadgeState.error.slice(0, 12)}` : ''}
+                    </div>
+                </div>
+            </div>
+        );
+    }, [opsGateBadgeState, opsGateNow, controlTowerBadgeState]);
+
+    if (!authChecked) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#0d1117] text-[#c9d1d9]">
+                <div className="text-center">
+                    <div className="text-3xl mb-4">🔐</div>
+                    <p className="text-gray-500">{authStatusMessage}</p>
+                </div>
+            </div>
+        );
+    }
 
     const adminSidebar = (
         <div className="workspace-section-stack">
@@ -2004,242 +2669,82 @@ export default function AdminDashboardPage() {
         </div>
     );
 
-    const boardSections = [
-        {
-            id: 'admin-control',
-            title: '🧩 ADMIN CONTROL HUB',
-            usage: '전역 운영 지표 요약 및 퀵 액션',
-            description: '앱 건강상태와 최근 설정 정보를 한눈에 모니터링합니다.',
-            open: adminControlHubOpen,
-            onToggle: () => setAdminControlHubOpen((prev) => !prev),
-            body: (
-                <div className="workspace-admin-command" style={{ padding: '0 20px', maxWidth: '800px', margin: '0 auto' }}>
-                    <textarea
-                        className="workspace-admin-command-textarea"
-                        readOnly
-                        style={{ height: '180px' }}
-                        value={[
-                            '운영자 명령 허브',
-                            `- 관리자 도메인: ${systemSettings?.summary.admin_domain || '-'}`,
-                            `- API 기준 주소: ${systemSettings?.summary.local_api_base_url || '-'}`,
-                            `- 저장 루트: ${systemSettings?.summary.marketplace_host_root || '-'}`,
-                            `- 현재 LLM 프로필: ${systemSettings?.summary.selected_profile || '-'}`,
-                            `- 최근 self-run: ${dashboardAnalysis.normalizedDashboardSelfRunStatus?.status || '-'}`,
-                        ].join('\n')}
-                    />
-                    <div className="workspace-admin-command-actions" style={{ marginTop: '16px' }}>
-                        <button type="button" onClick={() => setSystemSettingsPanelOpen(true)} className="workspace-primary-button">전역 설정 열기</button>
-                        <button type="button" onClick={loadSystemSettings} className="workspace-secondary-button">설정 새로고침</button>
-                        <button type="button" onClick={applyGlobalAutomaticMode} className="workspace-ghost-button">전역 자동 전환</button>
-                    </div>
-                </div>
-            ),
-            toggleTestId: 'admin-control-hub',
-            windowSize: 'wide' as const,
-        },
-        {
-            id: 'health',
-            title: '🩺 관리자 자동 건강상태 / 자가진단',
-            usage: '전체 시스템 건강 상태 모니터링 및 자가 치유',
-            description: '각 컴포넌트의 상태를 점검하고 복구 동작을 진행합니다.',
-            open: healthOverviewOpen,
-            onToggle: () => setHealthOverviewOpen((prev) => !prev),
-            body: <AdminDashboardOverview {...adminDashboardOverviewAssembly} />,
-            toggleTestId: 'admin-health-overview-section',
-            windowSize: 'full' as const,
-        },
-        {
-            id: 'autoconnect',
-            title: '🕸️ self auto-connect graph',
-            usage: '버튼/패널/대화/실행 공통 추적키 확인',
-            description: '관리자 대시보드와 관리자 LLM의 active connection 흐름을 추적합니다.',
-            open: autoConnectGraphPanelOpen,
-            onToggle: () => setAutoConnectGraphPanelOpen((prev) => !prev),
-            body: <AdminAutoConnectGraphPanel {...adminAutoConnectGraphAssembly} />,
-            windowSize: 'wide' as const,
-        },
-        {
-            id: 'manual',
-            title: '관리자 수동 오케스트레이션',
-            usage: '관리자 전용 수동 분석·구조 설계',
-            description: '장기 분석, 기술 정보 유입, 구조 수립을 단계별로 수동 관리합니다.',
-            open: customerOrchestratorPanelOpen,
-            onToggle: () => setCustomerOrchestratorPanelOpen((prev) => !prev),
-            body: <AdminManualOrchestratorSection {...adminManualOrchestratorAssembly} />,
-            windowSize: 'full' as const,
-        },
-        {
-            id: 'ad-orders',
-            title: '🎬 광고 영상 주문 모니터링',
-            usage: '광고 주문 상태와 재시도/다운로드 운영 관리',
-            description: '주문 모니터링과 액션을 별도 보드 카드로 바로 수행합니다.',
-            open: adOrdersPanelOpen,
-            onToggle: () => setAdOrdersPanelOpen((prev) => !prev),
-            body: (
-                <AdminAdOrdersSection
-                    summary={adminAdOrdersAssembly.summary}
-                    review={adminAdOrdersAssembly.review}
-                    actions={adminAdOrdersAssembly.actions}
-                />
-            ),
-            toggleTestId: 'admin-storyboard-section-toggle',
-            wide: true,
-            windowSize: 'full' as const,
-        },
-        {
-            id: 'category',
-            title: '🗂️ 마켓플레이스 카테고리 관리',
-            usage: '카테고리 등록과 운영 분류 체계 정리',
-            description: '상품 분류 체계를 정리하는 관리자용 카드입니다.',
-            open: categoryPanelOpen,
-            onToggle: () => setCategoryPanelOpen((prev) => !prev),
-            body: (
-                <AdminCategoryManagementSection
-                    list={{
-                        visibleCategories,
-                        sortedVisibleCategories,
-                        categoryStats,
-                        categoryRecentProjects,
-                        categoryMessage,
-                        categoryUpdatingId,
-                        categoryDeletingId,
-                        onLoadCategories: loadCategories,
-                        onUpdateCategory: (categoryId) => void updateCategory(categoryId),
-                        onCancelEditCategory: cancelEditCategory,
-                        onBeginEditCategory: beginEditCategory,
-                        onDeleteCategory: (category) => void deleteCategory(category),
-                    }}
-                    filter={{
-                        categoryName,
-                        categoryDescription,
-                        categoryCreating,
-                        hideEmptyCategories,
-                        categorySortBy,
-                        onCategoryNameChange: setCategoryName,
-                        onCategoryDescriptionChange: setCategoryDescription,
-                        onCreateCategory: () => void createCategory(),
-                        onHideEmptyCategoriesChange: setHideEmptyCategories,
-                        onCategorySortByChange: setCategorySortBy,
-                    }}
-                    editing={{
-                        editingCategoryId,
-                        editingCategoryName,
-                        editingCategoryDescription,
-                        onEditingCategoryNameChange: setEditingCategoryName,
-                        onEditingCategoryDescriptionChange: setEditingCategoryDescription,
-                    }}
-                />
-            ),
-            windowSize: 'wide' as const,
-        },
-        {
-            id: 'cost',
-            title: '💸 비용 시뮬레이터',
-            usage: '로컬+외부 하이브리드 비용 모델 계산',
-            description: '컷당 비용과 권장 아키텍처를 즉시 계산합니다.',
-            open: costSimulatorPanelOpen,
-            onToggle: () => setCostSimulatorPanelOpen((prev) => !prev),
-            body: (
-                <AdminCostSimulatorSection
-                    form={costSimulatorForm}
-                    loading={costSimulatorLoading}
-                    error={costSimulatorError}
-                    result={costSimulatorResult}
-                    onFieldChange={updateCostSimulatorField}
-                    onRun={runCostSimulation}
-                />
-            ),
-            windowSize: 'wide' as const,
-        },
-        {
-            id: 'quick',
-            title: '⚡ 빠른 이동',
-            usage: '운영자가 자주 여는 핵심 화면과 API 바로가기',
-            description: '핵심 운영 경로를 작은 카드로 정리합니다.',
-            open: quickLinksPanelOpen,
-            onToggle: () => setQuickLinksPanelOpen((prev) => !prev),
-            body: <AdminQuickLinksSection apiBaseUrl={apiBaseUrl} />,
-            windowSize: 'default' as const,
-        },
-        {
-            id: 'llm',
-            title: '🤖 LLM 통합 제어 패널',
-            usage: 'LLM runtime, 역할별 모델, 실행 정책 관리',
-            description: '핵심 LLM 운영값을 집결 관리합니다.',
-            open: llmControlPanelOpen,
-            onToggle: () => setLlmControlPanelOpen((prev) => !prev),
-            body: <AdminLlmControlSummary llmPanelHeight={llmPanelHeight} />,
-            windowSize: 'full' as const,
-        },
-        {
-            id: 'sample',
-            title: '🎯 원터치 샘플 생성',
-            usage: '테스트/디자인 검증용 샘플 상품 생성과 정리',
-            description: '샘플 생성과 정리를 별도 카드로 분리합니다.',
-            open: samplePanelOpen,
-            onToggle: () => setSamplePanelOpen((prev) => !prev),
-            body: <AdminSampleProductsSection {...adminSampleProductsAssembly} />,
-            windowSize: 'wide' as const,
-        },
-        {
-            id: 'live-logs',
-            title: '📡 운영 라이브 로그',
-            usage: '실시간 이벤트 스트림 확인',
-            description: '운영 이벤트를 스트림 형태로 제공합니다.',
-            open: liveLogsPanelOpen,
-            onToggle: () => setLiveLogsPanelOpen((prev) => !prev),
-            body: (
-                <div style={{ padding: '0 20px', paddingBottom: '20px' }}>
-                    {liveLogs.length === 0 ? (
-                        <p className="workspace-card-copy">아직 기록된 실시간 이벤트가 없습니다.</p>
-                    ) : (
-                        <ul className="workspace-list">
-                            {liveLogs.map((log) => (
-                                <li key={log.id} className="workspace-list-item">
-                                    <div>
-                                        <strong>{log.message}</strong>
-                                        <span>{log.connection_id || '-'} · {log.panel_id || '-'} · {log.action || '-'}</span>
-                                    </div>
-                                    <span>{log.createdAt}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-            ),
-            toggleTestId: 'admin-live-logs-section',
-            windowSize: 'wide' as const,
-        },
-        {
-            id: 'top-projects',
-            title: '🏆 상위 프로젝트',
-            usage: '다운로드 기준 상위 항목 확인',
-            description: '인기 프로젝트 지표를 요약해 제공합니다.',
-            open: topProjectsPanelOpen,
-            onToggle: () => setTopProjectsPanelOpen((prev) => !prev),
-            body: (
-                <div style={{ padding: '0 20px', paddingBottom: '20px' }}>
-                    {filteredTopProjects.length === 0 ? (
-                        <p className="workspace-card-copy">아직 집계된 상위 프로젝트가 없습니다.</p>
-                    ) : (
-                        <div className="workspace-list mt-4">
-                            {filteredTopProjects.map((project) => (
-                                <div key={project.id} className="workspace-list-item">
-                                    <div>
-                                        <strong>{project.title}</strong>
-                                        <span>다운로드 {project.downloads} · 평점 {project.rating?.toFixed?.(1) ?? project.rating}</span>
-                                    </div>
-                                    <strong>{formatCurrency(project.price)}</strong>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            ),
-            toggleTestId: 'admin-top-projects-section',
-            windowSize: 'wide' as const,
-        },
-    ];
+    const boardSections = buildAdminDashboardSectionsConfig({
+        adminControlHubOpen,
+        setAdminControlHubOpen,
+        systemSettings,
+        dashboardAnalysis,
+        setSystemSettingsPanelOpen,
+        loadSystemSettings,
+        applyGlobalAutomaticMode,
+        healthOverviewOpen,
+        setHealthOverviewOpen,
+        adminDashboardOverviewAssembly,
+        autoConnectGraphPanelOpen,
+        setAutoConnectGraphPanelOpen,
+        adminAutoConnectGraphAssembly,
+        customerOrchestratorPanelOpen,
+        setCustomerOrchestratorPanelOpen,
+        adminManualOrchestratorAssembly,
+        adOrdersPanelOpen,
+        setAdOrdersPanelOpen,
+        adminAdOrdersAssembly,
+        categoryPanelOpen,
+        setCategoryPanelOpen,
+        visibleCategories,
+        sortedVisibleCategories,
+        categoryStats,
+        categoryRecentProjects,
+        categoryMessage,
+        categoryUpdatingId,
+        categoryDeletingId,
+        loadCategories,
+        updateCategory,
+        cancelEditCategory,
+        beginEditCategory,
+        deleteCategory,
+        categoryName,
+        categoryDescription,
+        categoryCreating,
+        hideEmptyCategories,
+        categorySortBy,
+        setCategoryName,
+        setCategoryDescription,
+        createCategory,
+        setHideEmptyCategories,
+        setCategorySortBy,
+        editingCategoryId,
+        editingCategoryName,
+        editingCategoryDescription,
+        setEditingCategoryName,
+        setEditingCategoryDescription,
+        subscriptionMonitorPanelOpen,
+        setSubscriptionMonitorPanelOpen,
+        apiBaseUrl,
+        costSimulatorPanelOpen,
+        setCostSimulatorPanelOpen,
+        costSimulatorForm,
+        costSimulatorLoading,
+        costSimulatorError,
+        costSimulatorResult,
+        updateCostSimulatorField,
+        runCostSimulation,
+        quickLinksPanelOpen,
+        setQuickLinksPanelOpen,
+        llmControlPanelOpen,
+        setLlmControlPanelOpen,
+        llmPanelHeight,
+        samplePanelOpen,
+        setSamplePanelOpen,
+        adminSampleProductsAssembly,
+        liveLogsPanelOpen,
+        setLiveLogsPanelOpen,
+        liveLogs,
+        topProjectsPanelOpen,
+        setTopProjectsPanelOpen,
+        filteredTopProjects,
+        formatCurrency,
+    });
 
     return (
         <div className="admin-dark">
@@ -2250,64 +2755,71 @@ export default function AdminDashboardPage() {
                 compactHeader
                 hideHero
                 railItems={[
-                    { 
+                    {
                         id: 'home', label: '대시보드', shortLabel: '대시', href: '/admin', active: true, accent: 'blue',
-                        icon: <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 mb-1 shadow-[0_0_12px_rgba(255,255,255,0.05)] text-lg">🏠</div> 
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🏠</div>
                     },
-                    { 
-                        id: 'market', label: '마켓', shortLabel: '마켓', href: '/marketplace', accent: 'emerald',
-                        icon: <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 mb-1 text-lg">🛒</div> 
+                    {
+                        id: 'market', label: '마켓', shortLabel: '마켓', href: marketplaceHomeHref, accent: 'emerald',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🛒</div>
                     },
-                    { 
+                    {
+                        id: 'users', label: '가입 사용자', shortLabel: '회원', href: '/admin/users', accent: 'cyan', testId: 'admin-rail-users',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">👥</div>
+                    },
+                    {
                         id: 'llm', label: 'LLM', shortLabel: 'LLM', href: '/admin/llm', accent: 'violet',
-                        icon: <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 mb-1 text-lg">🤖</div> 
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🤖</div>
                     },
-                    { 
-                        id: 'docs', label: '문서', shortLabel: '문서', href: '/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md', accent: 'amber',
-                        icon: <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 mb-1 text-lg">📘</div> 
+                    {
+                        id: 'docs', label: '문서', shortLabel: '문서', href: adminPassKmcKcbDocsHref, accent: 'amber',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📘</div>
                     },
-                    ...launcherLeftColumn.map(item => {
-                        const match = item.label.match(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/);
-                        const emoji = match ? match[0] : '●';
-                        let cleanLabel = item.label.replace(emoji, '').trim();
-                        let short = cleanLabel.split(' ')[0]?.slice(0, 2) || cleanLabel.slice(0, 2);
-                        if (short.toUpperCase() === 'AD') short = '제어';
-                        if (item.id === 'system-settings') short = '설정';
-                        if (item.id === 'auto-connect') short = '연결';
-
-                        return {
-                            id: item.id,
-                            label: item.label,
-                            shortLabel: short,
-                            accent: item.accent as 'blue' | 'violet' | 'emerald' | 'amber' | 'neutral' | 'slate' | 'cyan',
-                            onClick: item.onClick,
-                            testId: `admin-launcher-${item.id}`,
-                            icon: <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 mb-1 text-lg group-hover:bg-white/10 transition-colors">{emoji}</div> 
-                        };
-                    }),
+                    ...buildAdminLauncherRailItems(launcherLeftColumn, ADMIN_LEFT_SHORT_LABEL_OVERRIDES),
                 ]}
-                rightRailItems={launcherRightColumn.map(item => {
-                    const match = item.label.match(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/);
-                    const emoji = match ? match[0] : '●';
-                    let cleanLabel = item.label.replace(emoji, '').trim();
-                    let short = cleanLabel.split(' ')[0]?.slice(0, 2) || cleanLabel.slice(0, 2);
-                    if (item.id === 'live-logs') short = '로그';
-                    if (item.id === 'top-projects') short = '인기';
-                    if (item.id === 'cost') short = '비용';
-                    if (item.id === 'quick-links') short = '빠른';
-
-                    return {
-                        id: item.id,
-                        label: item.label,
-                        shortLabel: short,
-                        accent: item.accent as 'blue' | 'violet' | 'emerald' | 'amber' | 'neutral' | 'slate' | 'cyan',
-                        onClick: item.onClick,
-                        testId: `admin-launcher-${item.id}`,
-                        icon: <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 mb-1 text-lg group-hover:bg-white/10 transition-colors">{emoji}</div> 
-                    };
-                })}
+                rightRailItems={[
+                    {
+                        id: 'subscription-monitor',
+                        label: '구독 결제 모니터링',
+                        shortLabel: '구독',
+                        href: '/admin/subscription-monitor?period_days=7&status=all',
+                        accent: 'violet',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">💳</div>
+                    },
+                    ...buildAdminLauncherRailItems(launcherRightColumn, ADMIN_RIGHT_SHORT_LABEL_OVERRIDES),
+                    ...buildAdminLauncherRailItems(opsExtensionRailColumn, ADMIN_RIGHT_SHORT_LABEL_OVERRIDES),
+                ]}
+                rightRailFooter={opsGateRailFooter}
                 topActions={(
                     <>
+                        <Link prefetch={false} href={marketplaceHomeHref} data-testid="admin-topnav-marketplace" aria-label="마켓플레이스 이동" className="workspace-topbar-chip">
+                            마켓
+                        </Link>
+                        <Link href="/admin/users" data-testid="admin-topnav-users" aria-label="회원가입 사용자 확인" className="workspace-topbar-chip">
+                            가입 사용자
+                        </Link>
+                        <Link href={adminPassKmcKcbDocsHref} data-testid="admin-topnav-pass-kmc-kcb" aria-label="PASS KMC KCB 계약 문서 열기" className="workspace-topbar-chip">
+                            PASS 문서
+                        </Link>
+                        <Link href={adminCommercialTermsDocsHref} data-testid="admin-topnav-commercial-terms" aria-label="상용화 계약 약관 기준 열기" className="workspace-topbar-chip">
+                            계약 기준
+                        </Link>
+                        <a href={adminApiDocsHref} target="_blank" rel="noreferrer" data-testid="admin-topnav-api-docs" aria-label="API 문서 열기" className="workspace-topbar-chip">
+                            API Docs
+                        </a>
+                        <div
+                            data-testid="admin-topnav-api-connection"
+                            aria-label="API 연결 상태"
+                            className="workspace-topbar-chip"
+                            title={isHealthOk ? '백엔드 API 연결 정상' : '백엔드 API 연결 점검 필요'}
+                        >
+                            <span className={isHealthOk ? 'text-emerald-300' : 'text-rose-300'}>{isHealthOk ? '●' : '○'}</span>
+                            <span className="font-semibold">{isHealthOk ? 'API 연결됨' : 'API 미연결'}</span>
+                        </div>
+                        <div data-testid="admin-topnav-user-panel" className="workspace-topbar-chip" aria-label="로그인 사용자 정보">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] opacity-70">Admin</span>
+                            <span className="max-w-[130px] truncate font-semibold">{adminUser?.username || '확인 중'}</span>
+                        </div>
                         <button
                             type="button"
                             onClick={() => loadDashboard(true)}
@@ -2330,7 +2842,7 @@ export default function AdminDashboardPage() {
                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '15px' }}>무엇이든 물어보고 만들어보세요 (관리자 전용)</p>
                     </div>
                     <div className="w-full">
-                        <AdminManualOrchestratorSection {...adminManualOrchestratorAssembly} />
+                        <AdminLlmControlSummary llmPanelHeight={llmPanelHeight} />
                     </div>
                 </div>
 
@@ -2339,7 +2851,7 @@ export default function AdminDashboardPage() {
                     usage="프로그램 전반 운영값과 연결 설정을 중앙 관리"
                     description="도메인, 저장 경로, LLM 기본 환경값, 셀프 엔진 연동 설정을 첫 화면 핵심 카드 아래 바로 붙입니다."
                     open={systemSettingsPanelOpen}
-                    onToggle={() => setSystemSettingsPanelOpen((prev) => !prev)}
+                    onToggle={() => setSystemSettingsPanelOpen((prev: any) => !prev)}
                     toggleTestId="admin-system-settings-section"
                     windowSize="full"
                     launcherHidden
@@ -2347,7 +2859,214 @@ export default function AdminDashboardPage() {
                     <AdminSystemSettingsPanel {...adminSystemSettingsAssembly} />
                 </AdminManagementSection>
 
-                {boardSections.filter(section => section.id !== 'manual').map((section) => (
+                <AdminManagementSection
+                    title="🎵 음악 생성·작사·협업 패널"
+                    usage="관리자 대시보드에서 music API 토큰 호출을 직접 검증"
+                    description="감정 기반 작곡, 코드 기반 작곡, 협업 데모 API를 관리자 권한 토큰으로 즉시 호출하고 payload를 확인합니다."
+                    open={musicPanelOpen}
+                    onToggle={() => setMusicPanelOpen((prev) => !prev)}
+                    toggleTestId="admin-music-panel-section"
+                    windowSize="wide"
+                    launcherHidden
+                >
+                    <div className="workspace-section-stack" data-testid="admin-music-panel">
+                        <div className="workspace-sidebar-card">
+                            <p className="workspace-card-kicker">Emotion Compose</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                <input
+                                    data-testid="admin-music-emotion-input"
+                                    value={musicEmotion}
+                                    onChange={(event) => setMusicEmotion(event.target.value)}
+                                    placeholder="emotion"
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                />
+                                <input
+                                    data-testid="admin-music-intensity-input"
+                                    value={musicIntensity}
+                                    onChange={(event) => setMusicIntensity(event.target.value)}
+                                    placeholder="intensity"
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                />
+                                <input
+                                    data-testid="admin-music-theme-input"
+                                    value={musicTheme}
+                                    onChange={(event) => setMusicTheme(event.target.value)}
+                                    placeholder="theme"
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                data-testid="admin-music-compose-emotion-btn"
+                                onClick={handleAdminMusicCompose}
+                                disabled={musicLoading}
+                                className="workspace-topbar-chip"
+                                style={{ marginTop: 10 }}
+                            >
+                                {musicLoading ? '음악 생성 중...' : '감정 기반 음악 생성'}
+                            </button>
+                        </div>
+
+                        <div className="workspace-sidebar-card">
+                            <p className="workspace-card-kicker">Code Compose</p>
+                            <textarea
+                                data-testid="admin-music-code-input"
+                                value={musicCode}
+                                onChange={(event) => setMusicCode(event.target.value)}
+                                className="workspace-admin-command-textarea"
+                                style={{ minHeight: 80 }}
+                                placeholder="작곡 패턴으로 변환할 코드"
+                            />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 8 }}>
+                                <input
+                                    data-testid="admin-music-code-emotion-input"
+                                    value={musicCodeEmotion}
+                                    onChange={(event) => setMusicCodeEmotion(event.target.value)}
+                                    placeholder="emotion"
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                />
+                                <button
+                                    type="button"
+                                    data-testid="admin-music-compose-code-btn"
+                                    onClick={handleAdminMusicComposeFromCode}
+                                    disabled={musicLoading}
+                                    className="workspace-topbar-chip"
+                                >
+                                    코드 작곡
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                data-testid="admin-music-friends-demo-btn"
+                                onClick={handleAdminMusicCollaboration}
+                                disabled={musicLoading}
+                                className="workspace-topbar-chip"
+                                style={{ marginTop: 8 }}
+                            >
+                                협업 데모 연결
+                            </button>
+                        </div>
+
+                        <div className="workspace-sidebar-card">
+                            <p className="workspace-card-kicker">Payload</p>
+                            {musicMode ? <p className="workspace-card-copy" data-testid="admin-music-mode">mode: {musicMode}</p> : null}
+                            {musicError ? <p className="workspace-card-copy" style={{ color: 'var(--workspace-danger)' }} data-testid="admin-music-error">{musicError}</p> : null}
+                            {musicComposeResult ? (
+                                <div className="workspace-list" data-testid="admin-music-compose-result">
+                                    <div className="workspace-list-item"><strong>song</strong><span>{String(musicComposeResult.song_title || '-')}</span></div>
+                                    <div className="workspace-list-item"><strong>lyrics</strong><span>{String(musicComposeResult.lyrics_title || '-')}</span></div>
+                                    <div className="workspace-list-item"><strong>tempo</strong><span>{String(musicComposeResult.tempo || '-')}</span></div>
+                                </div>
+                            ) : null}
+                            {musicCodeResult ? (
+                                <div className="workspace-list" data-testid="admin-music-code-result" style={{ marginTop: 10 }}>
+                                    <div className="workspace-list-item"><strong>song</strong><span>{String(musicCodeResult.song_title || '-')}</span></div>
+                                    <div className="workspace-list-item"><strong>composition</strong><span>{String(musicCodeResult.code_composition_title || '-')}</span></div>
+                                    <div className="workspace-list-item"><strong>chords</strong><span>{Array.isArray(musicCodeResult.chords) ? musicCodeResult.chords.join(' → ') : '-'}</span></div>
+                                </div>
+                            ) : null}
+                            {musicFriendResult ? (
+                                <div className="workspace-list" data-testid="admin-music-friends-result" style={{ marginTop: 10 }}>
+                                    <div className="workspace-list-item"><strong>request</strong><span>{String(musicFriendResult.request_id || '-')}</span></div>
+                                    <div className="workspace-list-item"><strong>collaboration</strong><span>{String(musicFriendResult.collaboration_id || '-')}</span></div>
+                                    <div className="workspace-list-item"><strong>friends</strong><span>{Array.isArray(musicFriendResult.friends_of_a) ? musicFriendResult.friends_of_a.join(', ') : '-'}</span></div>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </AdminManagementSection>
+
+                <AdminManagementSection
+                    title="🧪/🧬 Extras API 인앱 프리뷰"
+                    usage="새 탭 이동 없이 health/catalog 응답을 대시보드 내부에서 확인"
+                    description="상태코드, 응답시간, 갱신 시각, JSON payload를 한 패널에서 확인하고 즉시 재조회할 수 있습니다."
+                    open={extrasPreviewPanelOpen}
+                    onToggle={() => setExtrasPreviewPanelOpen((prev) => !prev)}
+                    toggleTestId="admin-extras-preview-section"
+                    windowSize="wide"
+                    launcherHidden
+                >
+                    <div className="workspace-section-stack" data-testid="admin-extras-preview-panel">
+                        <div className="workspace-sidebar-card">
+                            <p className="workspace-card-kicker">Request</p>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    data-testid="admin-extras-preview-health-btn"
+                                    onClick={() => void runExtrasPreviewRequest('health')}
+                                    disabled={extrasPreviewState.loading}
+                                    className="workspace-topbar-chip"
+                                >
+                                    health 조회
+                                </button>
+                                <button
+                                    type="button"
+                                    data-testid="admin-extras-preview-catalog-btn"
+                                    onClick={() => void runExtrasPreviewRequest('catalog')}
+                                    disabled={extrasPreviewState.loading}
+                                    className="workspace-topbar-chip"
+                                >
+                                    catalog 조회
+                                </button>
+                                <button
+                                    type="button"
+                                    data-testid="admin-extras-preview-refresh-btn"
+                                    onClick={() => void runExtrasPreviewRequest(extrasPreviewTarget)}
+                                    disabled={extrasPreviewState.loading}
+                                    className="workspace-topbar-chip"
+                                >
+                                    {extrasPreviewState.loading ? '조회 중...' : '현재 탭 재조회'}
+                                </button>
+                            </div>
+                            <p className="workspace-card-copy" style={{ marginTop: 10 }}>
+                                endpoint: {extrasPreviewTarget === 'health' ? '/api/marketplace/extras/health' : '/api/marketplace/extras/catalog'}
+                            </p>
+                        </div>
+
+                        <div className="workspace-sidebar-card">
+                            <p className="workspace-card-kicker">Response Meta</p>
+                            <div className="workspace-list">
+                                <div className="workspace-list-item"><strong>status</strong><span data-testid="admin-extras-preview-status">{extrasPreviewState.statusCode ?? '-'}</span></div>
+                                <div className="workspace-list-item"><strong>latency</strong><span>{extrasPreviewState.durationMs != null ? `${extrasPreviewState.durationMs} ms` : '-'}</span></div>
+                                <div className="workspace-list-item"><strong>fetchedAt</strong><span>{extrasPreviewState.fetchedAt ? new Date(extrasPreviewState.fetchedAt).toLocaleString('ko-KR') : '-'}</span></div>
+                            </div>
+                            {extrasPreviewState.error ? (
+                                <p data-testid="admin-extras-preview-error" className="workspace-card-copy" style={{ marginTop: 10, color: 'var(--workspace-danger)' }}>
+                                    {extrasPreviewState.error}
+                                </p>
+                            ) : null}
+                        </div>
+
+                        <div className="workspace-sidebar-card">
+                            <p className="workspace-card-kicker">Payload</p>
+                            <pre
+                                data-testid="admin-extras-preview-payload"
+                                style={{
+                                    margin: 0,
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    background: 'rgba(9,14,22,0.96)',
+                                    border: '1px solid var(--workspace-border)',
+                                    borderRadius: 'var(--workspace-radius-sm)',
+                                    padding: 12,
+                                    maxHeight: 320,
+                                    overflow: 'auto',
+                                    color: 'var(--workspace-text)',
+                                    fontSize: 12,
+                                    lineHeight: 1.45,
+                                }}
+                            >
+                                {extrasPreviewState.payload == null
+                                    ? '조회 결과가 없습니다.'
+                                    : typeof extrasPreviewState.payload === 'string'
+                                        ? extrasPreviewState.payload
+                                        : JSON.stringify(extrasPreviewState.payload, null, 2)}
+                            </pre>
+                        </div>
+                    </div>
+                </AdminManagementSection>
+
+                {boardSections.filter(section => section.id !== 'llm').map((section) => (
                     <AdminManagementSection
                         key={section.id}
                         title={section.title}

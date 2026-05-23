@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-05-02T20:19:54.545722Z",
+  "results": [
+    {
+      "index": 1,
+      "project_name": "ai-engine-stock-trading-program-rerun1-20260502_201206",
+      "run_id": "stage_run_GRq2OnYN2migILez-xiq1NYx",
+      "stage_id": "ARCH-001",
+      "raw_output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_201206_20260502_201206_924116",
+      "output_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun1-20260502_201206_20260502_201206_924116",
+      "output_archive_path": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_201206_20260502_201206_924116/ai-engine-stock-trading-program-reru-b3e2e55376_shipment.zip",
+      "status": "failed",
+      "failed_reasons": [
+        "semantic gate failed"
+      ],
+      "validation_profile": "python_fastapi",
+      "profile_id": null,
+      "file_count": 3810,
+      "dir_count": 450,
+      "code_lines": 725722,
+      "check_sh_has_compileall": true,
+      "check_sh_has_pytest_q_s": true,
+      "check_sh_has_lock_marker": true
+    },
+    {
+      "index": 2,
+      "project_name": "ai-engine-stock-trading-program-rerun2-20260502_201601",
+      "run_id": "stage_run__XdnWGvuFUzKviVrLtPZz1LU",
+      "stage_id": "ARCH-001",
+      "raw_output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_201601_20260502_201601_319763",
+      "output_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun2-20260502_201601_20260502_201601_319763",
+      "output_archive_path": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_201601_20260502_201601_319763/ai-engine-stock-trading-program-reru-33c0a918fe_shipment.zip",
+      "status": "failed",
+      "failed_reasons": [
+        "semantic gate failed"
+      ],
+      "validation_profile": "python_fastapi",
+      "profile_id": null,
+      "file_count": 3810,
+      "dir_count": 450,
+      "code_lines": 725722,
+      "check_sh_has_compileall": true,
+      "check_sh_has_pytest_q_s": true,
+      "check_sh_has_lock_marker": true
+    }
+  ]
+}

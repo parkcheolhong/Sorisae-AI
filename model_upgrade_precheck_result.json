@@ -1,0 +1,88 @@
+{
+  "checked_at": "2026-05-01T21:29:32.888913",
+  "gpu": {
+    "available": true,
+    "gpus": [
+      {
+        "name": "NVIDIA GeForce RTX 5090",
+        "memory_total_mb": 32607,
+        "memory_used_mb": 31895,
+        "memory_free_mb": 712,
+        "utilization_gpu_percent": 100
+      }
+    ],
+    "total_free_vram_gb": 0.7,
+    "max_single_gpu_free_vram_gb": 0.7
+  },
+  "latency": {
+    "ollama_tags": {
+      "url": "http://127.0.0.1:11434/api/tags",
+      "ok": true,
+      "error": "",
+      "samples_ms": [
+        63.71,
+        8.3,
+        5.0
+      ],
+      "avg_ms": 25.67
+    },
+    "vllm_models": {
+      "url": "http://127.0.0.1:8008/v1/models",
+      "ok": true,
+      "error": "",
+      "samples_ms": [
+        27.95,
+        3.0,
+        27.41
+      ],
+      "avg_ms": 19.45
+    }
+  },
+  "configured_routes": {
+    "default": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "reasoning": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "voice_chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "coder": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "reviewer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "smart_planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "smart_executor": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "smart_designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+  },
+  "candidate_evaluation": [
+    {
+      "name": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "recommended_vram_gb": 24,
+      "expected_latency_ms": "30-60",
+      "feasible_on_current_single_gpu": false,
+      "vram_margin_gb": -23.3,
+      "risk": "high"
+    },
+    {
+      "name": "Qwen/Qwen2.5-72B-Instruct-AWQ",
+      "recommended_vram_gb": 48,
+      "expected_latency_ms": "60-90",
+      "feasible_on_current_single_gpu": false,
+      "vram_margin_gb": -47.3,
+      "risk": "high"
+    },
+    {
+      "name": "Qwen/Qwen2.5-72B-Instruct-FP16",
+      "recommended_vram_gb": 144,
+      "expected_latency_ms": "20-30",
+      "feasible_on_current_single_gpu": false,
+      "vram_margin_gb": -143.3,
+      "risk": "high"
+    },
+    {
+      "name": "DeepSeek-Coder-33B-Instruct-AWQ",
+      "recommended_vram_gb": 24,
+      "expected_latency_ms": "35-70",
+      "feasible_on_current_single_gpu": false,
+      "vram_margin_gb": -23.3,
+      "risk": "high"
+    }
+  ]
+}

@@ -1,7 +1,10 @@
+import copy
 import json
 import os
 import re
 import tempfile
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -24,7 +27,6 @@ from backend.llm.model_config import (
 )
 from backend.llm.python_security_policy import scan_python_security_policy
 from backend.models import User
-
 
 router = APIRouter(prefix="/api/admin/orchestrator", tags=["admin-orchestrator"])
 
@@ -115,6 +117,10 @@ CAPABILITY_ORDER = [
     "admin-command-interface",
     "ollama-model-controller",
 ]
+CAPABILITY_CACHE_TTL_SEC = max(5, int(os.getenv("ADMIN_CAPABILITY_CACHE_TTL_SEC", "20")))
+_CAPABILITY_CACHE_LOCK = threading.Lock()
+_CAPABILITY_CACHE_VALUE: Dict[str, Dict[str, Any]] | None = None
+_CAPABILITY_CACHE_EXPIRES_AT = 0.0
 
 
 def require_admin(current_user: User = Depends(get_current_user)):
@@ -294,7 +300,7 @@ def _build_finding_file_evidence(
             (
                 "backend/llm/admin_capabilities.py",
                 ["scope_info[\"scope\"] != \"whole-project\"", "scope_info"],
-                "전체 프로젝트 범위가 아닐 때 보조 진단으로 강등하는 조건입니다.",
+                "실행 범위가 전체 프로젝트인지 fixture 인지 판별하는 코드입니다.",
             ),
         ],
         "self-run-status": [
@@ -991,11 +997,14 @@ def _build_capability_evidence_context(capability: Dict[str, Any]) -> Dict[str, 
 
 
 def _attach_capability_evidence_context(capability_map: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    shared_evidence_context: Dict[str, Any] | None = None
     for capability_id in CAPABILITY_ORDER:
         capability = capability_map.get(capability_id)
         if not isinstance(capability, dict):
             continue
-        capability["evidence_context"] = _build_capability_evidence_context(capability)
+        if shared_evidence_context is None:
+            shared_evidence_context = _build_capability_evidence_context(capability)
+        capability["evidence_context"] = copy.deepcopy(shared_evidence_context)
     return capability_map
 
 
@@ -2162,6 +2171,13 @@ def _admin_command_interface() -> Dict[str, Any]:
 
 
 def _build_capability_map() -> Dict[str, Dict[str, Any]]:
+    global _CAPABILITY_CACHE_VALUE, _CAPABILITY_CACHE_EXPIRES_AT
+
+    now_monotonic = time.monotonic()
+    with _CAPABILITY_CACHE_LOCK:
+        if _CAPABILITY_CACHE_VALUE is not None and now_monotonic < _CAPABILITY_CACHE_EXPIRES_AT:
+            return copy.deepcopy(_CAPABILITY_CACHE_VALUE)
+
     project_scan = _workspace_scan()
     dependency_graph = _dependency_graph()
     security_guard = _security_guard(project_scan)
@@ -2206,7 +2222,7 @@ def _build_capability_map() -> Dict[str, Dict[str, Any]]:
         else runtime_diagnostics["state_reason"]
     )
 
-    return {
+    capability_map = {
         "project-scanner": {
             "title": "Project Scanner",
             "group_id": "diagnosis-control",
@@ -2296,6 +2312,12 @@ def _build_capability_map() -> Dict[str, Dict[str, Any]]:
             "payload": model_control,
         },
     }
+
+    with _CAPABILITY_CACHE_LOCK:
+        _CAPABILITY_CACHE_VALUE = capability_map
+        _CAPABILITY_CACHE_EXPIRES_AT = time.monotonic() + float(CAPABILITY_CACHE_TTL_SEC)
+
+    return copy.deepcopy(capability_map)
 
 
 def _build_sections(capability_id: str, capability: Dict[str, Any]) -> List[CapabilitySection]:
@@ -2862,7 +2884,8 @@ def _build_actions(capability_id: str, capability: Dict[str, Any]) -> List[str]:
 
 
 def _build_capability_card(capability_id: str, capability: Dict[str, Any]) -> CapabilityCard:
-    evidence_context = capability.get("evidence_context") if isinstance(capability.get("evidence_context"), dict) else _build_capability_evidence_context(capability)
+    raw_evidence_context = capability.get("evidence_context")
+    evidence_context = raw_evidence_context if isinstance(raw_evidence_context, dict) else _build_capability_evidence_context(capability)
     return CapabilityCard(
         id=capability_id,
         title=capability["title"],
@@ -2938,7 +2961,8 @@ def get_capability_detail(capability_id: str, _: User = Depends(require_admin)):
     capability = capability_map.get(capability_id)
     if capability is None:
         raise HTTPException(status_code=404, detail="지원되지 않는 능력입니다")
-    evidence_context = capability.get("evidence_context") if isinstance(capability.get("evidence_context"), dict) else _build_capability_evidence_context(capability)
+    raw_evidence_context = capability.get("evidence_context")
+    evidence_context = raw_evidence_context if isinstance(raw_evidence_context, dict) else _build_capability_evidence_context(capability)
     sections = _build_sections(capability_id, capability)
     return CapabilityDetailResponse(
         generated_at=_now_iso(),

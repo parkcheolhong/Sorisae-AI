@@ -280,3 +280,38 @@ def review_spreadsheet_quality(
         "preview_artifact_id": preview_artifact.get("artifact_id"),
         "final_artifact_id": final_artifact.get("artifact_id"),
     }
+
+
+class SpreadsheetGenerationEngine:
+    """팝업 오케스트레이터에서 호출되는 스프레드시트 생성 엔진."""
+
+    ENGINE_ID = "spreadsheet-builder"
+
+    async def run_preview(
+        self,
+        prompt: str,
+        *,
+        project_name: str = "",
+        template: str = "sheet-schema-template",
+        options: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """preview 단계: 시트 schema 구조 생성."""
+        payload = {
+            "prompt": prompt,
+            "project_name": project_name or "marketplace-sheet-run",
+            "template_id": template,
+            "bridge_payload": dict(options or {}),
+        }
+        return build_spreadsheet_preview(payload)
+
+    async def run_final(
+        self,
+        preview_artifact_id: str,
+        *,
+        preview_artifact: Dict[str, Any] | None = None,
+        options: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """final 단계: xlsx + csv 최종 패키지 생성."""
+        preview = preview_artifact or {}
+        payload = {"bridge_payload": dict(options or {})}
+        return render_spreadsheet_final(payload, preview)

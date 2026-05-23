@@ -1,0 +1,38 @@
+﻿{
+    "run_at":  "2026-04-29T01:14:24",
+    "pass_name":  "pass1",
+    "frontend_subscription_page":  {
+                                       "url":  "http://127.0.0.1:3000/marketplace/subscription",
+                                       "status":  0,
+                                       "title_or_keyword_found":  false
+                                   },
+    "api_login":  {
+                      "status":  401,
+                      "ok":  false
+                  },
+    "api_get_subscription":  {
+                                 "status":  0,
+                                 "ok":  false,
+                                 "subscription_status":  null,
+                                 "cancel_at_period_end":  null,
+                                 "plan_code":  null,
+                                 "product_code":  null,
+                                 "raw":  null
+                             },
+    "api_cancel_subscription":  {
+                                    "status":  401,
+                                    "ok":  false,
+                                    "applied":  null,
+                                    "ignored":  null,
+                                    "reason_code":  null,
+                                    "raw":  null
+                                },
+    "api_resume_subscription":  {
+                                    "status":  401,
+                                    "ok":  false,
+                                    "applied":  null,
+                                    "ignored":  null,
+                                    "reason_code":  null,
+                                    "raw":  null
+                                }
+}

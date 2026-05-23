@@ -1,0 +1,3 @@
+{
+  "/.well-known/webauthn/route": "app/.well-known/webauthn/route.js"
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "product-identity.v1",
+  "product_id": "PID-C-USE-9B4C2CD6F4",
+  "project_name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4",
+  "validation_profile": "nextjs_app",
+  "identity_policy": {
+    "mandatory": true,
+    "description": "생성기 산출물의 고유 인식표(주민번호 수준 식별자)입니다. 배포/검증/복구 모든 단계에서 반드시 유지해야 합니다."
+  },
+  "identity_links": {
+    "id_registry_path": "docs/id_registry.json",
+    "traceability_map_path": "docs/traceability_map.json",
+    "architecture_contract_path": "docs/architecture.contract.json"
+  }
+}

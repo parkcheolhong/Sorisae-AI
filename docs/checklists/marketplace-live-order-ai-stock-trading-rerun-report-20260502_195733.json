@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-05-02T19:57:33.204350Z",
+  "results": [
+    {
+      "index": 1,
+      "project_name": "ai-engine-stock-trading-program-rerun1-20260502_194950",
+      "run_id": "stage_run_RCrdXCk9BCSiZg50nt2iK96c",
+      "stage_id": "ARCH-001",
+      "output_dir": "\\app\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun1-20260502_194950_20260502_194950_150417",
+      "output_archive_path": null,
+      "status": null,
+      "failed_reasons": [],
+      "validation_profile": null,
+      "profile_id": null,
+      "file_count": 0,
+      "dir_count": 0,
+      "code_lines": 0,
+      "check_sh_has_compileall": false,
+      "check_sh_has_pytest_q_s": false,
+      "check_sh_has_lock_marker": false
+    },
+    {
+      "index": 2,
+      "project_name": "ai-engine-stock-trading-program-rerun2-20260502_195343",
+      "run_id": "stage_run_Raxyzu2U2yE4FTBoIHTpgkiM",
+      "stage_id": "ARCH-001",
+      "output_dir": "\\app\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun2-20260502_195343_20260502_195343_153980",
+      "output_archive_path": null,
+      "status": null,
+      "failed_reasons": [],
+      "validation_profile": null,
+      "profile_id": null,
+      "file_count": 0,
+      "dir_count": 0,
+      "code_lines": 0,
+      "check_sh_has_compileall": false,
+      "check_sh_has_pytest_q_s": false,
+      "check_sh_has_lock_marker": false
+    }
+  ]
+}

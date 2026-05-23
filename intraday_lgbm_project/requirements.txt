@@ -1,0 +1,22 @@
+# 단타 LightGBM 자동매매 연구 프로젝트 의존성
+# 설치: pip install -r requirements.txt
+
+# 핵심 ML
+lightgbm>=4.0.0
+scikit-learn>=1.3.0
+
+# 데이터 처리
+pandas>=2.0.0
+numpy>=1.24.0
+
+# 금융 데이터 수집
+yfinance>=0.2.30
+
+# 시각화
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# 유틸
+joblib>=1.3.0          # 모델 저장/로드 (sklearn 내장이지만 명시)
+tqdm>=4.65.0           # 진행률 표시 (선택)
+python-dateutil>=2.8.2 # 날짜 파싱

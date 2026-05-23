@@ -1,0 +1,1082 @@
+--------- beginning of main
+05-24 01:11:51.399 D/NetdEventListenerService( 2765): DNS Requested by 213, 10512(com.microsoft.copilot), 4(FAIL), isBlocked=true, 0ms
+05-24 01:11:51.777 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:11:51.778 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:11:52.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552712
+05-24 01:11:52.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:52.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:52.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:52.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:52.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:52.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:52.028 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:52.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:52.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:52.125 D/AndroidRuntime(15008): >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+05-24 01:11:52.128 I/app_process(15008): MMAP_TRYLOCK is supported in uffd errno:2 addr:0x794a286000 size:4096
+05-24 01:11:52.129 I/AndroidRuntime(15008): Using default boot image
+05-24 01:11:52.129 I/AndroidRuntime(15008): Leaving lock profiling enabled
+05-24 01:11:52.131 I/app_process(15008): Using CollectorTypeCMC GC.
+05-24 01:11:52.153 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 44(44),m:7,c:1,b:250,c0:2496,l:44,f(r):82,u(bl):101,j:37
+05-24 01:11:52.183 D/nativeloader(15008): InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+05-24 01:11:52.191 D/nativeloader(15008): Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+05-24 01:11:52.191 D/app_process(15008): u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/9/icu") succeeded. 
+05-24 01:11:52.191 D/app_process(15008): I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt76l.dat
+05-24 01:11:52.193 D/nativeloader(15008): Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+05-24 01:11:52.194 D/nativeloader(15008): Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+05-24 01:11:52.195 I/app_process(15008): Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+05-24 01:11:52.208 E/SemDvfsManager_JNI(15008): SemDvfsManager: registerfunction enter
+05-24 01:11:52.208 E/SemAffinityControl(15008): SemAffinityControl: registerfunction enter
+05-24 01:11:52.220 D/nativeloader(15008): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+05-24 01:11:52.220 D/AndroidRuntime(15008): Calling main entry com.android.commands.monkey.Monkey
+05-24 01:11:52.221 D/nativeloader(15008): Load /system/lib64/libmonkey_jni.so using ns default for caller /system/framework/monkey.jar in same partition (is_bridged=0): ok
+05-24 01:11:52.222 W/Monkey  (15008): args: [-p, com.parkcheolhong.worldlinco, -c, android.intent.category.LAUNCHER, 1]
+05-24 01:11:52.224 W/PlatformAconfigPackage(15008): android.os.flagging.AconfigStorageReadException: ERROR_CANNOT_READ_STORAGE_FILE: Fail to mmap storage
+05-24 01:11:52.224 I/AconfigPackage(15008): com.android.appsearch.flags is mapped to com.android.appsearch
+05-24 01:11:52.224 I/AconfigPackage(15008): com.android.media.extractor.flags is mapped to com.android.media
+05-24 01:11:52.224 I/AconfigPackage(15008): com.android.media.mainline.flags is mapped to com.android.media
+05-24 01:11:52.224 I/AconfigPackage(15008): com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+05-24 01:11:52.224 I/AconfigPackage(15008): com.android.icu is mapped to com.android.i18n
+05-24 01:11:52.224 I/AconfigPackage(15008): android.os.profiling is mapped to com.android.profiling
+05-24 01:11:52.224 I/AconfigPackage(15008): com.android.system.virtualmachine.flags is mapped to com.android.virt
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.healthfitness.flags is mapped to com.android.healthfitness
+05-24 01:11:52.225 I/AconfigPackage(15008): android.provider.flags is mapped to com.android.configinfrastructure
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.adbd.flags is mapped to com.android.adbd
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.tethering.mainline.beta is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): android.net.http is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.tethering.readonly.flags is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): android.net.vcn is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.net.flags is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.tethering.flags is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.tethering.beta.test is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.nearby.flags is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.net.thread.flags is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.net.ct.flags is mapped to com.android.tethering
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.os.statsd.flags is mapped to com.android.os.statsd
+05-24 01:11:52.225 I/AconfigPackage(15008): android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.permission.flags is mapped to com.android.permission
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.permissioncontroller.flags is mapped to com.android.permission
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.adservices.flags is mapped to com.android.adservices
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.sdksandbox.flags is mapped to com.android.adservices
+05-24 01:11:52.225 I/AconfigPackage(15008): android.media.swcodec.flags is mapped to com.android.media.swcodec
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.art.flags is mapped to com.android.art
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.art.rw.flags is mapped to com.android.art
+05-24 01:11:52.225 I/AconfigPackage(15008): com.android.libcore is mapped to com.android.art
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.ipsec.flags is mapped to com.android.ipsec
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.wifi.flags is mapped to com.android.wifi
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.devicelock.flags is mapped to com.android.devicelock
+05-24 01:11:52.226 I/AconfigPackage(15008): android.graphics.pdf.flags is mapped to com.android.mediaprovider
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.providers.media.flags is mapped to com.android.mediaprovider
+05-24 01:11:52.226 I/AconfigPackage(15008): android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.uwb.flags is mapped to com.android.uwb
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.ranging.flags is mapped to com.android.uwb
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.rkpd.flags is mapped to com.android.rkpd
+05-24 01:11:52.226 I/AconfigPackage(15008): com.android.bluetooth.flags is mapped to com.android.bt
+05-24 01:11:52.226 E/FeatureFlagsImplExport(15008): android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+05-24 01:11:52.229 D/SemCscFeature(15008): Encoded
+05-24 01:11:52.233 W/Monkey  (15008):  arg: "-p"
+05-24 01:11:52.233 W/Monkey  (15008):  arg: "com.parkcheolhong.worldlinco"
+05-24 01:11:52.233 W/Monkey  (15008):  arg: "-c"
+05-24 01:11:52.233 W/Monkey  (15008):  arg: "android.intent.category.LAUNCHER"
+05-24 01:11:52.233 W/Monkey  (15008):  arg: "1"
+05-24 01:11:52.233 W/Monkey  (15008): data="com.parkcheolhong.worldlinco"
+05-24 01:11:52.233 W/Monkey  (15008): data="android.intent.category.LAUNCHER"
+05-24 01:11:52.234 D/EventHub( 2765): No input device configuration file found for device 'Monkey touch'.
+05-24 01:11:52.241 I/EventHub( 2765): usingClockIoctl=true
+05-24 01:11:52.241 I/EventHub( 2765): New device: id=185, fd=1277, path='/dev/input/event15', name='Monkey touch', classes=TOUCH | TOUCH_MT, bus=6, vid:pid=18d1:0001, configuration='', keyLayout='', keyCharacterMap='', builtinKeyboard=false, 
+05-24 01:11:52.243 I/InputReader( 2765): Device reconfigured: id=179, name='Monkey touch', size 1440x3088, orientation Rotation0, mode DIRECT, display id 0
+05-24 01:11:52.243 I/InputReader( 2765): Device added: id=179, eventHubId=185, name='Monkey touch', descriptor='e1fe28b90f915c7d1febbd52c1ef84b3c4cbed9f',sources=TOUCHSCREEN
+--------- beginning of system
+05-24 01:11:52.256 W/ActivityManager( 2765): registerReceiverWithFeature: no app for null
+05-24 01:11:52.266 W/ParceledListSlice( 2765): Element #202 is 22600 bytes.
+05-24 01:11:52.269 D/ActivityTaskManager( 2765): startActivityAsUser: callingPid=15008, callingUid=2000, caller=com.android.server.am.ActivityManagerService.startActivityAsUserWithFeature:27 android.app.IActivityManager$Stub.onTransact$startActivityAsUserWithFeature$:13109 android.app.IActivityManager$Stub.onTransact:4305 com.android.server.am.ActivityManagerService.onTransact:425 android.os.Binder.execTransactInternal:1457 android.os.Binder.execTransact:1401 <bottom of call stack> 
+05-24 01:11:52.269 I/Pageboost( 2765): onAppLaunch : com.parkcheolhong.worldlinco
+05-24 01:11:52.270 W/ActivityTaskManager( 2765): callingPackage for (uid=2000, pid=15008) has no WPC
+05-24 01:11:52.270 D/ActivityTaskManager( 2765): DesktopModeLaunchParamsModifier: task=null activity=null task null, skipping
+05-24 01:11:52.270 D/ActivityTaskManager( 2765): TaskLaunchParamsModifier:task=null activity=null display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea_d0@186984442 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@186984442
+05-24 01:11:52.270 W/OptProp ( 2765): Cannot read opt property android.window.PROPERTY_COMPAT_ALLOW_ORIENTATION_OVERRIDE
+05-24 01:11:52.271 D/WindowManager( 2765): Transition is created, t=TransitionRecord{99fe4e8 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.Transition.<init>:182 com.android.server.wm.TransitionController.createAndStartCollecting:106 com.android.server.wm.ActivityStarter.executeRequest:3515 com.android.server.wm.ActivityStarter.execute:1752 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 
+05-24 01:11:52.271 D/BLASTSyncEngine( 2765): SyncGroup is created, id=3011, name=Transition-OPEN, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:52 com.android.server.wm.TransitionController.moveToCollecting:79 com.android.server.wm.TransitionController.createAndStartCollecting:109 com.android.server.wm.ActivityStarter.executeRequest:3515 com.android.server.wm.ActivityStarter.execute:1752 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 com.android.server.am.ActivityManagerService.startActivityAsUserWithFeature:27 
+05-24 01:11:52.271 W/BLASTSyncEngine( 2765): setSyncMethod, id=3011, method=0, caller=com.android.server.wm.TransitionController.moveToCollecting:91 com.android.server.wm.TransitionController.createAndStartCollecting:109 com.android.server.wm.ActivityStarter.executeRequest:3515 
+05-24 01:11:52.271 V/WindowManager( 2765): Start collecting in Transition: TransitionRecord{99fe4e8 id=3011 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:109 com.android.server.wm.ActivityStarter.executeRequest:3515 com.android.server.wm.ActivityStarter.execute:1752 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 com.android.server.am.ActivityManagerService.startActivityAsUserWithFeature:27 
+05-24 01:11:52.271 V/WindowManager( 2765): Collecting in transition 3011: ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityStarter.startActivityUnchecked:98 com.android.server.wm.ActivityStarter.executeRequest:3559 com.android.server.wm.ActivityStarter.execute:1752 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 
+05-24 01:11:52.271 D/ActivityTaskManager( 2765): DesktopModeLaunchParamsModifier: task=null activity=ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} task null, skipping
+05-24 01:11:52.271 D/ActivityTaskManager( 2765): TaskLaunchParamsModifier:task=null activity=ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-area-from-current-params=null display-area-for-record=DefaultTaskDisplayArea_d0@186984442 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@186984442
+05-24 01:11:52.271 D/ActivityTaskManager( 2765): DesktopModeLaunchParamsModifier: task=Task{8467d36 #35200 type=standard A=10533:com.parkcheolhong.worldlinco nonResizable} activity=ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} non-desktop, skipping
+05-24 01:11:52.271 D/ActivityTaskManager( 2765): TaskLaunchParamsModifier:task=Task{8467d36 #35200 type=standard A=10533:com.parkcheolhong.worldlinco nonResizable} activity=ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@186984442 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@186984442 activity-requested-portrait freeform-size-mismatch=Rect(108, 726 - 1332, 2270)
+05-24 01:11:52.271 I/SemDvfsHyPerManager( 2765): acquire hyper - AMS_ACT_START/2765@19, type = -999
+05-24 01:11:52.271 D/ActivityManagerPerformance( 2765): AMP_acquire() ACT_START
+05-24 01:11:52.271 D/ActivityTaskManager( 2765): DesktopModeLaunchParamsModifier: task=Task{8467d36 #35200 type=standard A=10533:com.parkcheolhong.worldlinco nonResizable} activity=ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} non-desktop, skipping
+05-24 01:11:52.271 I/HYPER-HAL( 1949): [RequestManager.cpp]acquire(): Acquired ID : 3876739  [2765 / 19]    HINT : AMS_ACT_START    list : 
+05-24 01:11:52.271 D/ActivityTaskManager( 2765): TaskLaunchParamsModifier:task=Task{8467d36 #35200 type=standard A=10533:com.parkcheolhong.worldlinco nonResizable} activity=ActivityRecord{71522049 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@186984442 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@186984442 activity-requested-portrait freeform-size-mismatch=Rect(108, 726 - 1332, 2270)
+05-24 01:11:52.272 D/WindowManager( 2765): Aborting Transition: 3011 in state 0 called from com.android.server.wm.ActivityStarter.handleStartResult:881
+05-24 01:11:52.272 V/WindowManager( 2765): SyncGroup 3011: Finished!
+05-24 01:11:52.272 D/PhoneWindowManager( 2765): transition/occluded commit occluded=false changed=false
+05-24 01:11:52.272 D/PhoneWindowManager( 2765): setKeyguardOccluded occluded=false
+05-24 01:11:52.273 I/Pageboost( 2765): stop alp
+05-24 01:11:52.273 I/ActivityTaskManager( 2765): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+05-24 01:11:52.273 I/Monkey  (15008): Events injected: 1
+05-24 01:11:52.274 E/WindowManager( 2765): Display reconfigured outside of a transition: Display{#0 state=ON size=1440x3088 ROTATION_0}
+05-24 01:11:52.274 E/pageboostd( 4662): Received HALT command code 2
+05-24 01:11:52.274 D/TspStateManager( 2765): updateCustomValue customSetting=
+05-24 01:11:52.274 I/KeyguardService( 3697): setOccluded isOccluded=false animate=false
+05-24 01:11:52.274 D/KeyguardService( 3697): setOccluded(false)
+05-24 01:11:52.274 D/KeyguardViewMediator( 3697): handleMessage 9
+05-24 01:11:52.274 D/KeyguardViewMediator( 3697): handleSetOccluded(false) seq=336
+05-24 01:11:52.274 D/KeyguardViewMediator( 3697): isOccluded=false,mPowerGestureIntercepted=false
+05-24 01:11:52.275 D/KeyguardViewMediator( 3697): KeyguardViewMediator queue processing message: SET_OCCLUDED
+05-24 01:11:52.275 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = accelerometer_rotation
+05-24 01:11:52.275 D/SettingsProvider( 2765): PUT_ret(/system/accelerometer_rotation), callingPackage:android
+05-24 01:11:52.275 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = user_rotation
+05-24 01:11:52.276 V/WindowManager( 2765): Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:72 com.android.server.wm.WindowManagerService.freezeDisplayRotation:156 com.android.server.wm.WindowManagerService.freezeRotation:2 android.view.IWindowManager$Stub.onTransact:3004 com.android.server.wm.WindowManagerService.onTransact:1 android.os.Binder.execTransactInternal:1457 
+05-24 01:11:52.278 I/MediaFocusControl( 2765): abandonAudioFocus() from uid/pid 10533/20825 clientId=android.media.AudioManager@ddef950expo.modules.av.AVManager@f8171da callingPack=com.parkcheolhong.worldlinco
+05-24 01:11:52.278 D/AS.AudioService( 2765): [Android Auto] isConnectedAndroidAuto = false
+05-24 01:11:52.278 D/MediaFocusControl( 2765): selectFocusStack, uid = 10533, appDevice = 0, device = 2
+05-24 01:11:52.278 I/MediaFocusControl( 2765): removeFocusStackEntry client:android.media.AudioManager@ddef950expo.modules.av.AVManager@f8171da
+05-24 01:11:52.278 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = accelerometer_rotation
+05-24 01:11:52.279 D/SettingsProvider( 2765): PUT_ret(/system/accelerometer_rotation), callingPackage:android
+05-24 01:11:52.279 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = user_rotation
+05-24 01:11:52.279 V/WindowManager( 2765): Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:72 com.android.server.wm.WindowManagerService.thawDisplayRotation:113 com.android.server.wm.WindowManagerService.thawRotation:2 android.view.IWindowManager$Stub.onTransact:3013 com.android.server.wm.WindowManagerService.onTransact:1 android.os.Binder.execTransactInternal:1457 
+05-24 01:11:52.279 I/SurfaceControlRegistry( 2765): hide, t=AbortTransition_SyncId<3011> sc=WallpaperWindowToken{6d94cee showWhenLocked=false}, caller=android.view.SurfaceControl$Transaction.hide:3583 android.view.SurfaceControl$Transaction.setVisibility:3525 com.android.server.wm.WallpaperWindowToken.prepareSurfaces:36 com.android.server.wm.WindowContainer.prepareSurfaces:18 com.android.server.wm.WindowContainer.prepareSurfaces:18 com.android.server.wm.WindowContainer.prepareSurfaces:18 
+05-24 01:11:52.280 I/SurfaceControlRegistry( 2765): hide, t=AbortTransition_SyncId<3011> sc=WallpaperWindowToken{aa24798 showWhenLocked=false}, caller=android.view.SurfaceControl$Transaction.hide:3583 android.view.SurfaceControl$Transaction.setVisibility:3525 com.android.server.wm.WallpaperWindowToken.prepareSurfaces:36 com.android.server.wm.WindowContainer.prepareSurfaces:18 com.android.server.wm.WindowContainer.prepareSurfaces:18 com.android.server.wm.WindowContainer.prepareSurfaces:18 
+05-24 01:11:52.280 I/BLASTBufferQueue_Java(20825): update, w= 1600 h= 3431 mName = VRI[MainActivity]@622cc1c mNativeObject= 0xb400007e09627750 sc.mNativeObject= 0xb400007dd9603c10 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3574 android.view.ViewRootImpl.relayoutWindow:11685 android.view.ViewRootImpl.performTraversals:4804 android.view.ViewRootImpl.doTraversal:3924 android.view.ViewRootImpl$TraversalRunnable.run:12903 android.view.Choreographer$CallbackRecord.run:1901 
+05-24 01:11:52.280 I/VRI[MainActivity]@622cc1c(20825): Relayout returned: old=(0,0,1600,3431) new=(0,0,1600,3431) relayoutAsync=true req=(1600,3431)0 dur=0 res=0x0 s={true 0xb400007d39687010} ch=false seqId=0
+05-24 01:11:52.280 I/SurfaceControlRegistry( 2765): apply, t=AbortTransition_SyncId<3011>, caller=android.view.SurfaceControl$Transaction.apply:3459 android.view.SurfaceControl$Transaction.apply:3447 android.view.SurfaceControl$Transaction.apply:3397 com.android.server.wm.WindowAnimator.animate:307 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda1.doFrame:14 android.view.Choreographer$CallbackRecord.run:1899 
+05-24 01:11:52.280 I/VRI[MainActivity]@622cc1c(20825): registerCallbackForPendingTransactions
+05-24 01:11:52.281 I/WindowManager( 2765): Relayout Window{92b540a u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=1600x3431 ty=1 d0
+05-24 01:11:52.282 D/SurfaceComposerClient( 2765): setCornerRadius ## 92b540a com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity#40683 cornerRadius=0.000000
+05-24 01:11:52.283 I/HoneySpace.InputDeviceSourceRepositoryImpl( 4253): onInputDeviceAdded 179
+05-24 01:11:52.283 D/SurfaceComposerClient( 2765): setCornerRadius ## 92b540a com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity#40683 cornerRadius=0.000000
+05-24 01:11:52.284 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 0
+05-24 01:11:52.284 D/WindowManagerShell( 3697): onActivityRestartAttempt: topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}, wasVisible=true
+05-24 01:11:52.286 I/VRI[MainActivity]@622cc1c(20825): mWNT: t=0xb400007d79631cd0 mBlastBufferQueue=0xb400007e09627750 fn= 10 HdrRenderState mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$10.onFrameDraw:6536 android.view.ViewRootImpl$4.onFrameDraw:2489 android.view.ThreadedRenderer$1.onFrameDraw:718 
+05-24 01:11:52.287 I/SurfaceFlinger( 2066): SFWD update time=340435372593673
+05-24 01:11:52.288 I/HoneySpace.InputDeviceSourceRepositoryImpl( 4253): onInputDeviceAdded 179
+05-24 01:11:52.288 I/HoneySpace.TaskListPot[7e8195d]( 4253): navigationButtonVisible observe: 8
+05-24 01:11:52.288 I/HoneySpace.TaskListContainerView( 4253): isLastItemOutOfScreen null
+05-24 01:11:52.288 I/HoneySpace.TaskListContainerView( 4253): updateNavigationButtonVisible gone
+05-24 01:11:52.288 I/Monkey  (15008): ## Network stats: elapsed time=11ms (0ms mobile, 0ms wifi, 11ms not connected)
+05-24 01:11:52.290 I/HoneySpace.RecentscreenPot( 4253): createLayoutStyle: PhoneLayoutStyle(ScreenLayoutStyle(insets=Insets{left=0, top=100, right=0, bottom=192}))
+05-24 01:11:52.290 I/WindowManager( 2765): Relayout hash=92b540a, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=visible adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030317
+05-24 01:11:52.290 I/WindowManager( 2765):   fl=81810900
+05-24 01:11:52.290 I/WindowManager( 2765):   pfl=10048040
+05-24 01:11:52.290 I/WindowManager( 2765):   bhv=1
+05-24 01:11:52.290 I/WindowManager( 2765):   fitSides=0
+05-24 01:11:52.290 I/WindowManager( 2765):   frameRateBoostOnTouch=true
+05-24 01:11:52.290 I/WindowManager( 2765):   dvrrWindowFrameRateHint=true naviIconColor=0}
+05-24 01:11:52.290 I/HoneySpace.RecentscreenPot( 4253): createLayoutStyle: PhoneLayoutStyle(ScreenLayoutStyle(insets=Insets{left=0, top=100, right=0, bottom=192}))
+05-24 01:11:52.291 I/HoneySpace.RecentscreenPot( 4253): createLayoutStyle: PhoneLayoutStyle(ScreenLayoutStyle(insets=Insets{left=0, top=100, right=0, bottom=192}))
+05-24 01:11:52.292 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 120
+05-24 01:11:52.293 I/app_process(15008): System.exit called, status: 0
+05-24 01:11:52.293 I/AndroidRuntime(15008): VM exiting with result code 0.
+05-24 01:11:52.294 D/Navbar.Store( 3697): handleEvent(0) OnRotationLockedChanged(rotationLocked=false) [Module] NavBarStoreImpl
+05-24 01:11:52.295 D/SettingsHelper( 3697): onChange() COMPLETED elapsed= 1
+05-24 01:11:52.295 D/SRotationLockTile( 3697):  OnChangedCallback : 
+05-24 01:11:52.295 D/Navbar.Store( 3697): handleEvent(0) OnRotationLockedChanged(rotationLocked=false) [Module] NavBarStoreImpl
+05-24 01:11:52.298 D/SRotationLockTile( 3697):  mRotationLocked: false handleUpdateState: true orientation = true
+05-24 01:11:52.299 D/Navbar.Store( 3697): handleEvent(0) OnRotationLockedChanged(rotationLocked=false) [Module] NavBarStoreImpl
+05-24 01:11:52.300 D/Navbar.Store( 3697): handleEvent(0) OnRotationLockedChanged(rotationLocked=false) [Module] NavBarStoreImpl
+05-24 01:11:52.300 D/SettingsHelper( 3697): onChange() COMPLETED elapsed= 0
+05-24 01:11:52.300 D/SRotationLockTile( 3697):  OnChangedCallback : 
+05-24 01:11:52.301 D/SRotationLockTile( 3697):  mRotationLocked: false handleUpdateState: true orientation = true
+05-24 01:11:52.301 D/PerProcessNandswap$NandswapHandler( 2765): nandswap start for non-activity com.samsung.android.dqagent(pid 14404) action:14 adj:905 type:1
+05-24 01:11:52.305 I/EventHub( 2765): Removing device Monkey touch due to epoll hang-up event.
+05-24 01:11:52.305 I/EventHub( 2765): Removed device: path=/dev/input/event15 name=Monkey touch id=185 fd=1277 classes=TOUCH | TOUCH_MT
+05-24 01:11:52.306 I/InputReader( 2765): Device removed: id=179, eventHubId=185, name='Monkey touch', descriptor='e1fe28b90f915c7d1febbd52c1ef84b3c4cbed9f', sources=TOUCHSCREEN
+05-24 01:11:52.318 E/WindowManager( 2765): Display reconfigured outside of a transition: Display{#0 state=ON size=1440x3088 ROTATION_0}
+05-24 01:11:52.318 D/TspStateManager( 2765): updateCustomValue customSetting=
+05-24 01:11:52.318 I/HoneySpace.InputDeviceSourceRepositoryImpl( 4253): onInputDeviceRemoved 179
+05-24 01:11:52.318 I/HoneySpace.InputDeviceSourceRepositoryImpl( 4253): onInputDeviceRemoved 179
+05-24 01:11:52.319 I/HoneySpace.TaskListPot[7e8195d]( 4253): navigationButtonVisible observe: 8
+05-24 01:11:52.319 I/HoneySpace.TaskListContainerView( 4253): isLastItemOutOfScreen null
+05-24 01:11:52.319 I/HoneySpace.TaskListContainerView( 4253): updateNavigationButtonVisible gone
+05-24 01:11:52.319 I/EventHub( 2765): Removing device '/dev/input/event15' due to inotify event
+05-24 01:11:52.319 I/HoneySpace.RecentscreenPot( 4253): createLayoutStyle: PhoneLayoutStyle(ScreenLayoutStyle(insets=Insets{left=0, top=100, right=0, bottom=192}))
+05-24 01:11:52.320 I/HoneySpace.RecentscreenPot( 4253): createLayoutStyle: PhoneLayoutStyle(ScreenLayoutStyle(insets=Insets{left=0, top=100, right=0, bottom=192}))
+05-24 01:11:52.320 I/HoneySpace.RecentscreenPot( 4253): createLayoutStyle: PhoneLayoutStyle(ScreenLayoutStyle(insets=Insets{left=0, top=100, right=0, bottom=192}))
+05-24 01:11:52.322 D/NetdEventListenerService( 2765): DNS Requested by 213, 10533(com.parkcheolhong.worldlinco), SUCCESS, 25ms
+05-24 01:11:52.322 D/PerProcessNandswap$NandswapHandler( 2765): nandswap end for non-activity com.samsung.android.dqagent(pid 14404) ret:18627477504 adj:905
+05-24 01:11:52.326 D/PerProcessNandswap$NandswapHandler( 2765): nandswap start for non-activity com.samsung.android.networkdiagnostic(pid 14348) action:14 adj:905 type:1
+05-24 01:11:52.346 D/PerProcessNandswap$NandswapHandler( 2765): nandswap end for non-activity com.samsung.android.networkdiagnostic(pid 14348) ret:18852093952 adj:905
+05-24 01:11:52.351 D/PerProcessNandswap$NandswapHandler( 2765): nandswap start for non-activity com.samsung.android.networkdiagnostic(pid 14365) action:14 adj:915 type:1
+05-24 01:11:52.369 D/PerProcessNandswap$NandswapHandler( 2765): nandswap end for non-activity com.samsung.android.networkdiagnostic(pid 14365) ret:18621640704 adj:915
+05-24 01:11:52.373 D/PerProcessNandswap$NandswapHandler( 2765): nandswap start for non-activity android.process.media(pid 14327) action:14 adj:915 type:1
+05-24 01:11:52.424 D/PerProcessNandswap$NandswapHandler( 2765): nandswap end for non-activity android.process.media(pid 14327) ret:18617016320 adj:915
+05-24 01:11:52.428 D/PerProcessNandswap$NandswapHandler( 2765): nandswap start for non-activity android.process.media(pid 14301) action:14 adj:915 type:1
+05-24 01:11:52.480 D/PerProcessNandswap$NandswapHandler( 2765): nandswap end for non-activity android.process.media(pid 14301) ret:18618097664 adj:915
+05-24 01:11:52.483 D/PerProcessNandswap$NandswapHandler( 2765): nandswap start for non-activity com.google.android.apps.turbo:ssb(pid 14199) action:14 adj:925 type:1
+05-24 01:11:52.540 D/PerProcessNandswap$NandswapHandler( 2765): nandswap end for non-activity com.google.android.apps.turbo:ssb(pid 14199) ret:18676084736 adj:925
+05-24 01:11:52.748 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1973593] accel_sample [ 0.087, -0.111,  9.897] 350237295673232
+05-24 01:11:52.791 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:11:52.817 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96873, isSameBssidAndFreq true
+05-24 01:11:52.818 I/SemWifiLinkQualityMonitor( 2765): Link stat: 804 / 68 / 1.00 (7) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.08 / G (G) || 6b020a812412: 0.085 / 93.766 / N || N N / 0 0 / N 2.0 / N X 0 / 340435902 0 || 2026-05-24 01:11:51  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:11:52.939 I/sensors-hal( 1942): handle_sns_client_event:185, auto_rotation_debug_2 mode,255, type,1,0 acc,0.074,-0.115,9.899, ar,0, ver,14, pedo,1,e,1,i,3
+05-24 01:11:53.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552713
+05-24 01:11:53.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:53.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:53.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:53.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:53.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:53.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:53.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:53.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:53.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:53.096 D/io_stats( 1146): !@   8,0 r 27164590 581657960 w 10338969 147868540 d 3394916 167763720 f 0 802205 iot 12908148 0 th 0 0 0 pt 0 inp 0 0 340436.180
+05-24 01:11:53.096 D/io_stats( 1146): !@ Read_top(KB): loop9(1305) 196 app_process(15008) 164
+05-24 01:11:53.096 D/io_stats( 1146): !@ Write_top(KB): system_server(2765) 120 f2fs_ckpt-254:5(4251) 48 init(1) 28
+05-24 01:11:54.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552714
+05-24 01:11:54.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:54.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:54.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:54.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:54.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:54.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:54.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:54.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:54.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:54.274 I/SemDvfsHyPerManager( 2765): acquire hyper - AMS_RESUME_TAIL/2765@21, type = -999
+05-24 01:11:54.274 I/SemDvfsHyPerManager( 2765): acquire hyper - AMS_ACT_LAZY/2765@22, type = -999
+05-24 01:11:54.274 D/ActivityManagerPerformance( 2765): AMP_acquire() TAIL
+05-24 01:11:54.274 D/ActivityManagerPerformance( 2765): AMP_release() ACT_START
+05-24 01:11:54.274 I/HYPER-HAL( 1949): [RequestManager.cpp]acquire(): Acquired ID : 3882312  [2765 / 21]    HINT : AMS_RESUME_TAIL    list : 
+05-24 01:11:54.276 I/HYPER-HAL( 1949): [RequestManager.cpp]acquire(): Acquired ID : 3885100  [2765 / 22]    HINT : AMS_ACT_LAZY    list : 
+05-24 01:11:54.277 I/HYPER-HAL( 1949): [RequestManager.cpp]releaseLocked(): Released ID : 3876739
+05-24 01:11:54.579 I/HYPER-HAL( 1949): [RequestManager.cpp]releaseLocked(): Released ID : 3882312
+05-24 01:11:54.744 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1973802] accel_sample [ 0.085, -0.106,  9.891] 350239301865211
+05-24 01:11:55.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552715
+05-24 01:11:55.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:55.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:55.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:55.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:55.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:55.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:55.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:55.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:55.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:55.097 D/io_stats( 1146): !@   8,0 r 27164590 581657960 w 10338986 147868776 d 3394916 167763720 f 0 802207 iot 12908160 0 th 0 0 0 pt 0 inp 0 0 340438.181
+05-24 01:11:55.537 I/wpa_supplicant(10796): Heartbeat 33566
+05-24 01:11:55.775 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul result - RSSI:-34, CE:13, PE:13, TI:36, PTI:33, TW:0, PTW:0, Tx:60, Rx:244, TxS:18, RxS:6, RESULT:true, IC:3, ICT:5, WC:1, WCT:5, R:0, RC:0, IE:0, EC:0
+05-24 01:11:55.857 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:11:55.880 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96874, isSameBssidAndFreq true
+05-24 01:11:55.883 I/SemWifiLinkQualityMonitor( 2765): Link stat: 431 / 43 / 1.00 (4) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.10 / G (G) || 6b020a812412: 0.087 / 92.330 / N || N N / 0 0 / N 2.0 / N X 0 / 340438967 0 || 2026-05-24 01:11:54  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:11:56.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552716
+05-24 01:11:56.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:56.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:56.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:56.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:56.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:56.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:56.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:56.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:56.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:56.236 I/SDHMS:LOAD( 6703): type: LoadsFreqs, value: 3:0:0:1083264:2995200:806400:957312:2496000:633600:285:285:285
+05-24 01:11:56.473 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 44(44),m:7,c:1,b:250,c0:2496,l:44,f(r):82,u(bl):101,j:39
+05-24 01:11:56.704 I/system_server( 2765): Background young concurrent mark compact GC freed 45MB AllocSpace bytes, 254(5524KB) LOS objects, 19% free, 182MB/226MB, paused 1.329ms,6.097ms total 138.642ms
+05-24 01:11:56.725 W/viders.calendar(14884): userfaultfd: MOVE ioctl seems unsupported: Connection timed out
+05-24 01:11:56.761 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1974011] accel_sample [ 0.078, -0.117,  9.882] 350241308057815
+05-24 01:11:57.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552717
+05-24 01:11:57.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:57.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:57.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:57.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:57.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:57.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:57.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:57.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:57.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:57.057 D/ActivityManager( 2765): Received BROADCAST intent 0xc5efcba Key{broadcastIntent pkg=com.kakao.talk intent=act=com.kakao.talk.core.loco.intent.action.ACTION_PING xflg=0x4 cmp=com.kakao.talk/.core.loco.LocoPingBroadcastReceiver flags=0x4000000 u=0} requestCode=1132982 sent=0 from uid 1000
+05-24 01:11:57.062 I/ActivityManager( 2765): Changes in 99440 10 to 10, 0 to 128
+05-24 01:11:57.063 I/ActivityManager( 2765): Changes in 10355 10 to 10, 0 to 128
+05-24 01:11:57.064 D/BackgroundInstallControlService( 2765): Package event received: 0
+05-24 01:11:57.065 I/ekjt    ( 6626): (REDACTED) HDM. appOpsListener %s %s
+05-24 01:11:57.066 I/ekjt    ( 6626): (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+05-24 01:11:57.067 I/ActivityManager( 2765): Changes in 99440 10 to 10, 128 to 0
+05-24 01:11:57.067 I/ActivityManager( 2765): Changes in 10355 10 to 10, 128 to 0
+05-24 01:11:57.097 D/io_stats( 1146): !@   8,0 r 27164590 581657960 w 10338994 147868800 d 3394916 167763720 f 0 802209 iot 12908164 0 th 0 0 0 pt 0 inp 0 0 340440.182
+05-24 01:11:57.097 D/io_stats( 1146): !@ Write_top(KB): kworker/u16:0(8069) 204 henticator:auth(23399) 24 soft.appmanager(18483) 16
+05-24 01:11:57.451 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:11:57.453 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:11:57.458 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:11:57.458 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:11:57.496 W/DeviceStorageMonitorService( 2765): updateBroadcasts(/data) oldLevel:0, newLevel:0, seq:1
+05-24 01:11:57.497 D/DeviceStorageMonitorService( 2765): Available File Node Number is [11987100]
+05-24 01:11:57.497 W/DeviceStorageMonitorService( 2765): updateBroadcasts_filenode(/data) fn_oldLevel:0, fn_newLevel:0, seq:1
+05-24 01:11:57.862 D/NetdEventListenerService( 2765): DNS Requested by 213, 10512(com.microsoft.copilot), 4(FAIL), isBlocked=true, 0ms
+05-24 01:11:58.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552718
+05-24 01:11:58.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:58.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:58.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:58.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:58.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:58.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:58.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:58.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:58.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:58.072 I/ekjt    ( 6626): (REDACTED) HDM. appOpsListener %s %s
+05-24 01:11:58.072 I/ekjt    ( 6626): (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+05-24 01:11:58.766 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1974220] accel_sample [ 0.092, -0.109,  9.902] 350243314251357
+05-24 01:11:58.928 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:11:58.932 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:11:58.937 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:11:58.957 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96875, isSameBssidAndFreq true
+05-24 01:11:58.960 I/SemWifiLinkQualityMonitor( 2765): Link stat: 1233 / 55 / 1.00 (7) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.04 / G (G) || 6b020a812412: 0.082 / 97.527 / N || N N / 0 0 / N 2.0 / N X 0 / 340442043 0 || 2026-05-24 01:11:57  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:11:59.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552719
+05-24 01:11:59.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:11:59.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:11:59.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659211
+05-24 01:11:59.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:11:59.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:11:59.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:11:59.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:11:59.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:11:59.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:11:59.098 D/io_stats( 1146): !@   8,0 r 27164590 581657960 w 10339010 147868900 d 3394916 167763720 f 0 802209 iot 12908168 0 th 0 0 0 pt 0 inp 0 0 340442.183
+05-24 01:11:59.870 W/System.err(25279): FlagsHookHelper: skip hook flags method getInstanceHook
+05-24 01:11:59.888 D/NetdEventListenerService( 2765): DNS Requested by 213, 10410(com.ss.android.ugc.trill), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:00.005 I/EyeComfortSolutionService( 2765): action  :  android.intent.action.TIME_TICK
+05-24 01:12:00.005 I/DateTimeView( 3697): updateAll - getTimeFormat
+05-24 01:12:00.006 I/EyeComfortSolutionService( 2765): Week : Sun , Hour : 01 , Minute : 12 , TimeValue : 72 , sleep state, defaultWakeupTime : 360 , start wakeup : 180
+05-24 01:12:00.006 I/EyeComfortSolutionService( 2765): currentSleepStep : 50
+05-24 01:12:00.006 D/ClockFaceEvents( 3697): onTimeTick. callers : com.android.keyguard.ClockEventController$keyguardUpdateMonitorCallback$1.refreshTime:19
+05-24 01:12:00.006 D/ClockFaceEvents( 3697): com.android.keyguard.ClockEventController$keyguardUpdateMonitorCallback$1.onTimeChanged:1
+05-24 01:12:00.006 D/ClockFaceEvents( 3697): com.android.keyguard.KeyguardUpdateMonitor$16.handleMessage:732
+05-24 01:12:00.006 D/ClockFaceEvents( 3697): onTimeTick. callers : com.android.keyguard.ClockEventController$keyguardUpdateMonitorCallback$1.refreshTime:38
+05-24 01:12:00.006 D/ClockFaceEvents( 3697): com.android.keyguard.ClockEventController$keyguardUpdateMonitorCallback$1.onTimeChanged:1
+05-24 01:12:00.006 D/ClockFaceEvents( 3697): com.android.keyguard.KeyguardUpdateMonitor$16.handleMessage:732
+05-24 01:12:00.006 D/FaceWidgetPagesController( 3697): onTimeChanged()
+05-24 01:12:00.008 D/QSClockBellTower( 3697): onReceive(android.intent.action.TIME_TICK) mTimeZoneString:Asia/Seoul
+05-24 01:12:00.008 D/QSClockBellTower( 3697): He is ready to ring the bell. (((QSClockBellSound - TimeText:01:12, TimeContentDescription:01:12, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demo:false)))
+05-24 01:12:00.010 D/QSClock ( 3697): StatusBar clock=01:12 notifyTimeChanged(QSClockBellSound - TimeText:01:12, TimeContentDescription:01:12, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demo:false) clockVisibleByPolicy=true, clockVisibleByUser=true, visible=true, parent=android.widget.LinearLayout{39d0982 V.E...... ......ID 109,0-239,75 #7f0a069b app:id/left_clock_container} caller=com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment.animateShow:52 com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment.updateStatusBarVisibilitiesInner:230 com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment.updateStatusBarVisibilities:65 com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment.disable:71 com.android.systemui.statusbar.CommandQueue$H.handleMessage:2997  
+05-24 01:12:00.010 D/QSClockBellTower( 3697): Everyone heard the bell. run(currentTime:1779552720008, getTime():Sun May 24 01:12:00 GMT+09:00 2026, getTimeZone():libcore.util.ZoneInfo[mDstSavings=0,mUseDst=false,mDelegate=[id="Asia/Seoul",mRawOffset=32400000,mEarliestRawOffset=30472000,transitions=29]])
+05-24 01:12:00.016 D/{OngoingChipAdapter}( 3697): updateEnableMaxWidth : 352 -:> 347
+05-24 01:12:00.019 W/RefactorFlag( 3697): New code path expects SceneContainerFlag to be enabled.
+05-24 01:12:00.026 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 0
+05-24 01:12:00.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552720
+05-24 01:12:00.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:00.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:00.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:00.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:00.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:00.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:00.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:00.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:00.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:00.034 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 120
+05-24 01:12:00.085 D/vendor.samsung.hardware.thermal@1.0-service( 2012): timer callback!
+05-24 01:12:00.112 D/vendor.samsung.hardware.thermal@1.0-service( 2012): frontset.size = 0
+05-24 01:12:00.118 I/SDHMS:x ( 6703): SIOP:: AP:354 BAT:298 USB:292 CHG:346 PA:344 WIFI:336 CF:321 BLK:0 SUBBAT:0 SKIN:312 SKINF:312 SKINB:308 LRP:312 LRP2:312 LRF2:312 LRB2:308 AP2:312 CHG2:307 WIFI2:311 UANT2:308 RCV2:307 SPK2:291 FCAM:292 UPSPK:319 DNSPK:292 AMB:239 AVGCUR:2 AVGSYS:460 POWER:8
+05-24 01:12:00.214 D/ActivityManager( 2765): unpendingScheduleServiceRestart: u=10670, drop=false
+05-24 01:12:00.218 D/FreecessController( 2765): UFZ : com.openai.chatgpt(10670) [28558] reason: Binder(1)-android.accessibilityservice.IAccessibili
+05-24 01:12:00.218 W/LocationManagerService( 2765): onFreezeStateChanged, uid[10670]=false
+05-24 01:12:00.218 I/PowerManagerService( 2765): [PWL] SetWakeLockEnableDisable uid = 10670 , disable= false
+05-24 01:12:00.218 I/PowerManagerService( 2765): [PWL] can not change uid =  10670
+05-24 01:12:00.761 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1974429] accel_sample [ 0.097, -0.114,  9.888] 350245320446044
+05-24 01:12:00.794 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 44(44),m:7,c:1,b:250,c0:2512,l:44,f(r):82,u(bl):101,j:37
+05-24 01:12:01.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552721
+05-24 01:12:01.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:01.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:01.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:01.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:01.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:01.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:01.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:01.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:01.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:01.098 D/io_stats( 1146): !@   8,0 r 27164613 581658228 w 10339105 147869308 d 3394976 167764408 f 0 802213 iot 12908208 0 th 0 0 0 pt 0 inp 0 0 340444.183
+05-24 01:12:01.099 D/io_stats( 1146): !@ Read_top(KB): .openai.chatgpt(28558) 256 droid.ugc.trill(25279) 8 f2fs_ckpt-254:5(4251) 4
+05-24 01:12:01.099 D/io_stats( 1146): !@ Write_top(KB): kworker/u16:2(14291) 100 f2fs_ckpt-254:5(4251) 92 init(1) 28
+05-24 01:12:01.178 I/FusedLocation(24302): (REDACTED) location delivery to %s blocked - too close
+05-24 01:12:01.179 I/FusedLocation(24302): (REDACTED) location delivery to %s blocked - too close
+05-24 01:12:01.181 I/FusedLocation(24302): (REDACTED) location delivery to %s blocked - too close
+05-24 01:12:01.182 I/FusedLocation(24302): (REDACTED) location delivery to %s blocked - too fast
+05-24 01:12:01.185 I/Rubin   (29590): [202] m7.a.onLocationChanged(Unknown Source) : polygon changedLocation process
+05-24 01:12:01.185 D/ActivityManager( 2765): Received BROADCAST intent 0x17e98f5 Key{broadcastIntent pkg=com.samsung.android.mcfds intent=act=com.samsung.android.ce.sensor.location.PASSIVE_INTENT xflg=0x4 pkg=com.samsung.android.mcfds flags=0x2000000 u=0} requestCode=20247613 sent=0 from uid 1000
+05-24 01:12:01.186 I/Rubin   (29590): [428] b7.a.a(Unknown Source) : changedLocation geohash : wydzx
+05-24 01:12:01.187 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.samsung.android.sm.policy
+05-24 01:12:01.188 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.samsung.android.sm.policy
+05-24 01:12:01.188 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:01.188 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:01.188 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:01.188 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:01.188 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:01.189 D/SLocation( 2765): PositionManager - Passive handleLocationChanged [F, A : 100.00, T : 1779552721175, ET : 350245743, h : 27/24]
+05-24 01:12:01.190 I/[CE]_ContextEngineReceiver(16387): onReceive - action: com.samsung.android.ce.sensor.location.PASSIVE_INTENT
+05-24 01:12:01.190 D/LocationTracker( 8337): Got a location update from Play Services
+05-24 01:12:01.190 D/SLocation( 2765): PositionManager - receive fused location
+05-24 01:12:01.190 W/SLocation( 2765): GeopointGeofenceManger - refresh wifi to receive loc
+05-24 01:12:01.191 D/SLocation( 2765): GeopointGeofenceManger - Location reported : fix method = 14 / 100.0
+05-24 01:12:01.191 I/GmsPassiveListener_FLP( 4527): onGmsLocationChanged, provider=fused / speed=0.0 / time=1779552721175 / elapsed=350245743288372
+05-24 01:12:01.191 D/SLocation( 2765): LocationBuffer - receivedLocation - op[interval(min 60000, max 300000), waitTime 36000000, numOfUpdates 20, minDistance 200.0]dist : 0.0 diffTime : 60002 accept time condition
+05-24 01:12:01.191 D/SLocation( 2765): LocationBuffer - input buffer, size : 7
+05-24 01:12:01.191 D/SLocation( 2765): BatchManager - received batch location buffered = true
+05-24 01:12:01.191 D/SLocation( 2765): LastLocations - update latest location [F, A : 100.00, T : 1779552721175, ET : 350245743, h : 27/24]
+05-24 01:12:01.191 D/SLocation( 2765): ARDistanceLibManager - request distance diff to AR Distance Library
+05-24 01:12:01.191 D/SLocation( 2765): SLocationCoreSem - send to coreSem, packet length : 1 / [34]
+05-24 01:12:01.191 D/SemContextLocationCoreAttribute( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.191 D/SemContextService( 2765): lock : changeParameters
+05-24 01:12:01.191 D/SemContext.CaeProvider.LocationCoreImpl( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.191 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:509) - [setProperty 01] Mutex is locked for SLOCATION_RUNNER
+05-24 01:12:01.191 I/CAE     ( 2765): setPropertyValue(SLocationRunner.java:116) - SLocationRunner setProperty header : 34, len : 1
+05-24 01:12:01.192 D/SensorService( 2765): setSContextDataLocked ints length 2 , byte length 4
+05-24 01:12:01.192 D/SensorService( 2765): setSContextDataLocked 223717c1
+05-24 01:12:01.192 I/sensors-hal( 1942): inject_sensor_data:555, handle 1501 send inject
+05-24 01:12:01.192 I/sensors-hal( 1942): sendContextData:285, sensor hal 4, (0xc1, 0x17, 0x37, 0x22)
+05-24 01:12:01.192 E/sensors-hal( 1942): sendContextData:131, slocationcore h 193 m 23 s 55
+05-24 01:12:01.192 I/sensors-hal( 1942): sendUserData:117, slocationcore sendUserData
+05-24 01:12:01.192 E/sensors-hal( 1942): create_send_context_data:62, slocationcore create_send_context_data
+05-24 01:12:01.192 I/sensors-hal( 1942): send_context_data:618, slocationcore, 4986366670857974562, 1320970896291267344, msgid:700
+05-24 01:12:01.193 D/[CE]_ContextEngineController(16387): isContextEngineEnabled - isEnabled: true, state: 3
+05-24 01:12:01.193 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:515) - [setProperty 02] Mutex is unlocked for SLOCATION_RUNNER
+05-24 01:12:01.193 D/SemContextService( 2765): unlock : changeParameters
+05-24 01:12:01.193 D/SemContextManager( 2765):   .changeParameters : listener = Z.i@daece44, service=SLocation Core
+05-24 01:12:01.193 D/SLocation( 2765): SLocationCoreSem - send to coreSem, packet length : 23 / [2, 22, 152, 92, 249, 76, 64, 254, 253, 0, 0, 0, 100, 2, 0, 0, 1, 158, 85, 155, 153, 23, 0]
+05-24 01:12:01.193 D/SemContextLocationCoreAttribute( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.193 D/SemContextService( 2765): lock : changeParameters
+05-24 01:12:01.193 D/SemContext.CaeProvider.LocationCoreImpl( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.193 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:509) - [setProperty 01] Mutex is locked for SLOCATION_RUNNER
+05-24 01:12:01.193 I/CAE     ( 2765): setPropertyValue(SLocationRunner.java:116) - SLocationRunner setProperty header : 2, len : 23
+05-24 01:12:01.193 D/[CE]_IntentBroker(16387): publish - [action] com.samsung.android.ce.sensor.location.PASSIVE_INTENT, [size] 2, [intent] Intent { act=com.samsung.android.ce.sensor.location.PASSIVE_INTENT flg=0x10 xflg=0x4 pkg=com.samsung.android.mcfds cmp=com.samsung.android.mcfds/com.samsung.android.ce.ContextEngineReceiver (has extras) }
+05-24 01:12:01.193 I/[CE]_SLocationManager(16387): onReceive - [Passive Location] 20247613
+05-24 01:12:01.194 D/SensorService( 2765): setSContextDataLocked ints length 8 , byte length 26
+05-24 01:12:01.194 D/SensorService( 2765): setSContextDataLocked 23717c1
+05-24 01:12:01.194 I/sensors-hal( 1942): inject_sensor_data:555, handle 1501 send inject
+05-24 01:12:01.194 I/sensors-hal( 1942): sendContextData:285, sensor hal 26, (0xc1, 0x17, 0x37, 0x2)
+05-24 01:12:01.194 E/sensors-hal( 1942): sendContextData:131, slocationcore h 193 m 23 s 55
+05-24 01:12:01.194 I/sensors-hal( 1942): sendUserData:117, slocationcore sendUserData
+05-24 01:12:01.194 D/[CE]_SLocationManager(16387): writeToLogger - hit!
+05-24 01:12:01.194 E/sensors-hal( 1942): create_send_context_data:62, slocationcore create_send_context_data
+05-24 01:12:01.194 I/sensors-hal( 1942): send_context_data:618, slocationcore, 4986366670857974562, 1320970896291267344, msgid:700
+05-24 01:12:01.194 I/sensors-hal( 1942): ssc_conn_resp_cb:833, resp_value = 0
+05-24 01:12:01.194 E/sensors-hal( 1942): handle_sns_client_event:76, slocationcore_event: msgid:1025
+05-24 01:12:01.195 E/sensors-hal( 1942): handle_sns_client_event:76, slocationcore_event: msgid:1025
+05-24 01:12:01.196 E/sensors-hal( 1942): handle_sns_client_event:76, slocationcore_event: msgid:1025
+05-24 01:12:01.196 I/sensors-hal( 1942): ssc_conn_resp_cb:833, resp_value = 0
+05-24 01:12:01.196 E/sensors-hal( 1942): handle_sns_client_event:76, slocationcore_event: msgid:1025
+05-24 01:12:01.198 D/CAE     ( 2765): onGetSensorHubData(SensorHubParserProvider.java:92) - onGetSensorHubData Event [event buffer len :56], AP_WAKEUP
+05-24 01:12:01.198 I/CAE     ( 2765): parse(SensorHubParserProvider.java:188) - buffer size = 56
+05-24 01:12:01.198 I/CAE     ( 2765): parse(SensorHubParserProvider.java:199) - 1, 1, 55, 0, 51, 5, 7, 2, 0, 0, 0, 0, 3, 120, -6, 32, 15, 5, 0, 0, 0, -56, 3, 120, -6, 32, 5, 1, 0, 0, 0, 100, 3, 120, -6, 32, 15, 5, 0, 0, 0, -56, 3, 120, -6, 32, 7, 2, 0, 0, 0, 10, 3, 121, 33, 48,
+05-24 01:12:01.198 I/CAE     ( 2765): parse(SLocationRunner.java:88) - SLocationRunner parse start : 3
+05-24 01:12:01.198 D/CAE     ( 2765): display(ContextProvider.java:375) - ================= SLOCATION_RUNNER =================
+05-24 01:12:01.198 I/CAE     ( 2765): display(ContextProvider.java:391) - ExtraDataArray=[1, 1, 55, 0, 51, 5, 7, 2, 0, 0, 0, 0, 3, 120, -6, 32, 15, 5, 0, 0, 0, -56, 3, 120, -6, 32, 5, 1, 0, 0, 0, 100, 3, 120, -6, 32, 15, 5, 0, 0, 0, -56, 3, 120, -6, 32, 7, 2, 0, 0, 0, 10, 3, 121, 33, 48]
+05-24 01:12:01.199 I/Rubin   (29590): [202] B5.e.onLocationChanged(Unknown Source) : Passive location updated
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SLocationRunner.java:96) - SLocationRunner parse end:56
+05-24 01:12:01.199 D/CAE     ( 2765): onGetSensorHubData(SensorHubParserProvider.java:92) - onGetSensorHubData Event [event buffer len :38], AP_WAKEUP
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SensorHubParserProvider.java:188) - buffer size = 38
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SensorHubParserProvider.java:199) - 1, 1, 55, 0, 33, 33, 0, 0, 0, 0, 0, 0, 1, -98, 84, -124, -43, 32, 22, -104, 95, -96, 76, 65, 2, 0, 0, 0, 0, 6, 3, 120, -6, 32, 0, 0, 0, 6,
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SLocationRunner.java:88) - SLocationRunner parse start : 3
+05-24 01:12:01.199 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:515) - [setProperty 02] Mutex is unlocked for SLOCATION_RUNNER
+05-24 01:12:01.199 D/SemContextService( 2765): unlock : changeParameters
+05-24 01:12:01.199 D/SemContextManager( 2765):   .changeParameters : listener = Z.i@daece44, service=SLocation Core
+05-24 01:12:01.199 D/CAE     ( 2765): display(ContextProvider.java:375) - ================= SLOCATION_RUNNER =================
+05-24 01:12:01.199 I/CAE     ( 2765): display(ContextProvider.java:391) - ExtraDataArray=[1, 1, 55, 0, 33, 33, 0, 0, 0, 0, 0, 0, 1, -98, 84, -124, -43, 32, 22, -104, 95, -96, 76, 65, 2, 0, 0, 0, 0, 6, 3, 120, -6, 32, 0, 0, 0, 6]
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SLocationRunner.java:96) - SLocationRunner parse end:38
+05-24 01:12:01.199 D/SLocation( 2765): ReceiverPair - ignore direction of location due to wifi, id = 20, reason = 400
+05-24 01:12:01.199 D/CAE     ( 2765): onGetSensorHubData(SensorHubParserProvider.java:92) - onGetSensorHubData Event [event buffer len :10], AP_WAKEUP
+05-24 01:12:01.199 D/SemContextService( 2765): Service.updateContext() : service = SLocation Core
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SensorHubParserProvider.java:188) - buffer size = 10
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SensorHubParserProvider.java:199) - 1, 1, 55, 0, 5, 2, 34, 0, 0, 0,
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SLocationRunner.java:88) - SLocationRunner parse start : 3
+05-24 01:12:01.199 D/SemContextService( 2765): Service.updateContext() : service = SLocation Core
+05-24 01:12:01.199 D/CAE     ( 2765): display(ContextProvider.java:375) - ================= SLOCATION_RUNNER =================
+05-24 01:12:01.199 I/CAE     ( 2765): display(ContextProvider.java:391) - ExtraDataArray=[1, 1, 55, 0, 5, 2, 34, 0, 0, 0]
+05-24 01:12:01.199 I/[CE]_PrimaryLocationManager(16387): checkInStayDurationNow - In CSD now? Y / In ASD now? Y
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SLocationRunner.java:96) - SLocationRunner parse end:10
+05-24 01:12:01.199 D/CAE     ( 2765): onGetSensorHubData(SensorHubParserProvider.java:92) - onGetSensorHubData Event [event buffer len :10], AP_WAKEUP
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SensorHubParserProvider.java:188) - buffer size = 10
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SensorHubParserProvider.java:199) - 1, 1, 55, 0, 5, 2, 2, 0, 0, 0,
+05-24 01:12:01.199 I/CAE     ( 2765): parse(SLocationRunner.java:88) - SLocationRunner parse start : 3
+05-24 01:12:01.200 D/CAE     ( 2765): display(ContextProvider.java:375) - ================= SLOCATION_RUNNER =================
+05-24 01:12:01.200 I/CAE     ( 2765): display(ContextProvider.java:391) - ExtraDataArray=[1, 1, 55, 0, 5, 2, 2, 0, 0, 0]
+05-24 01:12:01.200 I/CAE     ( 2765): parse(SLocationRunner.java:96) - SLocationRunner parse end:10
+05-24 01:12:01.200 I/Rubin   (29590): [204] com.samsung.android.rubin.inferenceengine.contextanalytics.engine.loggers.LocationLogger.flush(Unknown Source) : flush
+05-24 01:12:01.200 D/SLocation( 2765): ReceiverPairWithAdaptive - id : 123, dir : 1
+05-24 01:12:01.200 I/[CE]_PrimaryLocationManager(16387): onNewLocation - State: 7 / 7
+05-24 01:12:01.200 I/[CE]_PrimaryAreaManager(16387): onNewlocation - State: 8 / 8
+05-24 01:12:01.200 D/SLocation( 2765): AlarmManagerWrapper - next alarm time : 353845759 (WK)
+05-24 01:12:01.201 D/SLocation( 2765): GeopointLastLocation - last location still available 25 / 9223372036854775807
+05-24 01:12:01.201 D/SLocation( 2765): GeopointGeofenceObserver - location : [F, A : 100.00, T : 1779552721175, ET : 350245743, h : 27/24], radius : 24320
+05-24 01:12:01.201 D/SLocation( 2765): LocationProviderStatus - try to update provider status (GPS/NLP)
+05-24 01:12:01.201 D/SLocation( 2765): LocationProviderStatus - set isGpsOn : true, isNlpOn : true
+05-24 01:12:01.201 D/SLocation( 2765): LocationProviderStatus - gps & nlp status not changed
+05-24 01:12:01.201 D/SLocation( 2765): GeofenceCoreManager - geofence core command pending size : 2
+05-24 01:12:01.201 D/SLocation( 2765): GeofenceCoreRecovery - removeGeofenceInfo id = 15000
+05-24 01:12:01.201 D/SLocation( 2765): SLocationCoreSem - send to coreSem, packet length : 3 / [17, 58, 152]
+05-24 01:12:01.201 D/SemContextLocationCoreAttribute( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.201 D/SemContextService( 2765): lock : changeParameters
+05-24 01:12:01.201 D/SemContext.CaeProvider.LocationCoreImpl( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.201 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:509) - [setProperty 01] Mutex is locked for SLOCATION_RUNNER
+05-24 01:12:01.201 I/CAE     ( 2765): setPropertyValue(SLocationRunner.java:116) - SLocationRunner setProperty header : 17, len : 3
+05-24 01:12:01.201 D/[CE]_LocationPatternManager(16387): loadPvpState - State : 0 / 1779552661173
+05-24 01:12:01.202 D/SensorService( 2765): setSContextDataLocked ints length 3 , byte length 6
+05-24 01:12:01.202 D/[CE]_LocationPatternManager(16387): savePvpState - State : 0 / 1779552721175
+05-24 01:12:01.202 D/SensorService( 2765): setSContextDataLocked 113717c1
+05-24 01:12:01.202 D/[CE]_LocationPatternManager(16387): onNewLocation - isInFA/time : true / 1779552721175
+05-24 01:12:01.202 D/SemContextService( 2765): Service.updateContext() : service = SLocation Core
+05-24 01:12:01.203 D/SemContextService( 2765): Service.updateContext() : service = SLocation Core
+05-24 01:12:01.202 I/sensors-hal( 1942): inject_sensor_data:555, handle 1501 send inject
+05-24 01:12:01.203 I/sensors-hal( 1942): sendContextData:285, sensor hal 6, (0xc1, 0x17, 0x37, 0x11)
+05-24 01:12:01.203 E/sensors-hal( 1942): sendContextData:131, slocationcore h 193 m 23 s 55
+05-24 01:12:01.203 I/sensors-hal( 1942): sendUserData:117, slocationcore sendUserData
+05-24 01:12:01.203 E/sensors-hal( 1942): create_send_context_data:62, slocationcore create_send_context_data
+05-24 01:12:01.203 I/sensors-hal( 1942): send_context_data:618, slocationcore, 4986366670857974562, 1320970896291267344, msgid:700
+05-24 01:12:01.203 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:515) - [setProperty 02] Mutex is unlocked for SLOCATION_RUNNER
+05-24 01:12:01.203 D/SemContextService( 2765): unlock : changeParameters
+05-24 01:12:01.203 D/SemContextManager( 2765):   .changeParameters : listener = Z.i@daece44, service=SLocation Core
+05-24 01:12:01.203 D/SLocation( 2765): GeofenceCoreManager - geofence core command pending size : 1
+05-24 01:12:01.203 D/SLocation( 2765): GeofenceCoreRecovery - storeGeofenceInfo 1 id = 15000, radius = 24320
+05-24 01:12:01.203 D/SLocation( 2765): SLocationCoreSem - send to coreSem, packet length : 16 / [16, 58, 152, 22, 152, 92, 249, 76, 64, 254, 253, 0, 0, 95, 0, 1]
+05-24 01:12:01.203 D/SemContextLocationCoreAttribute( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.203 D/SemContextService( 2765): lock : changeParameters
+05-24 01:12:01.203 D/SemContext.CaeProvider.LocationCoreImpl( 2765): setAttribute() mode : 0 action : 23
+05-24 01:12:01.203 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:509) - [setProperty 01] Mutex is locked for SLOCATION_RUNNER
+05-24 01:12:01.203 I/CAE     ( 2765): setPropertyValue(SLocationRunner.java:116) - SLocationRunner setProperty header : 16, len : 16
+05-24 01:12:01.203 D/SensorService( 2765): setSContextDataLocked ints length 6 , byte length 19
+05-24 01:12:01.203 D/SensorService( 2765): setSContextDataLocked 103717c1
+05-24 01:12:01.204 I/sensors-hal( 1942): inject_sensor_data:555, handle 1501 send inject
+05-24 01:12:01.204 I/sensors-hal( 1942): sendContextData:285, sensor hal 19, (0xc1, 0x17, 0x37, 0x10)
+05-24 01:12:01.204 E/sensors-hal( 1942): sendContextData:131, slocationcore h 193 m 23 s 55
+05-24 01:12:01.204 I/sensors-hal( 1942): sendUserData:117, slocationcore sendUserData
+05-24 01:12:01.205 E/sensors-hal( 1942): create_send_context_data:62, slocationcore create_send_context_data
+05-24 01:12:01.205 I/sensors-hal( 1942): send_context_data:618, slocationcore, 4986366670857974562, 1320970896291267344, msgid:700
+05-24 01:12:01.205 I/sensors-hal( 1942): ssc_conn_resp_cb:833, resp_value = 0
+05-24 01:12:01.205 W/CAE     ( 2765): setCAProperty(ContextAwareService.java:515) - [setProperty 02] Mutex is unlocked for SLOCATION_RUNNER
+05-24 01:12:01.205 D/SemContextService( 2765): unlock : changeParameters
+05-24 01:12:01.205 D/SemContextManager( 2765):   .changeParameters : listener = Z.i@daece44, service=SLocation Core
+05-24 01:12:01.205 E/sensors-hal( 1942): handle_sns_client_event:76, slocationcore_event: msgid:1025
+05-24 01:12:01.205 D/ActivityManager( 2765): Received SERVICE intent 0x3dae944 Key{startService pkg=com.google.android.gms/current_semantic_location intent=act=com.google.android.gms.semanticlocation.ACTION_LOCATION xflg=0x4 cmp=com.google.android.gms/.semanticlocation.service.SemanticLocationService flags=0x2000000 u=0} requestCode=0 from uid 10245
+05-24 01:12:01.206 I/sensors-hal( 1942): ssc_conn_resp_cb:833, resp_value = 0
+05-24 01:12:01.206 D/CAE     ( 2765): onGetSensorHubData(SensorHubParserProvider.java:92) - onGetSensorHubData Event [event buffer len :10], AP_WAKEUP
+05-24 01:12:01.206 I/CAE     ( 2765): parse(SensorHubParserProvider.java:188) - buffer size = 10
+05-24 01:12:01.206 E/sensors-hal( 1942): handle_sns_client_event:76, slocationcore_event: msgid:1025
+05-24 01:12:01.206 I/CAE     ( 2765): parse(SensorHubParserProvider.java:199) - 1, 1, 55, 0, 5, 2, 17, 0, 58, -104,
+05-24 01:12:01.206 I/CAE     ( 2765): parse(SLocationRunner.java:88) - SLocationRunner parse start : 3
+05-24 01:12:01.206 D/CAE     ( 2765): display(ContextProvider.java:375) - ================= SLOCATION_RUNNER =================
+05-24 01:12:01.206 I/CAE     ( 2765): display(ContextProvider.java:391) - ExtraDataArray=[1, 1, 55, 0, 5, 2, 17, 0, 58, -104]
+05-24 01:12:01.206 I/CAE     ( 2765): parse(SLocationRunner.java:96) - SLocationRunner parse end:10
+05-24 01:12:01.206 D/SemContextService( 2765): Service.updateContext() : service = SLocation Core
+05-24 01:12:01.207 D/CAE     ( 2765): onGetSensorHubData(SensorHubParserProvider.java:92) - onGetSensorHubData Event [event buffer len :10], AP_WAKEUP
+05-24 01:12:01.207 I/CAE     ( 2765): parse(SensorHubParserProvider.java:188) - buffer size = 10
+05-24 01:12:01.207 I/CAE     ( 2765): parse(SensorHubParserProvider.java:199) - 1, 1, 55, 0, 5, 2, 16, 0, 58, -104,
+05-24 01:12:01.207 I/CAE     ( 2765): parse(SLocationRunner.java:88) - SLocationRunner parse start : 3
+05-24 01:12:01.207 D/CAE     ( 2765): display(ContextProvider.java:375) - ================= SLOCATION_RUNNER =================
+05-24 01:12:01.207 I/CAE     ( 2765): display(ContextProvider.java:391) - ExtraDataArray=[1, 1, 55, 0, 5, 2, 16, 0, 58, -104]
+05-24 01:12:01.207 D/SemContextService( 2765): Service.updateContext() : service = SLocation Core
+05-24 01:12:01.207 I/CAE     ( 2765): parse(SLocationRunner.java:96) - SLocationRunner parse end:10
+05-24 01:12:01.207 I/[CE]_ActivityDataManagerImpl(16387): loadState - StayInfo loaded
+05-24 01:12:01.207 D/SemContextManager( 2765): onSemContextChanged() : event = SLocation Core
+05-24 01:12:01.208 D/SLocation( 2765): SensorHubWrapper - SemContextChanged type = 47, packet received
+05-24 01:12:01.208 D/SemContextManager( 2765): onSemContextChanged() : event = SLocation Core
+05-24 01:12:01.208 D/SLocation( 2765): SensorHubWrapper - SemContextChanged type = 47, packet received
+05-24 01:12:01.208 D/SemContextManager( 2765): onSemContextChanged() : event = SLocation Core
+05-24 01:12:01.208 D/SLocation( 2765): SensorHubWrapper - SemContextChanged type = 47, packet received
+05-24 01:12:01.208 D/SemContextManager( 2765): onSemContextChanged() : event = SLocation Core
+05-24 01:12:01.208 D/SLocation( 2765): SensorHubWrapper - SemContextChanged type = 47, packet received
+05-24 01:12:01.208 D/SemContextManager( 2765): onSemContextChanged() : event = SLocation Core
+05-24 01:12:01.208 D/SLocation( 2765): SensorHubWrapper - SemContextChanged type = 47, packet received
+05-24 01:12:01.208 D/SemContextManager( 2765): onSemContextChanged() : event = SLocation Core
+05-24 01:12:01.208 D/SLocation( 2765): SensorHubWrapper - SemContextChanged type = 47, packet received
+05-24 01:12:01.208 D/SLocation( 2765): GeofenceCoreManager - received Extra Data from core, len : 51
+05-24 01:12:01.208 D/SLocation( 2765): CommonCoreManager - received Extra Data from core, len : 51
+05-24 01:12:01.208 D/SLocation( 2765): GeofenceCoreManager - received Extra Data from core, len : 33
+05-24 01:12:01.208 D/SLocation( 2765): ARDistanceGetARDistance - convertSensorHubTimeToElapsedTime 331976568
+05-24 01:12:01.208 D/SLocation( 2765): CommonCoreManager - received Extra Data from core, len : 33
+05-24 01:12:01.208 D/SLocation( 2765): GeofenceCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.208 D/SLocation( 2765): GeofenceCoreManager - handleCommandCallback - UNKNOWN_CALLBACK 34 SUCCESS
+05-24 01:12:01.208 D/SLocation( 2765): ARDistanceLibManager - command callback received - CURRENT_LOCATION_REQUEST_DISTANCE ERROR CODE : ERROR_NONE
+05-24 01:12:01.208 D/SLocation( 2765): CommonCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.208 D/SLocation( 2765): GeofenceCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.208 D/SLocation( 2765): GeofenceCoreManager - handleCommandCallback - UNKNOWN_CALLBACK 2 SUCCESS
+05-24 01:12:01.208 D/SLocation( 2765): CommonCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.208 D/SLocation( 2765): CommonCoreManager - handleCommandCallback - FUNC_TYPE : SET_LOCATION  ERROR_CODE : ERROR_NONE
+05-24 01:12:01.208 W/Settings( 2765): Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+05-24 01:12:01.210 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:12:01.210 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:12:01.210 D/[CE]_ActivityDataManagerImpl(16387): isInStayCondition - currentMoveType: stationary, Cellular condition: true
+05-24 01:12:01.210 I/[CE]_ActivityDataManagerImpl(16387): Scan receiver - Stay detected - start time : 1779532931696, end time : 1779552721208, timestamp : 1779552721208
+05-24 01:12:01.211 V/[CE]_Utils(16387): saveAsYaml - hit!
+05-24 01:12:01.212 W/Settings( 2765): Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+05-24 01:12:01.212 D/BoundBrokerSvc(24302): onRebind: Intent { act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+05-24 01:12:01.212 D/SLocation( 2765): FilteredLastLocation - notify all last locations, loc : 1
+05-24 01:12:01.212 D/SLocation( 2765): GeofenceCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.212 D/SLocation( 2765): GeofenceCoreManager - handleCommandCallback - GEOFENCE_REMOVE SUCCESS
+05-24 01:12:01.212 I/SLocation( 2765): SHardwareManager - handleRemoveCallback : GEOFENCE_SUCCESS, id = 15000
+05-24 01:12:01.212 D/SLocation( 2765): CommonCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.213 D/SLocation( 2765): GeofenceCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.213 D/SLocation( 2765): GeofenceCoreManager - handleCommandCallback - GEOFENCE_ADD SUCCESS
+05-24 01:12:01.213 I/SLocation( 2765): SHardwareManager - handleAddCallback : GEOFENCE_SUCCESS id = 15000
+05-24 01:12:01.213 D/SLocation( 2765): CommonCoreManager - received Extra Data from core, len : 5
+05-24 01:12:01.213 D/[CE]_Utils(16387): saveAsYaml - updated!
+05-24 01:12:01.213 D/[CE]_ActivityDataManagerImpl(16387): onReceive - onReceive(ActivityDataManager)onReceive: Activity=stationary, Timestamp=1779552721208, PCI=0, pciSet=142,143
+05-24 01:12:01.213 I/[CE]_RealtimeMovingContextProvider(16387): onReceive - Not started
+05-24 01:12:01.222 I/TFLite-in-PlayServices(24302): Created interpreter.
+05-24 01:12:01.229 I/TFLite-in-PlayServices(24302): Created interpreter.
+05-24 01:12:01.235 I/SemanticLocation(24302): (REDACTED) [Inferrer] %s%s
+05-24 01:12:01.297 I/TFLite-in-PlayServices(24302): Created interpreter.
+05-24 01:12:01.302 I/TFLite-in-PlayServices(24302): Created interpreter.
+05-24 01:12:01.308 I/SemanticLocation(24302): (REDACTED) [Inferrer] %s%s
+05-24 01:12:01.693 D/SLocation( 2765): WifiBssidMonitor - requestRefresh
+05-24 01:12:01.693 W/SLocation( 2765): WifiBssidMonitor - connected wifi : (16:e6:6b:**:**:82/759)
+05-24 01:12:02.007 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:12:02.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552722
+05-24 01:12:02.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:02.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:02.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:02.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:02.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:02.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:02.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:02.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:02.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:02.033 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96876, isSameBssidAndFreq true
+05-24 01:12:02.034 I/SemWifiLinkQualityMonitor( 2765): Link stat: 734 / 48 / 1.00 (7) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.07 / G (G) || 6b020a812412: 0.084 / 95.574 / N || N N / 0 0 / N 2.0 / N X 0 / 340445118 0 || 2026-05-24 01:12:01  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:12:02.216 D/BoundBrokerSvc(24302): onRebind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+05-24 01:12:02.456 D/SatelliteController( 3655): isInCarrierRoamingNbIotNtn: satellite is disabled
+05-24 01:12:02.538 I/sensors-hal( 1942): handle_sns_client_event:185, auto_rotation_debug_2 mode,255, type,1,0 acc,0.086,-0.117,9.897, ar,0, ver,14, pedo,1,e,1,i,3
+05-24 01:12:02.767 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1974638] accel_sample [ 0.093, -0.105,  9.896] 350247326641878
+05-24 01:12:03.009 I/AfterimageCompensationService( 2765): AfcThread mLuminance : 487 , AfpcPeriodCount : 1958 , rotation : 0 , AOD : false
+05-24 01:12:03.010 I/SurfaceComposerClient( 2765): captureDisplay:Display-4630947232161729154
+05-24 01:12:03.012 I/SurfaceFlinger( 2066): Capture layer list: 	 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977(seamlessTransition:0)
+05-24 01:12:03.013 I/SurfaceFlinger( 2066): Capture layer list: 	 StatusBar$_3697#118(seamlessTransition:0)
+05-24 01:12:03.013 I/SurfaceFlinger( 2066): Capture layer list: 	 com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986(seamlessTransition:0)
+05-24 01:12:03.013 I/SurfaceFlinger( 2066): Capture layer list: 	 NavigationBar0$_3697#114(seamlessTransition:0)
+05-24 01:12:03.013 I/CompositionEngine( 2066): [setDisplaySize] size=(1440, 3088)
+05-24 01:12:03.013 E/HWComposer( 2066): getLuts: getLuts failed for display 4630947232161729154: UNSUPPORTED (8)
+05-24 01:12:03.016 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer ScreenCaptureFillLayer at index 0
+05-24 01:12:03.016 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977 at index 1
+05-24 01:12:03.016 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer StatusBar$_3697#118 at index 2
+05-24 01:12:03.016 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986 at index 3
+05-24 01:12:03.017 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer NavigationBar0$_3697#114 at index 4
+05-24 01:12:03.020 I/ContactsProvider( 5396): [P] onTrimMemory-success
+05-24 01:12:03.025 D/system_server( 2765): mAFPC_Read - w = 1440, h = 3088, s = 32, f = 4, s_size = 18182144, luminance = 487, count = 1958, captureOrientation = 0
+05-24 01:12:03.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552723
+05-24 01:12:03.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:03.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:03.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:03.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:03.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:03.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:03.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:03.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:03.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:03.099 D/io_stats( 1146): !@   8,0 r 27164614 581658232 w 10339130 147869392 d 3394976 167764408 f 0 802217 iot 12908240 0 th 0 0 0 pt 0 inp 0 0 340446.184
+05-24 01:12:03.223 D/SatelliteController( 3655): isInCarrierRoamingNbIotNtn: satellite is disabled
+05-24 01:12:03.526 I/SemWifiServiceDetector( 2765): Service det. suspended: T / T / 27646
+05-24 01:12:03.798 D/NetdEventListenerService( 2765): CSC Feature value: true
+05-24 01:12:03.798 D/NetdEventListenerService( 2765): CSC Feature value: true
+05-24 01:12:03.799 D/NetdEventListenerService( 2765): CSC Feature value: true
+05-24 01:12:03.800 D/NetdEventListenerService( 2765): DNS Requested by 213, 10512(com.microsoft.copilot), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:04.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552724
+05-24 01:12:04.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:04.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:04.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:04.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:04.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:04.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:04.028 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:04.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:04.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:04.669 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:04.669 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:12:04.674 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:12:04.674 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:04.715 D/SemCellularStateManager( 2765): onSignalStrengthsChanged: mCellularSignalLevel=4
+05-24 01:12:04.715 D/SatelliteController( 3655): isInCarrierRoamingNbIotNtn: satellite is disabled
+05-24 01:12:04.794 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1974847] accel_sample [ 0.086, -0.112,  9.879] 350249332838961
+05-24 01:12:04.904 D/NetdEventListenerService( 2765): DNS Requested by 213, 10410(com.ss.android.ugc.trill), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:05.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552725
+05-24 01:12:05.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:05.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:05.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:05.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:05.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:05.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:05.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:05.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:05.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:05.084 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:12:05.100 D/io_stats( 1146): !@   8,0 r 27164739 581673076 w 10339211 147870512 d 3394976 167764408 f 0 802219 iot 12908468 0 th 0 0 0 pt 0 inp 0 0 340448.184
+05-24 01:12:05.100 D/io_stats( 1146): !@ Read_top(KB): rosoft.skydrive(23292) 14840 rs.media.module(6601) 4 sung.android.ce(16387) 4
+05-24 01:12:05.100 D/io_stats( 1146): !@ Write_top(KB): kworker/u16:2(14291) 768 droid.ugc.trill(25279) 328 droid.rubin.app(29590) 68
+05-24 01:12:05.113 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96877, isSameBssidAndFreq true
+05-24 01:12:05.114 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 44(44),m:7,c:1,b:250,c0:2496,l:44,f(r):82,u(bl):101,j:37
+05-24 01:12:05.116 I/SemWifiLinkQualityMonitor( 2765): Link stat: 527 / 49 / 1.00 (3) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.09 / G (G) || 6b020a812412: 0.086 / 92.972 / N || N N / 0 0 / N 2.0 / N X 0 / 340448198 0 || 2026-05-24 01:12:05  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:12:05.537 I/wpa_supplicant(10796): Heartbeat 33567
+05-24 01:12:05.684 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:05.686 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:12:05.779 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul result - RSSI:-29, CE:13, PE:13, TI:36, PTI:36, TW:0, PTW:0, Tx:36, Rx:81, TxS:13, RxS:5, RESULT:true, IC:3, ICT:5, WC:2, WCT:5, R:0, RC:0, IE:0, EC:0
+05-24 01:12:06.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552726
+05-24 01:12:06.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:06.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:06.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:06.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:06.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:06.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:06.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:06.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:06.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:06.223 I/NSLocationMonitor( 2765): getGPSUsingApps() called
+05-24 01:12:06.224 I/NSLocationManager_FLP( 4527): getGPSUsingApps, No change
+05-24 01:12:06.230 W/Binder  ( 2765): Outgoing transactions from this process must be FLAG_ONEWAY
+05-24 01:12:06.230 W/Binder  ( 2765): java.lang.Throwable
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.os.BinderProxy.transact(BinderProxy.java:566)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.bluetooth.IBluetoothGatt$Stub$Proxy.getAdvertisingSetUids(IBluetoothGatt.java:1678)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.bluetooth.BluetoothAdapter.getAdvertisingSetUids(BluetoothAdapter.java:8476)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.bluetooth.BluetoothAdapter.getHWUsingApps(BluetoothAdapter.java:1342)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at com.android.server.am.mars.filter.filter.BlueToothConnectedFilter.updateBTUsingPackages(qb/106571952 c4c4375f2809767d35c3924eb0560cb9c53861c2af8e84225184923cb2856e18:22)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at com.android.server.am.FreecessController.freeze(qb/106571952 c4c4375f2809767d35c3924eb0560cb9c53861c2af8e84225184923cb2856e18:117)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at com.android.server.am.FreecessHandler$MainHandler.handleLcdOnFreeze(qb/106571952 c4c4375f2809767d35c3924eb0560cb9c53861c2af8e84225184923cb2856e18:55)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at com.android.server.am.FreecessHandler$MainHandler.handleMessage(qb/106571952 c4c4375f2809767d35c3924eb0560cb9c53861c2af8e84225184923cb2856e18:793)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.os.Handler.dispatchMessage(Handler.java:110)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.os.Looper.loopOnce(Looper.java:273)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.os.Looper.loop(Looper.java:363)
+05-24 01:12:06.230 W/Binder  ( 2765): 	at android.os.HandlerThread.run(HandlerThread.java:85)
+05-24 01:12:06.238 D/FreecessController( 2765): FZ : com.openai.chatgpt(10670) [28558] reason: Bg [cached:X
+05-24 01:12:06.238 D/FreecessHandler( 2765): freeze com.openai.chatgpt(10670) result : 0
+05-24 01:12:06.239 W/LocationManagerService( 2765): onFreezeStateChanged, uid[10670]=true
+05-24 01:12:06.239 I/PowerManagerService( 2765): [PWL] SetWakeLockEnableDisable uid = 10670 , disable= true
+05-24 01:12:06.239 I/PowerManagerService( 2765): [PWL] can not change uid =  10670
+05-24 01:12:06.314 I/SDHMS:LOAD( 6703): type: LoadsFreqs, value: 2:0:0:932351:2995200:806400:673536:2496000:633600:285:285:285
+05-24 01:12:06.530 I/SemWifiServiceDetector( 2765): Service det. resumed: T / T / 27646
+05-24 01:12:06.711 D/SatelliteController( 3655): isInCarrierRoamingNbIotNtn: satellite is disabled
+05-24 01:12:06.790 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1975056] accel_sample [ 0.091, -0.122,  9.892] 350251339037086
+05-24 01:12:07.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552727
+05-24 01:12:07.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:07.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:07.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:07.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:07.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:07.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:07.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:07.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:07.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:07.102 D/io_stats( 1146): !@   8,0 r 27165981 581825096 w 10339219 147870536 d 3394976 167764408 f 0 802221 iot 12910172 0 th 0 0 0 pt 0 inp 0 1 340450.186
+05-24 01:12:07.102 D/io_stats( 1146): !@ MemInfo(KB): total 11473780 free 245104 avail 4592364 actv(f) 1844472 inactv(f) 1682960 dirty 220 wb 0 anonpg 2595264 slab 791004
+05-24 01:12:08.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552728
+05-24 01:12:08.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:08.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:08.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:08.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:08.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:08.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:08.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:08.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:08.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:08.161 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:12:08.192 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96878, isSameBssidAndFreq true
+05-24 01:12:08.194 I/SemWifiLinkQualityMonitor( 2765): Link stat: 627 / 55 / 1.00 (5) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.09 / G (G) || 6b020a812412: 0.086 / 93.469 / N || N N / 0 0 / N 2.0 / N X 0 / 340451277 0 || 2026-05-24 01:12:08  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:12:08.787 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1975265] accel_sample [ 0.087, -0.109,  9.891] 350253345236253
+05-24 01:12:09.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552729
+05-24 01:12:09.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:09.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:09.028 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:09.028 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:09.028 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:09.028 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:09.028 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:09.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:09.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:09.104 D/io_stats( 1146): !@   8,0 r 27166904 581936320 w 10339230 147870620 d 3394976 167764408 f 0 802221 iot 12911432 0 th 0 0 0 pt 0 inp 0 0 340452.189
+05-24 01:12:09.104 D/io_stats( 1146): !@ Read_top(KB): rosoft.skydrive(23292) 263244
+05-24 01:12:09.105 D/io_stats( 1146): !@ Write_top(KB): kworker/u16:2(14291) 76 soft.appmanager(18483) 16 id.gms.unstable(25852) 8
+05-24 01:12:09.280 I/HYPER-HAL( 1949): [RequestManager.cpp]releaseLocked(): Released ID : 3885100
+05-24 01:12:09.294 D/NetdEventListenerService( 2765): DNS Requested by 213, 10481(com.hanaskcard.paycla), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:09.434 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 44(44),m:7,c:1,b:250,c0:2496,l:44,f(r):82,u(bl):101,j:39
+05-24 01:12:09.818 E/Watchdog( 2765): !@Sync: 11340 heap(MB): 191 / 226 native(MB): 107 FD: 1450 WaitTime: 0 ms GCcnt: 0 FullGC: 0 [2026-05-24 01:12:09.747]
+05-24 01:12:10.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552730
+05-24 01:12:10.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:10.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:10.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:10.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:10.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:10.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:10.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:10.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:10.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:10.087 D/vendor.samsung.hardware.thermal@1.0-service( 2012): timer callback!
+05-24 01:12:10.114 D/vendor.samsung.hardware.thermal@1.0-service( 2012): frontset.size = 0
+05-24 01:12:10.793 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1975474] accel_sample [ 0.090, -0.118,  9.890] 350255351436669
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [                 contacts = {contacts=1120, raw_contacts=2247, data=17289, account={secphone(1)=0, google(2)=1115, sim(3)=500, agg(4)=0, samsung(5)=326, duo(11)=0, com.one.onestore.android(12)=0, google(16)=0, duo(56)=306, mobileservice(80)=0, com.nhn.android.addressbookbackup(125)=0, com.dropbox.android.account(126)=0, com.microsoft.skydrive(127)=0, com.microsoft.workaccount(129)=0, com.microsoft.workaccount(130)=0, com.microsoft.workaccount(131)=0, com.samsung.android.email(133)=0, com.nhn.android.naveraccount(153)=0, com.microsoft.appmanager(164)=0, com.starmakerinteractive.thevoice.ashes(165)=0, www.instagram.com(171)=0, com.github.android(174)=0, com.github.android(175)=0, com.adobe.creativesdk.foundation.auth.adobeID.DC(176)=0, com.kakao.sdk.kakaotalk.sso.account(177)=0, com.microsoft.office(182)=0}, trash=0, trash_acc={}, trash_sync=0, database=contacts2.db} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [               aggregated = {[2,2,2,3,56]=1, [2,2,3,56]=20, [2,2,3]=52, [2,2,5,5,2,2,2,3]=1, [2,2]=3, [2,3,56]=77, [2,3]=191, [2,5,2,2,3]=1, [2,5,2,3,56]=6, [2,5,2,3]=9, [2,5,3,56]=15, [2,5,3]=24, [2,5,5,2,2,3,56]=1, [2,5,5,2,3,56]=2, [2,5,5,3]=1, [2,5,56]=14, [2,56]=108, [2,5]=40, [2]=317, [3,56]=1, [3]=35, [5,2,2,3,56]=2, [5,2,2,3]=11, [5,2,3,56]=17, [5,2,3]=27, [5,2,56]=12, [5,2]=37, [5,5,2,2,3,56]=4, [5,5,2,2,3]=1, [5,5,2,3,56]=1, [5,56]=25, [5]=64} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [                  request = {ALL(0)={avg=10, cnt=3, dur=31, ops={query=3}}, calendar(14884)={avg=13, cnt=2, dur=26, ops={query=2}}, contacts(9565)={avg=5, cnt=1, dur=5, ops={query=1}}} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [                    calls = {types={[100]=175, [200]=189, [300]=64, [500]=4, [1000]=1540, [1250]=135, [1300]=8}, database=calllog.db} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [                  profile = {contacts=1, raw_contacts=1, data=7, account={secphone(1)=1, google(2)=0, sim(3)=0, agg(4)=0, samsung(5)=0, duo(11)=0, com.one.onestore.android(12)=0, google(16)=0, duo(56)=0, mobileservice(80)=0, com.nhn.android.addressbookbackup(125)=0, com.dropbox.android.account(126)=0, com.microsoft.skydrive(127)=0, com.microsoft.workaccount(129)=0, com.microsoft.workaccount(130)=0, com.microsoft.workaccount(131)=0, com.samsung.android.email(133)=0, com.nhn.android.naveraccount(153)=0, com.microsoft.appmanager(164)=0, com.starmakerinteractive.thevoice.ashes(165)=0, www.instagram.com(171)=0, com.github.android(174)=0, com.github.android(175)=0, com.adobe.creativesdk.foundation.auth.adobeID.DC(176)=0, com.kakao.sdk.kakaotalk.sso.account(177)=0, com.microsoft.office(182)=0}, trash=0, trash_acc={}, trash_sync=0, database=profile.db} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [               sa_profile = {contacts=1, raw_contacts=1, data=8, account={secphone(1)=1, google(2)=0, sim(3)=0, agg(4)=0, samsung(5)=0, duo(11)=0, com.one.onestore.android(12)=0, google(16)=0, duo(56)=0, mobileservice(80)=0, com.nhn.android.addressbookbackup(125)=0, com.dropbox.android.account(126)=0, com.microsoft.skydrive(127)=0, com.microsoft.workaccount(129)=0, com.microsoft.workaccount(130)=0, com.microsoft.workaccount(131)=0, com.samsung.android.email(133)=0, com.nhn.android.naveraccount(153)=0, com.microsoft.appmanager(164)=0, com.starmakerinteractive.thevoice.ashes(165)=0, www.instagram.com(171)=0, com.github.android(174)=0, com.github.android(175)=0, com.adobe.creativesdk.foundation.auth.adobeID.DC(176)=0, com.kakao.sdk.kakaotalk.sso.account(177)=0, com.microsoft.office(182)=0}, trash=0, trash_acc={}, trash_sync=0, database=profile_sa.db} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: [                      etc = {binders=0, country_iso=KR, version=15.6.28, db_version=2000, db_size=10, db_wal_size=4, csc=SKT/SKT, sec_enabled=false, is_roaming=false} ]
+05-24 01:12:10.806 V/CpEventLog(u0)( 5396): [P] cp_state: ------------------------------------------------------------------------------
+05-24 01:12:11.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552731
+05-24 01:12:11.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:11.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:11.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:11.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:11.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:11.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:11.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:11.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:11.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:11.105 D/io_stats( 1146): !@   8,0 r 27166904 581936320 w 10339366 147871128 d 3395063 167766096 f 0 802229 iot 12911452 0 th 0 0 0 pt 0 inp 0 0 340454.190
+05-24 01:12:11.196 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.samsung.android.sm.policy
+05-24 01:12:11.197 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.samsung.android.sm.policy
+05-24 01:12:11.198 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:11.198 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:11.198 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:11.198 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:11.198 E/JobScheduler.Background( 2765): Couldn't determine stopped state for unknown package: com.facebook.appmanager
+05-24 01:12:11.241 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:12:11.267 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96879, isSameBssidAndFreq true
+05-24 01:12:11.269 I/SemWifiLinkQualityMonitor( 2765): Link stat: 563 / 47 / 1.00 (3) / 1200 / -32.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.08 / G (G) || 6b020a812412: 0.085 / 93.869 / N || N N / 0 0 / N 2.0 / N X 0 / 340454352 0 || 2026-05-24 01:12:11  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:12:11.798 D/NetdEventListenerService( 2765): DNS Requested by 213, 10512(com.microsoft.copilot), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:11.886 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:11.889 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:12:11.894 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:12:11.895 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:11.994 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 43(43),m:7,c:1,b:250,c0:2480,l:43,f(r):82,u(bl):101,j:37
+05-24 01:12:12.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552732
+05-24 01:12:12.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:12.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:12.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:12.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:12.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:12.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:12.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:12.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:12.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:12.137 I/sensors-hal( 1942): handle_sns_client_event:185, auto_rotation_debug_2 mode,255, type,1,0 acc,0.096,-0.120,9.897, ar,0, ver,14, pedo,1,e,1,i,3
+05-24 01:12:12.205 D/WM-DelayedWorkTracker(16405): Scheduling work 7495f33e-d1d3-4955-97c0-af48ab7affe3
+05-24 01:12:12.207 D/WM-GreedyScheduler(16405): Starting work for 7495f33e-d1d3-4955-97c0-af48ab7affe3
+05-24 01:12:12.213 D/WM-Processor(16405): ueo: processing WorkGenerationalId(workSpecId=7495f33e-d1d3-4955-97c0-af48ab7affe3, generation=0)
+05-24 01:12:12.221 D/WM-WorkerWrapper(16405): Starting work for com.samsung.android.app.shealth.social.together.service.SocialSyncLoopMonitorWorker
+05-24 01:12:12.239 I/WM-WorkerWrapper(16405): Worker result SUCCESS for Work [ id=7495f33e-d1d3-4955-97c0-af48ab7affe3, tags={ com.samsung.android.app.shealth.social.together.service.SocialSyncLoopMonitorWorker } ]
+05-24 01:12:12.241 I/SamsungAccount( 6528): [AccountManagerProvider] getSamsungAccountId
+05-24 01:12:12.242 I/SamsungAccount( 6528): [AccountManagerProvider] Calling package : app.shealth.
+05-24 01:12:12.246 D/WM-Processor(16405): ueo 7495f33e-d1d3-4955-97c0-af48ab7affe3 executed; reschedule = false
+05-24 01:12:12.252 I/SamsungAccount( 6528): [SignatureInfoDbHelper] searchOnUser(fromDb) - [10/1y90e][app.shealth.][64/14aaf] => matched
+05-24 01:12:12.252 I/SamsungAccount( 6528): [AccountManagerProvider] This is the access of the allowed application
+05-24 01:12:12.253 I/SamsungAccount( 6528): [AccountManagerProvider] makeResultBundle - resultCode : 0
+05-24 01:12:12.259 D/WM-GreedyScheduler(16405): Cancelling work ID 7495f33e-d1d3-4955-97c0-af48ab7affe3
+05-24 01:12:12.264 D/WM-SystemJobScheduler(16405): Scheduling work ID 7495f33e-d1d3-4955-97c0-af48ab7affe3Job ID 29477
+05-24 01:12:12.809 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1975683] accel_sample [ 0.081, -0.103,  9.891] 350257357638544
+05-24 01:12:13.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552733
+05-24 01:12:13.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:13.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:13.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:13.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:13.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:13.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:13.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:13.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:13.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:13.106 D/io_stats( 1146): !@   8,0 r 27166963 581936880 w 10339377 147871224 d 3395063 167766096 f 0 802229 iot 12911508 0 th 0 0 0 pt 0 inp 0 0 340456.190
+05-24 01:12:13.106 D/io_stats( 1146): !@ Read_top(KB): oid.app.shealth(16405) 544 .osp.app.signin(6528) 16
+05-24 01:12:13.106 D/io_stats( 1146): !@ Write_top(KB): f2fs_ckpt-254:5(4251) 124 oid.app.shealth(16405) 96 init(1) 28
+05-24 01:12:13.383 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:13.383 E/msys    (21704): E[N mns:DGWClient]_LogError(289)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+05-24 01:12:13.987 I/android.hardware.health@2.1-service-samsung( 1940): updateLrpSysfs: write: 314
+05-24 01:12:13.988 V/[SS]SleepChargingTimeController( 2765): [isActivated]mSleepChargingStatus Confident False => false
+05-24 01:12:14.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552734
+05-24 01:12:14.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:14.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:14.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:14.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:14.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:14.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:14.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:14.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:14.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:14.103 E/BatteryDump( 1940): !@new_battery_dump : 4246,-17,1666,4490,100,299,292,349,299,0,310,341,0,Full,NO_CHARGING,None,Good,PDIC_APDO,0,Normal,0,0,8700,0x0,0xf0000,0x0,0,0,0000,0000,00000000,0,0,0,0,1769,4246,10000,990,0,
+05-24 01:12:14.307 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:12:14.331 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96880, isSameBssidAndFreq true
+05-24 01:12:14.334 I/SemWifiLinkQualityMonitor( 2765): Link stat: 734 / 43 / 1.00 (9) / 1200 / -29.0 || 100.0 : 1200.00 / 0.5 : 1.00 / 0.55 : 0.06 / G (G) || 6b020a812412: 0.083 / 96.215 / N || N N / 0 0 / N 2.0 / N X 0 / 340457417 0 || 2026-05-24 01:12:14  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+05-24 01:12:14.555 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 42(42),m:7,c:1,b:250,c0:2384,l:42,f(r):82,u(bl):101,j:37
+05-24 01:12:14.715 I/sensors-hal( 1942): handle_sns_client_event:45, light_seamless ts=350259281921565 ns, 37,40,2147483647, M:0,0, S:0,0
+05-24 01:12:14.724 D/RefreshRateModeManager( 2765): onBrightnessChanged: brt=250, lux=37.0
+05-24 01:12:14.816 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1975892] accel_sample [ 0.089, -0.108,  9.891] 350259363842294
+05-24 01:12:14.816 D/InputDispatcher( 2765): Inject motion (15180/2000): action=0x0, time=340457901000000, f=0x0, d=0 dsdx=1.000000 dtdx=0.000000
+05-24 01:12:14.817 I/InputDispatcher( 2765): Delivering touch to (3697): action: 0x4, f=0x0, d=0, '21d989a', t=1 
+05-24 01:12:14.817 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x0, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:12:14.818 D/PowerManagerService( 2765): [api] userActivityFromNative : touch displayId=0 eventTime=340457901
+05-24 01:12:14.818 I/VRI[MainActivity]@622cc1c(20825): ViewPostIme pointer 0
+05-24 01:12:14.819 D/PowerManagerService( 2765): UserActivityStateListenerState: 1
+05-24 01:12:14.821 I/SemDvfsHyPerManager( 6703): acquire hyper - TABoost/6703@23, type = -999
+05-24 01:12:14.822 I/HYPER-HAL( 1949): [RequestManager.cpp]acquire(): Acquired ID : 22622924  [6703 / 23]    HINT :      list : [TABoost / 1] [TIMEOUT / 1500] 
+05-24 01:12:14.823 I/GestureDetector( 2765): obtain mCurrentDownEvent. id: -500527961 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:17 com.android.server.wm.PointerEventDispatcher.onInputEvent:51 android.view.InputEventReceiver.dispatchInputEvent:392 
+05-24 01:12:14.823 I/VRI[MainActivity]@622cc1c(20825): call setFrameRateCategory for touch hint category=high hint, reason=touch, vri=VRI[MainActivity]@622cc1c
+05-24 01:12:14.824 I/GestureDetector( 2765): obtain mCurrentDownEvent. id: -500527961 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:13 com.android.server.wm.PointerEventDispatcher.onInputEvent:51 android.view.InputEventReceiver.dispatchInputEvent:392 
+05-24 01:12:14.825 D/InputDispatcher( 2765): Inject motion (15180/2000): action=0x1, time=340457901000000, f=0x0, d=0 dsdx=1.000000 dtdx=0.000000
+05-24 01:12:14.825 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x1, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:12:14.825 I/VRI[MainActivity]@622cc1c(20825): ViewPostIme pointer 1
+05-24 01:12:14.826 I/SurfaceFlinger( 2066): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977] setFrameRateCategory: HighHint
+05-24 01:12:14.826 I/GestureDetector( 2765): obtain mCurrentMotionEventRaw. action: 1 id: -692769372
+05-24 01:12:14.826 I/GestureDetector( 2765): obtain mCurrentMotionEventRaw. action: 1 id: -692769372
+05-24 01:12:14.827 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"SECTION_RAIL_PRESS","timestamp":"2026-05-23T16:12:14.827Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","key":"voip","previous_section":"home","next_section":"voip"}'
+05-24 01:12:14.827 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 0
+05-24 01:12:14.835 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 120
+05-24 01:12:14.861 I/BLASTBufferQueue_Java(20825): update, w= 1600 h= 3431 mName = VRI[MainActivity]@622cc1c mNativeObject= 0xb400007e09627750 sc.mNativeObject= 0xb400007dd9603c10 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3574 android.view.ViewRootImpl.relayoutWindow:11685 android.view.ViewRootImpl.performTraversals:4804 android.view.ViewRootImpl.doTraversal:3924 android.view.ViewRootImpl$TraversalRunnable.run:12903 android.view.Choreographer$CallbackRecord.run:1901 
+05-24 01:12:14.861 I/VRI[MainActivity]@622cc1c(20825): Relayout returned: old=(0,0,1600,3431) new=(0,0,1600,3431) relayoutAsync=true req=(1600,3431)0 dur=0 res=0x0 s={true 0xb400007d39687010} ch=false seqId=0
+05-24 01:12:14.861 I/WindowManager( 2765): Relayout Window{92b540a u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=1600x3431 ty=1 d0
+05-24 01:12:14.862 D/SurfaceComposerClient( 2765): setCornerRadius ## 92b540a com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity#40683 cornerRadius=0.000000
+05-24 01:12:14.862 I/VRI[MainActivity]@622cc1c(20825): registerCallbackForPendingTransactions
+05-24 01:12:14.862 I/VRI[MainActivity]@622cc1c(20825): mWNT: t=0xb400007d7969fd50 mBlastBufferQueue=0xb400007e09627750 fn= 11 HdrRenderState mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$10.onFrameDraw:6536 android.view.ViewRootImpl$4.onFrameDraw:2489 android.view.ThreadedRenderer$1.onFrameDraw:718 
+05-24 01:12:14.863 D/SurfaceComposerClient( 2765): setCornerRadius ## 92b540a com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity#40683 cornerRadius=0.000000
+05-24 01:12:14.865 I/WindowManager( 2765): Relayout hash=92b540a, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=visible adjust=resize} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030317
+05-24 01:12:14.865 I/WindowManager( 2765):   fl=81810900
+05-24 01:12:14.865 I/WindowManager( 2765):   pfl=10048040
+05-24 01:12:14.865 I/WindowManager( 2765):   bhv=1
+05-24 01:12:14.865 I/WindowManager( 2765):   fitSides=0
+05-24 01:12:14.865 I/WindowManager( 2765):   frameRateBoostOnTouch=true
+05-24 01:12:14.865 I/WindowManager( 2765):   dvrrWindowFrameRateHint=true naviIconColor=0}
+05-24 01:12:14.873 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 27(27),m:7,c:1,b:250,c0:1408,l:24,f(r):82,u(bl):101,j:21
+05-24 01:12:14.905 W/System.err(25279): FlagsHookHelper: skip hook flags method getInstanceHook
+05-24 01:12:14.908 D/InputDispatcher( 2765): Inject motion (15187/2000): action=0x0, time=340457993000000, f=0x0, d=0 dsdx=1.000000 dtdx=0.000000
+05-24 01:12:14.909 I/InputDispatcher( 2765): Delivering touch to (3697): action: 0x4, f=0x0, d=0, '21d989a', t=1 
+05-24 01:12:14.909 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x0, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:12:14.909 I/VRI[MainActivity]@622cc1c(20825): ViewPostIme pointer 0
+05-24 01:12:14.910 I/GestureDetector( 2765): obtain mCurrentDownEvent. id: -718359601 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:17 com.android.server.wm.PointerEventDispatcher.onInputEvent:51 android.view.InputEventReceiver.dispatchInputEvent:392 
+05-24 01:12:14.910 D/InputDispatcher( 2765): Inject motion (15187/2000): action=0x1, time=340457993000000, f=0x0, d=0 dsdx=1.000000 dtdx=0.000000
+05-24 01:12:14.910 I/GestureDetector( 2765): obtain mCurrentDownEvent. id: -718359601 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:13 com.android.server.wm.PointerEventDispatcher.onInputEvent:51 android.view.InputEventReceiver.dispatchInputEvent:392 
+05-24 01:12:14.910 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x1, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:12:14.911 I/GestureDetector( 2765): obtain mCurrentMotionEventRaw. action: 1 id: -192712854
+05-24 01:12:14.911 I/GestureDetector( 2765): obtain mCurrentMotionEventRaw. action: 1 id: -192712854
+05-24 01:12:14.911 I/VRI[MainActivity]@622cc1c(20825): ViewPostIme pointer 1
+05-24 01:12:14.922 D/NetdEventListenerService( 2765): DNS Requested by 213, 10410(com.ss.android.ugc.trill), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:14.993 D/InputDispatcher( 2765): Inject motion (15194/2000): action=0x0, time=340458078000000, f=0x0, d=0 dsdx=1.000000 dtdx=0.000000
+05-24 01:12:14.994 I/InputDispatcher( 2765): Delivering touch to (3697): action: 0x4, f=0x0, d=0, '21d989a', t=1 
+05-24 01:12:14.994 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x0, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:12:14.995 I/VRI[MainActivity]@622cc1c(20825): ViewPostIme pointer 0
+05-24 01:12:14.995 I/GestureDetector( 2765): obtain mCurrentDownEvent. id: -679628875 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:17 com.android.server.wm.PointerEventDispatcher.onInputEvent:51 android.view.InputEventReceiver.dispatchInputEvent:392 
+05-24 01:12:14.996 I/GestureDetector( 2765): obtain mCurrentDownEvent. id: -679628875 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:13 com.android.server.wm.PointerEventDispatcher.onInputEvent:51 android.view.InputEventReceiver.dispatchInputEvent:392 
+05-24 01:12:14.997 D/InputDispatcher( 2765): Inject motion (15194/2000): action=0x1, time=340458078000000, f=0x0, d=0 dsdx=1.000000 dtdx=0.000000
+05-24 01:12:14.997 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x1, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:12:14.997 I/VRI[MainActivity]@622cc1c(20825): ViewPostIme pointer 1
+05-24 01:12:14.998 I/GestureDetector( 2765): obtain mCurrentMotionEventRaw. action: 1 id: -2379190
+05-24 01:12:14.999 I/SemDvfsHyPerManager( 6703): acquire hyper - TABoost/6703@23, type = -999
+05-24 01:12:14.999 I/GestureDetector( 2765): obtain mCurrentMotionEventRaw. action: 1 id: -2379190
+05-24 01:12:14.999 I/HYPER-HAL( 1949): [RequestManager.cpp]releaseLocked(): Released ID : 22622924
+05-24 01:12:14.999 I/HYPER-HAL( 1949): [RequestManager.cpp]acquire(): Acquired ID : 22622924  [6703 / 23]    HINT :      list : [TABoost / 1] [TIMEOUT / 1500] 
+05-24 01:12:15.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552735
+05-24 01:12:15.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:15.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:15.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:15.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:15.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:15.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:15.028 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:15.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:15.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:15.033 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 16(16),m:7,c:2,b:250,c0:928,l:15,f(r):82,u(bl):101,j:9
+05-24 01:12:15.072 D/ActivityManager( 2765): unpendingScheduleServiceRestart: u=10670, drop=false
+05-24 01:12:15.075 W/LocationManagerService( 2765): onFreezeStateChanged, uid[10670]=false
+05-24 01:12:15.075 D/FreecessController( 2765): UFZ : com.openai.chatgpt(10670) [28558] reason: Binder(1)-android.accessibilityservice.IAccessibili
+05-24 01:12:15.075 I/PowerManagerService( 2765): [PWL] SetWakeLockEnableDisable uid = 10670 , disable= false
+05-24 01:12:15.075 I/PowerManagerService( 2765): [PWL] can not change uid =  10670
+05-24 01:12:15.106 D/io_stats( 1146): !@   8,0 r 27166985 581937140 w 10339398 147871308 d 3395063 167766096 f 0 802231 iot 12911560 0 th 0 0 0 pt 0 inp 0 2 340458.191
+05-24 01:12:15.296 I/GestureDetector( 2765): handleMessage TAP
+05-24 01:12:15.296 I/GestureDetector( 2765): handleMessage TAP
+05-24 01:12:15.538 I/wpa_supplicant(10796): Heartbeat 33568
+05-24 01:12:15.552 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 1
+05-24 01:12:15.561 I/VSyncReactor( 2066): Current= 120, Period= 120, Distance= 120
+05-24 01:12:15.782 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul result - RSSI:-29, CE:13, PE:13, TI:37, PTI:36, TW:0, PTW:0, Tx:44, Rx:181, TxS:12, RxS:4, RESULT:true, IC:4, ICT:5, WC:3, WCT:5, R:0, RC:0, IE:0, EC:0
+05-24 01:12:16.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552736
+05-24 01:12:16.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:16.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:16.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:16.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:16.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:16.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:16.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:16.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:16.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:16.286 D/BoundBrokerSvc(24302): onUnbind: Intent { act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+05-24 01:12:16.404 I/SDHMS:LOAD( 6703): type: LoadsFreqs, value: 7:0:0:806400:806400:806400:732288:1881600:633600:285:285:285
+05-24 01:12:16.501 I/HYPER-HAL( 1949): [RequestManager.cpp]releaseLocked(): Released ID : 22622924
+05-24 01:12:16.538 D/SatelliteController( 3655): isInCarrierRoamingNbIotNtn: satellite is disabled
+05-24 01:12:16.541 D/SemCellularStateManager( 2765): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:12:16.582 I/vendor.rmt_storage( 2067): rmt_storage_connect_cb: clnt_h=0x15e conn_h=0xb4000076b6828410
+05-24 01:12:16.582 I/vendor.rmt_storage( 2067): rmt_storage_rw_iovec_cb: /boot/modem_fs2: req_h=0x15e msg_id=3: R/W request received (wr_count 342)
+05-24 01:12:16.582 I/vendor.rmt_storage( 2067): wakelock acquired: 1, error no: 11
+05-24 01:12:16.583 I/vendor.rmt_storage( 2067): rmt_storage_client_thread: /boot/modem_fs2: Unblock worker thread (th_id: 500737416368)
+05-24 01:12:16.604 I/vendor.rmt_storage( 2067): rmt_storage_client_thread: /boot/modem_fs2: req_h=0x15e msg_id=3: Bytes written = 2621440, wr_count 342
+05-24 01:12:16.604 I/vendor.rmt_storage( 2067): rmt_storage_client_thread: /boot/modem_fs2: req_h=0x15e msg_id=3: Send response: res=0 err=0, wr_count 342
+05-24 01:12:16.605 I/vendor.rmt_storage( 2067): rmt_storage_client_thread: /boot/modem_fs2: About to block rmt_storage client thread (th_id: 500737416368) wakelock released: 1, error no: 0
+05-24 01:12:16.605 I/vendor.rmt_storage( 2067): 
+05-24 01:12:16.606 E/minksocket( 1917): MinkIPC_QRTR_Service: client with node 0 port 1dd went down
+05-24 01:12:16.606 I/vendor.rmt_storage( 2067): rmt_storage_disconnect_cb: clnt_h=0x15e conn_h=0xb4000076b6828410
+05-24 01:12:16.821 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1976101] accel_sample [ 0.072, -0.117,  9.881] 350261370047689
+05-24 01:12:16.955 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 28(28),m:7,c:3,b:250,c0:1856,l:31,f(r):82,u(bl):101,j:20
+05-24 01:12:17.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552737
+05-24 01:12:17.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:17.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:17.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:17.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:17.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:17.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:17.028 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:17.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:17.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:17.107 D/io_stats( 1146): !@   8,0 r 27166990 581937208 w 10339410 147873892 d 3395063 167766096 f 0 802234 iot 12911588 0 th 0 0 0 pt 0 inp 0 0 340460.192
+05-24 01:12:17.108 D/io_stats( 1146): !@ Read_top(KB): rild(2399) 152 om.kakaopay.app(16809) 104 hong.worldlinco(20825) 48
+05-24 01:12:17.108 D/io_stats( 1146): !@ Write_top(KB): rmt_storage(2067) 2560 kworker/u16:0(8069) 40 soft.appmanager(18483) 16
+05-24 01:12:17.113 I/sensors-hal( 1942): handle_sns_std_sensor_event:311, [SSC_LIGHT] P: 38(38),m:7,c:3,b:250,c0:2448,l:41,f(r):82,u(bl):101,j:31
+05-24 01:12:17.233 D/BoundBrokerSvc(24302): onUnbind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+05-24 01:12:17.275 I/sensors-hal( 1942): handle_sns_client_event:45, light_seamless ts=350261839883574 ns, 46,40,2147483647, M:0,0, S:0,0
+05-24 01:12:17.282 D/RefreshRateModeManager( 2765): onBrightnessChanged: brt=250, lux=46.0
+05-24 01:12:17.400 D/WifiStaIfaceHidlImpl( 2765): getCachedScanData is not implemented by HIDL
+05-24 01:12:17.429 D/SemWifiUsabilityStatsMonitor( 2765): onWifiUsabilityStats - seqNum 96881, isSameBssidAndFreq true
+05-24 01:12:17.519 D/NetdEventListenerService( 2765): DNS Requested by 213, 10512(com.microsoft.copilot), 4(FAIL), isBlocked=true, 0ms
+05-24 01:12:17.995 D/PowerManagerService( 2765): UserActivityStateListenerState: 0
+05-24 01:12:17.998 I/VRI[MainActivity]@622cc1c(20825): call setFrameRateCategory for touch hint category=no preference, reason=boost timeout, vri=VRI[MainActivity]@622cc1c
+05-24 01:12:18.003 I/SurfaceFlinger( 2066): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977] setFrameRateCategory: NoPreference
+05-24 01:12:18.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552738
+05-24 01:12:18.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:18.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:18.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:18.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:18.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:18.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:18.027 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:18.027 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:18.027 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:18.183 D/WifiConnectivityMonitor.DnsThread( 2765):  [|209] []
+05-24 01:12:18.184 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): DNS resultType : 0, responseTime : 209
+05-24 01:12:18.185 D/OpenNetworkQos[4.00]( 2765): updateBssidLatestDnsResultType - result: 0
+05-24 01:12:18.185 D/OpenNetworkQos[4.00]( 2765): updateBssidNoInternet: mBssidNoInternet = false
+05-24 01:12:18.185 D/OpenNetworkQos[4.00]( 2765): getOpenNetworkQosNoInternetStatus: false
+05-24 01:12:18.185 D/OpenNetworkQos[4.00]( 2765): getOpenNetworkQosScores: 26 23 26 
+05-24 01:12:18.185 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:12:18.186 I/WifiProfileShare( 2765): network QoS data was changed (internet), updateQoSData networkType: true, qosData: false
+05-24 01:12:18.186 V/WifiProfileShare.Caster( 2765): update wips network, size: 0
+05-24 01:12:18.186 D/WifiProfileShare( 2765): nearby scanning settings run
+05-24 01:12:18.186 D/WifiProfileShare( 2765): network score provider settings enabled
+05-24 01:12:18.186 D/OpenNetworkQos[4.00]( 2765): getOpenNetworkQosScores: 26 23 26 
+05-24 01:12:18.186 D/OpenNetworkQos[4.00]( 2765): getOpenNetworkQosNoInternetStatus: false
+05-24 01:12:18.187 I/WifiProfileShare.Caster( 2765): current network type: 0, score: [26, 23, 26]
+05-24 01:12:18.187 V/WifiProfileShare.Cache( 2765): update network score 16:e6:6b:**:**:81
+05-24 01:12:18.188 D/WifiProfileShare.ScanMatcher( 2765): getMcfDataList size:2
+05-24 01:12:18.188 I/WifiProfileShare.Caster( 2765): qos data was updated , before:type:QOS, pBssid:e4:61:97, qosData:77 after:type:QOS, pBssid:e4:61:97, qosData:77
+05-24 01:12:18.188 D/[MCFServer]_McfMainController(10669): getBleStatus - true.
+05-24 01:12:18.189 I/[MCFSDK_android_1.3.7026]_4_McfCasterImpl( 2765): isNetworkEnabled - type : 1 ret : true
+05-24 01:12:18.189 D/WifiProfileShare.McfCast( 2765): -ME--- mIsNetworkEnabled :true
+05-24 01:12:18.189 D/WifiProfileShare.McfCast( 2765): updateQoSData ignored, same contents
+05-24 01:12:18.189 D/WifiProfileShare.MCF( 2765): success update QosData !
+05-24 01:12:18.189 D/[MCFServer]_McfMainController(10669): getBleStatus - true.
+05-24 01:12:18.189 I/[MCFSDK_android_1.3.7026]_4_McfCasterImpl( 2765): isNetworkEnabled - type : 1 ret : true
+05-24 01:12:18.189 D/WifiProfileShare.McfCast( 2765): -ME--- mIsNetworkEnabled :true
+05-24 01:12:18.189 D/WifiProfileShare.McfCast( 2765): -ME--- updatePasswordDate pwdData size:2
+05-24 01:12:18.555 I/SemWifiServiceDetector( 2765): Service det. suspended: T / T / 27646
+05-24 01:12:18.652 W/ParceledListSlice( 2765): Element #460 is 24380 bytes.
+05-24 01:12:18.653 W/ParceledListSlice( 2765): Element #460 is 24380 bytes.
+05-24 01:12:18.817 I/sensors-hal( 1942): handle_sns_client_event:550, [0][1976310] accel_sample [ 0.097, -0.111,  9.896] 350263376254564
+05-24 01:12:19.027 E/HeatmapThread( 2062): ECT Thread time in milliseconds: 1779552739
+05-24 01:12:19.027 D/HeatmapThread( 2062): !@ batteryplugType : 0
+05-24 01:12:19.027 D/HeatmapThread( 2062): !@ batteryLevel : 0  batteryTemperature : 0 
+05-24 01:12:19.027 D/HeatmapThread( 2062): !@ Heatmap currtime: 29659212
+05-24 01:12:19.027 D/HeatmapThread( 2062): !@ Heatmap prevtime: 29659196
+05-24 01:12:19.027 D/HeatmapThread( 2062): !@ Heatmap plugstarttime: 35791394
+05-24 01:12:19.027 D/HeatmapThread( 2062): !@ Heatmap prevv_dsoh_update_time: 29653376
+05-24 01:12:19.028 E/HeatmapThread( 2062): !@Could not open '/efs/FactoryApp/bsoh', errno = 13
+05-24 01:12:19.028 E/HeatmapThread( 2062): !@ CAM Could not access BSOH EFS
+05-24 01:12:19.028 E/HeatmapThread( 2062): !@ CAM New BSOH: 0
+05-24 01:12:19.103 D/NetdEventListenerService( 2765): DNS Requested by 213, 10125(com.instagram.android), 4(FAIL), isBlocked=tr

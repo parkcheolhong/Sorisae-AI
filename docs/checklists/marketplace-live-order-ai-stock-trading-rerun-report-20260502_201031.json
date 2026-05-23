@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-05-02T20:10:31.554484Z",
+  "results": [
+    {
+      "index": 1,
+      "project_name": "ai-engine-stock-trading-program-rerun1-20260502_200244",
+      "run_id": "stage_run_oLRwSmSxIHcv1hC05vxjQaxG",
+      "stage_id": "ARCH-001",
+      "raw_output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_200244_20260502_200244_934261",
+      "output_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun1-20260502_200244_20260502_200244_934261",
+      "output_archive_path": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_200244_20260502_200244_934261/ai-engine-stock-trading-program-reru-4c61b08ab4_shipment.zip",
+      "status": "failed",
+      "failed_reasons": [
+        "semantic gate failed",
+        "runtime scenario marker missing: marketplace publish payload",
+        "thin implementation files detected: backend/core/auth.py"
+      ],
+      "validation_profile": "python_fastapi",
+      "profile_id": null,
+      "file_count": 3810,
+      "dir_count": 450,
+      "code_lines": 725708,
+      "check_sh_has_compileall": true,
+      "check_sh_has_pytest_q_s": true,
+      "check_sh_has_lock_marker": true
+    },
+    {
+      "index": 2,
+      "project_name": "ai-engine-stock-trading-program-rerun2-20260502_200638",
+      "run_id": "stage_run_SQI0a3EtbndAg3Hn6D_slkK-",
+      "stage_id": "ARCH-001",
+      "raw_output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_200638_20260502_200638_208866",
+      "output_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun2-20260502_200638_20260502_200638_208866",
+      "output_archive_path": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_200638_20260502_200638_208866/ai-engine-stock-trading-program-reru-e718a99d98_shipment.zip",
+      "status": "failed",
+      "failed_reasons": [
+        "semantic gate failed",
+        "runtime scenario marker missing: marketplace publish payload",
+        "thin implementation files detected: backend/core/auth.py"
+      ],
+      "validation_profile": "python_fastapi",
+      "profile_id": null,
+      "file_count": 3810,
+      "dir_count": 450,
+      "code_lines": 725708,
+      "check_sh_has_compileall": true,
+      "check_sh_has_pytest_q_s": true,
+      "check_sh_has_lock_marker": true
+    }
+  ]
+}

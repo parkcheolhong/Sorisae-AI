@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ipaddress
 import logging
 import os
 import socket
@@ -24,44 +23,9 @@ from backend.main import app  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
-def _is_container_runtime() -> bool:
-    return (
-        Path("/.dockerenv").exists()
-        or Path("/run/.containerenv").exists()
-        or bool(os.getenv("KUBERNETES_SERVICE_HOST"))
-    )
-
-
 def _default_profiler_host() -> str:
-    return "127.0.0.1"
-
-
-def _resolve_profiler_host() -> str:
-    requested_host = (os.getenv("BACKEND_PROFILER_HOST") or _default_profiler_host()).strip()
-    allow_remote = (os.getenv("BACKEND_PROFILER_ALLOW_REMOTE", "") or "").strip().lower() in {"1", "true", "yes", "on"}
-    if requested_host == "localhost":
-        try:
-            infos = socket.getaddrinfo("localhost", None)
-            if infos and all(ipaddress.ip_address(info[4][0]).is_loopback for info in infos):
-                return requested_host
-        except Exception:
-            logger.warning("[WARN] failed to resolve localhost loopback addresses", exc_info=True)
-        logger.warning("[WARN] localhost does not resolve to loopback only; fallback to 127.0.0.1")
-        return "127.0.0.1"
-    if requested_host in {"127.0.0.1", "::1"}:
-        return requested_host
-    try:
-        requested_ip = ipaddress.ip_address(requested_host)
-    except (TypeError, ValueError):
-        logger.warning("[WARN] hostname profiler host=%s is not allowed; fallback to 127.0.0.1", requested_host)
-        return "127.0.0.1"
-    if requested_ip.is_loopback:
-        return requested_host
-    if allow_remote:
-        if requested_ip.is_unspecified:
-            logger.warning("[WARN] profiler backend is binding to all interfaces (host=%s)", requested_host)
-        return requested_host
-    logger.warning("[WARN] remote profiler host=%s blocked; set BACKEND_PROFILER_ALLOW_REMOTE=true to allow", requested_host)
+    if os.path.exists("/.dockerenv") or os.getenv("DOTNET_RUNNING_IN_CONTAINER") == "true":
+        return "0.0.0.0"
     return "127.0.0.1"
 
 
@@ -96,7 +60,7 @@ def _resolve_bind_port(host: str, requested_port: int, max_attempts: int = 20) -
 def main() -> None:
     import uvicorn
 
-    host = _resolve_profiler_host()
+    host = os.getenv("BACKEND_PROFILER_HOST", _default_profiler_host())
     port = _resolve_bind_port(host, int(os.getenv("BACKEND_PROFILER_PORT", "8000")))
     logger.info("[OK] profiler backend bind target: http://%s:%s", host, port)
     uvicorn.run(app, host=host, port=port, reload=False)

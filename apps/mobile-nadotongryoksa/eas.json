@@ -1,0 +1,50 @@
+{
+  "cli": {
+    "version": ">= 10.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "android": { "buildType": "apk" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": { "EXPO_PUBLIC_RELEASE_CHANNEL": "preview" }
+    },
+    "staging": {
+      "distribution": "internal",
+      "channel": "staging",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": { "EXPO_PUBLIC_RELEASE_CHANNEL": "staging" }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "channel": "production",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": { "EXPO_PUBLIC_RELEASE_CHANNEL": "production" }
+    },
+    "production": {
+      "distribution": "store",
+      "channel": "production",
+      "android": {
+        "buildType": "app-bundle",
+        "applicationArchivePath": "android/app/build/outputs/bundle/release/app-release.aab"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

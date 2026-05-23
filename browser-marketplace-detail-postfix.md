@@ -1,0 +1,96 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Marketplace Detail 탐색" [ref=e3]:
+      - generic [ref=e4]: MA
+      - navigation [ref=e5]:
+        - link "홈" [ref=e6] [cursor=pointer]:
+          - /url: /marketplace
+          - generic [ref=e8]: 홈
+        - link "상세" [ref=e9] [cursor=pointer]:
+          - /url: /marketplace/1
+          - generic [ref=e11]: 상세
+        - link "관리" [ref=e12] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e14]: 관리
+        - link "주문" [ref=e15] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e17]: 주문
+      - generic [ref=e18]: LIVE
+    - generic [ref=e19]:
+      - banner [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: 실전 샘플 · SaaS 운영 대시보드 UI Kit
+          - heading "Marketplace Detail" [level=1] [ref=e23]
+          - paragraph [ref=e24]: 목록에서 진입한 프로젝트의 상세 정보와 운영 링크를 확인합니다.
+        - generic [ref=e25]:
+          - link "Marketplace Home" [ref=e26] [cursor=pointer]:
+            - /url: /marketplace
+          - link "Admin Dashboard" [ref=e27] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: Commercial Detail
+            - generic [ref=e32]: 거래 UI 연결 완료
+          - paragraph [ref=e33]: 구매 · 리뷰 · 다운로드가 연결된 공개 상세 경로
+          - heading "실전 샘플 · SaaS 운영 대시보드 UI Kit" [level=2] [ref=e48]
+          - paragraph [ref=e35]: 공개 상세 페이지에서 즉시 구매, 리뷰 등록, 다운로드 토큰 발급까지 처리합니다.
+        - generic "핵심 기능 바로가기" [ref=e36]:
+          - generic [ref=e37]: 프로젝트 상세 노출
+          - generic [ref=e38]: 즉시 구매 시뮬레이션
+          - generic [ref=e39]: 구매자 다운로드
+          - generic [ref=e40]: 리뷰 등록/조회
+      - main [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - link "목록으로 돌아가기" [ref=e45] [cursor=pointer]:
+              - /url: /marketplace
+            - generic [ref=e49]: 웹 개발
+          - generic [ref=e46]:
+            - article [ref=e50]:
+              - generic [ref=e51]:
+                - paragraph [ref=e52]: Project Detail
+                - heading "실전 샘플 · SaaS 운영 대시보드 UI Kit" [level=1] [ref=e53]
+                - paragraph [ref=e54]: 결제, 멤버십, 알림, 운영 공지까지 포함한 실서비스형 Next.js 관리자 UI 샘플입니다.
+              - generic [ref=e55]:
+                - generic [ref=e56]: "#sample-pack"
+                - generic [ref=e57]: "#ui-kit"
+                - generic [ref=e58]: "#nextjs"
+                - generic [ref=e59]: "#ops"
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - generic [ref=e62]:
+                    - paragraph [ref=e63]: Reviews
+                    - heading "구매 후기" [level=2] [ref=e64]
+                  - generic [ref=e65]: 평균 4.8 / 5 · 0개
+                - generic [ref=e66]:
+                  - generic [ref=e67]:
+                    - generic [ref=e68]
+                    - generic [ref=e70]
+                  - generic [ref=e72]:
+                    - paragraph [ref=e73]: 리뷰 작성은 구매 완료 계정만 가능합니다.
+                    - button "리뷰 등록" [ref=e74] [cursor=pointer]
+                - generic [ref=e76]: 아직 등록된 리뷰가 없습니다. 첫 구매 후기를 남겨보세요.
+            - complementary [ref=e77]:
+              - generic [ref=e78]:
+                - paragraph [ref=e79]: Commercial Snapshot
+                - paragraph [ref=e80]: ₩129,000
+              - generic [ref=e81]:
+                - generic [ref=e82]:
+                  - term [ref=e83]: 다운로드
+                  - definition [ref=e84]: "18"
+                - generic [ref=e85]:
+                  - term [ref=e86]: 평점
+                  - definition [ref=e87]: "4.8"
+                - generic [ref=e88]:
+                  - term [ref=e89]: 상태
+                  - definition [ref=e90]: active
+              - generic [ref=e91]:
+                - button "구매 후 즉시 다운로드" [ref=e92] [cursor=pointer]
+                - button "구매자 다운로드" [ref=e93] [cursor=pointer]
+                - link "데모 열기" [ref=e94] [cursor=pointer]:
+                  - /url: /marketplace/demo/saas-admin-ui-kit
+              - generic [ref=e95]:
+                - paragraph [ref=e96]: 거래 상태
+                - paragraph [ref=e97]: 로그인 토큰이 연결되어 있습니다.
+  - alert [ref=e47]

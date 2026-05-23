@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-05-04T16:40:48.241179+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "total_checks": 7,
+  "passed_checks": 7,
+  "failed_checks": 0,
+  "pass_rate": 100.0,
+  "checks": [
+    {
+      "name": "unauthenticated_dispatch_blocked",
+      "passed": true,
+      "detail": "{\"detail\":\"Not authenticated\"}",
+      "status_code": 401
+    },
+    {
+      "name": "invalid_token_blocked",
+      "passed": true,
+      "detail": "{\"detail\":\"인증 정보가 유효하지 않습니다\"}",
+      "status_code": 401
+    },
+    {
+      "name": "missing_engine_type_validated",
+      "passed": true,
+      "detail": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"engine_type\"],\"msg\":\"Field required\",\"input\":{\"context\":{}}}]}",
+      "status_code": 422
+    },
+    {
+      "name": "unknown_engine_standardized_error",
+      "passed": true,
+      "detail": "{\"detail\":{\"engine\":\"unknown_security_probe\",\"status\":\"input_validation_error\",\"error\":\"등록되지 않은 엔진 타입: 'unknown_security_probe'. 등록 목록: ['decision', 'divine', 'transcendent', 'master', 'master_hybrid', 'integrated', 'dual_brain', 'consciousness', 'consciousness_engine', 'ethics', 'ethics_simple', 'q",
+      "status_code": 400
+    },
+    {
+      "name": "runtime_error_no_internal_traceback_leak",
+      "passed": true,
+      "detail": "{\"engine\":\"runtime_probe\",\"status\":\"error\",\"error\":\"intentional runtime failure for failure-code validation\",\"error_code\":\"ENGINE_RUNTIME_ERROR\",\"error_message\":\"intentional runtime failure for failure-code validation\",\"retryable\":false,\"source\":\"engine_runtime\",\"result\":null,\"entry_fn\":\"main\"}",
+      "status_code": 200
+    },
+    {
+      "name": "cors_allowed_origin_present",
+      "passed": true,
+      "detail": "acao=http://localhost:3000",
+      "status_code": 200
+    },
+    {
+      "name": "cors_disallowed_origin_blocked",
+      "passed": true,
+      "detail": "acao=None",
+      "status_code": 400
+    }
+  ]
+}

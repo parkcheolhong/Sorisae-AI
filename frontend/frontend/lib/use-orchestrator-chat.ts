@@ -8,12 +8,76 @@ import {
 
 export type { OrchestratorConversationMessage } from '@/lib/orchestrator-chat-normalizer';
 
-const ORCHESTRATOR_CHAT_ABORT_MS = 45_000;
+const parseOrchestratorChatAbortMs = (): number => {
+    const raw = Number(process.env.NEXT_PUBLIC_ORCHESTRATOR_CHAT_ABORT_MS || 240_000);
+    if (!Number.isFinite(raw)) {
+        return 240_000;
+    }
+    return Math.min(300_000, Math.max(30_000, Math.trunc(raw)));
+};
+
+const ORCHESTRATOR_CHAT_ABORT_MS = parseOrchestratorChatAbortMs();
 
 export type CompanionMode = 'research' | 'project' | 'hybrid';
 export type OrchestratorAgentKey = 'chat' | 'voice_chat' | 'reasoner' | 'coder';
 export type RoutedTextFeatureKey = 'question' | 'research' | 'action';
 export type ChatFunctionMode = 'auto' | RoutedTextFeatureKey;
+export type ConversationTonePreset = 'auto' | 'free_talk' | 'concise' | 'execution';
+
+export const CONVERSATION_TONE_PRESET_OPTIONS: Array<{
+    id: ConversationTonePreset;
+    label: string;
+    description: string;
+}> = [
+        {
+            id: 'free_talk',
+            label: '자유대화',
+            description: '사람처럼 자연스럽게 대화합니다.',
+        },
+        {
+            id: 'concise',
+            label: '간결',
+            description: '핵심 위주로 짧게 답변합니다.',
+        },
+        {
+            id: 'execution',
+            label: '실행형',
+            description: '즉시 실행 가능한 지시형 답변을 우선합니다.',
+        },
+    ];
+
+const resolveTonePresetPayload = (preset: ConversationTonePreset): {
+    conversationMode: string;
+    responseStyle: string;
+    tag: string;
+} => {
+    if (preset === 'auto') {
+        return {
+            conversationMode: 'auto',
+            responseStyle: 'balanced',
+            tag: 'tone-auto',
+        };
+    }
+    if (preset === 'execution') {
+        return {
+            conversationMode: 'directive_fixed',
+            responseStyle: 'execution',
+            tag: 'tone-execution',
+        };
+    }
+    if (preset === 'concise') {
+        return {
+            conversationMode: 'free',
+            responseStyle: 'concise',
+            tag: 'tone-concise',
+        };
+    }
+    return {
+        conversationMode: 'free',
+        responseStyle: 'free_talk',
+        tag: 'tone-free-talk',
+    };
+};
 
 export interface AdvisoryQuestion {
     prompt: string;
@@ -40,6 +104,7 @@ export interface AdvisoryNextAction {
     action_type: string;
     detail: string;
     recommended_mode?: string | null;
+    action_payload?: Record<string, unknown>;
 }
 
 export interface ProposalItem {
@@ -62,17 +127,17 @@ export interface SuggestedSelfRunPreview {
     action: AdvisoryNextAction;
     requestedMode: 'self-diagnosis' | 'self-improvement' | 'self-expansion';
     directiveTemplate:
-        | ''
-        | 'debug_remediation_loop'
-        | 'video_ad_clarity'
-        | 'video_ad_conversion'
-        | 'video_ad_speed_optimization'
-        | 'video_ad_storytelling'
-        | 'video_ad_quality_upgrade'
-        | 'video_ad_new_tech'
-        | 'admin_ops_efficiency'
-        | 'marketplace_conversion'
-        | 'llm_cost_latency';
+    | ''
+    | 'debug_remediation_loop'
+    | 'video_ad_clarity'
+    | 'video_ad_conversion'
+    | 'video_ad_speed_optimization'
+    | 'video_ad_storytelling'
+    | 'video_ad_quality_upgrade'
+    | 'video_ad_new_tech'
+    | 'admin_ops_efficiency'
+    | 'marketplace_conversion'
+    | 'llm_cost_latency';
     directiveScope: 'preset_default' | 'diagnosis_only' | 'targeted_implementation' | 'feature_expansion' | 'modernization';
     directiveRequest: string;
 }
@@ -121,10 +186,10 @@ const ROUTED_TEXT_FEATURES: Array<{
     key: RoutedTextFeatureKey;
     lockedMode: CompanionMode;
 }> = [
-    { key: 'question', lockedMode: 'hybrid' },
-    { key: 'research', lockedMode: 'research' },
-    { key: 'action', lockedMode: 'project' },
-];
+        { key: 'question', lockedMode: 'hybrid' },
+        { key: 'research', lockedMode: 'research' },
+        { key: 'action', lockedMode: 'project' },
+    ];
 
 const DEFAULT_ROUTED_TEXT_AGENTS: Record<RoutedTextFeatureKey, OrchestratorAgentKey> = {
     question: 'chat',
@@ -224,7 +289,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
             role: 'assistant',
             speaker: '오케스트레이터',
             step_title: '실행 안내',
-            content: '관리자 화면은 챗봇 지시 중심으로 사용합니다. 필요한 수정이나 구현 내용을 바로 입력하면 실행 가능한 답과 변경 방향을 우선 정리합니다.',
+            content: '관리자 오케스트레이터는 자유 대화형 모드입니다. 질문-응답-역질문을 이어가며 설계/구현/운영을 함께 진행할 수 있습니다.',
         },
     ]);
     const [chatInput, setChatInput] = useState('');
@@ -233,13 +298,14 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     const [chatAgentKey, setChatAgentKey] = useState<OrchestratorAgentKey>('chat');
     const [voiceAgentKey, setVoiceAgentKey] = useState<OrchestratorAgentKey>('reasoner');
     const [textFeatureAgents, setTextFeatureAgents] = useState<Record<RoutedTextFeatureKey, OrchestratorAgentKey>>(DEFAULT_ROUTED_TEXT_AGENTS);
-    const [chatFunctionMode, setChatFunctionMode] = useState<ChatFunctionMode>('action');
+    const [chatFunctionMode, setChatFunctionMode] = useState<ChatFunctionMode>('auto');
     const [lastGroundingMode, setLastGroundingMode] = useState<'internal' | 'web'>('internal');
     const [lastGroundingNote, setLastGroundingNote] = useState('');
     const [companionMode, setCompanionMode] = useState<CompanionMode>('project');
     const [lastWebResults, setLastWebResults] = useState<NonNullable<OrchestratorChatResponse['web_results']>>([]);
     const [suggestedCompanionMode, setSuggestedCompanionMode] = useState<CompanionMode | null>(null);
     const [suggestedCompanionReason, setSuggestedCompanionReason] = useState('');
+    const [conversationTonePreset, setConversationTonePreset] = useState<ConversationTonePreset>('auto');
     const [lastConversationStage, setLastConversationStage] = useState('general');
     const [clarificationQuestions, setClarificationQuestions] = useState<AdvisoryQuestion[]>([]);
     const [evidenceHighlights, setEvidenceHighlights] = useState<AdvisoryEvidenceItem[]>([]);
@@ -448,6 +514,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         const effectiveCompanionMode = routedFeature
             ? ROUTED_TEXT_FEATURES.find((feature) => feature.key === routedFeature)?.lockedMode || companionMode
             : companionMode;
+        const tonePresetPayload = resolveTonePresetPayload(conversationTonePreset);
         const userMessage: OrchestratorConversationMessage = {
             role: 'user',
             speaker: '관리자',
@@ -462,11 +529,12 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         }
         setChatInput('');
         setChatLoading(true);
+        const requestStartedAt = Date.now();
         const controller = new AbortController();
         const abortTimer = window.setTimeout(() => controller.abort(), ORCHESTRATOR_CHAT_ABORT_MS);
         try {
             const data = await postOrchestratorChat<OrchestratorChatResponse>(
-                `${options.apiBaseUrl}/api/llm/orchestrate/chat/light`,
+                `${options.apiBaseUrl}/api/llm/orchestrate/chat`,
                 options.getAdminToken(),
                 {
                     task: nextTask,
@@ -475,10 +543,15 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                     mode: options.manualMode ? 'manual_9step' : options.mode,
                     manual_mode: options.manualMode,
                     companion_mode: effectiveCompanionMode,
+                    conversation_mode: tonePresetPayload.conversationMode,
+                    multi_turn_enabled: true,
+                    response_style: tonePresetPayload.responseStyle,
+                    tone_preset: conversationTonePreset,
                     output_dir: resolveReusableOutputDir(),
                     run_id: options.liveRunIdRef.current || undefined,
                     max_tokens: getConversationRequestMaxTokens(),
                     conversation: nextConversation,
+                    context_tags: ['admin-orchestrator', 'free-dialogue', tonePresetPayload.tag],
                 },
                 controller.signal,
             );
@@ -506,12 +579,18 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                 options.setLiveOutputDir(data.failed_output_dir);
             }
         } catch (e: any) {
-            const timeoutMessage = `오케스트레이터 응답이 ${Math.round(ORCHESTRATOR_CHAT_ABORT_MS / 1000)}초 안에 끝나지 않아 요청을 중단했습니다. 질문 범위를 조금 줄여 다시 시도해 주세요.`;
+            const elapsedMs = Math.max(0, Date.now() - requestStartedAt);
+            const likelyAbortByChatTimeout = e?.name === 'AbortError' && elapsedMs >= ORCHESTRATOR_CHAT_ABORT_MS - 1000;
+            const timeoutMessage = `오케스트레이터 응답이 ${Math.round(ORCHESTRATOR_CHAT_ABORT_MS / 1000)}초를 넘어 잠시 중단되었습니다. 같은 요청을 한 번 더 보내면 이어서 처리할 수 있어요.`;
             appendConversationMessage({
                 role: 'assistant',
                 speaker: '오케스트레이터',
                 step_title: '대화 오류',
-                content: e?.name === 'AbortError' ? timeoutMessage : `대화 응답 실패: ${e.message}`,
+                content: likelyAbortByChatTimeout
+                    ? timeoutMessage
+                    : (e?.name === 'AbortError'
+                        ? '요청 연결이 중간에 끊겼습니다. 잠시 후 다시 보내 주세요.'
+                        : `대화 응답 실패: ${e.message}`),
                 timestamp: new Date().toISOString(),
             });
         } finally {
@@ -532,6 +611,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         lastGroundingMode,
         lastGroundingNote,
         companionMode,
+        conversationTonePreset,
         lastWebResults,
         suggestedCompanionMode,
         suggestedCompanionReason,
@@ -554,6 +634,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         setTextFeatureAgents,
         setChatFunctionMode,
         setCompanionMode,
+        setConversationTonePreset,
         setConversationAssistExpanded,
         setSuggestedSelfRunPreview,
         appendConversationMessage,

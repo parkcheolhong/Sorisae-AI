@@ -15,6 +15,7 @@ from .flow_trace import (
 )
 from .project_context_store import get_project_context_bundle, upsert_project_memory_snapshot
 from .llm_client import call_orchestrator_chat_llm
+from .web_search import build_web_grounding_block, fetch_web_grounding, should_use_web_search
 from .models import (
     AutoConnectMeta,
     AdvisoryEvidenceItem,
@@ -25,6 +26,7 @@ from .models import (
     OrchestratorChatResponse,
     ProposalItem,
     TargetPatchHint,
+    WebGroundingItem,
 )
 
 
@@ -84,6 +86,150 @@ def _is_meta_conversation_question(message: str) -> bool:
     )
 
 
+def _is_freepace_conversation_mode(requested_conversation_mode: str) -> bool:
+    normalized = str(requested_conversation_mode or "").strip().lower()
+    if not normalized:
+        return True
+    return normalized in {
+        "auto",
+        "free",
+        "freepace",
+        "free_pace",
+        "freetalk",
+        "free_talk",
+        "chat",
+        "casual",
+        "natural",
+    }
+
+
+def _should_force_reciprocal_question(requested_conversation_mode: str, response_style: str) -> bool:
+    mode = str(requested_conversation_mode or "").strip().lower()
+    style = str(response_style or "").strip().lower()
+    if mode in {"reverse_question", "reciprocal", "interview"}:
+        return True
+    if "reverse_question" in style or "reciprocal" in style:
+        return True
+    return False
+
+
+def _resolve_tone_preset(
+    requested_conversation_mode: str,
+    response_style: str,
+    tone_preset: str,
+) -> tuple[str, str, str]:
+    preset = str(tone_preset or "").strip().lower()
+    mode = str(requested_conversation_mode or "").strip().lower()
+    style = str(response_style or "").strip().lower()
+
+    if preset in {"execution", "directive", "run"}:
+        return "execution", "directive_fixed", "execution"
+    if preset in {"concise", "brief", "short"}:
+        return "concise", mode or "free", "concise"
+    if preset in {"free_talk", "free", "natural", "casual"}:
+        return "free_talk", "free", "free_talk"
+
+    if mode == "directive_fixed" or style == "execution":
+        return "execution", "directive_fixed", "execution"
+    if style in {"concise", "brief", "short"}:
+        return "concise", mode or "free", "concise"
+    normalized_mode = "free" if mode in {"", "auto"} else mode
+    normalized_style = "free_talk" if style in {"", "auto", "balanced"} else style
+    return "free_talk", normalized_mode, normalized_style
+
+
+def _extract_tone_preset_from_text(message: str) -> str | None:
+    lowered = _normalize_chat_message(message).lower()
+    if not lowered:
+        return None
+
+    if lowered in {"1", "1번", "1번으로", "자유", "자유대화", "자유 대화"}:
+        return "free_talk"
+    if lowered in {"2", "2번", "2번으로", "간결", "짧게", "간단히"}:
+        return "concise"
+    if lowered in {"3", "3번", "3번으로", "실행형", "지시형", "바로 실행"}:
+        return "execution"
+
+    if _contains_any(lowered, ["1번", "1 번"]):
+        return "free_talk"
+    if _contains_any(lowered, ["2번", "2 번"]):
+        return "concise"
+    if _contains_any(lowered, ["3번", "3 번"]):
+        return "execution"
+
+    if _contains_any(lowered, ["실행형", "지시형", "실행 모드", "바로 실행", "실행 중심"]):
+        return "execution"
+    if _contains_any(lowered, ["간결", "짧게", "핵심만", "요약", "짧은 답"]):
+        return "concise"
+    if _contains_any(lowered, ["자유대화", "자유 대화", "편하게", "자연스럽게", "잡담처럼"]):
+        return "free_talk"
+    return None
+
+
+def _infer_tone_preset_from_history(conversation: List[Dict[str, Any]]) -> str | None:
+    for item in reversed(conversation or []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("role") or "").strip().lower() != "user":
+            continue
+        selected = _extract_tone_preset_from_text(str(item.get("content") or ""))
+        if selected:
+            return selected
+    return None
+
+
+def _needs_tone_selection(
+    requested_conversation_mode: str,
+    response_style: str,
+    tone_preset: str,
+    conversation: List[Dict[str, Any]],
+    message: str,
+) -> bool:
+    preset = str(tone_preset or "").strip().lower()
+    mode = str(requested_conversation_mode or "").strip().lower()
+    style = str(response_style or "").strip().lower()
+
+    # Never interrupt ongoing conversations with a tone picker.
+    for item in conversation or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("content") or "").strip():
+            return False
+
+    # If this message already carries an explicit tone choice, do not force prompt.
+    if _extract_tone_preset_from_text(message):
+        return False
+
+    # Keep explicit request-only mode for clients that intentionally ask for picker UX.
+    if preset == "ask":
+        return True
+
+    if preset in {"", "auto", "none", "unset"}:
+        return False
+    if mode in {"", "auto"} and style in {"", "auto", "balanced"}:
+        return False
+    return False
+
+
+def _is_tone_selection_only_message(message: str) -> bool:
+    lowered = _normalize_chat_message(message).lower()
+    if not lowered:
+        return False
+    if not _extract_tone_preset_from_text(lowered):
+        return False
+
+    cleaned = lowered
+    for token in [
+        "자유대화", "자유 대화", "자유", "간결", "실행형", "지시형",
+        "1번", "2번", "3번", "1", "2", "3", "번", "모드", "톤", "스타일",
+        "으로", "로", "해줘", "해주세요", "선택", "할게", "할래", "하자",
+    ]:
+        cleaned = cleaned.replace(token, " ")
+    cleaned = "".join(ch for ch in cleaned if ch not in "?!.,~")
+    cleaned = _normalize_chat_message(cleaned)
+    return len(cleaned) <= 2
+
+
 def _looks_like_question(message: str) -> bool:
     normalized = _normalize_chat_message(message)
     lowered = normalized.lower()
@@ -122,11 +268,16 @@ def _looks_like_directive(message: str) -> bool:
     lowered = _normalize_chat_message(message).lower()
     if not lowered:
         return False
-    if lowered.startswith(("/run", "/pass", "/fix", "/fail", "/verify", "/search", "/news", "/ask", "/revise", "/resume")):
+    if lowered.startswith((
+        "/run", "/pass", "/fix", "/fail", "/verify", "/search", "/news", "/ask", "/revise", "/resume",
+        "/diagnose", "/improve", "/expand", "/analyze", "/test", "/script", "/task", "/실행", "/진단",
+        "/개선", "/확장", "/분석", "/스크립트",
+    )):
         return True
     if _contains_any(
         lowered,
         [
+            # 기존
             "수정해줘",
             "구현해줘",
             "만들어줘",
@@ -151,6 +302,29 @@ def _looks_like_directive(message: str) -> bool:
             "부탁해",
             "부탁합니다",
             "진행해줘",
+            # 자가 진단 / 개선 / 확장
+            "자가진단",
+            "자가 진단",
+            "진단해줘",
+            "자가개선",
+            "자가 개선",
+            "개선해줘",
+            "자가확장",
+            "자가 확장",
+            "확장해줘",
+            # 스크립트 / 생성 / 테스트 / 빌드
+            "스크립트 만들어",
+            "스크립트 생성",
+            "스크립트 작성",
+            "스크립트 추가",
+            "생성해줘",
+            "테스트해줘",
+            "빌드해줘",
+            "배포해줘",
+            "설치해줘",
+            "최적화해줘",
+            "리팩터링",
+            "리팩토링",
         ],
     ):
         return True
@@ -168,6 +342,34 @@ def infer_message_kind(message: str) -> str:
     if _looks_like_directive(normalized):
         return "directive"
     return "general"
+
+
+def infer_emotion_signal(message: str) -> str:
+    lowered = _normalize_chat_message(message).lower()
+    if not lowered:
+        return "neutral"
+
+    urgent_tokens = ["급해", "빨리", "지금 당장", "긴급", "urgent", "asap"]
+    frustration_tokens = ["답답", "짜증", "안 풀", "3시간", "망했", "미치겠", "frustrat", "stuck"]
+    anxious_tokens = ["불안", "걱정", "무서", "막막", "panic", "anxious"]
+
+    if any(token in lowered for token in urgent_tokens):
+        return "urgent"
+    if any(token in lowered for token in frustration_tokens):
+        return "frustrated"
+    if any(token in lowered for token in anxious_tokens):
+        return "anxious"
+    return "neutral"
+
+
+def build_emotion_tone_guidance(emotion_signal: str) -> str:
+    if emotion_signal == "urgent":
+        return "사용자가 긴급함을 보입니다. 공감 1문장 후 즉시 실행 가능한 해결책부터 우선순위로 제시하세요."
+    if emotion_signal == "frustrated":
+        return "사용자가 답답함/피로를 보입니다. 방어적 설명 대신 공감하고 실패 원인 분해 + 즉시 시도 가능한 3단계 해결안을 제시하세요."
+    if emotion_signal == "anxious":
+        return "사용자가 불안 신호를 보입니다. 단정적 표현을 피하고 리스크/대응책을 차분히 제시하세요."
+    return "사용자의 감정 신호가 중립입니다. 기본 협업 톤을 유지하세요."
 
 
 def build_fast_admin_chat_reply(
@@ -191,14 +393,6 @@ def build_fast_admin_chat_reply(
 
     if _is_meta_conversation_question(normalized):
         return "네, 가능합니다. 자유 질문도 받고, 잡담형 대화도 이어갈 수 있고, 필요하면 구현 지시로도 바로 전환할 수 있습니다. 편하게 이어서 물어보세요."
-
-    if len(normalized) <= 24 and message_kind in {"general", "question"} and conversation_stage == "general":
-        return (
-            f"현재 입력은 짧은 {conversation_stage} 대화로 인식했습니다.\n"
-            "- 원하는 작업 또는 질문 범위를 한 줄 더 붙여 주세요.\n"
-            "- 예: `이 파일 기준으로 중복 응답 제거해줘`\n"
-            "- 예: `관리자 챗봇 타임아웃 응답을 더 짧게 바꿔줘`"
-        )
 
     if requested_conversation_mode == "directive_fixed" and len(normalized) <= 40:
         return (
@@ -224,33 +418,72 @@ def build_admin_chat_fallback_reply(
 
     if message_kind == "directive":
         reply_lines.extend([
-            "지시형 요청으로 해석했습니다.",
-            f"- 현재 단계: {conversation_stage}",
-            f"- 요청 요약: {normalized}",
-            "- 바로 필요한 정보: 수정 대상 파일 / 원하는 결과 / 유지 조건",
+            f"요청 이해했습니다. ({conversation_stage} 단계)",
+            f"핵심은 '{normalized}' 입니다.",
+            "원하면 바로 실행형으로 좁혀서 진행할게요. 수정 파일, 원하는 결과, 유지 조건만 알려주세요.",
         ])
         if command_plan:
-            reply_lines.append("- 바로 진행할 순서:")
-            reply_lines.extend([f"  · {item.trace_id}: {item.command_text}" for item in command_plan[:3]])
-        reply_lines.append("- 위 3가지를 주시면 다음 답변부터 실행형으로 더 짧고 정확하게 정리합니다.")
+            reply_lines.append("지금 기준 제안 순서는 다음과 같습니다.")
+            reply_lines.extend([f"- {item.command_text}" for item in command_plan[:2]])
         return "\n".join(reply_lines)
 
     if message_kind == "question":
         reply_lines.extend([
-            "질문형 요청으로 해석했습니다.",
-            f"- 현재 단계: {conversation_stage}",
-            f"- 질문 요약: {normalized}",
-            "- 더 정확한 답을 위해 비교 대상이나 원하는 출력 형식을 한 줄만 추가해 주세요.",
-            "- 예: 원인만 / 수정안만 / 파일 기준 / 우선순위 기준",
+            f"질문 이해했습니다. ({conversation_stage} 단계)",
+            f"질문 요약: {normalized}",
+            "바로 답변 가능합니다. 원하면 원인 중심/수정안 중심처럼 답변 스타일만 지정해 주세요.",
         ])
         return "\n".join(reply_lines)
 
     return "\n".join([
-        "관리자 대화를 계속 이어갈 수 있습니다.",
-        f"- 현재 단계: {conversation_stage}",
-        f"- 입력 요약: {normalized}",
-        "- 다음 입력은 한 번에 한 가지 작업만 적는 것이 가장 안정적입니다.",
+        "좋습니다. 계속 이어서 대화할 수 있습니다.",
+        f"현재 단계는 {conversation_stage}이고, 입력은 '{normalized}'로 이해했습니다.",
+        "원하면 바로 답변만 간단히 드리고, 필요할 때만 실행 계획을 붙이겠습니다.",
     ])
+
+
+def _append_reciprocal_question(
+    reply_content: str,
+    *,
+    message: str,
+    lightweight: bool,
+    requested_conversation_mode: str,
+    response_style: str,
+    message_kind: str,
+    conversation_stage: str,
+) -> str:
+    text = str(reply_content or "").strip()
+    if not text:
+        return text
+    if lightweight:
+        return text
+    if requested_conversation_mode == "directive_fixed":
+        return text
+    if _is_freepace_conversation_mode(requested_conversation_mode) and not _should_force_reciprocal_question(
+        requested_conversation_mode,
+        response_style,
+    ):
+        return text
+    if not _should_force_reciprocal_question(requested_conversation_mode, response_style):
+        return text
+    if "?" in text[-180:] or "？" in text[-180:]:
+        return text
+
+    follow_up = ""
+    if _is_meta_conversation_question(message):
+        follow_up = "지금부터 제가 먼저 한 가지씩 역질문하면서 진행할게요. 먼저, 이번 턴에서 가장 먼저 확정할 목표 1개는 무엇인가요?"
+    elif message_kind == "directive":
+        follow_up = "바로 실행 품질을 올리기 위해 확인할게요. 이번 지시에서 절대 바꾸면 안 되는 파일/동작 1가지는 무엇인가요?"
+    elif conversation_stage == "research":
+        follow_up = "비교 정확도를 높이기 위해 역질문 하나만 할게요. 이번에 비교할 후보를 2개로 좁히면 무엇과 무엇인가요?"
+    elif conversation_stage == "implementation":
+        follow_up = "구현으로 바로 연결하기 위해 확인할게요. 우선 수정 대상을 파일 기준으로 1~2개만 지정해줄 수 있나요?"
+    elif conversation_stage == "operations":
+        follow_up = "운영 진단 정확도를 위해 확인할게요. 지금 가장 먼저 봐야 할 실패 신호를 1개만 지정해줄 수 있나요?"
+    else:
+        follow_up = "대화를 끊지 않고 이어가기 위해 제가 역질문 하나 할게요. 지금 이 주제에서 먼저 해결하고 싶은 우선순위 1번은 무엇인가요?"
+
+    return f"{text}\n\n{follow_up}".strip()
 
 
 def _build_approval_gate_warning(project_memory: Dict[str, Any], message: str) -> str:
@@ -320,6 +553,8 @@ def build_chat_system_prompt(
     response_style: str,
     multi_turn_enabled: bool,
     context_tags: List[str],
+    emotion_tone_guidance: str,
+    web_grounding_enabled: bool,
 ) -> str:
     base_lines = [
         f"당신은 관리자 {mode_label} 오케스트레이터입니다.",
@@ -327,17 +562,30 @@ def build_chat_system_prompt(
         "관리자 오케스트레이터는 정보 실험, 연구, 신기술 검토, 수동형/반자동 운영 보조 목적입니다.",
         "마켓플레이스 오케스트레이터처럼 자동 실행을 강제하지 말고, 연구·검토·지시 대화를 자율적으로 이어가세요.",
         "관리자 오케스트레이터는 동료 개발자처럼 자연스럽게 대화해야 합니다.",
+        "질문이 모호하면 먼저 사용자의 의도를 한 문장으로 재진술하고, 필요한 확인 질문은 1개만 하세요.",
+        "답변은 공감/확인 1문장 이하 + 핵심 답변 2~4문장 중심으로 구성하세요.",
+        "의미 없는 수사, 반복 문장, 고정 문구(템플릿) 재사용을 피하고 맥락에 맞춰 표현을 바꾸세요.",
+        "모르거나 확실하지 않은 부분은 솔직하게 말하세요. '이 부분은 제 학습 데이터 한계로 정확하지 않을 수 있습니다'라고 표현해서 신뢰성을 유지하세요.",
         "사용자가 인터넷/최신 기술/조사를 요청하면 문제를 함께 정의하고, 핵심 개념·적용 방식·주의점·다음 선택지를 설명하세요.",
         "사용자가 자가 확장이나 필요한 기능을 말하면 어떤 분석, 신기술, 접근법이 적합한지 제안하고 이유를 설명하세요.",
         "사용자가 실험을 요청하면 실험 목적, 가설, 확인 방법, 기대 결과를 짧게 정리한 뒤 결과를 설명하는 동료 개발자 말투를 유지하세요.",
         "사용자가 결과를 반영해 자가확장해달라고 하면 코드 자동생성기와 연결되는 실행 제안, 수정 포인트, 검증 순서를 함께 제시하세요.",
         "항상 질문에 직접 답하고, 필요하면 조사 요약 → 실험 포인트 → 실행 제안 순서로 이어가세요.",
+        "답변 길이는 사용자 입력 길이에 맞추세요: 짧은 입력(1-2문장)→핵심만(1-2문장), 중간(3-5문장)→중간(3-5문장), 길게→상세 설명. '자세히' 요청 시만 1개 추가 단락 덧붙이세요.",
+        "복잡한 주제는 이 구조로 답하세요: 핵심(1줄)→행동(1줄)→선택지(2-3개: 더 알고 싶으신 게?).",
         f"현재 대화 단계: {conversation_stage}",
         f"현재 대화 모드: {requested_conversation_mode}",
         f"응답 스타일: {response_style}",
         f"멀티 대화 유지: {'enabled' if multi_turn_enabled else 'disabled'}",
+        f"감정 톤 가이드: {emotion_tone_guidance}",
+        f"웹 검색 근거 사용: {'enabled' if web_grounding_enabled else 'disabled'}",
         "응답은 질문에 직접 답한 뒤, 필요하면 근거/선택지/다음 단계만 짧게 덧붙이세요.",
     ]
+    if web_grounding_enabled:
+        base_lines.extend([
+            "웹 검색 근거가 제공되면 해당 근거를 우선 반영하고, 출처를 짧게 표시하세요.",
+            "검색 근거가 부족하거나 상충하면 확실하지 않음을 명시하고 검증 경로를 안내하세요.",
+        ])
     if context_tags:
         base_lines.append(f"현재 컨텍스트 태그: {', '.join(context_tags[:8])}")
     if lightweight:
@@ -353,6 +601,13 @@ def build_chat_system_prompt(
             "설명만 끝내지 말고 사용자가 바로 이어서 실험·검증·자가확장으로 넘어갈 수 있게 다음 선택지를 제안하세요.",
             "자동 패널 숨김 여부와 관계없이 대화 자체는 막지 말고 자유 질의에 계속 응답하세요.",
         ])
+    if _is_freepace_conversation_mode(requested_conversation_mode):
+        base_lines.extend([
+            "자연 대화 모드입니다. 사람과 대화하듯 짧고 자연스럽게 답하세요.",
+            "답변은 먼저 질문 의도에 바로 반응하고, 필요 시에만 후속 질문 1개를 덧붙이세요.",
+            "불필요한 체크리스트, 고정 템플릿, 강제 역질문을 붙이지 마세요.",
+            "사용자가 명시적으로 요청할 때만 단계화/형식화된 응답을 제공합니다.",
+        ])
     return "\n".join(base_lines)
 
 
@@ -366,15 +621,20 @@ def build_chat_user_prompt(
     message_kind: str,
     project_root: str,
     project_memory_summary: str,
+    emotion_signal: str,
+    web_grounding_block: str,
 ) -> str:
     prompt_lines = [
         f"[메시지 종류]\n{message_kind}",
         f"[대화 요약]\n{conversation_summary}",
         f"[작업 프로젝트 루트]\n{project_root or '-'}",
         f"[프로젝트 메모리]\n{project_memory_summary}",
+        f"[감정 신호]\n{emotion_signal}",
         f"[현재 질문]\n{message}",
         f"[최근 대화]\n{conversation_context}",
     ]
+    if web_grounding_block:
+        prompt_lines.append(web_grounding_block)
     if not lightweight:
         prompt_lines.append(f"[Flow 계획 후보]\n{command_plan_lines}")
     return "\n".join(prompt_lines)
@@ -635,6 +895,8 @@ def build_evidence_highlights(
 
 def build_next_action_suggestions(
     *,
+    message: str,
+    web_results: List[WebGroundingItem],
     message_kind: str,
     requested_conversation_mode: str,
     suggested_mode: str,
@@ -678,6 +940,40 @@ def build_next_action_suggestions(
                 recommended_mode="research",
             ),
         ]
+
+    if web_results:
+        grounding_lines: List[str] = []
+        for index, item in enumerate(web_results[:3], start=1):
+            title = str(item.title or "").strip() or f"검색 근거 {index}"
+            snippet = str(item.snippet or "").strip()
+            if not snippet:
+                continue
+            url_suffix = f" ({item.url})" if item.url else ""
+            grounding_lines.append(f"{index}. {title}{url_suffix}\n- {snippet}")
+        if grounding_lines:
+            action_prompt = (
+                f"요청: {_normalize_chat_message(message)}\n\n"
+                "아래 웹 검색 근거를 반영해 운영형 문서 초안을 생성하세요.\n"
+                "산출물에는 핵심 주장, 근거 URL, 바로 실행 가능한 체크리스트를 포함하세요.\n\n"
+                "[웹 근거]\n"
+                + "\n".join(grounding_lines)
+            )[:2800]
+            actions.insert(
+                0,
+                AdvisoryNextAction(
+                    title="검색 근거로 feature-orchestrate 실행",
+                    action_type="feature_orchestrate",
+                    detail="웹 검색 결과를 payload에 반영해 AI 문서 엔진을 바로 실행합니다.",
+                    recommended_mode="project",
+                    action_payload={
+                        "feature_id": "ai-document",
+                        "project_name": f"web-grounded-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+                        "prompt": action_prompt,
+                        "final_enabled": True,
+                        "context_tags": ["web-grounded", "admin-chat", "feature-orchestrate"],
+                    },
+                ),
+            )
     limit = max(0, int(advisory_controls.get("max_next_actions", 3) or 0))
     return actions[:limit]
 
@@ -709,8 +1005,179 @@ async def answer_orchestrator_chat(
     message = str(request.message or "").strip() or "요청 내용을 다시 입력하세요."
     message_lower = message.lower()
     lightweight = is_lightweight_chat_request(request, request_context)
-    requested_conversation_mode = str(request.conversation_mode or "auto").strip().lower()
+    requested_conversation_mode = str(request.conversation_mode or "auto").strip().lower() or "auto"
     response_style = str(request.response_style or "balanced").strip().lower() or "balanced"
+    tone_preset = str(request.tone_preset or "auto").strip().lower() or "auto"
+    selected_tone_from_message = _extract_tone_preset_from_text(message)
+    selected_tone_from_history = _infer_tone_preset_from_history(request.conversation)
+    if _needs_tone_selection(
+        requested_conversation_mode,
+        response_style,
+        tone_preset,
+        request.conversation,
+        message,
+    ):
+        selected_tone = selected_tone_from_message or selected_tone_from_history
+        if selected_tone:
+            tone_preset = selected_tone
+        else:
+            reply_content = (
+                "좋아요. 먼저 대화 스타일을 맞춘 뒤 진행할게요.\n"
+                "- 1번 자유대화: 자연스럽게 대화형\n"
+                "- 2번 간결: 핵심만 짧게\n"
+                "- 3번 실행형: 바로 실행 단계 중심\n"
+                "원하는 번호나 이름(자유대화/간결/실행형)으로 답해 주세요."
+            )
+            reply = ConversationMessage(
+                role="assistant",
+                speaker=agent_key,
+                content=reply_content,
+                step_id=auto_connect.step_id or "FLOW-ADM-CHAT-1",
+                step_title="대화 스타일 확인",
+                timestamp=datetime.now().isoformat(),
+                connection_id=auto_connect.connection_id,
+                flow_id=auto_connect.flow_id,
+                action=auto_connect.action,
+                route_id=auto_connect.route_id,
+                panel_id=auto_connect.panel_id,
+            )
+            history = [
+                ConversationMessage(**item)
+                for item in (request.conversation or [])
+                if isinstance(item, dict)
+            ]
+            history.append(reply)
+            return OrchestratorChatResponse(
+                reply=reply,
+                conversation=history,
+                output_dir=request.output_dir,
+                run_id=request.run_id or uuid4().hex,
+                grounding_mode="internal",
+                grounding_note="대화 스타일 선택 유도",
+                companion_mode=request.companion_mode,
+                web_results=[],
+                suggested_companion_mode=request.companion_mode or "hybrid",
+                suggested_companion_reason="스타일 확정 후 답변 품질을 더 안정적으로 맞추기 위해 먼저 선택을 요청했습니다.",
+                conversation_stage="tone-selection",
+                clarification_questions=[
+                    AdvisoryQuestion(
+                        prompt="1번 자유대화 / 2번 간결 / 3번 실행형 중 어떤 스타일로 진행할까요?",
+                        reason="스타일에 따라 답변 길이와 진행 방식이 달라집니다.",
+                    )
+                ],
+                evidence_highlights=[],
+                next_action_suggestions=[
+                    AdvisoryNextAction(
+                        title="자유대화로 시작",
+                        action_type="follow-up",
+                        detail="'1번' 또는 '자유대화'라고 답하면 자연 대화형으로 시작합니다.",
+                        recommended_mode="hybrid",
+                    ),
+                    AdvisoryNextAction(
+                        title="간결 모드로 시작",
+                        action_type="follow-up",
+                        detail="'2번' 또는 '간결'이라고 답하면 핵심만 짧게 답합니다.",
+                        recommended_mode="research",
+                    ),
+                    AdvisoryNextAction(
+                        title="실행형 모드로 시작",
+                        action_type="follow-up",
+                        detail="'3번' 또는 '실행형'이라고 답하면 단계 중심으로 바로 진행합니다.",
+                        recommended_mode="project",
+                    ),
+                ],
+                flow_trace=[],
+                command_plan=[],
+                active_trace=None,
+                message_kind="general",
+                multi_turn_enabled=bool(request.multi_turn_enabled),
+                conversation_summary="스타일 선택 대기",
+                inferred_goal="대화 스타일 확정",
+                proposal_items=[],
+                new_technology_candidates=[],
+                target_patch_hints=[],
+                project_root=str(request.project_root or request.output_dir or "").strip() or None,
+                project_memory=dict(request.project_memory or {}),
+                auto_connect=auto_connect,
+                diagnostics={
+                    "path": "tone-clarification",
+                    "tone_preset": "pending",
+                    "requested_conversation_mode": requested_conversation_mode,
+                    "response_style": response_style,
+                },
+            )
+    resolved_tone_preset, requested_conversation_mode, response_style = _resolve_tone_preset(
+        requested_conversation_mode,
+        response_style,
+        tone_preset,
+    )
+    if selected_tone_from_message and _is_tone_selection_only_message(message):
+        reply_content = {
+            "free_talk": "좋습니다. 자유대화로 맞췄어요. 이제 바로 질문이나 요청을 편하게 이어주세요.",
+            "concise": "좋습니다. 간결 모드로 맞췄어요. 이제 핵심 요청을 보내주시면 짧고 명확하게 답할게요.",
+            "execution": "좋습니다. 실행형 모드로 맞췄어요. 이제 목표를 보내주시면 단계 중심으로 바로 진행할게요.",
+        }.get(resolved_tone_preset, "좋습니다. 스타일을 적용했습니다. 이제 원하는 요청을 이어서 보내주세요.")
+        reply = ConversationMessage(
+            role="assistant",
+            speaker=agent_key,
+            content=reply_content,
+            step_id=auto_connect.step_id or "FLOW-ADM-CHAT-1",
+            step_title="대화 스타일 적용",
+            timestamp=datetime.now().isoformat(),
+            connection_id=auto_connect.connection_id,
+            flow_id=auto_connect.flow_id,
+            action=auto_connect.action,
+            route_id=auto_connect.route_id,
+            panel_id=auto_connect.panel_id,
+        )
+        history = [
+            ConversationMessage(**item)
+            for item in (request.conversation or [])
+            if isinstance(item, dict)
+        ]
+        history.append(reply)
+        return OrchestratorChatResponse(
+            reply=reply,
+            conversation=history,
+            output_dir=request.output_dir,
+            run_id=request.run_id or uuid4().hex,
+            grounding_mode="internal",
+            grounding_note="대화 스타일 적용 확인",
+            companion_mode=request.companion_mode,
+            web_results=[],
+            suggested_companion_mode=request.companion_mode or "hybrid",
+            suggested_companion_reason="사용자가 직접 스타일을 선택했습니다.",
+            conversation_stage="tone-confirmed",
+            clarification_questions=[],
+            evidence_highlights=[],
+            next_action_suggestions=[
+                AdvisoryNextAction(
+                    title="바로 요청 이어가기",
+                    action_type="follow-up",
+                    detail="원하는 목표, 대상 파일, 제약 조건을 한 줄로 보내면 바로 처리합니다.",
+                    recommended_mode="project",
+                )
+            ],
+            flow_trace=[],
+            command_plan=[],
+            active_trace=None,
+            message_kind="general",
+            multi_turn_enabled=bool(request.multi_turn_enabled),
+            conversation_summary="스타일 확정 완료",
+            inferred_goal="스타일 적용 완료",
+            proposal_items=[],
+            new_technology_candidates=[],
+            target_patch_hints=[],
+            project_root=str(request.project_root or request.output_dir or "").strip() or None,
+            project_memory=dict(request.project_memory or {}),
+            auto_connect=auto_connect,
+            diagnostics={
+                "path": "tone-confirmed",
+                "tone_preset": resolved_tone_preset,
+                "requested_conversation_mode": requested_conversation_mode,
+                "response_style": response_style,
+            },
+        )
     multi_turn_enabled = bool(request.multi_turn_enabled)
     context_tags = [str(item).strip() for item in (request.context_tags or []) if str(item).strip()]
     conversation_stage = "general"
@@ -736,6 +1203,26 @@ async def answer_orchestrator_chat(
     else:
         if _is_banter_message(message) or meta_conversation_question:
             conversation_stage = "general"
+        elif any(token in message_lower for token in ("자가진단", "자가 진단", "진단해줘", "진단해 줘", "diagnose", "self-diagnose")):
+            conversation_stage = "diagnostics"
+            suggested_mode = "project"
+            grounding_note = "자가 진단 명령 — 코드베이스 전체 진단 실행"
+            suggested_reason = "자가 진단 명령이 감지되어 진단 실행 흐름을 안내합니다."
+        elif any(token in message_lower for token in ("자가개선", "자가 개선", "개선해줘", "개선해 줘", "self-improve")):
+            conversation_stage = "implementation"
+            suggested_mode = "project"
+            grounding_note = "자가 개선 명령 — 코드 품질 개선 실행"
+            suggested_reason = "자가 개선 명령이 감지되어 코드 품질 개선 흐름을 안내합니다."
+        elif any(token in message_lower for token in ("자가확장", "자가 확장", "확장해줘", "확장해 줘", "self-expand")):
+            conversation_stage = "implementation"
+            suggested_mode = "project"
+            grounding_note = "자가 확장 명령 — 기능 확장 실행"
+            suggested_reason = "자가 확장 명령이 감지되어 기능 확장 실행 흐름을 안내합니다."
+        elif any(token in message_lower for token in ("스크립트 만들어", "스크립트 생성", "스크립트 작성", "generate script", "create script")):
+            conversation_stage = "implementation"
+            suggested_mode = "project"
+            grounding_note = "스크립트 생성 명령 — 스크립트 파일 작성"
+            suggested_reason = "스크립트 생성 명령이 감지되어 코드 작성 흐름을 안내합니다."
         elif any(token in message_lower for token in ("최신", "news", "release", "trend", "신기술", "비교", "research", "조사")):
             conversation_stage = "research"
         elif any(token in message_lower for token in ("아키텍처", "구조", "설계", "architecture", "system design")):
@@ -805,6 +1292,21 @@ async def answer_orchestrator_chat(
         if priority_tasks:
             project_memory["priority_tasks"] = priority_tasks
     project_memory_summary = summarize_project_memory(project_memory)
+    emotion_signal = infer_emotion_signal(message)
+    emotion_tone_guidance = build_emotion_tone_guidance(emotion_signal)
+    web_results: List[WebGroundingItem] = []
+    web_grounding_block = ""
+    if should_use_web_search(message, message_kind):
+        web_results = fetch_web_grounding(
+            message,
+            max_items=5,
+            timeout_sec=8.0,
+            logger=logger,
+        )
+        web_grounding_block = build_web_grounding_block(web_results)
+    if web_results:
+        grounding_note = "웹 검색 근거를 포함한 관리자 대화 응답"
+        suggested_reason = "최신성 신호가 감지되어 웹 검색 근거를 반영했습니다."
     inferred_goal = infer_conversation_goal(
         message,
         conversation_stage=conversation_stage,
@@ -831,6 +1333,8 @@ async def answer_orchestrator_chat(
         advisory_controls=advisory_controls,
     )
     next_action_suggestions = build_next_action_suggestions(
+        message=message,
+        web_results=web_results,
         message_kind=message_kind,
         requested_conversation_mode=requested_conversation_mode,
         suggested_mode=suggested_mode,
@@ -851,11 +1355,15 @@ async def answer_orchestrator_chat(
         "conversation_stage": conversation_stage,
         "lightweight": lightweight,
         "requested_conversation_mode": requested_conversation_mode,
+        "tone_preset": resolved_tone_preset,
         "model": None,
         "timeout_sec": None,
         "llm_elapsed_ms": 0,
         "used_fallback": False,
         "project_root": project_root,
+        "emotion_signal": emotion_signal,
+        "web_grounding_used": bool(web_results),
+        "web_grounding_count": len(web_results),
     }
     fast_reply_content = build_fast_admin_chat_reply(
         message,
@@ -864,6 +1372,15 @@ async def answer_orchestrator_chat(
         conversation_stage=conversation_stage,
     )
     if fast_reply_content:
+        fast_reply_content = _append_reciprocal_question(
+            fast_reply_content,
+            message=message,
+            lightweight=lightweight,
+            requested_conversation_mode=requested_conversation_mode,
+            response_style=response_style,
+            message_kind=message_kind,
+            conversation_stage=conversation_stage,
+        )
         reply = ConversationMessage(
             role="assistant",
             speaker=agent_key,
@@ -888,22 +1405,22 @@ async def answer_orchestrator_chat(
             conversation=history,
             output_dir=request.output_dir,
             run_id=request.run_id or uuid4().hex,
-            grounding_mode="internal",
-            grounding_note="관리자 빠른 응답 경로",
+            grounding_mode="web" if web_results else "internal",
+            grounding_note="관리자 빠른 응답 경로 (웹 검색 근거 포함)" if web_results else "관리자 빠른 응답 경로",
             companion_mode=request.companion_mode,
-            web_results=[],
+            web_results=web_results,
             suggested_companion_mode=suggested_mode,
             suggested_companion_reason="짧은 관리자 입력은 빠른 응답 경로로 처리했습니다.",
             conversation_stage=conversation_stage,
             clarification_questions=clarification_questions[:2],
             evidence_highlights=evidence_highlights[:2],
             next_action_suggestions=next_action_suggestions[:2] if lightweight else [
-                {
-                    "title": "작업 지시 구체화",
-                    "action_type": "follow-up",
-                    "detail": "수정 대상 파일, 기대 결과, 유지 조건을 함께 보내면 바로 실행형 답으로 이어집니다.",
-                    "recommended_mode": "project",
-                }
+                AdvisoryNextAction(
+                    title="작업 지시 구체화",
+                    action_type="follow-up",
+                    detail="수정 대상 파일, 기대 결과, 유지 조건을 함께 보내면 바로 실행형 답으로 이어집니다.",
+                    recommended_mode="project",
+                )
             ],
             flow_trace=flow_trace,
             command_plan=command_plan,
@@ -935,6 +1452,8 @@ async def answer_orchestrator_chat(
         response_style=response_style,
         multi_turn_enabled=multi_turn_enabled,
         context_tags=context_tags,
+        emotion_tone_guidance=emotion_tone_guidance,
+        web_grounding_enabled=bool(web_results),
     )
     user_prompt = build_chat_user_prompt(
         message,
@@ -945,6 +1464,8 @@ async def answer_orchestrator_chat(
         message_kind=message_kind,
         project_root=project_root,
         project_memory_summary=project_memory_summary,
+        emotion_signal=emotion_signal,
+        web_grounding_block=web_grounding_block,
     )
     reply_content = ""
     model_name = resolve_chat_model(request.agent_key or agent_key, lightweight=lightweight)
@@ -991,6 +1512,15 @@ async def answer_orchestrator_chat(
         )
     if approval_gate_warning:
         reply_content = f"{approval_gate_warning}\n\n{reply_content}".strip()
+    reply_content = _append_reciprocal_question(
+        reply_content,
+        message=message,
+        lightweight=lightweight,
+        requested_conversation_mode=requested_conversation_mode,
+        response_style=response_style,
+        message_kind=message_kind,
+        conversation_stage=conversation_stage,
+    )
 
     reply = ConversationMessage(
         role="assistant",
@@ -1036,10 +1566,10 @@ async def answer_orchestrator_chat(
         conversation=history,
         output_dir=request.output_dir,
         run_id=request.run_id or uuid4().hex,
-        grounding_mode="internal",
+        grounding_mode="web" if web_results else "internal",
         grounding_note=grounding_note,
         companion_mode=request.companion_mode,
-        web_results=[],
+        web_results=web_results,
         suggested_companion_mode=suggested_mode,
         suggested_companion_reason=suggested_reason,
         conversation_stage=conversation_stage,

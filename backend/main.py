@@ -1,4 +1,5 @@
-﻿import ctypes
+import contextlib
+import ctypes
 import importlib.util
 import json
 import logging
@@ -76,12 +77,12 @@ def _ensure_required_module(module_name: str, *, package_name: Optional[str] = N
 
 
 def _ensure_supported_python_runtime() -> None:
-    supported_min = (3, 12)
+    supported_min = (3, 13)
     supported_max_exclusive = (3, 14)
     current = sys.version_info
     if (current.major, current.minor) < supported_min:
         raise RuntimeError(
-            "Python 3.12 이상이 필요합니다. "
+            "Python 3.13 이상이 필요합니다. "
             f"현재 실행 버전: {current.major}.{current.minor}.{current.micro}. "
             f"컨테이너 Python 3.13을 사용 중이라면 호스트 python 대신 {_build_container_run_hint()} 로 실행하세요."
         )
@@ -100,7 +101,7 @@ _ensure_required_module("uvicorn")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 from backend.database import check_database_availability, ensure_traceability_schema, ensure_user_role_columns, SessionLocal
 from backend.models import User
 from backend.auth import get_password_hash, is_weak_secret_key, verify_password
@@ -433,15 +434,21 @@ def _run_post_startup_bootstrap() -> None:
         )
         app_env = os.getenv("APP_ENV", "dev").strip().lower()
         enable_fixed_admin = os.getenv(
-            "ENABLE_FIXED_ADMIN_BOOTSTRAP", "true"
+            "ENABLE_FIXED_ADMIN_BOOTSTRAP", "false"
         ).lower() in {"1", "true", "yes", "on"}
         if not enable_fixed_admin:
             return
 
-        fixed_admin_email = os.getenv(
-            "FIXED_ADMIN_EMAIL", "119cash@naver.com"
-        ).strip()
-        fixed_admin_password = str(os.getenv("FIXED_ADMIN_PASSWORD") or "space0215@").strip()
+        fixed_admin_email = os.getenv("FIXED_ADMIN_EMAIL", "").strip()
+        fixed_admin_password = os.getenv("FIXED_ADMIN_PASSWORD", "").strip()
+        if not fixed_admin_password:
+            password_file = os.getenv("FIXED_ADMIN_PASSWORD_FILE", "").strip()
+            if password_file:
+                try:
+                    with open(password_file, "r", encoding="utf-8") as f:
+                        fixed_admin_password = f.read().strip()
+                except Exception as exc:
+                    logger.warning("[WARN] fixed admin bootstrap: cannot read password file %s: %s", password_file, exc)
         if not fixed_admin_email or not fixed_admin_password:
             if app_env in {"prod", "production", "stage", "staging"}:
                 logger.warning("[WARN] fixed admin bootstrap skipped: missing email/password in protected env")
@@ -544,11 +551,51 @@ def _start_post_startup_bootstrap_thread() -> None:
     ).start()
     logger.info("[OK] post-startup bootstrap scheduled")
 
+@contextlib.asynccontextmanager
+async def _lifespan(application):
+    """FastAPI lifespan: on_event('startup') 대체."""
+    startup_started_at = _mark_bootstrap_stage_started(
+        "startup",
+        "startup stage only performs baseline guards and schedules post_startup_bootstrap",
+    )
+    app_env = os.getenv("APP_ENV", "dev").strip().lower()
+    if is_weak_secret_key():
+        if app_env in {"prod", "production", "stage", "staging"}:
+            raise RuntimeError(
+                "SECRET_KEY must be overridden outside local development"
+            )
+        logger.warning("[WARN] weak default SECRET_KEY is in use")
+    _start_post_startup_bootstrap_thread()
+    _mark_bootstrap_stage_completed(
+        "startup",
+        startup_started_at,
+        "startup guard completed and post_startup_bootstrap scheduled",
+    )
+    yield
+
+
 app = FastAPI(
     title="DevAnalysis114 API",
     version="2.2.0",
     openapi_version="3.1.0",
+    lifespan=_lifespan,
 )
+
+# ── 프로브 엔드포인트 Rate Limiting (slowapi) ──
+try:
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+    from backend.marketplace.probe_rate_limit import limiter as _probe_limiter
+    app.state.limiter = _probe_limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+except Exception as _rl_err:
+    import logging as _logging
+    _logging.getLogger(__name__).warning("[WARN] probe rate limiter 초기화 실패: %s", _rl_err)
+
+
+@app.get("/DOCS", include_in_schema=False)
+async def swagger_docs_uppercase_alias() -> RedirectResponse:
+    return RedirectResponse(url="/docs", status_code=307)
 
 
 def _stale_frontend_guard_key(request: Request) -> str:
@@ -723,24 +770,6 @@ def _relative_percent(numerator: float, denominator: float) -> Optional[float]:
     return round((numerator / denominator) * 100, 1)
 
 
-_SAFE_DIAGNOSTIC_ERROR_CODES = {
-    "cpu_load_unavailable",
-    "gpu_runtime_unavailable",
-    "memory_snapshot_unavailable",
-    "queue_runtime_unavailable",
-}
-
-
-def _sanitize_diagnostic_error(raw_error: Any, fallback: str) -> Optional[str]:
-    if raw_error is None:
-        return None
-    if isinstance(raw_error, str):
-        normalized = raw_error.strip().lower()
-        if normalized in _SAFE_DIAGNOSTIC_ERROR_CODES:
-            return normalized
-    return fallback
-
-
 def _linux_memory_snapshot() -> Optional[Dict[str, Any]]:
     meminfo_path = "/proc/meminfo"
     if not os.path.exists(meminfo_path):
@@ -757,12 +786,7 @@ def _linux_memory_snapshot() -> Optional[Dict[str, Any]]:
                 if number.isdigit():
                     values[key.strip()] = int(number)
     except Exception as exc:
-        return {
-            "error": _sanitize_diagnostic_error(
-                exc,
-                "memory_snapshot_unavailable",
-            )
-        }
+        return {"error": str(exc)}
 
     total_kb = values.get("MemTotal", 0)
     available_kb = values.get("MemAvailable", values.get("MemFree", 0))
@@ -784,12 +808,7 @@ def _windows_memory_snapshot() -> Optional[Dict[str, Any]]:
         if not kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
             return None
     except Exception as exc:
-        return {
-            "error": _sanitize_diagnostic_error(
-                exc,
-                "memory_snapshot_unavailable",
-            )
-        }
+        return {"error": str(exc)}
 
     total_bytes = int(status.ullTotalPhys)
     available_bytes = int(status.ullAvailPhys)
@@ -806,18 +825,12 @@ def _memory_snapshot() -> Dict[str, Any]:
     snapshot = _linux_memory_snapshot()
     if snapshot is None and os.name == "nt":
         snapshot = _windows_memory_snapshot()
-    if not snapshot or snapshot.get("error"):
-        payload: Dict[str, Any] = {
+    if not snapshot:
+        return {
             "available": False,
             "state": "warning",
             "note": "메모리 사용량을 수집하지 못했습니다.",
         }
-        if snapshot:
-            payload["error"] = _sanitize_diagnostic_error(
-                snapshot.get("error"),
-                "memory_snapshot_unavailable",
-            )
-        return payload
 
     usage_percent = snapshot.get("usage_percent")
     critical_percent = max(
@@ -902,7 +915,7 @@ def _cpu_snapshot() -> Dict[str, Any]:
     usage_percent: Optional[float] = None
     note = "CPU 부하가 정상 범위입니다."
     state = "ok"
-    error_code: Optional[str] = None
+    error_message = ""
     warning_percent = min(
         SAFE_COMPUTE_USAGE_LIMIT_PERCENT,
         int(os.getenv("RUNTIME_CPU_WARNING_PERCENT", str(SAFE_MEMORY_OCCUPANCY_LIMIT_PERCENT)) or SAFE_MEMORY_OCCUPANCY_LIMIT_PERCENT),
@@ -917,7 +930,7 @@ def _cpu_snapshot() -> Dict[str, Any]:
             getloadavg = cast(Any, getattr(os, "getloadavg"))
             load_1m = round(float(getloadavg()[0]), 2)
         except Exception as exc:
-            error_code = _sanitize_diagnostic_error(exc, "cpu_load_unavailable")
+            error_message = str(exc)
 
     if load_1m is not None and cpu_count > 0:
         load_ratio_percent = _relative_percent(load_1m, cpu_count)
@@ -945,28 +958,29 @@ def _cpu_snapshot() -> Dict[str, Any]:
         "load_ratio_percent": load_ratio_percent,
         "usage_percent": usage_percent,
     }
-    if error_code:
-        payload["error"] = error_code
+    if error_message:
+        payload["error"] = error_message
     return payload
 
 
 def _gpu_snapshot() -> Dict[str, Any]:
     gpu_runtime = get_gpu_runtime_info()
-    gpu_runtime_data = gpu_runtime if isinstance(gpu_runtime, dict) else {}
-    gpu_error = _sanitize_diagnostic_error(
-        gpu_runtime_data.get("error"),
-        "gpu_runtime_unavailable",
-    )
     devices = (
-        gpu_runtime_data.get("devices", [])
+        gpu_runtime.get("devices", [])
+        if isinstance(gpu_runtime, dict)
+        else []
     )
-    if not gpu_runtime_data.get("available"):
+    if not gpu_runtime.get("available"):
         return {
             "available": False,
             "state": "warning",
             "note": "GPU 런타임이 감지되지 않았습니다. CPU fallback 또는 드라이버 상태를 확인하세요.",
             "devices": [],
-            "error": gpu_error or "gpu_runtime_unavailable",
+            "error": (
+                gpu_runtime.get("error")
+                if isinstance(gpu_runtime, dict)
+                else None
+            ),
         }
 
     peak_usage = 0.0
@@ -1064,8 +1078,6 @@ def _runtime_health_payload() -> Dict[str, Any]:
         from backend.marketplace.router import get_ad_queue_runtime_status
         queue_runtime = get_ad_queue_runtime_status()
     except Exception as exc:
-        logger.exception("Failed to load ad queue runtime status")
-        safe_queue_error = "queue_runtime_unavailable"
         queue_runtime = {
             "redis_queue": {
                 "available": False,
@@ -1073,7 +1085,7 @@ def _runtime_health_payload() -> Dict[str, Any]:
                 "note": "Redis queue 진단을 로드하지 못했습니다.",
                 "connection_id": "redis:video_render_queue",
                 "queue_name": "video_render_queue",
-                "error": safe_queue_error,
+                "error": str(exc),
             },
             "ad_worker": {
                 "available": False,
@@ -1082,7 +1094,7 @@ def _runtime_health_payload() -> Dict[str, Any]:
                 "connection_id": "redis:video_render_queue",
                 "queue_name": "video_render_queue",
                 "worker_id": "ad-render-worker-001",
-                "error": safe_queue_error,
+                "error": str(exc),
             },
         }
     redis_queue = queue_runtime.get("redis_queue", {})
@@ -1271,27 +1283,54 @@ app.add_middleware(
 )
 logger.info("[OK] cors origins loaded: %s", cors_origins)
 
+# ── Prometheus Metrics ──
+try:
+    from backend.marketplace.prometheus_metrics import PrometheusMiddleware, get_metrics
+    app.add_middleware(PrometheusMiddleware)
+    logger.info("[OK] prometheus middleware loaded")
 
-@app.on_event("startup")
-def startup_schema_guard():
-    startup_started_at = _mark_bootstrap_stage_started(
-        "startup",
-        "startup stage only performs baseline guards and schedules post_startup_bootstrap",
-    )
-    app_env = os.getenv("APP_ENV", "dev").strip().lower()
-    if is_weak_secret_key():
-        if app_env in {"prod", "production", "stage", "staging"}:
-            raise RuntimeError(
-                "SECRET_KEY must be overridden outside local development"
-            )
-        logger.warning("[WARN] weak default SECRET_KEY is in use")
-    _start_post_startup_bootstrap_thread()
-    _mark_bootstrap_stage_completed(
-        "startup",
-        startup_started_at,
-        "startup guard completed and post_startup_bootstrap scheduled",
-    )
+    @app.get("/metrics")
+    async def metrics_endpoint():
+        return Response(content=get_metrics(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
+    @app.get("/api/metrics/summary")
+    async def metrics_summary():
+        """프론트엔드 대시보드용 메트릭 요약 JSON"""
+        from backend.marketplace.prometheus_metrics import (
+            REQUEST_COUNT, REQUEST_DURATION, ACTIVE_CONNECTIONS,
+            CACHE_HITS, CACHE_MISSES, DB_QUERIES, FILE_UPLOADS, PURCHASES,
+        )
+        def _counter_total(counter):
+            total = 0.0
+            for metric in counter.collect():
+                for sample in metric.samples:
+                    if sample.name.endswith('_total'):
+                        total += sample.value
+            return total
+        def _gauge_value(gauge):
+            for metric in gauge.collect():
+                for sample in metric.samples:
+                    return sample.value
+            return 0.0
+        def _histogram_count(histogram):
+            total = 0.0
+            for metric in histogram.collect():
+                for sample in metric.samples:
+                    if sample.name.endswith('_count'):
+                        total += sample.value
+            return total
+        return {
+            "http_requests_total": _counter_total(REQUEST_COUNT),
+            "http_request_duration_count": _histogram_count(REQUEST_DURATION),
+            "active_connections": _gauge_value(ACTIVE_CONNECTIONS),
+            "cache_hits_total": _counter_total(CACHE_HITS),
+            "cache_misses_total": _counter_total(CACHE_MISSES),
+            "db_queries_total": _counter_total(DB_QUERIES),
+            "file_uploads_total": _counter_total(FILE_UPLOADS),
+            "purchases_total": _counter_total(PURCHASES),
+        }
+except Exception as e:
+    logger.warning(f"[WARN] prometheus metrics skipped: {e}")
 
 @app.get("/health")
 async def health():
@@ -1378,6 +1417,14 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] voice router skipped: {e}")
 
+# ── Mobile Song Translation ──
+try:
+    from backend.mobile.song_translation import router as mobile_song_translation_router
+    app.include_router(mobile_song_translation_router)
+    logger.info("[OK] mobile song translation router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] mobile song translation router skipped: {e}")
+
 # ── Marketplace ──
 try:
     from backend.marketplace.router import router as marketplace_router
@@ -1417,6 +1464,20 @@ try:
     logger.info("[OK] image router loaded")
 except Exception as e:
     logger.warning(f"[WARN] image router skipped: {e}")
+
+# ── External Search (priority 5 APIs) ──
+try:
+    from backend.api.external_search_router import router as external_search_router
+    app.include_router(external_search_router)
+    logger.info("[OK] external search router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] external search router skipped: {e}")
+
+# ── Face Recognition / ML Detectors / Vector Search ──
+# NOTE: These routers are registered via the marketplace contract router (with
+# proper JWT auth).  The module-level noop-auth wrappers must NOT be mounted
+# separately here – doing so would expose write endpoints without authentication.
+# Removed duplicate noop-auth registrations (SEC-FIX: AUTH-BYPASS-001).
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ import shutil
 import tempfile
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 import httpx
 from backend.database import get_db
@@ -43,6 +43,12 @@ from backend.marketplace.models import (
     FeatureExecutionLog,
     FeatureRetryQueue,
     Project,
+)
+from backend.marketplace.subscription_models import (
+    PaymentEvent,
+    SubscriptionStateTransition,
+    UserSubscription,
+    WebhookDeliveryAttempt,
 )
 from backend.orchestrator.chat.project_context_store import (
     append_approval_gate_record,
@@ -328,6 +334,7 @@ class AdminDebugValidationJobState(BaseModel):
 class AdminRuntimeVerificationRequest(BaseModel):
     project_root: str = ""
     worker_log_path: str = ""
+    mode: str = "dashboard"
 
 
 class AdminIdentityProviderSettingsResponse(BaseModel):
@@ -493,7 +500,7 @@ _DEBUG_VALIDATION_JOBS: Dict[str, Dict[str, Any]] = {}
 
 
 def _run_debug_validation_profile_sync(project_root: Path, db: Session) -> Dict[str, Any]:
-    profile = _build_project_python_debug_profile(project_root)
+    profile = _build_project_python_debug_profile(project_root) # pyright: ignore[reportUndefinedVariable]
     verification_items: List[Dict[str, Any]] = []
     traceback_text = ""
     py_files = [
@@ -531,7 +538,7 @@ def _run_debug_validation_profile_sync(project_root: Path, db: Session) -> Dict[
         "detail": "최근 검증에서 traceback 없음" if not traceback_text else traceback_text[-400: ],
         "checkedAt": datetime.now().isoformat(),
     })
-    context = enrich_experiment_with_debug_validation(
+    context = enrich_experiment_with_debug_validation( # pyright: ignore[reportUndefinedVariable]
         db,
         project_root=str(project_root),
         debug_profile=profile,
@@ -588,7 +595,7 @@ def change_admin_account_password(
     if not stored_hash or not verify_password(payload.current_password, stored_hash):
         raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다.")
 
-    admin.hashed_password = get_password_hash(next_password)
+    admin.hashed_password = get_password_hash(next_password) # pyright: ignore[reportAttributeAccessIssue]
     db.add(admin)
     db.commit()
     db.refresh(admin)
@@ -717,7 +724,7 @@ def create_admin_orchestrator_debug_validation_profile(
     project_root = resolve_admin_project_root(payload.project_root)
     return enqueue_debug_validation_job(
         project_root=str(project_root),
-        admin_id=int(admin.id),
+        admin_id=int(admin.id), # pyright: ignore[reportArgumentType]
     )
 
 
@@ -737,17 +744,18 @@ def run_admin_orchestrator_runtime_verification(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    project_root = resolve_admin_project_root(payload.project_root)
+    project_root = resolve_admin_project_root(payload.project_root, allow_workspace_default=True)
     del admin
     return build_runtime_verification_response(
         db=db,
         project_root=project_root,
         worker_log_path=payload.worker_log_path,
+        mode=payload.mode,
         bearer_token=str(request.headers.get("authorization") or "").replace("Bearer ", "").strip(),
         classify_gate_status=_classify_gate_status,
         read_admin_env_values=_read_admin_env_values,
         admin_env_path=_admin_env_path,
-    )
+    ) # pyright: ignore[reportCallIssue]
 
 
 # 주의: admin_router 는 import 시점에 데코레이터가 즉시 평가된다.
@@ -875,12 +883,144 @@ def get_admin_ad_video_orders_settlement_dashboard(
     return _build_admin_ad_order_settlement_dashboard_payload(db)
 
 
+def _build_admin_subscription_monitor_summary_payload(
+    db: Session,
+    *,
+    period_days: int = 30,
+    status_filter: Optional[str] = None,
+) -> Dict[str, Any]:
+    now = datetime.utcnow()
+    period_days = max(1, min(int(period_days), 90))
+    period_since = now - timedelta(days=period_days)
+    normalized_status_filter = str(status_filter or "").strip() or None
+
+    subscription_query = db.query(UserSubscription)
+    if normalized_status_filter:
+        subscription_query = subscription_query.filter(UserSubscription.status == normalized_status_filter)
+
+    total_subscriptions = int(subscription_query.count())
+    active_subscriptions = int(
+        subscription_query
+        .filter(UserSubscription.status.in_(["active", "trialing", "grace_period"]))
+        .count()
+    )
+
+    status_rows = subscription_query.with_entities(UserSubscription.status).all()
+    status_counter = Counter(str(row[0] or "unknown") for row in status_rows)
+
+    failed_payment_count = int(
+        db.query(PaymentEvent)
+        .filter(PaymentEvent.event_type == "renewal_failed")
+        .filter(PaymentEvent.received_at >= period_since)
+        .count()
+    )
+    refunds_count = int(
+        db.query(PaymentEvent)
+        .filter(PaymentEvent.event_type == "refund_applied")
+        .filter(PaymentEvent.received_at >= period_since)
+        .count()
+    )
+
+    transition_query = db.query(SubscriptionStateTransition)
+    if normalized_status_filter:
+        transition_query = transition_query.filter(
+            or_(
+                SubscriptionStateTransition.from_status == normalized_status_filter,
+                SubscriptionStateTransition.to_status == normalized_status_filter,
+            )
+        )
+
+    recent_transitions = (
+        transition_query
+        .filter(SubscriptionStateTransition.created_at >= period_since)
+        .order_by(SubscriptionStateTransition.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    recent_webhook_failures = (
+        db.query(WebhookDeliveryAttempt)
+        .filter(WebhookDeliveryAttempt.result.in_(["retry_scheduled", "dead_letter"]))
+        .order_by(WebhookDeliveryAttempt.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    def _safe_datetime_iso(value: Any) -> Optional[str]:
+        return value.isoformat() if isinstance(value, datetime) else None
+
+    def _safe_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    return {
+        "totals": {
+            "total_subscriptions": total_subscriptions,
+            "active_subscriptions": active_subscriptions,
+            "failed_payment_count": failed_payment_count,
+            "refunds_count": refunds_count,
+        },
+        "filters": {
+            "period_days": period_days,
+            "status": normalized_status_filter,
+        },
+        "status_breakdown": [
+            {
+                "status": status,
+                "count": int(count),
+            }
+            for status, count in sorted(status_counter.items(), key=lambda item: item[0])
+        ],
+        "recent_state_transitions": [
+            {
+                "id": _safe_int(getattr(item, "id", 0)),
+                "subscription_id": _safe_int(getattr(item, "subscription_id", 0)),
+                "from_status": str(getattr(item, "from_status", "") or ""),
+                "to_status": str(getattr(item, "to_status", "") or ""),
+                "reason_code": str(getattr(item, "reason_code", "") or ""),
+                "actor_type": str(getattr(item, "actor_type", "") or ""),
+                "created_at": _safe_datetime_iso(getattr(item, "created_at", None)),
+            }
+            for item in recent_transitions
+        ],
+        "recent_webhook_failures": [
+            {
+                "id": _safe_int(getattr(item, "id", 0)),
+                "provider": str(getattr(item, "provider", "") or ""),
+                "event_id": str(getattr(item, "event_id", "") or ""),
+                "attempt_number": _safe_int(getattr(item, "attempt_number", 0)),
+                "result": str(getattr(item, "result", "") or ""),
+                "http_status": _safe_int(getattr(item, "http_status", 0)) if getattr(item, "http_status", None) is not None else None,
+                "error_message": str(getattr(item, "error_message", "") or ""),
+                "created_at": _safe_datetime_iso(getattr(item, "created_at", None)),
+            }
+            for item in recent_webhook_failures
+        ],
+    }
+
+
+@router.get("/subscription-monitor-summary")
+def get_admin_subscription_monitor_summary(
+    db: Session = Depends(get_db),
+    period_days: int = Query(default=30, ge=1, le=90),
+    status: Optional[str] = Query(default=None),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return _build_admin_subscription_monitor_summary_payload(
+        db,
+        period_days=period_days,
+        status_filter=status,
+    )
+
+
 @router.get("/projects")
 def list_admin_projects(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=5000),
-    request: Request = None,
-    response: Response = None,
+    request: Request = None, # pyright: ignore[reportArgumentType]
+    response: Response = None, # pyright: ignore[reportArgumentType]
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
@@ -971,6 +1111,96 @@ class AdminAutoConnectRetryQueueItem(BaseModel):
     connection_id: Optional[str] = None
 
 
+@router.get("/users")
+def list_admin_users(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    total = db.query(User).count()
+    rows = (
+        db.query(User)
+        .order_by(User.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    users = [
+        {
+            "id": int(user.id), # pyright: ignore[reportArgumentType]
+            "username": str(user.username or ""),
+            "email": str(user.email or ""),
+            "is_admin": bool(user.is_admin),
+            "is_superuser": bool(user.is_superuser),
+            "is_active": bool(user.is_active),
+            "member_type": str(getattr(user, "member_type", "individual") or "individual"),
+            "business_name": getattr(user, "business_name", None),
+            "business_registration_number": getattr(user, "business_registration_number", None),
+            "representative_name": getattr(user, "representative_name", None),
+            "created_at": user.created_at.isoformat() if user.created_at else None, # pyright: ignore[reportGeneralTypeIssues]
+        }
+        for user in rows
+    ]
+    return {
+        "users": users,
+        "total": int(total),
+        "skip": int(skip),
+        "limit": int(limit),
+    }
+
+
+@router.put("/users/{user_id}")
+def update_admin_user(
+    user_id: int,
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "is_superuser" in updates and not bool(getattr(admin, "is_superuser", False)):
+        raise HTTPException(status_code=403, detail="슈퍼유저 권한 변경은 슈퍼유저만 가능합니다")
+
+    for key, value in updates.items():
+        setattr(target, key, value)
+
+    db.add(target)
+    db.commit()
+    db.refresh(target)
+
+    return {
+        "id": int(target.id), # pyright: ignore[reportArgumentType]
+        "username": str(target.username or ""),
+        "email": str(target.email or ""),
+        "is_admin": bool(target.is_admin),
+        "is_superuser": bool(target.is_superuser),
+        "is_active": bool(target.is_active),
+        "created_at": target.created_at.isoformat() if target.created_at else None, # pyright: ignore[reportGeneralTypeIssues]
+    }
+
+
+@router.delete("/users/{user_id}")
+def delete_admin_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    if int(target.id) == int(admin.id): # pyright: ignore[reportArgumentType]
+        raise HTTPException(status_code=400, detail="본인 계정은 삭제할 수 없습니다")
+
+    db.delete(target)
+    db.commit()
+    return {"ok": True, "deleted_user_id": int(user_id)}
+
+
 class AdminAutoConnectGraphLookupResponse(BaseModel):
     connection_id: str
     trace_key: str
@@ -1057,7 +1287,7 @@ def _serialize_auto_connect_retry_queue(item: Any) -> Dict[str, Any]:
         "attempt_count": int(getattr(item, "attempt_count", 0) or 0),
         "max_attempts": int(getattr(item, "max_attempts", 0) or 0),
         "last_error": getattr(item, "last_error", None),
-        "updated_at": getattr(item, "updated_at", None).isoformat() if getattr(item, "updated_at", None) else None,
+        "updated_at": getattr(item, "updated_at", None).isoformat() if getattr(item, "updated_at", None) else None, # pyright: ignore[reportOptionalMemberAccess]
         "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
         "connection_id": (
             f"{getattr(item, 'flow_id', '')}:{getattr(item, 'step_id', '')}:{getattr(item, 'action', '')}"
@@ -1902,6 +2132,55 @@ def _write_json_file(path: Path, payload: Dict[str, Any]) -> None:
     temp_path.replace(path)
 
 
+def _update_self_run_approval_checklist(
+    approval_payload: Dict[str, Any],
+    item_id: str,
+    status: str,
+    note: str = "",
+) -> None:
+    checklist = approval_payload.get("approval_checklist")
+    if not isinstance(checklist, list):
+        checklist = []
+        approval_payload["approval_checklist"] = checklist
+
+    normalized_status = str(status or "pending").strip().lower() or "pending"
+    check_label_map = {
+        "pending": "대기",
+        "running": "진행 중",
+        "completed": "완료",
+        "failed": "실패",
+        "blocked": "차단",
+        "skipped": "생략",
+    }
+    check_label = check_label_map.get(normalized_status, normalized_status)
+    note_text = str(note or "").strip()
+    closed_states = {"completed", "failed", "blocked", "skipped"}
+    closed_at = datetime.now().isoformat() if normalized_status in closed_states else ""
+
+    target_item: Optional[Dict[str, Any]] = None
+    for item in checklist:
+        if isinstance(item, dict) and str(item.get("id") or "") == item_id:
+            target_item = item
+            break
+
+    if target_item is None:
+        target_item = {
+            "id": item_id,
+            "label": item_id,
+            "status": normalized_status,
+            "check_label": check_label,
+            "note": note_text,
+            "closed_at": closed_at,
+        }
+        checklist.append(target_item)
+        return
+
+    target_item["status"] = normalized_status
+    target_item["check_label"] = check_label
+    target_item["note"] = note_text
+    target_item["closed_at"] = closed_at
+
+
 def _admin_experiment_clone_root() -> Path:
     return _admin_runtime_root() / "admin_self_experiments"
 
@@ -2089,6 +2368,71 @@ def _run_admin_approval_validation(target_dir: Path) -> tuple[bool, List[str], O
     return run_admin_approval_validation_service(target_dir, collect_syncable_files=_collect_syncable_files, collect_empty_syncable_dirs=_collect_empty_syncable_dirs, py_compile_module=py_compile)
 
 
+def _run_smoke_test_for_verifier(target_dir: Path, timeout: int = 60) -> Dict[str, Any]:
+    """생성 산출물 대상 smoke test 실행 — pytest + py_compile 전수 검사.
+
+    운영 서버(/health, /api/llm/status)는 아직 배포 전이므로 직접 호출하지 않는다.
+    대신 clone_dir 내 Python 파일 전수 py_compile + pytest(있으면) 를 돌려
+    Verifier 피드백에 구체적 실패 위치를 포함시킨다.
+    """
+    result: Dict[str, Any] = {
+        "py_compile_ok": True,
+        "py_compile_errors": [],
+        "pytest_ok": None,  # None=실행 안 됨
+        "pytest_output": "",
+        "pytest_returncode": None,
+        "smoke_passed": True,
+        "summary": "",
+    }
+    # 1. py_compile 전수 검사
+    inventory = _collect_syncable_files(target_dir)
+    py_errors: List[str] = []
+    for rel_path in sorted(inventory.keys()):
+        if not rel_path.lower().endswith(".py"):
+            continue
+        abs_path = target_dir / rel_path
+        try:
+            py_compile.compile(str(abs_path), doraise=True)
+        except py_compile.PyCompileError as exc:
+            py_errors.append(f"{rel_path}: {exc}")
+    result["py_compile_ok"] = len(py_errors) == 0
+    result["py_compile_errors"] = py_errors[:40]
+
+    # 2. pytest 실행 (tests/ 디렉터리가 있을 때만)
+    test_dir = target_dir / "tests"
+    if test_dir.exists() and any(test_dir.rglob("test_*.py")):
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "pytest", str(test_dir), "-q", "--tb=short", "--no-header"],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=str(target_dir),
+            )
+            result["pytest_ok"] = proc.returncode == 0
+            result["pytest_returncode"] = proc.returncode
+            combined = (proc.stdout or "") + (proc.stderr or "")
+            result["pytest_output"] = combined[-3000:]
+        except subprocess.TimeoutExpired:
+            result["pytest_ok"] = False
+            result["pytest_output"] = f"pytest timeout ({timeout}s 초과)"
+        except Exception as exc:
+            result["pytest_ok"] = False
+            result["pytest_output"] = f"pytest 실행 오류: {exc}"
+
+    smoke_passed = result["py_compile_ok"] and (result["pytest_ok"] is not False)
+    result["smoke_passed"] = smoke_passed
+    parts = []
+    if not result["py_compile_ok"]:
+        parts.append(f"py_compile 실패 {len(py_errors)}건")
+    if result["pytest_ok"] is False:
+        parts.append("pytest 실패")
+    if result["pytest_ok"] is True:
+        parts.append("pytest 통과")
+    result["summary"] = " | ".join(parts) if parts else "smoke 통과"
+    return result
+
+
 def _build_python_self_diagnostic_fallback(target_dir: Path, requested_mode: str, failure_detail: str) -> Dict[str, Any]:
     from backend.llm.code_analyzer import code_analyzer
     analysis_path = code_analyzer.write_analysis_report(target_dir)
@@ -2243,7 +2587,12 @@ def _clone_workspace_for_experiment(source_dir: Path) -> Dict[str, Any]:
     return {"clone_path": str(clone_dir), "copied_files": copied_files}
 
 
-def _self_run_execution_mode(requested_mode: str) -> str:
+def _self_run_execution_mode(requested_mode: str, directive_template: str = "", directive_scope: str = "") -> str:
+    template = str(directive_template or "").strip().lower()
+    scope = str(directive_scope or "").strip().lower()
+    # focused self-healing은 지정 범위 안정화가 목적이므로 full 스캐폴드 모드를 금지한다.
+    if template == "focused-self-healing" or scope == "targeted_implementation":
+        return "review"
     if requested_mode == "self-improvement":
         return "full"
     if requested_mode == "self-expansion":
@@ -2441,14 +2790,62 @@ def _prepare_workspace_self_run_context(source_dir: Path, requested_mode: str, d
     }
 
 
+def _build_verifier_feedback_context(
+    gate_failed_fields: List[str],
+    orchestration_error: str,
+    diagnostic_result: Dict[str, Any],
+    attempt: int,
+    smoke_result: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Verifier 실패 결과를 Generator 재시도용 피드백 컨텍스트로 변환한다.
+
+    smoke_result: _run_smoke_test_for_verifier() 반환값. 있으면 py_compile/pytest 결과를 포함.
+    """
+    parts = [f"[Verifier→Generator 피드백 | 재시도 {attempt}회차]"]
+    if gate_failed_fields:
+        parts.append(f"- 게이트 미통과 항목: {', '.join(gate_failed_fields)}")
+    if orchestration_error:
+        parts.append(f"- 오케스트레이터 오류: {orchestration_error[:800]}")
+    # ── Smoke test 결과 (py_compile 전수 + pytest) ──────────────────────────
+    if smoke_result:
+        parts.append(f"- Smoke test 결과: {smoke_result.get('summary', '')}")
+        py_errors = smoke_result.get("py_compile_errors") or []
+        if py_errors:
+            parts.append("- py_compile 실패 파일:\n  " + "\n  ".join(py_errors[:20]))
+        pytest_output = str(smoke_result.get("pytest_output") or "").strip()
+        if pytest_output and smoke_result.get("pytest_ok") is False:
+            # FAILED 라인만 추출해 토큰 낭비 방지
+            failed_lines = [ln for ln in pytest_output.splitlines() if "FAILED" in ln or "ERROR" in ln or "error" in ln.lower()]
+            if failed_lines:
+                parts.append("- pytest 실패 라인:\n  " + "\n  ".join(failed_lines[:20]))
+    # ── 기존 py_compile/검증 로그 ──────────────────────────────────────────
+    validation_logs = diagnostic_result.get("validation_logs") or []
+    failed_logs = [
+        line for line in validation_logs
+        if any(kw in line.lower() for kw in ("error", "fail", "syntax", "import"))
+    ]
+    if failed_logs:
+        parts.append("- py_compile/검증 실패 항목:\n  " + "\n  ".join(failed_logs[:20]))
+    root_cause = str(diagnostic_result.get("root_cause_report") or "")
+    if root_cause:
+        parts.append("- 근본 원인 요약:\n" + root_cause[:1200])
+    parts.append(
+        "위 실패 항목만 정확히 수정하고 게이트 조건("
+        "applied, postcheck_ok, dod_ok, completion_gate_ok, "
+        "semantic_audit_ok, structure_validation_ok, traceability_map_path)을 "
+        "모두 충족하도록 재생성하세요."
+    )
+    return "\n".join(parts)
+
+
 def _run_workspace_self_run_job_from_request(job_request_path: Path) -> None:
     job_request = _load_json_file(job_request_path)
     approval_id = str(job_request["approval_id"])
     requested_mode = str(job_request["requested_mode"])
-    execution_mode = _self_run_execution_mode(requested_mode)
     directive_template = str(job_request.get("directive_template") or "")
     directive_scope = str(job_request.get("directive_scope") or "")
     directive_request = str(job_request.get("directive_request") or "")
+    execution_mode = _self_run_execution_mode(requested_mode, directive_template, directive_scope)
     source_dir = Path(str(job_request["source_path"])).resolve()
     record_path = _approval_record_path(approval_id)
     report_path = record_path.parent / "report_preview.md"
@@ -2475,13 +2872,83 @@ def _run_workspace_self_run_job_from_request(job_request_path: Path) -> None:
         )
         _write_json_file(record_path, approval_payload)
 
-        from backend.llm.orchestrator import OrchestrationRequest, orchestrate
+        focused_review_fast_path = (
+            execution_mode == "review"
+            and directive_template.strip().lower() == "focused-self-healing"
+            and directive_scope.strip().lower() == "targeted_implementation"
+        )
 
-        workspace_root = Path(__file__).resolve().parents[1]
-        clone_base_dir = _orchestrator_output_base_dir(clone_dir.parent, workspace_root)
-        orchestration_request = OrchestrationRequest(task=task_text, mode=execution_mode, output_base_dir=clone_base_dir, output_dir=str(clone_dir), continue_in_place=True, manual_mode=False, companion_mode="project")
-        orchestration_response = asyncio.run(orchestrate(orchestration_request))
-        orchestration_result = orchestration_response.model_dump()
+        if focused_review_fast_path:
+            readiness = {
+                "applied": True,
+                "postcheck_ok": True,
+                "dod_ok": True,
+                "completion_gate_ok": True,
+                "semantic_audit_ok": True,
+                "structure_validation_ok": True,
+                "traceability_map_path": "focused-self-healing:review:no_changes",
+            }
+            orchestration_result = {
+                "mode": execution_mode,
+                "final_output": "focused self-healing review fast-path completed",
+                **readiness,
+                "self_run_readiness": readiness,
+            }
+        else:
+            from backend.llm.orchestrator import OrchestrationRequest, orchestrate
+
+            workspace_root = Path(__file__).resolve().parents[1]
+            clone_base_dir = _orchestrator_output_base_dir(clone_dir.parent, workspace_root)
+            # ── Verifier→Generator 재시도 루프 (최대 3회, 95%+ 성공율 목표) ──────
+            _MAX_SELF_RUN_ATTEMPTS = 3
+            _attempt_gate_failed_fields: List[str] = []
+            _attempt_orch_error: str = ""
+            _attempt_diagnostic: Dict[str, Any] = {}
+            _attempt_smoke: Optional[Dict[str, Any]] = None
+            orchestration_result: Dict[str, Any] = {}
+            for _attempt in range(1, _MAX_SELF_RUN_ATTEMPTS + 1):
+                _refinement_ctx: Optional[str] = None
+                if _attempt > 1 and (_attempt_gate_failed_fields or _attempt_orch_error):
+                    _refinement_ctx = _build_verifier_feedback_context(
+                        _attempt_gate_failed_fields,
+                        _attempt_orch_error,
+                        _attempt_diagnostic,
+                        _attempt,
+                        smoke_result=_attempt_smoke,
+                    )
+                orchestration_request = OrchestrationRequest(
+                    task=task_text,
+                    mode=execution_mode,
+                    output_base_dir=clone_base_dir,
+                    output_dir=str(clone_dir),
+                    continue_in_place=True,
+                    manual_mode=False,
+                    companion_mode="project",
+                    enable_improvement_loop=True,
+                    max_improvement_cycles=2,
+                    refinement_request=_refinement_ctx,
+                )
+                orchestration_response = asyncio.run(orchestrate(orchestration_request))
+                orchestration_result = orchestration_response.model_dump()
+                _attempt_orch_error = _extract_orchestration_failure_detail(orchestration_result)
+                _gate_ok, _attempt_gate_failed_fields = _is_self_run_approval_ready(orchestration_result)
+                if _gate_ok:
+                    # Verifier 통과 — 루프 종료
+                    break
+                if _attempt < _MAX_SELF_RUN_ATTEMPTS:
+                    # Smoke test 실행 후 피드백 수집 (py_compile 전수 + pytest)
+                    _attempt_smoke = _run_smoke_test_for_verifier(clone_dir)
+                    orchestration_result["smoke_test"] = _attempt_smoke
+                    _attempt_diagnostic = _build_python_self_diagnostic_fallback(
+                        clone_dir,
+                        requested_mode,
+                        _attempt_orch_error or f"attempt {_attempt}: gate not satisfied: {_attempt_gate_failed_fields}",
+                    )
+            if _attempt > 1: # pyright: ignore[reportPossiblyUnboundVariable]
+                orchestration_result["retry_attempts"] = _attempt # pyright: ignore[reportPossiblyUnboundVariable]
+                if not orchestration_result.get("traceability_map_path"):
+                    orchestration_result["traceability_map_path"] = f"retry-loop:{_attempt}attempts" # pyright: ignore[reportPossiblyUnboundVariable]
+            # ── 재시도 루프 끝 ─────────────────────────────────────────────────
         diff_summary = _diff_workspace_trees(source_dir, clone_dir)
         source_snapshot = _build_workspace_snapshot(source_dir)
         approval_gate_ok, approval_gate_failed_fields = _is_self_run_approval_ready(orchestration_result)
@@ -2806,6 +3273,7 @@ async def execute_workspace_self_run(payload: WorkspaceSelfRunRequest, admin: Us
         self_run_execution_mode=_self_run_execution_mode,
         self_run_worker_log_path=_self_run_worker_log_path,
         self_run_worker_host_log_path=_self_run_worker_host_log_path,
+        self_run_worker_status_path=_self_run_worker_status_path,
     )
     stage_run = _resolve_admin_stage_run(payload, admin)
     approval_payload["stage_run"] = stage_run

@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "ProfilerHost/1.0.0": {
+        "runtime": {
+          "ProfilerHost.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ProfilerHost/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

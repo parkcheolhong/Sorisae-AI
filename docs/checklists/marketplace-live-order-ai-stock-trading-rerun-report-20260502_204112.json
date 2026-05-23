@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-05-02T20:41:12.575426Z",
+  "results": [
+    {
+      "index": 1,
+      "project_name": "ai-engine-stock-trading-program-rerun1-20260502_203313",
+      "run_id": "stage_run_HCxtVmY13tAcOjEKGdS_1Hhk",
+      "stage_status": "blocked",
+      "execution_status": "completed",
+      "raw_output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_203313_20260502_203314_085622",
+      "output_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun1-20260502_203313_20260502_203314_085622",
+      "validation_json_exists": true,
+      "automatic_validation_result_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun1-20260502_203313_20260502_203314_085622\\docs\\automatic_validation_result.json",
+      "status": "failed",
+      "failed_reasons": [
+        "semantic gate failed"
+      ],
+      "validation_profile": "python_fastapi",
+      "output_archive_path": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_203313_20260502_203314_085622/ai-engine-stock-trading-program-reru-e525f5a106_shipment.zip",
+      "shipment_zip_local_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun1-20260502_203313_20260502_203314_085622\\ai-engine-stock-trading-program-reru-e525f5a106_shipment.zip",
+      "shipment_zip_exists": true,
+      "check_sh_has_compileall": true,
+      "check_sh_has_pytest_q_s": true,
+      "check_sh_has_lock_marker": true
+    },
+    {
+      "index": 2,
+      "project_name": "ai-engine-stock-trading-program-rerun2-20260502_203714",
+      "run_id": "stage_run_UohOxG4Fn2ly3FiUpZUU88O6",
+      "stage_status": "blocked",
+      "execution_status": "completed",
+      "raw_output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_203714_20260502_203714_736372",
+      "output_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun2-20260502_203714_20260502_203714_736372",
+      "validation_json_exists": true,
+      "automatic_validation_result_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun2-20260502_203714_20260502_203714_736372\\docs\\automatic_validation_result.json",
+      "status": "failed",
+      "failed_reasons": [
+        "semantic gate failed"
+      ],
+      "validation_profile": "python_fastapi",
+      "output_archive_path": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_203714_20260502_203714_736372/ai-engine-stock-trading-program-reru-73ccfa0ddf_shipment.zip",
+      "shipment_zip_local_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\projects\\customer_9\\runs\\ai-engine-stock-trading-program-rerun2-20260502_203714_20260502_203714_736372\\ai-engine-stock-trading-program-reru-73ccfa0ddf_shipment.zip",
+      "shipment_zip_exists": true,
+      "check_sh_has_compileall": true,
+      "check_sh_has_pytest_q_s": true,
+      "check_sh_has_lock_marker": true
+    }
+  ]
+}

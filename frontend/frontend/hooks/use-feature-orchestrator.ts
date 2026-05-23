@@ -3,25 +3,7 @@
 import * as React from 'react';
 import { MARKETPLACE_ORCHESTRATOR_BRIDGE_KEY, type MarketplaceOrchestratorBridgePayload } from '@/lib/admin-orchestrator-bridge';
 import { buildMarketplacePopupTelemetryEvent, recordMarketplacePopupTelemetry } from '@/lib/marketplace-popup-telemetry';
-
-function resolveApiBaseUrl(): string {
-    if (typeof window !== 'undefined') {
-        const { hostname, origin, port, protocol } = window.location;
-        const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
-        const isDirectFrontendDevPort = port === '3000' || port === '3005';
-        const isGatewayPort = port === '8080' || port === '8443';
-
-        if (isDirectFrontendDevPort && protocol !== 'https:') {
-            return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-        }
-
-        if (!isLocalHost || isGatewayPort || protocol === 'https:') {
-            return origin;
-        }
-    }
-
-    return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-}
+import { resolveApiBaseUrl } from '@/lib/api';
 
 export type FeaturePopupState =
     | 'idle'
@@ -46,7 +28,7 @@ export type FeatureCatalogItem = {
 
 export type FeatureExperienceMeta = {
     featureId: string;
-    outputKind: 'image' | 'music' | 'document' | 'spreadsheet' | 'video';
+    outputKind: 'image' | 'music' | 'document' | 'spreadsheet' | 'video' | 'presentation' | 'code';
     popupKicker: string;
     launcherSummary: string;
     launcherCta: string;
@@ -188,71 +170,6 @@ type FeaturePreset = {
 };
 
 const FEATURE_EXPERIENCE_META: Record<string, FeatureExperienceMeta> = {
-    'ai-image': {
-        featureId: 'ai-image',
-        outputKind: 'image',
-        popupKicker: 'AI Image Studio',
-        launcherSummary: '광고 배너, 제품 컷, 인물 프로모션 시안을 빠르게 만들고 preview → final 결과를 비교합니다.',
-        launcherCta: '이미지 시안 만들기',
-        launcherBadge: '광고 이미지 제작',
-        launcherHighlights: ['참조 이미지 업로드', '광고 카피 반영', 'preview vs final 비교'],
-        liveViewTitle: '이미지 시안 라이브 피드',
-        liveViewDescription: '레퍼런스 사진과 프롬프트를 바탕으로 시안 preview를 먼저 확인하고, final 단계에서 배너/프로모션 결과를 확정합니다.',
-        inputTitle: '이미지 제작 입력',
-        inputDescription: '광고 목적, 배경, 카피, 스타일 가이드를 입력하면 시안 목적이 바로 드러나는 결과를 만들 수 있습니다.',
-        projectPlaceholder: '예: 봄 시즌 프로모션 배너',
-        promptPlaceholder: '제품/인물, 배경, 색감, 카피, 비율, 원하는 광고 분위기를 입력하세요.',
-        templateLabel: '이미지 템플릿',
-        templateOptions: [
-            { value: 'ad-photo-template', label: '광고 사진 템플릿' },
-            { value: 'portrait-promo-template', label: '인물 프로모션 템플릿' },
-            { value: 'product-banner-template', label: '제품 배너 템플릿' },
-        ],
-        finalToggleLabel: 'preview 뒤 최종 광고 이미지까지 렌더링',
-        submitLabel: '이미지 생성 시작',
-        uploadLabel: '참조 사진 업로드',
-        previewTitle: '이미지 Preview',
-        finalTitle: '최종 이미지 Result',
-        emptyArtifactText: '이미지 시안이 아직 없습니다. 목적과 스타일을 적고 실행을 시작해 주세요.',
-        quickPromptChips: ['제품 단독컷', '인물 프로모션', 'SNS 광고 배너', '따뜻한 톤', '고급 브랜드 느낌'],
-        statCards: [
-            { id: 'visual', label: '비주얼 톤', note: '색감/조명/구도' },
-            { id: 'copy', label: '카피 반영', note: '광고 문구 일치도' },
-            { id: 'delivery', label: '산출물', note: 'preview + final 이미지' },
-        ],
-    },
-    'ai-music': {
-        featureId: 'ai-music',
-        outputKind: 'music',
-        popupKicker: 'AI Music Composer',
-        launcherSummary: '장르, 분위기, 길이, 템포를 정해 브랜드 BGM과 티저 음악 구성을 설계합니다.',
-        launcherCta: '음악 생성 시작',
-        launcherBadge: '오디오 제작',
-        launcherHighlights: ['장르/무드 설정', '트랙 구조 요약', '최종 렌더 패키지'],
-        liveViewTitle: '음악 구성 라이브 피드',
-        liveViewDescription: '인트로, 메인, 클라이맥스 흐름을 먼저 확인하고 최종 오디오 패키지 단계로 이어집니다.',
-        inputTitle: '음악 제작 입력',
-        inputDescription: '장르, 분위기, BPM, 길이, 악기 구성을 적으면 사용 목적에 맞는 트랙 설명과 산출물을 정리합니다.',
-        projectPlaceholder: '예: 브랜드 런칭 티저 BGM',
-        promptPlaceholder: '장르, 분위기, BPM, 길이, 악기 구성, 감정 곡선, 보컬 여부를 입력하세요.',
-        templateLabel: '음악 템플릿',
-        templateOptions: [
-            { value: 'music-track-template', label: '브랜드 티저 트랙' },
-            { value: 'lofi-brand-template', label: '로파이 브랜딩 템플릿' },
-            { value: 'cinematic-rise-template', label: '시네마틱 고조 템플릿' },
-        ],
-        finalToggleLabel: '구성 preview 뒤 최종 오디오 패키지 생성',
-        submitLabel: '음악 트랙 생성',
-        previewTitle: '트랙 Preview',
-        finalTitle: '최종 오디오 Package',
-        emptyArtifactText: '아직 생성된 트랙 설명이 없습니다. 장르와 분위기를 넣고 시작하세요.',
-        quickPromptChips: ['브랜드 티저 30초', '차분한 인트로', '후반부 고조', '로파이 감성', '제품 공개 영상용'],
-        statCards: [
-            { id: 'genre', label: '장르', note: '무드/악기 조합' },
-            { id: 'tempo', label: '템포', note: '길이/BPM 구조' },
-            { id: 'delivery', label: '산출물', note: 'preview + final audio' },
-        ],
-    },
     'ai-document': {
         featureId: 'ai-document',
         outputKind: 'document',
@@ -319,37 +236,341 @@ const FEATURE_EXPERIENCE_META: Record<string, FeatureExperienceMeta> = {
             { id: 'delivery', label: '다운로드', note: 'xlsx/csv 패키지' },
         ],
     },
-    'ai-video': {
-        featureId: 'ai-video',
-        outputKind: 'video',
-        popupKicker: 'AI Video Generator',
-        launcherSummary: '영상 길이, 장면 수, 톤을 정해 스토리보드 preview와 최종 영상 패키지 UX를 제공합니다.',
-        launcherCta: '영상 생성 시작',
-        launcherBadge: '영상 스토리보드',
-        launcherHighlights: ['장면 구성', '스토리보드 preview', '최종 영상 패키지'],
-        liveViewTitle: '영상 스토리보드 라이브 피드',
-        liveViewDescription: '장면 구성과 CTA를 먼저 정리한 뒤 final 단계에서 렌더 패키지 결과로 이어집니다.',
-        inputTitle: '영상 제작 입력',
-        inputDescription: '영상 목적, 길이, 장면 수, 톤, 자막/내레이션 정보를 넣어 스토리보드와 결과 패키지를 정리합니다.',
-        projectPlaceholder: '예: 신제품 15초 광고 영상',
-        promptPlaceholder: '영상 목적, 길이, 장면 수, 스타일, 자막/내레이션, CTA를 입력하세요.',
-        templateLabel: '영상 템플릿',
+    'ai-powerpoint': {
+        featureId: 'ai-powerpoint',
+        outputKind: 'presentation',
+        popupKicker: 'AI PowerPoint Builder',
+        launcherSummary: '발표 목적에 맞는 슬라이드 구성 preview와 최종 pptx 패키지를 자동 생성합니다.',
+        launcherCta: '파워포인트 생성 시작',
+        launcherBadge: 'PPT 자동 제작',
+        launcherHighlights: ['슬라이드 개요', '핵심 메시지 정리', 'pptx 다운로드'],
+        liveViewTitle: '파워포인트 구성 라이브 피드',
+        liveViewDescription: 'preview 단계에서 슬라이드 목차와 bullet 구성을 확인하고 final 단계에서 pptx 패키지를 확정합니다.',
+        inputTitle: '파워포인트 제작 입력',
+        inputDescription: '발표 목적, 청중, 핵심 메시지, 분량을 입력하면 슬라이드 구조와 핵심 문장을 자동 정리합니다.',
+        projectPlaceholder: '예: 분기 실적 발표 자료',
+        promptPlaceholder: '발표 목적, 청중, 핵심 메시지, 장표 수, 원하는 톤을 입력하세요.',
+        templateLabel: 'PPT 템플릿',
         templateOptions: [
-            { value: 'video-storyboard-template', label: '광고 스토리보드 템플릿' },
-            { value: 'shortform-launch-template', label: '숏폼 런칭 템플릿' },
-            { value: 'product-demo-template', label: '제품 데모 템플릿' },
+            { value: 'pitch-deck-template', label: '피치덱 템플릿' },
+            { value: 'business-report-template', label: '사업 보고 템플릿' },
+            { value: 'product-launch-template', label: '제품 런칭 템플릿' },
         ],
-        finalToggleLabel: '스토리보드 preview 뒤 최종 영상 패키지 생성',
-        submitLabel: '영상 스토리보드 생성',
-        previewTitle: 'Storyboard Preview',
-        finalTitle: '최종 영상 Package',
-        emptyArtifactText: '영상 결과가 아직 없습니다. 장면 구성과 톤을 입력하고 시작하세요.',
-        quickPromptChips: ['15초 광고 영상', '제품 소개', '세 장면 구성', '강한 CTA', '세련된 브랜드 무드'],
+        finalToggleLabel: '슬라이드 구성 preview 뒤 최종 pptx 패키지 생성',
+        submitLabel: '파워포인트 생성',
+        previewTitle: 'Presentation Outline Preview',
+        finalTitle: '최종 PowerPoint Package',
+        downloadTitle: 'PowerPoint Downloads',
+        downloadDescription: 'final phase 가 완료되면 pptx 결과물을 바로 내려받을 수 있습니다.',
+        emptyArtifactText: '파워포인트 결과가 아직 없습니다. 발표 목적을 입력하고 시작하세요.',
+        quickPromptChips: ['분기 실적 보고', '제품 런칭 발표', '투자자 피치덱', '임원 회의 자료', '핵심 KPI 요약'],
         statCards: [
-            { id: 'scenes', label: '장면 수', note: '스토리보드 구조' },
-            { id: 'tempo', label: '영상 템포', note: '길이/호흡' },
-            { id: 'delivery', label: '산출물', note: 'storyboard + final video' },
+            { id: 'outline', label: '슬라이드 구성', note: '목차/흐름 점검' },
+            { id: 'message', label: '핵심 메시지', note: '문장/포인트 요약' },
+            { id: 'delivery', label: '산출물', note: 'pptx 패키지' },
         ],
+    },
+    'ai-web-design': {
+        featureId: 'ai-web-design',
+        outputKind: 'code',
+        popupKicker: 'AI Web App Designer',
+        launcherSummary: 'React/Next.js 웹 앱을 디자인부터 컴포넌트 코드까지 풀 자동 생성합니다.',
+        launcherCta: '웹 앱 생성 시작',
+        launcherBadge: '웹 앱 디자인 자동화',
+        launcherHighlights: ['컴포넌트 설계', 'Next.js 스캐폴드', '디자인 시스템 반영'],
+        liveViewTitle: '웹 앱 생성 라이브 피드',
+        liveViewDescription: 'UI/UX 설계 preview 단계에서 컴포넌트 구조를 확인하고, final 단계에서 완전한 Next.js 코드 패키지를 확정합니다.',
+        inputTitle: '웹 앱 제작 입력',
+        inputDescription: '앱 목적, 핵심 페이지, 컴포넌트 요구사항, 디자인 스타일을 입력하면 실사용 가능한 코드 구조를 자동으로 생성합니다.',
+        projectPlaceholder: '예: SaaS 대시보드 앱',
+        promptPlaceholder: '앱 목적, 핵심 페이지, 필요한 컴포넌트, 디자인 가이드, 상태 관리 방식을 입력하세요.',
+        templateLabel: '웹 앱 템플릿',
+        templateOptions: [
+            { value: 'nextjs-dashboard-template', label: 'Next.js 대시보드 템플릿' },
+            { value: 'landing-page-template', label: '랜딩 페이지 템플릿' },
+            { value: 'saas-app-template', label: 'SaaS 앱 템플릿' },
+        ],
+        finalToggleLabel: '설계 preview 뒤 최종 코드 패키지 생성',
+        submitLabel: '웹 앱 생성 시작',
+        previewTitle: 'UI/UX 구조 Preview',
+        finalTitle: '최종 코드 Package',
+        downloadTitle: '코드 패키지 다운로드',
+        downloadDescription: 'final phase 가 완료되면 Next.js 프로젝트 ZIP 패키지를 바로 내려받을 수 있습니다.',
+        emptyArtifactText: '웹 앱 결과가 아직 없습니다. 앱 목적과 페이지 구성을 입력하고 시작하세요.',
+        quickPromptChips: ['SaaS 대시보드', '랜딩 페이지', '관리자 패널', 'Tailwind 스타일', 'TypeScript 기반'],
+        statCards: [
+            { id: 'pages', label: '페이지 구성', note: '라우트/컴포넌트 설계' },
+            { id: 'components', label: '컴포넌트', note: 'UI 구성 요소' },
+            { id: 'delivery', label: '산출물', note: 'Next.js 코드 패키지' },
+        ],
+    },
+'ai-document-mobile': {
+    featureId: 'ai-document-mobile',
+        outputKind: 'document',
+            popupKicker: 'AI Document Builder (모바일 앱)',
+                launcherSummary: '📱 모바일 앱으로 설치해 이동 중에도 제안서·보고서·운영가이드를 빠르게 초안 작성합니다.',
+                    launcherCta: '모바일 문서 앱 시작',
+                        launcherBadge: '📱 모바일 문서 제작',
+                            launcherHighlights: ['iOS/Android 앱', '목차 preview', '최종 문서 패키지'],
+                                liveViewTitle: '문서 개요 라이브 피드 (모바일)',
+                                    liveViewDescription: '모바일 환경에서 preview 단계에서는 개요와 목차를, final 단계에서는 내보내기 가능한 문서 패키지를 정리합니다.',
+                                        inputTitle: '문서 제작 입력',
+                                            inputDescription: '문서 목적, 독자, 핵심 메시지, 원하는 문체를 입력하면 초안 UX가 좋아집니다.',
+                                                projectPlaceholder: '예: 신규 서비스 제안서',
+                                                    promptPlaceholder: '문서 목적, 독자, 목차, 핵심 메시지, 분량, 원하는 문체를 입력하세요.',
+                                                        templateLabel: '문서 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'document-outline-template', label: '제안서 개요 템플릿' },
+                                                                { value: 'report-brief-template', label: '보고서 요약 템플릿' },
+                                                                { value: 'manual-guide-template', label: '운영 가이드 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: '목차 preview 뒤 최종 문서 패키지 생성',
+                                                                    submitLabel: '문서 초안 생성',
+                                                                        previewTitle: '문서 Outline Preview',
+                                                                            finalTitle: '최종 문서 Package',
+                                                                                emptyArtifactText: '문서 결과가 아직 없습니다. 목적과 독자 정보를 입력해 주세요.',
+                                                                                    quickPromptChips: ['제안서 목차', '운영 가이드', '임원 보고서', '친절한 문체', '핵심 요약 중심'],
+                                                                                        statCards: [
+                                                                                            { id: 'outline', label: '목차 구조', note: 'preview 개요 품질' },
+                                                                                            { id: 'audience', label: '독자 적합도', note: '문체/톤' },
+                                                                                            { id: 'delivery', label: '산출물', note: 'outline + final doc' },
+                                                                                        ],
+    },
+'ai-document-pc': {
+    featureId: 'ai-document-pc',
+        outputKind: 'document',
+            popupKicker: 'AI Document Builder (로컬 PC)',
+                launcherSummary: '💻 로컬 PC에서 직접 실행해 대용량 제안서·보고서·운영가이드를 빠르게 생성합니다.',
+                    launcherCta: 'PC 문서 앱 시작',
+                        launcherBadge: '💻 PC 로컬 문서 제작',
+                            launcherHighlights: ['로컬 처리', '목차 preview', '최종 문서 패키지'],
+                                liveViewTitle: '문서 개요 라이브 피드 (PC)',
+                                    liveViewDescription: '로컬 PC에서 preview 단계에서는 개요와 목차를, final 단계에서는 내보내기 가능한 문서 패키지를 정리합니다.',
+                                        inputTitle: '문서 제작 입력',
+                                            inputDescription: '문서 목적, 독자, 핵심 메시지, 원하는 문체를 입력하면 초안 UX가 좋아집니다.',
+                                                projectPlaceholder: '예: 신규 서비스 제안서',
+                                                    promptPlaceholder: '문서 목적, 독자, 목차, 핵심 메시지, 분량, 원하는 문체를 입력하세요.',
+                                                        templateLabel: '문서 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'document-outline-template', label: '제안서 개요 템플릿' },
+                                                                { value: 'report-brief-template', label: '보고서 요약 템플릿' },
+                                                                { value: 'manual-guide-template', label: '운영 가이드 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: '목차 preview 뒤 최종 문서 패키지 생성',
+                                                                    submitLabel: '문서 초안 생성',
+                                                                        previewTitle: '문서 Outline Preview',
+                                                                            finalTitle: '최종 문서 Package',
+                                                                                emptyArtifactText: '문서 결과가 아직 없습니다. 목적과 독자 정보를 입력해 주세요.',
+                                                                                    quickPromptChips: ['제안서 목차', '운영 가이드', '임원 보고서', '친절한 문체', '핵심 요약 중심'],
+                                                                                        statCards: [
+                                                                                            { id: 'outline', label: '목차 구조', note: 'preview 개요 품질' },
+                                                                                            { id: 'audience', label: '독자 적합도', note: '문체/톤' },
+                                                                                            { id: 'delivery', label: '산출물', note: 'outline + final doc' },
+                                                                                        ],
+    },
+'ai-sheet-mobile': {
+    featureId: 'ai-sheet-mobile',
+        outputKind: 'spreadsheet',
+            popupKicker: 'AI Spreadsheet Builder (모바일 앱)',
+                launcherSummary: '📱 모바일 앱으로 설치해 이동 중에도 영업·재고·운영 시트를 즉시 생성합니다.',
+                    launcherCta: '모바일 시트 앱 시작',
+                        launcherBadge: '📱 모바일 엑셀 생성',
+                            launcherHighlights: ['iOS/Android 앱', '컬럼/행 구조 확인', 'xlsx/csv 다운로드'],
+                                liveViewTitle: '시트 생성 라이브 피드 (모바일)',
+                                    liveViewDescription: '모바일 환경에서 시트 목적에 맞는 schema를 먼저 확인하고, final 단계에서 workbook 패키지와 다운로드 자산을 확정합니다.',
+                                        inputTitle: '엑셀 시트 입력',
+                                            inputDescription: '시트 목적, 컬럼명, 행 수, 숫자/날짜 규칙을 적으면 실사용 가능한 워크북 구조를 바로 확인할 수 있습니다.',
+                                                projectPlaceholder: '예: 영업 리드 관리 시트',
+                                                    promptPlaceholder: '시트 목적, 필수 컬럼, 샘플 행 수, 숫자/날짜 형식을 입력하세요.',
+                                                        templateLabel: '시트 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'sheet-schema-template', label: '기본 시트 스키마 템플릿' },
+                                                                { value: 'sales-pipeline-template', label: '영업 파이프라인 템플릿' },
+                                                                { value: 'inventory-control-template', label: '재고 관리 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: 'schema preview 뒤 workbook 패키지까지 생성',
+                                                                    submitLabel: '시트 생성 시작',
+                                                                        previewTitle: 'Sheet Schema Preview',
+                                                                            finalTitle: 'Workbook Package',
+                                                                                downloadTitle: 'Spreadsheet Downloads',
+                                                                                    downloadDescription: 'final phase 가 완료되면 xlsx/csv 결과물을 바로 내려받을 수 있습니다.',
+                                                                                        emptyArtifactText: '시트 결과가 아직 없습니다. 컬럼과 목적을 입력하고 시작하세요.',
+                                                                                            quickPromptChips: ['영업 리드 관리', '재고 관리표', '운영 일정표', '숫자/날짜 혼합', '24행 샘플 데이터'],
+                                                                                                statCards: [
+                                                                                                    { id: 'columns', label: '컬럼 설계', note: '구조/타입 미리보기' },
+                                                                                                    { id: 'rows', label: '샘플 행', note: '실제 데이터 형태' },
+                                                                                                    { id: 'delivery', label: '다운로드', note: 'xlsx/csv 패키지' },
+                                                                                                ],
+    },
+'ai-sheet-pc': {
+    featureId: 'ai-sheet-pc',
+        outputKind: 'spreadsheet',
+            popupKicker: 'AI Spreadsheet Builder (로컬 PC)',
+                launcherSummary: '💻 로컬 PC에서 직접 실행해 대용량 영업·재고·운영 시트를 빠르게 생성합니다.',
+                    launcherCta: 'PC 시트 앱 시작',
+                        launcherBadge: '💻 PC 로컬 엑셀 생성',
+                            launcherHighlights: ['로컬 처리', '컬럼/행 구조 확인', 'xlsx/csv 다운로드'],
+                                liveViewTitle: '시트 생성 라이브 피드 (PC)',
+                                    liveViewDescription: '로컬 PC에서 시트 목적에 맞는 schema를 먼저 확인하고, final 단계에서 workbook 패키지와 다운로드 자산을 확정합니다.',
+                                        inputTitle: '엑셀 시트 입력',
+                                            inputDescription: '시트 목적, 컬럼명, 행 수, 숫자/날짜 규칙을 적으면 실사용 가능한 워크북 구조를 바로 확인할 수 있습니다.',
+                                                projectPlaceholder: '예: 영업 리드 관리 시트',
+                                                    promptPlaceholder: '시트 목적, 필수 컬럼, 샘플 행 수, 숫자/날짜 형식을 입력하세요.',
+                                                        templateLabel: '시트 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'sheet-schema-template', label: '기본 시트 스키마 템플릿' },
+                                                                { value: 'sales-pipeline-template', label: '영업 파이프라인 템플릿' },
+                                                                { value: 'inventory-control-template', label: '재고 관리 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: 'schema preview 뒤 workbook 패키지까지 생성',
+                                                                    submitLabel: '시트 생성 시작',
+                                                                        previewTitle: 'Sheet Schema Preview',
+                                                                            finalTitle: 'Workbook Package',
+                                                                                downloadTitle: 'Spreadsheet Downloads',
+                                                                                    downloadDescription: 'final phase 가 완료되면 xlsx/csv 결과물을 바로 내려받을 수 있습니다.',
+                                                                                        emptyArtifactText: '시트 결과가 아직 없습니다. 컬럼과 목적을 입력하고 시작하세요.',
+                                                                                            quickPromptChips: ['영업 리드 관리', '재고 관리표', '운영 일정표', '숫자/날짜 혼합', '24행 샘플 데이터'],
+                                                                                                statCards: [
+                                                                                                    { id: 'columns', label: '컬럼 설계', note: '구조/타입 미리보기' },
+                                                                                                    { id: 'rows', label: '샘플 행', note: '실제 데이터 형태' },
+                                                                                                    { id: 'delivery', label: '다운로드', note: 'xlsx/csv 패키지' },
+                                                                                                ],
+    },
+'ai-powerpoint-mobile': {
+    featureId: 'ai-powerpoint-mobile',
+        outputKind: 'presentation',
+            popupKicker: 'AI PowerPoint Builder (모바일 앱)',
+                launcherSummary: '📱 모바일 앱으로 설치해 이동 중에도 발표 자료·피치덱을 즉시 생성합니다.',
+                    launcherCta: '모바일 PPT 앱 시작',
+                        launcherBadge: '📱 모바일 PPT 제작',
+                            launcherHighlights: ['iOS/Android 앱', '슬라이드 개요', 'pptx 다운로드'],
+                                liveViewTitle: '파워포인트 구성 라이브 피드 (모바일)',
+                                    liveViewDescription: '모바일 환경에서 preview 단계에서 슬라이드 목차와 bullet 구성을 확인하고 final 단계에서 pptx 패키지를 확정합니다.',
+                                        inputTitle: '파워포인트 제작 입력',
+                                            inputDescription: '발표 목적, 청중, 핵심 메시지, 분량을 입력하면 슬라이드 구조와 핵심 문장을 자동 정리합니다.',
+                                                projectPlaceholder: '예: 분기 실적 발표 자료',
+                                                    promptPlaceholder: '발표 목적, 청중, 핵심 메시지, 장표 수, 원하는 톤을 입력하세요.',
+                                                        templateLabel: 'PPT 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'pitch-deck-template', label: '피치덱 템플릿' },
+                                                                { value: 'business-report-template', label: '사업 보고 템플릿' },
+                                                                { value: 'product-launch-template', label: '제품 런칭 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: '슬라이드 구성 preview 뒤 최종 pptx 패키지 생성',
+                                                                    submitLabel: '파워포인트 생성',
+                                                                        previewTitle: 'Presentation Outline Preview',
+                                                                            finalTitle: '최종 PowerPoint Package',
+                                                                                downloadTitle: 'PowerPoint Downloads',
+                                                                                    downloadDescription: 'final phase 가 완료되면 pptx 결과물을 바로 내려받을 수 있습니다.',
+                                                                                        emptyArtifactText: '파워포인트 결과가 아직 없습니다. 발표 목적을 입력하고 시작하세요.',
+                                                                                            quickPromptChips: ['분기 실적 보고', '제품 런칭 발표', '투자자 피치덱', '임원 회의 자료', '핵심 KPI 요약'],
+                                                                                                statCards: [
+                                                                                                    { id: 'outline', label: '슬라이드 구성', note: '목차/흐름 점검' },
+                                                                                                    { id: 'message', label: '핵심 메시지', note: '문장/포인트 요약' },
+                                                                                                    { id: 'delivery', label: '산출물', note: 'pptx 패키지' },
+                                                                                                ],
+    },
+'ai-powerpoint-pc': {
+    featureId: 'ai-powerpoint-pc',
+        outputKind: 'presentation',
+            popupKicker: 'AI PowerPoint Builder (로컬 PC)',
+                launcherSummary: '💻 로컬 PC에서 직접 실행해 대용량 발표 자료·피치덱을 빠르게 생성합니다.',
+                    launcherCta: 'PC PPT 앱 시작',
+                        launcherBadge: '💻 PC 로컬 PPT 제작',
+                            launcherHighlights: ['로컬 처리', '슬라이드 개요', 'pptx 다운로드'],
+                                liveViewTitle: '파워포인트 구성 라이브 피드 (PC)',
+                                    liveViewDescription: '로컬 PC에서 preview 단계에서 슬라이드 목차와 bullet 구성을 확인하고 final 단계에서 pptx 패키지를 확정합니다.',
+                                        inputTitle: '파워포인트 제작 입력',
+                                            inputDescription: '발표 목적, 청중, 핵심 메시지, 분량을 입력하면 슬라이드 구조와 핵심 문장을 자동 정리합니다.',
+                                                projectPlaceholder: '예: 분기 실적 발표 자료',
+                                                    promptPlaceholder: '발표 목적, 청중, 핵심 메시지, 장표 수, 원하는 톤을 입력하세요.',
+                                                        templateLabel: 'PPT 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'pitch-deck-template', label: '피치덱 템플릿' },
+                                                                { value: 'business-report-template', label: '사업 보고 템플릿' },
+                                                                { value: 'product-launch-template', label: '제품 런칭 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: '슬라이드 구성 preview 뒤 최종 pptx 패키지 생성',
+                                                                    submitLabel: '파워포인트 생성',
+                                                                        previewTitle: 'Presentation Outline Preview',
+                                                                            finalTitle: '최종 PowerPoint Package',
+                                                                                downloadTitle: 'PowerPoint Downloads',
+                                                                                    downloadDescription: 'final phase 가 완료되면 pptx 결과물을 바로 내려받을 수 있습니다.',
+                                                                                        emptyArtifactText: '파워포인트 결과가 아직 없습니다. 발표 목적을 입력하고 시작하세요.',
+                                                                                            quickPromptChips: ['분기 실적 보고', '제품 런칭 발표', '투자자 피치덱', '임원 회의 자료', '핵심 KPI 요약'],
+                                                                                                statCards: [
+                                                                                                    { id: 'outline', label: '슬라이드 구성', note: '목차/흐름 점검' },
+                                                                                                    { id: 'message', label: '핵심 메시지', note: '문장/포인트 요약' },
+                                                                                                    { id: 'delivery', label: '산출물', note: 'pptx 패키지' },
+                                                                                                ],
+    },
+'ai-web-design-mobile': {
+    featureId: 'ai-web-design-mobile',
+        outputKind: 'code',
+            popupKicker: 'AI Web App Designer (모바일 앱)',
+                launcherSummary: '📱 모바일 앱으로 설치해 React/Next.js 웹 앱 설계 및 코드를 어디서나 생성합니다.',
+                    launcherCta: '모바일 웹 디자인 앱 시작',
+                        launcherBadge: '📱 모바일 웹 앱 생성',
+                            launcherHighlights: ['iOS/Android 앱', '컴포넌트 설계', 'Next.js 코드 패키지'],
+                                liveViewTitle: '웹 앱 생성 라이브 피드 (모바일)',
+                                    liveViewDescription: '모바일 환경에서 UI/UX 설계 preview 단계에서 컴포넌트 구조를 확인하고, final 단계에서 완전한 Next.js 코드 패키지를 확정합니다.',
+                                        inputTitle: '웹 앱 제작 입력',
+                                            inputDescription: '앱 목적, 핵심 페이지, 컴포넌트 요구사항, 디자인 스타일을 입력하면 실사용 가능한 코드 구조를 자동으로 생성합니다.',
+                                                projectPlaceholder: '예: SaaS 대시보드 앱',
+                                                    promptPlaceholder: '앱 목적, 핵심 페이지, 필요한 컴포넌트, 디자인 가이드, 상태 관리 방식을 입력하세요.',
+                                                        templateLabel: '웹 앱 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'nextjs-dashboard-template', label: 'Next.js 대시보드 템플릿' },
+                                                                { value: 'landing-page-template', label: '랜딩 페이지 템플릿' },
+                                                                { value: 'saas-app-template', label: 'SaaS 앱 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: '설계 preview 뒤 최종 코드 패키지 생성',
+                                                                    submitLabel: '웹 앱 생성 시작',
+                                                                        previewTitle: 'UI/UX 구조 Preview',
+                                                                            finalTitle: '최종 코드 Package',
+                                                                                downloadTitle: '코드 패키지 다운로드',
+                                                                                    downloadDescription: 'final phase 가 완료되면 Next.js 프로젝트 ZIP 패키지를 바로 내려받을 수 있습니다.',
+                                                                                        emptyArtifactText: '웹 앱 결과가 아직 없습니다. 앱 목적과 페이지 구성을 입력하고 시작하세요.',
+                                                                                            quickPromptChips: ['SaaS 대시보드', '랜딩 페이지', '관리자 패널', 'Tailwind 스타일', 'TypeScript 기반'],
+                                                                                                statCards: [
+                                                                                                    { id: 'pages', label: '페이지 구성', note: '라우트/컴포넌트 설계' },
+                                                                                                    { id: 'components', label: '컴포넌트', note: 'UI 구성 요소' },
+                                                                                                    { id: 'delivery', label: '산출물', note: 'Next.js 코드 패키지' },
+                                                                                                ],
+    },
+'ai-web-design-pc': {
+    featureId: 'ai-web-design-pc',
+        outputKind: 'code',
+            popupKicker: 'AI Web App Designer (로컬 PC)',
+                launcherSummary: '💻 로컬 PC에서 직접 실행해 React/Next.js 웹 앱을 풀 자동으로 생성하고 바로 실행합니다.',
+                    launcherCta: 'PC 웹 디자인 앱 시작',
+                        launcherBadge: '💻 PC 로컬 웹 앱 생성',
+                            launcherHighlights: ['로컬 빌드 & 실행', '컴포넌트 설계', 'Next.js 코드 패키지'],
+                                liveViewTitle: '웹 앱 생성 라이브 피드 (PC)',
+                                    liveViewDescription: '로컬 PC에서 UI/UX 설계 preview 단계에서 컴포넌트 구조를 확인하고, final 단계에서 완전한 Next.js 코드 패키지를 확정합니다.',
+                                        inputTitle: '웹 앱 제작 입력',
+                                            inputDescription: '앱 목적, 핵심 페이지, 컴포넌트 요구사항, 디자인 스타일을 입력하면 실사용 가능한 코드 구조를 자동으로 생성합니다.',
+                                                projectPlaceholder: '예: SaaS 대시보드 앱',
+                                                    promptPlaceholder: '앱 목적, 핵심 페이지, 필요한 컴포넌트, 디자인 가이드, 상태 관리 방식을 입력하세요.',
+                                                        templateLabel: '웹 앱 템플릿',
+                                                            templateOptions: [
+                                                                { value: 'nextjs-dashboard-template', label: 'Next.js 대시보드 템플릿' },
+                                                                { value: 'landing-page-template', label: '랜딩 페이지 템플릿' },
+                                                                { value: 'saas-app-template', label: 'SaaS 앱 템플릿' },
+                                                            ],
+                                                                finalToggleLabel: '설계 preview 뒤 최종 코드 패키지 생성',
+                                                                    submitLabel: '웹 앱 생성 시작',
+                                                                        previewTitle: 'UI/UX 구조 Preview',
+                                                                            finalTitle: '최종 코드 Package',
+                                                                                downloadTitle: '코드 패키지 다운로드',
+                                                                                    downloadDescription: 'final phase 가 완료되면 Next.js 프로젝트 ZIP 패키지를 바로 내려받을 수 있습니다.',
+                                                                                        emptyArtifactText: '웹 앱 결과가 아직 없습니다. 앱 목적과 페이지 구성을 입력하고 시작하세요.',
+                                                                                            quickPromptChips: ['SaaS 대시보드', '랜딩 페이지', '관리자 패널', 'Tailwind 스타일', 'TypeScript 기반'],
+                                                                                                statCards: [
+                                                                                                    { id: 'pages', label: '페이지 구성', note: '라우트/컴포넌트 설계' },
+                                                                                                    { id: 'components', label: '컴포넌트', note: 'UI 구성 요소' },
+                                                                                                    { id: 'delivery', label: '산출물', note: 'Next.js 코드 패키지' },
+                                                                                                ],
     },
 };
 
@@ -358,7 +579,7 @@ function buildDefaultCatalogItem(featureId: string): FeatureCatalogItem {
     const meta = FEATURE_EXPERIENCE_META[featureId] || FEATURE_EXPERIENCE_META['ai-sheet'];
     return {
         feature_id: featureId,
-        title: meta.popupKicker,
+        title: meta.popupKicker.replace('AI ', 'AI '),
         summary: meta.launcherSummary,
         popup_mode: preset.contextTags[1] || meta.outputKind,
         status: 'enabled',
@@ -370,9 +591,18 @@ function buildDefaultCatalogItem(featureId: string): FeatureCatalogItem {
 function mergeFeatureCatalog(payload: unknown): FeatureCatalogItem[] {
     const incoming = Array.isArray(payload) ? (payload as FeatureCatalogItem[]) : [];
     const merged = new Map<string, FeatureCatalogItem>();
-    Object.keys(FEATURE_PRESETS).forEach((featureId) => {
+
+    // Only expose features that backend explicitly provides.
+    // If backend payload is temporarily empty, fall back to canonical runtime 6.
+    const fallbackFeatureIds = ['ai-sheet', 'ai-document', 'ai-powerpoint'];
+    const sourceFeatureIds = incoming.length > 0
+        ? incoming.map((item) => String(item?.feature_id || '').trim()).filter(Boolean)
+        : fallbackFeatureIds;
+
+    sourceFeatureIds.forEach((featureId) => {
         merged.set(featureId, buildDefaultCatalogItem(featureId));
     });
+
     incoming.forEach((item) => {
         if (!item?.feature_id) {
             return;
@@ -395,20 +625,6 @@ const FEATURE_PRESETS: Record<string, FeaturePreset> = {
         finalEnabled: true,
         contextTags: ['marketplace-popup', 'spreadsheet-builder'],
     },
-    'ai-image': {
-        projectName: 'marketplace-image-run',
-        prompt: '',
-        templateId: 'ad-photo-template',
-        finalEnabled: true,
-        contextTags: ['marketplace-popup', 'hybrid-image'],
-    },
-    'ai-music': {
-        projectName: 'marketplace-music-run',
-        prompt: '브랜드 런칭 티저용 30초 음악 트랙을 생성해주세요. 도입부는 차분하게, 후반부는 고조되는 구조로 구성해주세요.',
-        templateId: 'music-track-template',
-        finalEnabled: true,
-        contextTags: ['marketplace-popup', 'music-generator'],
-    },
     'ai-document': {
         projectName: 'marketplace-document-run',
         prompt: '신규 서비스 제안서를 위한 목차 preview 와 최종 문서 패키지를 만들어주세요.',
@@ -416,12 +632,75 @@ const FEATURE_PRESETS: Record<string, FeaturePreset> = {
         finalEnabled: true,
         contextTags: ['marketplace-popup', 'document-builder'],
     },
-    'ai-video': {
-        projectName: 'marketplace-video-run',
-        prompt: '제품 소개용 15초 영상 스토리보드와 최종 렌더 패키지를 생성해주세요.',
-        templateId: 'video-storyboard-template',
+    'ai-powerpoint': {
+        projectName: 'marketplace-powerpoint-run',
+        prompt: '분기 실적 발표를 위한 파워포인트를 만들어주세요. 핵심 KPI, 리스크, 다음 액션 슬라이드를 포함해주세요.',
+        templateId: 'pitch-deck-template',
         finalEnabled: true,
-        contextTags: ['marketplace-popup', 'video-generator'],
+        contextTags: ['marketplace-popup', 'powerpoint-builder'],
+    },
+    'ai-web-design': {
+        projectName: 'marketplace-web-design-run',
+        prompt: 'SaaS 대시보드 웹 앱을 만들어주세요. 홈, 분석, 설정 페이지를 포함하고 Tailwind CSS와 TypeScript를 사용해주세요.',
+        templateId: 'nextjs-dashboard-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'web-app-designer'],
+    },
+    'ai-document-mobile': {
+        projectName: 'marketplace-document-mobile-run',
+        prompt: '신규 서비스 제안서를 위한 목차 preview 와 최종 문서 패키지를 만들어주세요.',
+        templateId: 'document-outline-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'document-builder', 'platform:mobile'],
+    },
+    'ai-document-pc': {
+        projectName: 'marketplace-document-pc-run',
+        prompt: '신규 서비스 제안서를 위한 목차 preview 와 최종 문서 패키지를 만들어주세요.',
+        templateId: 'document-outline-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'document-builder', 'platform:pc'],
+    },
+    'ai-sheet-mobile': {
+        projectName: 'marketplace-sheet-mobile-run',
+        prompt: '영업 리드 관리용 엑셀 시트를 만들어주세요. 컬럼은 고객사명, 담당자, 예상 매출, 미팅일을 포함하고 24행 샘플 데이터를 채워주세요.',
+        templateId: 'sheet-schema-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'spreadsheet-builder', 'platform:mobile'],
+    },
+    'ai-sheet-pc': {
+        projectName: 'marketplace-sheet-pc-run',
+        prompt: '영업 리드 관리용 엑셀 시트를 만들어주세요. 컬럼은 고객사명, 담당자, 예상 매출, 미팅일을 포함하고 24행 샘플 데이터를 채워주세요.',
+        templateId: 'sheet-schema-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'spreadsheet-builder', 'platform:pc'],
+    },
+    'ai-powerpoint-mobile': {
+        projectName: 'marketplace-powerpoint-mobile-run',
+        prompt: '분기 실적 발표를 위한 파워포인트를 만들어주세요. 핵심 KPI, 리스크, 다음 액션 슬라이드를 포함해주세요.',
+        templateId: 'pitch-deck-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'powerpoint-builder', 'platform:mobile'],
+    },
+    'ai-powerpoint-pc': {
+        projectName: 'marketplace-powerpoint-pc-run',
+        prompt: '분기 실적 발표를 위한 파워포인트를 만들어주세요. 핵심 KPI, 리스크, 다음 액션 슬라이드를 포함해주세요.',
+        templateId: 'pitch-deck-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'powerpoint-builder', 'platform:pc'],
+    },
+    'ai-web-design-mobile': {
+        projectName: 'marketplace-web-design-mobile-run',
+        prompt: 'SaaS 대시보드 웹 앱을 만들어주세요. 홈, 분석, 설정 페이지를 포함하고 Tailwind CSS와 TypeScript를 사용해주세요.',
+        templateId: 'nextjs-dashboard-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'web-app-designer', 'platform:mobile'],
+    },
+    'ai-web-design-pc': {
+        projectName: 'marketplace-web-design-pc-run',
+        prompt: 'SaaS 대시보드 웹 앱을 만들어주세요. 홈, 분석, 설정 페이지를 포함하고 Tailwind CSS와 TypeScript를 사용해주세요.',
+        templateId: 'nextjs-dashboard-template',
+        finalEnabled: true,
+        contextTags: ['marketplace-popup', 'web-app-designer', 'platform:pc'],
     },
 };
 
@@ -454,14 +733,14 @@ function buildBridgePrompt(bridge: MarketplaceOrchestratorBridgePayload): {
 } {
     if (bridge.source === 'admin-dashboard') {
         return {
-            featureId: 'ai-image',
-            projectName: bridge.title || 'admin-dashboard-image-request',
+            featureId: 'ai-document',
+            projectName: bridge.title || 'admin-dashboard-document-request',
             prompt: [bridge.title, bridge.imagePrompt, bridge.backgroundPrompt, bridge.captionText, bridge.scenarioScript].filter(Boolean).join('\n'),
         };
     }
     return {
-        featureId: 'ai-image',
-        projectName: bridge.projectName || 'admin-llm-image-request',
+        featureId: 'ai-document',
+        projectName: bridge.projectName || 'admin-llm-document-request',
         prompt: bridge.task || '',
     };
 }
@@ -868,9 +1147,16 @@ export function useFeatureOrchestrator() {
     }, [finalArtifact, photoPreviewUrl, previewArtifact]);
 
     const spreadsheetDownloadLinks = React.useMemo<SpreadsheetDownloadLink[]>(() => {
-        if (activeFeatureId !== 'ai-sheet' || !runId) {
+        const supportsDeliveryDownload = Boolean(finalArtifact?.delivery_assets?.length);
+        if (!supportsDeliveryDownload || !runId) {
             return [];
         }
+        const defaultBaseNames: Record<string, string> = {
+            'ai-sheet': 'spreadsheet-result',
+            'ai-powerpoint': 'powerpoint-result',
+            'ai-document': 'document-result',
+        };
+        const defaultBaseName = defaultBaseNames[activeFeatureId] || 'feature-result';
         return (finalArtifact?.delivery_assets || [])
             .filter((asset) => Boolean(asset.format))
             .map((asset) => {
@@ -879,7 +1165,7 @@ export function useFeatureOrchestrator() {
                 return {
                     format,
                     href: `${apiBaseUrl}/api/marketplace/feature-orchestrate/stage-runs/${encodeURIComponent(runId)}/delivery-assets/${encodeURIComponent(format)}`,
-                    fileName: `${projectName || 'spreadsheet-result'}.${format || 'bin'}`,
+                    fileName: `${projectName || defaultBaseName}.${format || 'bin'}`,
                     sizeLabel: formatFileSizeLabel(asset.size_bytes),
                     ready: Boolean(asset.exists),
                     completedAt: generatedAt,

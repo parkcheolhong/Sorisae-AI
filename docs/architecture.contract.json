@@ -1,0 +1,246 @@
+{
+  "contract_id": "ARCH-CONTRACT-001",
+  "document_id": "GEN-DSL-001",
+  "project_id": "GEN-PROJECT-001",
+  "profile": "python_fastapi",
+  "runtime": "fastapi",
+  "roles": [
+    "api-entrypoint",
+    "health-route",
+    "service-package-export",
+    "runtime-service",
+    "runtime-config",
+    "security-guard",
+    "upstream-status-adapter",
+    "multi-role-orchestrator",
+    "health-test",
+    "file-manifest",
+    "orchestrator-checklist",
+    "output-audit",
+    "artifact-ledger",
+    "traceability-map",
+    "auto-link-map",
+    "architecture-contract",
+    "role-separation",
+    "generator-checklist",
+    "multi-role-contract",
+    "operational-readiness",
+    "template-contract"
+  ],
+  "role_contracts": [
+    {
+      "node_id": "GRAPH-NODE-001",
+      "role": "api-entrypoint",
+      "target_path": "app/main.py",
+      "layer": "entry",
+      "kind": "entrypoint",
+      "contract_target_path": "app/main.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-002",
+      "role": "health-route",
+      "target_path": "app/api/routes/health.py",
+      "layer": "api",
+      "kind": "route",
+      "contract_target_path": "app/api/routes/health.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-003",
+      "role": "service-package-export",
+      "target_path": "app/services/__init__.py",
+      "layer": "service",
+      "kind": "service",
+      "contract_target_path": "app/services/__init__.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-004",
+      "role": "runtime-service",
+      "target_path": "app/services/runtime_service.py",
+      "layer": "service",
+      "kind": "service",
+      "contract_target_path": "app/services/runtime_service.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-005",
+      "role": "runtime-config",
+      "target_path": "app/core/config.py",
+      "layer": "config",
+      "kind": "config",
+      "contract_target_path": "app/core/config.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-006",
+      "role": "security-guard",
+      "target_path": "app/core/security.py",
+      "layer": "security",
+      "kind": "guard",
+      "contract_target_path": "app/core/security.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-007",
+      "role": "upstream-status-adapter",
+      "target_path": "app/external_adapters/status_client.py",
+      "layer": "adapter",
+      "kind": "adapter",
+      "contract_target_path": "app/external_adapters/status_client.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-008",
+      "role": "multi-role-orchestrator",
+      "target_path": "app/agents/orchestrator_roles.py",
+      "layer": "agent",
+      "kind": "agent",
+      "contract_target_path": "app/agents/orchestrator_roles.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-009",
+      "role": "health-test",
+      "target_path": "tests/test_health.py",
+      "layer": "test",
+      "kind": "test",
+      "contract_target_path": "tests/test_health.py"
+    },
+    {
+      "node_id": "GRAPH-NODE-010",
+      "role": "file-manifest",
+      "target_path": "docs/file_manifest.md",
+      "layer": "meta",
+      "kind": "doc",
+      "contract_target_path": "docs/file_manifest.md"
+    },
+    {
+      "node_id": "GRAPH-NODE-011",
+      "role": "orchestrator-checklist",
+      "target_path": "docs/orchestrator_checklist.md",
+      "layer": "meta",
+      "kind": "doc",
+      "contract_target_path": "docs/orchestrator_checklist.md"
+    },
+    {
+      "node_id": "GRAPH-NODE-012",
+      "role": "output-audit",
+      "target_path": "docs/output_audit.json",
+      "layer": "meta",
+      "kind": "doc",
+      "contract_target_path": "docs/output_audit.json"
+    },
+    {
+      "node_id": "GRAPH-NODE-013",
+      "role": "artifact-ledger",
+      "target_path": "docs/orchestrator_artifacts.json",
+      "layer": "meta",
+      "kind": "doc",
+      "contract_target_path": "docs/orchestrator_artifacts.json"
+    },
+    {
+      "node_id": "GRAPH-NODE-014",
+      "role": "traceability-map",
+      "target_path": "docs/traceability_map.json",
+      "layer": "meta",
+      "kind": "doc",
+      "contract_target_path": "docs/traceability_map.json"
+    },
+    {
+      "node_id": "GRAPH-NODE-015",
+      "role": "auto-link-map",
+      "target_path": "docs/auto_link_map.json",
+      "layer": "governance",
+      "kind": "doc",
+      "contract_target_path": "docs/auto_link_map.json"
+    },
+    {
+      "node_id": "GRAPH-NODE-016",
+      "role": "architecture-contract",
+      "target_path": "docs/architecture.contract.json",
+      "layer": "governance",
+      "kind": "doc",
+      "contract_target_path": "docs/architecture.contract.json"
+    },
+    {
+      "node_id": "GRAPH-NODE-017",
+      "role": "role-separation",
+      "target_path": "docs/role_separation.md",
+      "layer": "governance",
+      "kind": "doc",
+      "contract_target_path": "docs/role_separation.md"
+    },
+    {
+      "node_id": "GRAPH-NODE-018",
+      "role": "generator-checklist",
+      "target_path": "docs/generator_checklist.md",
+      "layer": "governance",
+      "kind": "doc",
+      "contract_target_path": "docs/generator_checklist.md"
+    },
+    {
+      "node_id": "GRAPH-NODE-019",
+      "role": "multi-role-contract",
+      "target_path": "docs/multi_role_contract.json",
+      "layer": "governance",
+      "kind": "doc",
+      "contract_target_path": "docs/multi_role_contract.json"
+    },
+    {
+      "node_id": "GRAPH-NODE-020",
+      "role": "operational-readiness",
+      "target_path": "docs/operational_readiness.md",
+      "layer": "governance",
+      "kind": "doc",
+      "contract_target_path": "docs/operational_readiness.md"
+    },
+    {
+      "node_id": "GRAPH-NODE-021",
+      "role": "template-contract",
+      "target_path": ".codeai-template.json",
+      "layer": "template",
+      "kind": "template",
+      "contract_target_path": ".codeai-template.json"
+    }
+  ],
+  "target_paths": [
+    "app/main.py",
+    "app/api/routes/health.py",
+    "app/services/__init__.py",
+    "app/services/runtime_service.py",
+    "app/core/config.py",
+    "app/core/security.py",
+    "app/external_adapters/status_client.py",
+    "app/agents/orchestrator_roles.py",
+    "tests/test_health.py",
+    "docs/file_manifest.md",
+    "docs/orchestrator_checklist.md",
+    "docs/output_audit.json",
+    "docs/orchestrator_artifacts.json",
+    "docs/traceability_map.json",
+    "docs/auto_link_map.json",
+    "docs/architecture.contract.json",
+    "docs/role_separation.md",
+    "docs/generator_checklist.md",
+    "docs/multi_role_contract.json",
+    "docs/operational_readiness.md",
+    ".codeai-template.json"
+  ],
+  "safety_hooks": [
+    "id-based-auto-link",
+    "role-separation-contract",
+    "service-package-export",
+    "multi-role-orchestrator",
+    "security-baseline",
+    "status-adapter-default",
+    "generation-checklist",
+    "runtime-entrypoint-check"
+  ],
+  "quality_gates": [
+    "required-files-present",
+    "service-package-contract",
+    "multi-role-contract-generated",
+    "auto-link-map-generated",
+    "architecture-contract-generated",
+    "role-separation-generated",
+    "generator-checklist-generated",
+    "output-audit-generated",
+    "traceability-generated",
+    "self-configurable-settings",
+    "syntax-verifiable"
+  ]
+}

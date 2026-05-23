@@ -98,6 +98,7 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
     const categoryStatsRequestInFlightRef = useRef(false);
     const categoryStatsRetryAfterRef = useRef(0);
     const systemSettingsAbortRef = useRef<AbortController | null>(null);
+    const systemSettingsInFlightRef = useRef(false);
     const SYSTEM_SETTINGS_BACKOFF_KEY = 'admin-system-settings';
 
     const syncOptimizedRuntimeConfig = useCallback(async (values: Record<string, string>) => {
@@ -188,15 +189,17 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
             return;
         }
 
-        if (systemSettingsLoading) {
+        // ref 기반 in-flight 가드 (state는 React 배칭으로 stale할 수 있음)
+        if (systemSettingsInFlightRef.current) {
             return;
         }
 
         const now = Date.now();
-        if (now - lastSystemSettingsLoadedAt < 1500) {
+        if (now - lastSystemSettingsLoadedAt < 5000) {
             return;
         }
 
+        systemSettingsInFlightRef.current = true;
         setSystemSettingsLoading(true);
         setSystemSettingsMessage('');
         try {
@@ -216,11 +219,14 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
             clearAdminApiBackoff(SYSTEM_SETTINGS_BACKOFF_KEY);
         } catch (error: any) {
             if (error?.message === '__ADMIN_SYSTEM_UNAUTHORIZED__') {
+                systemSettingsInFlightRef.current = false;
                 handleAdminUnauthorized();
                 return;
             }
             const errorText = String(error?.message || '');
-            if (/502|503|504|Gateway Timeout|connection refused/i.test(errorText)) {
+            // 네트워크 레벨 오류(재시작 중 발생)도 backoff 처리
+            const isNetworkError = /502|503|504|Gateway Timeout|connection refused|ERR_EMPTY_RESPONSE|ERR_SOCKET_NOT_CONNECTED|Failed to fetch|NetworkError|network error|fetch failed|ECONNREFUSED|net::|empty response/i.test(errorText);
+            if (isNetworkError) {
                 setAdminApiBackoff(SYSTEM_SETTINGS_BACKOFF_KEY);
             }
             const normalized = normalizeSystemSettingsMessage(
@@ -229,6 +235,7 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
             setSystemSettingsMessage(`${normalized.userMessage}\n${normalized.detailMessage}`);
             pushLiveLog(normalized.liveLogLevel, normalized.liveLogMessage);
         } finally {
+            systemSettingsInFlightRef.current = false;
             setSystemSettingsLoading(false);
         }
     }, [apiBaseUrl, handleAdminUnauthorized, normalizeSystemSettingsMessage, pushLiveLog]);

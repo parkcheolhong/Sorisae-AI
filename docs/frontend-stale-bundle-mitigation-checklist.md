@@ -92,5 +92,6 @@
   - 근거: HTML no-store 전환 + legacy admin projects 엣지 즉시 cutoff + categories 엣지 캐시 반영 완료
 
 ## 현재 판정
-- 상태: **완료됨**
-- 이유: 프런트 초기 부트스트랩 1회 고정, 백엔드/전역 차단, nginx 엣지 차단과 no-store 덮기, admin projects legacy cutoff, marketplace categories 엣지 캐시, 관리자 프런트 재빌드/재기동까지 반영했고, 운영 도메인 실측 2회에서 `/admin`, `/marketplace`, `/api/admin/projects?skip=0&limit=5000`, `/api/marketplace/categories` 모두 새 헤더와 차단/완충 결과가 확인됐다.
+- [x] 문서 최종 판정을 완료 기준으로 승격한다.
+  - 상태: 완료됨
+  - 근거: 구번들 완화 코드 반영, 반복 호출 완화, 로컬 검증, 운영 실측 2회 항목이 모두 `[x]`로 닫혀 있다.

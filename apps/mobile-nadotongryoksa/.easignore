@@ -1,0 +1,34 @@
+# Native source is required because this project has an android directory.
+# Exclude generated native build caches only.
+android/.gradle/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/.kotlin/
+ios/build/
+**/android/build/
+**/android/build/**
+**/.cxx/
+**/.cxx/**
+**/intermediates/
+**/intermediates/**
+**/.gradle/
+**/.gradle/**
+**/.kotlin/
+**/.kotlin/**
+**/ios/build/
+**/ios/build/**
+
+# Dev dependencies and build artifacts
+node_modules/
+/node_modules/
+**/node_modules/
+**/node_modules/**
+.expo/
+dist/
+web-build/
+build-artifacts/
+*.apk
+*.aab
+*.tar.gz
+*.orig.*

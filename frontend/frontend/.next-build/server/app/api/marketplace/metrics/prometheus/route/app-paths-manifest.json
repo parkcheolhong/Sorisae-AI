@@ -1,0 +1,3 @@
+{
+  "/api/marketplace/metrics/prometheus/route": "app/api/marketplace/metrics/prometheus/route.js"
+}

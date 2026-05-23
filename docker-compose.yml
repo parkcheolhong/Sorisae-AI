@@ -1,3 +1,46 @@
+# 공통 환경변수: backend와 video-worker가 공유하는 DB/MinIO/Video/FFmpeg 설정
+x-video-env: &video-env
+  DATABASE_URL: ${DATABASE_URL:-}
+  DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+  POSTGRES_USER: ${POSTGRES_USER:-admin}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+  POSTGRES_PASSWORD_FILE: ${POSTGRES_PASSWORD_FILE:-}
+  POSTGRES_DB: ${POSTGRES_DB:-devanalysis114}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  REDIS_URL: redis://redis:6379/0
+  CUDA_MPS_ACTIVE_THREAD_PERCENTAGE: ${CUDA_MPS_ACTIVE_THREAD_PERCENTAGE:-80}
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+  MINIO_ACCESS_KEY_FILE: ${MINIO_ACCESS_KEY_FILE:-/run/codeai-secrets/minio_access_key.txt}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+  MINIO_SECRET_KEY_FILE: ${MINIO_SECRET_KEY_FILE:-/run/codeai-secrets/minio_secret_key.txt}
+  MINIO_BUCKET: marketplace-projects
+  FFMPEG_BIN: ffmpeg
+  VIDEO_EXTERNAL_API_URL: ${VIDEO_EXTERNAL_API_URL:-}
+  VIDEO_EXTERNAL_API_KEY: ${VIDEO_EXTERNAL_API_KEY:-}
+  VIDEO_EXTERNAL_API_KEY_FILE: ${VIDEO_EXTERNAL_API_KEY_FILE:-}
+  AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+  AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+  AZURE_OPENAI_API_KEY_FILE: ${AZURE_OPENAI_API_KEY_FILE:-}
+  AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME: ${AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME:-sora-2}
+  AZURE_OPENAI_VISION_DEPLOYMENT_NAME: ${AZURE_OPENAI_VISION_DEPLOYMENT_NAME:-gpt-4o}
+  VIDEO_DEDICATED_ENGINE_URL: ${VIDEO_DEDICATED_ENGINE_URL:-}
+  VIDEO_DEDICATED_ENGINE_API_KEY: ${VIDEO_DEDICATED_ENGINE_API_KEY:-}
+  VIDEO_DEDICATED_ENGINE_API_KEY_FILE: ${VIDEO_DEDICATED_ENGINE_API_KEY_FILE:-}
+  VIDEO_DEDICATED_SUBMIT_PATH: ${VIDEO_DEDICATED_SUBMIT_PATH:-/jobs}
+  VIDEO_DEDICATED_TIMEOUT_SEC: ${VIDEO_DEDICATED_TIMEOUT_SEC:-900}
+  VIDEO_DEDICATED_POLL_SEC: ${VIDEO_DEDICATED_POLL_SEC:-2}
+  VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE: ${VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE:-false}
+  VIDEO_ENGINE_FALLBACK_TO_INTERNAL: ${VIDEO_ENGINE_FALLBACK_TO_INTERNAL:-false}
+  VIDEO_REQUIRE_GENERATIVE_ENGINE: ${VIDEO_REQUIRE_GENERATIVE_ENGINE:-true}
+  AD_TOTAL_SECONDS: ${AD_TOTAL_SECONDS:-60}
+  AD_CUT_COUNT: ${AD_CUT_COUNT:-6}
+  MARKETPLACE_UPLOAD_ROOT: ${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}
+  TMPDIR: ${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}/tmp
+  MARKETPLACE_RETENTION_DAYS: ${MARKETPLACE_RETENTION_DAYS:-30}
+  MARKETPLACE_TEMP_RETENTION_DAYS: ${MARKETPLACE_TEMP_RETENTION_DAYS:-7}
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -11,12 +54,12 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d devanalysis114"]
+      test: [ "CMD-SHELL", "pg_isready -U admin -d devanalysis114" ]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       - devanalysis114-network
 
@@ -31,8 +74,8 @@ services:
       - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     networks:
       - devanalysis114-network
 
@@ -41,12 +84,12 @@ services:
     container_name: devanalysis114-redis
     command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     networks:
       - devanalysis114-network
 
@@ -56,7 +99,7 @@ services:
     volumes:
       - qdrant-data:/qdrant/storage
     ports:
-      - "6333:6333"
+      - "127.0.0.1:6333:6333"
     networks:
       - devanalysis114-network
 
@@ -67,62 +110,36 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     environment:
-      DATABASE_URL: ${DATABASE_URL:-}
-      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
-      POSTGRES_PASSWORD_FILE: ${POSTGRES_PASSWORD_FILE:-}
-      POSTGRES_DB: ${POSTGRES_DB:-devanalysis114}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
+      <<: *video-env
       SECRET_KEY: ${JWT_SECRET_KEY:-}
       SECRET_KEY_FILE: ${JWT_SECRET_KEY_FILE:-}
-      CORS_ORIGINS: http://localhost:3000,http://localhost:3005,http://127.0.0.1:3000,http://127.0.0.1:3005
-      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3005,http://127.0.0.1:3000,http://127.0.0.1:3005,https://metanova1004.com,https://xn--114-2p7l635dz3bh5j.com
       QDRANT_URL: http://qdrant:6333
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
-      CUDA_MPS_ACTIVE_THREAD_PERCENTAGE: ${CUDA_MPS_ACTIVE_THREAD_PERCENTAGE:-80}
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
-      MINIO_ACCESS_KEY_FILE: ${MINIO_ACCESS_KEY_FILE:-}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_SECRET_KEY_FILE: ${MINIO_SECRET_KEY_FILE:-}
-      MINIO_BUCKET: marketplace-projects
-      FFMPEG_BIN: ffmpeg
-      VIDEO_EXTERNAL_API_URL: ${VIDEO_EXTERNAL_API_URL:-}
-      VIDEO_EXTERNAL_API_KEY: ${VIDEO_EXTERNAL_API_KEY:-}
-      VIDEO_EXTERNAL_API_KEY_FILE: ${VIDEO_EXTERNAL_API_KEY_FILE:-}
-      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
-      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
-      AZURE_OPENAI_API_KEY_FILE: ${AZURE_OPENAI_API_KEY_FILE:-}
-      AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME: ${AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME:-sora-2}
-      AZURE_OPENAI_VISION_DEPLOYMENT_NAME: ${AZURE_OPENAI_VISION_DEPLOYMENT_NAME:-gpt-4o}
-      VIDEO_DEDICATED_ENGINE_URL: ${VIDEO_DEDICATED_ENGINE_URL:-}
-      VIDEO_DEDICATED_ENGINE_API_KEY: ${VIDEO_DEDICATED_ENGINE_API_KEY:-}
-      VIDEO_DEDICATED_ENGINE_API_KEY_FILE: ${VIDEO_DEDICATED_ENGINE_API_KEY_FILE:-}
-      VIDEO_DEDICATED_SUBMIT_PATH: ${VIDEO_DEDICATED_SUBMIT_PATH:-/jobs}
-      VIDEO_DEDICATED_TIMEOUT_SEC: ${VIDEO_DEDICATED_TIMEOUT_SEC:-900}
-      VIDEO_DEDICATED_POLL_SEC: ${VIDEO_DEDICATED_POLL_SEC:-2}
-      VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE: ${VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE:-false}
-      VIDEO_ENGINE_FALLBACK_TO_INTERNAL: ${VIDEO_ENGINE_FALLBACK_TO_INTERNAL:-false}
-      VIDEO_REQUIRE_GENERATIVE_ENGINE: ${VIDEO_REQUIRE_GENERATIVE_ENGINE:-true}
       ENABLE_AD_ORDER_WORKER_BOOTSTRAP: ${ENABLE_AD_ORDER_WORKER_BOOTSTRAP:-true}
       ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP: ${ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP:-false}
-      AD_TOTAL_SECONDS: ${AD_TOTAL_SECONDS:-60}
-      AD_CUT_COUNT: ${AD_CUT_COUNT:-6}
-      LLM_MODEL_DEFAULT: ${LLM_MODEL_DEFAULT:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_REASONING: ${LLM_MODEL_REASONING:-qwen2.5-coder:32b-q6k}
-      LLM_MODEL_CODING: ${LLM_MODEL_CODING:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_CHAT: ${LLM_MODEL_CHAT:-qwen2.5-coder:32b-q4km}
-      LLM_MODEL_VOICE_CHAT: ${LLM_MODEL_VOICE_CHAT:-qwen2.5-coder:32b-q4km}
-      LLM_MODEL_PLANNER: ${LLM_MODEL_PLANNER:-qwen2.5-coder:32b-q4km}
-      LLM_MODEL_CODER: ${LLM_MODEL_CODER:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_REVIEWER: ${LLM_MODEL_REVIEWER:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_DESIGNER: ${LLM_MODEL_DESIGNER:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_SMART_PLANNER: ${LLM_MODEL_SMART_PLANNER:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_SMART_EXECUTOR: ${LLM_MODEL_SMART_EXECUTOR:-qwen2.5-coder:32b-q5km}
-      LLM_MODEL_SMART_DESIGNER: ${LLM_MODEL_SMART_DESIGNER:-qwen2.5-coder:32b-q5km}
+      LLM_MODEL_DEFAULT: ${LLM_MODEL_DEFAULT:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_REASONING: ${LLM_MODEL_REASONING:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_CODING: ${LLM_MODEL_CODING:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_CHAT: ${LLM_MODEL_CHAT:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_VOICE_CHAT: ${LLM_MODEL_VOICE_CHAT:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_PLANNER: ${LLM_MODEL_PLANNER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_CODER: ${LLM_MODEL_CODER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_REVIEWER: ${LLM_MODEL_REVIEWER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_DESIGNER: ${LLM_MODEL_DESIGNER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_SMART_PLANNER: ${LLM_MODEL_SMART_PLANNER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_SMART_EXECUTOR: ${LLM_MODEL_SMART_EXECUTOR:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_SMART_DESIGNER: ${LLM_MODEL_SMART_DESIGNER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      OLLAMA_BASE: ${OLLAMA_BASE:-http://host.docker.internal:8008/v1}
+      WEB_SEARCH_ENABLED: ${WEB_SEARCH_ENABLED:-true}
+      WEB_SEARCH_PROVIDER: ${WEB_SEARCH_PROVIDER:-auto}
+      BING_SEARCH_API_KEY: ${BING_SEARCH_API_KEY:-}
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
+      SORISAE_CENTRAL_ENABLED: ${SORISAE_CENTRAL_ENABLED:-true}
+      SORISAE_CENTRAL_RATIO: ${SORISAE_CENTRAL_RATIO:-0.5}
+      SORISAE_URL: ${SORISAE_URL:-http://sorisae-brain:5050/v1}
+      SORISAE_FALLBACK_TIMEOUT_SEC: ${SORISAE_FALLBACK_TIMEOUT_SEC:-2.5}
       ORCH_FORCE_COMPLETE: ${ORCH_FORCE_COMPLETE:-false}
       ORCH_MIN_FILES: ${ORCH_MIN_FILES:-27}
       ORCH_MIN_DIRS: ${ORCH_MIN_DIRS:-3}
@@ -133,13 +150,11 @@ services:
       ADMIN_PROBE_VERIFY_SSL: ${ADMIN_PROBE_VERIFY_SSL:-false}
       PASSKEY_RP_ID: ${PASSKEY_RP_ID:-metanova1004.com}
       PASSKEY_EXPECTED_ORIGIN: ${PASSKEY_EXPECTED_ORIGIN:-https://metanova1004.com}
-      MARKETPLACE_UPLOAD_ROOT: ${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}
-      TMPDIR: ${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}/tmp
-      MARKETPLACE_RETENTION_DAYS: ${MARKETPLACE_RETENTION_DAYS:-30}
-      MARKETPLACE_TEMP_RETENTION_DAYS: ${MARKETPLACE_TEMP_RETENTION_DAYS:-7}
       AD_DOWNLOAD_MIN_NOTICE_MINUTES: ${AD_DOWNLOAD_MIN_NOTICE_MINUTES:-60}
       AD_DOWNLOAD_WINDOW_DAYS: ${AD_DOWNLOAD_WINDOW_DAYS:-30}
       AD_DOWNLOAD_MAX_COUNT: ${AD_DOWNLOAD_MAX_COUNT:-2}
+      INTERPRETER_SERVICE_URL: ${INTERPRETER_SERVICE_URL:-http://interpreter-service:8011}
+      MUSIC_SERVICE_URL: ${MUSIC_SERVICE_URL:-http://music-service:8012}
       # Stripe 결제 실연동 설정 (기본 simulation 모드)
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: ${MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT:-true}
@@ -154,13 +169,14 @@ services:
       - ./backend:/app/backend
       - ./docs:/app/docs
       - ./frontend:/app/frontend
+      - ./addons:/app/addons
       - ./knowledge:/app/knowledge
       - ./models:/app/models
       - ./reports:/app/reports
       - ${MARKETPLACE_HOST_ROOT:-./uploads}:/app/uploads
       - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
     ports:
-      - "0.0.0.0:8000:8000"
+      - "127.0.0.1:8000:8000"
     cpus: ${BACKEND_CPU_LIMIT_CORES:-20.0}
     depends_on:
       postgres:
@@ -171,15 +187,75 @@ services:
         condition: service_started
       minio:
         condition: service_started
+      interpreter-service:
+        condition: service_started
+      music-service:
+        condition: service_started
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
+    restart: unless-stopped
     command: >-
       python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - devanalysis114-network
+
+  interpreter-service:
+    image: devanalysis114-backend
+    container_name: devanalysis114-interpreter-service
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./addons:/app/addons
+    ports:
+      - "127.0.0.1:8011:8011"
+    command: >-
+      python -m uvicorn addons.shinsegye_interpreter.service_api:app --host
+      0.0.0.0 --port 8011
+    networks:
+      - devanalysis114-network
+
+  sorisae-brain:
+    image: codeai-sorisae-local:latest
+    build:
+      context: ./tmp/external_migrations/run_all_shinsegye.py
+      dockerfile: Dockerfile
+    container_name: devanalysis114-sorisae-brain
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+      LOG_LEVEL: ${SORISAE_LOG_LEVEL:-INFO}
+      TZ: Asia/Seoul
+      SORISAE_UPSTREAM_URL: ${SORISAE_UPSTREAM_URL:-http://host.docker.internal:8008}
+    ports:
+      - "127.0.0.1:15050:5050"
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-brain
+
+  music-service:
+    image: devanalysis114-backend
+    container_name: devanalysis114-music-service
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./addons:/app/addons
+    ports:
+      - "127.0.0.1:8012:8012"
+    command: >-
+      python -m uvicorn addons.shinsegye_music_system.service_api:app --host
+      0.0.0.0 --port 8012
     networks:
       - devanalysis114-network
 
@@ -190,46 +266,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     environment:
-      DATABASE_URL: ${DATABASE_URL:-}
-      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
-      POSTGRES_PASSWORD_FILE: ${POSTGRES_PASSWORD_FILE:-}
-      POSTGRES_DB: ${POSTGRES_DB:-devanalysis114}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      REDIS_URL: redis://redis:6379/0
-      CUDA_MPS_ACTIVE_THREAD_PERCENTAGE: ${CUDA_MPS_ACTIVE_THREAD_PERCENTAGE:-80}
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
-      MINIO_ACCESS_KEY_FILE: ${MINIO_ACCESS_KEY_FILE:-}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_SECRET_KEY_FILE: ${MINIO_SECRET_KEY_FILE:-}
-      MINIO_BUCKET: marketplace-projects
-      FFMPEG_BIN: ffmpeg
-      VIDEO_EXTERNAL_API_URL: ${VIDEO_EXTERNAL_API_URL:-}
-      VIDEO_EXTERNAL_API_KEY: ${VIDEO_EXTERNAL_API_KEY:-}
-      VIDEO_EXTERNAL_API_KEY_FILE: ${VIDEO_EXTERNAL_API_KEY_FILE:-}
-      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
-      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
-      AZURE_OPENAI_API_KEY_FILE: ${AZURE_OPENAI_API_KEY_FILE:-}
-      AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME: ${AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME:-sora-2}
-      AZURE_OPENAI_VISION_DEPLOYMENT_NAME: ${AZURE_OPENAI_VISION_DEPLOYMENT_NAME:-gpt-4o}
-      VIDEO_DEDICATED_ENGINE_URL: ${VIDEO_DEDICATED_ENGINE_URL:-}
-      VIDEO_DEDICATED_ENGINE_API_KEY: ${VIDEO_DEDICATED_ENGINE_API_KEY:-}
-      VIDEO_DEDICATED_ENGINE_API_KEY_FILE: ${VIDEO_DEDICATED_ENGINE_API_KEY_FILE:-}
-      VIDEO_DEDICATED_SUBMIT_PATH: ${VIDEO_DEDICATED_SUBMIT_PATH:-/jobs}
-      VIDEO_DEDICATED_TIMEOUT_SEC: ${VIDEO_DEDICATED_TIMEOUT_SEC:-900}
-      VIDEO_DEDICATED_POLL_SEC: ${VIDEO_DEDICATED_POLL_SEC:-2}
-      VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE: ${VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE:-false}
-      VIDEO_ENGINE_FALLBACK_TO_INTERNAL: ${VIDEO_ENGINE_FALLBACK_TO_INTERNAL:-false}
-      VIDEO_REQUIRE_GENERATIVE_ENGINE: ${VIDEO_REQUIRE_GENERATIVE_ENGINE:-true}
-      AD_TOTAL_SECONDS: ${AD_TOTAL_SECONDS:-60}
-      AD_CUT_COUNT: ${AD_CUT_COUNT:-6}
-      MARKETPLACE_UPLOAD_ROOT: ${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}
-      TMPDIR: ${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}/tmp
-      MARKETPLACE_RETENTION_DAYS: ${MARKETPLACE_RETENTION_DAYS:-30}
-      MARKETPLACE_TEMP_RETENTION_DAYS: ${MARKETPLACE_TEMP_RETENTION_DAYS:-7}
+      <<: *video-env
       VIDEO_RENDER_QUEUE_NAME: ${VIDEO_RENDER_QUEUE_NAME:-video_render_queue}
     volumes:
       - ./backend:/app/backend
@@ -253,7 +290,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     command: python scripts/start_video_render_worker.py
     networks:
       - devanalysis114-network
@@ -266,21 +303,56 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_SITE_URL: https://xn--114-2p7l635dz3bh5j.com
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      NEXT_PUBLIC_API_URL: ""
+      NEXT_PUBLIC_SITE_URL: https://xn--114-2p7l635dz3bh5j.com
+      MARKETPLACE_VALIDATOR_BASE_URL: ${MARKETPLACE_VALIDATOR_BASE_URL:-}
+      MULTI_PROGRAM_VALIDATOR_BASE_URL: ${MULTI_PROGRAM_VALIDATOR_BASE_URL:-}
+      BACKEND_PROXY_TARGET: http://backend:8000
+      LOCAL_API_BASE_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3005:3005"
+    networks:
+      devanalysis114-network:
+        aliases:
+          - frontend-admin
+
+  # P0-4: 마켓플레이스 전용 프론트엔드 서비스
+  frontend-marketplace:
+    image: devanalysis114-frontend-marketplace
+    container_name: devanalysis114-frontend-marketplace
+    build:
+      context: ./frontend/frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ""
         NEXT_PUBLIC_SITE_URL: https://metanova1004.com
     environment:
       NODE_ENV: production
       PORT: 3000
       NEXT_PUBLIC_API_URL: ""
       NEXT_PUBLIC_SITE_URL: https://metanova1004.com
+      MARKETPLACE_VALIDATOR_BASE_URL: ${MARKETPLACE_VALIDATOR_BASE_URL:-}
+      MULTI_PROGRAM_VALIDATOR_BASE_URL: ${MULTI_PROGRAM_VALIDATOR_BASE_URL:-}
       BACKEND_PROXY_TARGET: http://backend:8000
       LOCAL_API_BASE_URL: http://backend:8000
     depends_on:
       backend:
         condition: service_started
+    volumes:
+      - ./intraday_lgbm_live:/app/intraday_lgbm_live:ro
+    ports:
+      - "127.0.0.1:3000:3000"
     networks:
       devanalysis114-network:
         aliases:
-          - frontend-admin
+          - frontend-marketplace
 
   nginx:
     image: nginx:1.27-alpine
@@ -296,17 +368,155 @@ services:
       - ./certbot/www:/var/www/certbot
     ports:
       - target: 80
-        published: ${NGINX_HTTP_PORT:-8080}
+        published: ${NGINX_HTTP_PORT:-80}
         protocol: tcp
         host_ip: 0.0.0.0
       - target: 443
-        published: ${NGINX_HTTPS_PORT:-8443}
+        published: ${NGINX_HTTPS_PORT:-443}
         protocol: tcp
         host_ip: 0.0.0.0
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - devanalysis114-network
+
+  # P3-9: Let's Encrypt 자동 SSL 갱신
+  certbot:
+    image: certbot/certbot:latest
+    container_name: devanalysis114-certbot
+    volumes:
+      - ./certbot/local-certs:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w
+      /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    depends_on:
+      nginx:
+        condition: service_started
+    networks:
+      - devanalysis114-network
+
+  # ── 소리새 Flask 슬롯 독립 컨테이너 (8개) ───────────────────────────
+  # 포트 매핑: 로컬 150xx → 컨테이너 내부 슬롯 기본 포트
+  # dispatch 게이트웨이(engine_hub.py)가 SORISAE_FLASK_SERVER_MAP으로 프록시
+
+  sorisae-voice-movie:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-voice-movie
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot001_sorisae_voice_movie_server.py
+      SLOT_PORT: "5050"
+    ports:
+      - "127.0.0.1:15001:5050"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-voice-movie
+
+  sorisae-cyber-detective:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-cyber-detective
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot041_cyber_detective_dashboard.py
+      SLOT_PORT: "5052"
+    ports:
+      - "127.0.0.1:15041:5052"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-cyber-detective
+
+  sorisae-integrated-dashboard:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-integrated-dashboard
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot089_sorisae_integrated_dashboard.py
+      SLOT_PORT: "5050"
+    ports:
+      - "127.0.0.1:15089:5050"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-integrated-dashboard
+
+  sorisae-dashboard-web:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-dashboard-web
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot094_sorisae_dashboard_web.py
+      SLOT_PORT: "5050"
+    ports:
+      - "127.0.0.1:15094:5050"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-dashboard-web
+
+  sorisae-movie-server:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-movie-server
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot103_sorisae_movie_web_server.py
+      SLOT_PORT: "5000"
+    ports:
+      - "127.0.0.1:15103:5000"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-movie-server
+
+  sorisae-master-system:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-master-system
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot106_sorisae_master_system.py
+      SLOT_PORT: "5050"
+    ports:
+      - "127.0.0.1:15106:5050"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-master-system
+
+  sorisae-shopping-mall:
+    image: devanalysis114-sorisae-flask
+    container_name: devanalysis114-sorisae-shopping-mall
+    build:
+      context: .
+      dockerfile: Dockerfile.sorisae-flask
+    environment:
+      SLOT_FILE: slot120_shopping_mall_dashboard.py
+      SLOT_PORT: "5050"
+    ports:
+      - "127.0.0.1:15120:5050"
+    restart: unless-stopped
+    networks:
+      devanalysis114-network:
+        aliases:
+          - sorisae-shopping-mall
 
 volumes:
   postgres-data:
@@ -316,3 +526,4 @@ volumes:
 networks:
   devanalysis114-network:
     driver: bridge
+

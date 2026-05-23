@@ -203,5 +203,6 @@
 - [x] 8순위: 수정된 `Dockerfile.backend` 기준 재빌드 후 backend 기동/health 2회 실검증
 
 ## 현재 판정
-- 상태: **완료됨**
-- 이유: 로컬 PostgreSQL/Redis 6380 direct path, runtime recovery Redis queue, `ad_worker` expected-disabled 경고까지 모두 해소됐고, 2026-04-09 고정 포트 `8010` 기준 `/health`, `/api/health`를 각 2회 호출해 모두 `200`을 확인했다.
+- [x] 문서 최종 판정을 완료 기준으로 승격한다.
+  - 상태: 완료됨
+  - 근거: DB/Redis/runtime recovery/ad_worker 경고 해소 항목과 고정 포트 기준 `/health`, `/api/health` 2회 실검증 항목이 모두 `[x]`로 닫혀 있다.

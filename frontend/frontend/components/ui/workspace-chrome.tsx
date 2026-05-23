@@ -31,6 +31,8 @@ export interface WorkspaceChromeProps {
     statusLabel?: string;
     railItems: WorkspaceRailItem[];
     rightRailItems?: WorkspaceRailItem[];
+    railFooter?: ReactNode;
+    rightRailFooter?: ReactNode;
     topActions?: ReactNode;
     heroBadge?: string;
     heroEyebrow?: string;
@@ -62,6 +64,8 @@ export default function WorkspaceChrome({
     statusLabel,
     railItems,
     rightRailItems,
+    railFooter,
+    rightRailFooter,
     topActions,
     heroBadge,
     heroEyebrow,
@@ -91,7 +95,7 @@ export default function WorkspaceChrome({
                         );
                         if (item.href) {
                             return (
-                                <Link key={item.id} href={item.href} className={className}>
+                                <Link key={item.id} href={item.href} className={className} data-testid={item.testId}>
                                     {content}
                                 </Link>
                             );
@@ -110,7 +114,7 @@ export default function WorkspaceChrome({
                         );
                     })}
                 </nav>
-                <div className="workspace-rail-footer">LIVE</div>
+                <div className="workspace-rail-footer">{railFooter ?? 'LIVE'}</div>
             </aside>
 
             <div className={`workspace-stage ${compactHeader ? 'workspace-stage-compact' : ''}`}>
@@ -185,7 +189,7 @@ export default function WorkspaceChrome({
                             );
                             if (item.href) {
                                 return (
-                                    <Link key={item.id} href={item.href} className={className}>
+                                    <Link key={item.id} href={item.href} className={className} data-testid={item.testId}>
                                         {content}
                                     </Link>
                                 );
@@ -204,6 +208,7 @@ export default function WorkspaceChrome({
                             );
                         })}
                     </nav>
+                    {rightRailFooter ? <div className="workspace-rail-footer">{rightRailFooter}</div> : null}
                 </aside>
             )}
         </div>

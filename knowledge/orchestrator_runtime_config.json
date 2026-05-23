@@ -1,0 +1,358 @@
+{
+  "max_tokens_per_step": 32000,
+  "default_request_max_tokens": 16000,
+  "chat_request_max_tokens": 768,
+  "default_agent_max_tokens": 8192,
+  "planner_max_tokens": 8192,
+  "coder_max_tokens": 12000,
+  "reviewer_max_tokens": 8192,
+  "step_timeout_sec": 600,
+  "job_timeout_sec": 3600,
+  "agent_http_timeout_sec": 840,
+  "planner_agent_timeout_sec": 240,
+  "coder_agent_timeout_sec": 300,
+  "reviewer_agent_timeout_sec": 240,
+  "index_context_timeout_sec": 45,
+  "planner_prompt_char_limit": 5000,
+  "coder_prompt_char_limit": 7000,
+  "reviewer_prompt_char_limit": 5000,
+  "planner_context_char_limit": 2500,
+  "coder_context_char_limit": 4500,
+  "reviewer_context_char_limit": 2500,
+  "experience_memory_char_limit": 1200,
+  "forensic_max_inventory": 1000,
+  "max_force_retries": 3,
+  "force_complete": true,
+  "allow_synthetic_fallback": false,
+  "code_generation_strategy": "auto_generator",
+  "min_files": 27,
+  "min_dirs": 2,
+  "selected_profile": "rtx5090_32gb",
+  "model_tuning_level": 0,
+  "token_tuning_level": 0,
+  "timeout_tuning_level": 0,
+  "model_routes": {
+    "default": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "reasoning": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "coding": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "voice_chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "coder": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "reviewer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "smart_planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "smart_executor": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "smart_designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+  },
+  "execution_controls": {
+    "default": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "reasoning": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "coding": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "chat": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "voice_chat": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "planner": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "coder": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "reviewer": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "designer": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "smart_planner": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "smart_executor": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    },
+    "smart_designer": {
+      "acceleration_mode": "gpu_only",
+      "num_gpu": 24,
+      "num_thread": 24
+    }
+  },
+  "advisory_controls": {
+    "clarification_questions_enabled": true,
+    "max_clarification_questions": 3,
+    "evidence_panel_enabled": true,
+    "max_evidence_items": 5,
+    "next_action_suggestions_enabled": true,
+    "max_next_actions": 3,
+    "scientific_reasoning_enabled": true,
+    "systems_thinking_enabled": true,
+    "future_tech_expansion_enabled": true,
+    "cross_domain_synthesis_enabled": true,
+    "innovation_scenarios_enabled": true,
+    "max_innovation_scenarios": 5,
+    "max_system_design_alternatives": 4
+  },
+  "gpu_only_preferred": true,
+  "config_path": "knowledge/orchestrator_runtime_config.json",
+  "available_models": [
+    "codellama:13b",
+    "deepseek-r1:32b",
+    "deepseek-r1:70b",
+    "gemma3:27b",
+    "glm4:latest",
+    "gpt-oss:120b",
+    "gpt-oss:20b",
+    "llama3.3:70b",
+    "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "qwen2.5-coder:14b",
+    "qwen2.5-coder:7b",
+    "qwen2.5-coder:latest",
+    "qwen2.5:72b",
+    "qwq:32b"
+  ],
+  "gpu_runtime": {
+    "available": true,
+    "devices": [
+      {
+        "name": "NVIDIA GeForce RTX 5090",
+        "memory_total_mb": 32607,
+        "memory_used_mb": 2389,
+        "utilization_gpu": 5
+      }
+    ]
+  },
+  "runtime_profiles": [
+    {
+      "key": "rtx5090_32gb",
+      "label": "RTX 5090 32GB 권장",
+      "description": "현재 단일 32GB VRAM 환경에서 실사용 가능한 안정 라우팅입니다.",
+      "hardware_hint": "RTX 5090 32GB 1장, RAM 128GB 권장",
+      "model_routes": {
+        "default": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "reasoning": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "coding": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "voice_chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "coder": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "reviewer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "smart_planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "smart_executor": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+        "smart_designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+      },
+      "execution_controls": {
+        "default": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "reasoning": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "coding": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "chat": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "voice_chat": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "planner": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "coder": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "reviewer": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "designer": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "smart_planner": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "smart_executor": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "smart_designer": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        }
+      },
+      "settings": {
+        "selected_profile": "rtx5090_32gb",
+        "max_tokens_per_step": 32768,
+        "default_request_max_tokens": 12288,
+        "chat_request_max_tokens": 768,
+        "default_agent_max_tokens": 8192,
+        "planner_max_tokens": 8192,
+        "coder_max_tokens": 12288,
+        "reviewer_max_tokens": 8192,
+        "step_timeout_sec": 1200,
+        "job_timeout_sec": 10800,
+        "agent_http_timeout_sec": 1800,
+        "forensic_max_inventory": 2000,
+        "max_force_retries": 60,
+        "force_complete": false,
+        "allow_synthetic_fallback": false,
+        "min_files": 27,
+        "min_dirs": 5
+      }
+    },
+    {
+      "key": "upper_tier_70b",
+      "label": "상위 서버 70B 권장",
+      "description": "48GB+ 단일 GPU 또는 다중 GPU 서버용 상위 라우팅입니다.",
+      "hardware_hint": "VRAM 48GB 이상 또는 다중 GPU 서버 권장",
+      "model_routes": {
+        "default": "qwen2.5:72b",
+        "reasoning": "deepseek-r1:70b",
+        "coding": "qwen2.5:72b",
+        "chat": "llama3.3:70b",
+        "voice_chat": "glm4:latest",
+        "planner": "deepseek-r1:70b",
+        "coder": "qwen2.5:72b",
+        "reviewer": "deepseek-r1:70b",
+        "designer": "llama3.3:70b",
+        "smart_planner": "deepseek-r1:70b",
+        "smart_executor": "qwen2.5:72b",
+        "smart_designer": "llama3.3:70b"
+      },
+      "execution_controls": {
+        "default": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "reasoning": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "coding": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "chat": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "voice_chat": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "planner": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "coder": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "reviewer": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "designer": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "smart_planner": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "smart_executor": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        },
+        "smart_designer": {
+          "acceleration_mode": "gpu_only",
+          "num_gpu": 24,
+          "num_thread": 24
+        }
+      },
+      "settings": {
+        "selected_profile": "upper_tier_70b",
+        "max_tokens_per_step": 65536,
+        "default_request_max_tokens": 24576,
+        "chat_request_max_tokens": 1536,
+        "default_agent_max_tokens": 32768,
+        "planner_max_tokens": 24576,
+        "coder_max_tokens": 32768,
+        "reviewer_max_tokens": 24576,
+        "step_timeout_sec": 1800,
+        "job_timeout_sec": 14400,
+        "agent_http_timeout_sec": 3600,
+        "forensic_max_inventory": 4000,
+        "max_force_retries": 99,
+        "force_complete": false,
+        "allow_synthetic_fallback": false,
+        "min_files": 27,
+        "min_dirs": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        build-essential \
+        espeak-ng \
+        alsa-utils \
+        portaudio19-dev \
+        gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements.delivery.lock.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements.delivery.lock.txt && \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu128 torch==2.7.0+cu128 torchvision==0.22.0+cu128 && \
+    pip install --no-cache-dir facenet-pytorch --no-deps tqdm
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

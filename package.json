@@ -1,8 +1,27 @@
 {
     "scripts": {
-        "dev:marketplace": "cmd /c \"set LOCAL_FRONTEND_ROLE=marketplace&& npm --prefix frontend/frontend run dev -- --port 3000\"",
-        "dev:admin": "cmd /c \"set LOCAL_FRONTEND_ROLE=admin&& npm --prefix frontend/frontend run dev -- --port 3005\"",
-        "build:admin": "npm --prefix frontend/frontend run build",
+        "dev:marketplace": "cmd /c \"set LOCAL_FRONTEND_ROLE=marketplace&& set NEXT_DIST_DIR=.next-dev-marketplace-3000&& npm --prefix frontend/frontend run dev -- --port 3000\"",
+        "dev:admin": "cmd /c \"set LOCAL_FRONTEND_ROLE=admin&& set NEXT_DIST_DIR=.next-dev-admin-3005&& npm --prefix frontend/frontend run dev -- --port 3005\"",
+        "dev:mobile": "npm --prefix apps/mobile-stock-ai run start",
+        "dev:mobile:android": "npm --prefix apps/mobile-stock-ai run android",
+        "dev:mobile:ios": "npm --prefix apps/mobile-stock-ai run ios",
+        "typecheck:mobile": "npm --prefix apps/mobile-stock-ai run typecheck",
+        "eas:project:ensure": "npm --prefix apps/mobile-stock-ai run eas:project:ensure",
+        "release:gate:mobile:production": "npm --prefix apps/mobile-stock-ai run release:gate:production",
+        "build:mobile:android:preview": "cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli build --non-interactive --platform android --profile preview\"",
+        "build:mobile:android:staging": "npm run eas:project:ensure ; cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli build --non-interactive --platform android --profile staging\"",
+        "build:mobile:android:production": "cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli build --non-interactive --platform android --profile production\"",
+        "build:mobile:ios:preview": "cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli build --non-interactive --platform ios --profile preview\"",
+        "build:mobile:ios:staging": "npm run eas:project:ensure ; cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli build --non-interactive --platform ios --profile staging\"",
+        "build:mobile:ios:production": "cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli build --non-interactive --platform ios --profile production\"",
+        "build:nadotongryoksa:android:preview": "cmd /c \"cd /d apps\\mobile-nadotongryoksa && npx eas-cli build --non-interactive --platform android --profile preview\"",
+        "build:nadotongryoksa:android:apk": "cmd /c \"cd /d apps\\mobile-nadotongryoksa && npx eas-cli build --non-interactive --platform android --profile production-apk\"",
+        "build:nadotongryoksa:android:production": "cmd /c \"cd /d apps\\mobile-nadotongryoksa && npx eas-cli build --non-interactive --platform android --profile production\"",
+        "submit:mobile:android:staging": "npm run eas:project:ensure ; cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli submit --non-interactive --platform android --profile staging\"",
+        "submit:mobile:ios:staging": "npm run eas:project:ensure ; cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli submit --non-interactive --platform ios --profile staging\"",
+        "submit:mobile:android:production": "npm run eas:project:ensure ; npm run release:gate:mobile:production ; cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli submit --non-interactive --platform android --profile production\"",
+        "submit:mobile:ios:production": "npm run eas:project:ensure ; npm run release:gate:mobile:production ; cmd /c \"cd /d apps\\mobile-stock-ai && npx eas-cli submit --non-interactive --platform ios --profile production\"",
+        "build:admin": "cmd /c \"set NEXT_DIST_DIR=.next-build&& npm --prefix frontend/frontend run build\"",
         "build:frontend": "npm run build:admin",
         "e2e:marketplace-liveview": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3011&& npm run e2e:marketplace-liveview\"",
         "e2e:marketplace-liveview:sheet": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_MARKETPLACE_BASE_URL=http://127.0.0.1:3000&& npm run e2e:marketplace-liveview:sheet\"",
@@ -12,10 +31,7 @@
         "stop:platform": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_all_in_one.ps1",
         "start:backend": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_backend_stack.ps1",
         "stop:backend": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_backend_stack.ps1",
-        "start:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_local_all_in_one.ps1",
-        "stop:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_local_all_in_one.ps1",
         "health:platform": "powershell -ExecutionPolicy Bypass -File .\\scripts\\ops_health_check.ps1",
-        "ensure:admin": "powershell -ExecutionPolicy Bypass -File .\\scripts\\ensure_fixed_admin_account.ps1",
         "start:all": "npm run start:platform",
         "stop:all": "npm run stop:platform",
         "start": "npm run start:platform",
@@ -25,11 +41,14 @@
     "dependencies": {
         "eslint-config-next": "^16.2.1",
         "http-proxy": "^1.18.1",
-        "next": "^16.2.1",
+        "next": "^16.2.4",
         "react": "^19.2.4",
         "react-dom": "^19.2.4"
     },
     "devDependencies": {
         "playwright": "^1.59.1"
+    },
+    "overrides": {
+        "postcss": "^8.5.12"
     }
 }

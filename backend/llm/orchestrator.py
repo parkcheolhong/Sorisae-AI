@@ -1,9 +1,9 @@
-﻿"""LLM 오케스트레이터 - 멀티 에이전트 파이프라인"""
+"""LLM 오케스트레이터 - 멀티 에이전트 파이프라인"""
 import asyncio
 import ast
 import html
 import logging
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict, Any, Callable
@@ -59,7 +59,45 @@ from backend.llm.file_tools import write_file_tool
 from backend.llm.python_security_policy import scan_python_security_policy
 from backend.llm.project_indexer import project_indexer
 from backend.llm.target_patch_registry import build_target_patch_registry_snapshot
+from backend.llm.orchestrator_progress_tracker import (
+    build_progress_poll_url as _progress_build_poll_url,
+    build_progress_stream_url as _progress_build_stream_url,
+    load_orchestration_progress as _progress_load,
+    mark_orchestration_progress_error as _progress_mark_error,
+    mark_orchestration_progress_result as _progress_mark_result,
+    record_orchestration_progress_event as _progress_record_event,
+    runtime_progress_root as _progress_runtime_root,
+    orchestration_progress_path as _progress_path,
+    save_orchestration_progress as _progress_save,
+)
+from backend.llm.orchestrator_budgeting import (
+    agent_context_char_limit as _budget_agent_context_char_limit,
+    agent_default_token_budget as _budget_agent_default_token_budget,
+    agent_prompt_char_limit as _budget_agent_prompt_char_limit,
+    bounded_token_floor as _budget_bounded_token_floor,
+    coerce_runtime_bool as _budget_coerce_runtime_bool,
+    coerce_runtime_int as _budget_coerce_runtime_int,
+    resolve_step_token_budget as _budget_resolve_step_token_budget,
+    truncate_prompt_segment as _budget_truncate_prompt_segment,
+)
+
+from backend.llm.orchestrator_scaffold_generators import (
+    _build_architecture_doc_template,
+    _build_architecture_contract_template,
+    _build_generated_id_registry_schema_template,
+    _build_generated_id_registry_template,
+    _build_generated_product_identity_template,
+    _decorate_generated_file_with_ids,
+    _strip_generated_id_headers,
+    _decorate_template_candidates_with_ids,
+    _build_nextjs_vertical_slice_files,
+    _build_node_service_vertical_slice_files,
+)
 from backend.llm.ws_channel import ws_channel
+from backend.security_gates import (
+    require_admin_mutation_quota,
+    require_llm_mutation_quota,
+)
 from backend.orchestrator.customer import (
     assemble_customer_orchestration_response as assemble_customer_orchestration_response_service,
     execute_orchestration as execute_customer_orchestration_service,
@@ -140,7 +178,7 @@ def _enforce_global_orchestration_gate(request: "OrchestrationRequest") -> None:
     if scope_paths and not any(is_workspace_root_scope(scope) or (scope and scope in normalized_output_dir) for scope in scope_paths):
         raise HTTPException(status_code=400, detail="전역 승인 게이트 승인 범위 밖 경로는 오케스트레이션 실행 대상이 될 수 없습니다.")
 
-OLLAMA_BASE = "http://host.docker.internal:11434"
+OLLAMA_BASE = os.getenv("OLLAMA_BASE", "http://host.docker.internal:8008/v1")
 _orchestrator_chat_http_client: Optional[httpx.AsyncClient] = None
 _orchestrator_chat_http_client_signature: Optional[tuple[str, float]] = None
 
@@ -448,7 +486,7 @@ def _build_trading_system_production_ai_template_candidates(
             "from typing import Any, Dict\n"
             "from jose import JWTError, jwt\n\n"
             f"JWT_SCOPES = {jwt_scopes_json}\n"
-            "JWT_SECRET = os.getenv('JWT_SECRET', 'codeai-trading-prod-secret-change-me')\n"
+            "JWT_SECRET = os.getenv('JWT_SECRET', '').strip()\n"
             "JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')\n"
             "JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '60'))\n\n"
             "def get_auth_settings() -> Dict[str, Any]:\n"
@@ -527,8 +565,12 @@ def _build_trading_system_production_ai_template_candidates(
         ),
         "backend/app/external_adapters/status_client.py": (
             "from __future__ import annotations\n"
+            "import os\n"
             "import time\n"
-            "import httpx\n\n"
+            "import httpx\n"
+            "UPSTREAM_STATUS_BASE_URL = os.getenv('UPSTREAM_STATUS_BASE_URL', 'https://broker.example.com')\n"
+            "NOTIFICATION_GATEWAY_URL = os.getenv('NOTIFICATION_GATEWAY_URL', 'https://notify.example.com')\n"
+            "REQUEST_TIMEOUT_SEC = float(os.getenv('REQUEST_TIMEOUT_SEC', '5'))\n\n"
             "def build_provider_status_map() -> list[dict]:\n"
             "    return [{'provider': 'signal-feed', 'reachable': True, 'latency_ms': 18}, {'provider': 'paper-broker', 'reachable': True, 'latency_ms': 26}, {'provider': 'portfolio-sync', 'reachable': True, 'latency_ms': 22}]\n\n"
             "def fetch_upstream_status(base_url: str | None = None, retries: int = 3, timeout: float = 2.0) -> dict:\n"
@@ -572,6 +614,7 @@ def _build_trading_system_production_ai_template_candidates(
             "import httpx\n"
             "from backend.app.connectors.base import BaseConnector\n"
             "from backend.app.external_adapters.status_client import fetch_upstream_status\n\n"
+            "provider_contracts = ['broker-adapter', 'paper-broker', 'live broker']\n\n"
             "class BrokerConnector(BaseConnector):\n"
             "    provider_name = 'paper-broker'\n\n"
             "    def __init__(self, base_url: str) -> None:\n"
@@ -915,11 +958,16 @@ def _build_trading_system_production_ai_template_candidates(
             "APP_ENV=dev\n"
             "APP_PORT=8000\n"
             "DATABASE_URL=sqlite:///./runtime/data/trading.db\n"
-            "JWT_SECRET=replace-with-strong-secret\n"
+            "JWT_SECRET=\n"
             "JWT_ALGORITHM=HS256\n"
             "JWT_EXPIRE_MINUTES=60\n"
+            "ALLOWED_HOSTS=localhost,127.0.0.1\n"
+            "CORS_ALLOW_ORIGINS=https://metanova1004.com\n"
+            "REQUEST_TIMEOUT_SEC=5\n"
             "OPS_LOG_PATH=runtime/logs/ops-events.jsonl\n"
             "MODEL_REGISTRY_PATH=runtime/models/registry.json\n"
+            "UPSTREAM_STATUS_BASE_URL=https://broker.example.com\n"
+            "NOTIFICATION_GATEWAY_URL=https://notify.example.com\n"
             "BROKER_BASE_URL=https://paper-broker.example.com\n"
             "SIGNAL_FEED_URL=https://signals.example.com\n"
         ),
@@ -927,18 +975,23 @@ def _build_trading_system_production_ai_template_candidates(
             "services:\n"
             "  trading-runtime:\n"
             "    build: ..\n"
-            "    command: uvicorn app.main:app --host 0.0.0.0 --port 8000\n"
+            "    command: uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000\n"
             "    ports:\n"
             "      - '8000:8000'\n"
             "    environment:\n"
             "      APP_ENV: production\n"
             "      DATABASE_URL: sqlite:///./runtime/data/trading.db\n"
             "      JWT_ALGORITHM: HS256\n"
-            "      JWT_SECRET: change-me-in-production\n"
+            "      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET_REQUIRED}\n"
             "      REQUEST_TIMEOUT_SEC: 5\n"
             "      OPS_LOG_PATH: runtime/logs/ops-events.jsonl\n"
             "      MODEL_REGISTRY_PATH: runtime/models/registry.json\n"
             "      BROKER_BASE_URL: https://paper-broker.example.com\n"
+            "    healthcheck:\n"
+            "      test: ['CMD', 'python', '-c', \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\"]\n"
+            "      interval: 30s\n"
+            "      timeout: 5s\n"
+            "      retries: 3\n"
         ),
         "infra/deploy/security.md": (
             "# production security\n\n"
@@ -976,7 +1029,7 @@ def _build_trading_system_template_candidates(
             "- `tests/test_ai_pipeline.py`, `tests/test_routes.py`, `tests/test_runtime.py`, `tests/test_security_runtime.py` 실거래 전 검증 시나리오\n\n"
             "## Operator Checklist\n\n"
             "1. `configs/app.env.example`를 운영 값으로 치환\n"
-            "2. `pip install -r requirements.txt` 실행\n"
+            "2. `pip install -r requirements.delivery.lock.txt` 실행\n"
             "3. `uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000` 기동\n"
             "4. `/health`, `/runtime`, `/ai/health`, `/ops/health`, `/auth/settings` 확인\n"
             "5. `scripts/check.sh`와 출고 ZIP 재현 결과 확인\n\n"
@@ -1012,6 +1065,7 @@ def _build_trading_system_template_candidates(
             "- order execution: `/ai/inference`\n"
             "- portfolio sync: `/ops/health`\n"
             "- broker adapter: `backend/app/connectors/broker.py`\n"
+            "- shipping package flow: `scripts/check.sh` and `shipment.zip` verification\n"
         ),
         "docs/deployment.md": (
             "# deployment\n\n"
@@ -1025,6 +1079,7 @@ def _build_trading_system_template_candidates(
             "# testing\n\n"
             "- `python -m compileall app backend tests`\n"
             "- `pytest -q tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_ai_pipeline.py tests/test_security_runtime.py`\n"
+            "- shipping package flow: run `scripts/check.sh` before `shipment.zip` release\n"
         ),
         "docs/runbook.md": (
             "# runbook\n\n"
@@ -1053,8 +1108,9 @@ def _build_trading_system_template_candidates(
         "scripts/check.sh": (
             "#!/usr/bin/env bash\n"
             "set -euo pipefail\n\n"
+            "test -f requirements.delivery.lock.txt\n"
             "python -m compileall app backend tests\n"
-            "pytest -q tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_ai_pipeline.py tests/test_security_runtime.py\n"
+            "pytest -q -s tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_ai_pipeline.py tests/test_security_runtime.py\n"
         ),
         "backend/main.py": (
             "from app.main import app, create_application\n\n"
@@ -1152,12 +1208,16 @@ def _build_trading_system_template_candidates(
             "APP_ENV=dev\n"
             "APP_PORT=8000\n"
             "DATABASE_URL=sqlite:///./runtime/data/trading.db\n"
-            "JWT_SECRET=replace-with-32-char-random-secret\n"
+            "JWT_SECRET=\n"
             "JWT_ALGORITHM=HS256\n"
             "JWT_EXPIRE_MINUTES=30\n"
             "ALLOWED_HOSTS=localhost,127.0.0.1,metanova1004.com\n"
             "CORS_ALLOW_ORIGINS=https://metanova1004.com\n"
             "REQUEST_TIMEOUT_SEC=5\n"
+            "OPS_LOG_PATH=runtime/logs/ops-events.jsonl\n"
+            "MODEL_REGISTRY_PATH=runtime/models/registry.json\n"
+            "UPSTREAM_STATUS_BASE_URL=https://broker.example.com\n"
+            "NOTIFICATION_GATEWAY_URL=https://notify.example.com\n"
             "BROKER_API_TOKEN=replace-with-broker-token\n"
             "BROKER_BASE_URL=https://paper-broker.example.com\n"
             "SIGNAL_FEED_TOKEN=replace-with-signal-token\n"
@@ -1171,7 +1231,7 @@ def _build_trading_system_template_candidates(
             "    environment:\n"
             "      APP_ENV: dev\n"
             "      APP_PORT: 8000\n"
-            "      JWT_SECRET: replace-with-32-char-random-secret\n"
+            "      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET_REQUIRED}\n"
             "      JWT_ALGORITHM: HS256\n"
             "      JWT_EXPIRE_MINUTES: 30\n"
             "      ALLOWED_HOSTS: localhost,127.0.0.1,metanova1004.com\n"
@@ -1329,7 +1389,7 @@ def _build_top_level_ai_template_candidates(
             "from typing import Any, Dict\n"
             "from jose import JWTError, jwt\n\n"
             f"JWT_SCOPES = {jwt_scopes}\n"
-            "JWT_SECRET = os.getenv('JWT_SECRET', 'codeai-generated-prod-secret-change-me')\n"
+            "JWT_SECRET = os.getenv('JWT_SECRET', '').strip()\n"
             "JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')\n"
             "JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '60'))\n"
             "AUTH_SETTINGS = {\n"
@@ -1570,14 +1630,26 @@ def _build_commerce_platform_ai_template_candidates(
             "        self.version = version\n"
         ),
         "backend/core/auth.py": (
-            f"AUTH_SETTINGS = {{'enabled': True, 'algorithm': 'HS256', 'scopes': {jwt_scopes}, 'token_header': 'Authorization'}}\n\n"
-            "def get_auth_settings() -> dict:\n"
-            "    return dict(AUTH_SETTINGS)\n\n"
+            "import os\n"
+            "from datetime import datetime, timedelta\n"
+            "from typing import Any, Dict\n"
+            "from jose import JWTError, jwt\n\n"
+            f"JWT_SCOPES = {jwt_scopes}\n"
+            "JWT_SECRET = os.getenv('JWT_SECRET', '').strip()\n"
+            "JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')\n"
+            "JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '30'))\n\n"
+            "def get_auth_settings() -> Dict[str, Any]:\n"
+            "    return {'enabled': True, 'algorithm': JWT_ALGORITHM, 'scopes': list(JWT_SCOPES), 'token_header': 'Authorization', 'secret_ready': len(JWT_SECRET) >= 32}\n\n"
             "def create_access_token(subject: str, scopes: list[str] | None = None) -> str:\n"
-            "    requested_scopes = scopes or list(AUTH_SETTINGS.get('scopes') or [])\n"
-            "    return f'token::{subject}::' + ','.join(requested_scopes)\n\n"
-            "def decode_access_token(token: str) -> dict:\n"
-            "    return {'valid': token.startswith('token::'), 'payload': {'token': token}}\n"
+            "    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)\n"
+            "    payload = {'sub': subject, 'scopes': scopes or list(JWT_SCOPES), 'exp': expire}\n"
+            "    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)\n\n"
+            "def decode_access_token(token: str) -> Dict[str, Any]:\n"
+            "    try:\n"
+            "        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])\n"
+            "    except JWTError as exc:\n"
+            "        return {'valid': False, 'error': str(exc)}\n"
+            "    return {'valid': True, 'payload': payload}\n"
         ),
         "backend/core/ops_logging.py": (
             f"OPS_CHANNELS = {ops_channels}\n"
@@ -1711,6 +1783,7 @@ def _build_commerce_platform_ai_template_candidates(
             "      <section>\n"
             "        <h2>AI 상태 패널</h2>\n"
             "        <p>model_registry / training_pipeline / inference_runtime / evaluation_report contract enabled</p>\n"
+            "        <p>catalog / order workflow / marketplace publish payload / shipment runtime shell</p>\n"
             "        <ul>{(orderProfile.ai_capabilities || []).map((item: string) => <li key={item}>{item}</li>)}</ul>\n"
             "        <p>model_registry · training_pipeline · inference_runtime · evaluation_report</p>\n"
             "      </section>\n"
@@ -2083,7 +2156,7 @@ ORCH_TIMEOUT_TUNING_PRESETS: Dict[int, Dict[str, Any]] = {
 
 
 def _bounded_token_floor(target: int) -> int:
-    return min(ORCH_MAX_TOKENS_PER_STEP, max(1024, int(target)))
+    return _budget_bounded_token_floor(target, ORCH_MAX_TOKENS_PER_STEP)
 
 
 def _coerce_runtime_int(
@@ -2093,30 +2166,17 @@ def _coerce_runtime_int(
     minimum: int,
     maximum: Optional[int] = None,
 ) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = fallback
-    parsed = max(minimum, parsed)
-    if maximum is not None:
-        parsed = min(maximum, parsed)
-    return parsed
+    return _budget_coerce_runtime_int(
+        value,
+        fallback,
+        minimum=minimum,
+        maximum=maximum,
+    )
 
 
 def _coerce_runtime_bool(value: Any, fallback: bool) -> bool:
     # 런타임 설정은 JSON/문자열 양쪽에서 들어오므로 "false"를 True로 오판하면 안 된다.
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized in {"true", "1", "yes", "on"}:
-            return True
-        if normalized in {"false", "0", "no", "off"}:
-            return False
-        return fallback
-    if value is None:
-        return fallback
-    return bool(value)
+    return _budget_coerce_runtime_bool(value, fallback)
 
 
 def _resolve_step_token_budget(
@@ -2125,55 +2185,45 @@ def _resolve_step_token_budget(
     minimum: int,
     preferred_default: Optional[int] = None,
 ) -> int:
-    effective_budget = int(
-        preferred_default or ORCH_DEFAULT_AGENT_MAX_TOKENS
+    return _budget_resolve_step_token_budget(
+        requested,
+        minimum=minimum,
+        preferred_default=preferred_default,
+        default_agent_max_tokens=ORCH_DEFAULT_AGENT_MAX_TOKENS,
+        max_tokens_per_step=ORCH_MAX_TOKENS_PER_STEP,
     )
-    requested_cap = int(requested or 0)
-    if requested_cap > 0:
-        effective_budget = min(effective_budget, requested_cap)
-    effective_budget = max(
-        effective_budget,
-        _bounded_token_floor(minimum),
-    )
-    return min(ORCH_MAX_TOKENS_PER_STEP, effective_budget)
 
 
 def _agent_default_token_budget(agent_key: str) -> int:
-    if agent_key == "planner":
-        return ORCH_PLANNER_MAX_TOKENS
-    if agent_key == "coder":
-        return ORCH_CODER_MAX_TOKENS
-    if agent_key == "reviewer":
-        return ORCH_REVIEWER_MAX_TOKENS
-    return ORCH_DEFAULT_AGENT_MAX_TOKENS
+    return _budget_agent_default_token_budget(
+        agent_key,
+        planner_max_tokens=ORCH_PLANNER_MAX_TOKENS,
+        coder_max_tokens=ORCH_CODER_MAX_TOKENS,
+        reviewer_max_tokens=ORCH_REVIEWER_MAX_TOKENS,
+        default_agent_max_tokens=ORCH_DEFAULT_AGENT_MAX_TOKENS,
+    )
 
 
 def _agent_prompt_char_limit(agent_key: str) -> int:
-    if agent_key == "planner":
-        return ORCH_PLANNER_PROMPT_CHAR_LIMIT
-    if agent_key == "coder":
-        return ORCH_CODER_PROMPT_CHAR_LIMIT
-    if agent_key == "reviewer":
-        return ORCH_REVIEWER_PROMPT_CHAR_LIMIT
-    return ORCH_CODER_PROMPT_CHAR_LIMIT
+    return _budget_agent_prompt_char_limit(
+        agent_key,
+        planner_prompt_char_limit=ORCH_PLANNER_PROMPT_CHAR_LIMIT,
+        coder_prompt_char_limit=ORCH_CODER_PROMPT_CHAR_LIMIT,
+        reviewer_prompt_char_limit=ORCH_REVIEWER_PROMPT_CHAR_LIMIT,
+    )
 
 
 def _agent_context_char_limit(agent_key: str) -> int:
-    if agent_key == "planner":
-        return ORCH_PLANNER_CONTEXT_CHAR_LIMIT
-    if agent_key == "coder":
-        return ORCH_CODER_CONTEXT_CHAR_LIMIT
-    if agent_key == "reviewer":
-        return ORCH_REVIEWER_CONTEXT_CHAR_LIMIT
-    return ORCH_CODER_CONTEXT_CHAR_LIMIT
+    return _budget_agent_context_char_limit(
+        agent_key,
+        planner_context_char_limit=ORCH_PLANNER_CONTEXT_CHAR_LIMIT,
+        coder_context_char_limit=ORCH_CODER_CONTEXT_CHAR_LIMIT,
+        reviewer_context_char_limit=ORCH_REVIEWER_CONTEXT_CHAR_LIMIT,
+    )
 
 
 def _truncate_prompt_segment(text: str, max_chars: int) -> str:
-    if max_chars <= 0:
-        return ""
-    if len(text) <= max_chars:
-        return text
-    return text[:max_chars].rstrip() + "\n...[truncated]"
+    return _budget_truncate_prompt_segment(text, max_chars)
 
 
 ORCH_DYNAMIC_TOOL_ALLOWED_IMPORTS = {
@@ -2257,7 +2307,7 @@ ORCH_SOURCE_FILE_SUFFIXES = {
 
 ORCH_MINIMAL_CONTENT: Dict[str, str] = {
     "readme.md": "# Generated Vertical Slice\n\n자동 생성 프로젝트입니다.\n",
-    ".env.example": "APP_ENV=dev\nSECRET_KEY=change-me\n",
+    ".env.example": "APP_ENV=dev\nSECRET_KEY=\n",
     ".gitignore": "__pycache__/\n.venv/\n.pytest_cache/\n",
     "package.json": (
         "{\n"
@@ -2683,126 +2733,36 @@ class OrchestrationAcceptedResponse(BaseModel):
     message: str = "오케스트레이션이 백그라운드에서 계속 진행됩니다. poll_url 또는 stream_url 로 진행 상태를 확인하세요."
 
 
-_ORCHESTRATION_PROGRESS_STORE: Dict[str, Dict[str, Any]] = {}
-_ORCHESTRATION_PROGRESS_FILE_LOCK = threading.Lock()
-
-
 def _runtime_progress_root() -> Path:
-    configured_root = (os.getenv("ADMIN_RUNTIME_ROOT", "") or "").strip()
-    runtime_root = Path(configured_root).expanduser().resolve() if configured_root else (Path(tempfile.gettempdir()) / "codeai_admin_runtime").resolve()
-    progress_root = runtime_root / "orchestration_progress"
-    progress_root.mkdir(parents=True, exist_ok=True)
-    return progress_root
+    return _progress_runtime_root()
 
 
-def _orchestration_progress_file_path(run_id: str) -> Path:
-    normalized_run_id = str(run_id if run_id is not None else "unknown")
-    if normalized_run_id == "":
-        normalized_run_id = "unknown"
-    runtime_root = _runtime_progress_root().resolve()
-    file_name = f"{hashlib.sha256(normalized_run_id.encode('utf-8')).hexdigest()}.json"
-    return runtime_root / file_name
+def _orchestration_progress_path(run_id: str) -> Path:
+    return _progress_path(run_id)
 
 
 def _build_progress_poll_url(run_id: str) -> str:
-    return f"/api/llm/orchestrate/progress/{run_id}"
+    return _progress_build_poll_url(run_id)
 
 
 def _build_progress_stream_url(run_id: str) -> str:
-    return f"/api/llm/orchestrate/stream/{run_id}"
+    return _progress_build_stream_url(run_id)
 
 
 def _save_orchestration_progress(run_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    normalized = dict(payload)
-    normalized["run_id"] = str(run_id or normalized.get("run_id") or "")
-    normalized.setdefault("updated_at", datetime.utcnow().isoformat() + "Z")
-    _ORCHESTRATION_PROGRESS_STORE[normalized["run_id"]] = normalized
-    progress_path = _orchestration_progress_file_path(normalized["run_id"])
-    trusted_temp_prefix = (
-        f"progress-{hashlib.sha256(normalized['run_id'].encode('utf-8')).hexdigest()}."
-        if normalized["run_id"]
-        else "progress-unknown."
-    )
-    with _ORCHESTRATION_PROGRESS_FILE_LOCK:
-        temp_path: Optional[Path] = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                dir=str(progress_path.parent),
-                prefix=trusted_temp_prefix,
-                suffix=".tmp",
-                delete=False,
-            ) as temp_file:
-                temp_file.write(json.dumps(normalized, ensure_ascii=False, indent=2))
-                temp_file.flush()
-                os.fsync(temp_file.fileno())
-                temp_path = Path(temp_file.name)
-            os.replace(temp_path, progress_path)
-        except Exception:
-            if temp_path is not None:
-                try:
-                    temp_path.unlink(missing_ok=True)
-                except Exception:
-                    logger.warning(
-                        "Failed to remove temporary orchestration progress file %s",
-                        str(temp_path),
-                        exc_info=True,
-                    )
-            logger.warning(
-                "Failed to write orchestration progress file at %s",
-                str(progress_path),
-                exc_info=True,
-            )
-            return dict(_ORCHESTRATION_PROGRESS_STORE.get(normalized["run_id"], {}))
-    return normalized
+    return _progress_save(run_id, payload)
 
 
 def _load_orchestration_progress(run_id: str) -> Dict[str, Any]:
-    cached = _ORCHESTRATION_PROGRESS_STORE.get(str(run_id or ""))
-    if isinstance(cached, dict) and cached:
-        return dict(cached)
-    progress_path = _orchestration_progress_file_path(run_id)
-    try:
-        with _ORCHESTRATION_PROGRESS_FILE_LOCK:
-            if progress_path.exists() and progress_path.is_file():
-                payload = json.loads(progress_path.read_text(encoding="utf-8"))
-                if isinstance(payload, dict):
-                    _ORCHESTRATION_PROGRESS_STORE[str(run_id or "")] = dict(payload)
-                    return dict(payload)
-    except Exception:
-        logger.error("Failed to load orchestration progress for run_id=%s", str(run_id or ""), exc_info=True)
-        return {}
-    return {}
+    return _progress_load(run_id)
 
 
 def _record_orchestration_progress_event(run_id: str, *, message: str, level: str = "info") -> Dict[str, Any]:
-    current = _load_orchestration_progress(run_id)
-    events = list(current.get("events") or [])
-    events.append(
-        {
-            "at": datetime.utcnow().isoformat() + "Z",
-            "level": level,
-            "message": str(message or "").strip(),
-        }
-    )
-    current["events"] = events[-120:]
-    current["status"] = "running"
-    return _save_orchestration_progress(run_id, current)
+    return _progress_record_event(run_id, message=message, level=level)
 
 
 def _mark_orchestration_progress_result(run_id: str, response: OrchestrationResponse) -> Dict[str, Any]:
-    payload = _load_orchestration_progress(run_id)
-    payload.update(
-        {
-            "status": "completed",
-            "result": response.model_dump(),
-            "output_dir": response.output_dir,
-            "project_name": response.normalized_requirements.get("project_name") if isinstance(response.normalized_requirements, dict) else payload.get("project_name"),
-            "completed_at": datetime.utcnow().isoformat() + "Z",
-        }
-    )
-    return _save_orchestration_progress(run_id, payload)
+    return _progress_mark_result(run_id, response)
 
 
 def _accepted_orchestrate_requests_full_mode(request: OrchestrationRequest) -> bool:
@@ -2811,15 +2771,7 @@ def _accepted_orchestrate_requests_full_mode(request: OrchestrationRequest) -> b
 
 
 def _mark_orchestration_progress_error(run_id: str, *, error_message: str) -> Dict[str, Any]:
-    payload = _load_orchestration_progress(run_id)
-    payload.update(
-        {
-            "status": "failed",
-            "error": str(error_message or "실행 중 오류가 발생했습니다."),
-            "completed_at": datetime.utcnow().isoformat() + "Z",
-        }
-    )
-    return _save_orchestration_progress(run_id, payload)
+    return _progress_mark_error(run_id, error_message=error_message)
 
 
 def _build_evidence_bundle(
@@ -3847,7 +3799,9 @@ def _save_runtime_config_to_disk(payload: Dict[str, Any]) -> None:
 
 
 @router.get("/runtime-config")
-async def get_runtime_config() -> Dict[str, Any]:
+async def get_runtime_config(
+    current_user=Depends(require_admin_mutation_quota),
+) -> Dict[str, Any]:
     _load_runtime_config_from_disk()
     return _runtime_config_payload()
 
@@ -3856,6 +3810,7 @@ async def get_runtime_config() -> Dict[str, Any]:
 @router.post("/runtime-config")
 async def update_runtime_config(
     update: OrchestratorRuntimeConfigUpdate,
+    current_user=Depends(require_admin_mutation_quota),
 ) -> Dict[str, Any]:
     current = _load_runtime_config_from_disk()
     merged = _merge_runtime_update_payload(
@@ -4005,7 +3960,7 @@ def _default_validation_profile(task: str, required_files: List[str]) -> str:
         path.endswith(".py") for path in lower_files
     ):
         return "python_fastapi"
-    if _has_nextjs_stack_markers(task_lower) and _has_python_backend_stack_markers(task_lower):
+    if _has_nextjs_stack_markers(task_lower) and _has_python_backend_stack_markers(task_lower): # pyright: ignore[reportUndefinedVariable]
         return "generic"
     if any(token in task_lower for token in ["next.js", "nextjs", "react"]):
         return "nextjs_react"
@@ -4316,7 +4271,7 @@ def _default_orchestration_spec(
         validation_profile = _default_validation_profile(task, required_files)
         return OrchestrationSpec(
             mode="manual_9step",
-            pipeline=PIPELINES["manual_9step"],
+            pipeline=PIPELINES["manual_9step"], # pyright: ignore[reportUndefinedVariable]
             required_files=required_files,
             validation_profile=validation_profile,
             dod_targets=_default_dod_targets(validation_profile),
@@ -4325,17 +4280,17 @@ def _default_orchestration_spec(
                 "5-step workflow selected"
             ),
             spec_source="manual",
-            manual_steps=list(MANUAL_ORCHESTRATION_STEPS),
+            manual_steps=list(MANUAL_ORCHESTRATION_STEPS), # pyright: ignore[reportUndefinedVariable]
         )
     resolved_mode = (
-        detect_mode(task)
+        detect_mode(task) # pyright: ignore[reportUndefinedVariable]
         if requested_mode == "auto"
         else requested_mode
     )
     required_files = _default_required_files_for_mode(task, resolved_mode)
     validation_profile = _default_validation_profile(task, required_files)
     effective_pipeline = _filter_pipeline_for_validation_profile(
-        PIPELINES.get(resolved_mode, ["planner", "coder"]),
+        PIPELINES.get(resolved_mode, ["planner", "coder"]), # pyright: ignore[reportUndefinedVariable]
         validation_profile,
     )
     return OrchestrationSpec(
@@ -4454,7 +4409,7 @@ def _planner_resolved_mode(
     if request_mode != "auto":
         return request_mode
     candidate = _normalize_requested_mode(planner_mode)
-    if candidate in PIPELINES:
+    if candidate in PIPELINES: # pyright: ignore[reportUndefinedVariable]
         return candidate
     return fallback_mode
 
@@ -4530,7 +4485,7 @@ def _build_resolved_orchestration_spec(
     effective_pipeline = (
         request.pipeline
         or planner_pipeline
-        or PIPELINES.get(resolved_mode, fallback.pipeline)
+        or PIPELINES.get(resolved_mode, fallback.pipeline) # pyright: ignore[reportUndefinedVariable]
         or fallback.pipeline
     )
     effective_pipeline = _filter_pipeline_for_validation_profile(
@@ -4685,982 +4640,6 @@ def _run_b_brain_multi_generator(
     }
 
 
-def _build_architecture_doc_template(project_name: str) -> str:
-    return (
-        f"# {project_name} Architecture\n\n"
-        "## Purpose\n\n"
-        "- Define fixed boundaries for the generated project.\n"
-        "- Keep implementation and validation traceable.\n\n"
-        "## Boundaries\n\n"
-        "- UI handles rendering and API calls only.\n"
-        "- Backend owns business logic and validation.\n"
-        "- Docs store design, checklist, and traceability artifacts.\n"
-    )
-
-
-def _build_architecture_contract_template(project_name: str) -> str:
-    payload = {
-        "schema_version": "generated.v1",
-        "project": project_name,
-        "required_documents": [
-            "docs/architecture.md",
-            "docs/architecture.contract.json",
-            "docs/id_registry.schema.json",
-            "docs/id_registry.json",
-            "docs/orchestration_rules_checklist.md",
-        ],
-        "fixed_links": [
-            {
-                "id": "main-to-router",
-                "source": "backend/app/main.py",
-                "target": "backend/app/api/routes/**",
-                "rule": "앱 진입점은 라우터를 등록해야 한다.",
-            },
-            {
-                "id": "router-to-controller",
-                "source": "backend/app/api/routes/**",
-                "target": "backend/app/controllers/**",
-                "rule": "라우터는 컨트롤러 계층을 통해 요청 흐름을 시작한다.",
-            },
-            {
-                "id": "controller-to-service",
-                "source": "backend/app/controllers/**",
-                "target": "backend/app/services/**",
-                "rule": "컨트롤러는 서비스 계층을 통해 비즈니스 흐름을 조합한다.",
-            },
-            {
-                "id": "service-to-repository",
-                "source": "backend/app/services/**",
-                "target": "backend/app/repositories/**",
-                "rule": "서비스는 저장소 계층을 통해 데이터 접근을 수행한다.",
-            },
-            {
-                "id": "service-to-external-adapter",
-                "source": "backend/app/services/**",
-                "target": "backend/app/external_adapters/**",
-                "rule": "서비스는 외부 연동 호출을 external adapter 계층을 통해 수행한다.",
-            },
-            {
-                "id": "repository-to-infra",
-                "source": "backend/app/repositories/**",
-                "target": "backend/app/infra/**",
-                "rule": "저장소는 infra 계층을 통해 런타임 구현을 사용한다.",
-            },
-        ],
-        "protected_paths": [
-            {
-                "path": "docs/**",
-                "rule": "design and validation artifacts",
-            }
-        ],
-        "structure_rules": [
-            {
-                "id": "main-router-registration",
-                "scope": "backend/app/main.py",
-                "requirement": "main entry must import and include routers",
-            },
-            {
-                "id": "router-service-boundary",
-                "scope": "backend/**/*router.py, backend/**/routers/**, backend/**/api/routes/**",
-                "requirement": "routers must not call repositories directly and should remain HTTP adapters",
-            },
-            {
-                "id": "controller-service-boundary",
-                "scope": "backend/**/*controller.py, backend/**/controllers/**",
-                "requirement": "controllers must orchestrate services only and must not call repositories or adapters directly",
-            },
-            {
-                "id": "service-no-router-import",
-                "scope": "backend/**/*service.py, backend/**/services/**",
-                "requirement": "services must not depend on routers or FastAPI HTTP primitives",
-            },
-            {
-                "id": "repository-data-only",
-                "scope": "backend/**/*repository.py, backend/**/repositories/**, backend/**/repos/**",
-                "requirement": "repositories must stay in data access layer and must not depend on routers or services",
-            },
-            {
-                "id": "infra-isolation",
-                "scope": "backend/**/*infra*.py, backend/**/infra/**",
-                "requirement": "infra layer must not depend on router, controller, or service layers",
-            },
-            {
-                "id": "external-adapter-isolation",
-                "scope": "backend/**/*adapter.py, backend/**/*client.py, backend/**/external/**, backend/**/external_adapters/**",
-                "requirement": "external adapters must stay as integration boundaries and must not depend on router, controller, or service layers",
-            },
-            {
-                "id": "design-traceability",
-                "scope": "docs/**, src/**, app/**, backend/**, frontend/**",
-                "requirement": "design items must be traceable to implementation and validation evidence",
-            }
-        ],
-        "traceability_fields": [
-            "design_item_id",
-            "implementation_files",
-            "api_or_ui_links",
-            "validation_evidence",
-            "approval_status",
-        ],
-        "validation_gates": [
-            "required_files",
-            "structure_compliance",
-            "id_registry_required",
-            "completion_gate",
-            "semantic_audit",
-        ],
-    }
-    return json.dumps(payload, ensure_ascii=True, indent=2)
-
-
-def _build_generated_id_registry_schema_template() -> str:
-    return (REPO_ROOT / "docs" / "id_registry.schema.json").read_text(encoding="utf-8")
-
-
-def _build_generated_id_registry_template(
-    project_name: str,
-    validation_profile: str,
-) -> str:
-    payload = {
-        "$schema": "./id_registry.schema.json",
-        "schema_version": "id-registry.v1",
-        "registry_id": f"REG-{re.sub(r'[^A-Za-z0-9]+', '-', project_name.upper()).strip('-') or 'PROJECT'}",
-        "generated_at": datetime.now().isoformat(),
-        "project": {
-            "project_id": f"PROJECT-{re.sub(r'[^A-Za-z0-9]+', '-', project_name.upper()).strip('-') or 'PROJECT'}",
-            "name": project_name,
-            "root_path": ".",
-            "scope": "generated-output",
-        },
-        "governance": {
-            "required_documents": [
-                "docs/id_registry.schema.json",
-                "docs/id_registry.json",
-                "docs/traceability_map.json",
-                "docs/auto_link_map.json",
-                "docs/architecture.contract.json",
-                "docs/generator_checklist.md",
-            ],
-            "required_id_levels": ["file", "section", "feature", "chunk", "flow", "trace", "failure_tag", "repair_tag"],
-            "selective_apply_policy": "id-targeted-only",
-            "future_generation_mandatory": True,
-        },
-        "files": [],
-        "flows": [],
-        "traceability_links": [],
-        "failure_tags": [],
-        "repair_tags": [],
-        "validation_rules": {
-            "hard_gate": [
-                "모든 신규 소스 파일은 FILE-ID registry 항목이 있어야 한다.",
-                "핵심 섹션은 SECTION-ID 와 최소 1개 CHUNK-ID를 가져야 한다.",
-                "생성 프로그램은 docs/id_registry.schema.json 과 docs/id_registry.json 을 반드시 포함해야 한다.",
-            ],
-            "generation_requirements": [
-                f"validation_profile={validation_profile}",
-                "앞으로 생성되는 모든 프로그램은 docs/id_registry.json, docs/traceability_map.json, docs/auto_link_map.json, docs/architecture.contract.json, docs/generator_checklist.md 를 의무 생성한다.",
-            ],
-        },
-    }
-    return json.dumps(payload, ensure_ascii=False, indent=2)
-
-
-def _build_generated_product_identity_template(
-    project_name: str,
-    validation_profile: str,
-) -> str:
-    normalized_project = re.sub(r"[^A-Za-z0-9]+", "-", str(project_name or "project").upper()).strip("-") or "PROJECT"
-    payload = {
-        "schema_version": "product-identity.v1",
-        "product_id": f"PID-{normalized_project}",
-        "project_name": project_name,
-        "validation_profile": validation_profile,
-        "identity_policy": {
-            "mandatory": True,
-            "description": "생성기 산출물의 고유 인식표(주민번호 수준 식별자)입니다. 배포/검증/복구 모든 단계에서 반드시 유지해야 합니다.",
-        },
-        "identity_links": {
-            "id_registry_path": ORCH_ID_REGISTRY_PATH,
-            "traceability_map_path": ORCH_TRACEABILITY_MAP_PATH,
-            "architecture_contract_path": "docs/architecture.contract.json",
-        },
-    }
-    return json.dumps(payload, ensure_ascii=False, indent=2)
-
-
-def _decorate_generated_file_with_ids(path: str, content: str) -> str:
-    normalized_path = str(path or "").strip().replace("\\", "/")
-    if not normalized_path or normalized_path.startswith("docs/"):
-        return content
-    file_stub = re.sub(r"[^A-Za-z0-9]+", "-", normalized_path.upper()).strip("-") or "GENERATED-FILE"
-    section_stub = f"SECTION-{file_stub}-MAIN"
-    feature_stub = f"FEATURE-{file_stub}-RUNTIME"
-    chunk_stub = f"CHUNK-{file_stub}-001"
-    header = (
-        f"# FILE-ID: FILE-{file_stub}\n"
-        f"# SECTION-ID: {section_stub}\n"
-        f"# FEATURE-ID: {feature_stub}\n"
-        f"# CHUNK-ID: {chunk_stub}\n\n"
-    )
-    suffix = normalized_path.rsplit('.', 1)[-1].lower() if '.' in normalized_path else ''
-    if suffix in {"py", "pyi", "sh", "yml", "yaml", "toml", "ini", "cfg", "env", "md", "txt"}:
-        return header + content if not content.startswith("# FILE-ID:") else content
-
-    if suffix in {"ts", "tsx", "js", "jsx", "css", "scss"}:
-        comment_block = (
-            f"/* FILE-ID: FILE-{file_stub} */\n"
-            f"/* SECTION-ID: {section_stub} */\n"
-            f"/* FEATURE-ID: {feature_stub} */\n"
-            f"/* CHUNK-ID: {chunk_stub} */\n\n"
-        )
-        return comment_block + content if "FILE-ID:" not in content[:200] else content
-
-    if suffix == "json":
-        return content
-
-    return header + content if not content.startswith("# FILE-ID:") else content
-
-
-def _strip_generated_id_headers(content: str) -> str:
-    text = str(content or "")
-    if not text:
-        return ""
-    normalized = text.replace("\r\n", "\n")
-    lines = normalized.split("\n")
-    prefix_index = 0
-    while prefix_index < len(lines) and lines[prefix_index].startswith("# ") and "-ID:" in lines[prefix_index]:
-        prefix_index += 1
-    if prefix_index > 0:
-        while prefix_index < len(lines) and not lines[prefix_index].strip():
-            prefix_index += 1
-        return "\n".join(lines[prefix_index:])
-    return normalized
-
-
-def _decorate_template_candidates_with_ids(template_candidates: Dict[str, str]) -> Dict[str, str]:
-    return {
-        path: _decorate_generated_file_with_ids(path, content)
-        for path, content in template_candidates.items()
-    }
-
-
-def _build_nextjs_vertical_slice_files(project_name: str) -> Dict[str, str]:
-    return {
-        "README.md": (
-            f"# {project_name}\n\n"
-            "Generated Next.js operations canvas scaffold.\n\n"
-            "## What is included\n\n"
-            "- App Router based landing page and dashboard experience\n"
-            "- Shared design tokens, editorial layout primitives, and animated sections\n"
-            "- Dark and light theme switch with persistent browser preference\n"
-            "- Client-side fetch pattern bound to /api/brief for live dashboard hydration\n"
-            "- Build-ready TypeScript and Next.js 16 configuration\n"
-        ),
-        ".gitignore": (
-            ".next\n"
-            "node_modules\n"
-            "npm-debug.log*\n"
-        ),
-        "package.json": (
-            "{\n"
-            "  \"name\": \"generated-nextjs-ops-dashboard\",\n"
-            "  \"private\": true,\n"
-            "  \"scripts\": {\n"
-            "    \"dev\": \"next dev\",\n"
-            "    \"build\": \"next build\",\n"
-            "    \"start\": \"next start\"\n"
-            "  },\n"
-            "  \"dependencies\": {\n"
-            "    \"next\": \"16.1.6\",\n"
-            "    \"react\": \"18.3.1\",\n"
-            "    \"react-dom\": \"18.3.1\"\n"
-            "  },\n"
-            "  \"devDependencies\": {\n"
-            "    \"@types/node\": \"20.14.12\",\n"
-            "    \"@types/react\": \"18.3.3\",\n"
-            "    \"@types/react-dom\": \"18.3.0\",\n"
-            "    \"typescript\": \"5.5.4\"\n"
-            "  }\n"
-            "}\n"
-        ),
-        "tsconfig.json": (
-            "{\n"
-            "  \"compilerOptions\": {\n"
-            "    \"target\": \"ES2022\",\n"
-            "    \"lib\": [\"dom\", \"dom.iterable\", \"es2022\"],\n"
-            "    \"allowJs\": false,\n"
-            "    \"skipLibCheck\": true,\n"
-            "    \"strict\": true,\n"
-            "    \"noEmit\": true,\n"
-            "    \"esModuleInterop\": true,\n"
-            "    \"module\": \"esnext\",\n"
-            "    \"moduleResolution\": \"bundler\",\n"
-            "    \"resolveJsonModule\": true,\n"
-            "    \"isolatedModules\": true,\n"
-            "    \"jsx\": \"react-jsx\",\n"
-            "    \"incremental\": true\n"
-            "  },\n"
-            "  \"include\": [\"next-env.d.ts\", \"**/*.ts\", \"**/*.tsx\"],\n"
-            "  \"exclude\": [\"node_modules\"]\n"
-            "}\n"
-        ),
-        "next-env.d.ts": (
-            "/// <reference types=\"next\" />\n"
-            "/// <reference types=\"next/image-types/global\" />\n\n"
-            "// This file is managed by Next.js.\n"
-        ),
-        "next.config.js": (
-            "const path = require('path');\n\n"
-            "/** @type {import('next').NextConfig} */\n"
-            "const nextConfig = {\n"
-            "  reactStrictMode: true,\n"
-            "  turbopack: {\n"
-            "    root: path.resolve(__dirname),\n"
-            "  },\n"
-            "};\n\n"
-            "module.exports = nextConfig;\n"
-        ),
-        "app/layout.tsx": (
-            "import './globals.css';\n"
-            "import type { ReactNode } from 'react';\n"
-            "import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';\n\n"
-            "const display = Space_Grotesk({\n"
-            "  subsets: ['latin'],\n"
-            "  variable: '--font-display',\n"
-            "});\n\n"
-            "const mono = IBM_Plex_Mono({\n"
-            "  subsets: ['latin'],\n"
-            "  weight: ['400', '500'],\n"
-            "  variable: '--font-mono',\n"
-            "});\n\n"
-            "export const metadata = {\n"
-            f"  title: '{project_name}',\n"
-            "  description: 'Operations canvas generated by the deterministic scaffold.',\n"
-            "};\n\n"
-            "export default function RootLayout({ children }: { children: ReactNode }) {\n"
-            "  return (\n"
-            "    <html lang=\"en\" suppressHydrationWarning>\n"
-            "      <body className={`${display.variable} ${mono.variable}`}>\n"
-            "        <div className=\"shell\">{children}</div>\n"
-            "      </body>\n"
-            "    </html>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "app/loading.tsx": (
-            "export default function Loading() {\n"
-            "  return (\n"
-            "    <main className=\"page\">\n"
-            "      <section className=\"sectionCard\">\n"
-            "        <p className=\"eyebrow\">Loading</p>\n"
-            "        <h1>Preparing the operations canvas...</h1>\n"
-            "      </section>\n"
-            "    </main>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "app/page.tsx": (
-            "import { DashboardClient } from '../components/dashboardclient';\n"
-            "import { defaultBriefPayload } from '../lib/data';\n\n"
-            "export default function HomePage() {\n"
-            "  return <DashboardClient variant=\"overview\" initialPayload={defaultBriefPayload} />;\n"
-            "}\n"
-        ),
-        "app/dashboard/page.tsx": (
-            "import { DashboardClient } from '../../components/dashboardclient';\n"
-            "import { defaultBriefPayload } from '../../lib/data';\n\n"
-            "export default function DashboardPage() {\n"
-            "  return <DashboardClient variant=\"detail\" initialPayload={defaultBriefPayload} />;\n"
-            "}\n"
-        ),
-        "app/api/health/route.ts": (
-            "import { NextResponse } from 'next/server';\n\n"
-            "export async function GET() {\n"
-            "  return NextResponse.json({ ok: true });\n"
-            "}\n"
-        ),
-        "app/api/brief/route.ts": (
-            "import { NextResponse } from 'next/server';\n\n"
-            "export async function GET() {\n"
-            "  return NextResponse.json({ refreshedAt: new Date().toISOString() });\n"
-            "}\n"
-        ),
-        "app/globals.css": (
-            ":root {\n"
-            "  color-scheme: light;\n"
-            "  --bg: #f5efe5;\n"
-            "  --bg-strong: #efe1cb;\n"
-            "  --panel: rgba(255, 250, 242, 0.86);\n"
-            "  --panel-strong: rgba(255, 247, 236, 0.98);\n"
-            "  --line: rgba(27, 43, 65, 0.12);\n"
-            "  --text: #1a2433;\n"
-            "  --muted: #6c7684;\n"
-            "  --accent: #e6783a;\n"
-            "  --accent-strong: #0f766e;\n"
-            "  --ink-soft: rgba(26, 36, 51, 0.08);\n"
-            "  --shadow: 0 32px 80px rgba(103, 73, 40, 0.16);\n"
-            "}\n\n"
-            "html[data-theme='dark'] {\n"
-            "  color-scheme: dark;\n"
-            "  --bg: #07111f;\n"
-            "  --bg-strong: #0d1a29;\n"
-            "  --panel: rgba(10, 24, 45, 0.88);\n"
-            "  --panel-strong: rgba(9, 20, 36, 0.96);\n"
-            "  --line: rgba(121, 192, 255, 0.18);\n"
-            "  --text: #e6edf3;\n"
-            "  --muted: #8aa4c2;\n"
-            "  --accent: #f59e0b;\n"
-            "  --accent-strong: #5eead4;\n"
-            "  --ink-soft: rgba(230, 237, 243, 0.08);\n"
-            "  --shadow: 0 32px 90px rgba(0, 0, 0, 0.32);\n"
-            "}\n\n"
-            "* { box-sizing: border-box; }\n"
-            "html, body { margin: 0; padding: 0; min-height: 100%; background: linear-gradient(180deg, var(--bg) 0%, var(--bg-strong) 100%); color: var(--text); transition: background 200ms ease, color 200ms ease; }\n"
-            "body { line-height: 1.5; font-family: var(--font-display), 'Segoe UI', sans-serif; }\n"
-            "body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 15% 15%, rgba(230, 120, 58, 0.14), transparent 28%), radial-gradient(circle at 85% 20%, rgba(15, 118, 110, 0.12), transparent 24%), linear-gradient(135deg, rgba(255,255,255,0.24) 0%, transparent 45%); pointer-events: none; }\n"
-            "a { color: inherit; text-decoration: none; }\n"
-            ".shell { min-height: 100vh; padding: 32px 20px 48px; position: relative; }\n"
-            ".page { max-width: 1220px; margin: 0 auto; display: grid; gap: 24px; position: relative; }\n"
-            ".hero, .sectionCard { border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(16px); border-radius: 32px; padding: 28px; box-shadow: var(--shadow); position: relative; overflow: hidden; }\n"
-            ".hero::after, .sectionCard::after { content: ''; position: absolute; inset: auto -10% -45% auto; width: 220px; height: 220px; background: radial-gradient(circle, rgba(230, 120, 58, 0.16), transparent 66%); }\n"
-            ".eyebrow { margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--accent-strong); font-size: 12px; font-family: var(--font-mono), monospace; }\n"
-            "h1, h2, h3, p { margin: 0; }\n"
-            ".hero { display: grid; gap: 24px; }\n"
-            ".heroHeader { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }\n"
-            ".heroTitle { font-size: clamp(2.7rem, 7vw, 5.4rem); line-height: 0.95; max-width: 9ch; letter-spacing: -0.05em; }\n"
-            ".heroCopy { max-width: 760px; font-size: 1.05rem; color: var(--muted); }\n"
-            ".heroBadge { border-radius: 999px; padding: 10px 14px; background: rgba(15, 118, 110, 0.08); border: 1px solid rgba(15, 118, 110, 0.18); font-family: var(--font-mono), monospace; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; }\n"
-            ".heroHighlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }\n"
-            ".heroHighlight { padding: 16px 18px; border-radius: 20px; background: rgba(255,255,255,0.72); border: 1px solid rgba(27, 43, 65, 0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }\n"
-            ".heroActions { display: flex; gap: 12px; flex-wrap: wrap; }\n"
-            ".primaryButton, .secondaryButton, .textLink { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; font-weight: 600; }\n"
-            ".primaryButton { background: var(--text); color: #fff7ef; padding: 12px 18px; }\n"
-            ".secondaryButton { border: 1px solid var(--line); padding: 12px 18px; background: rgba(255,255,255,0.56); }\n"
-            ".textLink { color: var(--accent-strong); font-family: var(--font-mono), monospace; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; }\n"
-            ".utilityBar { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; }\n"
-            ".utilityGroup { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }\n"
-            ".statusPill { padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.5); font-family: var(--font-mono), monospace; font-size: 0.78rem; }\n"
-            ".statusPill.is-error { color: #b91c1c; }\n"
-            ".statusPill.is-live { color: var(--accent-strong); }\n"
-            ".refreshButton { border: 1px solid var(--line); background: var(--panel-strong); color: var(--text); padding: 10px 14px; border-radius: 999px; font-family: var(--font-mono), monospace; }\n"
-            ".themeToggle { display: inline-flex; padding: 4px; gap: 4px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.52); }\n"
-            ".themeChip { border: 0; background: transparent; color: var(--muted); padding: 10px 12px; border-radius: 999px; font-family: var(--font-mono), monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; }\n"
-            ".themeChip.is-active { background: var(--text); color: #fff7ef; }\n"
-            ".metricGrid, .signalGrid, .featureGrid { display: grid; gap: 18px; }\n"
-            ".metricGrid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }\n"
-            ".metricCard { padding: 22px; border-radius: 24px; background: var(--panel-strong); border: 1px solid var(--line); box-shadow: var(--shadow); transform: translateY(0); animation: floatUp 560ms ease both; }\n"
-            ".metricLabel, .signalLabel, .microLabel { font-family: var(--font-mono), monospace; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }\n"
-            ".metricValue { margin-top: 12px; font-size: 2rem; letter-spacing: -0.04em; }\n"
-            ".metricDetail { margin-top: 10px; color: var(--muted); }\n"
-            ".signalGrid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }\n"
-            ".signalCard { border: 1px solid var(--line); background: rgba(255,255,255,0.66); border-radius: 26px; padding: 20px; display: grid; gap: 12px; position: relative; overflow: hidden; }\n"
-            ".signalTone { position: absolute; inset: 0 auto 0 0; width: 6px; }\n"
-            ".signalTone.is-healthy { background: #0f766e; }\n"
-            ".signalTone.is-watch { background: #e6783a; }\n"
-            ".signalTone.is-planning { background: #3b82f6; }\n"
-            ".signalStatus { font-size: 1.1rem; font-weight: 700; }\n"
-            ".muted { color: var(--muted); }\n"
-            ".list { display: grid; gap: 12px; margin-top: 18px; }\n"
-            ".listItem { border-left: 3px solid var(--accent); padding-left: 14px; color: var(--text); }\n"
-            ".featureGrid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }\n"
-            ".railList { display: grid; gap: 14px; margin-top: 18px; }\n"
-            ".railItem { padding: 16px 18px; border-radius: 20px; background: rgba(255,255,255,0.64); border: 1px solid var(--line); }\n"
-            ".sectionHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }\n"
-            ".sectionCopy { margin-top: 12px; max-width: 640px; }\n"
-            ".compactMetrics .metricCard { padding: 18px; }\n"
-            ".dashboardStack { display: grid; gap: 24px; }\n"
-            "@keyframes floatUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }\n"
-            "@media (max-width: 920px) { .featureGrid { grid-template-columns: 1fr; } .heroHeader, .sectionHeader { flex-direction: column; } }\n"
-            "@media (max-width: 720px) { .shell { padding: 20px 14px 36px; } .hero, .sectionCard { padding: 22px; border-radius: 24px; } .heroTitle { font-size: clamp(2.2rem, 15vw, 3.6rem); } }\n"
-        ),
-        "components/dashboardclient.tsx": (
-            "'use client';\n\n"
-            "import { useEffect, useState } from 'react';\n"
-            "import { ExecutionBoard } from './executionboard';\n"
-            "import { FocusRail } from './focusrail';\n"
-            "import { HeroPanel } from './heropanel';\n"
-            "import { InsightTimeline } from './insighttimeline';\n"
-            "import { MetricCluster } from './metriccluster';\n"
-            "import { SignalMatrix } from './signalmatrix';\n"
-            "import { ThemeToggle } from './themetoggle';\n"
-            "import type { BriefPayload } from '../lib/types';\n\n"
-            "type DashboardVariant = 'overview' | 'detail';\n\n"
-            "async function readBrief(): Promise<BriefPayload> {\n"
-            "  const response = await fetch('/api/brief', { cache: 'no-store' });\n"
-            "  if (!response.ok) {\n"
-            "    throw new Error(`brief fetch failed: ${response.status}`);\n"
-            "  }\n"
-            "  return response.json() as Promise<BriefPayload>;\n"
-            "}\n\n"
-            "export function DashboardClient({ initialPayload, variant }: { initialPayload: BriefPayload; variant: DashboardVariant }) {\n"
-            "  const [payload, setPayload] = useState(initialPayload);\n"
-            "  const [phase, setPhase] = useState<'idle' | 'loading' | 'live' | 'error'>('idle');\n"
-            "  const [errorMessage, setErrorMessage] = useState('');\n\n"
-            "  const refresh = async () => {\n"
-            "    setPhase('loading');\n"
-            "    setErrorMessage('');\n"
-            "    try {\n"
-            "      const nextPayload = await readBrief();\n"
-            "      setPayload(nextPayload);\n"
-            "      setPhase('live');\n"
-            "    } catch (error) {\n"
-            "      setPhase('error');\n"
-            "      setErrorMessage(error instanceof Error ? error.message : 'brief fetch failed');\n"
-            "    }\n"
-            "  };\n\n"
-            "  useEffect(() => {\n"
-            "    void refresh();\n"
-            "  }, []);\n\n"
-            "  const runtimeItems = payload.runtimeSignals.map((signal) => `${signal.label}: ${signal.status} · ${signal.owner}`);\n"
-            "  const pillClassName = phase === 'error' ? 'statusPill is-error' : phase === 'live' ? 'statusPill is-live' : 'statusPill';\n\n"
-            "  return (\n"
-            "    <main className=\"page dashboardStack\">\n"
-            "      <section className=\"sectionCard utilityBar\">\n"
-            "        <div className=\"utilityGroup\">\n"
-            "          <div className=\"statusPill\">Variant · {variant}</div>\n"
-            "          <div className={pillClassName}>Fetch · {phase}</div>\n"
-            "          <div className=\"statusPill\">Refreshed · {payload.refreshedAt}</div>\n"
-            "        </div>\n"
-            "        <div className=\"utilityGroup\">\n"
-            "          <ThemeToggle />\n"
-            "          <button type=\"button\" className=\"refreshButton\" onClick={() => void refresh()}>Refresh live brief</button>\n"
-            "        </div>\n"
-            "      </section>\n"
-            "      {phase === 'error' ? <section className=\"sectionCard\"><p className=\"eyebrow\">Fetch warning</p><p>{errorMessage}</p></section> : null}\n"
-            "      {variant === 'overview' ? (\n"
-            "        <>\n"
-            "          <HeroPanel summary={payload.summary} />\n"
-            "          <MetricCluster metrics={payload.metrics} />\n"
-            "          <SignalMatrix signals={payload.runtimeSignals} />\n"
-            "          <section className=\"featureGrid\">\n"
-            "            <FocusRail title=\"Focus rail\" items={payload.focusRail} />\n"
-            "            <InsightTimeline title=\"Release timeline\" items={payload.releaseTimeline} />\n"
-            "          </section>\n"
-            "        </>\n"
-            "      ) : (\n"
-            "        <>\n"
-            "          <header className=\"sectionCard sectionHeader\">\n"
-            "            <div>\n"
-            "              <p className=\"eyebrow\">Dashboard</p>\n"
-            "              <h1>Operational release cockpit</h1>\n"
-            "              <p className=\"muted sectionCopy\">This view compresses the same live brief into a denser board for owners and release reviewers.</p>\n"
-            "            </div>\n"
-            "            <a href=\"/api/brief\" className=\"textLink\">Open raw brief JSON</a>\n"
-            "          </header>\n"
-            "          <MetricCluster metrics={payload.metrics} compact />\n"
-            "          <section className=\"featureGrid\">\n"
-            "            <ExecutionBoard title=\"Runtime signals\" items={runtimeItems} />\n"
-            "            <InsightTimeline title=\"Release timeline\" items={payload.releaseTimeline} />\n"
-            "          </section>\n"
-            "        </>\n"
-            "      )}\n"
-            "    </main>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/heropanel.tsx": (
-            "import type { DashboardSummary } from '../lib/types';\n\n"
-            "export function HeroPanel({ summary }: { summary: DashboardSummary }) {\n"
-            "  return (\n"
-            "    <section className=\"hero\">\n"
-            "      <div className=\"heroHeader\">\n"
-            "        <div>\n"
-            "          <p className=\"eyebrow\">{summary.eyebrow}</p>\n"
-            "          <h1 className=\"heroTitle\">{summary.headline}</h1>\n"
-            "        </div>\n"
-            "        <div className=\"heroBadge\">{summary.badge}</div>\n"
-            "      </div>\n"
-            "      <p className=\"heroCopy\">{summary.description}</p>\n"
-            "      <div className=\"heroHighlights\">\n"
-            "        {summary.highlights.map((item) => (\n"
-            "          <div key={item} className=\"heroHighlight\">{item}</div>\n"
-            "        ))}\n"
-            "      </div>\n"
-            "      <div className=\"heroActions\">\n"
-            "        <a href={summary.primaryHref} className=\"primaryButton\">{summary.primaryLabel}</a>\n"
-            "        <a href={summary.secondaryHref} className=\"secondaryButton\">{summary.secondaryLabel}</a>\n"
-            "      </div>\n"
-            "    </section>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/metriccluster.tsx": (
-            "import type { SummaryMetric } from '../lib/types';\n\n"
-            "export function MetricCluster({ metrics, compact = false }: { metrics: SummaryMetric[]; compact?: boolean }) {\n"
-            "  return (\n"
-            "    <section className={compact ? 'metricGrid compactMetrics' : 'metricGrid'}>\n"
-            "      {metrics.map((metric) => (\n"
-            "        <article key={metric.label} className=\"metricCard\">\n"
-            "          <div className=\"metricLabel\">{metric.label}</div>\n"
-            "          <div className=\"metricValue\">{metric.value}</div>\n"
-            "          <p className=\"metricDetail\">{metric.detail}</p>\n"
-            "        </article>\n"
-            "      ))}\n"
-            "    </section>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/signalmatrix.tsx": (
-            "import type { RuntimeSignal } from '../lib/types';\n\n"
-            "export function SignalMatrix({ signals }: { signals: RuntimeSignal[] }) {\n"
-            "  return (\n"
-            "    <section className=\"signalGrid\">\n"
-            "      {signals.map((signal) => (\n"
-            "        <article key={signal.label} className=\"signalCard\">\n"
-            "          <div className={`signalTone is-${signal.tone}`} />\n"
-            "          <div className=\"signalLabel\">{signal.label}</div>\n"
-            "          <div className=\"signalStatus\">{signal.status}</div>\n"
-            "          <p className=\"muted\">{signal.detail}</p>\n"
-            "          <div className=\"microLabel\">Owner · {signal.owner}</div>\n"
-            "        </article>\n"
-            "        ))}\n"
-            "    </section>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/focusrail.tsx": (
-            "import type { FocusItem } from '../lib/types';\n\n"
-            "export function FocusRail({ title, items }: { title: string; items: FocusItem[] }) {\n"
-            "  return (\n"
-            "    <section className=\"sectionCard\">\n"
-            "      <p className=\"eyebrow\">Focus</p>\n"
-            "      <h2>{title}</h2>\n"
-            "      <div className=\"railList\">\n"
-            "        {items.map((item) => (\n"
-            "          <article key={item.title} className=\"railItem\">\n"
-            "            <div className=\"microLabel\">{item.owner}</div>\n"
-            "            <h3 style={{ marginTop: 8 }}>{item.title}</h3>\n"
-            "            <p className=\"muted\" style={{ marginTop: 8 }}>{item.summary}</p>\n"
-            "          </article>\n"
-            "        ))}\n"
-            "      </div>\n"
-            "    </section>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/insighttimeline.tsx": (
-            "export function InsightTimeline({ title, items }: { title: string; items: string[] }) {\n"
-            "  return (\n"
-            "    <section className=\"sectionCard\">\n"
-            "      <p className=\"eyebrow\">Timeline</p>\n"
-            "      <h2>{title}</h2>\n"
-            "      <div className=\"list\">\n"
-            "        {items.map((item, index) => (\n"
-            "          <div key={`${title}-${index}`} className=\"listItem\">\n"
-            "            <strong style={{ color: 'var(--accent-strong)' }}>0{index + 1}</strong> {item}\n"
-            "          </div>\n"
-            "        ))}\n"
-            "      </div>\n"
-            "    </section>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/executionboard.tsx": (
-            "export function ExecutionBoard({ title, items }: { title: string; items: string[] }) {\n"
-            "  return (\n"
-            "    <section className=\"sectionCard\">\n"
-            "      <p className=\"eyebrow\">Execution</p>\n"
-            "      <h2>{title}</h2>\n"
-            "      <div className=\"list\">\n"
-            "        {items.map((item, index) => (\n"
-            "          <div key={`${title}-${index}`} className=\"listItem\">\n"
-            "            <strong style={{ color: 'var(--accent)' }}>Step {index + 1}</strong> {item}\n"
-            "          </div>\n"
-            "        ))}\n"
-            "      </div>\n"
-            "    </section>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "components/themetoggle.tsx": (
-            "'use client';\n\n"
-            "import { useEffect, useState } from 'react';\n\n"
-            "type ThemeMode = 'light' | 'dark';\n\n"
-            "function applyTheme(theme: ThemeMode) {\n"
-            "  document.documentElement.dataset.theme = theme;\n"
-            "  window.localStorage.setItem('ops-theme', theme);\n"
-            "}\n\n"
-            "export function ThemeToggle() {\n"
-            "  const [theme, setTheme] = useState<ThemeMode>('light');\n\n"
-            "  useEffect(() => {\n"
-            "    const stored = window.localStorage.getItem('ops-theme');\n"
-            "    const resolved = stored === 'dark' ? 'dark' : 'light';\n"
-            "    setTheme(resolved);\n"
-            "    applyTheme(resolved);\n"
-            "  }, []);\n\n"
-            "  const updateTheme = (nextTheme: ThemeMode) => {\n"
-            "    setTheme(nextTheme);\n"
-            "    applyTheme(nextTheme);\n"
-            "  };\n\n"
-            "  return (\n"
-            "    <div className=\"themeToggle\">\n"
-            "      <button type=\"button\" className={theme === 'light' ? 'themeChip is-active' : 'themeChip'} onClick={() => updateTheme('light')}>Light</button>\n"
-            "      <button type=\"button\" className={theme === 'dark' ? 'themeChip is-active' : 'themeChip'} onClick={() => updateTheme('dark')}>Dark</button>\n"
-            "    </div>\n"
-            "  );\n"
-            "}\n"
-        ),
-        "lib/types.ts": (
-            "export interface DashboardSummary {\n"
-            "  eyebrow: string;\n"
-            "  headline: string;\n"
-            "  badge: string;\n"
-            "  description: string;\n"
-            "  highlights: string[];\n"
-            "  primaryLabel: string;\n"
-            "  primaryHref: string;\n"
-            "  secondaryLabel: string;\n"
-            "  secondaryHref: string;\n"
-            "}\n\n"
-            "export interface SummaryMetric {\n"
-            "  label: string;\n"
-            "  value: string;\n"
-            "  detail: string;\n"
-            "}\n\n"
-            "export interface RuntimeSignal {\n"
-            "  label: string;\n"
-            "  status: string;\n"
-            "  detail: string;\n"
-            "  owner: string;\n"
-            "  tone: 'healthy' | 'watch' | 'planning';\n"
-            "}\n\n"
-            "export interface FocusItem {\n"
-            "  title: string;\n"
-            "  summary: string;\n"
-            "  owner: string;\n"
-            "}\n\n"
-            "export interface BriefPayload {\n"
-            "  summary: DashboardSummary;\n"
-            "  metrics: SummaryMetric[];\n"
-            "  runtimeSignals: RuntimeSignal[];\n"
-            "  focusRail: FocusItem[];\n"
-            "  releaseTimeline: string[];\n"
-            "  refreshedAt: string;\n"
-            "}\n"
-        ),
-        "lib/data.ts": (
-            "import type { BriefPayload, DashboardSummary, FocusItem, RuntimeSignal, SummaryMetric } from './types';\n\n"
-            "export const dashboardSummary: DashboardSummary = {\n"
-            "  eyebrow: 'Operations canvas',\n"
-            "  headline: 'Release confidence with visible ownership.',\n"
-            "  badge: 'Template 2026.03',\n"
-            "  description: 'The generated dashboard acts like an editorial control room: planning context, runtime signals, and ship-readiness cues all sit in one deliberately designed surface.',\n"
-            "  highlights: [\n"
-            "    'Planning, validation, and release ownership are separated into clear lanes instead of one noisy feed.',\n"
-            "    'Each runtime card explains the operational meaning, not only the current color.',\n"
-            "    'Landing and dashboard surfaces share one data contract so the generated output remains deterministic.',\n"
-            "  ],\n"
-            "  primaryLabel: 'Open dashboard',\n"
-            "  primaryHref: '/dashboard',\n"
-            "  secondaryLabel: 'Read live brief',\n"
-            "  secondaryHref: '/api/brief',\n"
-            "};\n\n"
-            "export const summaryMetrics: SummaryMetric[] = [\n"
-            "  { label: 'Evidence coverage', value: '92%', detail: 'Traceability rows already linked to implementation and validation artifacts.' },\n"
-            "  { label: 'Runtime window', value: '14m', detail: 'Average time from checklist freeze to release handoff in the last dry-run.' },\n"
-            "  { label: 'Approval delta', value: '+3', detail: 'Three ownership gaps were closed before the final shipment review.' },\n"
-            "  { label: 'Recovery headroom', value: '2.4x', detail: 'Queue and incident buffers remain below the recovery escalation threshold.' },\n"
-            "];\n\n"
-            "export const runtimeSignals: RuntimeSignal[] = [\n"
-            "  { label: 'Approval gate', status: 'Green and locked', detail: 'Completion and semantic gates passed with no missing release evidence.', owner: 'Reviewer', tone: 'healthy' },\n"
-            "  { label: 'Queue watch', status: '6 tasks waiting', detail: 'Background queue remains under the recovery threshold with room for one more rollout.', owner: 'Runtime', tone: 'watch' },\n"
-            "  { label: 'Brief posture', status: 'Ready for live handoff', detail: 'The release brief is already reduced to operator-facing language for the final check.', owner: 'Reasoner', tone: 'planning' },\n"
-            "  { label: 'Evidence sync', status: 'Docs and code aligned', detail: 'The dashboard and route payloads use the same typed contract and update together.', owner: 'Planner', tone: 'healthy' },\n"
-            "];\n\n"
-            "export const focusRail: FocusItem[] = [\n"
-            "  { title: 'Lock scope early', summary: 'Freeze the visible release promise before the implementation lane expands and turns into rework.', owner: 'Planner' },\n"
-            "  { title: 'Explain runtime meaning', summary: 'Turn raw metrics into operator language so the release conversation stays decision-oriented.', owner: 'Reasoner' },\n"
-            "  { title: 'Ship only with evidence', summary: 'Keep route checks, build output, and ownership traces attached to the final handoff packet.', owner: 'Reviewer' },\n"
-            "];\n\n"
-            "export const releaseTimeline = [\n"
-            "  'Morning: freeze the change brief and confirm the live evidence packet.',\n"
-            "  'Midday: compare dashboard payloads, queue state, and route contract drift.',\n"
-            "  'Afternoon: finalize owner handoff notes, then ship from the same release canvas.',\n"
-            "];\n\n"
-            "export const defaultBriefPayload: BriefPayload = {\n"
-            "  summary: dashboardSummary,\n"
-            "  metrics: summaryMetrics,\n"
-            "  runtimeSignals,\n"
-            "  focusRail,\n"
-            "  releaseTimeline,\n"
-            "  refreshedAt: 'seeded-static-brief',\n"
-            "};\n"
-        ),
-    }
-
-
-def _build_node_service_vertical_slice_files(project_name: str) -> Dict[str, str]:
-    return {
-        "README.md": (
-            f"# {project_name}\n\n"
-            "Generated Node.js operational service scaffold.\n\n"
-            "## Included layers\n\n"
-            "- Express entrypoint and route composition\n"
-            "- Controller, service, and repository boundaries\n"
-            "- Runtime store abstraction and central error middleware\n"
-            "- TypeScript build path ready for npm run build\n"
-        ),
-        "package.json": (
-            "{\n"
-            "  \"name\": \"generated-node-ops-service\",\n"
-            "  \"private\": true,\n"
-            "  \"type\": \"commonjs\",\n"
-            "  \"scripts\": {\n"
-            "    \"dev\": \"tsx src/index.ts\",\n"
-            "    \"build\": \"tsc -p tsconfig.json\",\n"
-            "    \"start\": \"node dist/index.js\"\n"
-            "  },\n"
-            "  \"dependencies\": {\n"
-            "    \"express\": \"4.21.1\",\n"
-            "    \"zod\": \"3.23.8\"\n"
-            "  },\n"
-            "  \"devDependencies\": {\n"
-            "    \"@types/express\": \"5.0.0\",\n"
-            "    \"@types/node\": \"20.17.6\",\n"
-            "    \"tsx\": \"4.19.2\",\n"
-            "    \"typescript\": \"5.6.3\"\n"
-            "  }\n"
-            "}\n"
-        ),
-        "tsconfig.json": (
-            "{\n"
-            "  \"compilerOptions\": {\n"
-            "    \"target\": \"ES2022\",\n"
-            "    \"module\": \"CommonJS\",\n"
-            "    \"moduleResolution\": \"node\",\n"
-            "    \"outDir\": \"dist\",\n"
-            "    \"rootDir\": \"src\",\n"
-            "    \"strict\": true,\n"
-            "    \"esModuleInterop\": true,\n"
-            "    \"resolveJsonModule\": true,\n"
-            "    \"skipLibCheck\": true\n"
-            "  },\n"
-            "  \"include\": [\"src/**/*.ts\"],\n"
-            "  \"exclude\": [\"node_modules\", \"dist\"]\n"
-            "}\n"
-        ),
-        "src/types.ts": (
-            "export interface OrderRecord {\n"
-            "  id: string;\n"
-            "  customer: string;\n"
-            "  total: number;\n"
-            "  status: 'queued' | 'approved' | 'shipped';\n"
-            "}\n"
-        ),
-        "src/config.ts": (
-            "export const config = {\n"
-            "  serviceName: 'node-ops-service',\n"
-            "  port: Number(process.env.PORT || 8080),\n"
-            "  runtimeProfile: process.env.RUNTIME_PROFILE || 'local-deterministic',\n"
-            "  secretKey: process.env.SECRET_KEY || 'change-me',\n"
-            "};\n"
-        ),
-        "src/lib/runtimeStore.ts": (
-            "import { config } from '../config';\n\n"
-            "export function readRuntimeSummary() {\n"
-            "  return {\n"
-            "    profile: config.runtimeProfile,\n"
-            "    readiness: 'ready',\n"
-            "  };\n"
-            "}\n"
-        ),
-        "src/repositories/orderRepository.ts": (
-            "import type { OrderRecord } from '../types';\n\n"
-            "const orders: OrderRecord[] = [\n"
-            "  { id: 'ord-100', customer: 'metanova', total: 182000, status: 'approved' },\n"
-            "  { id: 'ord-101', customer: 'pilot-lab', total: 94000, status: 'queued' },\n"
-            "];\n\n"
-            "export function listOrders(): OrderRecord[] {\n"
-            "  return orders.map((order) => ({ ...order }));\n"
-            "}\n\n"
-            "export function findOrder(orderId: string): OrderRecord | undefined {\n"
-            "  return orders.find((order) => order.id === orderId);\n"
-            "}\n"
-        ),
-        "src/services/orderService.ts": (
-            "import { findOrder, listOrders } from '../repositories/orderRepository';\n"
-            "import { readRuntimeSummary } from '../lib/runtimeStore';\n\n"
-            "export function buildHealthPayload() {\n"
-            "  return {\n"
-            "    ok: true,\n"
-            "    service: 'go-ops-service',\n"
-            "    timestamp: new Date().toISOString(),\n"
-            "    runtime: readRuntimeSummary(),\n"
-            "  };\n"
-            "}\n\n"
-            "export function listOperationalOrders() {\n"
-            "  return {\n"
-            "    runtime: readRuntimeSummary(),\n"
-            "    items: listOrders(),\n"
-            "  };\n"
-            "}\n\n"
-            "export function readOperationalOrder(orderId: string) {\n"
-            "  const order = findOrder(orderId);\n"
-            "  if (!order) {\n"
-            "    return null;\n"
-            "  }\n"
-            "  return {\n"
-            "    order,\n"
-            "    runtime: readRuntimeSummary(),\n"
-            "    nextStep: order.status === 'queued' ? 'review-and-approve' : 'handoff-ready',\n"
-            "  };\n"
-            "}\n"
-        ),
-        "src/http/handlers/health.go": (
-            "package handlers\n\n"
-            "import (\n"
-            "\t\"encoding/json\"\n"
-            "\t\"net/http\"\n"
-            "\t\"generated/service/internal/service\"\n"
-            ")\n\n"
-            "type HealthHandler struct {\n"
-            "\tservice service.InventoryService\n"
-            "}\n\n"
-            "func NewHealthHandler(service service.InventoryService) HealthHandler {\n"
-            "\treturn HealthHandler{service: service}\n"
-            "}\n\n"
-            "func (handler HealthHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {\n"
-            "\twriter.Header().Set(\"Content-Type\", \"application/json\")\n"
-            "\t_ = json.NewEncoder(writer).Encode(handler.service.HealthPayload())\n"
-            "}\n"
-        ),
-        "src/http/handlers/inventory.go": (
-            "package handlers\n\n"
-            "import (\n"
-            "\t\"encoding/json\"\n"
-            "\t\"net/http\"\n"
-            "\t\"generated/service/internal/service\"\n"
-            ")\n\n"
-            "type InventoryHandler struct {\n"
-            "\tservice service.InventoryService\n"
-            "}\n\n"
-            "func NewInventoryHandler(service service.InventoryService) InventoryHandler {\n"
-            "\treturn InventoryHandler{service: service}\n"
-            "}\n\n"
-            "func (handler InventoryHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {\n"
-            "\twriter.Header().Set(\"Content-Type\", \"application/json\")\n"
-            "\t_ = json.NewEncoder(writer).Encode(handler.service.InventoryPayload())\n"
-            "}\n"
-        ),
-        "src/http/router.go": (
-            "package httpapi\n\n"
-            "import (\n"
-            "\t\"net/http\"\n"
-            "\t\"generated/service/internal/http/handlers\"\n"
-            "\t\"generated/service/internal/repository\"\n"
-            "\t\"generated/service/internal/service\"\n"
-            ")\n\n"
-            "func NewRouter() http.Handler {\n"
-            "\trepo := repository.NewInventoryRepository()\n"
-            "\tserviceLayer := service.NewInventoryService(repo)\n"
-            "\tmux := http.NewServeMux()\n"
-            "\tmux.Handle(\"/health\", handlers.NewHealthHandler(serviceLayer))\n"
-            "\tmux.Handle(\"/inventory\", handlers.NewInventoryHandler(serviceLayer))\n"
-            "\treturn mux\n"
-            "}\n"
-        ),
-    }
-
 
 def _is_locked_targeted_patch_run(
     task: str,
@@ -5693,7 +4672,7 @@ def _build_fixed_scaffold_files(
         "docs/orchestration_rules_checklist.md",
     }
     required_lookup = {
-        _normalize_rel(path)
+        _normalize_rel(path) # pyright: ignore[reportUndefinedVariable] # pyright: ignore[reportUndefinedVariable]
         for path in (orchestration_spec.required_files or [])
         if str(path).strip()
     }
@@ -5908,14 +4887,14 @@ def _build_fixed_scaffold_files(
             }
         )
     elif template_profile in {"nextjs_app", "nextjs", "fullstack_mixed"}:
-        template_candidates.update(nextjs_defaults)
+        template_candidates.update(nextjs_defaults) # pyright: ignore[reportUndefinedVariable]
 
     design_ready_paths = set(template_candidates.keys())
     target_paths = set(required_lookup or template_candidates.keys()) | always_include
     fallback_only_paths: List[str] = []
     for target_path in sorted(target_paths):
         if target_path not in template_candidates:
-            template_candidates[target_path] = _fallback_required_content(target_path)
+            template_candidates[target_path] = _fallback_required_content(target_path) # pyright: ignore[reportUndefinedVariable]
         if target_path not in design_ready_paths:
             fallback_only_paths.append(target_path)
 
@@ -6092,6 +5071,16 @@ def _build_customer_order_profile(task: str, project_name: str) -> Dict[str, Any
     ]
     profiles: List[Dict[str, Any]] = [
         {
+            "profile_id": "autonomous_multimall_platform",
+            "label": "자율운영 멀티 쇼핑몰 플랫폼",
+            "summary": "tenant 운영, 카탈로그 동기화, 캠페인 최적화, fulfillment 감독을 함께 다루는 멀티 스토어 주문형 프로그램",
+            "keywords": ["멀티 쇼핑몰", "멀티쇼핑몰", "multimall", "multi mall", "tenant", "fulfillment", "campaign optimization"],
+            "entities": ["tenants", "catalog_sync_jobs", "campaigns", "fulfillment_runs"],
+            "requested_outcomes": ["tenant 운영", "카탈로그 동기화", "캠페인 최적화", "fulfillment 감독"],
+            "ui_modules": ["tenant 운영 보드", "카탈로그 동기화 패널", "캠페인 최적화 대시보드", "fulfillment 감독 센터"],
+            "requested_stack": ["FastAPI", "catalog-ui", "order-workflow", "tenant-ops"],
+        },
+        {
             "profile_id": "trading_system",
             "label": "자동매매/트레이딩 시스템",
             "summary": "전략 신호, 주문, 포트폴리오, 실행 상태를 관리하는 주문형 프로그램",
@@ -6241,12 +5230,11 @@ def _build_customer_order_profile(task: str, project_name: str) -> Dict[str, Any
 
     explicit_profile_id = ""
     mojibake_detected = _has_mojibake_text(task) or _has_mojibake_text(project_name)
-    if workspace_app_target_context:
-        explicit_profile_id = "commerce_platform"
     explicit_profile_markers = [
         ("deployment_kit_program", ["코드 생성기 배포 키트", "deployment kit", "실배포 구현형", "배포 패키징", "publish-readiness", "runtime policy", "실프로그램", "출고형"]),
-        ("commerce_platform", ["마켓플레이스", "이커머스", "쇼핑몰", "커머스", "catalog", "product", "order", "store"]),
-        ("trading_system", ["자동매매", "트레이딩", "주식", "매매", "trading", "stock", "portfolio", "signal"]),
+        ("autonomous_multimall_platform", ["멀티 쇼핑몰", "멀티쇼핑몰", "multimall", "multi mall", "tenant 운영", "tenant", "fulfillment", "캠페인 최적화"]),
+            ("trading_system", ["자동매매", "트레이딩", "주식", "매매", "trading", "stock", "portfolio", "signal"]),
+            ("commerce_platform", ["마켓플레이스", "이커머스", "쇼핑몰", "커머스", "catalog", "product", "order", "store"]),
         ("website_builder", ["웹사이트", "홈페이지", "landing page", "website", "브랜딩"]),
         ("automation_service", ["자동화", "workflow", "agent", "scheduler", "queue", "etl", "pipeline"]),
         ("admin_console", ["관리자 콘솔", "admin console", "admin dashboard", "backoffice", "권한 관리", "role management", "감사 로그", "audit trail"]),
@@ -6257,6 +5245,9 @@ def _build_customer_order_profile(task: str, project_name: str) -> Dict[str, Any
         if any(marker.lower() in task_text for marker in markers):
             explicit_profile_id = candidate_profile_id
             break
+
+    if not explicit_profile_id and workspace_app_target_context:
+        explicit_profile_id = "commerce_platform"
 
     if not explicit_profile_id and mojibake_detected:
         commerce_fallback_markers = [
@@ -6319,8 +5310,18 @@ def _build_customer_order_profile(task: str, project_name: str) -> Dict[str, Any
         "오케스트레이터",
     ]
     ai_requested = any(token in source_text for token in ai_activation_markers)
+    ai_disable_markers = [
+        "no ai",
+        "without ai",
+        "non-ai",
+        "ai 제외",
+        "ai 비활성화",
+    ]
+    ai_forced_default = not any(marker in source_text for marker in ai_disable_markers)
     is_trading_profile = profile.get("profile_id") == "trading_system"
-    profile["ai_enabled"] = ai_requested or is_trading_profile
+    profile["ai_enabled"] = ai_requested or is_trading_profile or ai_forced_default
+    if profile["ai_enabled"]:
+        profile["ai_engine_core"] = "sorisae"
     if profile["ai_enabled"]:
         profile["mandatory_engine_contracts"] = [
             "engine-core",
@@ -6359,6 +5360,7 @@ def _build_customer_order_profile(task: str, project_name: str) -> Dict[str, Any
             "ai-engine",
             "training-pipeline",
             "model-registry",
+            "sorisae-ai-core",
         ])
         if profile.get("profile_id") == "trading_system":
             profile["mandatory_engine_contracts"] = _unique_sequence(list(profile.get("mandatory_engine_contracts") or []) + [
@@ -6432,6 +5434,7 @@ def _resolve_customer_ai_adapter_profile(order_profile: Dict[str, Any]) -> str:
         "trading_system": "trading",
         "website_builder": "content",
         "admin_console": "operations",
+        "autonomous_multimall_platform": "commerce",
         "commerce_platform": "commerce",
         "automation_service": "workflow",
         "crm_suite": "crm",
@@ -6475,6 +5478,12 @@ def _resolve_customer_domain_contract(order_profile: Dict[str, Any]) -> Dict[str
             "jwt_scopes": ["healthcare.read", "healthcare.write", "healthcare.triage"],
             "ops_channels": ["audit", "triage", "patient-ops"],
             "adapter_targets": ["risk_score", "triage_level", "follow_up_action"],
+        },
+        "autonomous_multimall_platform": {
+            "database_tables": ["tenants", "catalogs", "campaigns", "fulfillment_runs", "recommendation_runs"],
+            "jwt_scopes": ["commerce.read", "commerce.write", "commerce.fulfill", "tenant.manage"],
+            "ops_channels": ["audit", "catalog", "campaign-ops", "fulfillment"],
+            "adapter_targets": ["conversion_score", "campaign_score", "fulfillment_risk", "next_offer"],
         },
         "commerce_platform": {
             "database_tables": ["products", "catalogs", "carts", "orders", "recommendation_runs"],
@@ -7107,7 +6116,7 @@ def _build_commerce_platform_template_candidates(
             "APP_ENV=dev\n"
             "APP_PORT=8000\n"
             "DATABASE_URL=sqlite:///./runtime/data/commerce.db\n"
-            "JWT_SECRET=replace-with-32-char-random-secret\n"
+            "JWT_SECRET=\n"
             "JWT_ALGORITHM=HS256\n"
             "JWT_EXPIRE_MINUTES=30\n"
             "ALLOWED_HOSTS=localhost,127.0.0.1,metanova1004.com\n"
@@ -7117,19 +6126,6 @@ def _build_commerce_platform_template_candidates(
             "SHOPIFY_BASE_URL=https://demo.example.com\n"
             "PAYMENT_PROVIDER_TOKEN=replace-with-payment-token\n"
             "PAYMENT_PROVIDER_URL=https://payments.example.com\n"
-        ),
-        "configs/logging.yml": (
-            "version: 1\n"
-            "formatters:\n"
-            "  standard:\n"
-            "    format: '%(asctime)s %(levelname)s %(name)s %(message)s'\n"
-            "handlers:\n"
-            "  console:\n"
-            "    class: logging.StreamHandler\n"
-            "    formatter: standard\n"
-            "root:\n"
-            "  level: INFO\n"
-            "  handlers: [console]\n"
         ),
         "scripts/dev.sh": (
             "#!/usr/bin/env bash\n"
@@ -7142,8 +6138,9 @@ def _build_commerce_platform_template_candidates(
         "scripts/check.sh": (
             "#!/usr/bin/env bash\n"
             "set -euo pipefail\n\n"
+            "test -f requirements.delivery.lock.txt\n"
             "python -m compileall app backend tests ai\n"
-            "pytest -q tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_catalog_flow.py tests/test_order_workflow.py tests/test_publish_payload.py tests/test_ai_pipeline.py tests/test_security_runtime.py\n"
+            "pytest -q -s tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_catalog_flow.py tests/test_order_workflow.py tests/test_publish_payload.py tests/test_ai_pipeline.py tests/test_security_runtime.py\n"
         ),
         "app/__init__.py": (
             "from app.main import app, create_application\n"
@@ -7220,7 +6217,7 @@ def _build_commerce_platform_template_candidates(
             "from typing import Any, Dict\n"
             "from jose import JWTError, jwt\n\n"
             "JWT_SCOPES = ['catalog:read', 'orders:write', 'ops:read']\n"
-            "JWT_SECRET = os.getenv('JWT_SECRET', 'replace-with-32-char-random-secret')\n"
+            "JWT_SECRET = os.getenv('JWT_SECRET', '').strip()\n"
             "JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')\n"
             "JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '30'))\n\n"
             "def get_auth_settings() -> Dict[str, Any]:\n"
@@ -7747,7 +6744,7 @@ def _build_commerce_platform_template_candidates(
             "    environment:\n"
             "      APP_ENV: dev\n"
             "      APP_PORT: 8000\n"
-            "      JWT_SECRET: replace-with-32-char-random-secret\n"
+            "      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET_REQUIRED}\n"
             "      JWT_ALGORITHM: HS256\n"
             "      JWT_EXPIRE_MINUTES: 30\n"
             "      ALLOWED_HOSTS: localhost,127.0.0.1,metanova1004.com\n"
@@ -8325,7 +7322,7 @@ def _build_customer_order_template_candidates(
             "from typing import Any, Dict\n"
             "from jose import JWTError, jwt\n\n"
             "JWT_SCOPES = ['program.read', 'program.write', 'ops.read']\n"
-            "JWT_SECRET = os.getenv('JWT_SECRET', 'replace-with-32-char-random-secret')\n"
+            "JWT_SECRET = os.getenv('JWT_SECRET', '').strip()\n"
             "JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')\n"
             "JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '30'))\n\n"
             "def get_auth_settings() -> Dict[str, Any]:\n"
@@ -8739,7 +7736,7 @@ def _build_customer_order_template_candidates(
             "APP_ENV=dev\n"
             "APP_PORT=8000\n"
             "DATABASE_URL=sqlite:///./runtime/data/app.db\n"
-            "JWT_SECRET=replace-with-strong-secret\n"
+            "JWT_SECRET=\n"
             "JWT_ALGORITHM=HS256\n"
             "JWT_EXPIRE_MINUTES=60\n"
             "ALLOWED_HOSTS=localhost,127.0.0.1,metanova1004.com\n"
@@ -8786,8 +7783,7 @@ def _build_customer_order_template_candidates(
             "      - DATABASE_URL=sqlite:///./app.db\n"
             "      - JWT_ALGORITHM=HS256\n"
             "      - JWT_EXPIRE_MINUTES=30\n"
-            "      JWT_SECRET: replace-with-32-char-random-secret\n"
-            "      - JWT_SECRET=replace-with-32-char-random-secret\n"
+            "      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_REQUIRED}\n"
             "      - ALLOWED_HOSTS=localhost,127.0.0.1,metanova1004.com\n"
             "      - CORS_ALLOW_ORIGINS=https://metanova1004.com\n"
             "      - OPS_LOG_PATH=logs/ops-events.jsonl\n"
@@ -8841,7 +7837,7 @@ def _build_customer_order_template_candidates(
         ),
     }
 
-    if profile_id == "commerce_platform":
+    if profile_id in {"commerce_platform", "autonomous_multimall_platform"}:
         template_candidates.update(
             _build_commerce_platform_template_candidates(
                 project_name=project_name,
@@ -8876,7 +7872,7 @@ def _build_customer_order_template_candidates(
                 )
             )
 
-    if order_profile.get("ai_enabled") and profile_id != "commerce_platform":
+    if order_profile.get("ai_enabled") and profile_id not in {"commerce_platform", "autonomous_multimall_platform"}:
         template_candidates.update(
             {
                 "docs/ai_capability_plan.md": (
@@ -8948,7 +7944,7 @@ def _build_customer_order_template_candidates(
                     "from typing import Any, Dict\n"
                     "from jose import JWTError, jwt\n\n"
                     f"JWT_SCOPES = {json.dumps(domain_contract['jwt_scopes'], ensure_ascii=False)}\n"
-                    "JWT_SECRET = os.getenv('JWT_SECRET', 'codeai-generated-prod-secret-change-me')\n"
+                    "JWT_SECRET = os.getenv('JWT_SECRET', '').strip()\n"
                     "JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')\n"
                     "JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '60'))\n\n"
                     "def get_auth_settings() -> Dict[str, Any]:\n"
@@ -9088,6 +8084,9 @@ def _build_customer_order_template_candidates(
                     "from fastapi import APIRouter, HTTPException\n"
                     "from backend.core.auth import create_access_token, decode_access_token, get_auth_settings\n\n"
                     "auth_router = APIRouter(prefix='/auth', tags=['auth'])\n\n"
+                    "@auth_router.get('/settings')\n"
+                    "def auth_settings():\n"
+                    "    return get_auth_settings()\n\n"
                     "@auth_router.post('/token')\n"
                     "def issue_token(payload: dict | None = None):\n"
                     "    request_payload = payload or {}\n"
@@ -10366,7 +9365,7 @@ def _compat_domain_required_files(order_profile: Dict[str, Any], validation_prof
         ]
     profile_id = str(order_profile.get("profile_id") or "").strip()
     ai_enabled = bool(order_profile.get("ai_enabled"))
-    if validation_profile == "python_fastapi" and profile_id == "commerce_platform":
+    if validation_profile == "python_fastapi" and profile_id in {"commerce_platform", "autonomous_multimall_platform"}:
         required.extend([
             "backend/app/external_adapters/status_client.py",
             "backend/app/connectors/base.py",
@@ -10587,6 +9586,11 @@ def _resolve_validation_profile(order_profile: Dict[str, Any], task: str) -> str
 def _build_domain_contract(order_profile: Dict[str, Any], validation_profile: str, required_files: List[str]) -> Dict[str, Any]:
     profile_id = str(order_profile.get("profile_id") or "customer_program")
     domain_contracts: Dict[str, Dict[str, Any]] = {
+        "autonomous_multimall_platform": {
+            "required_structure": ["tenant operations", "catalog", "campaign optimization", "fulfillment supervision", "security runtime", "shipping package"],
+            "verification_rules": ["tenant/카탈로그/fulfillment 마커 포함", "캠페인 최적화 및 운영 문서 포함", "auth/ops/security/출고 마커 포함"],
+            "packaging_requirements": ["README", "배포 문서", "테스트 문서", "configs/app.env.example", "docs/runbook.md", "infra/prometheus.yml", "infra/deploy/security.md"],
+        },
         "commerce_platform": {
             "required_structure": ["catalog", "order-workflow", "customer runtime", "ops catalog", "security runtime", "shipping package"],
             "verification_rules": ["상품/카탈로그/주문 흐름 파일 존재", "주문 상태 API/화면 마커 포함", "운영 문서와 env 예시 포함", "auth/ops/security/출고 마커 포함"],
@@ -10661,7 +9665,7 @@ def _build_integration_test_plan(order_profile: Dict[str, Any], validation_profi
     if bool(order_profile.get("ai_enabled")):
         plan["required_tests"].append("tests/test_ai_pipeline.py")
         plan["runtime_checks"].append("AI runtime contract")
-    if str(order_profile.get("profile_id") or "") == "commerce_platform":
+    if str(order_profile.get("profile_id") or "") in {"commerce_platform", "autonomous_multimall_platform"}:
         plan["runtime_checks"].extend(["catalog flow", "order workflow", "marketplace publish payload"])
     if str(order_profile.get("profile_id") or "") == "deployment_kit_program":
         plan["runtime_checks"].extend([
@@ -12513,7 +11517,8 @@ def _build_product_readiness_hard_gate(
     }
 
 
-def _build_operational_evidence_bundle() -> Dict[str, Any]:
+def _build_operational_evidence_bundle(profile_id: Optional[str] = None, **_: Any) -> Dict[str, Any]:
+    del profile_id
     target_defaults = [
         {
             "id": "websocket",
@@ -12606,19 +11611,19 @@ def _build_operational_evidence_bundle() -> Dict[str, Any]:
     targets_by_id: Dict[str, Dict[str, Any]] = {}
     for item in target_defaults:
         evidence_item = evidence_map.get(item["id"]) if isinstance(evidence_map.get(item["id"]), dict) else {}
-        ok = bool(evidence_item.get("ok"))
-        status = str(evidence_item.get("status") or ("verified" if ok else "missing"))
+        ok = bool(evidence_item.get("ok")) # pyright: ignore[reportOptionalMemberAccess]
+        status = str(evidence_item.get("status") or ("verified" if ok else "missing")) # pyright: ignore[reportOptionalMemberAccess]
         snapshot = {
             **item,
             "ok": ok,
             "status": status,
-            "status_code": evidence_item.get("status_code"),
-            "latency_ms": evidence_item.get("latency_ms"),
-            "latency_warning": bool(evidence_item.get("latency_warning")),
-            "warning_threshold_ms": evidence_item.get("warning_threshold_ms") or item.get("warning_threshold_ms"),
-            "verified_at": evidence_item.get("verified_at"),
-            "source": evidence_item.get("source") or "runtime-cache",
-            "note": str(evidence_item.get("note") or item["note"]),
+            "status_code": evidence_item.get("status_code"), # pyright: ignore[reportOptionalMemberAccess]
+            "latency_ms": evidence_item.get("latency_ms"), # pyright: ignore[reportOptionalMemberAccess]
+            "latency_warning": bool(evidence_item.get("latency_warning")), # pyright: ignore[reportOptionalMemberAccess]
+            "warning_threshold_ms": evidence_item.get("warning_threshold_ms") or item.get("warning_threshold_ms"), # pyright: ignore[reportOptionalMemberAccess]
+            "verified_at": evidence_item.get("verified_at"), # pyright: ignore[reportOptionalMemberAccess]
+            "source": evidence_item.get("source") or "runtime-cache", # pyright: ignore[reportOptionalMemberAccess]
+            "note": str(evidence_item.get("note") or item["note"]), # pyright: ignore[reportOptionalMemberAccess]
         }
         targets.append(snapshot)
         targets_by_id[item["id"]] = snapshot
@@ -12756,6 +11761,8 @@ def _build_completion_judge(
     output_dir: Path,
     written_files: List[str],
     domain_contract: Dict[str, Any],
+    min_files: int = 27,
+    min_dirs: int = 2,
 ) -> Dict[str, Any]:
     failed_reasons: List[str] = []
     quality_findings: List[str] = []
@@ -12781,6 +11788,8 @@ def _build_completion_judge(
     ])
     test_file_count = len([path for path in written_files if str(path).startswith("tests/")])
     docs_file_count = len([path for path in written_files if str(path).startswith("docs/")])
+    unique_dirs = {str(Path(p).parent) for p in written_files if str(Path(p).parent) not in {"", "."}}
+    dir_count = len(unique_dirs)
     thin_file_markers: Dict[str, List[str]] = {
         "Makefile": ["run:", "test:", "check:"],
         "backend/main.py": ["create_application", "uvicorn.run", "__all__"],
@@ -12806,7 +11815,9 @@ def _build_completion_judge(
         normalized_path = str(path)
         if normalized_path.endswith("__init__.py"):
             continue
-        if normalized_path.endswith((".json", ".yml", ".yaml", ".toml", ".env.example", ".md", ".txt", ".gitignore")):
+        if normalized_path.endswith((".json", ".yml", ".yaml", ".toml", ".env.example", ".md", ".txt", ".gitignore", ".d.ts")):
+            continue
+        if normalized_path.startswith("addons/"):
             continue
         file_text = _strip_generated_id_headers(target_path.read_text(encoding="utf-8", errors="ignore"))
         required_markers = thin_file_markers.get(normalized_path)
@@ -12817,8 +11828,10 @@ def _build_completion_judge(
         if target_path.stat().st_size <= 120:
             tiny_files.append(normalized_path)
 
-    if file_count < 25:
-        quality_findings.append(f"written_files too small: {file_count}")
+    if file_count < min_files:
+        quality_findings.append(f"written_files too small: {file_count} (min={min_files})")
+    if min_dirs > 0 and dir_count < min_dirs:
+        quality_findings.append(f"output directories too few: {dir_count} (min={min_dirs})")
     if docs_file_count < 5:
         quality_findings.append(f"docs coverage too small: {docs_file_count}")
     if test_file_count < 3:
@@ -12947,14 +11960,14 @@ def _build_completion_judge(
         if isinstance(target, dict) and target.get("latency_warning")
     ]
     warning_threshold_ms = {
-        str(target.get("id") or ""): round(float(target.get("warning_threshold_ms")), 1)
+        str(target.get("id") or ""): round(float(target.get("warning_threshold_ms")), 1) # pyright: ignore[reportArgumentType]
         for target in operational_targets
         if isinstance(target, dict)
         and str(target.get("id") or "")
         and isinstance(target.get("warning_threshold_ms"), (int, float))
     }
     latency_values = [
-        float(target.get("latency_ms"))
+        float(target.get("latency_ms")) # pyright: ignore[reportArgumentType]
         for target in operational_targets
         if isinstance(target, dict) and isinstance(target.get("latency_ms"), (int, float))
     ]
@@ -13028,6 +12041,86 @@ def _compat_validate_import_links(manifest_lookup: Dict[str, str]) -> List[str]:
 def _compat_validate_required_files(manifest_lookup: Dict[str, str], required_files: List[str]) -> List[str]:
     missing = [path for path in required_files if path not in manifest_lookup]
     return [f"missing required file: {path}" for path in missing]
+
+
+def _resolve_customer_common_required_files() -> List[str]:
+    return _compat_domain_required_files(
+        {
+            "profile_id": "customer_program",
+            "ai_enabled": False,
+        },
+        "python_fastapi",
+    )
+
+
+def _compat_validate_implementation_normalization(
+    order_profile: Dict[str, Any],
+    manifest_lookup: Dict[str, str],
+    validation_profile: str,
+) -> List[str]:
+    findings: List[str] = []
+    if validation_profile != "python_fastapi":
+        return findings
+    if not bool(order_profile.get("ai_enabled")):
+        return findings
+
+    profile_id = str(order_profile.get("profile_id") or "").strip()
+    strategy_service = str(manifest_lookup.get("backend/service/strategy_service.py") or "")
+    runtime_service = str(manifest_lookup.get("app/services/runtime_service.py") or "")
+    ai_router = str(manifest_lookup.get("ai/router.py") or "")
+
+    if profile_id == "document_writer_suite":
+        document_lifecycle_markers = [
+            "document lifecycle state",
+            "document_state",
+            "document-state",
+            "document status",
+            "document_status",
+        ]
+        if not any(marker in strategy_service or marker in runtime_service for marker in document_lifecycle_markers):
+            findings.append("document lifecycle state marker missing")
+
+        document_router_markers = [
+            "DocumentInferenceRequest",
+            "DocumentEvaluationRequest",
+            "document typed ai router",
+            "document_router",
+            "document inference",
+        ]
+        if not any(marker in ai_router for marker in document_router_markers):
+            findings.append("document typed AI router marker missing")
+
+    if profile_id == "trading_system":
+        trading_markers = [
+            "build_risk_guard",
+            "build_order_execution_plan",
+            "build_portfolio_sync",
+            "risk-guard",
+            "order-execution",
+            "portfolio-sync",
+            "signals",
+            "ai_runtime_contract",
+        ]
+        combined_sources = "\n".join(
+            [
+                strategy_service,
+                runtime_service,
+                ai_router,
+                str(manifest_lookup.get("backend/app/connectors/broker.py") or ""),
+            ]
+        )
+        broker_sources = str(manifest_lookup.get("backend/app/connectors/broker.py") or "")
+        broker_markers = ["provider_contracts", "BROKER_LIVE_ACK_TOKEN", "live broker", "broker-adapter"]
+        if not any(marker in broker_sources or marker.replace("-", "_") in broker_sources for marker in broker_markers):
+            findings.append("trading implementation marker missing: broker-adapter")
+        missing_trading_markers = [
+            marker for marker in trading_markers
+            if marker not in combined_sources and marker.replace("-", "_") not in combined_sources
+        ]
+        if missing_trading_markers:
+            findings.extend([f"trading implementation marker missing: {marker}" for marker in missing_trading_markers])
+
+    return findings
 
 
 def _compat_validate_ai_implementation(
@@ -13278,6 +12371,10 @@ def _compat_validate_profile_alignment(
     findings: List[str] = []
     explicit_task_domains = [
         (
+            "autonomous_multimall_platform",
+            ["멀티 쇼핑몰", "멀티쇼핑몰", "multimall", "multi mall", "tenant", "fulfillment", "캠페인", "campaign"],
+        ),
+        (
             "trading_system",
             ["자동매매", "트레이딩", "주식", "매매", "trading", "stock", "portfolio", "signal"],
         ),
@@ -13290,6 +12387,10 @@ def _compat_validate_profile_alignment(
                 )
             return findings
     domain_markers = [
+        (
+            "autonomous_multimall_platform",
+            ["멀티 쇼핑몰", "멀티쇼핑몰", "multimall", "multi mall", "tenant", "fulfillment", "campaign"],
+        ),
         (
             "commerce_platform",
             ["쇼핑몰", "마켓플레이스", "이커머스", "커머스", "commerce", "marketplace", "store"],
@@ -13323,6 +12424,7 @@ def _compat_run_semantic_gate(
     findings.extend(_compat_validate_python_sources(manifest_lookup))
     findings.extend(_compat_validate_runtime_completeness(manifest_lookup, order_profile))
     findings.extend(_compat_validate_profile_alignment(task, project_name, order_profile))
+    findings.extend(_compat_validate_implementation_normalization(order_profile, manifest_lookup, validation_profile))
     findings.extend(_compat_validate_ai_implementation(order_profile, manifest_lookup, validation_profile, required_files))
     packaging_targets = [
         "README.md",
@@ -13395,6 +12497,22 @@ async def _run_orchestration_core(
     mode = str(preparation["mode"])
     order_profile = dict(preparation["order_profile"])
     validation_profile = str(preparation["validation_profile"])
+
+    # ── 소리새 엔진 컨트롤 타워 훅 ─────────────────────────────────
+    # 오케스트레이션 태스크를 소리새 의사결정 엔진에 알림(분석 힌트 수집).
+    # 실패해도 기존 LLM 경로에 영향 없음(non-blocking).
+    try:
+        from backend.services.shinsegye.engine_hub import SorisaeEngineHub as _SHub
+        _sorisae_hint = _SHub.get_instance().orchestrator_hook(
+            task,
+            {"mode": mode, "validation_profile": validation_profile},
+        )
+        if _sorisae_hint:
+            order_profile.setdefault("sorisae_routing_hint", _sorisae_hint)
+            logger.debug("[SorisaeHub] orchestrator_hook hint: %s", _sorisae_hint)
+    except Exception as _se:
+        logger.debug("[SorisaeHub] orchestrator_hook skipped: %s", _se)
+    # ────────────────────────────────────────────────────────────────
     compat_required_files = list(preparation["compat_required_files"])
     normalized_requirements = dict(preparation["normalized_requirements"])
     domain_contract = dict(preparation["domain_contract"])
@@ -13418,7 +12536,24 @@ async def _run_orchestration_core(
     _emit_orchestration_progress(progress_callback, f"초기 산출물 {len(written_files)}개를 생성했습니다.")
     _log_orchestration_phase("compat_manifest_written", started_at, project_name=project_name, validation_profile=validation_profile)
 
-    semantic_gate = _compat_run_semantic_gate(task, project_name, order_profile, validation_profile, manifest)
+    semantic_manifest_by_path: Dict[str, Dict[str, str]] = {}
+    for relative_path in written_files:
+        normalized_path = str(relative_path or "").replace("\\", "/").strip()
+        if not normalized_path:
+            continue
+        file_path = output_dir / normalized_path
+        if not file_path.exists() or not file_path.is_file():
+            continue
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        semantic_manifest_by_path[normalized_path] = {
+            "path": normalized_path,
+            "content": content,
+        }
+    semantic_manifest = list(semantic_manifest_by_path.values()) or manifest
+    semantic_gate = _compat_run_semantic_gate(task, project_name, order_profile, validation_profile, semantic_manifest)
     _emit_orchestration_progress(
         progress_callback,
         (
@@ -13438,7 +12573,8 @@ async def _run_orchestration_core(
         validation_profile,
         str(output_dir),
     )
-    integration_test_engine = _run_domain_integration_test_engine(
+    integration_test_engine = await asyncio.to_thread(
+        _run_domain_integration_test_engine,
         output_dir=output_dir,
         validation_profile=validation_profile,
         integration_test_plan=integration_test_plan,
@@ -13461,7 +12597,8 @@ async def _run_orchestration_core(
         len(list(integration_test_engine.get("failures") or [])),
     )
     _log_orchestration_phase("integration_test_engine_finished", started_at, project_name=project_name, validation_profile=validation_profile)
-    framework_e2e_validation = _run_framework_e2e_validator(
+    framework_e2e_validation = await asyncio.to_thread(
+        _run_framework_e2e_validator,
         output_dir=output_dir,
         validation_profile=validation_profile,
     )
@@ -13495,6 +12632,8 @@ async def _run_orchestration_core(
         output_dir=output_dir,
         written_files=written_files,
         domain_contract=domain_contract,
+        min_files=ORCH_MIN_FILES,
+        min_dirs=ORCH_MIN_DIRS,
     )
     _emit_orchestration_progress(progress_callback, "post-validation stage: completion judge computed")
     semantic_audit_score = int(semantic_gate["score"])
@@ -13744,7 +12883,7 @@ async def execute_orchestration(
         run_orchestration_func=run_orchestration,
         emit_orchestration_progress_func=_emit_orchestration_progress,
         progress_callback=progress_callback,
-    )
+    ) # pyright: ignore[reportReturnType]
 
 
 async def _call_orchestrator_chat_llm(
@@ -13756,31 +12895,40 @@ async def _call_orchestrator_chat_llm(
     max_tokens: int,
 ) -> str:
     combined_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
+    options = build_ollama_options(
+        route_key,
+        {
+            "num_predict": max_tokens,
+            "temperature": 0.4,
+            "top_p": 0.9,
+            "repeat_penalty": 1.05,
+        },
+    )
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": combined_prompt}],
         "stream": False,
-        "options": build_ollama_options(
-            route_key,
-            {
-                "num_predict": max_tokens,
-                "temperature": 0.4,
-                "top_p": 0.9,
-                "repeat_penalty": 1.05,
-            },
-        ),
+        "max_tokens": int(options.get("num_predict", max_tokens)),
+        "temperature": float(options.get("temperature", 0.4)),
+        "top_p": float(options.get("top_p", 0.9)),
     }
-    client = await _get_orchestrator_chat_http_client()
-    response = await client.post("/api/chat", json=payload)
+    client = await _get_orchestrator_chat_http_client() # pyright: ignore[reportUndefinedVariable]
+    response = await client.post("/chat/completions", json=payload)
     response.raise_for_status()
     data = response.json()
-    content = str(data.get("message", {}).get("content") or "").strip()
+    choices = data.get("choices") if isinstance(data, dict) else None
+    first_choice = choices[0] if isinstance(choices, list) and choices else {}
+    message = first_choice.get("message") if isinstance(first_choice, dict) else {}
+    if not isinstance(message, dict):
+        return ""
+    content = str(message.get("content") or "").strip()
     return content
 
 
 @router.post("/orchestrate", response_model=OrchestrationResponse)
 async def orchestrate(
     request: OrchestrationRequest,
+    current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestrationResponse:
     _enforce_global_orchestration_gate(request)
     return await execute_orchestration(request)
@@ -13789,6 +12937,7 @@ async def orchestrate(
 @router.post("/orchestrate/accepted", response_model=OrchestrationAcceptedResponse)
 async def orchestrate_accepted(
     request: OrchestrationRequest,
+    current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestrationAcceptedResponse:
     _enforce_global_orchestration_gate(request)
     if _accepted_orchestrate_requests_full_mode(request):
@@ -13861,6 +13010,7 @@ async def answer_orchestrator_chat(
     request_context: Request,
     request: OrchestratorChatRequest,
     agent_key: str = "chat",
+    current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestratorChatResponse:
     return await answer_orchestrator_chat_service(
         request_context=request_context,

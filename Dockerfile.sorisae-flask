@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Flask + Flask-SocketIO 최소 의존성
+RUN pip install --no-cache-dir \
+    flask==3.1.0 \
+    flask-socketio==5.4.1 \
+    python-engineio==4.11.2 \
+    python-socketio==5.12.1 \
+    eventlet==0.38.2 \
+    requests==2.32.3 \
+    numpy==1.26.4
+
+# 소리새 엔진 슬롯 파일 복사
+COPY backend/services/shinsegye/engines120 /app/engines120
+
+# slot120 등이 참조하는 modules 패키지 복사
+COPY addons/shinsegye_extras/src/full_merge_all/modules /app/modules
+
+# 진입 스크립트: SLOT_FILE 환경변수로 실행할 슬롯 지정
+COPY backend/services/shinsegye/sorisae_flask_runner.py /app/sorisae_flask_runner.py
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+CMD ["python", "/app/sorisae_flask_runner.py"]
+

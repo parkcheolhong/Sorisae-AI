@@ -1,0 +1,83 @@
+{
+  "round": "R2",
+  "requests_per_engine": 30,
+  "engines": [
+    "voice_movie",
+    "detective_dashboard",
+    "integrated_dashboard",
+    "movie_server",
+    "master",
+    "shopping"
+  ],
+  "concurrency": 18,
+  "timeout_sec": 12.0,
+  "total_requests": 180,
+  "ok": 180,
+  "fail": 0,
+  "error_rate": 0.0,
+  "throughput_rps": 303.487,
+  "latency_ms": {
+    "avg": 56.638,
+    "p50": 56.242,
+    "p95": 73.268,
+    "p99": 79.311,
+    "max": 82.358
+  },
+  "by_engine": {
+    "voice_movie": {
+      "total": 30,
+      "ok": 30,
+      "fail": 0,
+      "error_rate": 0.0,
+      "p95_ms": 63.402,
+      "max_ms": 65.188,
+      "avg_ms": 52.193
+    },
+    "detective_dashboard": {
+      "total": 30,
+      "ok": 30,
+      "fail": 0,
+      "error_rate": 0.0,
+      "p95_ms": 71.237,
+      "max_ms": 77.718,
+      "avg_ms": 57.906
+    },
+    "integrated_dashboard": {
+      "total": 30,
+      "ok": 30,
+      "fail": 0,
+      "error_rate": 0.0,
+      "p95_ms": 73.385,
+      "max_ms": 78.751,
+      "avg_ms": 59.468
+    },
+    "movie_server": {
+      "total": 30,
+      "ok": 30,
+      "fail": 0,
+      "error_rate": 0.0,
+      "p95_ms": 66.817,
+      "max_ms": 72.0,
+      "avg_ms": 57.868
+    },
+    "master": {
+      "total": 30,
+      "ok": 30,
+      "fail": 0,
+      "error_rate": 0.0,
+      "p95_ms": 73.339,
+      "max_ms": 82.358,
+      "avg_ms": 58.701
+    },
+    "shopping": {
+      "total": 30,
+      "ok": 30,
+      "fail": 0,
+      "error_rate": 0.0,
+      "p95_ms": 78.213,
+      "max_ms": 79.546,
+      "avg_ms": 53.69
+    }
+  },
+  "error_breakdown": {}
+}

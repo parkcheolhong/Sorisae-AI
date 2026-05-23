@@ -10,7 +10,7 @@ test('marketplace renders API connected stats filters and project grid', async (
     await expect(page.getByTestId('marketplace-filters')).toBeVisible();
     await expect(page.getByTestId('marketplace-project-grid')).toBeVisible();
     await expect(page.getByRole('heading', { name: '실제 등록 프로젝트', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '4가지 코드생성기 상품', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '7가지 AI 엔진 상품', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '회원가입' })).toBeVisible();
     await page.getByRole('button', { name: '회원가입' }).click();
     const memberTypeSelect = page.locator('select').filter({ has: page.locator('option[value="sole_proprietor"]') }).first();

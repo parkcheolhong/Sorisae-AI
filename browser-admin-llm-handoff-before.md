@@ -1,0 +1,66 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary "Admin Workspace 탐색" [ref=e5]:
+      - generic [ref=e6]: AD
+      - navigation [ref=e7]:
+        - link "관리" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e10]: 관리
+        - link "LLM" [ref=e11] [cursor=pointer]:
+          - /url: /admin/llm
+          - generic [ref=e13]: LLM
+        - link "실행" [ref=e14] [cursor=pointer]:
+          - /url: /admin/runs
+          - generic [ref=e16]: 실행
+        - link "승인" [ref=e17] [cursor=pointer]:
+          - /url: /admin/approvals
+          - generic [ref=e19]: 승인
+        - link "배포" [ref=e20] [cursor=pointer]:
+          - /url: /admin/publish
+          - generic [ref=e22]: 배포
+        - link "관측" [ref=e23] [cursor=pointer]:
+          - /url: /admin/observability
+          - generic [ref=e25]: 관측
+      - generic [ref=e26]: LIVE
+    - generic [ref=e27]:
+      - banner [ref=e28]:
+        - generic [ref=e29]:
+          - paragraph [ref=e30]: 관리자 오케스트레이터
+          - heading "Admin Workspace" [level=1] [ref=e31]
+          - paragraph [ref=e32]: 관리자에서 marketplace full-page orchestrator 와 AI sheet popup flow 를 실제로 열 수 있는 실행 페이지입니다.
+        - generic [ref=e33]:
+          - link "Marketplace" [ref=e34] [cursor=pointer]:
+            - /url: /marketplace
+          - link "관측 보드" [ref=e35] [cursor=pointer]:
+            - /url: /admin/observability
+          - link "관리 홈" [ref=e36] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 실행 페이지
+            - generic [ref=e41]: bridge ready
+          - paragraph [ref=e42]: admin llm orchestration
+          - heading "관리자 요청을 실제 오케스트레이터로 넘깁니다" [level=2] [ref=e43]
+          - paragraph [ref=e44]: 단순 라벨이 아니라, 관리자 입력을 marketplace full-page orchestrator 또는 AI sheet popup 흐름으로 실제 전달하도록 구성했습니다.
+          - generic [ref=e45]:
+            - link "Marketplace 열기" [ref=e46] [cursor=pointer]:
+              - /url: /marketplace
+            - link "관측 보드" [ref=e47] [cursor=pointer]:
+              - /url: /admin/observability
+        - generic "핵심 기능 바로가기" [ref=e48]:
+          - generic [ref=e49]: full-page handoff
+          - generic [ref=e50]: AI sheet popup handoff
+          - generic [ref=e51]: localStorage bridge payload
+          - generic [ref=e52]: admin to marketplace routing
+      - generic [ref=e53]:
+        - main [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]
+            - generic [ref=e67]
+            - dialog "AI Sheet Flow" [ref=e76]
+        - complementary [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]
+            - generic [ref=e110]
+  - alert [ref=e120]

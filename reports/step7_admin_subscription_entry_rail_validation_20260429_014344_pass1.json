@@ -1,0 +1,26 @@
+{
+    "step": "Step 7",
+    "title": "관리자 구독 모니터링 우측 진입 레일 추가",
+    "status": "completed",
+    "pass": 1,
+    "executed_at": "2026-04-29T01:43:44+09:00",
+    "url": "http://127.0.0.1:3005/admin/subscription-monitor?period_days=90&status=all",
+    "checks": [
+        {
+            "name": "우측 진입 레일 렌더",
+            "result": "pass",
+            "evidence": "heading '⚡ 진입 레일' 확인"
+        },
+        {
+            "name": "진입 링크 목록 노출",
+            "result": "pass",
+            "evidence": "관리자 대시보드, 최근 7일/30일/90일, 마켓 구독 페이지 링크 확인"
+        },
+        {
+            "name": "90일 필터 진입 상태 유지",
+            "result": "pass",
+            "evidence": "기간 콤보박스에서 '최근 90일' 선택 상태 확인"
+        }
+    ],
+    "notes": "런타임 로그에서 백엔드 API 응답 실패(Failed to fetch)가 있었으나, 본 검증 범위인 우측 진입 레일 UI 렌더/네비게이션 항목 확인에는 영향 없음"
+}

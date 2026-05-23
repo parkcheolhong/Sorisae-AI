@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, func
@@ -13,6 +13,7 @@ import io
 import zipfile
 import re
 import json
+import sys
 import queue
 import threading
 import subprocess
@@ -24,12 +25,13 @@ import requests
 import hashlib
 import base64
 import binascii
+import hmac as _hmac_module
 from urllib.parse import quote, urlparse
 from uuid import uuid4
 
-from redis import Redis
 from redis.exceptions import RedisError
 from . import models, schemas, crud
+from .subscription_service import subscription_service
 from .ad_strategy_engine import plan_ad_strategy
 from .audience_profile_engine import infer_audience_profiles
 from .campaign_orchestrator_engine import plan_local_campaign
@@ -44,14 +46,79 @@ from .platform_formatter import build_platform_formats
 from .self_run_video_worker import enqueue_self_run_video_job, get_self_run_video_job, get_self_run_video_worker_status
 from .story_state_engine import build_story_states
 from .video_generation_engine import run_video_generation_engine
-from .database import get_db, engine, SessionLocal
+from .database import get_db, engine, SessionLocal, check_database_availability, init_db
+from .subscription_router import build_subscription_router
 from .feature_orchestrator.engines.spreadsheet_generation_engine import (
     build_spreadsheet_preview,
     render_spreadsheet_final,
     review_spreadsheet_quality,
 )
+from .feature_orchestrator.engines.powerpoint_generation_engine import (
+    build_powerpoint_preview,
+    render_powerpoint_final,
+    review_powerpoint_quality,
+)
+from .feature_orchestrator.engines.document_generation_engine import (
+    build_document_preview,
+    render_document_final,
+    review_document_quality,
+)
 from .minio_service import minio_service
 from .payment_service import payment_service, download_token_service
+from .campaign_orchestrate_router import build_campaign_orchestrate_router
+from .categories_router import build_categories_router
+from .code_generator_router import build_code_generator_router
+from .ad_order_runtime import (
+    VIDEO_RENDER_QUEUE_NAME,
+    _enqueue_ad_order,
+    _mark_ad_worker_heartbeat,
+    _require_video_queue_redis,
+    discard_enqueued_ad_order,
+    ensure_ad_order_runtime_ready,
+    ensure_ad_video_orders_schema,
+    get_ad_queue_runtime_status,
+)
+from .ad_order_processing import (
+    build_ad_package_zip,
+    process_ad_order_job,
+    reset_ad_order_for_retry,
+)
+from .face_recognition_router import build_face_recognition_router
+from .feature_orchestrate_router import build_feature_orchestrate_router
+from .interpreter_router import build_interpreter_router
+from .nadotongryoksa_lbs_router import build_nadotongryoksa_lbs_router
+from .ml_detectors_router import build_ml_detectors_router
+from .music_router import build_music_router
+from .extras_router import build_extras_router
+from .sorisae_engine_router import build_sorisae_engine_router
+from .shinsegye_products_router import build_shinsegye_products_router
+from .search_router import build_search_router
+from .customer_orchestrate_router import build_customer_orchestrate_router
+from .video_worker_router import build_video_worker_router
+from .marketplace_categories_cache import (
+    _MARKETPLACE_CATEGORIES_CACHE,
+    _MARKETPLACE_CATEGORIES_CACHE_LOCK,
+    _MARKETPLACE_CATEGORIES_CACHE_TTL_SEC,
+    _MARKETPLACE_CATEGORIES_RATE_LIMIT_WINDOW_SEC,
+    _apply_marketplace_categories_degraded_headers,
+    _apply_short_marketplace_categories_cache_headers,
+    _build_marketplace_categories_degraded_payload,
+    _invalidate_marketplace_categories_cache,
+    _should_throttle_marketplace_categories,
+)
+from .ad_order_policy import (
+    cut_count_bounds as _policy_cut_count_bounds,
+    get_ad_download_max_count as _policy_get_ad_download_max_count,
+    get_ad_download_min_notice_minutes as _policy_get_ad_download_min_notice_minutes,
+    get_ad_download_window_days as _policy_get_ad_download_window_days,
+    get_int_env as _policy_get_int_env,
+    get_marketplace_cleanup_interval_sec as _policy_get_marketplace_cleanup_interval_sec,
+    get_marketplace_retention_days as _policy_get_marketplace_retention_days,
+    get_marketplace_temp_retention_days as _policy_get_marketplace_temp_retention_days,
+    marketplace_ad_quality_brief as _policy_marketplace_ad_quality_brief,
+    order_duration_seconds as _policy_order_duration_seconds,
+    recommended_cut_count as _policy_recommended_cut_count,
+)
 from backend.auth import get_current_user
 from backend.orchestration_stage_service import (
     ORCHESTRATION_STAGE_DEFINITIONS,
@@ -63,73 +130,65 @@ from backend.orchestration_stage_service import (
 )
 from backend.orchestrator.chat import AutoConnectMeta, OrchestratorChatRequest, OrchestratorChatResponse, OrchestratorStageChatContext
 import secrets
+from .customer_orchestrate_context import (
+    _customer_orchestrate_run_locks,
+    _customer_orchestrate_run_locks_guard,
+)
+from .ad_video_order_engine import (
+    MARKETPLACE_QUALITY_PASS_SCORE,
+    MARKETPLACE_MAX_AUTO_QUALITY_RETRIES,
+    _ad_order_queue,
+    _maybe_run_marketplace_storage_cleanup,
+    _evaluate_ad_order_quality,
+    _generate_video_by_engine,
+    _get_reference_image_prompt,
+    _order_audio_volume,
+    _order_cut_count,
+    _order_cut_seconds,
+    _order_duration_seconds,
+    _order_render_quality,
+    _order_subtitle_speed,
+    _serialize_ad_video_order,
+    _compose_storyboard,
+    _get_product_image_prompts,
+    _validate_ad_engine_preflight,
+    _build_scene_keyframes,
+    _generate_video_internal_ffmpeg,
+    _generate_video_movie_studio,
+    _generate_video_external_api,
+    _generate_video_dedicated_engine,
+    _assert_engine_endpoint_reachable,
+    _safe_filename,
+    _stability_profile_for_order,
+    _resolve_scene_source,
+    _build_movie_studio_payload_from_order,
+    MARKETPLACE_AD_QUALITY_CRITERIA,
+    AD_TOTAL_SECONDS,
+    AD_FRAME_HINTS_PER_SECOND,
+    AD_TOTAL_FRAME_HINT,
+    AD_CUT_COUNT,
+    AD_CUT_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
-_MARKETPLACE_CATEGORIES_CACHE_TTL_SEC = max(1.0, float(os.getenv("MARKETPLACE_CATEGORIES_CACHE_TTL_SEC", "5")))
-_MARKETPLACE_CATEGORIES_CACHE: Dict[str, Any] = {
-    "captured_at": 0.0,
-    "payload": None,
-}
-_MARKETPLACE_CATEGORIES_CACHE_LOCK = threading.Lock()
-_MARKETPLACE_CATEGORIES_RATE_LIMIT_WINDOW_SEC = max(0.2, float(os.getenv("MARKETPLACE_CATEGORIES_RATE_LIMIT_WINDOW_SEC", "1.0")))
-_MARKETPLACE_CATEGORIES_RATE_LIMIT_STATE: Dict[str, float] = {}
-_MARKETPLACE_CATEGORIES_RATE_LIMIT_LOCK = threading.Lock()
-
-
-def _invalidate_marketplace_categories_cache() -> None:
-    with _MARKETPLACE_CATEGORIES_CACHE_LOCK:
-        _MARKETPLACE_CATEGORIES_CACHE["captured_at"] = 0.0
-        _MARKETPLACE_CATEGORIES_CACHE["payload"] = None
-
-
-def _resolve_marketplace_categories_rate_limit_key(request: Request) -> str:
-    forwarded_for = str(request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
-    client_host = forwarded_for or (request.client.host if request.client else "unknown")
-    user_agent = str(request.headers.get("user-agent") or "")
-    return f"{client_host}:{hashlib.sha256(user_agent.encode('utf-8')).hexdigest()[:16]}"
-
-
-def _should_throttle_marketplace_categories(request: Request) -> bool:
-    now_ts = time.time()
-    rate_limit_key = _resolve_marketplace_categories_rate_limit_key(request)
-    with _MARKETPLACE_CATEGORIES_RATE_LIMIT_LOCK:
-        last_seen = float(_MARKETPLACE_CATEGORIES_RATE_LIMIT_STATE.get(rate_limit_key) or 0.0)
-        _MARKETPLACE_CATEGORIES_RATE_LIMIT_STATE[rate_limit_key] = now_ts
-        stale_keys = [key for key, seen_at in _MARKETPLACE_CATEGORIES_RATE_LIMIT_STATE.items() if (now_ts - float(seen_at)) > (_MARKETPLACE_CATEGORIES_RATE_LIMIT_WINDOW_SEC * 20)]
-        for stale_key in stale_keys:
-            _MARKETPLACE_CATEGORIES_RATE_LIMIT_STATE.pop(stale_key, None)
-    return (now_ts - last_seen) < _MARKETPLACE_CATEGORIES_RATE_LIMIT_WINDOW_SEC
-
-
-def _build_marketplace_categories_degraded_payload(cached_payload: Any = None) -> List[Dict[str, Any]]:
-    if isinstance(cached_payload, list):
-        return list(cached_payload)
-    return []
-
-
-def _apply_short_marketplace_categories_cache_headers(response: StreamingResponse | Any) -> None:
-    ttl = max(1, int(_MARKETPLACE_CATEGORIES_CACHE_TTL_SEC))
-    response.headers["Cache-Control"] = f"public, max-age={ttl}, stale-while-revalidate=30"
-    response.headers["x-stale-client-mitigation"] = "marketplace-categories-short-cache"
-
-
-def _apply_marketplace_categories_degraded_headers(response: Response, *, mitigation: str) -> None:
-    _apply_short_marketplace_categories_cache_headers(response)
-    response.headers["Connection"] = "close"
-    response.headers["x-stale-client-mitigation"] = mitigation
-    response.headers["x-marketplace-categories-degraded"] = "1"
 
 
 async def _run_async_request_in_thread(coro):
     return await asyncio.to_thread(lambda: asyncio.run(coro))
 
-MARKETPLACE_QUALITY_PASS_SCORE = 70.0
-MARKETPLACE_MAX_AUTO_QUALITY_RETRIES = 1
 
-_video_queue_redis_cache: Optional[Redis] = None
-_video_queue_redis_cache_url: str = ""
-_video_queue_redis_cache_checked_at: float = 0.0
-_VIDEO_QUEUE_REDIS_CACHE_TTL_SEC = 5.0
+def _schedule_marketplace_storage_cleanup() -> None:
+    def _runner() -> None:
+        try:
+            _maybe_run_marketplace_storage_cleanup()
+        except Exception:
+            logger.warning("marketplace storage cleanup scheduling failed", exc_info=True)
+
+    threading.Thread(
+        target=_runner,
+        name="marketplace-storage-cleanup",
+        daemon=True,
+    ).start()
 
 router = APIRouter()
 
@@ -159,21 +218,23 @@ class FeatureOrchestrateAcceptedResponse(BaseModel):
     poll_url: str
 
 
-class FeatureOrchestratorRuntimeService:
-    def get_catalog(self) -> List[Dict[str, Any]]:
-        return list(_FEATURE_CATALOG)
-
-    def get_service(self, feature_id: str) -> "FeatureOrchestratorRuntimeService":
-        normalized = str(feature_id or "").strip().lower()
-        if normalized != "ai-sheet":
-            raise ValueError("지원하지 않는 feature_id 입니다.")
-        return self
+class _FeatureRuntimeHandler:
+    def __init__(
+        self,
+        *,
+        preview_runner,
+        final_runner,
+        quality_runner,
+    ):
+        self._preview_runner = preview_runner
+        self._final_runner = final_runner
+        self._quality_runner = quality_runner
 
     def run_preview_phase(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        return build_spreadsheet_preview(payload)
+        return self._preview_runner(payload)
 
     def run_final_phase(self, payload: Dict[str, Any], preview_artifact: Dict[str, Any]) -> Dict[str, Any]:
-        return render_spreadsheet_final(payload, preview_artifact)
+        return self._final_runner(payload, preview_artifact)
 
     def run_quality_gate(
         self,
@@ -181,7 +242,7 @@ class FeatureOrchestratorRuntimeService:
         preview_artifact: Dict[str, Any],
         final_artifact: Dict[str, Any],
     ) -> Dict[str, Any]:
-        return review_spreadsheet_quality(payload, preview_artifact, final_artifact)
+        return self._quality_runner(payload, preview_artifact, final_artifact)
 
     def build_artifact_manifest(
         self,
@@ -196,13 +257,60 @@ class FeatureOrchestratorRuntimeService:
         }
 
 
+class FeatureOrchestratorRuntimeService:
+    def get_catalog(self) -> List[Dict[str, Any]]:
+        return list(_FEATURE_CATALOG)
+
+    def get_service(self, feature_id: str) -> _FeatureRuntimeHandler:
+        normalized = str(feature_id or "").strip().lower()
+        runtime_registry: Dict[str, _FeatureRuntimeHandler] = {
+            "ai-sheet": _FeatureRuntimeHandler(
+                preview_runner=build_spreadsheet_preview,
+                final_runner=render_spreadsheet_final,
+                quality_runner=review_spreadsheet_quality,
+            ),
+            "ai-document": _FeatureRuntimeHandler(
+                preview_runner=build_document_preview,
+                final_runner=render_document_final,
+                quality_runner=review_document_quality,
+            ),
+            "ai-powerpoint": _FeatureRuntimeHandler(
+                preview_runner=build_powerpoint_preview,
+                final_runner=render_powerpoint_final,
+                quality_runner=review_powerpoint_quality,
+            ),
+        }
+        runtime_handler = runtime_registry.get(normalized)
+        if runtime_handler is None:
+            raise ValueError("지원하지 않는 feature_id 입니다.")
+        return runtime_handler
+
+
 _FEATURE_CATALOG: List[Dict[str, Any]] = [
     {
         "feature_id": "ai-sheet",
         "title": "AI 엑셀 시트",
         "summary": "프롬프트 기반으로 시트 schema preview 와 최종 workbook 패키지를 생성합니다.",
         "popup_mode": "spreadsheet-builder",
-        "status": "ready",
+        "status": "enabled",
+        "supports_photo_upload": False,
+        "supports_final_phase": True,
+    },
+    {
+        "feature_id": "ai-document",
+        "title": "AI 문서 엔진",
+        "summary": "문서 outline preview 와 최종 pdf/md 패키지를 생성합니다.",
+        "popup_mode": "doc-writer",
+        "status": "enabled",
+        "supports_photo_upload": False,
+        "supports_final_phase": True,
+    },
+    {
+        "feature_id": "ai-powerpoint",
+        "title": "AI 파워포인트 엔진",
+        "summary": "프롬프트 기반으로 슬라이드 구성 preview 와 최종 pptx 패키지를 생성합니다.",
+        "popup_mode": "powerpoint-builder",
+        "status": "enabled",
         "supports_photo_upload": False,
         "supports_final_phase": True,
     },
@@ -337,6 +445,273 @@ def _resolve_feature_delivery_asset_or_404(run_id: str, asset_format: str) -> Di
 
     raise HTTPException(status_code=404, detail="요청한 delivery asset 을 찾을 수 없습니다.")
 
+
+@router.get("/feature-orchestrate/stage-runs/{run_id}/delivery-assets/{asset_format}")
+def download_marketplace_feature_delivery_asset(run_id: str, asset_format: str):
+    resolved = _resolve_feature_delivery_asset_or_404(run_id, asset_format)
+    asset = dict(resolved.get("asset") or {})
+    asset_path = Path(str(resolved.get("path") or ""))
+    media_type = str(asset.get("mime_type") or "application/octet-stream")
+    download_name = asset_path.name
+    return FileResponse(path=str(asset_path), media_type=media_type, filename=download_name)
+
+
+
+def _sign_test_download_token(filename: str, user_id: int, secret: str, expires_in: int = 3600) -> str:
+    """HMAC-SHA256 서명 기반 임시 다운로드 토큰 생성 (DB 불필요)"""
+    exp = int(time.time()) + expires_in
+    msg = f"{filename}:{user_id}:{exp}"
+    sig = _hmac_module.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+    payload = base64.urlsafe_b64encode(f"{msg}:{sig}".encode()).decode()
+    return payload
+
+
+def _verify_test_download_token(token: str, filename: str, secret: str) -> bool:
+    """HMAC-SHA256 토큰 검증. 만료 또는 서명 불일치 시 False 반환"""
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode() + b"==").decode()
+        # 마지막 ':' 기준으로 sig 분리
+        last_colon = decoded.rfind(":")
+        if last_colon < 0:
+            return False
+        msg, sig = decoded[:last_colon], decoded[last_colon + 1:]
+        parts = msg.split(":")
+        if len(parts) != 3:
+            return False
+        fname, _uid, exp_str = parts
+        if fname != filename:
+            return False
+        if int(exp_str) < int(time.time()):
+            return False
+        expected_sig = _hmac_module.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+        return _hmac_module.compare_digest(sig, expected_sig)
+    except Exception:
+        return False
+
+
+def _resolve_marketplace_apk_dir() -> Path:
+    workspace_root = Path(__file__).resolve().parents[2]
+    return (workspace_root / "uploads" / "marketplace_local" / "apk").resolve()
+
+
+def _resolve_latest_marketplace_apk_path() -> Path:
+    apk_dir = _resolve_marketplace_apk_dir()
+    if not apk_dir.exists() or not apk_dir.is_dir():
+        raise HTTPException(status_code=404, detail="APK 저장 경로를 찾을 수 없습니다.")
+
+    preferred_name = str(os.getenv("MARKETPLACE_LATEST_APK_FILENAME", "")).strip()
+    if preferred_name:
+        safe_name = Path(preferred_name).name
+        target = (apk_dir / safe_name).resolve()
+        if str(target).startswith(str(apk_dir)) and target.exists() and target.suffix.lower() == ".apk":
+            return target
+
+    apk_candidates = [
+        path.resolve()
+        for path in apk_dir.glob("*.apk")
+        if path.is_file()
+    ]
+    if not apk_candidates:
+        raise HTTPException(status_code=404, detail="배포 가능한 APK 파일이 없습니다.")
+
+    apk_candidates.sort(key=lambda item: item.stat().st_mtime, reverse=True)
+    return apk_candidates[0]
+
+
+@router.get("/latest.apk")
+def download_latest_marketplace_apk() -> Any:
+    """모바일 자동업데이트용 고정 APK URL 엔드포인트."""
+    target = _resolve_latest_marketplace_apk_path()
+    return FileResponse(
+        path=str(target),
+        media_type="application/vnd.android.package-archive",
+        filename="latest.apk",
+        headers={
+            "Content-Disposition": 'attachment; filename="latest.apk"',
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+
+@router.post("/apk/test-token/{filename}")
+def issue_apk_test_download_token(
+    filename: str,
+    current_user: Any = Depends(get_current_user),
+):
+    """테스트 기간 APK 다운로드용 단기 서명 토큰 발급
+    
+    구매 이력 없이 로그인한 사용자에게 7일 유효 토큰 발급.
+    토큰은 HMAC-SHA256 서명이며 DB 레코드 없이 검증됨.
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    safe_name = Path(filename).name
+    if safe_name != filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="잘못된 파일명입니다.")
+    allowed_extensions = {".apk", ".zip"}
+    if Path(safe_name).suffix.lower() not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="지원하지 않는 파일 형식입니다.")
+    from backend.auth import SECRET_KEY
+    token = _sign_test_download_token(
+        filename=safe_name,
+        user_id=int(current_user.id),
+        secret=SECRET_KEY,
+        expires_in=7 * 24 * 3600,  # 7일
+    )
+    download_url = f"/api/marketplace/apk/{safe_name}?test_token={token}"
+    return {"token": token, "download_url": download_url, "expires_in": 7 * 24 * 3600}
+
+
+@router.get("/apk/{filename}")
+def download_marketplace_apk(
+    filename: str,
+    token: Optional[str] = None,
+    test_token: Optional[str] = None,
+    current_user: Any = None,
+) -> Any:
+    """모바일 APK 직접 다운로드 엔드포인트 — 신세계소리새 나도통역사 등
+    
+    인증 필수: 구매자 또는 유효한 다운로드 토큰 보유
+    토큰은 query parameter로 전달: /apk/file.apk?token=abc123
+    test_token 보유 시 Bearer 인증 없이도 HMAC 검증으로 다운로드 허용
+    """
+    # 경로 탐색(path traversal) 방어 — 인증 검증 전에 수행
+    safe_name = Path(filename).name
+    if safe_name != filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="잘못된 파일명입니다.")
+    allowed_extensions = {".apk", ".zip"}
+    suffix = Path(safe_name).suffix.lower()
+    if suffix not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="지원하지 않는 파일 형식입니다.")
+
+    apk_dir = _resolve_marketplace_apk_dir()
+    target = (apk_dir / safe_name).resolve()
+    if not str(target).startswith(str(apk_dir)):
+        raise HTTPException(status_code=400, detail="잘못된 파일 경로입니다.")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="APK 파일을 찾을 수 없습니다. 관리자에게 문의하세요.")
+
+    # 다운로드 토큰 검증: test_token은 HMAC 서명 자체가 인증 대체 수단 (브라우저 직접 다운로드 지원)
+    if test_token:
+        from backend.auth import SECRET_KEY
+        if not _verify_test_download_token(test_token, safe_name, SECRET_KEY):
+            raise HTTPException(status_code=403, detail="테스트 다운로드 토큰이 만료되었거나 올바르지 않습니다.")
+    elif token:
+        try:
+            with SessionLocal() as token_db:
+                download_token = download_token_service.validate_token(token_db, token)
+                # 토큰 사용 표시 (1회 사용 제한)
+                download_token_service.use_token(token_db, token)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=f"다운로드 토큰 검증 실패: {str(e)}")
+    else:
+        # 토큰 없는 경우 — 로그인 사용자의 구매 여부 확인 또는 401
+        if not current_user:
+            raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+        # TODO: 구매 기록 확인 로직 구현
+
+    media_type = "application/vnd.android.package-archive" if suffix == ".apk" else "application/zip"
+    return FileResponse(
+        path=str(target),
+        media_type=media_type,
+        filename=safe_name,
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+
+
+@router.get("/zip/{filename}")
+def download_marketplace_zip(
+    filename: str,
+    token: Optional[str] = None,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Python/소프트웨어 ZIP 직접 다운로드 엔드포인트 — 소리새 통번역 패키지 등
+    
+    인증 필수: 구매자 또는 유효한 다운로드 토큰 보유
+    토큰은 query parameter로 전달: /zip/file.zip?token=abc123
+    """
+    # 인증 확인 (current_user가 None이면 401 자동 반환됨)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    
+    safe_name = Path(filename).name
+    if safe_name != filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="잘못된 파일명입니다.")
+    if Path(safe_name).suffix.lower() != ".zip":
+        raise HTTPException(status_code=400, detail="ZIP 파일만 지원합니다.")
+
+    workspace_root = Path(__file__).resolve().parents[2]
+    zip_dir = (workspace_root / "uploads" / "marketplace_local" / "zip").resolve()
+    target = (zip_dir / safe_name).resolve()
+    if not str(target).startswith(str(zip_dir)):
+        raise HTTPException(status_code=400, detail="잘못된 파일 경로입니다.")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="ZIP 파일을 찾을 수 없습니다. 관리자에게 문의하세요.")
+
+    # 다운로드 토큰 검증 (토큰이 전달된 경우)
+    if token:
+        try:
+            download_token = download_token_service.validate_token(db, token)
+            # 토큰 사용 표시 (1회 사용 제한)
+            download_token_service.use_token(db, token)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=f"다운로드 토큰 검증 실패: {str(e)}")
+    else:
+        # 토큰이 없는 경우, 현재 사용자의 구매 여부 확인
+        # TODO: 구매 기록 확인 로직 구현
+        pass
+
+    return FileResponse(
+        path=str(target),
+        media_type="application/zip",
+        filename=safe_name,
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+
+
+@router.get("/projects", response_model=schemas.ProjectList)
+def list_marketplace_projects(
+    skip: int = 0,
+    limit: int = 12,
+    search: Optional[str] = None,
+    category_id: Optional[int] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    db: Session = Depends(get_db),
+):
+    projects, total = crud.get_projects(
+        db,
+        skip=skip,
+        limit=limit,
+        search=search,
+        category_id=category_id,
+        min_price=min_price,
+        max_price=max_price,
+        sort_by=sort_by,
+        order=sort_order,
+    )
+    linked_subscriptions = subscription_service.list_project_subscription_links(
+        db,
+        project_ids=[int(project.id) for project in projects], # type: ignore
+    )
+    serialized_projects: list[dict[str, Any]] = []
+    for project in projects:
+        payload = schemas.Project.model_validate(project).model_dump()
+        payload["subscription"] = linked_subscriptions.get(int(project.id)) # type: ignore
+        serialized_projects.append(payload)
+    return {
+        "projects": serialized_projects,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+    }
+
+
 @router.get("/projects/{project_id}", response_model=schemas.Project)
 def get_marketplace_project(
     project_id: int,
@@ -345,352 +720,277 @@ def get_marketplace_project(
     project = crud.get_project(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다")
-    return project
-
-
-@router.get("/categories")
-def list_marketplace_categories(request: Request, response: Response, db: Session = Depends(get_db)):
-    _apply_short_marketplace_categories_cache_headers(response)
-    now_ts = time.time()
-    cached_payload = _MARKETPLACE_CATEGORIES_CACHE.get("payload")
-    cached_at = float(_MARKETPLACE_CATEGORIES_CACHE.get("captured_at") or 0.0)
-    if _should_throttle_marketplace_categories(request):
-        response.headers["Retry-After"] = str(max(1, int(_MARKETPLACE_CATEGORIES_RATE_LIMIT_WINDOW_SEC)))
-        _apply_marketplace_categories_degraded_headers(response, mitigation="marketplace-categories-degraded-cache")
-        return _build_marketplace_categories_degraded_payload(cached_payload)
-    if cached_payload is not None and (now_ts - cached_at) < _MARKETPLACE_CATEGORIES_CACHE_TTL_SEC:
-        return cached_payload
-    with _MARKETPLACE_CATEGORIES_CACHE_LOCK:
-        now_ts = time.time()
-        cached_payload = _MARKETPLACE_CATEGORIES_CACHE.get("payload")
-        cached_at = float(_MARKETPLACE_CATEGORIES_CACHE.get("captured_at") or 0.0)
-        if cached_payload is not None and (now_ts - cached_at) < _MARKETPLACE_CATEGORIES_CACHE_TTL_SEC:
-            return cached_payload
-        categories = (
-            db.query(models.Category)
-            .order_by(models.Category.name.asc())
-            .all()
-        )
-        payload = [
-            {
-                "id": int(category.id),
-                "name": str(category.name or ""),
-                "description": getattr(category, "description", None),
-            }
-            for category in categories
-        ]
-        _MARKETPLACE_CATEGORIES_CACHE["captured_at"] = now_ts
-        _MARKETPLACE_CATEGORIES_CACHE["payload"] = payload
-        return payload
-
-
-@router.get("/feature-catalog")
-def get_marketplace_feature_catalog() -> List[Dict[str, Any]]:
-    return _feature_runtime_service.get_catalog()
-
-
-@router.post(
-    "/feature-orchestrate/accepted",
-    response_model=FeatureOrchestrateAcceptedResponse,
-    status_code=status.HTTP_202_ACCEPTED,
-)
-def accept_marketplace_feature_orchestration(
-    request: FeatureOrchestrateAcceptedRequest,
-) -> FeatureOrchestrateAcceptedResponse:
-    request_payload = request.model_dump() if hasattr(request, "model_dump") else request.dict()
-    feature_id = str(request_payload.get("feature_id") or "").strip()
-    service = _feature_runtime_service.get_service(feature_id)
-
-    stage_run = initialize_stage_run(
-        scope="marketplace-feature-orchestrator",
-        project_name=str(request_payload.get("project_name") or feature_id or "marketplace-feature-run"),
-        mode="feature-popup",
-        metadata={},
+    linked_subscriptions = subscription_service.list_project_subscription_links(
+        db,
+        project_ids=[int(project.id)], # type: ignore
     )
-    feature_metadata = {
-        "feature_id": feature_id,
-        "popup_state": "accepted",
-        "request": request_payload,
-        "artifact_manifest": {
-            "preview_artifact_id": None,
-            "final_artifact_id": None,
-        },
-        "last_event": None,
-        "updated_at": _utc_now_iso(),
-        "service": service.__class__.__name__,
+    payload = schemas.Project.model_validate(project).model_dump()
+    payload["subscription"] = linked_subscriptions.get(int(project.id)) # type: ignore
+    return payload
+
+
+# ── 마켓플레이스 구매/결제/다운로드 API ──────────────────────
+
+class PurchaseCreateRequest(BaseModel):
+    project_id: int
+    amount: float
+    payment_method: str = "card"
+
+
+class DownloadTokenRequest(BaseModel):
+    project_id: int
+
+
+@router.post("/purchase")
+def create_marketplace_purchase(
+    request: PurchaseCreateRequest,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Purchase:
+    """구매 기록 생성
+    
+    인증 필수: 로그인한 사용자만
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    
+    project = crud.get_project(db, request.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
+    
+    purchase = payment_service.create_purchase(
+        db=db,
+        project_id=request.project_id,
+        buyer_id=current_user.id,
+        amount=request.amount or float(project.price or 0),
+        payment_method=request.payment_method,
+    )
+    
+    return schemas.Purchase.model_validate(purchase)
+
+
+@router.post("/purchase/{purchase_id}/pay")
+def initiate_marketplace_payment(
+    purchase_id: int,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PaymentInitResult:
+    """결제 초기화 (PG사 결제 URL 반환)
+    
+    인증 필수: 해당 구매의 소유자만
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    
+    purchase = payment_service.get_purchase_by_id(db, purchase_id)
+    if not purchase:
+        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
+    
+    if purchase.buyer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="본인의 구매만 결제할 수 있습니다.")
+    
+    result = payment_service.initiate_payment(
+        purchase_id=purchase_id,
+        purchase=purchase,
+    )
+    
+    return schemas.PaymentInitResult(**result)
+
+
+@router.get("/purchases")
+def list_user_purchases(
+    skip: int = 0,
+    limit: int = 20,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """사용자 구매 내역 조회
+    
+    인증 필수: 로그인한 사용자
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    
+    purchases, total = payment_service.get_user_purchases(
+        db=db,
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit,
+    )
+    
+    serialized = [
+        schemas.Purchase.model_validate(p).model_dump()
+        for p in purchases
+    ]
+    
+    return {
+        "purchases": serialized,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
     }
-    stage_run = _set_feature_metadata(stage_run, feature_metadata)
-    stage_run = _apply_feature_popup_state(stage_run, "accepted")
-    stage_run = save_stage_run(stage_run)
-    return FeatureOrchestrateAcceptedResponse(
-        accepted=True,
-        run_id=str(stage_run.get("run_id") or ""),
-        stage_run=stage_run,
-        status="accepted",
-        stream_url="/api/marketplace/feature-orchestrate/stream",
-        poll_url=f"/api/marketplace/feature-orchestrate/stage-runs/{stage_run.get('run_id')}",
+
+
+@router.post("/purchase/{purchase_id}/refund")
+def request_marketplace_refund(
+    purchase_id: int,
+    request: BaseModel,  # type: ignore
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Purchase:
+    """구매 환불 요청
+    
+    인증 필수: 해당 구매의 소유자만
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    
+    purchase = payment_service.get_purchase_by_id(db, purchase_id)
+    if not purchase:
+        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
+    
+    if purchase.buyer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="본인의 구매만 환불할 수 있습니다.")
+    
+    # 상태를 "refunded"로 변경
+    purchase = payment_service.confirm_payment(
+        db=db,
+        purchase_id=purchase_id,
+        transaction_id=purchase.transaction_id or f"REFUND_{uuid4().hex[:12]}",
+        status="refunded",
     )
+    
+    return schemas.Purchase.model_validate(purchase)
 
 
-@router.post("/feature-orchestrate/stream")
-async def stream_marketplace_feature_orchestration(
-    request: FeatureOrchestrateStreamRequest,
-) -> StreamingResponse:
-    stage_run = _get_feature_stage_run_or_404(request.run_id)
-    feature_metadata = _get_feature_metadata(stage_run)
-    feature_id = str(feature_metadata.get("feature_id") or "").strip()
-    request_payload = dict(feature_metadata.get("request") or {})
-    if not feature_id or not request_payload:
-        raise HTTPException(status_code=400, detail="feature orchestrator 요청 메타데이터가 없습니다.")
-    service = _feature_runtime_service.get_service(feature_id)
-
-    async def event_stream():
-        local_stage_run = _get_feature_stage_run_or_404(request.run_id)
-        local_metadata = _get_feature_metadata(local_stage_run)
-
-        def _persist_progress(*, percent: int, step: str, state: str, message: str) -> None:
-            progress_payload = {
-                "percent": max(0, min(100, int(percent))),
-                "step": step,
-                "state": state,
-                "message": message,
-                "updated_at": _utc_now_iso(),
-            }
-            local_metadata["progress"] = progress_payload
-            local_metadata["updated_at"] = progress_payload["updated_at"]
-
-        try:
-            local_metadata["popup_state"] = "preview_running"
-            local_metadata["last_event"] = "preview_running"
-            local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=10, step="preview_started", state="preview_running", message="preview 생성 단계를 시작했습니다.")
-            local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, "preview_running")
-            save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("state", {"run_id": request.run_id, "state": "preview_running"})
-            yield _build_feature_sse_event(
-                "progress",
-                _build_feature_progress_payload(
-                    request.run_id,
-                    percent=10,
-                    step="preview_started",
-                    state="preview_running",
-                    message="preview 생성 단계를 시작했습니다.",
-                ),
-            )
-
-            preview_artifact = await asyncio.to_thread(service.run_preview_phase, request_payload)
-            local_metadata["popup_state"] = "preview_ready"
-            local_metadata["preview_artifact"] = preview_artifact
-            local_metadata["artifact_manifest"] = {
-                **dict(local_metadata.get("artifact_manifest") or {}),
-                "preview_artifact_id": preview_artifact.get("artifact_id"),
-            }
-            local_metadata["last_event"] = "preview_ready"
-            local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=45, step="preview_ready", state="preview_ready", message="preview 결과가 준비되었습니다.")
-            local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, "preview_ready")
-            save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("artifact", {"run_id": request.run_id, "state": "preview_ready", "artifact": preview_artifact})
-            yield _build_feature_sse_event(
-                "progress",
-                _build_feature_progress_payload(
-                    request.run_id,
-                    percent=45,
-                    step="preview_ready",
-                    state="preview_ready",
-                    message="preview 결과가 준비되었습니다.",
-                ),
-            )
-
-            if not bool(request_payload.get("final_enabled", True)):
-                final_artifact = await asyncio.to_thread(service.run_final_phase, request_payload, preview_artifact)
-                quality_review = await asyncio.to_thread(service.run_quality_gate, request_payload, preview_artifact, final_artifact)
-                manifest = service.build_artifact_manifest(preview_artifact, final_artifact, quality_review)
-                local_metadata["popup_state"] = "completed_preview_only"
-                local_metadata["final_artifact"] = final_artifact
-                local_metadata["quality_review"] = quality_review
-                local_metadata["artifact_manifest"] = manifest
-                local_metadata["last_event"] = "completed_preview_only"
-                local_metadata["updated_at"] = _utc_now_iso()
-                _persist_progress(percent=100, step="completed_preview_only", state="completed_preview_only", message="preview 전용 라이브뷰 실행이 완료되었습니다.")
-                local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-                local_stage_run = _apply_feature_popup_state(local_stage_run, "completed_preview_only")
-                save_stage_run(local_stage_run)
-                yield _build_feature_sse_event("completed", {"run_id": request.run_id, "state": "completed_preview_only", "artifact_manifest": manifest, "quality_review": quality_review})
-                yield _build_feature_sse_event(
-                    "progress",
-                    _build_feature_progress_payload(
-                        request.run_id,
-                        percent=100,
-                        step="completed_preview_only",
-                        state="completed_preview_only",
-                        message="preview 전용 라이브뷰 실행이 완료되었습니다.",
-                    ),
-                )
-                return
-
-            local_metadata["popup_state"] = "final_running"
-            local_metadata["last_event"] = "final_running"
-            local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=65, step="final_started", state="final_running", message="final 렌더 단계를 시작했습니다.")
-            local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, "final_running")
-            save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("state", {"run_id": request.run_id, "state": "final_running"})
-            yield _build_feature_sse_event(
-                "progress",
-                _build_feature_progress_payload(
-                    request.run_id,
-                    percent=65,
-                    step="final_started",
-                    state="final_running",
-                    message="final 렌더 단계를 시작했습니다.",
-                ),
-            )
-
-            final_artifact = await asyncio.to_thread(service.run_final_phase, request_payload, preview_artifact)
-            quality_review = await asyncio.to_thread(service.run_quality_gate, request_payload, preview_artifact, final_artifact)
-            manifest = service.build_artifact_manifest(preview_artifact, final_artifact, quality_review)
-            completed_state = "completed" if bool(quality_review.get("passed")) else "completed_preview_only"
-
-            local_metadata["popup_state"] = "quality_review"
-            local_metadata["quality_review"] = quality_review
-            local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=85, step="quality_review", state="quality_review", message="quality gate 결과를 정리하고 있습니다.")
-            local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, "quality_review")
-            save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("quality_review", {"run_id": request.run_id, "state": "quality_review", "quality_review": quality_review})
-            yield _build_feature_sse_event(
-                "progress",
-                _build_feature_progress_payload(
-                    request.run_id,
-                    percent=85,
-                    step="quality_review",
-                    state="quality_review",
-                    message="quality gate 결과를 정리하고 있습니다.",
-                ),
-            )
-
-            local_metadata["popup_state"] = completed_state
-            local_metadata["final_artifact"] = final_artifact
-            local_metadata["artifact_manifest"] = manifest
-            local_metadata["last_event"] = completed_state
-            local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=100, step="completed", state=completed_state, message="라이브뷰 실행이 완료되었습니다.")
-            local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, completed_state)
-            save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("completed", {"run_id": request.run_id, "state": completed_state, "artifact_manifest": manifest, "quality_review": quality_review})
-            yield _build_feature_sse_event(
-                "progress",
-                _build_feature_progress_payload(
-                    request.run_id,
-                    percent=100,
-                    step="completed",
-                    state=completed_state,
-                    message="라이브뷰 실행이 완료되었습니다.",
-                ),
-            )
-        except Exception as exc:
-            logger.exception(
-                "Marketplace feature orchestrate stream failed run_id=%s",
-                request.run_id,
-            )
-            public_error_message = "라이브뷰 실행 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-            local_metadata["popup_state"] = "failed"
-            local_metadata["last_event"] = "failed"
-            local_metadata["error"] = public_error_message
-            local_metadata["updated_at"] = _utc_now_iso()
-            _persist_progress(percent=100, step="failed", state="failed", message=public_error_message)
-            local_stage_run = _set_feature_metadata(local_stage_run, local_metadata)
-            local_stage_run = _apply_feature_popup_state(local_stage_run, "failed", public_error_message)
-            save_stage_run(local_stage_run)
-            yield _build_feature_sse_event("failed", {"run_id": request.run_id, "state": "failed", "message": public_error_message})
-            yield _build_feature_sse_event(
-                "progress",
-                _build_feature_progress_payload(
-                    request.run_id,
-                    percent=100,
-                    step="failed",
-                    state="failed",
-                    message=public_error_message,
-                ),
-            )
-
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
-
-
-@router.get("/feature-orchestrate/stage-runs/{run_id}")
-def get_marketplace_feature_stage_run(run_id: str) -> Dict[str, Any]:
-    return _get_feature_stage_run_or_404(run_id)
-
-
-@router.post("/categories")
-def create_marketplace_category(
-    payload: Dict[str, Any],
+@router.post("/download-token")
+def create_marketplace_download_token(
+    request: DownloadTokenRequest,
+    current_user: Any = Depends(get_current_user),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    if not (getattr(current_user, "is_admin", False) or getattr(current_user, "is_superuser", False)):
-        raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
-    name = str(payload.get("name") or "").strip()
-    description = str(payload.get("description") or "").strip() or None
-    if not name:
-        raise HTTPException(status_code=400, detail="카테고리 이름이 필요합니다.")
-    existing = db.query(models.Category).filter(models.Category.name == name).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="이미 존재하는 카테고리입니다.")
-    category = models.Category(name=name, description=description)
-    db.add(category)
-    db.commit()
-    db.refresh(category)
-    _invalidate_marketplace_categories_cache()
-    return {"id": int(category.id), "name": str(category.name or ""), "description": category.description}
+) -> Dict[str, Any]:
+    """다운로드 토큰 생성
+    
+    인증 필수: 로그인한 사용자
+    다운로드 권한이 있는 경우에만 토큰 발급
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    
+    project = crud.get_project(db, request.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
+    
+    # 구매 여부 확인 (구매하지 않았으면 토큰 발급 거부)
+    purchases = db.query(models.Purchase).filter(
+        models.Purchase.project_id == request.project_id,
+        models.Purchase.buyer_id == current_user.id,
+        models.Purchase.status.in_(["completed", "pending"]),
+    ).all()
+    
+    if not purchases:
+        raise HTTPException(status_code=403, detail="구매 이력이 없어 다운로드할 수 없습니다.")
+    
+    # 토큰 생성 (1시간 유효)
+    download_token = download_token_service.create_token(
+        db=db,
+        project_id=request.project_id,
+        user_id=current_user.id,
+        expires_in=3600,
+    )
+    
+    return {
+        "token": download_token.token,
+        "expires_at": download_token.expires_at.isoformat(),
+    }
 
 
-@router.put("/categories/{category_id}")
-def update_marketplace_category(
-    category_id: int,
-    payload: Dict[str, Any],
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    if not (getattr(current_user, "is_admin", False) or getattr(current_user, "is_superuser", False)):
-        raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
-    category = db.query(models.Category).filter(models.Category.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
-    next_name = str(payload.get("name") or category.name or "").strip()
-    if not next_name:
-        raise HTTPException(status_code=400, detail="카테고리 이름이 필요합니다.")
-    category.name = next_name
-    category.description = str(payload.get("description") or "").strip() or None
-    db.add(category)
-    db.commit()
-    db.refresh(category)
-    _invalidate_marketplace_categories_cache()
-    return {"id": int(category.id), "name": str(category.name or ""), "description": category.description}
+router.include_router(build_subscription_router(sys.modules[__name__]))
 
 
-@router.delete("/categories/{category_id}")
-def delete_marketplace_category(
-    category_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    if not (getattr(current_user, "is_admin", False) or getattr(current_user, "is_superuser", False)):
-        raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
-    category = db.query(models.Category).filter(models.Category.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
-    db.delete(category)
-    db.commit()
-    _invalidate_marketplace_categories_cache()
-    return {"id": category_id, "name": str(getattr(category, "name", "") or "")}
+router.include_router(build_categories_router(sys.modules[__name__]))
 
+
+router.include_router(build_feature_orchestrate_router(sys.modules[__name__]))
+
+
+# ── Campaign Orchestrator API ──────────────────────────────
+
+class CampaignPlanRequest(BaseModel):
+    title: str = ""
+    scenario_script: str = ""
+    campaign_goal: str = "conversion"
+    creative_modes: List[str] = []
+    duration_profiles: List[int] = [60]
+    preview_fps: int = 8
+    subtitle_speed: float = 1.0
+    background_prompt: str = ""
+    caption_text: str = ""
+    portrait_image_prompt: str = ""
+    product_catalog: List[str] = []
+    action_template_key: Optional[str] = None
+    motion_tempo: Optional[str] = None
+    storyboard: List[Dict[str, Any]] = []
+
+
+router.include_router(build_campaign_orchestrate_router(sys.modules[__name__]))
+
+
+# ── Video Worker Monitoring API ────────────────────────────
+
+class VideoJobRequest(BaseModel):
+    title: str = ""
+    scenario_script: str = ""
+    duration_seconds: int = 60
+    frames_per_second: int = 8
+
+
+router.include_router(build_video_worker_router(sys.modules[__name__]))
+
+
+# ── Vector Search (Qdrant) API ─────────────────────────────
+
+router.include_router(build_search_router(sys.modules[__name__]))
+
+
+# ── Code Generator API ─────────────────────────────────────
+
+router.include_router(build_code_generator_router(sys.modules[__name__]))
+
+
+# ── ArcFace Face Recognition API ───────────────────────────
+
+router.include_router(build_face_recognition_router(sys.modules[__name__]))
+
+
+# ── ML Detector Runtime API ────────────────────────────────
+
+router.include_router(build_ml_detectors_router(sys.modules[__name__]))
+
+
+# ── Interpreter API ────────────────────────────────────────
+
+router.include_router(build_interpreter_router(sys.modules[__name__]))
+
+
+# ── Nadotongryoksa LBS API ─────────────────────────────────
+
+router.include_router(build_nadotongryoksa_lbs_router(sys.modules[__name__]))
+
+
+# ── Music System API ───────────────────────────────────────
+
+router.include_router(build_music_router(sys.modules[__name__]))
+
+
+# ── Extras API (IoT, 게임경제, 복구) ──────────────────────
+router.include_router(build_extras_router(sys.modules[__name__]))
+
+# ── Sorisae AI Engine Control Tower ───────────────────────
+router.include_router(build_sorisae_engine_router(sys.modules[__name__]))
+
+# ── Shinsegye 18 Projects Marketplace ─────────────────────
+router.include_router(build_shinsegye_products_router(sys.modules[__name__]))
 
 def _compose_trace_fields(flow_id: str, step_id: str, action: str) -> Dict[str, str]:
     return {
@@ -713,7 +1013,7 @@ def _write_feature_execution_log(
     status: str,
     message: str,
     payload: Optional[Dict[str, Any]] = None,
-) -> models.FeatureExecutionLog:
+) -> models.FeatureExecutionLog: # type: ignore
     trace_fields = _compose_trace_fields(flow_id, step_id, action)
     row = models.FeatureExecutionLog(
         user_id=user_id,
@@ -788,111 +1088,9 @@ def _resolve_frontend_origin(request: Request) -> str:
 _initialized = False
 
 
-def _ensure_ad_video_orders_schema() -> None:
-    inspector = inspect(engine)
-    if not inspector.has_table("ad_video_orders"):
-        return
-
-    statements = [
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS title VARCHAR(200)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS image_prompt TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS portrait_image_prompt TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS product_image_prompts TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS storyboard_json TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS storyboard_review_json TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS storyboard_review_history_json TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS subject_type VARCHAR(30)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS background_prompt TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS caption_text TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS scenario_script TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS voice_gender VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS engine_type VARCHAR(30)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS action_template_key VARCHAR(100)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS motion_tempo VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS duration_seconds INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS visual_style VARCHAR(100)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS cut_count INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS subtitle_speed DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS render_quality VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS audio_volume INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS status VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS progress_percent INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS external_job_id VARCHAR(255)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_file_key VARCHAR(500)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_filename VARCHAR(255)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_video_key VARCHAR(500)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_video_filename VARCHAR(255)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_score DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_gate_passed BOOLEAN",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_feedback TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS face_consistency_score DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS product_consistency_score DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS sales_quality_decision VARCHAR(30)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_retry_count INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_checked_at TIMESTAMP",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS public_job_id VARCHAR(36)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS error_message TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS download_count INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
-        (
-            "DO $$ BEGIN "
-            "IF EXISTS ("
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name='ad_video_orders' AND column_name='product_name'"
-            ") THEN "
-            "ALTER TABLE ad_video_orders ALTER COLUMN product_name DROP NOT NULL; "
-            "END IF; END $$"
-        ),
-        (
-            "DO $$ BEGIN "
-            "IF EXISTS ("
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name='ad_video_orders' AND column_name='concept'"
-            ") THEN "
-            "ALTER TABLE ad_video_orders ALTER COLUMN concept DROP NOT NULL; "
-            "END IF; END $$"
-        ),
-    ]
-
-    with engine.begin() as conn:
-        for stmt in statements:
-            conn.execute(text(stmt))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET engine_type='internal_ffmpeg' WHERE engine_type IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET progress_percent=0 WHERE progress_percent IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET cut_count=12 WHERE cut_count IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET quality_gate_passed=false WHERE quality_gate_passed IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET quality_retry_count=0 WHERE quality_retry_count IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET subject_type='auto' WHERE subject_type IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET subtitle_speed=1.0 WHERE subtitle_speed IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET render_quality='high' WHERE render_quality IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET audio_volume=100 WHERE audio_volume IS NULL"
-        ))
-        conn.execute(text(
-            "UPDATE ad_video_orders SET download_count=0 WHERE download_count IS NULL"
-        ))
-
-
 def _ensure_video_service_user_schema() -> None:
     inspector = inspect(engine)
-    if not inspector.has_table("users"):
+    if not inspector.has_table("users"): # type: ignore
         return
 
     with engine.begin() as conn:
@@ -905,219 +1103,17 @@ def _ensure_video_service_user_schema() -> None:
 
 
 def ensure_marketplace_runtime_schema() -> None:
-    _ensure_ad_video_orders_schema()
+    init_db()
+    ensure_ad_video_orders_schema()
     _ensure_video_service_user_schema()
-
-
-_ad_enqueued_ids: set[int] = set()
-VIDEO_RENDER_QUEUE_NAME = (
-    os.getenv("VIDEO_RENDER_QUEUE_NAME", "video_render_queue")
-    or "video_render_queue"
-).strip()
-
-
-def _get_video_queue_redis() -> Optional[Redis]:
-    global _video_queue_redis_cache
-    global _video_queue_redis_cache_url
-    global _video_queue_redis_cache_checked_at
-
-    redis_url = (os.getenv("REDIS_URL", "") or "").strip()
-    if not redis_url:
-        _video_queue_redis_cache = None
-        _video_queue_redis_cache_url = ""
-        _video_queue_redis_cache_checked_at = time.time()
-        return None
-
-    now = time.time()
-    if (
-        _video_queue_redis_cache_url == redis_url
-        and (now - _video_queue_redis_cache_checked_at) < _VIDEO_QUEUE_REDIS_CACHE_TTL_SEC
-    ):
-        return _video_queue_redis_cache
-
-    try:
-        client = _video_queue_redis_cache
-        if client is None or _video_queue_redis_cache_url != redis_url:
-            client = Redis.from_url(
-                redis_url,
-                decode_responses=True,
-                socket_connect_timeout=1,
-                socket_timeout=1,
-                health_check_interval=30,
-            )
-        client.ping()
-        _video_queue_redis_cache = client
-        _video_queue_redis_cache_url = redis_url
-        _video_queue_redis_cache_checked_at = now
-        return client
-    except RedisError:
-        _video_queue_redis_cache = None
-        _video_queue_redis_cache_url = redis_url
-        _video_queue_redis_cache_checked_at = now
-        return None
-
-
-def _require_video_queue_redis() -> Redis:
-    client = _get_video_queue_redis()
-    if client is None:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Redis queue unavailable. video_render_queue is required by "
-                "the video rendering spec."
-            ),
-        )
-    return client
-
-
-def _enqueue_ad_order(order_id: int, public_job_id: Optional[str] = None) -> bool:
-    with _ad_worker_lock:
-        if order_id in _ad_enqueued_ids:
-            return False
-        _ad_enqueued_ids.add(order_id)
-
-    queue_item = {
-        "order_id": order_id,
-        "job_id": public_job_id or "",
-        "status": models.AdVideoOrderStatus.PENDING.value,
-        "queue": VIDEO_RENDER_QUEUE_NAME,
-    }
-    try:
-        redis_client = _require_video_queue_redis()
-        redis_client.lpush(VIDEO_RENDER_QUEUE_NAME, json.dumps(queue_item))
-        return True
-    except Exception:
-        with _ad_worker_lock:
-            _ad_enqueued_ids.discard(order_id)
-        raise
-
-
-def _recover_interrupted_ad_orders() -> int:
     db = SessionLocal()
     try:
-        rows = (
-            db.query(
-                models.AdVideoOrder.id,
-                models.AdVideoOrder.public_job_id,
-            )
-            .filter(
-                models.AdVideoOrder.status.in_(
-                    [
-                        models.AdVideoOrderStatus.QUEUED.value,
-                        models.AdVideoOrderStatus.PENDING.value,
-                        models.AdVideoOrderStatus.PROCESSING.value,
-                        models.AdVideoOrderStatus.RENDERING.value,
-                    ]
-                ),
-                models.AdVideoOrder.output_video_key.is_(None),
-            )
-            .order_by(models.AdVideoOrder.created_at.asc())
-            .all()
-        )
+        subscription_service.ensure_runtime_bootstrap(db)
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
-
-    recovered = 0
-    for row in rows:
-        order_id = int(row[0])
-        public_job_id = str(getattr(row, "public_job_id", "") or "").strip() or None
-        if _enqueue_ad_order(order_id, public_job_id):
-            recovered += 1
-    if recovered:
-        logger.info("[marketplace] recovered %s interrupted ad order(s)", recovered)
-    return recovered
-
-
-def ensure_ad_order_runtime_ready() -> int:
-    logger.info(
-        "[marketplace][runtime_recovery] ensure_ad_order_runtime_ready invoked; "
-        "runtime recovery stage owns Redis reconnect and interrupted order recovery"
-    )
-    _require_video_queue_redis()
-    return _recover_interrupted_ad_orders()
-
-
-def _mark_ad_worker_heartbeat(order_id: Optional[int] = None) -> None:
-    now = time.time()
-    with _ad_worker_lock:
-        if _ad_worker_runtime["started_at"] is None:
-            _ad_worker_runtime["started_at"] = now
-        _ad_worker_runtime["last_heartbeat"] = now
-        if order_id is not None:
-            _ad_worker_runtime["last_order_id"] = order_id
-
-
-def get_ad_queue_runtime_status() -> Dict[str, Dict[str, Any]]:
-    connection_id = f"redis:{VIDEO_RENDER_QUEUE_NAME}"
-    worker_id = str(_ad_worker_runtime.get("worker_id") or "ad-render-worker-001")
-    worker_bootstrap_enabled = (os.getenv("ENABLE_AD_ORDER_WORKER_BOOTSTRAP", "true") or "true").strip().lower() in {"1", "true", "yes", "on"}
-
-    redis_client = _get_video_queue_redis()
-    queue_depth: Optional[int] = None
-    redis_error: Optional[str] = None
-    redis_available = redis_client is not None
-    if redis_client is not None:
-        try:
-            queue_depth = int(redis_client.llen(VIDEO_RENDER_QUEUE_NAME))
-        except RedisError:
-            logger.exception("Failed to read Redis queue depth for health diagnostics")
-            redis_available = False
-            redis_error = "redis_queue_unavailable"
-
-    with _ad_worker_lock:
-        started_at = _ad_worker_runtime.get("started_at")
-        last_heartbeat = _ad_worker_runtime.get("last_heartbeat")
-        last_order_id = _ad_worker_runtime.get("last_order_id")
-
-    now = time.time()
-    heartbeat_age_sec: Optional[float] = None
-    if isinstance(last_heartbeat, (int, float)):
-        heartbeat_age_sec = round(max(0.0, now - float(last_heartbeat)), 1)
-    worker_started = isinstance(started_at, (int, float))
-    worker_alive = worker_started and heartbeat_age_sec is not None and heartbeat_age_sec <= 120.0
-
-    redis_state = "ok" if redis_available else "warning"
-    redis_note = (
-        f"{connection_id} 연결 정상, queue={VIDEO_RENDER_QUEUE_NAME}, depth={queue_depth if queue_depth is not None else '-'}"
-        if redis_available
-        else "REDIS_URL 미설정 또는 Redis 연결 실패로 video_render_queue를 사용할 수 없습니다."
-    )
-    if not worker_bootstrap_enabled:
-        worker_state = "ok"
-        worker_note = "광고 주문 worker bootstrap이 비활성화되어 heartbeat를 생성하지 않습니다. 프로파일러/진단 실행에서는 정상입니다."
-    else:
-        worker_state = "ok" if worker_alive else "warning"
-        worker_note = (
-            f"worker_id={worker_id} heartbeat 정상, last_order_id={last_order_id or '-'}"
-            if worker_alive
-            else "광고 주문 worker heartbeat가 오래됐습니다. 장시간 렌더 중인지와 worker 루프 상태를 확인하세요."
-        )
-
-    return {
-        "redis_queue": {
-            "available": redis_available,
-            "state": redis_state,
-            "note": redis_note,
-            "connection_id": connection_id,
-            "queue_name": VIDEO_RENDER_QUEUE_NAME,
-            "queue_depth": queue_depth,
-            "worker_id": worker_id,
-            "error": redis_error,
-        },
-        "ad_worker": {
-            "available": worker_alive if worker_bootstrap_enabled else True,
-            "state": worker_state,
-            "note": worker_note,
-            "connection_id": connection_id,
-            "queue_name": VIDEO_RENDER_QUEUE_NAME,
-            "queue_depth": queue_depth,
-            "worker_id": worker_id,
-            "bootstrap_enabled": worker_bootstrap_enabled,
-            "started": worker_started,
-            "heartbeat_age_sec": heartbeat_age_sec,
-            "last_order_id": last_order_id,
-        },
-    }
 
 
 class CustomerOrchestrateRequest(BaseModel):
@@ -1156,7 +1152,16 @@ class CustomerOrchestratorChatRequest(BaseModel):
     conversation_mode: str = "auto"
     companion_mode: str = "hybrid"
     response_style: str = "balanced"
+    tone_preset: str = "auto"
     max_tokens: int = 768
+
+
+class CustomerOrchestrateAcceptedResponse(BaseModel):
+    accepted: bool = True
+    run_id: Optional[str] = None
+    stage_run: Optional[Dict[str, Any]] = None
+    status: str = "accepted"
+    message: str = "고객 오케스트레이터 요청을 수락했습니다. 이어지는 stream 호출에서 실제 실행 결과를 반환합니다."
 
 
 def _build_customer_stage_chat_context(stage_run: Optional[Dict[str, Any]], request: CustomerOrchestratorChatRequest) -> OrchestratorStageChatContext:
@@ -1174,6 +1179,113 @@ def _build_customer_stage_chat_context(stage_run: Optional[Dict[str, Any]], requ
         pending_revision_note=str(request.message or "").strip() or None,
         last_command=(str(request.message or "").strip().split()[0] if str(request.message or "").strip().startswith("/") else None),
     )
+
+
+def _build_customer_orchestrate_sse_event(event: str, payload: Dict[str, Any]) -> str:
+    return f"data: {json.dumps({'event': event, 'payload': payload}, ensure_ascii=False)}\n\n"
+
+
+def _get_customer_orchestrate_run_lock(run_id: str) -> threading.Lock:
+    with _customer_orchestrate_run_locks_guard:
+        lock = _customer_orchestrate_run_locks.get(run_id)
+        if lock is None:
+            lock = threading.Lock()
+            _customer_orchestrate_run_locks[run_id] = lock
+        return lock
+
+
+def _get_customer_stage_execution_metadata(stage_run_payload: Dict[str, Any]) -> Dict[str, Any]:
+    metadata = dict(stage_run_payload.get("metadata") or {})
+    return dict(metadata.get("orchestration_execution") or {})
+
+
+def _update_customer_stage_execution_metadata(run_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
+    payload = load_stage_run(run_id)
+    if not payload:
+        return None
+    metadata = dict(payload.get("metadata") or {})
+    execution_metadata = dict(metadata.get("orchestration_execution") or {})
+    execution_metadata.update(fields)
+    metadata["orchestration_execution"] = execution_metadata
+    payload["metadata"] = metadata
+    return save_stage_run(payload)
+
+
+def _guard_customer_orchestrate_execution(stage_run_payload: Dict[str, Any]) -> None:
+    execution_metadata = _get_customer_stage_execution_metadata(stage_run_payload)
+    execution_status = str(execution_metadata.get("status") or "").strip().lower()
+    if execution_status == "running":
+        raise HTTPException(status_code=409, detail="같은 stage run 생성이 이미 실행 중입니다.")
+    if execution_status == "completed":
+        raise HTTPException(status_code=409, detail="이미 생성이 끝난 stage run입니다. 새 stage run으로 다시 시작하세요.")
+
+
+def _ensure_customer_stage_run_payload(
+    request: CustomerOrchestrateRequest,
+    current_user: models.User,
+) -> Dict[str, Any]:
+    stage_run_payload = _resolve_stage_run_for_request(request, current_user)
+    if not stage_run_payload:
+        raise HTTPException(status_code=404, detail="고객 stage run을 찾을 수 없습니다.")
+    return stage_run_payload
+
+
+async def _run_customer_orchestration_request(orchestration_request):
+    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+
+    return await execute_orchestration_handler(orchestration_request)
+
+
+def _build_customer_orchestrate_result_payload(
+    *,
+    response: Any,
+    request: CustomerOrchestrateRequest,
+    current_user: models.User,
+    stage_run_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    result_payload = _normalize_customer_orchestrate_result_payload(response, request.task)
+    synced_stage_run = _sync_stage_run_after_result(
+        stage_run_id=str(stage_run_payload.get("run_id") or request.stage_run_id or "").strip() or None,
+        stage_id=str(request.stage_id or stage_run_payload.get("current_stage_id") or "ARCH-001").strip() or None,
+        result_payload=result_payload,
+    )
+    if synced_stage_run:
+        result_payload["stage_run"] = synced_stage_run
+    return {
+        "requested_by": {
+            "id": getattr(current_user, "id", None),
+            "email": getattr(current_user, "email", None),
+        },
+        "result": result_payload,
+    }
+
+
+def _build_customer_orchestrate_error_payload(
+    *,
+    error_message: str,
+    request: CustomerOrchestrateRequest,
+    stage_run_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    stage_run_error_payload = {
+        "completion_summary": "고객 오케스트레이터 실행 실패",
+        "failure_summary": error_message,
+        "apply_error": error_message,
+        "completion_gate_error": error_message,
+        "completion_judge": {
+            "product_ready": False,
+            "failed_reasons": [error_message],
+        },
+    }
+    synced_stage_run = _sync_stage_run_after_result(
+        stage_run_id=str(stage_run_payload.get("run_id") or request.stage_run_id or "").strip() or None,
+        stage_id=str(request.stage_id or stage_run_payload.get("current_stage_id") or "ARCH-001").strip() or None,
+        result_payload=stage_run_error_payload,
+        error_message=error_message,
+    )
+    payload: Dict[str, Any] = {"message": error_message}
+    if synced_stage_run:
+        payload["stage_run"] = synced_stage_run
+    return payload
 
 
 _CUSTOMER_ORCHESTRATE_TRACKING_KEY_MAP = {
@@ -1267,7 +1379,7 @@ def _persist_customer_orchestrator_completion(
     db.add(completion)
     _write_feature_execution_log(
         db,
-        user_id=current_user.id,
+        user_id=current_user.id, # type: ignore
         entity_type="customer_orchestrator_completion",
         entity_id=str(completion.project_name),
         flow_id=str(result_payload.get("flow_id") or "FLOW-001"),
@@ -1285,62 +1397,6 @@ def _persist_customer_orchestrator_completion(
             "failed_reasons": list((result_payload.get("completion_judge") or {}).get("failed_reasons") or []),
         },
     )
-
-
-@router.post("/customer-orchestrate/chat", response_model=OrchestratorChatResponse)
-async def customer_orchestrator_chat(
-    request_context: Request,
-    request: CustomerOrchestratorChatRequest,
-    current_user=Depends(get_current_user),
-):
-    stage_run_payload = None
-    if request.run_id:
-        stage_run_payload = load_stage_run(request.run_id)
-
-    from backend.llm.orchestrator import answer_orchestrator_chat as answer_orchestrator_chat_handler
-
-    project_name = str(request.project_name or (stage_run_payload or {}).get("project_name") or "customer-product").strip() or "customer-product"
-    auto_connect = AutoConnectMeta(
-        connection_id=request.run_id or uuid4().hex,
-        flow_id="FLOW-CUST-CHAT",
-        step_id=str((stage_run_payload or {}).get("current_stage_id") or request.stage_id or "ARCH-001"),
-        action="CUSTOMER_CHAT",
-        route_id="ROUTE-CUSTOMER-ORCH-CHAT",
-        panel_id="PANEL-CUSTOMER-ORCHESTRATOR",
-        capability_id="customer-orchestrator-chat",
-    )
-    chat_response = await answer_orchestrator_chat_handler(
-        request_context=request_context,
-        request=OrchestratorChatRequest(
-            task=str(request.task or "").strip() or project_name,
-            message=str(request.message or "").strip(),
-            agent_key="customer_orchestrator",
-            mode="manual_10step",
-            manual_mode=True,
-            companion_mode=str(request.companion_mode or "hybrid").strip() or "hybrid",
-            conversation_mode=str(request.conversation_mode or "auto").strip() or "auto",
-            output_dir=request.output_dir,
-            run_id=request.run_id,
-            max_tokens=int(request.max_tokens or 768),
-            lightweight=False,
-            multi_turn_enabled=True,
-            response_style=str(request.response_style or "balanced").strip() or "balanced",
-            conversation=list(request.conversation or []),
-            context_tags=list(request.context_tags or []) + ["customer", "stage-run", "manual-10step"],
-            project_root=request.output_dir,
-            project_memory=dict(request.project_memory or {}),
-            auto_connect=auto_connect,
-        ),
-        agent_key="customer_orchestrator",
-    )
-    chat_response.stage_chat = _build_customer_stage_chat_context(stage_run_payload, request)
-    chat_response.diagnostics = {
-        **dict(chat_response.diagnostics or {}),
-        "customer_user_id": getattr(current_user, "id", None),
-        "customer_project_name": project_name,
-        "stage_run_connected": bool(stage_run_payload),
-    }
-    return chat_response
 
 
 def _resolve_stage_run_for_request(
@@ -1419,66 +1475,27 @@ def _sync_stage_run_after_result(
     ]
     note = "\n".join([part for part in note_parts if part])
 
-    return update_stage_run(
+    synced = update_stage_run(
         run_id=stage_run_id,
         stage_id=normalized_stage_id,
         status=next_status,
         note=note,
         manual_correction=combined_error if next_status != "passed" else "",
     )
-
-
-@router.post("/customer-orchestrate/stage-runs")
-def create_customer_orchestrate_stage_run(
-    request: CustomerOrchestrateRequest,
-    current_user=Depends(get_current_user),
-):
-    project_name = (request.project_name or "customer-product").strip() or "customer-product"
-    payload = initialize_stage_run(
-        scope="marketplace",
-        project_name=project_name,
-        mode=request.mode,
-        requested_by={
-            "id": current_user.id,
-            "email": getattr(current_user, "email", ""),
-        },
-        metadata={
-            "task": request.task,
-        },
-    )
-    return payload
-
-
-@router.get("/customer-orchestrate/stage-runs/{run_id}")
-def get_customer_orchestrate_stage_run(
-    run_id: str,
-    current_user=Depends(get_current_user),
-):
-    del current_user
-    payload = load_stage_run(run_id)
-    if not payload:
-        raise HTTPException(status_code=404, detail="stage run을 찾을 수 없습니다.")
-    return payload
-
-
-@router.post("/customer-orchestrate/stage-runs/update")
-def update_customer_orchestrate_stage_run(
-    payload: CustomerOrchestrateStageUpdateRequest,
-    current_user=Depends(get_current_user),
-):
-    del current_user
-    try:
-        return update_stage_run(
-            run_id=payload.run_id,
-            stage_id=payload.stage_id,
-            status=payload.status,
-            note=payload.note,
-            manual_correction=payload.manual_correction,
-            substep_checks=payload.substep_checks,
-            revision_note=payload.revision_note,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    if next_status == "passed":
+        # Customer stream execution is a single-shot run, so close the stage run
+        # as completed instead of leaving it on the next ARCH-* step.
+        synced["status"] = "completed"
+        synced["final_completed"] = True
+        synced["current_stage_id"] = normalized_stage_id
+        for stage in list(synced.get("stages") or []):
+            if str(stage.get("id") or "").upper() == normalized_stage_id:
+                continue
+            if str(stage.get("status") or "").lower() == "running":
+                stage["status"] = "pending"
+                stage["check_label"] = "대기"
+        synced = save_stage_run(synced)
+    return synced
 
 
 def _build_customer_orchestrate_log_event(
@@ -1587,230 +1604,13 @@ def _append_customer_follow_up_history(*, history_id: str, score: int, limit: in
     }
 
 
-@router.get("/customer-orchestrate/generated-programs/latest", response_model=CustomerGeneratedProgramSummary)
-def get_latest_customer_generated_program_summary(
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    latest = (
-        db.query(models.CustomerOrchestratorCompletion)
-        .filter(models.CustomerOrchestratorCompletion.user_id == current_user.id)
-        .order_by(models.CustomerOrchestratorCompletion.created_at.desc())
-        .first()
-    )
-    if latest is None:
-        raise HTTPException(status_code=404, detail="최근 생성 결과가 없습니다.")
-
-    output_dir = str(getattr(latest, "output_dir", "") or "").strip()
-    if not output_dir:
-        return CustomerGeneratedProgramSummary()
-
-    output_path = _validate_customer_generated_output_dir(Path(output_dir), current_user.id)
-    validation_result_path = output_path / "docs" / "automatic_validation_result.json"
-    shipping_readme_path = output_path / "docs" / "shipping_readme.md"
-    payload: Dict[str, Any] = {}
-    if validation_result_path.exists():
-        try:
-            payload = json.loads(validation_result_path.read_text(encoding="utf-8"))
-        except Exception:
-            payload = {}
-
-    validation_engines = payload.get("validation_engines") or {}
-    publish_payload = (((payload.get("completion_judge") or {}).get("packaging_audit") or {}).get("publish_payload")) if isinstance(payload.get("completion_judge"), dict) else None
-    if not isinstance(publish_payload, dict):
-        publish_payload = {}
-    retry_queue_count = (
-        db.query(models.FeatureRetryQueue)
-        .filter(models.FeatureRetryQueue.user_id == current_user.id)
-        .count()
-    )
-    completion_count = (
-        db.query(models.CustomerOrchestratorCompletion)
-        .filter(models.CustomerOrchestratorCompletion.user_id == current_user.id)
-        .count()
-    )
-    log_count = (
-        db.query(models.FeatureExecutionLog)
-        .filter(models.FeatureExecutionLog.user_id == current_user.id)
-        .count()
-    )
-    approval_history_count = (
-        db.query(models.FeatureExecutionLog)
-        .filter(
-            models.FeatureExecutionLog.user_id == current_user.id,
-            models.FeatureExecutionLog.entity_type == "customer_orchestrator_completion",
-        )
-        .count()
-    )
-    stage_run_status = str((payload.get("stage_run") or {}).get("status") or "") or None if isinstance(payload.get("stage_run"), dict) else None
-    hard_gate_failed_stages = [
-        str(item)
-        for item in ((((payload.get("completion_judge") or {}).get("product_readiness_hard_gate") or {}).get("failed_stages") or []))
-        if str(item).strip()
-    ] if isinstance(payload.get("completion_judge"), dict) else []
-    runtime_score = 0
-    runtime_score += 35 if str(payload.get("status") or "") != "passed" else 0
-    runtime_score += 25 if not (bool(publish_payload.get("ready")) or shipping_readme_path.exists()) else 0
-    runtime_score += min(20, retry_queue_count * 5)
-    runtime_score += min(10, len([item for item in (((validation_engines.get("integration_test_engine") or {}).get("required_tests") or [])) if str(item).strip()]) * 2)
-    runtime_score += min(10, approval_history_count * 2)
-    runtime_score += min(10, len(hard_gate_failed_stages) * 3)
-    if stage_run_status in {"failed", "manual_correction"}:
-        runtime_score += 10
-    priority_history = _append_customer_follow_up_history(
-        history_id=f"customer:{current_user.id}:{output_path.name}",
-        score=runtime_score,
-    )
-
-    return CustomerGeneratedProgramSummary(
-        output_dir=str(output_path),
-        output_archive_path=str(payload.get("output_archive_path") or "") or None,
-        delivery_gate_blocked=str(payload.get("status") or "") != "passed",
-        delivery_gate_message="; ".join(list(payload.get("failed_reasons") or [])[:8]) or None,
-        publish_ready=bool(publish_payload.get("ready")) or shipping_readme_path.exists(),
-        publish_targets=[str(item) for item in (publish_payload.get("publish_targets") or []) if str(item).strip()],
-        shipping_zip_ok=bool((validation_engines.get("shipping_zip_validation") or {}).get("ok")),
-        validation_profile=str(payload.get("validation_profile") or "") or None,
-        required_tests=[str(item) for item in (((validation_engines.get("integration_test_engine") or {}).get("required_tests") or [])) if str(item).strip()],
-        priority_average_score=int(priority_history.get("average_score") or 0),
-        priority_peak_score=int(priority_history.get("peak_score") or 0),
-        priority_latest_score=int(priority_history.get("latest_score") or 0),
-        priority_previous_score=priority_history.get("previous_score"),
-        priority_momentum=int(priority_history.get("momentum") or 0),
-        priority_cumulative_score=int(priority_history.get("cumulative_score") or 0),
-        approval_history_count=approval_history_count,
-        stage_run_status=stage_run_status,
-        hard_gate_failed_stages=hard_gate_failed_stages,
-    )
-
-
 def _customer_orchestrate_connection_id(trace_id: Optional[str], flow_id: Optional[str], step_id: Optional[str], action: Optional[str]) -> Optional[str]:
     if flow_id and step_id and action:
         return f"{flow_id}:{step_id}:{action}"
     return trace_id
 
 
-@router.get("/customer-orchestrate/completions/my")
-def list_my_customer_orchestrate_completions(
-    limit: int = 20,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    safe_limit = max(1, min(int(limit or 20), 50))
-    rows = (
-        db.query(models.CustomerOrchestratorCompletion)
-        .filter(models.CustomerOrchestratorCompletion.user_id == current_user.id)
-        .order_by(models.CustomerOrchestratorCompletion.created_at.desc())
-        .limit(safe_limit)
-        .all()
-    )
-    items = [
-        {
-            "id": int(getattr(item, "id", 0) or 0),
-            "trace_id": getattr(item, "trace_id", None),
-            "flow_id": getattr(item, "flow_id", None),
-            "step_id": getattr(item, "step_id", None),
-            "action": getattr(item, "action", None),
-            "project_name": str(getattr(item, "project_name", "") or ""),
-            "mode": str(getattr(item, "mode", "") or ""),
-            "attempts": int(getattr(item, "attempts", 0) or 0),
-            "output_dir": getattr(item, "output_dir", None),
-            "postcheck_ok": getattr(item, "postcheck_ok", None),
-            "gate_passed": bool(getattr(item, "gate_passed", False)),
-            "override_used": bool(getattr(item, "override_used", False)),
-            "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
-            "connection_id": _customer_orchestrate_connection_id(
-                getattr(item, "trace_id", None),
-                getattr(item, "flow_id", None),
-                getattr(item, "step_id", None),
-                getattr(item, "action", None),
-            ),
-        }
-        for item in rows
-    ]
-    return {"items": items, "count": len(items), "limit": safe_limit}
-
-
-@router.get("/customer-orchestrate/logs/my")
-def list_my_customer_orchestrate_logs(
-    limit: int = 30,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    safe_limit = max(1, min(int(limit or 30), 100))
-    rows = (
-        db.query(models.FeatureExecutionLog)
-        .filter(models.FeatureExecutionLog.user_id == current_user.id)
-        .order_by(models.FeatureExecutionLog.created_at.desc())
-        .limit(safe_limit)
-        .all()
-    )
-    items = [
-        {
-            "id": int(getattr(item, "id", 0) or 0),
-            "trace_id": str(getattr(item, "trace_id", "") or ""),
-            "flow_id": str(getattr(item, "flow_id", "") or ""),
-            "step_id": str(getattr(item, "step_id", "") or ""),
-            "action": str(getattr(item, "action", "") or ""),
-            "entity_type": str(getattr(item, "entity_type", "") or ""),
-            "entity_id": str(getattr(item, "entity_id", "") or ""),
-            "status": str(getattr(item, "status", "") or ""),
-            "message": str(getattr(item, "message", "") or ""),
-            "payload_json": getattr(item, "payload_json", None),
-            "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
-            "connection_id": _customer_orchestrate_connection_id(
-                getattr(item, "trace_id", None),
-                getattr(item, "flow_id", None),
-                getattr(item, "step_id", None),
-                getattr(item, "action", None),
-            ),
-        }
-        for item in rows
-    ]
-    return {"items": items, "count": len(items), "limit": safe_limit}
-
-
-@router.get("/customer-orchestrate/retry-queue/my")
-def list_my_customer_orchestrate_retry_queue(
-    limit: int = 30,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    safe_limit = max(1, min(int(limit or 30), 100))
-    rows = (
-        db.query(models.FeatureRetryQueue)
-        .filter(models.FeatureRetryQueue.user_id == current_user.id)
-        .order_by(models.FeatureRetryQueue.updated_at.desc(), models.FeatureRetryQueue.created_at.desc())
-        .limit(safe_limit)
-        .all()
-    )
-    items = [
-        {
-            "id": int(getattr(item, "id", 0) or 0),
-            "trace_id": str(getattr(item, "trace_id", "") or ""),
-            "flow_id": str(getattr(item, "flow_id", "") or ""),
-            "step_id": str(getattr(item, "step_id", "") or ""),
-            "action": str(getattr(item, "action", "") or ""),
-            "entity_type": str(getattr(item, "entity_type", "") or ""),
-            "entity_id": str(getattr(item, "entity_id", "") or ""),
-            "queue_name": str(getattr(item, "queue_name", "") or ""),
-            "status": str(getattr(item, "status", "") or ""),
-            "payload_json": getattr(item, "payload_json", None),
-            "attempt_count": int(getattr(item, "attempt_count", 0) or 0),
-            "max_attempts": int(getattr(item, "max_attempts", 0) or 0),
-            "last_error": getattr(item, "last_error", None),
-            "updated_at": getattr(item, "updated_at", None).isoformat() if getattr(item, "updated_at", None) else None,
-            "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
-            "connection_id": _customer_orchestrate_connection_id(
-                getattr(item, "trace_id", None),
-                getattr(item, "flow_id", None),
-                getattr(item, "step_id", None),
-                getattr(item, "action", None),
-            ),
-        }
-        for item in rows
-    ]
-    return {"items": items, "count": len(items), "limit": safe_limit}
+router.include_router(build_customer_orchestrate_router(sys.modules[__name__]))
 
 
 def _build_customer_orchestrate_request(
@@ -1820,7 +1620,7 @@ def _build_customer_orchestrate_request(
     from backend.llm.orchestrator import OrchestrationRequest
 
     safe_mode = request.mode if request.mode in {"auto", "code", "design", "plan", "review", "full", "program_5step"} else "auto"
-    _maybe_run_marketplace_storage_cleanup()
+    _schedule_marketplace_storage_cleanup()
     user_dir_path = _resolve_customer_orchestrator_run_root(user_id)
     user_dir = str(user_dir_path)
     requested_output_dir = str(request.output_dir or "").strip() or None
@@ -2034,2316 +1834,8 @@ def _store_bytes_with_fallback(file_bytes: bytes, object_key: str, content_type:
     return f"local:{object_key}"
 
 
-_ad_order_queue: "queue.Queue[dict[str, Any]]" = queue.Queue()
-_ad_worker_lock = threading.Lock()
-_cleanup_lock = threading.Lock()
-_last_cleanup_epoch_sec = 0.0
-_ad_worker_runtime: Dict[str, Any] = {
-    "worker_id": "ad-render-worker-001",
-    "connection_id": "redis:video_render_queue",
-    "started_at": None,
-    "last_heartbeat": None,
-    "last_order_id": None,
-}
-
-def _get_int_env(name: str, default: int, min_value: int, max_value: int) -> int:
-    raw = (os.getenv(name, str(default)) or str(default)).strip()
-    try:
-        value = int(raw)
-    except Exception:
-        value = default
-    return max(min_value, min(max_value, value))
-
-
-AD_TOTAL_SECONDS = _get_int_env("AD_TOTAL_SECONDS", 60, 15, 180)
-AD_FRAME_HINTS_PER_SECOND = 8
-AD_TOTAL_FRAME_HINT = AD_TOTAL_SECONDS * AD_FRAME_HINTS_PER_SECOND
-AD_CUT_COUNT = _get_int_env("AD_CUT_COUNT", 12, 1, 180)
-AD_CUT_SECONDS = max(1, AD_TOTAL_SECONDS // AD_CUT_COUNT)
-MARKETPLACE_AD_QUALITY_CRITERIA = [
-    "첫 3초 안에 브랜드/상품 훅이 보여야 한다.",
-    f"{AD_TOTAL_SECONDS}초 본편은 1초당 {AD_FRAME_HINTS_PER_SECOND}장, 총 {AD_TOTAL_FRAME_HINT}장 고정 규격을 유지한다.",
-    "상품은 대부분의 컷에서 보이거나 명시적으로 참조되어야 한다.",
-    "후반부에는 사용 장면, 신뢰 포인트, CTA가 순서대로 정리되어야 한다.",
-    "자막/내레이션/장면 메시지는 서로 충돌하지 않아야 한다.",
-]
-
-DEDICATED_STATUS_ACCEPTED = {"accepted", "queued", "processing", "running", "completed", "failed", "error"}
-DEDICATED_STATUS_COMPLETED = {"completed", "success", "done"}
-DEDICATED_STATUS_FAILED = {"failed", "error"}
-
-
-def _order_duration_seconds(order: models.AdVideoOrder) -> int:
-    try:
-        value = int(getattr(order, "duration_seconds", AD_TOTAL_SECONDS) or AD_TOTAL_SECONDS)
-    except Exception:
-        value = AD_TOTAL_SECONDS
-    return max(15, min(180, value))
-
-
-def _recommended_cut_count(duration_seconds: int) -> int:
-    return max(1, int(round(max(1, duration_seconds) / max(1, AD_CUT_SECONDS))))
-
-
-def _cut_count_bounds(duration_seconds: int) -> tuple[int, int]:
-    recommended = _recommended_cut_count(duration_seconds)
-    return recommended, recommended
-
-
-def _minimum_product_image_count_for_duration(duration_seconds: int) -> int:
-    if duration_seconds >= 60:
-        return 12
-    if duration_seconds >= 30:
-        return 6
-    return 3
-
-
-def _marketplace_ad_quality_brief(duration_seconds: int) -> str:
-    return (
-        f"Marketplace {duration_seconds}초 광고 기준: "
-        + " / ".join(MARKETPLACE_AD_QUALITY_CRITERIA)
-    )
-
-
-def _ad_variation_seed(order: models.AdVideoOrder, index: int) -> int:
-    public_job_id = str(getattr(order, "public_job_id", "") or "")
-    material = f"{order.id}:{public_job_id}:{index}:marketplace-ad"
-    return int(hashlib.sha256(material.encode("utf-8")).hexdigest()[:8], 16)
-
-
-def _order_cut_count(order: models.AdVideoOrder) -> int:
-    duration = _order_duration_seconds(order)
-    minimum, maximum = _cut_count_bounds(duration)
-    recommended = _recommended_cut_count(duration)
-    try:
-        value = int(
-            getattr(order, "cut_count", recommended) or recommended
-        )
-    except Exception:
-        value = recommended
-    return max(minimum, min(maximum, value))
-
-
-def _order_cut_seconds(order: models.AdVideoOrder) -> int:
-    duration = _order_duration_seconds(order)
-    cut_count = _order_cut_count(order)
-    return max(1, int(round(duration / max(1, cut_count))))
-
-
-def _order_subtitle_speed(order: models.AdVideoOrder) -> float:
-    try:
-        value = float(getattr(order, "subtitle_speed", 1.0) or 1.0)
-    except Exception:
-        value = 1.0
-    value = max(0.5, min(2.0, value))
-    return round(value, 1)
-
-
-def _order_audio_volume(order: models.AdVideoOrder) -> int:
-    try:
-        value = int(getattr(order, "audio_volume", 100) or 100)
-    except Exception:
-        value = 100
-    value = max(0, min(200, value))
-    return int(round(value / 5.0) * 5)
-
-
-def _order_bgm_enabled(order: models.AdVideoOrder) -> bool:
-    raw = (os.getenv("MARKETPLACE_AD_BGM_ENABLED", "true") or "true")
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _order_bgm_volume(order: models.AdVideoOrder) -> int:
-    raw = (os.getenv("MARKETPLACE_AD_BGM_VOLUME", "38") or "38").strip()
-    try:
-        value = int(raw)
-    except Exception:
-        value = 38
-    return max(0, min(100, value))
-
-
-def _infer_bgm_mood(*values: Optional[str]) -> str:
-    text = " ".join(str(value or "").lower() for value in values)
-    if any(keyword in text for keyword in [
-        "premium", "luxury", "studio", "elegant", "high-end", "gold",
-    ]):
-        return "premium"
-    if any(keyword in text for keyword in [
-        "sale", "launch", "dynamic", "sport", "active", "energy",
-        "energetic", "boost",
-    ]):
-        return "upbeat"
-    if any(keyword in text for keyword in [
-        "beauty", "calm", "natural", "wellness", "soft", "relax",
-        "clean", "serene",
-    ]):
-        return "calm"
-    if any(keyword in text for keyword in [
-        "tech", "digital", "future", "futuristic", "smart", "ai",
-        "modern", "neon",
-    ]):
-        return "tech"
-    return "corporate"
-
-
-def _order_bgm_mood(order: models.AdVideoOrder) -> str:
-    return _infer_bgm_mood(
-        getattr(order, "title", ""),
-        getattr(order, "background_prompt", ""),
-        getattr(order, "caption_text", ""),
-    )
-
-
-def _bgm_profile(mood: str) -> Dict[str, Any]:
-    profiles: Dict[str, Dict[str, Any]] = {
-        "premium": {
-            "expr": "0.20*sin(2*PI*196*t)+0.12*sin(2*PI*246.94*t)+0.08*sin(2*PI*329.63*t)+0.04*sin(2*PI*98*t)",
-            "lowpass": 3400,
-        },
-        "upbeat": {
-            "expr": "0.18*sin(2*PI*220*t)+0.12*sin(2*PI*330*t)+0.08*sin(2*PI*440*t)+0.05*sin(2*PI*660*t)",
-            "lowpass": 4200,
-        },
-        "calm": {
-            "expr": "0.18*sin(2*PI*174.61*t)+0.10*sin(2*PI*220*t)+0.07*sin(2*PI*261.63*t)+0.03*sin(2*PI*87.31*t)",
-            "lowpass": 3000,
-        },
-        "tech": {
-            "expr": "0.16*sin(2*PI*207.65*t)+0.11*sin(2*PI*311.13*t)+0.07*sin(2*PI*415.3*t)+0.05*sin(2*PI*622.25*t)",
-            "lowpass": 4600,
-        },
-        "corporate": {
-            "expr": "0.19*sin(2*PI*196*t)+0.11*sin(2*PI*293.66*t)+0.07*sin(2*PI*392*t)+0.04*sin(2*PI*98*t)",
-            "lowpass": 3600,
-        },
-    }
-    return profiles.get(mood, profiles["corporate"])
-
-
-def _bgm_lavfi_source(duration_seconds: int, mood: str) -> str:
-    profile = _bgm_profile(mood)
-    return (
-        "aevalsrc="
-        f"exprs='{profile['expr']}|{profile['expr']}':"
-        f"s=44100:d={max(1, int(duration_seconds))}"
-    )
-
-
-def _order_render_quality(order: models.AdVideoOrder) -> str:
-    value = str(getattr(order, "render_quality", "high") or "high").strip().lower()
-    if value not in {"standard", "high", "ultra"}:
-        return "high"
-    return value
-
-
-def _stability_profile_for_order(order: models.AdVideoOrder) -> str:
-    duration = _order_duration_seconds(order)
-    cut_count = _order_cut_count(order)
-    quality = _order_render_quality(order)
-    motion_profile = _motion_profile_for_order(order)
-    if quality == "ultra" or motion_profile == "youtube_web" or duration >= 30 or cut_count > 12:
-        return "stable_90"
-    return "default"
-
-
-def _effective_cut_count_for_order(order: models.AdVideoOrder) -> int:
-    cut_count = _order_cut_count(order)
-    raw_storyboard = getattr(order, "storyboard_json", None)
-    if raw_storyboard:
-        try:
-            parsed = json.loads(raw_storyboard)
-            if isinstance(parsed, list) and parsed:
-                return max(1, len(parsed))
-        except Exception:
-            pass
-    return cut_count
-
-
-def _effective_cut_seconds_for_order(order: models.AdVideoOrder) -> int:
-    duration = _order_duration_seconds(order)
-    cut_count = _effective_cut_count_for_order(order)
-    return max(1, int(round(duration / max(1, cut_count))))
-
-
-def _get_marketplace_retention_days() -> int:
-    raw = (os.getenv("MARKETPLACE_RETENTION_DAYS", "30") or "30").strip()
-    try:
-        days = int(raw)
-    except Exception:
-        days = 30
-    return max(1, days)
-
-
-def _get_marketplace_temp_retention_days() -> int:
-    raw = (os.getenv("MARKETPLACE_TEMP_RETENTION_DAYS", "7") or "7").strip()
-    try:
-        days = int(raw)
-    except Exception:
-        days = 7
-    return max(1, days)
-
-
-def _get_marketplace_cleanup_interval_sec() -> int:
-    raw = (os.getenv("MARKETPLACE_CLEANUP_INTERVAL_SEC", "3600") or "3600").strip()
-    try:
-        value = int(raw)
-    except Exception:
-        value = 3600
-    return max(60, value)
-
-
-def _get_ad_download_min_notice_minutes() -> int:
-    raw = (os.getenv("AD_DOWNLOAD_MIN_NOTICE_MINUTES", "60") or "60").strip()
-    try:
-        value = int(raw)
-    except Exception:
-        value = 60
-    return max(0, value)
-
-
-def _get_ad_download_window_days() -> int:
-    raw = (os.getenv("AD_DOWNLOAD_WINDOW_DAYS", "30") or "30").strip()
-    try:
-        value = int(raw)
-    except Exception:
-        value = 30
-    return max(1, value)
-
-
-def _get_ad_download_max_count() -> int:
-    raw = (os.getenv("AD_DOWNLOAD_MAX_COUNT", "2") or "2").strip()
-    try:
-        value = int(raw)
-    except Exception:
-        value = 2
-    return max(1, value)
-
-
-def _to_naive_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value
-    return value.astimezone(timezone.utc).replace(tzinfo=None)
-
-
-def _cleanup_expired_paths(root: Path, cutoff_epoch_sec: float) -> None:
-    if not root.exists() or not root.is_dir():
-        return
-
-    for child in root.iterdir():
-        try:
-            child_mtime = child.stat().st_mtime
-            if child_mtime >= cutoff_epoch_sec:
-                continue
-            if child.is_dir():
-                shutil.rmtree(child, ignore_errors=True)
-            else:
-                child.unlink(missing_ok=True)
-        except Exception:
-            continue
-
-
-def _maybe_run_marketplace_storage_cleanup(force: bool = False) -> None:
-    global _last_cleanup_epoch_sec
-
-    now = time.time()
-    interval_sec = _get_marketplace_cleanup_interval_sec()
-    if not force and (now - _last_cleanup_epoch_sec) < interval_sec:
-        return
-
-    with _cleanup_lock:
-        now = time.time()
-        if not force and (now - _last_cleanup_epoch_sec) < interval_sec:
-            return
-        _last_cleanup_epoch_sec = now
-
-        retention_days = _get_marketplace_retention_days()
-        temp_retention_days = _get_marketplace_temp_retention_days()
-        asset_cutoff = now - (retention_days * 86400)
-        temp_cutoff = now - (temp_retention_days * 86400)
-        upload_root = _resolve_marketplace_upload_root()
-
-        temp_targets = [
-            upload_root / "tmp",
-        ]
-        asset_targets = [
-            upload_root / "projects",
-            upload_root / "marketplace_local" / "projects",
-            upload_root / "marketplace_local" / "ad-orders",
-        ]
-        for target in temp_targets:
-            _cleanup_expired_paths(target, temp_cutoff)
-        for target in asset_targets:
-            _cleanup_expired_paths(target, asset_cutoff)
-
-
-def _engine_headers(api_key_env_name: str) -> Dict[str, str]:
-    headers = {"Content-Type": "application/json"}
-    api_key = read_secret_env(api_key_env_name)
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    return headers
-
-
-def _safe_json(response: requests.Response, source_name: str) -> Dict[str, Any]:
-    try:
-        data = response.json()
-    except Exception as exc:
-        raise RuntimeError(f"{source_name} returned non-json response") from exc
-    if not isinstance(data, dict):
-        raise RuntimeError(f"{source_name} returned invalid json shape")
-    return data
-
-
-def _parse_progress_percent(raw: Any) -> Optional[int]:
-    if raw is None:
-        return None
-    try:
-        progress = int(raw)
-    except Exception:
-        return None
-    return max(0, min(100, progress))
-
-
-def _safe_filename(value: str) -> str:
-    name = _slugify_text(value)
-    return name[:80] if len(name) > 80 else name
-
-
-def _split_caption_into_cuts(caption: str, cut_count: int) -> List[str]:
-    text = (caption or "").strip()
-    if not text:
-        text = "광고 메시지"
-
-    safe_cut_count = max(1, cut_count)
-    chunk_size = max(1, len(text) // safe_cut_count)
-    chunks: List[str] = []
-    cursor = 0
-    for index in range(safe_cut_count):
-        if index == safe_cut_count - 1:
-            part = text[cursor:]
-        else:
-            part = text[cursor:cursor + chunk_size]
-        cursor += chunk_size
-        part = part.strip() or text[:20]
-        chunks.append(part)
-    return chunks
-
-
-def _load_ad_image_from_prompt(
-    image_prompt: Optional[str],
-    tmpdir: str,
-    file_stem: str = "source",
-) -> Optional[Path]:
-    text = (image_prompt or "").strip()
-    if not text:
-        return None
-
-    try:
-        if text.startswith("data:image/"):
-            header, encoded = text.split(",", 1)
-            mime = header.split(";", 1)[0].split(":", 1)[1].lower()
-            ext_map = {
-                "image/jpeg": ".jpg",
-                "image/jpg": ".jpg",
-                "image/png": ".png",
-                "image/webp": ".webp",
-                "image/gif": ".gif",
-                "image/bmp": ".bmp",
-            }
-            ext = ext_map.get(mime, ".img")
-            data = base64.b64decode(encoded, validate=True)
-            if not data:
-                return None
-            image_path = Path(tmpdir) / f"{file_stem}{ext}"
-            image_path.write_bytes(data)
-            return image_path
-
-        if text.startswith("http://") or text.startswith("https://"):
-            response = requests.get(text, timeout=30)
-            response.raise_for_status()
-            content_type = str(response.headers.get("content-type") or "").lower()
-            if not content_type.startswith("image/"):
-                return None
-            ext = ".jpg"
-            if "png" in content_type:
-                ext = ".png"
-            elif "webp" in content_type:
-                ext = ".webp"
-            elif "gif" in content_type:
-                ext = ".gif"
-            image_path = Path(tmpdir) / f"{file_stem}{ext}"
-            image_path.write_bytes(response.content)
-            return image_path
-    except (ValueError, binascii.Error, requests.RequestException):
-        return None
-    except Exception:
-        return None
-
-    return None
-
-
-def _normalize_string_list(values: Any) -> List[str]:
-    if values is None:
-        return []
-
-    items: List[Any]
-    if isinstance(values, list):
-        items = values
-    elif isinstance(values, str):
-        text_value = values.strip()
-        if not text_value:
-            return []
-        if text_value.startswith("["):
-            try:
-                parsed = json.loads(text_value)
-                items = parsed if isinstance(parsed, list) else [text_value]
-            except Exception:
-                items = [text_value]
-        else:
-            items = [text_value]
-    else:
-        items = [values]
-
-    normalized: List[str] = []
-    for item in items:
-        text_item = str(item or "").strip()
-        if text_item:
-            normalized.append(text_item)
-    return normalized
-
-
-def _normalize_image_reference(value: Optional[str]) -> Optional[str]:
-    text = (value or "").strip()
-    return text or None
-
-
-def _get_product_image_prompts(order: models.AdVideoOrder) -> List[str]:
-    values = _normalize_string_list(getattr(order, "product_image_prompts", None))
-    if values:
-        return values
-    legacy_value = _normalize_image_reference(getattr(order, "image_prompt", None))
-    return [legacy_value] if legacy_value else []
-
-
-def _get_primary_image_prompt(
-    image_prompt: Optional[str],
-    product_image_prompts: Optional[Any] = None,
-) -> str:
-    normalized_products = _normalize_string_list(product_image_prompts)
-    if normalized_products:
-        return normalized_products[0]
-    return (image_prompt or "").strip()
-
-
-def _get_reference_image_prompt(order: models.AdVideoOrder) -> Optional[str]:
-    portrait_prompt = _normalize_image_reference(getattr(order, "portrait_image_prompt", None))
-    if portrait_prompt:
-        return portrait_prompt
-    primary_prompt = _get_primary_image_prompt(order.image_prompt, getattr(order, "product_image_prompts", None))
-    return primary_prompt or None
-
-
-def _serialize_ad_video_order(order: models.AdVideoOrder) -> Dict[str, Any]:
-    expose_output_metadata = str(getattr(order, "status", "") or "") == models.AdVideoOrderStatus.COMPLETED.value
-    return {
-        "id": order.id,
-        "public_job_id": getattr(order, "public_job_id", None),
-        "trace_id": getattr(order, "trace_id", None),
-        "flow_id": getattr(order, "flow_id", None),
-        "step_id": getattr(order, "step_id", None),
-        "action": getattr(order, "action", None),
-        "user_id": order.user_id,
-        "title": order.title,
-        "image_prompt": _get_primary_image_prompt(order.image_prompt, getattr(order, "product_image_prompts", None)),
-        "portrait_image_prompt": _normalize_image_reference(getattr(order, "portrait_image_prompt", None)),
-        "product_image_prompts": _get_product_image_prompts(order),
-        "storyboard": _compose_storyboard(order),
-        "storyboard_review": _compose_storyboard_review(order),
-        "subject_type": str(getattr(order, "subject_type", "auto") or "auto"),
-        "background_prompt": order.background_prompt,
-        "caption_text": order.caption_text,
-        "voice_gender": order.voice_gender,
-        "engine_type": order.engine_type,
-        "duration_seconds": order.duration_seconds,
-        "visual_style": order.visual_style,
-        "cut_count": order.cut_count,
-        "subtitle_speed": order.subtitle_speed,
-        "render_quality": order.render_quality,
-        "audio_volume": order.audio_volume,
-        "status": order.status,
-        "progress_percent": order.progress_percent,
-        "external_job_id": order.external_job_id,
-        "output_file_key": order.output_file_key if expose_output_metadata else None,
-        "output_filename": order.output_filename if expose_output_metadata else None,
-        "output_video_key": order.output_video_key if expose_output_metadata else None,
-        "output_video_filename": order.output_video_filename if expose_output_metadata else None,
-        "quality_score": getattr(order, "quality_score", None),
-        "quality_gate_passed": bool(getattr(order, "quality_gate_passed", False)),
-        "quality_feedback": getattr(order, "quality_feedback", None),
-        "quality_retry_count": int(getattr(order, "quality_retry_count", 0) or 0),
-        "quality_checked_at": getattr(order, "quality_checked_at", None),
-        "download_count": order.download_count,
-        "error_message": order.error_message,
-        "created_at": order.created_at,
-        "updated_at": order.updated_at,
-    }
-
-
-def _contains_cta_signal(text: str) -> bool:
-    normalized = (text or "").lower()
-    keywords = [
-        "지금",
-        "바로",
-        "구매",
-        "주문",
-        "신청",
-        "문의",
-        "예약",
-        "체험",
-        "상담",
-        "shop",
-        "buy",
-        "cta",
-        "order now",
-        "learn more",
-        "call now",
-        "sign up",
-    ]
-    return any(keyword in normalized for keyword in keywords)
-
-
-def _estimate_min_video_bytes(order: models.AdVideoOrder) -> int:
-    duration = max(1, _order_duration_seconds(order))
-    quality = str(getattr(order, "render_quality", "high") or "high").lower()
-    engine_type = str(getattr(order, "engine_type", "") or "").lower()
-
-    if engine_type == "internal_ffmpeg":
-        per_second = 15000
-        if quality == "high":
-            per_second = 18000
-        elif quality == "ultra":
-            per_second = 22000
-        return duration * per_second
-
-    per_second = 90000
-    if quality == "high":
-        per_second = 120000
-    elif quality == "ultra":
-        per_second = 150000
-    if engine_type == "dedicated_engine":
-        per_second += 15000
-    return duration * per_second
-
-
-def _evaluate_ad_order_quality(
-    order: models.AdVideoOrder,
-    video_bytes: bytes,
-) -> Dict[str, Any]:
-    duration = _order_duration_seconds(order)
-    cut_count = _order_cut_count(order)
-    minimum, maximum = _cut_count_bounds(duration)
-    recommended = _recommended_cut_count(duration)
-    caption = str(getattr(order, "caption_text", "") or "").strip()
-    title = str(getattr(order, "title", "") or "").strip()
-    image_prompt = str(getattr(order, "image_prompt", "") or "").strip()
-    product_prompts = _get_product_image_prompts(order)
-    feedback: List[str] = []
-    hard_failures: List[str] = []
-    score = 0.0
-    face_consistency = 0.0
-    product_consistency = 0.0
-    visual_decision = "review_required"
-
-    if minimum <= cut_count <= maximum:
-        pacing_score = max(18.0, 30.0 - abs(cut_count - recommended) * 1.2)
-        score += pacing_score
-    else:
-        hard_failures.append(
-            f"컷 수가 {duration}초 기준 권장 범위({minimum}~{maximum})를 벗어났습니다. 현재 {cut_count}컷입니다."
-        )
-
-    if len(caption) >= 24:
-        score += 10.0
-    else:
-        feedback.append("카피가 너무 짧아서 중반부 효익/증거 전개가 약할 가능성이 큽니다.")
-
-    if _contains_cta_signal(f"{title} {caption}"):
-        score += 12.0
-    else:
-        feedback.append("최종 CTA 신호가 약합니다. 구매/문의/신청 같은 행동 유도가 필요합니다.")
-
-    if _has_ad_image_reference(image_prompt):
-        score += 10.0
-    elif product_prompts:
-        score += 8.0
-    else:
-        hard_failures.append("실상품 기준 이미지 참조가 약해서 제품 인지 유지 가능성이 낮습니다.")
-
-    if title and caption and title.lower() not in caption.lower():
-        score += 8.0
-    else:
-        feedback.append("타이틀과 본문 카피가 거의 동일해서 훅과 본문 메시지 분리가 약합니다.")
-
-    if len(product_prompts) >= 2:
-        score += 5.0
-    elif product_prompts:
-        score += 3.0
-    else:
-        feedback.append("상품/장면 참조 수가 적어 반복 프레임 위험이 있습니다.")
-
-    face_consistency = 85.0 if _normalize_image_reference(getattr(order, "portrait_image_prompt", None)) else 0.0
-    if _normalize_image_reference(getattr(order, "portrait_image_prompt", None)):
-        try:
-            from backend.movie_studio.quality.arcface_adapter import build_face_recognition_adapter
-
-            adapter, adapter_status = build_face_recognition_adapter()
-            if adapter.is_available():
-                face_consistency = 92.0 if adapter_status.get("available") else 85.0
-                score += 10.0
-            else:
-                feedback.append("얼굴 일관성 엔진이 비활성 상태여서 fallback 점수로 판정했습니다.")
-        except Exception as exc:
-            feedback.append(f"얼굴 일관성 실검증 fallback 적용: {exc}")
-        if face_consistency < 80.0:
-            hard_failures.append("얼굴 일관성 점수가 기준 미만입니다.")
-
-    if len(product_prompts) >= 3:
-        product_consistency = 94.0
-        score += 10.0
-    elif len(product_prompts) >= 2:
-        product_consistency = 84.0
-        score += 6.0
-    elif len(product_prompts) == 1:
-        product_consistency = 72.0
-        feedback.append("제품 참조 이미지가 1개뿐이라 컷 간 제품 일관성 검증 신뢰도가 낮습니다.")
-    else:
-        product_consistency = 0.0
-        hard_failures.append("제품 일관성 실검증을 위한 참조 이미지가 부족합니다.")
-
-    if product_consistency and product_consistency < 75.0:
-        hard_failures.append("제품 일관성 점수가 기준 미만입니다.")
-
-    actual_bytes = len(video_bytes or b"")
-    min_video_bytes = _estimate_min_video_bytes(order)
-    if actual_bytes >= min_video_bytes:
-        size_ratio = min(1.0, actual_bytes / max(1, min_video_bytes * 1.25))
-        score += 25.0 * size_ratio
-    else:
-        hard_failures.append(
-            f"산출 영상 용량이 낮습니다. {actual_bytes} bytes, 최소 기대치 {min_video_bytes} bytes."
-        )
-
-    if duration == AD_TOTAL_SECONDS and cut_count != AD_CUT_COUNT:
-        hard_failures.append(f"{AD_TOTAL_SECONDS}초 광고는 {AD_CUT_COUNT}컷 x {AD_CUT_SECONDS}초 규격을 유지해야 합니다.")
-
-    score = round(min(100.0, score), 1)
-    quality_gate_passed = not hard_failures and score >= MARKETPLACE_QUALITY_PASS_SCORE
-    if quality_gate_passed and face_consistency >= 80.0 and product_consistency >= 80.0:
-        visual_decision = "sale_ready"
-    elif quality_gate_passed:
-        visual_decision = "review_required"
-    else:
-        visual_decision = "blocked"
-
-    if not quality_gate_passed:
-        feedback = hard_failures + feedback
-    elif not feedback:
-        feedback = ["시장형 60초 광고 기준을 충족했습니다."]
-
-    return {
-        "score": score,
-        "passed": quality_gate_passed,
-        "feedback": " ".join(feedback).strip(),
-        "face_consistency_score": round(face_consistency, 1),
-        "product_consistency_score": round(product_consistency, 1),
-        "sales_quality_decision": visual_decision,
-    }
-
-
-def _build_engine_image_payload(image_prompt: Optional[str]) -> Dict[str, str]:
-    text = (image_prompt or "").strip()
-    if not text:
-        return {}
-
-    if text.startswith("data:image/"):
-        try:
-            header, encoded = text.split(",", 1)
-            mime = header.split(";", 1)[0].split(":", 1)[1].lower()
-            return {
-                "image_mime_type": mime,
-                "image_data_base64": encoded,
-            }
-        except Exception:
-            return {"image_prompt": text}
-
-    if text.startswith("http://") or text.startswith("https://"):
-        return {"image_source_url": text}
-
-    return {"image_prompt": text}
-
-
-def _build_engine_media_payload(order: models.AdVideoOrder) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {}
-    primary_prompt = _get_primary_image_prompt(order.image_prompt, getattr(order, "product_image_prompts", None))
-    payload.update(_build_engine_image_payload(primary_prompt))
-
-    portrait_prompt = _normalize_image_reference(getattr(order, "portrait_image_prompt", None))
-    if portrait_prompt:
-        payload["portrait_image_prompt"] = portrait_prompt
-
-    product_prompts = _get_product_image_prompts(order)
-    if product_prompts:
-        payload["product_image_prompts"] = product_prompts
-
-    return payload
-
-
-def _has_ad_image_reference(image_prompt: Optional[str]) -> bool:
-    text = (image_prompt or "").strip()
-    if not text:
-        return False
-    return text.startswith("data:image/") or text.startswith("http://") or text.startswith("https://")
-
-
-def _ffmpeg_text(value: Optional[str], limit: int = 90) -> str:
-    text = (value or "").strip().replace("\n", " ")
-    if len(text) > limit:
-        text = text[:limit]
-    return (
-        text
-        .replace("\\", "\\\\")
-        .replace("'", "\\'")
-        .replace(":", "\\:")
-        .replace(",", "\\,")
-        .replace("%", "\\%")
-    )
-
-
-def _compose_cut_scripts(order: models.AdVideoOrder) -> List[str]:
-    title = (order.title or "신규 제품 광고").strip()
-    bg = (order.background_prompt or "").strip()
-    caption = (order.caption_text or "").strip()
-
-    bg_parts = [p.strip() for p in re.split(r"[\n,\.\!\?]+", bg) if p.strip()]
-    caption_parts = [p.strip() for p in re.split(r"[\n,\.\!\?]+", caption) if p.strip()]
-
-    cut_count = _order_cut_count(order)
-    hook_pool = [
-        f"첫 장면 훅: {title}의 핵심 이미지를 즉시 보여준다",
-        f"스크롤을 멈추게 하는 시작 장면으로 {title}를 바로 인지시킨다",
-        bg_parts[0] if bg_parts else f"{title}의 분위기와 브랜드 톤을 첫 컷에서 고정한다",
-    ]
-    benefit_pool = [
-        caption_parts[0] if caption_parts else "핵심 가치 전달",
-        caption_parts[1] if len(caption_parts) > 1 else "문제 해결 제안",
-        caption_parts[2] if len(caption_parts) > 2 else "실사용 만족 포인트",
-    ]
-    proof_pool = [
-        bg_parts[1] if len(bg_parts) > 1 else "사용 장면으로 신뢰도를 증명한다",
-        "상품 디테일과 사용 맥락을 교차 편집해 설득력을 높인다",
-        "리뷰 컷처럼 기능과 결과를 짧게 증명한다",
-    ]
-    cta_pool = [
-        "지금 바로 문의하고 시작하세요",
-        f"마지막 컷에서 {title}와 행동 유도를 동시에 고정한다",
-        "혜택 요약 뒤 즉시 행동 유도로 마무리한다",
-    ]
-
-    scripts: List[str] = []
-    for index in range(cut_count):
-        ratio = (index + 1) / max(1, cut_count)
-        if ratio <= 0.12:
-            pool = hook_pool
-        elif ratio <= 0.45:
-            pool = benefit_pool
-        elif ratio <= 0.78:
-            pool = proof_pool
-        else:
-            pool = cta_pool
-
-        selected = pool[index % len(pool)].strip()
-        if ratio > 0.12 and ratio <= 0.78:
-            selected = f"{selected}. 상품이 화면 안에서 계속 보이도록 유지한다"
-        if ratio > 0.78:
-            selected = f"{selected}. 브랜드명과 CTA를 동시에 보여준다"
-        scripts.append(selected)
-
-    return scripts
-
-
-def _compose_scene_prompt(order: models.AdVideoOrder) -> str:
-    title = (order.title or "광고").strip()
-    bg = (order.background_prompt or "").strip()
-    caption = (order.caption_text or "").strip()
-    style = (order.visual_style or "photorealistic").strip()
-    duration = _order_duration_seconds(order)
-    cut_count = _order_cut_count(order)
-    profile = _subject_profile(order)
-    subject_label = str(profile["subject_label"])
-    motion_phrase = str(profile["motion_phrase"])
-    gesture_phrase = str(profile["gesture_phrase"])
-
-    return (
-        f"Create a cinematic {duration}-second scene-driven commercial video. "
-        f"Use {cut_count} short sequential micro-cuts with a clear motion beat in every cut. "
-        f"Product title: {title}. "
-        f"Primary subject: {subject_label}. "
-        f"Background: {bg}. "
-        f"Required actions and story: {caption}. "
-        f"Visual style: {style}. "
-        f"Motion rule: {motion_phrase}. Gesture rule: {gesture_phrase}. "
-        f"Marketplace quality gate: {_marketplace_ad_quality_brief(duration)}. "
-        "Editing rule: build many short editorially stitchable clips instead of relying on a single long take. "
-        "Clear product beauty shots, readable movement, continuous scene transitions, ad-quality composition, subtitles must remain readable, no black frames, no static slideshow."
-    )
-
-
-def _split_ad_copy(text_value: Optional[str]) -> List[str]:
-    return [
-        part.strip()
-        for part in re.split(r"[\n\.\!\?]+", (text_value or "").strip())
-        if part.strip()
-    ]
-
-
-def _order_subject_type(order: models.AdVideoOrder) -> str:
-    explicit = str(getattr(order, "subject_type", "auto") or "auto").strip().lower()
-    allowed = {"auto", "human", "robot", "character", "product"}
-    if explicit in allowed and explicit != "auto":
-        return explicit
-
-    combined_text = " ".join(
-        value
-        for value in [
-            str(getattr(order, "title", "") or ""),
-            str(getattr(order, "caption_text", "") or ""),
-            str(getattr(order, "background_prompt", "") or ""),
-            str(getattr(order, "visual_style", "") or ""),
-        ]
-        if value
-    ).lower()
-
-    robot_keywords = ["robot", "android", "cyborg", "mecha", "로봇", "안드로이드", "메카"]
-    character_keywords = ["character", "mascot", "avatar", "creature", "캐릭터", "마스코트", "아바타"]
-
-    if any(keyword in combined_text for keyword in robot_keywords):
-        return "robot"
-    if any(keyword in combined_text for keyword in character_keywords):
-        return "character"
-    if _normalize_image_reference(getattr(order, "portrait_image_prompt", None)):
-        return "human"
-    return "product"
-
-
-def _subject_profile(order: models.AdVideoOrder) -> Dict[str, Any]:
-    subject_type = _order_subject_type(order)
-    portrait_prompt = _normalize_image_reference(getattr(order, "portrait_image_prompt", None))
-    has_portrait = bool(portrait_prompt)
-    has_product = bool(_get_product_image_prompts(order))
-
-    profiles: Dict[str, Dict[str, Any]] = {
-        "human": {
-            "subject_label": "human spokesperson",
-            "identity_phrase": "same person identity cues from the reference, newly staged for a commercial",
-            "motion_phrase": "natural human gestures, confident product presentation, controlled body movement",
-            "gesture_phrase": "eye contact, hand gestures, pointing, holding, presenting",
-            "requires_realistic_human": has_portrait,
-        },
-        "robot": {
-            "subject_label": "robot spokesperson",
-            "identity_phrase": "same robot identity cues from the reference, newly staged for a commercial",
-            "motion_phrase": "articulated robotic movement, clear arm gestures, stable torso turns",
-            "gesture_phrase": "robot arm pointing, product display pose, deliberate head turn",
-            "requires_realistic_human": False,
-        },
-        "character": {
-            "subject_label": "animated mascot spokesperson",
-            "identity_phrase": "same mascot identity cues from the reference, newly staged for a commercial",
-            "motion_phrase": "expressive mascot motion, readable silhouette, clear body acting",
-            "gesture_phrase": "big readable gestures, product presentation, inviting call to action",
-            "requires_realistic_human": False,
-        },
-        "product": {
-            "subject_label": "product hero object",
-            "identity_phrase": "same product identity from the reference, newly staged for a premium commercial",
-            "motion_phrase": "camera-led motion, object reveal, kinetic framing, premium detail emphasis",
-            "gesture_phrase": "object reveal, rotation, close-up transitions, premium hero emphasis",
-            "requires_realistic_human": False,
-        },
-    }
-
-    profile = profiles.get(subject_type, profiles["product"]).copy()
-    profile["subject_type"] = subject_type
-    profile["has_portrait"] = has_portrait
-    profile["has_product"] = has_product
-    return profile
-
-
-def _prefer_global_scene_basis(order: models.AdVideoOrder) -> bool:
-    scene_basis = str(os.getenv("VIDEO_SCENE_BASIS", "global") or "global").strip().lower()
-    if scene_basis in {"subject", "local"}:
-        return False
-    return True
-
-
-def _motion_profile_for_order(order: models.AdVideoOrder) -> str:
-    style = str(getattr(order, "visual_style", "") or "").strip().lower()
-    quality = str(getattr(order, "render_quality", "high") or "high").strip().lower()
-    if quality == "ultra" or "youtube_web" in style or "web" in style or "youtube" in style:
-        return "youtube_web"
-    return "general"
-
-
-def _effective_motion_profile_for_order(order: models.AdVideoOrder) -> str:
-    if _stability_profile_for_order(order) == "stable_90":
-        return "general"
-    return _motion_profile_for_order(order)
-
-
-def _effective_render_quality_for_order(order: models.AdVideoOrder) -> str:
-    if _stability_profile_for_order(order) == "stable_90":
-        return "high"
-    return _order_render_quality(order)
-
-
-def _target_output_fps_for_order(order: models.AdVideoOrder) -> int:
-    duration = _order_duration_seconds(order)
-    if duration == AD_TOTAL_SECONDS:
-        return 8
-    if _stability_profile_for_order(order) == "stable_90":
-        return 30
-    return 60 if _motion_profile_for_order(order) == "youtube_web" else 30
-
-
-def _target_output_frame_hint_for_order(order: models.AdVideoOrder) -> int:
-    duration = _order_duration_seconds(order)
-    if duration == AD_TOTAL_SECONDS:
-        return AD_TOTAL_FRAME_HINT
-    return max(AD_FRAME_HINTS_PER_SECOND, int(max(1, duration) * AD_FRAME_HINTS_PER_SECOND))
-
-
-def _scene_templates_for_subject(order: models.AdVideoOrder) -> List[Dict[str, str]]:
-    profile = _subject_profile(order)
-    primary_subject_asset = "portrait" if profile["has_portrait"] else "product"
-    secondary_asset = "product" if profile["has_product"] else primary_subject_asset
-
-    if _prefer_global_scene_basis(order):
-        return [
-            {"role": "flow_intro", "camera": "wide flow shot", "camera_move": "slow floating drift", "asset_source": primary_subject_asset, "action": "the whole scene establishes visual rhythm and continuous motion", "gesture": "movement travels across the full frame instead of isolating one element"},
-            {"role": "flow_focus", "camera": "medium composition shot", "camera_move": "gentle lateral glide", "asset_source": primary_subject_asset, "action": "the composition keeps subject, background, and copy in one coherent motion field", "gesture": "frame-wide motion carries the eye naturally forward"},
-            {"role": "flow_hero", "camera": "hero scene shot", "camera_move": "orbital drift", "asset_source": secondary_asset, "action": "product gets a clean premium beauty shot", "gesture": "camera-led product reveal"},
-            {"role": "flow_detail", "camera": "close cinematic shot", "camera_move": "macro slide", "asset_source": secondary_asset, "action": "detail and texture appear as part of the same visual flow", "gesture": "small motion accents keep continuity intact"},
-            {"role": "flow_transition", "camera": "tracking bridge shot", "camera_move": "smooth forward motion", "asset_source": primary_subject_asset, "action": "the scene transitions fluidly with background, lighting, and framing locked together", "gesture": "movement connects one beat to the next without abrupt separation"},
-            {"role": "flow_close", "camera": "closing composition shot", "camera_move": "slow settle", "asset_source": secondary_asset, "action": "the final frame resolves as one consistent commercial image", "gesture": "all motion calms into a stable branded finish"},
-        ]
-
-    return [
-        {"role": "hook", "camera": "wide establishing shot", "camera_move": "slow push in", "asset_source": primary_subject_asset, "action": "spokesperson opens the product story in a confident first beat", "gesture": "eye contact and open presentation gesture"},
-        {"role": "explain", "camera": "medium presenter shot", "camera_move": "gentle lateral move", "asset_source": primary_subject_asset, "action": "spokesperson explains the core benefit with readable posture", "gesture": "hand gesture toward the message and the product"},
-        {"role": "hero_product", "camera": "product hero shot", "camera_move": "orbit reveal", "asset_source": secondary_asset, "action": "product gets a clean premium beauty shot", "gesture": "camera-led product reveal"},
-        {"role": "demo", "camera": "demo shot", "camera_move": "tracking motion", "asset_source": primary_subject_asset, "action": "spokesperson demonstrates the product in use", "gesture": "holding, pointing, or presenting the product"},
-        {"role": "detail", "camera": "close-up detail shot", "camera_move": "macro slide", "asset_source": secondary_asset, "action": "detail shot proves texture, finish, or function", "gesture": "controlled object emphasis"},
-        {"role": "cta", "camera": "closing call-to-action shot", "camera_move": "slow settle", "asset_source": primary_subject_asset, "action": "spokesperson closes with a confident final beat", "gesture": "clear final call-to-action pose with the product visible"},
-    ]
-
-
-def _portrait_restyle_prompt(order: models.AdVideoOrder, scene: Dict[str, Any]) -> str:
-    title = (order.title or "광고 상품").strip() or "광고 상품"
-    style = (order.visual_style or "photorealistic").strip() or "photorealistic"
-    narration_line = str(scene.get("narration_line") or "").strip()
-    camera = str(scene.get("camera") or "commercial shot").strip()
-    camera_move = str(scene.get("camera_move") or "controlled commercial motion").strip()
-    gesture = str(scene.get("gesture") or "clear advertising gesture").strip()
-    background = (order.background_prompt or "premium commercial set").strip() or "premium commercial set"
-    profile = _subject_profile(order)
-    subject_label = str(profile["subject_label"])
-    identity_phrase = str(profile["identity_phrase"])
-    motion_phrase = str(profile["motion_phrase"])
-
-    return (
-        f"newly generated scene-led commercial frame based on the reference, not the raw original image, {style}. "
-        f"preserve identity continuity while matching the whole-frame composition. {identity_phrase}. "
-        f"new pose, {camera}, {camera_move}. motion intent: {motion_phrase}. gesture intent: {gesture}. "
-        f"background {background}. message {narration_line}. product {title}. "
-        "high-end ad composition, whole-scene continuity, readable silhouette, stable anatomy, stable hands, no warped face, no melted frame, no frozen slideshow."
-    ).strip()
-
-
-def _product_restyle_prompt(order: models.AdVideoOrder, scene: Dict[str, Any]) -> str:
-    title = (order.title or "광고 상품").strip() or "광고 상품"
-    style = (order.visual_style or "photorealistic").strip() or "photorealistic"
-    narration_line = str(scene.get("narration_line") or "").strip()
-    camera = str(scene.get("camera") or "product commercial shot").strip()
-    camera_move = str(scene.get("camera_move") or "kinetic camera motion").strip()
-    gesture = str(scene.get("gesture") or "object reveal motion").strip()
-    background = (order.background_prompt or "premium commercial set").strip() or "premium commercial set"
-    return (
-        f"newly generated scene-led premium commercial still based on the reference image, not a pasted source image, {style}. "
-        f"preserve identity, upgrade reflections, materials, texture, styling, ad lighting, and keep the full composition coherent. "
-        f"camera {camera}, {camera_move}. motion intent: {gesture}. "
-        f"background {background}. message {narration_line}. product {title}. no static slideshow feeling, no black frame."
-    ).strip()
-
-
-def _scene_generation_prompt(order: models.AdVideoOrder, scene: Dict[str, Any]) -> str:
-    asset_source = str(scene.get("asset_source") or "portrait").strip().lower()
-    if asset_source == "portrait":
-        return _portrait_restyle_prompt(order, scene)
-    return _product_restyle_prompt(order, scene)
-
-
-def _scene_generation_options(scene: Dict[str, Any]) -> Dict[str, float | int | str]:
-    asset_source = str(scene.get("asset_source") or "portrait").strip().lower()
-    if asset_source == "portrait":
-        return {
-            "guidance_scale": 7.8,
-            "strength": 0.68,
-            "steps": 30,
-            "model_key": "sdxl",
-        }
-    return {
-        "guidance_scale": 6.8,
-        "strength": 0.46,
-        "steps": 24,
-        "model_key": "sdxl",
-    }
-
-
-def _normalize_storyboard_item(item: Dict[str, Any], index: int) -> Dict[str, Any]:
-    cut = int(item.get("cut") or index)
-    duration_sec = max(1, int(item.get("duration_sec") or 1))
-    start_sec = int(item.get("start_sec") or max(0, (cut - 1) * duration_sec))
-    end_sec = int(item.get("end_sec") or (start_sec + duration_sec))
-    narration_line = str(item.get("narration_line") or item.get("title") or f"컷 {cut}").strip()
-    title = str(item.get("title") or narration_line or f"컷 {cut}").strip() or f"컷 {cut}"
-    visual_focus = str(item.get("visual_focus") or "").strip()
-    if not visual_focus:
-        visual_focus = " / ".join(
-            part
-            for part in [
-                str(item.get("camera") or "").strip(),
-                str(item.get("gesture") or "").strip(),
-                narration_line,
-            ]
-            if part
-        ).strip()
-    normalized = dict(item)
-    normalized.update(
-        {
-            "cut": cut,
-            "title": title[:120],
-            "duration_sec": duration_sec,
-            "start_sec": max(0, start_sec),
-            "end_sec": max(end_sec, start_sec + duration_sec),
-            "narration_line": narration_line[:500],
-            "visual_focus": (visual_focus or f"컷 {cut} 핵심 장면")[:300],
-            "scene_prompt": str(item.get("scene_prompt") or narration_line or title).strip()[:2000],
-            "asset_source": str(item.get("asset_source") or "auto").strip() or "auto",
-        }
-    )
-    return normalized
-
-
-def _compose_storyboard(order: models.AdVideoOrder) -> List[Dict[str, Any]]:
-    raw_storyboard = getattr(order, "storyboard_json", None)
-    if raw_storyboard:
-        try:
-            parsed = json.loads(raw_storyboard)
-            if isinstance(parsed, list) and parsed:
-                return [
-                    _normalize_storyboard_item(item, index)
-                    for index, item in enumerate(parsed, start=1)
-                    if isinstance(item, dict)
-                ]
-        except Exception:
-            pass
-
-    scripts = _compose_cut_scripts(order)
-    cut_count = _effective_cut_count_for_order(order)
-    cut_seconds = _effective_cut_seconds_for_order(order)
-    bg = (order.background_prompt or "premium commercial set").strip() or "광고 상품"
-    title = (order.title or "광고 상품").strip() or "광고 상품"
-    caption_parts = _split_ad_copy(order.caption_text)
-    product_prompts = _get_product_image_prompts(order)
-    scene_templates = _scene_templates_for_subject(order)
-    profile = _subject_profile(order)
-    global_basis = _prefer_global_scene_basis(order)
-    stable_profile = _stability_profile_for_order(order) == "stable_90"
-    subject_label = (
-        "whole-scene commercial composition"
-        if global_basis
-        else str(profile["subject_label"])
-    )
-    motion_phrase = (
-        "whole-frame motion continuity, fluid camera travel, and background consistency across every cut"
-        if global_basis
-        else str(profile["motion_phrase"])
-    )
-    gesture_phrase = (
-        "scene-wide motion accents, flowing transitions, and composition-led movement"
-        if global_basis
-        else str(profile["gesture_phrase"])
-    )
-
-    storyboard: List[Dict[str, Any]] = []
-    for index in range(cut_count):
-        start_sec = index * cut_seconds
-        end_sec = start_sec + cut_seconds
-        scene_text = scripts[index] if index < len(scripts) else scripts[-1]
-        scene_template = scene_templates[index % len(scene_templates)]
-        caption_hint = caption_parts[index] if index < len(caption_parts) else scene_text
-        asset_source = scene_template["asset_source"]
-        product_index = index % len(product_prompts) if asset_source == "product" and product_prompts else None
-        storyboard.append(
-            _normalize_storyboard_item({
-                "cut": index + 1,
-                "title": f"컷 {index + 1}",
-                "duration_sec": cut_seconds,
-                "start_sec": max(0, start_sec),
-                "end_sec": max(end_sec, start_sec + cut_seconds),
-                "camera": scene_template["camera"],
-                "camera_move": scene_template["camera_move"],
-                "role": scene_template["role"],
-                "asset_source": asset_source,
-                "product_index": product_index,
-                "gesture": scene_template["gesture"],
-                "motion_intent": motion_phrase,
-                "narration_line": caption_hint,
-                "visual_focus": f"{scene_template['camera']} / {scene_template['gesture']} / {caption_hint}",
-                "scene_prompt": (
-                    f"{bg}. "
-                    f"{scene_template['action']}. "
-                    f"Camera motion: {scene_template['camera_move']}. "
-                    f"Gesture/action emphasis: {scene_template['gesture']}. "
-                    f"Key message: {caption_hint}. "
-                    f"Product: {title}. "
-                    f"Primary subject: {subject_label}. "
-                    f"Motion rule: {motion_phrase}. "
-                    f"Gesture rule: {gesture_phrase}. "
-                    +
-                    (
-                        "Premium ad direction, whole-scene coherence, readable movement, no black frame."
-                        if stable_profile
-                        else "Premium ad direction, whole-scene coherence, readable movement, no black frame, no static slideshow."
-                    )
-                ),
-            }, index + 1)
-        )
-    return storyboard
-
-
-def _compose_storyboard_review(order: models.AdVideoOrder) -> List[Dict[str, Any]]:
-    raw_review = getattr(order, "storyboard_review_json", None)
-    if raw_review:
-        try:
-            parsed = json.loads(raw_review)
-            if isinstance(parsed, list):
-                return [item for item in parsed if isinstance(item, dict)]
-        except Exception:
-            pass
-    return []
-
-
-def _resolve_scene_source(scene: Optional[Dict[str, Any]]) -> Optional[str]:
-    if not scene:
-        return None
-    asset_ref = _normalize_image_reference(scene.get("asset_ref"))
-    if asset_ref and _has_ad_image_reference(asset_ref):
-        return asset_ref
-    return None
-
-
-def _build_scene_keyframes(order: models.AdVideoOrder, storyboard: List[Dict[str, Any]]) -> List[str]:
-    portrait_prompt = _normalize_image_reference(getattr(order, "portrait_image_prompt", None))
-    product_prompts = _get_product_image_prompts(order)
-    if not storyboard or not (portrait_prompt or product_prompts):
-        return []
-
-    fallback_keyframes: List[str] = []
-    for scene in storyboard:
-        source_prompt = _resolve_scene_source(scene)
-        if source_prompt:
-            fallback_keyframes.append(source_prompt)
-
-    if _stability_profile_for_order(order) == "stable_90":
-        return fallback_keyframes
-
-    try:
-        from backend.image.generator import stylize_reference_image
-    except Exception as exc:
-        logger.warning("[marketplace] scene keyframe generator unavailable: %s", exc)
-        return fallback_keyframes
-
-    negative_prompt = (
-        "low quality, blurry, deformed face, extra fingers, duplicate person, cropped head, "
-        "wax skin, cartoon artifact, black frame, dark frame, unreadable product, unchanged source photo, raw camera snapshot, "
-        "passport photo, exact same pose as reference, exact same background as reference, flat phone selfie look"
-    )
-    temp_root = _resolve_marketplace_temp_root()
-    keyframes: List[str] = []
-
-    with tempfile.TemporaryDirectory(prefix="ad_scene_keyframes_", dir=str(temp_root)) as tmpdir:
-        resolved_sources: Dict[str, Optional[str]] = {}
-        for index, scene in enumerate(storyboard):
-            source_prompt = _resolve_scene_source(scene) or default_source_prompt
-            source_image = _load_ad_image_from_prompt(source_prompt, tmpdir, file_stem=f"scene_{index + 1}")
-
-            if source_image and source_image.exists():
-                keyframe = str(source_image)
-            else:
-                keyframe = None
-
-            asset_source = str(scene.get("asset_source") or "portrait").strip().lower()
-            scene_prompt = _scene_generation_prompt(order, scene)
-            options = _scene_generation_options(scene)
-            try:
-                result = stylize_reference_image(
-                    prompt=scene_prompt,
-                    source_image_path=keyframe,
-                    negative_prompt=negative_prompt,
-                    width=1024,
-                    height=576,
-                    steps=int(options["steps"]),
-                    guidance_scale=float(options["guidance_scale"]),
-                    strength=float(options["strength"]),
-                    seed=_ad_variation_seed(order, index),
-                    model_key=str(options["model_key"]),
-                )
-                image_base64 = str(result.get("image_base64") or "").strip()
-                if image_base64:
-                    keyframes.append(f"data:image/png;base64,{image_base64}")
-                    continue
-            except Exception:
-                logger.warning(
-                    "[marketplace] scene keyframe generation failed for order %s cut %s: %s",
-                    order.id,
-                    index + 1,
-                    exc,
-                )
-
-            if keyframe and _has_ad_image_reference(keyframe):
-                keyframes.append(keyframe)
-
-    return keyframes or fallback_keyframes
-
-
-def _build_ad_engine_render_payload(order: models.AdVideoOrder) -> Dict[str, Any]:
-    scene_prompt = _compose_scene_prompt(order)
-    storyboard = _compose_storyboard(order)
-    keyframes = _build_scene_keyframes(order, storyboard)
-    subject_type = _order_subject_type(order)
-    bgm_enabled = _order_bgm_enabled(order)
-    bgm_mood = _order_bgm_mood(order)
-    bgm_volume = _order_bgm_volume(order)
-    stability_profile = _stability_profile_for_order(order)
-    payload: Dict[str, Any] = {
-        "title": order.title,
-        "image_prompt": order.image_prompt,
-        "background_prompt": order.background_prompt,
-        "caption_text": order.caption_text,
-        "prompt": scene_prompt,
-        "scene_prompt": scene_prompt,
-        "storyboard": storyboard,
-        "shot_prompts": [
-            str(item.get("scene_prompt") or "").strip()
-            for item in storyboard
-            if str(item.get("scene_prompt") or "").strip()
-        ],
-        "negative_prompt": "watermark, blurry motion, flicker, black frame",
-        "subtitle_burn_in": True,
-        "subject_type": subject_type,
-        "require_realistic_human": subject_type == "human" and bool(_normalize_image_reference(getattr(order, "portrait_image_prompt", None))),
-        "composition_basis": "global" if _prefer_global_scene_basis(order) else "subject",
-        "composite_mode": "global_full_frame",
-        "global_background_lock": True,
-        "stability_profile": stability_profile,
-        "motion_profile": _effective_motion_profile_for_order(order),
-        "target_output_fps": _target_output_fps_for_order(order),
-        "target_output_frames": _target_output_frame_hint_for_order(order),
-        "voice_track": str(order.caption_text or "").strip() or None,
-        "continuity_rules": [
-            "scene flow continuity",
-            "photoreal identity continuity",
-            "stable environment realism",
-            "cinematic camera continuity",
-        ],
-        "hero_props": [str(order.title or "hero product").strip() or "hero product"],
-        "sequence_beats": [
-            {
-                "objective": str(scene.get("title") or f"scene {index + 1}").strip() or f"scene {index + 1}",
-                "emotional_state": "conversion intent" if index == len(storyboard) - 1 else "controlled realism",
-                "blocking_summary": str(scene.get("visual_focus") or scene.get("scene_prompt") or scene.get("title") or "cinematic scene progression").strip(),
-                "cta_required": index == len(storyboard) - 1,
-            }
-            for index, scene in enumerate(storyboard[:12])
-        ],
-        "identity_references": [
-            str(getattr(order, "portrait_image_prompt", "")).strip()
-        ],
-        "environment_references": [
-            ref for ref in _get_product_image_prompts(order)[:3] + [str(getattr(order, "image_prompt", "")).strip()]
-            if ref
-        ],
-        "operator_note": f"ad_order_id={order.id}; public_job_id={order.public_job_id}",
-    }
-    if keyframes:
-        payload["keyframe_image_paths"] = keyframes
-    payload.update(_build_engine_media_payload(order))
-    return payload
-
-
-def _is_mock_engine_url(url: str) -> bool:
-    value = (url or "").lower()
-    mock_markers = [
-        "127.0.0.1",
-        "localhost",
-        "host.docker.internal:18081",
-        "mock",
-    ]
-    return any(marker in value for marker in mock_markers)
-
-
-def _is_local_engine_url(url: str) -> bool:
-    value = (url or "").lower()
-    local_markers = [
-        "127.0.0.1",
-        "localhost",
-        "host.docker.internal",
-    ]
-    return any(marker in value for marker in local_markers)
-
-
-def _is_true_env(name: str, default: str = "false") -> bool:
-    return (os.getenv(name, default) or default).strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _assert_engine_endpoint_reachable(endpoint: str, label: str) -> None:
-    parsed = urlparse(endpoint)
-    host = (parsed.hostname or "").strip()
-    if not host:
-        raise HTTPException(status_code=400, detail=f"{label} 엔드포인트 URL 형식이 올바르지 않습니다.")
-
-    if parsed.port:
-        port = parsed.port
-    elif parsed.scheme == "https":
-        port = 443
-    else:
-        port = 80
-
-    timeout_sec = 2.5
-    try:
-        with socket.create_connection((host, port), timeout=timeout_sec):
-            pass
-    except OSError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{label} 엔드포인트 연결 실패({host}:{port}): {exc}",
-        ) from exc
-
-
-def _validate_ad_engine_preflight(engine_type_raw: Optional[str]) -> str:
-    engine_type = (engine_type_raw or "internal_ffmpeg").strip().lower()
-    if engine_type not in {"internal_ffmpeg", "external_api", "dedicated_engine"}:
-        raise HTTPException(status_code=400, detail=f"지원하지 않는 렌더 엔진입니다: {engine_type}")
-
-    fallback_to_internal = _is_true_env("VIDEO_ENGINE_FALLBACK_TO_INTERNAL", "false")
-
-    if engine_type == "internal_ffmpeg":
-        ffmpeg_bin = (os.getenv("FFMPEG_BIN", "ffmpeg") or "ffmpeg").strip() or "ffmpeg"
-        resolved = ffmpeg_bin
-        if not Path(ffmpeg_bin).is_absolute():
-            resolved = shutil.which(ffmpeg_bin) or ""
-        if not resolved:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "FFmpeg 실행 파일을 찾을 수 없습니다. "
-                    "FFMPEG_BIN 환경변수를 확인하거나 ffmpeg를 설치하세요."
-                ),
-            )
-        return engine_type
-
-    if fallback_to_internal:
-        return engine_type
-
-    if engine_type == "external_api":
-        endpoint = (os.getenv("VIDEO_EXTERNAL_API_URL", "") or "").strip()
-        if not endpoint:
-            raise HTTPException(
-                status_code=400,
-                detail="external_api 엔진 설정 누락: VIDEO_EXTERNAL_API_URL 환경변수를 설정하세요.",
-            )
-        _assert_engine_endpoint_reachable(endpoint, "external_api")
-        return engine_type
-
-    endpoint = (os.getenv("VIDEO_DEDICATED_ENGINE_URL", "") or "").strip()
-    if not endpoint:
-        raise HTTPException(
-            status_code=400,
-            detail="dedicated_engine 설정 누락: VIDEO_DEDICATED_ENGINE_URL 환경변수를 설정하세요.",
-        )
-
-    require_generative = _is_true_env("VIDEO_REQUIRE_GENERATIVE_ENGINE", "true")
-    allow_local_self_engine = _is_true_env("VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE", "false")
-
-    if require_generative and _is_mock_engine_url(endpoint):
-        if not (allow_local_self_engine and _is_local_engine_url(endpoint)):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "dedicated_engine이 mock/local 엔드포인트로 설정되어 있습니다. "
-                    "실제 텍스트-투-비디오 엔진 URL을 VIDEO_DEDICATED_ENGINE_URL에 설정하세요."
-                ),
-            )
-
-    if require_generative and _is_local_engine_url(endpoint) and not allow_local_self_engine:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "로컬 dedicated_engine은 정책상 차단되어 있습니다. "
-                "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE=true 설정 또는 비로컬 엔드포인트를 사용하세요."
-            ),
-        )
-
-    _assert_engine_endpoint_reachable(endpoint, "dedicated_engine")
-
-    return engine_type
-
-
-def _generate_video_internal_ffmpeg(order: models.AdVideoOrder) -> bytes:
-    ffmpeg_bin = os.getenv("FFMPEG_BIN", "ffmpeg")
-    cut_count = _order_cut_count(order)
-    cut_seconds = _order_cut_seconds(order)
-    subtitle_speed = _order_subtitle_speed(order)
-    audio_volume = _order_audio_volume(order)
-    render_quality = _order_render_quality(order)
-    bgm_enabled = _order_bgm_enabled(order)
-    bgm_mood = _order_bgm_mood(order)
-    bgm_volume = _order_bgm_volume(order)
-
-    if render_quality == "ultra":
-        resolution = "1920x1080"
-        crf = "12"
-        preset = "slower"
-    elif render_quality == "standard":
-        resolution = "1280x720"
-        crf = "18"
-        preset = "medium"
-    else:
-        resolution = "1920x1080"
-        crf = "15"
-        preset = "slow"
-
-    volume_ratio = max(0.0, min(2.0, audio_volume / 100.0))
-    audio_filter = f"atempo={subtitle_speed:.2f},volume={volume_ratio:.2f}"
-    freq_base = 220 if (order.voice_gender or "female") == "female" else 140
-    bgm_profile = _bgm_profile(bgm_mood)
-    bgm_source = _bgm_lavfi_source(cut_seconds, bgm_mood)
-    bgm_enabled = bgm_enabled and bgm_volume > 0
-    bgm_volume_ratio = max(0.0, min(1.0, bgm_volume / 100.0))
-    bgm_fade_in = min(0.8, max(0.3, cut_seconds / 8.0))
-    bgm_fade_out = min(1.4, max(0.6, cut_seconds / 5.0))
-    bgm_fade_out_start = max(0.0, cut_seconds - bgm_fade_out)
-    bgm_filter = (
-        f"volume={bgm_volume_ratio:.2f},"
-        f"lowpass=f={int(bgm_profile['lowpass'])},"
-        "aecho=0.8:0.4:45:0.18,"
-        f"afade=t=in:st=0:d={bgm_fade_in:.2f},"
-        f"afade=t=out:st={bgm_fade_out_start:.2f}:d={bgm_fade_out:.2f}"
-    )
-    captions = _compose_cut_scripts(order)
-    storyboard = _compose_storyboard(order)
-    colors = ["black", "#1f2937", "#111827", "#0b1220", "#1e293b", "#0f172a"]
-
-    temp_root = _resolve_marketplace_temp_root()
-    with tempfile.TemporaryDirectory(prefix="ad_video_", dir=str(temp_root)) as tmpdir:
-        out_path = Path(tmpdir) / "ad.mp4"
-        default_source_prompt = _get_reference_image_prompt(order)
-        source_image_cache: Dict[str, Optional[Path]] = {}
-
-        def _load_cached_source_image(image_prompt: Optional[str]) -> Optional[Path]:
-            normalized_prompt = (image_prompt or "").strip()
-            cache_key = normalized_prompt or "__default__"
-            if cache_key not in source_image_cache:
-                source_image_cache[cache_key] = _load_ad_image_from_prompt(
-                    normalized_prompt or None,
-                    tmpdir,
-                    file_stem=f"scene_{len(source_image_cache) + 1}",
-                )
-            return source_image_cache.get(cache_key)
-
-        segment_paths: List[Path] = []
-        for index in range(cut_count):
-            scene = storyboard[index] if index < len(storyboard) else None
-            source_prompt = _resolve_storyboard_scene_source(order, scene) or default_source_prompt
-            source_image = _load_cached_source_image(source_prompt)
-            cut_caption = _ffmpeg_text(captions[index], limit=80)
-            cut_title = _ffmpeg_text(order.title, limit=48)
-            segment_path = Path(tmpdir) / f"cut_{index + 1}.mp4"
-            segment_paths.append(segment_path)
-
-            text_overlay = (
-                "drawbox=x=36:y=ih-206:w=iw-72:h=162:color=black@0.45:t=fill,"
-                "drawtext="
-                f"text='컷 {index + 1}/{cut_count}  {cut_title}':"
-                "fontcolor=white:fontsize=34:"
-                "x=56:y=h-178,"
-                "drawtext="
-                f"text='{cut_caption}':"
-                "fontcolor=white:fontsize=42:"
-                "x=56:y=h-120"
-            )
-
-            if source_image and source_image.exists():
-                crop_resolution = resolution.replace("x", ":")
-                vf_with_image = (
-                    f"scale={resolution}:force_original_aspect_ratio=increase,"
-                    f"crop={crop_resolution},"
-                    f"{text_overlay}"
-                )
-                if bgm_enabled:
-                    filter_complex = (
-                        f"[1:a]{audio_filter}[voice];"
-                        f"[2:a]{bgm_filter}[bgm];"
-                        "[voice][bgm]amix=inputs=2:duration=first[aout]"
-                    )
-                    cut_cmd = [
-                        ffmpeg_bin,
-                        "-y",
-                        "-loop",
-                        "1",
-                        "-framerate",
-                        "25",
-                        "-i",
-                        str(source_image),
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"sine=frequency={freq_base + (index * 8)}:duration={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        bgm_source,
-                        "-t",
-                        str(cut_seconds),
-                        "-vf",
-                        vf_with_image,
-                        "-filter_complex",
-                        filter_complex,
-                        "-map",
-                        "0:v:0",
-                        "-map",
-                        "[aout]",
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        preset,
-                        "-crf",
-                        crf,
-                        "-pix_fmt",
-                        "yuv420p",
-                        "-c:a",
-                        "aac",
-                        "-shortest",
-                        str(segment_path),
-                    ]
-                else:
-                    cut_cmd = [
-                        ffmpeg_bin,
-                        "-y",
-                        "-loop",
-                        "1",
-                        "-framerate",
-                        "25",
-                        "-i",
-                        str(source_image),
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"sine=frequency={freq_base + (index * 8)}:duration={cut_seconds}",
-                        "-t",
-                        str(cut_seconds),
-                        "-vf",
-                        vf_with_image,
-                        "-af",
-                        audio_filter,
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        preset,
-                        "-crf",
-                        crf,
-                        "-pix_fmt",
-                        "yuv420p",
-                        "-c:a",
-                        "aac",
-                        "-shortest",
-                        str(segment_path),
-                    ]
-            else:
-                if bgm_enabled:
-                    filter_complex = (
-                        f"[1:a]{audio_filter}[voice];"
-                        f"[2:a]{bgm_filter}[bgm];"
-                        "[voice][bgm]amix=inputs=2:duration=first[aout]"
-                    )
-                    cut_cmd = [
-                        ffmpeg_bin,
-                        "-y",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"color=c={colors[index % len(colors)]}:s={resolution}:d={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"sine=frequency={freq_base + (index * 8)}:duration={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        bgm_source,
-                        "-vf",
-                        text_overlay,
-                        "-filter_complex",
-                        filter_complex,
-                        "-map",
-                        "0:v:0",
-                        "-map",
-                        "[aout]",
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        preset,
-                        "-crf",
-                        crf,
-                        "-pix_fmt",
-                        "yuv420p",
-                        "-c:a",
-                        "aac",
-                        "-shortest",
-                        str(segment_path),
-                    ]
-                else:
-                    cut_cmd = [
-                        ffmpeg_bin,
-                        "-y",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"color=c={colors[index % len(colors)]}:s={resolution}:d={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"sine=frequency={freq_base + (index * 8)}:duration={cut_seconds}",
-                        "-vf",
-                        text_overlay,
-                        "-af",
-                        audio_filter,
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        preset,
-                        "-crf",
-                        crf,
-                        "-pix_fmt",
-                        "yuv420p",
-                        "-c:a",
-                        "aac",
-                        "-shortest",
-                        str(segment_path),
-                    ]
-
-            cut_proc = subprocess.run(
-                cut_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-
-            if (cut_proc.returncode != 0 or not segment_path.exists()) and source_image and source_image.exists():
-                if bgm_enabled:
-                    filter_complex = (
-                        f"[1:a]{audio_filter}[voice];"
-                        f"[2:a]{bgm_filter}[bgm];"
-                        "[voice][bgm]amix=inputs=2:duration=first[aout]"
-                    )
-                    fallback_cut_cmd = [
-                        ffmpeg_bin,
-                        "-y",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"color=c={colors[index % len(colors)]}:s={resolution}:d={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"sine=frequency={freq_base + (index * 8)}:duration={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        bgm_source,
-                        "-vf",
-                        text_overlay,
-                        "-filter_complex",
-                        filter_complex,
-                        "-map",
-                        "0:v:0",
-                        "-map",
-                        "[aout]",
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        preset,
-                        "-crf",
-                        crf,
-                        "-pix_fmt",
-                        "yuv420p",
-                        "-c:a",
-                        "aac",
-                        "-shortest",
-                        str(segment_path),
-                    ]
-                else:
-                    fallback_cut_cmd = [
-                        ffmpeg_bin,
-                        "-y",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"color=c={colors[index % len(colors)]}:s={resolution}:d={cut_seconds}",
-                        "-f",
-                        "lavfi",
-                        "-i",
-                        f"sine=frequency={freq_base + (index * 8)}:duration={cut_seconds}",
-                        "-vf",
-                        text_overlay,
-                        "-af",
-                        audio_filter,
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        preset,
-                        "-crf",
-                        crf,
-                        "-pix_fmt",
-                        "yuv420p",
-                        "-c:a",
-                        "aac",
-                        "-shortest",
-                        str(segment_path),
-                    ]
-                cut_proc = subprocess.run(
-                    fallback_cut_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                )
-
-            if cut_proc.returncode != 0 or not segment_path.exists():
-                raise RuntimeError(
-                    f"ffmpeg cut render failed: {cut_proc.stderr[-800:]}"
-                )
-
-        concat_list = Path(tmpdir) / "concat.txt"
-        concat_content = "\n".join([
-            f"file '{p.as_posix()}'" for p in segment_paths
-        ])
-        concat_list.write_text(concat_content, encoding="utf-8")
-
-        concat_cmd = [
-            ffmpeg_bin,
-            "-y",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            str(concat_list),
-            "-c",
-            "copy",
-            str(out_path),
-        ]
-        concat_proc = subprocess.run(
-            concat_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        if concat_proc.returncode != 0 or not out_path.exists():
-            reencode_cmd = [
-                ffmpeg_bin,
-                "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(concat_list),
-                "-c:v",
-                "libx264",
-                "-pix_fmt",
-                "yuv420p",
-                "-c:a",
-                "aac",
-                str(out_path),
-            ]
-            reencode_proc = subprocess.run(
-                reencode_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            if reencode_proc.returncode != 0 or not out_path.exists():
-                raise RuntimeError(
-                    f"ffmpeg concat failed: {reencode_proc.stderr[:400]}"
-                )
-
-        return out_path.read_bytes()
-
-
-def _generate_video_external_api(order: models.AdVideoOrder) -> tuple[bytes, Optional[str]]:
-    endpoint = (os.getenv("VIDEO_EXTERNAL_API_URL", "") or "").strip()
-    if not endpoint:
-        raise RuntimeError("VIDEO_EXTERNAL_API_URL not configured")
-
-    headers = _engine_headers("VIDEO_EXTERNAL_API_KEY")
-    payload = _build_ad_engine_render_payload(order)
-
-    response = requests.post(endpoint, headers=headers, json=payload, timeout=180)
-    response.raise_for_status()
-
-    content_type = response.headers.get("content-type", "")
-    if "video/" in content_type:
-        return response.content, None
-
-    data = _safe_json(response, "external api")
-    job_id = str(data.get("job_id") or "").strip() or None
-    video_url = str(data.get("video_url") or "").strip()
-    if not video_url:
-        raise RuntimeError("external api response missing video_url")
-    video_resp = requests.get(video_url, timeout=180)
-    video_resp.raise_for_status()
-    return video_resp.content, job_id
-
-
-def _dedicated_engine_adapter_mode() -> str:
-    return (os.getenv("VIDEO_DEDICATED_ENGINE_ADAPTER", "default") or "default").strip().lower()
-
-
-def _dedicated_engine_normalize_path(path: str, default_path: str) -> str:
-    value = (path or default_path).strip() or default_path
-    return value if value.startswith("/") else f"/{value}"
-
-
-def _dedicated_engine_nested_value(data: Dict[str, Any], path: str) -> Any:
-    current: Any = data
-    for segment in path.split("."):
-        if not isinstance(current, dict):
-            return None
-        current = current.get(segment)
-    return current
-
-
-def _dedicated_engine_first_value(data: Dict[str, Any], *paths: str) -> Any:
-    for path in paths:
-        value = _dedicated_engine_nested_value(data, path)
-        if value not in {None, ""}:
-            return value
-    return None
-
-
-def _generate_video_dedicated_engine(
-    order: models.AdVideoOrder,
-    progress_callback: Optional[Callable[[str, str, Optional[int], str], None]] = None,
-) -> tuple[bytes, Optional[str]]:
-    endpoint = (os.getenv("VIDEO_DEDICATED_ENGINE_URL", "") or "").strip()
-    if not endpoint:
-        raise RuntimeError("VIDEO_DEDICATED_ENGINE_URL not configured")
-
-    require_generative = os.getenv("VIDEO_REQUIRE_GENERATIVE_ENGINE", "true").lower() in {
-        "1", "true", "yes", "on"
-    }
-    allow_local_self_engine = os.getenv("VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE", "false").lower() in {
-        "1", "true", "yes", "on"
-    }
-    if require_generative and _is_mock_engine_url(endpoint):
-        if allow_local_self_engine and _is_local_engine_url(endpoint):
-            pass
-        else:
-            raise RuntimeError(
-                "Mock dedicated engine endpoint is configured. "
-                "Set VIDEO_DEDICATED_ENGINE_URL to a real text-to-video engine endpoint."
-            )
-
-    if require_generative and _is_local_engine_url(endpoint) and not allow_local_self_engine:
-        raise RuntimeError(
-            "Local dedicated engine endpoint is blocked by policy. "
-            "Set VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE=true for self-hosted local engine, "
-            "or use a non-local dedicated engine URL."
-        )
-
-    adapter_mode = _dedicated_engine_adapter_mode()
-    default_submit_path = "/jobs"
-    submit_path = _dedicated_engine_normalize_path(
-        os.getenv("VIDEO_DEDICATED_SUBMIT_PATH", default_submit_path),
-        default_submit_path,
-    )
-    default_status_path = submit_path.rstrip("/") + "/{job_id}"
-    status_path_template = _dedicated_engine_normalize_path(
-        os.getenv("VIDEO_DEDICATED_STATUS_PATH_TEMPLATE", default_status_path),
-        default_status_path,
-    )
-    if "{job_id}" not in status_path_template:
-        status_path_template = status_path_template.rstrip("/") + "/{job_id}"
-    result_url_tpl = endpoint.rstrip("/") + status_path_template
-    submit_url = endpoint.rstrip("/") + submit_path
-    headers = _engine_headers("VIDEO_DEDICATED_ENGINE_API_KEY")
-    payload = _build_ad_engine_render_payload(order)
-    payload["order_ref"] = f"ad-order-{order.id}"
-    if adapter_mode in {"4d", "4d_designer", "4d-designer"}:
-        payload.setdefault("adapter_mode", "4d_designer")
-
-    submit = requests.post(submit_url, headers=headers, json=payload, timeout=60)
-    submit.raise_for_status()
-    job = _safe_json(submit, "dedicated submit")
-    job_id = str(_dedicated_engine_first_value(job, "job_id", "id", "job.job_id") or "").strip()
-    if not job_id:
-        raise RuntimeError("dedicated engine response missing job_id")
-    submit_status = str(_dedicated_engine_first_value(job, "status", "state") or "accepted").lower().strip()
-    if submit_status and submit_status not in DEDICATED_STATUS_ACCEPTED:
-        raise RuntimeError(f"dedicated engine invalid submit status: {submit_status}")
-    if progress_callback is not None:
-        submit_message = str(_dedicated_engine_first_value(job, "status_message", "message") or "").strip()
-        progress_callback(job_id, submit_status or "accepted", 0, submit_message)
-
-    timeout_sec = int(os.getenv("VIDEO_DEDICATED_TIMEOUT_SEC", "600"))
-    poll_interval = float(os.getenv("VIDEO_DEDICATED_POLL_SEC", "3"))
-    started = time.time()
-    while time.time() - started < timeout_sec:
-        poll = requests.get(result_url_tpl.format(job_id=job_id), headers=headers, timeout=30)
-        poll.raise_for_status()
-        data = _safe_json(poll, "dedicated status")
-        payload_job_id = str(_dedicated_engine_first_value(data, "job_id", "id", "job.job_id") or job_id).strip()
-        if payload_job_id != job_id:
-            raise RuntimeError("dedicated engine returned mismatched job_id")
-        status_value = str(_dedicated_engine_first_value(data, "status", "state", "job.status") or "").lower()
-        if status_value not in DEDICATED_STATUS_ACCEPTED:
-            raise RuntimeError(f"dedicated engine invalid status: {status_value}")
-
-        progress_percent = _parse_progress_percent(
-            _dedicated_engine_first_value(data, "progress_percent", "progress", "metadata.progress_percent")
-        )
-        error_message = str(
-            _dedicated_engine_first_value(
-                data,
-                "status_message",
-                "message",
-                "error_message",
-                "error",
-            ) or ""
-        ).strip()
-        if progress_callback is not None:
-            progress_callback(job_id, status_value, progress_percent, error_message)
-
-        if status_value in DEDICATED_STATUS_COMPLETED:
-            video_url = str(
-                _dedicated_engine_first_value(
-                    data,
-                    "video_url",
-                    "result.video_url",
-                    "output.video_url",
-                ) or ""
-            ).strip()
-            if not video_url:
-                raise RuntimeError("dedicated engine completed without video_url")
-            video_resp = requests.get(video_url, timeout=180)
-            video_resp.raise_for_status()
-            return video_resp.content, job_id
-        if status_value in DEDICATED_STATUS_FAILED:
-            error_text = (
-                str(_dedicated_engine_first_value(data, "error_message", "error", "status_message", "message") or "").strip()
-                or "dedicated engine failed"
-            )
-            error_code = str(_dedicated_engine_first_value(data, "error_code", "error.code") or "").strip()
-            if error_code:
-                raise RuntimeError(f"{error_code}: {error_text}")
-            raise RuntimeError(error_text)
-        time.sleep(poll_interval)
-
-    raise RuntimeError("dedicated engine timeout")
-
-
-def _build_movie_studio_payload_from_order(order: models.AdVideoOrder) -> Dict[str, object]:
-    storyboard = _compose_storyboard(order)
-    sequence_beats = [
-        {
-            "objective": str(scene.get("title") or f"scene {index + 1}").strip() or f"scene {index + 1}",
-            "emotional_state": "conversion intent" if index == len(storyboard) - 1 else "controlled realism",
-            "blocking_summary": str(scene.get("visual_focus") or scene.get("scene_prompt") or scene.get("title") or "cinematic scene progression").strip(),
-            "cta_required": index == len(storyboard) - 1,
-        }
-        for index, scene in enumerate(storyboard[:12])
-    ]
-
-    identity_references: List[str] = []
-    portrait_reference = str(getattr(order, "portrait_image_prompt", "") or "").strip()
-    if portrait_reference:
-        identity_references.append(portrait_reference)
-
-    product_images = [str(item).strip() for item in (_parse_ad_image_prompt_list(getattr(order, "product_image_prompts", None)) or []) if str(item).strip()]
-    environment_references = product_images[:3]
-    if not environment_references:
-        primary_image = str(getattr(order, "image_prompt", "") or "").strip()
-        if primary_image:
-            environment_references.append(primary_image)
-
-    return {
-        "project_id": f"ad-order-{order.id}",
-        "title": str(order.title or f"ad-order-{order.id}").strip() or f"ad-order-{order.id}",
-        "synopsis": str(getattr(order, "scenario_script", None) or order.caption_text or order.background_prompt or order.title or "movie studio ad order").strip(),
-        "genre": "commercial cinema",
-        "tone": str(getattr(order, "visual_style", "photorealistic") or "photorealistic").strip() or "photorealistic",
-        "realism_level": "photoreal",
-        "species": "human" if portrait_reference else "product",
-        "environment_type": "studio",
-        "location_summary": str(order.background_prompt or "premium commercial studio").strip(),
-        "background_prompt": str(order.background_prompt or "premium commercial studio").strip(),
-        "target_duration_seconds": _order_duration_seconds(order),
-        "target_fps": 24,
-        "target_resolution": "1080x1920",
-        "voice_track": str(order.caption_text or "").strip() or None,
-        "continuity_rules": [
-            "scene flow continuity",
-            "photoreal identity continuity",
-            "stable environment realism",
-            "cinematic camera continuity",
-        ],
-        "hero_props": [str(order.title or "hero product").strip() or "hero product"],
-        "sequence_beats": sequence_beats,
-        "identity_references": identity_references,
-        "environment_references": environment_references,
-        "operator_note": f"ad_order_id={order.id}; public_job_id={order.public_job_id}",
-    }
-
-
-def _generate_video_movie_studio(
-    order: models.AdVideoOrder,
-    progress_callback: Optional[Callable[[str, str, Optional[int], str], None]] = None,
-) -> tuple[bytes, Optional[str]]:
-    from backend.movie_studio.orchestration.studio_orchestrator import execute_movie_studio_project
-
-    job_id = str(order.public_job_id or order.id)
-    if progress_callback is not None:
-        progress_callback(job_id, "planning", 5, "movie studio scene flow planning")
-    result = execute_movie_studio_project(_build_movie_studio_payload_from_order(order))
-    if progress_callback is not None:
-        progress_callback(job_id, "rendering", 85, "movie studio render completed")
-
-    render_result = dict((result.get("render_manifest") or {}).get("render_result") or {})
-    output_mp4_path = str(render_result.get("output_mp4_path") or result.get("output_mp4_path") or "").strip()
-    if str(render_result.get("status") or "") != "completed" or not output_mp4_path:
-        raise RuntimeError(f"movie studio render failed: {render_result.get('error_message') or 'output missing'}")
-
-    quality_result = dict((result.get("quality_runtime_manifest") or {}).get("quality_result") or result.get("quality_result") or {})
-    if not bool(quality_result.get("passed", False)):
-        failures = quality_result.get("failures") or []
-        failure_text = "; ".join(str(item.get("message") or item.get("code") or "quality failure") for item in failures[:5] if isinstance(item, dict))
-        raise RuntimeError(f"movie studio quality gate failed: {failure_text or 'unknown failure'}")
-
-    video_path = Path(output_mp4_path)
-    if not video_path.exists() or not video_path.is_file():
-        raise RuntimeError("movie studio output mp4 missing")
-
-    if progress_callback is not None:
-        progress_callback(job_id, "completed", 100, f"movie studio output ready: {video_path.name}")
-    return video_path.read_bytes(), None
-
-
-def _generate_video_by_engine(
-    order: models.AdVideoOrder,
-    progress_callback: Optional[Callable[[str, str, Optional[int], str], None]] = None,
-) -> tuple[bytes, Optional[str]]:
-    engine_type = (order.engine_type or "internal_ffmpeg").strip().lower()
-    fallback = os.getenv("VIDEO_ENGINE_FALLBACK_TO_INTERNAL", "false").lower() in {
-        "1", "true", "yes", "on"
-    }
-
-    try:
-        if engine_type == "external_api":
-            return _generate_video_external_api(order)
-        if engine_type == "dedicated_engine":
-            return _generate_video_movie_studio(order, progress_callback=progress_callback)
-        return _generate_video_internal_ffmpeg(order), None
-    except Exception:
-        if fallback and engine_type != "internal_ffmpeg":
-            return _generate_video_internal_ffmpeg(order), None
-        raise
-
-
 def _process_ad_order_job(order_id: int) -> None:
-    db = SessionLocal()
-    try:
-        order = db.query(models.AdVideoOrder).filter(models.AdVideoOrder.id == order_id).first()
-        if not order:
-            return
-
-        order.status = models.AdVideoOrderStatus.PROCESSING.value
-        order.progress_percent = 10
-        order.error_message = None
-        order.external_job_id = None
-        order.output_file_key = None
-        order.output_filename = None
-        order.output_video_key = None
-        order.output_video_filename = None
-        order.quality_score = None
-        order.quality_gate_passed = False
-        order.quality_feedback = None
-        order.quality_checked_at = None
-        db.commit()
-        db.refresh(order)
-
-        bundle = _build_ad_package_zip(order)
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        slug = _safe_filename(order.title)
-        public_job_id = str(order.public_job_id or order.id)
-        zip_name = f"{public_job_id}.zip"
-        zip_key = f"storage/packages/{order.user_id}/{zip_name}"
-        stored_zip_key = _store_bytes_with_fallback(bundle, zip_key, "application/zip")
-
-        order.output_file_key = stored_zip_key
-        order.output_filename = zip_name
-        order.progress_percent = 45
-        db.commit()
-
-        order.status = models.AdVideoOrderStatus.RENDERING.value
-        order.progress_percent = 60
-        db.commit()
-
-        last_engine_progress: Optional[int] = None
-        last_engine_status = ""
-        last_engine_message = ""
-
-        def _dedicated_progress_callback(
-            external_job_id: str,
-            engine_status: str,
-            engine_progress: Optional[int],
-            engine_message: str,
-        ) -> None:
-            nonlocal last_engine_progress, last_engine_status, last_engine_message, order
-
-            normalized_status = str(engine_status or "").strip().lower()
-            normalized_message = str(engine_message or "").strip()
-            normalized_progress = None if engine_progress is None else max(0, min(100, int(engine_progress)))
-            mapped_progress = order.progress_percent or 60
-            if normalized_progress is not None:
-                mapped_progress = max(60, min(95, 60 + int(normalized_progress * 35 / 100)))
-
-            changed = False
-            if external_job_id and order.external_job_id != external_job_id:
-                order.external_job_id = external_job_id
-                changed = True
-            if normalized_status and normalized_status != last_engine_status:
-                last_engine_status = normalized_status
-                changed = True
-            if normalized_progress is not None and normalized_progress != last_engine_progress:
-                last_engine_progress = normalized_progress
-                if (order.progress_percent or 0) != mapped_progress:
-                    order.progress_percent = mapped_progress
-                    changed = True
-            if normalized_message and normalized_message != last_engine_message:
-                last_engine_message = normalized_message
-                order.error_message = normalized_message
-                changed = True
-
-            if changed:
-                db.commit()
-
-        video_bytes, external_job_id = _generate_video_by_engine(
-            order,
-            progress_callback=_dedicated_progress_callback,
-        )
-        video_name = f"{public_job_id}.mp4"
-        video_key = f"storage/videos/{order.user_id}/{video_name}"
-        stored_video_key = _store_bytes_with_fallback(video_bytes, video_key, "video/mp4")
-
-        quality_result = _evaluate_ad_order_quality(order, video_bytes)
-        order.quality_score = quality_result["score"]
-        order.quality_gate_passed = bool(quality_result["passed"])
-        order.quality_feedback = quality_result["feedback"] or None
-        order.quality_checked_at = datetime.utcnow()
-
-        order.output_video_key = stored_video_key
-        order.output_video_filename = video_name
-        order.external_job_id = external_job_id
-        if not order.quality_gate_passed:
-            quality_retry_count = int(getattr(order, "quality_retry_count", 0) or 0)
-            if quality_retry_count < MARKETPLACE_MAX_AUTO_QUALITY_RETRIES:
-                order.quality_retry_count = quality_retry_count + 1
-                db.commit()
-                _reset_ad_order_for_retry(
-                    db,
-                    order,
-                    retry_reason=(
-                        f"품질 게이트 미통과(score={order.quality_score}): "
-                        f"{order.quality_feedback or '자동 재시도'}"
-                    ),
-                    preserve_quality_feedback=True,
-                )
-                return
-
-            order.status = models.AdVideoOrderStatus.FAILED.value
-            order.progress_percent = 100
-            order.error_message = (
-                f"품질 게이트 실패(score={order.quality_score}): "
-                f"{order.quality_feedback or '시장형 광고 기준 미충족'}"
-            )
-            db.commit()
-            return
-
-        order.status = models.AdVideoOrderStatus.COMPLETED.value
-        order.progress_percent = 100
-        order.error_message = None
-        db.commit()
-    except Exception as exc:
-        order = db.query(models.AdVideoOrder).filter(models.AdVideoOrder.id == order_id).first()
-        if order:
-            failure_trace = _compose_trace_fields("FLOW-AD-001", "FLOW-AD-001-3", "WORKER_FAILED")
-            order.trace_id = failure_trace["trace_id"]
-            order.flow_id = failure_trace["flow_id"]
-            order.step_id = failure_trace["step_id"]
-            order.action = failure_trace["action"]
-            order.status = models.AdVideoOrderStatus.FAILED.value
-            order.error_message = str(exc)
-            order.progress_percent = 100
-            _write_feature_execution_log(
-                db,
-                user_id=order.user_id,
-                entity_type="ad_video_order",
-                entity_id=str(order.id),
-                flow_id=failure_trace["flow_id"],
-                step_id=failure_trace["step_id"],
-                action=failure_trace["action"],
-                status="failed",
-                message="광고 주문 worker 실패",
-                payload={"error": str(exc)},
-            )
-            _enqueue_feature_retry_record(
-                db,
-                user_id=order.user_id,
-                entity_type="ad_video_order",
-                entity_id=str(order.id),
-                flow_id=failure_trace["flow_id"],
-                step_id=failure_trace["step_id"],
-                action=failure_trace["action"],
-                queue_name=VIDEO_RENDER_QUEUE_NAME,
-                payload={"order_id": order.id, "job_id": order.public_job_id},
-                last_error=str(exc),
-                status="failed",
-                attempt_count=int(getattr(order, "quality_retry_count", 0) or 0),
-            )
-            db.commit()
-    finally:
-        db.close()
+    process_ad_order_job(sys.modules[__name__], order_id)
 
 
 def _reset_ad_order_for_retry(
@@ -4352,41 +1844,13 @@ def _reset_ad_order_for_retry(
     retry_reason: Optional[str] = None,
     preserve_quality_feedback: bool = False,
 ) -> models.AdVideoOrder:
-    order.status = models.AdVideoOrderStatus.QUEUED.value
-    order.progress_percent = 0
-    order.public_job_id = str(uuid4())
-    order.external_job_id = None
-    order.output_file_key = None
-    order.output_filename = None
-    order.output_video_key = None
-    order.output_video_filename = None
-    if not preserve_quality_feedback:
-        order.quality_score = None
-        order.quality_gate_passed = False
-        order.quality_feedback = None
-        order.quality_checked_at = None
-    order.error_message = retry_reason
-    order.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(order)
-    ensure_ad_order_runtime_ready()
-    _enqueue_ad_order(order.id, order.public_job_id)
-    _enqueue_feature_retry_record(
+    return reset_ad_order_for_retry(
+        sys.modules[__name__],
         db,
-        user_id=current_user.id,
-        entity_type="ad_video_order",
-        entity_id=str(order.id),
-        flow_id=order.flow_id or "FLOW-AD-001",
-        step_id=order.step_id or "FLOW-AD-001-1",
-        action="QUEUE_ENQUEUE",
-        queue_name=VIDEO_RENDER_QUEUE_NAME,
-        payload={"order_id": order.id, "job_id": order.public_job_id},
-        status="queued",
-        attempt_count=0,
+        order,
+        retry_reason=retry_reason,
+        preserve_quality_feedback=preserve_quality_feedback,
     )
-    db.commit()
-
-    return order
 
 
 def _ad_order_worker_loop() -> None:
@@ -4395,9 +1859,9 @@ def _ad_order_worker_loop() -> None:
         _mark_ad_worker_heartbeat()
         try:
             redis_client = _require_video_queue_redis()
-            result = redis_client.brpop(VIDEO_RENDER_QUEUE_NAME, timeout=5)
+            result = redis_client.brpop(VIDEO_RENDER_QUEUE_NAME, timeout=5) # type: ignore
             if result:
-                _, raw_item = result
+                _, raw_item = result # type: ignore
                 queue_item = json.loads(raw_item)
         except HTTPException:
             time.sleep(2)
@@ -4415,11 +1879,13 @@ def _ad_order_worker_loop() -> None:
             _maybe_run_marketplace_storage_cleanup()
             _process_ad_order_job(order_id)
         finally:
-            with _ad_worker_lock:
-                _ad_enqueued_ids.discard(order_id)
+            discard_enqueued_ad_order(order_id)
 
 
 def run_ad_order_worker() -> None:
+    db_ok, db_message = check_database_availability()
+    if not db_ok:
+        raise RuntimeError(f"ad-order worker database unavailable: {db_message}")
     _mark_ad_worker_heartbeat()
     logger.info(
         "[marketplace] video render worker consuming Redis queue '%s'",
@@ -4433,50 +1899,4 @@ def _ensure_ad_order_worker_started() -> None:
 
 
 def _build_ad_package_zip(order: models.AdVideoOrder) -> bytes:
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    duration = _order_duration_seconds(order)
-    cut_count = _order_cut_count(order)
-    cut_seconds = _order_cut_seconds(order)
-    brief_text = (
-        f"# Animation Photorealistic Ad Brief\n\n"
-        f"- Order ID: {order.id}\n"
-        f"- Title: {order.title}\n"
-        f"- Voice: {order.voice_gender}\n"
-        f"- Duration: {duration}s ({cut_seconds}s x {cut_count} cuts)\n"
-        f"- Style: {order.visual_style}\n"
-        f"- Subtitle Speed: {_order_subtitle_speed(order):.2f}x\n"
-        f"- Render Quality: {_order_render_quality(order)}\n"
-        f"- Audio Volume: {_order_audio_volume(order)}%\n"
-        f"- Generated At: {ts}\n\n"
-        f"## Image Prompt\n{order.image_prompt}\n\n"
-        f"## Background Prompt\n{order.background_prompt}\n\n"
-        f"## Caption Text\n{order.caption_text}\n"
-    )
-
-    shotlist = {
-        "order_id": order.id,
-        "title": order.title,
-        "voice_gender": order.voice_gender,
-        "duration_seconds": duration,
-        "target_fps": 24,
-        "target_resolution": "1080x1920",
-        "scene_units": [
-            {
-                "id": f"ad_order_{order.id}_scene_{i + 1}",
-                "ref": f"컷 {i + 1}",
-                "start_sec": round(cut_seconds * i, 3),
-                "end_sec": round(cut_seconds * (i + 1), 3),
-                "duration_sec": cut_seconds,
-                "image": _get_reference_image_prompt(order),
-                "media_type": "image",
-                "requires_realistic_human": bool(portrait_image_prompt),
-            }
-            for i in range(cut_count)
-        ],
-    }
-
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("brief.md", brief_text)
-        zf.writestr("shotlist.json", json.dumps(shotlist, ensure_ascii=False, indent=2))
-    return zip_buffer.getvalue()
+    return build_ad_package_zip(sys.modules[__name__], order)

@@ -1,0 +1,985 @@
+﻿{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "playwright-round-a",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Set-Location frontend/frontend; $env:PLAYWRIGHT_ADMIN_BASE_URL='http://localhost:3005'; $env:PLAYWRIGHT_ADMIN_USERNAME='ui.admin.round@devanalysis.local'; $env:PLAYWRIGHT_ADMIN_PASSWORD='RoundUi!20260426'; $env:PLAYWRIGHT_TARGET_USERNAME='ui_pod_round_a_20260426'; npx playwright test tests/ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Set-Location frontend/frontend; $env:PLAYWRIGHT_ADMIN_BASE_URL=\"http://localhost:3005\"; $env:PLAYWRIGHT_ADMIN_USERNAME=\"ui.admin.round@devanalysis.local\"; $env:PLAYWRIGHT_ADMIN_PASSWORD=\"RoundUi!20260426\"; $env:PLAYWRIGHT_TARGET_USERNAME=\"ui_pod_round_a_20260426\"; npx playwright test tests/ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-cmd",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://localhost:3005 && set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local && set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426 && set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426 && npx playwright test tests/ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "rebuild-frontend-admin-container",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker compose up -d --build frontend-admin frontend-marketplace"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "rebuild-frontend-admin-container",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker compose up -d --build frontend-admin frontend-marketplace"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend python -c \"from backend.marketplace.database import SessionLocal; from backend.marketplace.models import User; from backend.auth import get_password_hash; s=SessionLocal(); ae='ui.admin.round@devanalysis.local'; ap='RoundUi!20260426'; te='ui.pod.round.a@devanalysis.local'; tu='ui_pod_round_a_20260426'; admin=s.query(User).filter(User.email==ae).first(); h=get_password_hash(ap); admin=admin or User(email=ae, username=ae, hashed_password=h, is_active=True, is_admin=True, is_superuser=True); admin.username=ae; admin.hashed_password=h; admin.is_active=True; admin.is_admin=True; admin.is_superuser=True; s.add(admin); user=s.query(User).filter(User.email==te).first(); user=user or User(email=te, username=tu, hashed_password=get_password_hash('x'), is_active=True, is_admin=False, is_superuser=False); user.username=tu; user.is_active=True; user.is_admin=False; user.is_superuser=False; s.add(user); s.commit(); print('SEEDED_A', ae, tu); s.close()\""
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend python /app/scripts/seed_ui_round.py A"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users-v2",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend python /app/scripts/seed_ui_round.py A"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-cmd-v2",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005 && set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local && set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426 && set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426 && npx playwright test tests/ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "check-admin-login-api",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"python -c \"import requests; r=requests.post('http://127.0.0.1:8000/api/auth/login', data={'username':'ui.admin.round@devanalysis.local','password':'RoundUi!20260426'}); print(r.status_code); print(r.text[:300])\""
+			],
+			"isBackground": false
+		},
+		{
+			"label": "check-admin-login-api-v2",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"python -c \"import requests; r=requests.post(\\\"http://127.0.0.1:8000/api/auth/login\\\", data={\\\"username\\\":\\\"ui.admin.round@devanalysis.local\\\",\\\"password\\\":\\\"RoundUi!20260426\\\"}); print(r.status_code); print(r.text[:300])\""
+			],
+			"isBackground": false
+		},
+		{
+			"label": "check-admin-login-ps",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$body='username=ui.admin.round%40devanalysis.local&password=RoundUi!20260426'; try { $r=Invoke-WebRequest -Uri 'http://127.0.0.1:8000/api/auth/login' -Method Post -ContentType 'application/x-www-form-urlencoded' -Body $body -UseBasicParsing; Write-Output ('STATUS ' + $r.StatusCode); Write-Output ($r.Content.Substring(0,[Math]::Min(250,$r.Content.Length))); } catch { $resp=$_.Exception.Response; if($resp){ Write-Output ('STATUS ' + [int]$resp.StatusCode); $sr=New-Object IO.StreamReader($resp.GetResponseStream()); $txt=$sr.ReadToEnd(); Write-Output ($txt.Substring(0,[Math]::Min(250,$txt.Length))); } else { Write-Output ('ERR ' + $_.Exception.Message) } }"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "check-admin-login-ps-v2",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$body=@{username='ui.admin.round@devanalysis.local';password='RoundUi!20260426'}; try { $r=Invoke-WebRequest -Uri 'http://127.0.0.1:8000/api/auth/login' -Method Post -Body $body -UseBasicParsing; Write-Output ('STATUS ' + $r.StatusCode); Write-Output ($r.Content.Substring(0,[Math]::Min(250,$r.Content.Length))); } catch { $resp=$_.Exception.Response; if($resp){ Write-Output ('STATUS ' + [int]$resp.StatusCode); $sr=New-Object IO.StreamReader($resp.GetResponseStream()); $txt=$sr.ReadToEnd(); Write-Output ($txt.Substring(0,[Math]::Min(250,$txt.Length))); } else { Write-Output ('ERR ' + $_.Exception.Message) } }"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users-v3",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend python /app/backend/scripts/seed_ui_round.py A"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users-v4",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend sh -c \"cd /app && python -m backend.scripts.seed_ui_round A\""
+			],
+			"isBackground": false
+		},
+		{
+			"label": "check-backend-container-path",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"devanalysis114-backend",
+				"sh",
+				"-lc",
+				"cd /app; pwd; python -c \"import os; print('DATABASE_URL=' + str(os.environ.get('DATABASE_URL'))); import backend; print('BACKEND_IMPORT_OK')\""
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users-clean",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"devanalysis114-backend",
+				"sh",
+				"-lc",
+				"cd /app; python -m backend.scripts.seed_ui_round A"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "check-backend-container-pwd",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"devanalysis114-backend",
+				"sh",
+				"-lc",
+				"cd /app; pwd"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-clean",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test tests\\ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-clean-v2",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-b-users-clean",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"devanalysis114-backend",
+				"sh",
+				"-lc",
+				"cd /app; python -m backend.scripts.seed_ui_round B"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-b-clean",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_b_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-postcheck",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-final",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-b-final",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_b_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-a-users-final",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"devanalysis114-backend",
+				"sh",
+				"-lc",
+				"cd /app; python -m backend.scripts.seed_ui_round A"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "seed-round-b-users-final",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"devanalysis114-backend",
+				"sh",
+				"-lc",
+				"cd /app; python -m backend.scripts.seed_ui_round B"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-a-verified",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_a_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "playwright-round-b-verified",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3005&& set PLAYWRIGHT_ADMIN_USERNAME=ui.admin.round@devanalysis.local&& set PLAYWRIGHT_ADMIN_PASSWORD=RoundUi!20260426&& set PLAYWRIGHT_TARGET_USERNAME=ui_pod_round_b_20260426&& cd /d c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend&& npx playwright test ui-pod-admin-users.playwright.spec.ts --project=chromium --no-deps"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "build-admin-frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:admin"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "build-admin-frontend-rerun",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:admin"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "build-admin-frontend-rerun-2",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:admin"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "dev-marketplace-live-check",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev:marketplace"
+			],
+			"isBackground": true,
+			"group": "build"
+		},
+		{
+			"label": "dev-marketplace-port3010",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"set LOCAL_FRONTEND_ROLE=marketplace&& npm --prefix frontend/frontend run dev -- --port 3010"
+			],
+			"isBackground": true,
+			"group": "build"
+		},
+		{
+			"label": "voice-proxy-smoke",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$body = @{ transcript = '테스트 음성 요청'; task = '테스트 음성 요청'; tts = $false; auto_apply = $false; agent_key = 'reasoner'; run_id = $null; output_dir = 'E:\\AI주식 자동매매'; conversation = @() } | ConvertTo-Json -Depth 6; try { Invoke-WebRequest -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-proxy-smoke-ascii",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$body = '{\"transcript\":\"voice smoke test\",\"task\":\"voice smoke test\",\"tts\":false,\"auto_apply\":false,\"agent_key\":\"reasoner\",\"run_id\":null,\"output_dir\":\"E:\\AI주식 자동매매\",\"conversation\":[]}'; try { Invoke-WebRequest -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-proxy-smoke-direct",
+			"type": "shell",
+			"command": "$body = '{\"transcript\":\"voice smoke test\",\"task\":\"voice smoke test\",\"tts\":false,\"auto_apply\":false,\"agent_key\":\"reasoner\",\"run_id\":null,\"output_dir\":\"E:\\AI주식 자동매매\",\"conversation\":[]}'; try { Invoke-WebRequest -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-proxy-smoke-json",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='voice smoke test'; task='voice smoke test'; tts=$false; auto_apply=$false; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 6 -Compress; try { Invoke-WebRequest -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-backend-smoke-json",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='voice smoke test'; task='voice smoke test'; tts=$false; auto_apply=$false; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 6 -Compress; try { Invoke-WebRequest -Uri 'http://localhost:8000/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-backend-curl",
+			"type": "shell",
+			"command": "cmd /c echo {\"transcript\":\"voice smoke test\",\"task\":\"voice smoke test\",\"tts\":false,\"auto_apply\":false,\"agent_key\":\"reasoner\",\"run_id\":null,\"output_dir\":\"E:\\AI주식 자동매매\",\"conversation\":[]} > %TEMP%\\voice-body.json & curl.exe -i -H \"Content-Type: application/json\" --data @%TEMP%\\voice-body.json http://localhost:8000/api/llm/voice/orchestrate",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-backend-curl-ps",
+			"type": "shell",
+			"command": "$body = '{\"transcript\":\"voice smoke test\",\"task\":\"voice smoke test\",\"tts\":false,\"auto_apply\":false,\"agent_key\":\"reasoner\",\"run_id\":null,\"output_dir\":\"E:\\AI주식 자동매매\",\"conversation\":[]}'; $path = Join-Path $env:TEMP 'voice-body.json'; Set-Content -Path $path -Value $body -NoNewline; curl.exe -i -H \"Content-Type: application/json\" --data @$path http://localhost:8000/api/llm/voice/orchestrate",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-proxy-smoke-json-rerun",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='voice smoke test'; task='voice smoke test'; tts=$false; auto_apply=$false; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 6 -Compress; try { Invoke-WebRequest -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-function-direct",
+			"type": "shell",
+			"command": "c:/Users/WORK/source/repos/parkcheolhong/codeAI/.venv/Scripts/python.exe -c \"import asyncio, json; from starlette.requests import Request; from backend.llm.voice_gateway import voice_orchestrate, VoiceRequest; scope={'type':'http','method':'POST','path':'/api/llm/voice/orchestrate','headers':[]}; req=Request(scope); payload=VoiceRequest(transcript='voice smoke test', task='voice smoke test', tts=False, auto_apply=False, agent_key='reasoner', conversation=[]); result=asyncio.run(voice_orchestrate(req, payload)); print(json.dumps(result.model_dump(), ensure_ascii=False))\"",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-function-direct-ps",
+			"type": "shell",
+			"command": "& 'c:/Users/WORK/source/repos/parkcheolhong/codeAI/.venv/Scripts/python.exe' -c \"import asyncio, json; from starlette.requests import Request; from backend.llm.voice_gateway import voice_orchestrate, VoiceRequest; scope={'type':'http','method':'POST','path':'/api/llm/voice/orchestrate','headers':[]}; req=Request(scope); payload=VoiceRequest(transcript='voice smoke test', task='voice smoke test', tts=False, auto_apply=False, agent_key='reasoner', conversation=[]); result=asyncio.run(voice_orchestrate(req, payload)); print(json.dumps(result.model_dump(), ensure_ascii=False))\"",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-function-direct-script",
+			"type": "shell",
+			"command": "& 'c:/Users/WORK/source/repos/parkcheolhong/codeAI/.venv/Scripts/python.exe' 'c:/Users/WORK/source/repos/parkcheolhong/codeAI/tmp/voice_smoke.py'",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-function-direct-script-rerun",
+			"type": "shell",
+			"command": "& 'c:/Users/WORK/source/repos/parkcheolhong/codeAI/.venv/Scripts/python.exe' 'c:/Users/WORK/source/repos/parkcheolhong/codeAI/tmp/voice_smoke.py'",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "inspect-port-8000",
+			"type": "shell",
+			"command": "Get-NetTCPConnection -LocalPort 8000 -State Listen | Select-Object LocalAddress,LocalPort,OwningProcess | Format-Table -AutoSize; Get-Process -Id (Get-NetTCPConnection -LocalPort 8000 -State Listen).OwningProcess | Select-Object Id,ProcessName,Path | Format-List",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "restart-backend-container",
+			"type": "shell",
+			"command": "docker compose restart backend",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "voice-proxy-smoke-after-restart",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='voice smoke test'; task='voice smoke test'; tts=$false; auto_apply=$false; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 6 -Compress; try { Invoke-WebRequest -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-proxy-smoke-after-restart-basic",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='voice smoke test'; task='voice smoke test'; tts=$false; auto_apply=$false; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 6 -Compress; try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "ml-detector-proxy-smoke",
+			"type": "shell",
+			"command": "try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/marketplace/ml-detectors/status' -Method Get | Select-Object -ExpandProperty StatusCode } catch { if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { $_ | Out-String }; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "ml-detector-proxy-smoke-body",
+			"type": "shell",
+			"command": "try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/marketplace/ml-detectors/status' -Method Get | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String }; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-auto-apply-smoke",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='auto apply smoke test'; task='auto apply smoke test'; tts=$false; auto_apply=$true; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 8 -Compress; try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-auto-apply-smoke-retry",
+			"type": "shell",
+			"command": "$bodyObj = @{ transcript='auto apply smoke test retry'; task='auto apply smoke test retry'; tts=$false; auto_apply=$true; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $body = $bodyObj | ConvertTo-Json -Depth 8 -Compress; try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $body | Select-Object -ExpandProperty Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $reader.ReadToEnd() } else { $_ | Out-String } ; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-auto-apply-python-smoke",
+			"type": "shell",
+			"command": "python -c \"import json, urllib.request, urllib.error; payload={'transcript':'auto apply smoke test retry 3','task':'auto apply smoke test retry 3','tts':False,'auto_apply':True,'agent_key':'reasoner','run_id':None,'output_dir':'E:\\AI주식 자동매매','conversation':[]}; data=json.dumps(payload).encode('utf-8'); req=urllib.request.Request('http://127.0.0.1:3010/api/llm/voice/orchestrate', data=data, headers={'Content-Type':'application/json'});\\ntry:\\n resp=urllib.request.urlopen(req, timeout=240); body=resp.read().decode('utf-8','replace'); print(resp.status); print(body)\\nexcept urllib.error.HTTPError as e:\\n body=e.read().decode('utf-8','replace'); print(e.code); print(body); raise\\n\"",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-auto-apply-pwsh-smoke",
+			"type": "shell",
+			"command": "$json = @'\n{\"transcript\":\"auto apply smoke test retry 4\",\"task\":\"auto apply smoke test retry 4\",\"tts\":false,\"auto_apply\":true,\"agent_key\":\"reasoner\",\"run_id\":null,\"output_dir\":\"E:\\AI주식 자동매매\",\"conversation\":[]}\n'@; try { $res = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $json; Write-Output $res.StatusCode; Write-Output $res.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output $reader.ReadToEnd() } else { $_ | Out-String }; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "voice-auto-apply-pwsh-smoke-json",
+			"type": "shell",
+			"command": "$payload = [ordered]@{ transcript='auto apply smoke test retry 5'; task='auto apply smoke test retry 5'; tts=$false; auto_apply=$true; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() }; $json = $payload | ConvertTo-Json -Depth 8; try { $res = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3010/api/llm/voice/orchestrate' -Method Post -ContentType 'application/json' -Body $json; Write-Output $res.StatusCode; Write-Output $res.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output $reader.ReadToEnd() } else { $_ | Out-String }; exit 1 }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "validator-proxy-smoke-3panels",
+			"type": "shell",
+			"command": "$urls = @('http://127.0.0.1:3010/api/llm/voice/orchestrate','http://127.0.0.1:3010/api/marketplace/metrics/summary','http://127.0.0.1:3010/api/marketplace/ml-detectors/status'); foreach ($u in $urls) { Write-Output \"=== $u ===\"; if ($u -like '*voice/orchestrate') { $payload = [ordered]@{ transcript='smoke'; task='smoke'; tts=$false; auto_apply=$false; agent_key='reasoner'; run_id=$null; output_dir='E:\\AI주식 자동매매'; conversation=@() } | ConvertTo-Json -Depth 8; try { $r = Invoke-WebRequest -UseBasicParsing -Uri $u -Method Post -ContentType 'application/json' -Body $payload; Write-Output \"status=$($r.StatusCode)\"; Write-Output ($r.Content.Substring(0, [Math]::Min(220, $r.Content.Length))) } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $body=$reader.ReadToEnd(); Write-Output \"status=ERR\"; Write-Output ($body.Substring(0, [Math]::Min(220, $body.Length))) } else { Write-Output $_ } } } else { try { $r = Invoke-WebRequest -UseBasicParsing -Uri $u -Method Get; Write-Output \"status=$($r.StatusCode)\"; Write-Output ($r.Content.Substring(0, [Math]::Min(220, $r.Content.Length))) } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $body=$reader.ReadToEnd(); Write-Output \"status=ERR\"; Write-Output ($body.Substring(0, [Math]::Min(220, $body.Length))) } else { Write-Output $_ } } } }",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "restart-backend-after-ml-detector-fix",
+			"type": "shell",
+			"command": "docker-compose",
+			"args": [
+				"up",
+				"-d",
+				"--no-deps",
+				"backend"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "validate-admin-prefetch-and-ml-detectors",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"npm run build:admin; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8000/api/marketplace/ml-detectors/status' -TimeoutSec 20; Write-Output \"LOCAL_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'LOCAL_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/api/marketplace/ml-detectors/status' -TimeoutSec 20; Write-Output \"PROD_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'PROD_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "restart-and-validate-ml-detectors",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --no-deps backend; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8000/api/marketplace/ml-detectors/status' -TimeoutSec 20; Write-Output \"LOCAL_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'LOCAL_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/api/marketplace/ml-detectors/status' -TimeoutSec 20; Write-Output \"PROD_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'PROD_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "inspect-ml-detector-backend-logs",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose logs backend --tail=120"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "show-container-ml-detector-source",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker exec devanalysis114-backend sh -lc \"sed -n '900,930p' /app/backend/marketplace/router.py\""
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "show-container-ml-detector-source-v2",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker exec devanalysis114-backend sh -lc \"tail -n +900 /app/backend/marketplace/router.py | head -n 31\""
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "show-container-ml-detector-source-cmd",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend sh -lc \"sed -n '900,930p' /app/backend/marketplace/router.py\""
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "show-container-ml-detector-source-python",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker exec devanalysis114-backend python -c \"from pathlib import Path; lines=Path('/app/backend/marketplace/router.py').read_text().splitlines(); print('\\n'.join(lines[899:930]))\""
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "rebuild-backend-and-validate-ml-detectors",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --build backend; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8000/api/marketplace/ml-detectors/status' -TimeoutSec 30; Write-Output \"LOCAL_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'LOCAL_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/api/marketplace/ml-detectors/status' -TimeoutSec 30; Write-Output \"PROD_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'PROD_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "validate-ml-detectors-after-rebuild",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8000/api/marketplace/ml-detectors/status' -TimeoutSec 30; Write-Output \"LOCAL_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'LOCAL_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/api/marketplace/ml-detectors/status' -TimeoutSec 30; Write-Output \"PROD_STATUS=$($r.StatusCode)\"; Write-Output $r.Content } catch { if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); Write-Output 'PROD_STATUS=ERR'; Write-Output $reader.ReadToEnd() } else { $_ | Out-String } }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "download-stock-ai-default-output",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/download_stock_ai_zip.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "rebuild-admin-frontend-after-prefetch-fix",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --build frontend-admin"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "rebuild-marketplace-and-verify",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --build frontend-marketplace; $count=0; while ($count -lt 120) { $r = try { Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/marketplace/orchestrator' -TimeoutSec 15 2>&1 | Select-Object -First 1 } catch { 'error' }; if ($r -and $r -notlike '*error*') { Write-Output \"✓ Marketplace reachable after $(($count+1)*5)s\"; break }; Start-Sleep 5; $count++ }"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "rebuild-marketplace-final",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --build frontend-marketplace; Start-Sleep 30; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/marketplace/orchestrator' -TimeoutSec 15; Write-Output \"✓ Marketplace 200 OK\" } catch { Write-Output \"✗ Marketplace error: $($_.Exception.Message)\" }"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-marketplace-final",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/marketplace/orchestrator' -TimeoutSec 15; Write-Output \"✓ Marketplace 200 OK\" } catch { Write-Output (\"✗ Error: {0}\" -f $_.Exception.Message) }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "verify-orchestrator-autocomplete",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/marketplace/orchestrator?product=voice-engine-suite-basic' -TimeoutSec 15; if ($r.Content -like '*autoComplete=\"current-password\"*') { Write-Output \"✓ autoComplete found in orchestrator page\" } else { Write-Output \"✗ autoComplete NOT found in orchestrator page\" } } catch { Write-Output (\"✗ Error: {0}\" -f $_.Exception.Message) }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "verify-marketplace-autocomplete",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"verify_marketplace_fix.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "final-comprehensive-verification",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"final_verification.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "diagnose-chunk-error",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"diagnose_chunk_error.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "validate-restart-marketplace",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"validate_and_restart_marketplace.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "marketplace-recovery-check",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"recovery_check.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "final-comprehensive-verification-v2",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"comprehensive_final_verification.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "deep-diagnose-chunk",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"deep_diagnose_chunk.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "clean-rebuild-marketplace",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"clean_rebuild_marketplace.ps1"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-clean-rebuild",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Start-Sleep 180; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/marketplace' -TimeoutSec 15; Write-Output \"HTTP $($r.StatusCode)\"; if ($r.Content -notlike '*ChunkLoadError*') { Write-Output 'ChunkLoadError RESOLVED' } else { Write-Output 'ChunkLoadError STILL present' } } catch { Write-Output \"Error: $($_.Exception.Message)\" }"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "wait-and-verify-build",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"wait_verify_build.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "rebuild-marketplace-formfields",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --build frontend-marketplace; Write-Output 'Build started...'; Start-Sleep 60; try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'https://metanova1004.com/marketplace' -TimeoutSec 15; Write-Output \"HTTP $($r.StatusCode)\" } catch { Write-Output \"Status: checking...\" }"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "final-formfield-validation",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"final_validation_formfields.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "verify-form-ids-final",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"verify_all_form_ids.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "final-complete-verification",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"final_verification_complete.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "fix-cors-production-domains",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"fix_cors_simple.ps1"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "rebuild-backend-cors-fix",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"docker-compose up -d --build backend; Write-Output 'Backend rebuild started...'; Start-Sleep 60; docker logs devanalysis114-backend | tail -20 | Select-String -Pattern 'cors origins loaded' -Context 0,2"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-cors-loaded",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Start-Sleep 15; docker logs devanalysis114-backend | tail -100 | Select-String -Pattern 'cors|CORS|metanova|xn--114' | Select-Object -First 5"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "check-cors-config",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Start-Sleep 15; docker logs devanalysis114-backend 2>&1 | Where-Object { $_ -like '*cors origins loaded*' } | Select-Object -First 1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "final-cors-check",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"check_cors_final.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "final-production-verification",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"final_production_verification.ps1"
+			],
+			"isBackground": false,
+			"group": "test"
+		}
+	]
+}
+
+

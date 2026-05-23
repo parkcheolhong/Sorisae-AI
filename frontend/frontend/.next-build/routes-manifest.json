@@ -1,0 +1,260 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [
+      {
+        "source": "/api/:path*",
+        "destination": "/api/backend-proxy/:path*",
+        "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/admin/users/[userId]",
+      "regex": "^/api/admin/users/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPuserId": "nxtPuserId"
+      },
+      "namedRegex": "^/api/admin/users/(?<nxtPuserId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/backend-proxy/[...path]",
+      "regex": "^/api/backend\\-proxy/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/backend\\-proxy/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/customer-orchestrate/stage-runs/[runId]",
+      "regex": "^/api/marketplace/customer\\-orchestrate/stage\\-runs/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPrunId": "nxtPrunId"
+      },
+      "namedRegex": "^/api/marketplace/customer\\-orchestrate/stage\\-runs/(?<nxtPrunId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/marketplace/[id]",
+      "regex": "^/marketplace/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/marketplace/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[...adminOnly]",
+      "regex": "^/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPadminOnly": "nxtPadminOnly"
+      },
+      "namedRegex": "^/(?<nxtPadminOnly>.+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/.well-known/webauthn",
+      "regex": "^/\\.well\\-known/webauthn(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/\\.well\\-known/webauthn(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/admin/docs-viewer",
+      "regex": "^/admin/docs\\-viewer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/docs\\-viewer(?:/)?$"
+    },
+    {
+      "page": "/admin/llm",
+      "regex": "^/admin/llm(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/llm(?:/)?$"
+    },
+    {
+      "page": "/admin/login",
+      "regex": "^/admin/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/login(?:/)?$"
+    },
+    {
+      "page": "/admin/recovery",
+      "regex": "^/admin/recovery(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/recovery(?:/)?$"
+    },
+    {
+      "page": "/admin/subscription-monitor",
+      "regex": "^/admin/subscription\\-monitor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/subscription\\-monitor(?:/)?$"
+    },
+    {
+      "page": "/admin/users",
+      "regex": "^/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/users(?:/)?$"
+    },
+    {
+      "page": "/api/admin/system-settings",
+      "regex": "^/api/admin/system\\-settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/system\\-settings(?:/)?$"
+    },
+    {
+      "page": "/api/admin/users",
+      "regex": "^/api/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/users(?:/)?$"
+    },
+    {
+      "page": "/api/llm/voice/orchestrate",
+      "regex": "^/api/llm/voice/orchestrate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/llm/voice/orchestrate(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/customer-orchestrate/stage-runs",
+      "regex": "^/api/marketplace/customer\\-orchestrate/stage\\-runs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/marketplace/customer\\-orchestrate/stage\\-runs(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/download-product",
+      "regex": "^/api/marketplace/download\\-product(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/marketplace/download\\-product(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/face-recognition/status",
+      "regex": "^/api/marketplace/face\\-recognition/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/marketplace/face\\-recognition/status(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/metrics/prometheus",
+      "regex": "^/api/marketplace/metrics/prometheus(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/marketplace/metrics/prometheus(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/metrics/summary",
+      "regex": "^/api/marketplace/metrics/summary(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/marketplace/metrics/summary(?:/)?$"
+    },
+    {
+      "page": "/api/marketplace/ml-detectors/status",
+      "regex": "^/api/marketplace/ml\\-detectors/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/marketplace/ml\\-detectors/status(?:/)?$"
+    },
+    {
+      "page": "/api/proxy",
+      "regex": "^/api/proxy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/proxy(?:/)?$"
+    },
+    {
+      "page": "/marketplace",
+      "regex": "^/marketplace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace(?:/)?$"
+    },
+    {
+      "page": "/marketplace/code-generator",
+      "regex": "^/marketplace/code\\-generator(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace/code\\-generator(?:/)?$"
+    },
+    {
+      "page": "/marketplace/metrics",
+      "regex": "^/marketplace/metrics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace/metrics(?:/)?$"
+    },
+    {
+      "page": "/marketplace/ml-detectors",
+      "regex": "^/marketplace/ml\\-detectors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace/ml\\-detectors(?:/)?$"
+    },
+    {
+      "page": "/marketplace/orchestrator",
+      "regex": "^/marketplace/orchestrator(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace/orchestrator(?:/)?$"
+    },
+    {
+      "page": "/marketplace/subscription",
+      "regex": "^/marketplace/subscription(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace/subscription(?:/)?$"
+    },
+    {
+      "page": "/privacy",
+      "regex": "^/privacy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privacy(?:/)?$"
+    },
+    {
+      "page": "/terms",
+      "regex": "^/terms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/terms(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

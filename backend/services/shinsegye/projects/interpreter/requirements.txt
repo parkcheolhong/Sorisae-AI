@@ -1,0 +1,12 @@
+# 프로젝트별 의존성
+# 전체 의존성은 루트의 requirements.txt 참고
+
+# 공통 의존성
+Flask>=2.0.0
+flask-cors>=3.0.10
+flask-socketio>=5.0.0
+python-socketio>=5.0.0
+
+# 통역 관련
+googletrans==4.0.0-rc1
+langdetect>=1.0.9

@@ -1,0 +1,44 @@
+{
+  "current_stage": {
+    "tracking_id": "ARCH-001",
+    "title": "structure"
+  },
+  "stage_chain": [
+    {
+      "index": 1,
+      "tracking_id": "ARCH-001",
+      "title": "구조",
+      "summary": "프로젝트 골조와 실행 엔트리를 고정합니다."
+    },
+    {
+      "index": 2,
+      "tracking_id": "ARCH-002",
+      "title": "순수 로직",
+      "summary": "핵심 계산과 판정 로직을 분리합니다."
+    },
+    {
+      "index": 3,
+      "tracking_id": "ARCH-003",
+      "title": "데이터",
+      "summary": "입출력 계약과 데이터 공급 레이어를 분리합니다."
+    },
+    {
+      "index": 4,
+      "tracking_id": "ARCH-004",
+      "title": "서비스",
+      "summary": "로직과 데이터를 묶는 서비스 흐름을 구성합니다."
+    },
+    {
+      "index": 5,
+      "tracking_id": "ARCH-005",
+      "title": "API",
+      "summary": "외부 요청과 서비스 연결을 구성합니다."
+    },
+    {
+      "index": 6,
+      "tracking_id": "ARCH-006",
+      "title": "프론트",
+      "summary": "화면, 상태 표현, 시각화를 연결합니다."
+    }
+  ]
+}

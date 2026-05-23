@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "aafb3625-ab65-43fb-9098-5f1711a9fd6d"
+      }
+    },
+    "android": {
+      "package": "com.parkcheolhong.codeai"
+    },
+    "ios": {
+      "bundleIdentifier": "com.parkcheolhong.codeai",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

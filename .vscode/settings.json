@@ -1,0 +1,38 @@
+{
+    "python.testing.pytestArgs": [
+        "TestResults"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "terminal.integrated.env.windows": {
+        "CODEAI_DEFAULT_OUTPUT_DIR": "E:\\AI주식 자동매매"
+    },
+    "docker.lsp.experimental.vulnerabilityScanning": false,
+    "docker.lsp.experimental.scout.vulnerabilities": false,
+    "docker.lsp.experimental.scout.criticalHighVulnerabilities": false,
+    "markdownlint.ignore": [
+        ".vs/**",
+        "uploads/**",
+        "tmp/**"
+    ],
+    "markdownlint.config": {
+        "MD022": false,
+        "MD032": false,
+        "MD036": false,
+        "MD040": false,
+        "MD060": false
+    },
+    "cSpell.words": [
+        "nadotongryoksa",
+        "nums",
+        "parkcheolhong",
+        "playwingback",
+        "ufrag",
+        "webrtc"
+    ],
+    "cSpell.enabledFileTypes": {
+        "json": false
+    },
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

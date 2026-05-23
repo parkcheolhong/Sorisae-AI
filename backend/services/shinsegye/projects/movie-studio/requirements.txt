@@ -1,0 +1,12 @@
+# 프로젝트별 의존성
+# 전체 의존성은 루트의 requirements.txt 참고
+
+# 공통 의존성
+Flask>=2.0.0
+flask-cors>=3.0.10
+flask-socketio>=5.0.0
+python-socketio>=5.0.0
+
+# 영화 제작 관련
+opencv-python>=4.5.0
+manim>=0.15.0

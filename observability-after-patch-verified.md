@@ -1,0 +1,114 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary "Admin Workspace 탐색" [ref=e5]:
+      - generic [ref=e6]: AD
+      - navigation [ref=e7]:
+        - link "관리" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e10]: 관리
+        - link "실행" [ref=e11] [cursor=pointer]:
+          - /url: /admin/runs
+          - generic [ref=e13]: 실행
+        - link "승인" [ref=e14] [cursor=pointer]:
+          - /url: /admin/approvals
+          - generic [ref=e16]: 승인
+        - link "배포" [ref=e17] [cursor=pointer]:
+          - /url: /admin/publish
+          - generic [ref=e19]: 배포
+        - link "관측" [ref=e20] [cursor=pointer]:
+          - /url: /admin/observability
+          - generic [ref=e22]: 관측
+      - generic [ref=e23]: LIVE
+    - generic [ref=e24]:
+      - banner [ref=e25]:
+        - generic [ref=e26]:
+          - paragraph [ref=e27]: Observability 보드
+          - heading "Admin Workspace" [level=1] [ref=e28]
+          - paragraph [ref=e29]: runtime probe, connectivity 상태, evidence 수집 흐름을 운영자가 추적하는 하위 보드입니다.
+        - generic [ref=e30]:
+          - link "Marketplace" [ref=e31] [cursor=pointer]:
+            - /url: /marketplace
+          - link "관측 보드" [ref=e32] [cursor=pointer]:
+            - /url: /admin/observability
+          - link "관리 홈" [ref=e33] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]: Observability
+            - generic [ref=e38]: runtime verification 응답 대기
+          - paragraph [ref=e39]: probe / logs / evidence
+          - heading "운영 증적과 연결 상태를 통합해서 확인합니다" [level=2] [ref=e40]
+          - paragraph [ref=e41]: runtime verification, connectivity probe, evidence collector를 분리해서 운영자가 어디서 막히는지 빠르게 파악하도록 구성했습니다.
+          - generic [ref=e42]:
+            - link "Marketplace 열기" [ref=e43] [cursor=pointer]:
+              - /url: /marketplace
+            - link "관측 보드" [ref=e44] [cursor=pointer]:
+              - /url: /admin/observability
+        - generic "핵심 기능 바로가기" [ref=e45]:
+          - generic [ref=e46]: runtime probe
+          - generic [ref=e47]: connectivity check
+          - generic [ref=e48]: evidence bundle
+      - generic [ref=e49]:
+        - main [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]: runtime verification 요청은 진행 중이지만 마지막 성공 응답은 아직 없습니다. 현재 막힌 지점은 runtime-verification 응답 대기입니다.
+            - generic [ref=e53]:
+              - generic [ref=e54]:
+                - paragraph [ref=e55]: Observability
+                - heading "Runtime Probe" [level=3] [ref=e56]
+                - generic [ref=e57]: awaiting response
+                - paragraph [ref=e58]: runtime verification 요청을 보냈지만 마지막 probe 응답은 아직 없습니다.
+              - generic [ref=e59]:
+                - paragraph [ref=e60]: Observability
+                - heading "Connectivity Probe" [level=3] [ref=e61]
+                - generic [ref=e62]: awaiting probe rows
+                - paragraph [ref=e63]: 현재 probe rows 기준 경고 항목이 없습니다.
+              - generic [ref=e64]:
+                - paragraph [ref=e65]: Observability
+                - heading "Evidence Collector" [level=3] [ref=e66]
+                - generic [ref=e67]: awaiting gate
+                - paragraph [ref=e68]: runtime verification 응답을 기다리는 중이라 마지막 evidence bundle 상태가 아직 없습니다.
+            - generic [ref=e69]:
+              - generic [ref=e70]:
+                - generic [ref=e71]
+                - generic [ref=e75]: pending response
+              - generic [ref=e76]:
+                - generic [ref=e77]
+                - generic [ref=e80]
+                - generic [ref=e83]
+                - generic [ref=e87]
+                - generic [ref=e90]
+            - generic [ref=e93]:
+              - paragraph [ref=e94]: Probe Table
+              - heading "현재 probe 상태" [level=3] [ref=e95]
+              - generic [ref=e96]: runtime probe 결과를 기다리는 중입니다. 마지막으로 확인된 probe 응답은 아직 없습니다.
+        - complementary [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - paragraph [ref=e100]: Ops Navigation
+              - heading "운영 보드 바로가기" [level=3] [ref=e101]
+              - generic [ref=e102]:
+                - link "관리 홈 전체 운영 카드와 Marketplace 진입점" [ref=e103] [cursor=pointer]:
+                  - /url: /admin
+                - link "실행 보드 self-run 및 live execution 상태" [ref=e106] [cursor=pointer]:
+                  - /url: /admin/runs
+                - link "승인 큐 승인 대기, 재시도, 수동 보정" [ref=e109] [cursor=pointer]:
+                  - /url: /admin/approvals
+                - link "Publish shipment readiness 및 publish gate" [ref=e112] [cursor=pointer]:
+                  - /url: /admin/publish
+                - link "관측 runtime probe, logs, evidence" [ref=e115] [cursor=pointer]:
+                  - /url: /admin/observability
+            - generic [ref=e118]:
+              - paragraph [ref=e119]: External Routes
+              - heading "운영 진입 링크" [level=3] [ref=e120]
+              - generic [ref=e121]:
+                - link "Marketplace 운영 페이지" [ref=e122] [cursor=pointer]:
+                  - /url: /marketplace
+                - link "관측 보드" [ref=e123] [cursor=pointer]:
+                  - /url: /admin/observability
+                - link "관리 홈 새로고침" [ref=e124] [cursor=pointer]:
+                  - /url: /admin
+  - button "Open Next.js Dev Tools" [ref=e130] [cursor=pointer]:
+    - img [ref=e131]
+  - alert [ref=e134]

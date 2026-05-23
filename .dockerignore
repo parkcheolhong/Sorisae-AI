@@ -1,0 +1,88 @@
+# ============================================================
+# .dockerignore — P0-3: 빌드 컨텍스트 최적화 (2GB+ → ~200MB)
+# ============================================================
+
+# --- Version Control ---
+.git/
+.github/
+
+# --- Python Virtual Environments (모든 변형) ---
+.venv/
+.venv*/
+venv/
+venv*/
+env/
+env1/
+env2/
+env3/
+env4/
+
+# --- Python Cache ---
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- IDE ---
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+
+# --- Node.js ---
+.next/
+**/.next/
+node_modules/
+**/node_modules/
+
+# --- Build Outputs ---
+dist/
+build/
+TestResults/
+
+# --- Logs & Reports ---
+*.log
+logs/
+reports/
+
+# --- Large Assets ---
+models/
+.tmp/
+tmp/
+uploads/
+uploads/tmp/
+uploads/projects/
+*.zip
+
+# --- Frontend (backend uses its own Dockerfile) ---
+frontend/
+
+# --- Temp / Debug Files ---
+*.png
+*.jpg
+*.webp
+browser-*.md
+observability-*.md
+publish-*.md
+marketplace-*.md
+*.err.log
+*.out.log
+
+# --- Playwright / Testing ---
+.playwright-mcp/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Certbot / Secrets (handled via volumes) ---
+certbot/
+.runtime/
+
+# --- Other large dirs ---
+addons/
+!addons/shinsegye_extras/src/full_merge_all/modules
+codeAI/
+knowledge/
+

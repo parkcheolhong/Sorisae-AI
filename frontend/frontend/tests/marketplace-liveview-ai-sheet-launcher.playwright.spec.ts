@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const MARKETPLACE_BASE_URL = process.env.PLAYWRIGHT_MARKETPLACE_BASE_URL ?? 'http://localhost:3000';
 
@@ -61,8 +61,8 @@ const FIXTURES = {
     ],
 };
 
-async function installMarketplaceSpreadsheetMock(page: Parameters<typeof test>[0]['page']) {
-    await page.addInitScript(({ fixtures }) => {
+async function installMarketplaceSpreadsheetMock(page: Page) {
+    await page.addInitScript(({ fixtures }: { fixtures: typeof FIXTURES }) => {
         const streamBody = [
             {
                 event: 'state',

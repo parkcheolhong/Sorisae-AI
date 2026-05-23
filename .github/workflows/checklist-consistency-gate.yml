@@ -1,0 +1,45 @@
+name: checklist-consistency-gate
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+    consistency-hard-gate:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.13"
+
+            - name: Run checklist consistency hard gate (PR)
+              if: ${{ github.event_name == 'pull_request' }}
+              run: |
+                  python scripts/check_checklist_consistency.py \
+                    --base "${{ github.event.pull_request.base.sha }}" \
+                    --head "${{ github.sha }}"
+
+            - name: Run checklist consistency hard gate (push)
+              if: ${{ github.event_name == 'push' }}
+              run: |
+                  if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+                    python scripts/check_checklist_consistency.py --all
+                  else
+                    python scripts/check_checklist_consistency.py \
+                      --base "${{ github.event.before }}" \
+                      --head "${{ github.sha }}"
+                  fi
+
+            - name: Run checklist consistency hard gate (manual)
+              if: ${{ github.event_name == 'workflow_dispatch' }}
+              run: |
+                  python scripts/check_checklist_consistency.py --all

@@ -1,0 +1,39 @@
+# EAS 빌드 제외 목록 (명시적 제외 방식)
+# 대용량/불필요 디렉토리만 제외, mobile-nadotongryoksa는 포함
+
+# Python 가상환경 및 캐시
+.venv/
+.venv*/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 대용량 업로드/프로젝트 산출물
+uploads/
+
+# SSL 인증서 (권한 오류 방지)
+certbot/
+
+# 빌드 캐시 및 임시 파일
+.next/
+.build-logs/
+tmp/
+*.log
+
+# 다른 앱 (stock-ai 모바일 앱은 원격 빌드에 포함)
+apps/admin/
+apps/marketplace/
+
+# addons 대용량 폴더
+addons/
+
+# 백엔드/프론트엔드 소스 (모바일 빌드에 불필요)
+backend/
+frontend/
+
+# IDE / 기타
+.vs/
+.vscode/
+TestResults/
+*.suo

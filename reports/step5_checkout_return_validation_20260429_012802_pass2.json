@@ -1,0 +1,16 @@
+{
+    "run_at": "2026-04-29T01:28:02",
+    "pass_name": "pass2",
+    "target": "http://127.0.0.1:3000/marketplace/subscription?checkout=cancel",
+    "observed_url_after_processing": "http://127.0.0.1:3000/marketplace/subscription",
+    "checks": {
+        "page_title": "개발분석114",
+        "cancel_message_visible": true,
+        "cancel_message_text": "결제가 취소되었습니다. 원하시면 다시 시도해 주세요.",
+        "query_param_removed": true
+    },
+    "notes": [
+        "checkout=cancel 진입 후 URL에서 checkout 쿼리가 제거됨",
+        "취소 안내 메시지가 화면에 노출됨"
+    ]
+}

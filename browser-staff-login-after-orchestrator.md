@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - paragraph [ref=e4]: Staff Access
+    - heading "직원 오케스트레이터 로그인" [level=1] [ref=e5]
+    - paragraph [ref=e6]: 관리자에게 발급받은 인증번호와 직원 계정 비밀번호를 함께 입력해야 합니다. 인증번호 사용 기간이 끝나면 다시 인증받아야 합니다.
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: 직원 이메일 또는 아이디
+        - textbox "직원 이메일 또는 아이디" [ref=e10]:
+          - /placeholder: staff@metanova1004.com
+      - generic [ref=e11]:
+        - generic [ref=e12]: 비밀번호
+        - textbox "비밀번호" [ref=e13]
+      - generic [ref=e14]:
+        - generic [ref=e15]: 관리자 발급 인증번호
+        - textbox "관리자 발급 인증번호" [ref=e16]:
+          - /placeholder: "000000"
+      - button "직원 오케스트레이터 열기" [disabled] [ref=e17]
+    - generic [ref=e18]:
+      - link "마켓플레이스로 돌아가기" [ref=e19] [cursor=pointer]:
+        - /url: /marketplace
+      - generic [ref=e20]: 재인증이 필요하면 관리자에게 새 인증번호 발급을 요청하세요.
+  - alert [ref=e21]

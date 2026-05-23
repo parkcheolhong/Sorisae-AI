@@ -1,0 +1,72 @@
+﻿{
+    "run_at":  "2026-04-29T01:21:19",
+    "pass_name":  "pass2",
+    "frontend":  {
+                     "status":  200,
+                     "has_keyword":  true
+                 },
+    "login":  {
+                  "status":  200,
+                  "ok":  true
+              },
+    "get_subscription":  {
+                             "status":  200,
+                             "body":  {
+                                          "user_id":  9,
+                                          "subscription_status":  "active",
+                                          "product_code":  "stock-ai-suite",
+                                          "plan_code":  "pro",
+                                          "entitlement_set":  [
+                                                                  "marketplace.app_family.stock_ai.use",
+                                                                  "marketplace_access"
+                                                              ],
+                                          "period_end":  "2026-05-28T16:18:04.638678",
+                                          "cancel_at_period_end":  false,
+                                          "device_limit":  1,
+                                          "active_device_count":  0,
+                                          "source":  "stripe"
+                                      }
+                         },
+    "cancel":  {
+                   "status":  200,
+                   "body":  {
+                                "user_id":  9,
+                                "subscription_status":  "active",
+                                "product_code":  "stock-ai-suite",
+                                "plan_code":  "pro",
+                                "entitlement_set":  [
+                                                        "marketplace.app_family.stock_ai.use",
+                                                        "marketplace_access"
+                                                    ],
+                                "period_end":  "2026-05-28T16:18:04.638678",
+                                "cancel_at_period_end":  true,
+                                "device_limit":  1,
+                                "active_device_count":  0,
+                                "source":  "stripe",
+                                "applied":  true,
+                                "ignored":  false,
+                                "reason_code":  "user_cancel_requested"
+                            }
+               },
+    "resume":  {
+                   "status":  200,
+                   "body":  {
+                                "user_id":  9,
+                                "subscription_status":  "active",
+                                "product_code":  "stock-ai-suite",
+                                "plan_code":  "pro",
+                                "entitlement_set":  [
+                                                        "marketplace.app_family.stock_ai.use",
+                                                        "marketplace_access"
+                                                    ],
+                                "period_end":  "2026-05-28T16:18:04.638678",
+                                "cancel_at_period_end":  false,
+                                "device_limit":  1,
+                                "active_device_count":  0,
+                                "source":  "stripe",
+                                "applied":  true,
+                                "ignored":  false,
+                                "reason_code":  "user_resume_requested"
+                            }
+               }
+}

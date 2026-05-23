@@ -1,0 +1,6 @@
+[GET] https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=marketplace-feature-catalog => [404] Not Found
+[GET] https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=marketplace-categories => [404] Not Found
+[GET] https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=marketplace-projects&skip=0&limit=24&sort_by=downloads&sort_order=desc => [404] Not Found
+[GET] https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=marketplace-stats-overview => [404] Not Found
+[GET] https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=marketplace-stats-revenue => [404] Not Found
+[GET] https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=marketplace-stats-top-projects&limit=6 => [404] Not Found

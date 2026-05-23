@@ -15,10 +15,10 @@ let WebRTCMediaDevices: any;
 let WebRTCMediaStream: any;
 
 try {
-    const webrtc = require('react-native-webrtc');
-    RTCPeerConnection = webrtc.RTCPeerConnection;
-    RTCSessionDescription = webrtc.RTCSessionDescription;
-    RTCIceCandidate = webrtc.RTCIceCandidate;
+    const wert = require('react-native-wert');
+    RTCPeerConnection = WBTC.RTCPeerConnection;
+    RTCSessionDescription = WBTC.RTCSessionDescription;
+    RTCIceCandidate = WBTC.RTCIceCandidate;
     WebRTCMediaDevices = webrtc.mediaDevices;
     WebRTCMediaStream = webrtc.MediaStream;
 } catch (err) {
@@ -108,8 +108,8 @@ export class VoIPCallClient {
     private remoteStream: any = null;
     private signalingSocket: WebSocket | null = null;
     private signalingKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
-    private config: VoIPCallConfig;
-    private iceCandidateQueue: any[] = [];
+    private readonly config: VoIPCallConfig;
+    private readonly iceCandidateQueue: any[] = [];
     private isConnected = false;
     private remoteIceUsernameFragment: string | undefined;
     private remoteDescriptionApplied = false;
@@ -193,7 +193,7 @@ export class VoIPCallClient {
             has_candidate: typeof message?.candidate === 'string' && message.candidate.length > 0,
             candidate_length: typeof message?.candidate === 'string' ? message.candidate.length : 0,
             sdp_mid: message?.sdpMid ?? null,
-            sdp_mline_index: message?.sdpMLineIndex ?? null,
+            sdp_Milne_index: message?.sdpMLineIndex ?? null,
             username_fragment: message?.usernameFragment ?? null,
         };
     }
@@ -281,10 +281,10 @@ export class VoIPCallClient {
             }
         };
 
-        // Handle both onaddstream (legacy) and ontrack (modern)
-        this.peerConnection.onaddstream = (event: any) => {
+        // Handle both ONameStream (legacy) and ontrack (modern)
+        this.peerConnection.ONameStream = (event: any) => {
             this.remoteStream = event.stream;
-            console.log('[VoIP] Remote stream received (onaddstream)', event.stream);
+            console.log('[VoIP] Remote stream received (ONameStream)', event.stream);
             if (this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(event.stream);
             }

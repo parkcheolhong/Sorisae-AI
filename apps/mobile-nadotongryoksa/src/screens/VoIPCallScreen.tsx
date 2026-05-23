@@ -851,7 +851,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
                 });
 
-                // Stop ringing/ringback after 60 seconds if the call never reaches a live media path.
+                // Stop ringing/wingback after 60 seconds if the call never reaches a live media path.
                 connectionTimeoutRef.current = setTimeout(() => {
                     const state = client.getConnectionState();
                     if (state !== 'connected') {
@@ -1046,7 +1046,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }
     }, [connectionState, callInitResponse.call_id]);
 
-    // VoIP Tone Management: In this screen (post-accept), only caller hears ringback while waiting.
+    // VoIP Tone Management: In this screen (post-accept), only caller hears wingback while waiting.
     // Callee-side ringing must not continue after accept.
     useEffect(() => {
         const toneService = getVoIPToneService();
@@ -1066,8 +1066,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }
 
         if (participantRole === 'caller' && connectionState === 'connecting') {
-            console.log('[VoIPScreen] Playing ringback tone...');
-            toneService.playRingbackTone();
+            console.log('[VoIPScreen] Playing wingback tone...');
+            toneService.playwingbackTone();
         } else {
             // In-call screen for callee should stay silent while waiting for media path.
             toneService.stopAll();

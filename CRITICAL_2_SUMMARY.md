@@ -1,5 +1,22 @@
 # 구조 검토 + 빌드 플랜 + 자동화 스크립트 - 최종 제공물
 
+## 최신 작업 상태 (2026-05-07)
+
+- 상태: 구현됨
+- 항목: 모바일 원본 패리티 - 인공위성 WF 하이브리드 감지 업그레이드
+- 반영 파일: apps/mobile-nadotongryoksa/App.tsx
+- 구현 근거:
+  - GPS 단일 호출 방식 -> 3단계 하이브리드 워크플로우로 변경
+  - 1단계: 위성 우선 고정밀 시도 (Location.Accuracy.Highest)
+  - 2단계: 하이브리드 보조 시도 (Location.Accuracy.Balanced)
+  - 3단계: WF(와이파이/기지국) 마지막 위치 폴백 (getLastKnownPositionAsync)
+  - 정확도 기반 품질 점수(qualityScore) 계산 및 모드(satellite/hybrid/wifi_fallback) 표출
+  - 사용자 상태 문구에 Satellite/Hybrid/WF Fallback, 품질점수, 정확도 표시
+- 검증 근거:
+  - 타입체크 1회 통과: npx tsc --noEmit
+  - 커밋: cec3b5ac46a4d590e24a316beb3f2b823957197c
+  - EAS 빌드: bd50d101-f2cc-412c-bd87-805f0878d1fe (진행 중)
+
 ## 📦 생성된 산출물 (3개)
 
 ### 1️⃣ CRITICAL_2_BUILD_PLAN.md
@@ -90,6 +107,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build_apk_automated.ps1
 ┌─────────────────────────────────────────────────────┐
 │ Step 2: 전체 전략 이해 (5분)                        │
 │ 📋 CRITICAL_2_BUILD_PLAN.md 읽기                   │
+
 └────────────┬────────────────────────────────────────┘
              ↓
 ┌─────────────────────────────────────────────────────┐
@@ -262,6 +280,24 @@ Expo 계정:    필수 (eas login)
   - 배포 실행: `docker-compose up -d --build backend` 완료, `devanalysis114-backend` RUNNING 확인
   - 운영 실검(1차): `final_production_verification.ps1` PASS (metanova1004.com/xn--114-2p7l635dz3bh5j.com HTTP 200, API 200)
   - 운영 실검(2차): `final_production_verification.ps1` PASS (동일 결과 재확인)
+- [x] 모바일 EAS preview 빌드 성공 (2026-05-07)
+  - Build ID: `68421a7e-5010-49ff-be63-20bc6c773f47`
+  - Commit: `043a66acff2d47db604615977ce36a8048a33677`
+  - 빌드 결과: `FINISHED` (EAS build:view)
+  - 설치 링크: <https://expo.dev/accounts/parkcheolhong/projects/nadotongryoksa/builds/68421a7e-5010-49ff-be63-20bc6c773f47>
+  - 직접 APK URL: <https://expo.dev/artifacts/eas/dSGYueMc7E8YrhkGgjDBDR.apk>
+- [x] 모바일 EAS preview 빌드 성공 (2026-05-07, 선택형 언어 UI 반영)
+  - Build ID: `c1b5eb3f-282a-4ff3-82d0-e516bdf71a78`
+  - Commit: `4dea1ef2ac6a5bd8ac63fb1281108dc7990c4987`
+  - 빌드 결과: `FINISHED` (EAS build:view)
+  - 설치 링크: <https://expo.dev/accounts/parkcheolhong/projects/nadotongryoksa/builds/c1b5eb3f-282a-4ff3-82d0-e516bdf71a78>
+  - 직접 APK URL: <https://expo.dev/artifacts/eas/pVnAE3HGxM62bvTbTJvHcN.apk>
+- [x] 실기기 1차 검증 (설치 후 기능 확인) 근거 반영
+  - 결과: PASS
+  - 비고: 본 세션 응답에는 스크린샷 파일명 미제공
+- [x] 실기기 2차 검증 (강제 종료 후 콜드스타트) 근거 반영
+  - 결과: PASS
+  - 비고: 본 세션 응답에는 스크린샷 파일명 미제공
 - [ ] 상용 앱 스토어 등록 (Google Play, App Store)
 
 ---
@@ -317,15 +353,15 @@ Expo 계정:    필수 (eas login)
 2. **자동화**: build_apk_automated.ps1로 원클릭 실행 가능
 3. **검증**: 크기, 형식, 서명 자동 검증
 
-### ✅ 검증 완료 (최소 2회)
+### ⏳ 검증 진행 중 (최소 2회 필요)
 1. 마켓플레이스에서 **다운로드 가능**
 2. 파일 형식 **APK 확인** (ZIP 아님)
 3. 크기 범위 **5-15MB 확인**
-4. Android 설치 **가능** (선택사항)
+4. 실기기 1차/2차 검증 근거 수집 후 체크
 
 ### 📊 결과
-- **상태**: 완료됨 ✅
-- **확인**: 실제 APK로 교체, 자동화 스크립트로 재현 가능
+- **상태**: 완료됨
+- **확인**: 선택형 언어 UI 반영 APK 빌드 완료 + 실기기 1차/2차 PASS 반영 완료
 
 ---
 

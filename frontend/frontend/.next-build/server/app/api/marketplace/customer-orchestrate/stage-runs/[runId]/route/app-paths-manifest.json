@@ -1,0 +1,3 @@
+{
+  "/api/marketplace/customer-orchestrate/stage-runs/[runId]/route": "app/api/marketplace/customer-orchestrate/stage-runs/[runId]/route.js"
+}

@@ -1,0 +1,95 @@
+name: marketplace-shinsegye-safe-integration
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "frontend/frontend/app/marketplace/code-generator/**"
+            - "frontend/frontend/tests/marketplace-shinsegye-safe-integration.p\
+              laywright.spec.ts"
+            - "frontend/frontend/playwright.config.ts"
+            - "frontend/frontend/package.json"
+            - "backend/marketplace/interpreter_router.py"
+            - "backend/marketplace/music_router.py"
+            - "backend/marketplace/code_generator_router.py"
+            - ".github/workflows/marketplace-shinsegye-safe-integration.yml"
+    workflow_dispatch:
+
+jobs:
+    browser-evidence:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: frontend/frontend
+        env:
+            CI: "1"
+            PLAYWRIGHT_ADMIN_BASE_URL: "https://metanova1004.com"
+            PLAYWRIGHT_API_BASE_URL: "https://xn--114-2p7l635dz3bh5j.com"
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: npm
+                  cache-dependency-path: frontend/frontend/package-lock.json
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Install Playwright browser
+              run: npx playwright install --with-deps chromium
+
+            - name: Round 1 - real user flow
+              id: round1
+              continue-on-error: true
+              run: npm run e2e:marketplace:shinsegye-safe
+
+            - name: Save Round 1 report
+              if: always()
+              run: |
+                  mkdir -p ../ci-artifacts
+                  if [ -d playwright-report ]; then
+                    cp -R playwright-report ../ci-artifacts/playwright-report-round1
+                  fi
+
+            - name: Round 2 - real user flow
+              id: round2
+              continue-on-error: true
+              run: npm run e2e:marketplace:shinsegye-safe
+
+            - name: Save Round 2 report
+              if: always()
+              run: |
+                  mkdir -p ../ci-artifacts
+                  if [ -d playwright-report ]; then
+                    cp -R playwright-report ../ci-artifacts/playwright-report-round2
+                  fi
+
+            - name: Write job summary
+              if: always()
+              run: |
+                  echo '## Shinsegye + CodingBot Marketplace Safe Integration' >> $GITHUB_STEP_SUMMARY
+                  echo '' >> $GITHUB_STEP_SUMMARY
+                  echo '| Check | Result |' >> $GITHUB_STEP_SUMMARY
+                  echo '|---|---|' >> $GITHUB_STEP_SUMMARY
+                  echo '| Round 1 (interpreter/music/zip) | ${{ steps.round1.outcome }} |' >> $GITHUB_STEP_SUMMARY
+                  echo '| Round 2 (interpreter/music/zip) | ${{ steps.round2.outcome }} |' >> $GITHUB_STEP_SUMMARY
+
+            - name: Upload CI artifacts
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: marketplace-shinsegye-safe-integration-artifacts
+                  path: frontend/ci-artifacts
+
+            - name: Fail when any round failed
+              if: always()
+              run: |
+                  if [ "${{ steps.round1.outcome }}" != "success" ] || [ "${{ steps.round2.outcome }}" != "success" ]; then
+                    echo 'At least one validation round failed.'
+                    exit 1
+                  fi

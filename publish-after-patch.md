@@ -1,0 +1,122 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Marketplace Workspace 탐색" [ref=e3]:
+      - generic [ref=e4]: MA
+      - navigation [ref=e5]:
+        - link "홈" [ref=e6] [cursor=pointer]:
+          - /url: /marketplace
+          - generic [ref=e8]: 홈
+        - link "주문" [ref=e9] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e11]: 주문
+        - link "관리" [ref=e12] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e14]: 관리
+        - link "안내" [ref=e15] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e17]: 안내
+      - generic [ref=e18]: LIVE
+    - generic [ref=e19]:
+      - banner [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: 고객 거래 워크스페이스
+          - heading "Marketplace Workspace" [level=1] [ref=e23]
+          - paragraph [ref=e24]: 관리자 대시보드와 동일한 디자인 시스템으로 마켓 탐색/주문/운영 통계를 통합합니다.
+        - generic [ref=e25]:
+          - link "고객용 오케스트레이터" [ref=e26] [cursor=pointer]:
+            - /url: /marketplace/orchestrator
+          - link "내 Marketplace" [ref=e27] [cursor=pointer]:
+            - /url: /marketplace
+          - button "로그아웃" [ref=e28] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: 실데이터 프로젝트 거래소
+            - generic [ref=e33]: 운영 API 연결 완료
+          - paragraph [ref=e34]: 프로젝트 탐색 · 주문 · 리뷰 · 통계 API 연결형 메인 화면
+          - heading "프로젝트 탐색 · 주문 · 계정을 한 화면에서 처리하는 메인 마켓" [level=2] [ref=e35]
+          - paragraph [ref=e36]: 헤더를 얇게 줄이고, 좌측 레일 + 중앙 상품 그리드 + 우측 계정/Top 패널 고정 구조로 재설계했습니다. 히어로 문구는 축소하고 상품 카드와 주문 버튼의 존재감을 높였습니다.
+          - generic [ref=e37]:
+            - link "맞춤 제작 바로 시작" [ref=e38] [cursor=pointer]:
+              - /url: /marketplace/orchestrator
+            - link "관리자 상품 관리" [ref=e39] [cursor=pointer]:
+              - /url: /admin
+            - link "운영형 주문 안내 열기" [ref=e40] [cursor=pointer]:
+              - /url: /marketplace/orchestrator
+        - generic "핵심 기능 바로가기" [ref=e41]:
+          - generic [ref=e42]: 실제 등록 프로젝트 탐색
+          - generic [ref=e43]: 카테고리/정렬/검색 필터
+          - generic [ref=e44]: 오케스트레이터 주문 진입
+          - generic [ref=e45]: Top 프로젝트/매출 통계
+          - generic [ref=e46]: 회원가입 / 내정보 패널
+          - generic [ref=e47]: 프로젝트 상세 / 데모 / GitHub 진입
+      - generic [ref=e48]:
+        - main [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - paragraph [ref=e53]: 진열 가능 상품
+                - paragraph [ref=e54]: "0"
+                - paragraph [ref=e55]: 실제 등록 프로젝트 기준
+              - generic [ref=e56]:
+                - paragraph [ref=e57]: 완료 구매
+                - paragraph [ref=e58]: "0"
+                - paragraph [ref=e59]: 결제 완료/반영 건수
+              - generic [ref=e60]:
+                - paragraph [ref=e61]: 평균 구매 금액
+                - paragraph [ref=e62]: ₩0
+                - paragraph [ref=e63]: 총 매출 ₩0
+              - generic [ref=e64]:
+                - paragraph [ref=e65]: 리뷰 수
+                - paragraph [ref=e66]: "0"
+                - paragraph [ref=e67]: 공개 상세 리뷰 기준
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - generic [ref=e70]
+                - generic [ref=e73]
+              - generic [ref=e76]:
+                - textbox "프로젝트 제목/설명 검색" [ref=e77]
+                - combobox "카테고리 필터" [ref=e78]
+                - combobox "정렬 기준" [ref=e79]
+            - generic [ref=e80]:
+              - generic [ref=e82]:
+                - paragraph [ref=e83]: 팝업형 백엔드 오케스트레이터
+                - heading "대화는 팝업에서, 실행은 백엔드에서" [level=2] [ref=e84]
+                - paragraph [ref=e85]: 공개 marketplace 본문은 기존 거래형 구조를 유지하고, 생성형 기능은 popup orchestrator 로 분리했습니다. ai-sheet 기능은 preview schema 와 final workbook 패키지까지 백엔드에서 실행됩니다.
+              - generic [ref=e86]:
+                - article [ref=e184]
+                - article [ref=e199]
+                - article [ref=e214]
+                - article [ref=e228]
+                - article [ref=e242]
+            - generic [ref=e87]:
+              - generic [ref=e89]:
+                - paragraph [ref=e90]: 기존 코드생성기 상품 진열
+                - heading "4가지 코드생성기 상품" [level=2] [ref=e91]
+                - paragraph [ref=e92]: 이전 marketplace에 있던 4가지 코드생성기 상품을 별도 진열 섹션으로 복원했습니다. 실데이터 프로젝트 목록과 함께 병행 비교할 수 있습니다.
+              - generic [ref=e93]:
+                - article [ref=e94]
+                - article [ref=e108]
+                - article [ref=e122]
+                - article [ref=e136]
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - generic [ref=e152]
+                - generic [ref=e156]
+              - generic [ref=e159]: 조건에 맞는 프로젝트가 없습니다.
+        - complementary [ref=e160]:
+          - generic [ref=e161]:
+            - generic [ref=e162]:
+              - paragraph [ref=e163]: Account
+              - heading "회원가입 / 내정보" [level=3] [ref=e164]
+              - generic [ref=e165]:
+                - generic [ref=e166]
+                - textbox "이메일" [ref=e169]
+                - textbox "비밀번호" [ref=e170]
+                - button "로그인 후 시작" [ref=e171] [cursor=pointer]
+            - generic [ref=e172]:
+              - paragraph [ref=e173]: Top Projects
+              - heading "다운로드 상위 프로젝트" [level=3] [ref=e174]
+  - button "Open Next.js Dev Tools" [ref=e180] [cursor=pointer]:
+    - img [ref=e181]
+  - alert [ref=e256]

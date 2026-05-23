@@ -1,0 +1,13 @@
+# Reduce EAS archive size in monorepo context
+uploads/
+../uploads/
+../../uploads/
+.delivery-venv/
+../.delivery-venv/
+../../.delivery-venv/
+.venv/
+../.venv/
+../../.venv/
+TestResults/
+../TestResults/
+../../TestResults/

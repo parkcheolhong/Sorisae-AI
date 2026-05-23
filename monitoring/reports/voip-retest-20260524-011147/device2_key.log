@@ -1,0 +1,1 @@
+914:05-24 01:12:14.827 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"SECTION_RAIL_PRESS","timestamp":"2026-05-23T16:12:14.827Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","key":"voip","previous_section":"home","next_section":"voip"}'

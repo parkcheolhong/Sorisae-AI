@@ -1,0 +1,96 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e232]
+  - generic [ref=e554]:
+    - generic [ref=e555]:
+      - generic [ref=e556]:
+        - paragraph [ref=e557]: 고객용 오케스트레이터
+        - heading "상품 주문 오케스트레이터" [level=1] [ref=e558]
+        - paragraph [ref=e559]: 관리자와 분리된 독립 고객 오케스트레이터입니다. 로그인 후 상품 주문 문맥으로 단계 카드를 진행하고 결과를 저장합니다.
+      - link "마켓플레이스로 돌아가기" [ref=e561] [cursor=pointer]:
+        - /url: /marketplace
+    - generic [ref=e562]:
+      - paragraph [ref=e563]: 오케스트레이터 핵심 사용법
+      - generic [ref=e564]:
+        - paragraph [ref=e565]: 1. 프로젝트명과 주문 내용을 입력합니다.
+        - paragraph [ref=e566]: "2. 시작은 버튼 또는 `/run` 하나만 사용합니다."
+        - paragraph [ref=e567]: "3. 카드 판정은 `/pass`, `/fix`, `/fail`로 처리합니다."
+        - paragraph [ref=e568]: "4. 상태 확인은 `/verify`, 질문/수정은 `/ask`, `/search`, `/news`, `/revise`를 사용합니다."
+    - generic [ref=e569]:
+      - generic [ref=e570]:
+        - generic [ref=e571]:
+          - paragraph [ref=e572]: 선택 상품
+          - heading "프로젝트 스캐너 스타터 팩" [level=2] [ref=e573]
+          - paragraph [ref=e574]: 프로젝트 구조 검색, 문제 포인트, 상품화 가능한 엔진을 복구합니다.
+          - generic [ref=e575]:
+            - generic [ref=e576]: 구조 진단형
+            - generic [ref=e577]: 189,000원
+        - generic [ref=e578]:
+          - generic [ref=e579]:
+            - paragraph [ref=e580]: 회원 / 내정보
+            - generic [ref=e581]: 로그인됨
+          - generic [ref=e582]:
+            - paragraph [ref=e583]: "이메일: marketplace.compat.20260423141555@example.com"
+            - paragraph [ref=e584]: "사용자명: marketplace.compat.20260423141555"
+            - paragraph [ref=e585]: "가입 유형: 개인"
+        - generic [ref=e586]:
+          - paragraph [ref=e587]: 주문 입력
+          - generic [ref=e588]:
+            - textbox "프로젝트명" [ref=e589]: project-scanner-starter
+            - textbox [ref=e590]: 프로젝트 스캐너 스타터 팩 상품으로 만들고 싶은 프로젝트 목표, 사용자, 필수 기능, 제약을 입력하세요.
+            - generic [ref=e591]:
+              - button "단계 카드 시작" [ref=e592] [cursor=pointer]
+              - button "주문하기" [ref=e593] [cursor=pointer]
+      - generic [ref=e594]:
+        - generic [ref=e595]:
+          - generic [ref=e596]:
+            - generic [ref=e597]:
+              - paragraph [ref=e598]: 고객 공용 단계 카드 오케스트레이터
+              - paragraph [ref=e599]: 실제 고객 오케스트레이터 stage-run을 10단계 반자동 카드 + 협업 대화 기준으로 진행합니다.
+            - button "새로고침" [ref=e600] [cursor=pointer]
+          - generic [ref=e601]: stage run 데이터가 아직 없습니다.
+        - generic [ref=e602]:
+          - generic [ref=e603]:
+            - generic [ref=e604]:
+              - paragraph [ref=e605]: 공통 후속 제안 카드
+              - paragraph [ref=e606]: 고객 오케스트레이터도 관리자와 같은 기준으로 후속 제안과 우선순위를 표시합니다.
+            - generic [ref=e607]: 우선순위 25점
+          - generic [ref=e608]:
+            - generic [ref=e609]:
+              - paragraph [ref=e610]: publish readiness
+              - paragraph [ref=e611]: blocked
+            - generic [ref=e612]:
+              - paragraph [ref=e613]: delivery gate
+              - paragraph [ref=e614]: open
+            - generic [ref=e615]:
+              - paragraph [ref=e616]: retry queue
+              - paragraph [ref=e617]: 0건
+            - generic [ref=e618]:
+              - paragraph [ref=e619]: active stage
+              - paragraph [ref=e620]: idle
+            - generic [ref=e621]:
+              - paragraph [ref=e622]: 누적 평균
+              - paragraph [ref=e623]: 25점
+            - generic [ref=e624]:
+              - paragraph [ref=e625]: 직전 대비
+              - paragraph [ref=e626]: +0점
+            - generic [ref=e627]:
+              - paragraph [ref=e628]: approval history
+              - paragraph [ref=e629]: 0건
+            - generic [ref=e630]:
+              - paragraph [ref=e631]: stage run
+              - paragraph [ref=e632]: unknown
+          - generic [ref=e634]: 후속 제안이 아직 없습니다.
+          - button "주문하기" [ref=e636] [cursor=pointer]
+        - generic [ref=e637]:
+          - paragraph [ref=e638]: 실행 결과
+          - generic [ref=e639]: 아직 실행 결과가 없습니다.
+        - generic [ref=e640]:
+          - generic [ref=e641]:
+            - paragraph [ref=e642]: 내 완료 이력
+            - paragraph [ref=e644]: 완료 이력이 없습니다.
+          - generic [ref=e645]:
+            - paragraph [ref=e646]: 실행 로그
+            - paragraph [ref=e648]: 로그가 없습니다.
+          - generic [ref=e649]:
+            - paragraph [ref=e650]: 재시도 큐
+            - paragraph [ref=e652]: 재시도 큐가 없습니다.

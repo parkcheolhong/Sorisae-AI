@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "functions": {
+    "/_middleware": {
+      "runtime": "nodejs",
+      "matchers": [
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!_next\\/image).*))(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/((?!_next/image).*)"
+        }
+      ]
+    },
+    "/admin": {},
+    "/admin/docs-viewer": {},
+    "/admin/llm": {},
+    "/admin/login": {},
+    "/admin/recovery": {},
+    "/admin/subscription-monitor": {},
+    "/admin/users": {},
+    "/marketplace": {},
+    "/marketplace/[id]": {},
+    "/marketplace/code-generator": {},
+    "/marketplace/metrics": {},
+    "/marketplace/ml-detectors": {},
+    "/marketplace/orchestrator": {},
+    "/marketplace/subscription": {}
+  }
+}

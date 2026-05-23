@@ -427,7 +427,7 @@ def _python_fastapi_artifacts(project_name: str, task: str) -> List[GeneratedArt
             ),
             GeneratedArtifact(
                 ".env.example",
-                "APP_NAME=python-code-generator\nAPP_ENV=development\nAPP_DEBUG=true\nAPP_SECRET_KEY=change-me-in-production\nSTATUS_ENDPOINT=http://localhost:8000/health\n",
+                "APP_NAME=python-code-generator\nAPP_ENV=development\nAPP_DEBUG=true\nAPP_SECRET_KEY=\nSTATUS_ENDPOINT=http://localhost:8000/health\n",
             ),
             GeneratedArtifact(
                 ".gitignore",
@@ -544,8 +544,8 @@ def _python_fastapi_artifacts(project_name: str, task: str) -> List[GeneratedArt
                 "app/core/security.py",
                 (
                     "from app.core.config import get_settings\n\n"
-                    "ALLOWED_HOSTS = ['*']\n"
-                    "CORS_ALLOW_ORIGINS = ['*']\n"
+                    "ALLOWED_HOSTS = ['localhost', '127.0.0.1']\n"
+                    "CORS_ALLOW_ORIGINS = ['http://localhost:8000']\n"
                     "REQUEST_TIMEOUT_SEC = 30\n\n"
                     "def build_security_headers() -> dict:\n"
                     "    settings = get_settings()\n"
@@ -749,11 +749,11 @@ def _python_fastapi_artifacts(project_name: str, task: str) -> List[GeneratedArt
             ),
             GeneratedArtifact(
                 "backend/core/auth.py",
-                "AUTH_SETTINGS = {'enabled': True, 'algorithm': 'HS256', 'scopes': ['basic'], 'token_header': 'Authorization'}\nJWT_SECRET='change-me'\nJWT_ALGORITHM='HS256'\nJWT_EXPIRE_MINUTES=60\nscopes=['basic']\n\ndef get_auth_settings() -> dict:\n    return {'scopes': scopes, **AUTH_SETTINGS}\n\ndef create_access_token(subject: str, scopes: list[str] | None = None) -> str:\n    requested_scopes = scopes or list(AUTH_SETTINGS.get('scopes') or [])\n    return f'token::{subject}::' + ','.join(requested_scopes)\n\ndef decode_access_token(token: str) -> dict:\n    return {'valid': token.startswith('token::'), 'payload': {'token': token}}\n",
+                "import os\n\nAUTH_SETTINGS = {'enabled': True, 'algorithm': 'HS256', 'scopes': ['basic'], 'token_header': 'Authorization'}\nJWT_SECRET=os.getenv('JWT_SECRET', '').strip()\nJWT_ALGORITHM='HS256'\nJWT_EXPIRE_MINUTES=60\nscopes=['basic']\n\ndef get_auth_settings() -> dict:\n    return {'scopes': scopes, 'secret_ready': len(JWT_SECRET) >= 32, **AUTH_SETTINGS}\n\ndef create_access_token(subject: str, scopes: list[str] | None = None) -> str:\n    if len(JWT_SECRET) < 32:\n        raise RuntimeError('JWT_SECRET must be configured with at least 32 characters')\n    requested_scopes = scopes or list(AUTH_SETTINGS.get('scopes') or [])\n    return f'token::{subject}::' + ','.join(requested_scopes)\n\ndef decode_access_token(token: str) -> dict:\n    return {'valid': token.startswith('token::'), 'payload': {'token': token}}\n",
             ),
             GeneratedArtifact(
                 "backend/core/security.py",
-                "ALLOWED_HOSTS=['*']\nCORS_ALLOW_ORIGINS=['*']\nhttps_only=True\nREQUEST_TIMEOUT_SEC=30\n\ndef get_security_profile() -> dict:\n    return {'allowed_hosts': ALLOWED_HOSTS, 'cors_allow_origins': CORS_ALLOW_ORIGINS, 'https_only': https_only, 'request_timeout_sec': REQUEST_TIMEOUT_SEC}\n",
+                "ALLOWED_HOSTS=['localhost', '127.0.0.1']\nCORS_ALLOW_ORIGINS=['http://localhost:8000']\nhttps_only=True\nREQUEST_TIMEOUT_SEC=30\n\ndef get_security_profile() -> dict:\n    return {'allowed_hosts': ALLOWED_HOSTS, 'cors_allow_origins': CORS_ALLOW_ORIGINS, 'https_only': https_only, 'request_timeout_sec': REQUEST_TIMEOUT_SEC}\n",
             ),
             GeneratedArtifact(
                 "backend/app/external_adapters/status_client.py",
@@ -911,7 +911,7 @@ def _python_fastapi_artifacts(project_name: str, task: str) -> List[GeneratedArt
             ),
             GeneratedArtifact(
                 "configs/app.env.example",
-                "APP_ENV=dev\nDATABASE_URL=sqlite:///app.db\nJWT_SECRET=change-me\nALLOWED_HOSTS=*\nCORS_ALLOW_ORIGINS=*\nREQUEST_TIMEOUT_SEC=30\nMODEL_REGISTRY_PATH=./models/registry.json\nOPS_LOG_PATH=./logs/ops.log\nUPSTREAM_STATUS_BASE_URL=http://localhost:8000\nNOTIFICATION_GATEWAY_URL=http://localhost:9000\n",
+                "APP_ENV=dev\nDATABASE_URL=sqlite:///app.db\nJWT_SECRET=\nALLOWED_HOSTS=localhost,127.0.0.1\nCORS_ALLOW_ORIGINS=http://localhost:8000\nREQUEST_TIMEOUT_SEC=30\nMODEL_REGISTRY_PATH=./models/registry.json\nOPS_LOG_PATH=./logs/ops.log\nUPSTREAM_STATUS_BASE_URL=http://localhost:8000\nNOTIFICATION_GATEWAY_URL=http://localhost:9000\n",
             ),
             GeneratedArtifact(
                 "configs/logging.yml",
@@ -923,7 +923,7 @@ def _python_fastapi_artifacts(project_name: str, task: str) -> List[GeneratedArt
             ),
             GeneratedArtifact(
                 "infra/docker-compose.override.yml",
-                "services:\n  app:\n    command: uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000\n    healthcheck:\n      test: ['CMD', 'python', '-c', 'print(1)']\n    environment:\n      JWT_SECRET: change-me\n",
+                "services:\n  app:\n    command: uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000\n    healthcheck:\n      test: ['CMD', 'python', '-c', 'print(1)']\n    environment:\n      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET_REQUIRED}\n",
             ),
             GeneratedArtifact(
                 "infra/prometheus.yml",
@@ -996,7 +996,7 @@ def _python_worker_artifacts(project_name: str, task: str) -> List[GeneratedArti
             ),
             GeneratedArtifact(
                 ".env.example",
-                "APP_NAME=python-worker\nAPP_ENV=development\nAPP_DEBUG=true\nAPP_SECRET_KEY=change-me-in-production\nSTATUS_ENDPOINT=http://localhost:9000/status\n",
+                "APP_NAME=python-worker\nAPP_ENV=development\nAPP_DEBUG=true\nAPP_SECRET_KEY=\nSTATUS_ENDPOINT=http://localhost:9000/status\n",
             ),
             GeneratedArtifact(
                 "app/__init__.py",

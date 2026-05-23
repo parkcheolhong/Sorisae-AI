@@ -176,7 +176,7 @@ def load_model():
         logger.error(f"Failed to load model: {e}")
         model = None
         tokenizer = None
-        model_load_error = "model_load_failed"
+        model_load_error = str(e)
         logger.warning("Server will stay up without a loaded model.")
 
 

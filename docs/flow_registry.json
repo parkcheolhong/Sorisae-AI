@@ -1,0 +1,34 @@
+[
+  {
+    "flow_id": "FLOW-001",
+    "step_number": 1,
+    "step_id": "FLOW-001-1",
+    "action": "INTAKE",
+    "title": "주문 해석",
+    "trace_id": "FLOW-001:FLOW-001-1:INTAKE"
+  },
+  {
+    "flow_id": "FLOW-001",
+    "step_number": 2,
+    "step_id": "FLOW-001-2",
+    "action": "STRUCTURE",
+    "title": "기능 구조화",
+    "trace_id": "FLOW-001:FLOW-001-2:STRUCTURE"
+  },
+  {
+    "flow_id": "FLOW-002",
+    "step_number": 1,
+    "step_id": "FLOW-002-1",
+    "action": "SERVICE_BIND",
+    "title": "서비스 연결",
+    "trace_id": "FLOW-002:FLOW-002-1:SERVICE_BIND"
+  },
+  {
+    "flow_id": "FLOW-003",
+    "step_number": 1,
+    "step_id": "FLOW-003-1",
+    "action": "DELIVERY",
+    "title": "산출물 패키징",
+    "trace_id": "FLOW-003:FLOW-003-1:DELIVERY"
+  }
+]

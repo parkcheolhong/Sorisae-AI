@@ -1,0 +1,57 @@
+﻿[
+    {
+        "category":  "보안/권한",
+        "round":  "round1",
+        "result":  "PASS"
+    },
+    {
+        "category":  "운영관측/헬스",
+        "round":  "round1",
+        "result":  "PASS"
+    },
+    {
+        "category":  "API/서버",
+        "round":  "round1",
+        "result":  "PASS"
+    },
+    {
+        "category":  "통역/언어",
+        "round":  "round1",
+        "result":  "FAIL"
+    },
+    {
+        "category":  "음악/오디오",
+        "round":  "round1",
+        "result":  "FAIL"
+    },
+    {
+        "category":  "코드/개발",
+        "round":  "round1",
+        "result":  "FAIL"
+    },
+    {
+        "category":  "대시보드/UI",
+        "round":  "round1",
+        "result":  "PASS"
+    },
+    {
+        "category":  "브레인/학습",
+        "round":  "round1",
+        "result":  "BLOCKED"
+    },
+    {
+        "category":  "오케스트레이션/에이전트",
+        "round":  "round1",
+        "result":  "BLOCKED"
+    },
+    {
+        "category":  "데이터/저장소",
+        "round":  "round1",
+        "result":  "BLOCKED"
+    },
+    {
+        "category":  "기타",
+        "round":  "round1",
+        "result":  "BLOCKED"
+    }
+]

@@ -1,0 +1,50 @@
+{
+  "$schema": "./id_registry.schema.json",
+  "schema_version": "id-registry.v1",
+  "registry_id": "REG-C-USE-9B4C2CD6F4",
+  "generated_at": "2026-04-23T04:53:34.923498",
+  "project": {
+    "project_id": "PROJECT-C-USE-9B4C2CD6F4",
+    "name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4",
+    "root_path": ".",
+    "scope": "generated-output"
+  },
+  "governance": {
+    "required_documents": [
+      "docs/id_registry.schema.json",
+      "docs/id_registry.json",
+      "docs/traceability_map.json",
+      "docs/auto_link_map.json",
+      "docs/architecture.contract.json",
+      "docs/generator_checklist.md"
+    ],
+    "required_id_levels": [
+      "file",
+      "section",
+      "feature",
+      "chunk",
+      "flow",
+      "trace",
+      "failure_tag",
+      "repair_tag"
+    ],
+    "selective_apply_policy": "id-targeted-only",
+    "future_generation_mandatory": true
+  },
+  "files": [],
+  "flows": [],
+  "traceability_links": [],
+  "failure_tags": [],
+  "repair_tags": [],
+  "validation_rules": {
+    "hard_gate": [
+      "모든 신규 소스 파일은 FILE-ID registry 항목이 있어야 한다.",
+      "핵심 섹션은 SECTION-ID 와 최소 1개 CHUNK-ID를 가져야 한다.",
+      "생성 프로그램은 docs/id_registry.schema.json 과 docs/id_registry.json 을 반드시 포함해야 한다."
+    ],
+    "generation_requirements": [
+      "validation_profile=nextjs_app",
+      "앞으로 생성되는 모든 프로그램은 docs/id_registry.json, docs/traceability_map.json, docs/auto_link_map.json, docs/architecture.contract.json, docs/generator_checklist.md 를 의무 생성한다."
+    ]
+  }
+}

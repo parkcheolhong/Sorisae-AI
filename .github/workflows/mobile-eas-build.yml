@@ -1,0 +1,87 @@
+name: Mobile EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_target:
+        description: Release target
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      platform:
+        description: Build platform
+        required: true
+        default: all
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+      action:
+        description: Build or Build+Submit
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - build_and_submit
+
+jobs:
+  eas-build:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.release_target }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install mobile dependencies
+        run: npm ci --prefix apps/mobile-stock-ai
+
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Ensure EAS project id
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+        run: |
+          cd apps/mobile-stock-ai
+          node scripts/ensure-eas-project-id.mjs
+
+      - name: Build with EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
+        run: |
+          cd apps/mobile-stock-ai
+          eas build \
+            --non-interactive \
+            --platform ${{ inputs.platform }} \
+            --profile ${{ inputs.release_target }}
+
+      - name: Validate production submit gate
+        if: ${{ inputs.action == 'build_and_submit' && inputs.release_target == 'production' }}
+        run: |
+          cd apps/mobile-stock-ai
+          node scripts/validate-production-submit-gate.mjs
+
+      - name: Submit with EAS
+        if: ${{ inputs.action == 'build_and_submit' }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+        run: |
+          cd apps/mobile-stock-ai
+          eas submit \
+            --non-interactive \
+            --platform ${{ inputs.platform }} \
+            --profile ${{ inputs.release_target }}

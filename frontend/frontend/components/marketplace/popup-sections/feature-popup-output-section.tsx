@@ -441,7 +441,7 @@ function renderGenericArtifact(artifact: RichFeatureArtifact) {
     );
 }
 
-function renderArtifactCard(title: string, artifact: FeatureArtifact | null, mode: 'image' | 'music' | 'document' | 'spreadsheet' | 'video') {
+function renderArtifactCard(title: string, artifact: FeatureArtifact | null, mode: 'image' | 'music' | 'document' | 'spreadsheet' | 'video' | 'presentation' | 'code') {
     if (!artifact) {
         return <div className="rounded-[24px] border border-dashed border-[#30363d] bg-[#0d1117] p-5 text-sm leading-7 text-[#8b949e]">{title} 결과가 아직 없습니다.</div>;
     }
@@ -465,7 +465,7 @@ function renderArtifactCard(title: string, artifact: FeatureArtifact | null, mod
                 renderImageArtifact(richArtifact)
             ) : mode === 'music' ? (
                 renderMusicArtifact(richArtifact)
-            ) : mode === 'document' ? (
+            ) : mode === 'document' || mode === 'presentation' ? (
                 renderDocumentArtifact(richArtifact)
             ) : mode === 'video' ? (
                 renderVideoArtifact(richArtifact)
@@ -495,11 +495,13 @@ interface FeaturePopupOutputSectionProps {
     isSpreadsheetBuilder: boolean;
     spreadsheetDownloadLinks?: SpreadsheetDownloadLink[];
     latestSpreadsheetDownloadFormat: string;
+    downloadTitle?: string;
+    downloadDescription?: string;
     previewTitle: string;
     finalTitle: string;
     previewArtifact: FeatureArtifact | null;
     finalArtifact: FeatureArtifact | null;
-    qualityReview: PopupQualityReview;
+    qualityReview: PopupQualityReview | null;
     qualityGateScoreLabel: string;
 }
 
@@ -507,12 +509,12 @@ export default function FeaturePopupOutputSection(props: FeaturePopupOutputSecti
     const outputKind = props.outputKind || (props.isSpreadsheetBuilder ? 'spreadsheet' : 'image');
     return (
         <section className="space-y-4" aria-label="생성 결과와 다운로드 패널">
-            {props.isSpreadsheetBuilder && !!props.spreadsheetDownloadLinks?.length && (
+            {!!props.spreadsheetDownloadLinks?.length && (
                 <div data-testid="marketplace-spreadsheet-downloads" className="rounded-[24px] border border-[#25304a] bg-[linear-gradient(180deg,#10182b,#0e1524)] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.16)] sm:p-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-white">Spreadsheet Downloads</p>
-                            <p className="mt-1 text-xs text-[#8b949e]">final phase 가 완료되면 xlsx/csv 결과물을 바로 내려받을 수 있습니다.</p>
+                            <p className="text-sm font-semibold text-white">{props.downloadTitle || 'Feature Downloads'}</p>
+                            <p className="mt-1 text-xs text-[#8b949e]">{props.downloadDescription || 'final phase 가 완료되면 결과물을 바로 내려받을 수 있습니다.'}</p>
                         </div>
                         <span className="inline-flex w-fit rounded-full border border-[#30363d] px-3 py-1 text-xs text-[#c9d1d9]">{props.spreadsheetDownloadLinks.filter((item) => item.ready).length} ready</span>
                     </div>
