@@ -1,7 +1,7 @@
 const fs = require('fs');
 const { defineConfig, devices } = require('@playwright/test');
 
-const baseURL = process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? 'http://localhost:3005';
+const baseURL = process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? 'http://127.0.0.1:3005';
 const storageState = process.env.PLAYWRIGHT_STORAGE_STATE ?? 'playwright/.auth/adminAuthState.json';
 const storageStatePath = fs.existsSync(storageState) ? storageState : undefined;
 const shouldStartWebServer = process.env.PLAYWRIGHT_USE_WEBSERVER === '1';
