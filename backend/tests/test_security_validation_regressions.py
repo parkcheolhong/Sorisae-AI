@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from backend.app.core.url_security import parse_http_base_url
-from backend.admin.orchestrator.path_utils import resolve_safe_child_path
+from backend.admin.orchestrator.path_utils import require_allowed_root_path
 from backend.orchestrator.chat.flow_trace import split_multi_command_text
 
 
@@ -24,10 +24,10 @@ def test_parse_http_base_url_marks_placeholder_domains() -> None:
     assert parsed.placeholder is True
 
 
-def test_resolve_safe_child_path_blocks_parent_traversal() -> None:
-    root = Path(__file__).resolve().parents[2]
+def test_require_allowed_root_path_blocks_parent_traversal() -> None:
+    traversal_path = Path("/tmp/../etc/passwd")
     with pytest.raises(Exception):
-        resolve_safe_child_path(root, "../secrets.txt", detail="blocked")
+        require_allowed_root_path(traversal_path, detail="blocked")
 
 
 def test_split_multi_command_text_handles_long_linear_input() -> None:
