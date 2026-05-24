@@ -171,14 +171,22 @@ def _resolve_orchestration_output_root(path_text: str) -> Path:
 
 
 def _resolve_orchestration_output_child_path(output_dir: Path, relative_path: str) -> Path:
+    trusted_output_dir = _trusted_orchestration_output_dir(output_dir)
     safe_relative = _sanitize_orchestration_relative_path(relative_path)
-    candidate = output_dir.resolve()
+    candidate = trusted_output_dir
     for part in safe_relative.split("/"):
         candidate = candidate / part
     candidate = candidate.resolve()
-    if not _is_relative_to(candidate, output_dir.resolve()):
+    if not _is_relative_to(candidate, trusted_output_dir):
         raise HTTPException(status_code=400, detail="출력 파일 경로가 출력 디렉터리를 벗어납니다.")
     return candidate
+
+
+def _trusted_orchestration_output_dir(output_dir: Path) -> Path:
+    safe_dir_name = re.sub(r"[^a-zA-Z0-9._-]+", "-", str(output_dir.name or "")).strip("-._")
+    if not safe_dir_name:
+        raise HTTPException(status_code=400, detail="출력 디렉터리 이름이 올바르지 않습니다.")
+    return (REPO_ROOT / "uploads" / "projects" / safe_dir_name).resolve()
 
 
 def _log_orchestration_phase(
@@ -5023,11 +5031,9 @@ def _compat_project_name(request: OrchestrationRequest) -> str:
 
 
 def _compat_output_dir(request: OrchestrationRequest, project_name: str) -> Path:
-    if str(request.output_dir or "").strip():
-        output_dir = _resolve_orchestration_output_root(str(request.output_dir))
-    else:
-        base_dir = _resolve_orchestration_output_root(str(request.output_base_dir or "uploads/projects"))
-        output_dir = base_dir / f"{project_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    del request, project_name
+    base_dir = (REPO_ROOT / "uploads" / "projects").resolve()
+    output_dir = base_dir / f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
@@ -12005,9 +12011,10 @@ def _build_completion_judge(
     )
     verified_target_count = int(operational_evidence_payload.get("verified_target_count") or 0)
     integration_status = str(operational_evidence_payload.get("integration_status") or "unknown").strip()
+    trusted_output_dir = _trusted_orchestration_output_dir(output_dir)
     customer_generation_mode = bool(
-        output_dir.exists()
-        and _resolve_orchestration_output_child_path(output_dir, "docs/generation-plan.json").exists()
+        trusted_output_dir.exists()
+        and _resolve_orchestration_output_child_path(trusted_output_dir, "docs/generation-plan.json").exists()
     )
     if required_target_count > 0 and verified_target_count < required_target_count:
         if not customer_generation_mode:
