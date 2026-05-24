@@ -205,13 +205,13 @@ def get_workspace_self_run_record_response(
         record_path = approval_record_path(_normalize_approval_id(approval_id))
     elif latest:
         record_path = latest_self_run_record_path_func(pending_only=pending_only)
+    else:
+        raise HTTPException(status_code=404, detail="자가 실행 기록을 찾을 수 없습니다.")
 
     if not record_path or not record_path.exists():
         if approval_id:
             return Response(status_code=204)
-        if latest:
-            return Response(status_code=204)
-        raise HTTPException(status_code=404, detail="자가 실행 기록을 찾을 수 없습니다.")
+        return Response(status_code=204)
 
     approval_payload = load_json_file(record_path)
     approval_payload = stabilize_running_self_run_record(record_path, approval_payload)
