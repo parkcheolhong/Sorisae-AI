@@ -6,7 +6,7 @@ import re
 
 from fastapi import HTTPException
 
-from .path_utils import admin_allowed_roots, admin_workspace_root, is_relative_to, require_allowed_root_path, resolve_marketplace_upload_root_path
+from .path_utils import ADMIN_ALLOWED_ROOT_PATH_DETAIL, admin_workspace_root, is_relative_to, require_allowed_root_path, resolve_marketplace_upload_root_path
 
 ADMIN_TEXT_FILE_SUFFIXES = {
     ".txt", ".md", ".json", ".yml", ".yaml", ".py", ".ts", ".tsx", ".js", ".jsx", ".html", ".css", ".scss", ".env", ".log", ".mmd",
@@ -72,7 +72,7 @@ def resolve_admin_workspace_path(
             try:
                 resolved_candidate = require_allowed_root_path(
                     next_candidate,
-                    detail="허용된 관리자 런타임/워크스페이스 내부 경로만 열 수 있습니다.",
+                    detail=ADMIN_ALLOWED_ROOT_PATH_DETAIL,
                 )
                 candidate = resolved_candidate
                 break
@@ -81,14 +81,14 @@ def resolve_admin_workspace_path(
         if candidate is None:
             candidate = require_allowed_root_path(
                 candidates[0],
-                detail="허용된 관리자 런타임/워크스페이스 내부 경로만 열 수 있습니다.",
+                detail=ADMIN_ALLOWED_ROOT_PATH_DETAIL,
             )
     else:
         candidate = workspace_root
 
     return require_allowed_root_path(
         candidate,
-        detail="허용된 관리자 런타임/워크스페이스 내부 경로만 열 수 있습니다.",
+        detail=ADMIN_ALLOWED_ROOT_PATH_DETAIL,
     )
 
 

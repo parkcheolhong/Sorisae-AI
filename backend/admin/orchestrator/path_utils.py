@@ -5,7 +5,10 @@ from typing import List, Optional
 import os
 import re
 import tempfile
+
 from fastapi import HTTPException
+
+ADMIN_ALLOWED_ROOT_PATH_DETAIL = "허용된 관리자 런타임/워크스페이스 내부 경로만 열 수 있습니다."
 
 
 def admin_workspace_root() -> Path:
@@ -74,18 +77,18 @@ def resolve_marketplace_upload_root_path() -> Path:
     return (admin_workspace_root() / "uploads").resolve()
 
 
-def require_allowed_root_path(path_value: Path, *, detail: str) -> Path:
-    candidate = path_value
-    if any(is_relative_to(candidate, allowed_root) for allowed_root in admin_allowed_roots()):
-        return candidate
+def _has_parent_reference(path: Path) -> bool:
+    return any(part == ".." for part in path.parts)
+
+
+def require_allowed_root_path(path: Path, *, detail: str) -> Path:
+    candidate_path = path.expanduser()
+    if _has_parent_reference(candidate_path):
+        raise HTTPException(status_code=400, detail=detail)
+    resolved_path = candidate_path.resolve()
+    if any(
+        is_relative_to(resolved_path, allowed_root)
+        for allowed_root in admin_allowed_roots()
+    ):
+        return resolved_path
     raise HTTPException(status_code=400, detail=detail)
-
-
-def resolve_safe_child_path(root: Path, relative_path: str, *, detail: str) -> Path:
-    normalized = str(relative_path or "").replace("\\", "/").strip().lstrip("/")
-    if not normalized:
-        raise HTTPException(status_code=400, detail=detail)
-    relative = Path(normalized)
-    if relative.is_absolute() or any(part == ".." for part in relative.parts):
-        raise HTTPException(status_code=400, detail=detail)
-    return require_allowed_root_path((root.resolve() / relative), detail=detail)

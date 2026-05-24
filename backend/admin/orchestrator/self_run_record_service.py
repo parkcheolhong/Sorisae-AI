@@ -11,6 +11,24 @@ from fastapi.responses import Response
 from .path_utils import require_allowed_root_path
 
 
+APPROVAL_ID_PATTERN = r"[A-Za-z0-9._-]{1,128}"
+INVALID_APPROVAL_ID_DETAIL = "approval_id 형식이 올바르지 않습니다."
+
+
+def _normalize_approval_id(approval_id: Optional[str]) -> str:
+    normalized_approval_id = str(approval_id or "").strip()
+    if not re.fullmatch(APPROVAL_ID_PATTERN, normalized_approval_id):
+        raise HTTPException(status_code=400, detail=INVALID_APPROVAL_ID_DETAIL)
+    return normalized_approval_id
+
+
+def _resolve_self_run_delete_target(admin_self_run_root: Callable[[], Path], approval_id: Optional[str]) -> Path:
+    return require_allowed_root_path(
+        admin_self_run_root() / _normalize_approval_id(approval_id),
+        detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
+    )
+
+
 def _build_terminal_evidence(approval_payload: Dict[str, Any]) -> Dict[str, Any]:
     status = str(approval_payload.get("status") or "failed").strip() or "failed"
     finished_at = str(approval_payload.get("finished_at") or "").strip()
@@ -162,7 +180,13 @@ def _delete_all_pending_self_run_records(
         if str(payload.get("status") or "") != "pending_approval":
             continue
         deleted_approval_ids.append(str(payload.get("approval_id") or candidate_dir.name))
-        shutil.rmtree(candidate_dir, ignore_errors=True)
+        shutil.rmtree(
+            require_allowed_root_path(
+                root_dir / candidate_dir.name,
+                detail="자가 실행 삭제 대상 경로가 허용 범위를 벗어났습니다.",
+            ),
+            ignore_errors=True,
+        )
 
     return {
         "deleted_approval_ids": deleted_approval_ids,
@@ -181,21 +205,17 @@ def get_workspace_self_run_record_response(
     stabilize_running_self_run_record: Callable[[Path, Dict[str, Any]], Dict[str, Any]],
     approval_payload_to_response: Callable[[Dict[str, Any]], Dict[str, Any]],
 ) -> Dict[str, Any] | Response:
+    if not approval_id and not latest:
+        raise HTTPException(status_code=404, detail="자가 실행 기록을 찾을 수 없습니다.")
+
     record_path: Optional[Path] = None
     if approval_id:
-        normalized_approval_id = str(approval_id or "").strip()
-        if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", normalized_approval_id):
-            raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
-        record_path = approval_record_path(normalized_approval_id)
-    elif latest:
+        record_path = approval_record_path(_normalize_approval_id(approval_id))
+    else:
         record_path = latest_self_run_record_path_func(pending_only=pending_only)
 
     if not record_path or not record_path.exists():
-        if approval_id:
-            return Response(status_code=204)
-        if latest and not approval_id:
-            return Response(status_code=204)
-        raise HTTPException(status_code=404, detail="자가 실행 기록을 찾을 수 없습니다.")
+        return Response(status_code=204)
 
     approval_payload = load_json_file(record_path)
     approval_payload = stabilize_running_self_run_record(record_path, approval_payload)
@@ -240,10 +260,7 @@ async def normalize_workspace_self_run_record_response(
 
     record_path: Optional[Path] = None
     if request.approval_id:
-        normalized_approval_id = str(request.approval_id or "").strip()
-        if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", normalized_approval_id):
-            raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
-        record_path = approval_record_path(normalized_approval_id)
+        record_path = approval_record_path(_normalize_approval_id(request.approval_id))
     else:
         record_path = latest_self_run_record_path_func()
 
@@ -259,14 +276,11 @@ async def normalize_workspace_self_run_record_response(
     approval_payload = stabilize_running_self_run_record(record_path, approval_payload)
     current_status = str(approval_payload.get("status") or "")
     if current_status == "pending_approval" and request.cleanup_only:
-        deleted_approval_id = str(approval_payload.get("approval_id") or "").strip()
-        if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", deleted_approval_id):
-            raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
-        delete_target = require_allowed_root_path(
-            admin_self_run_root() / deleted_approval_id,
-            detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
+        deleted_approval_id = _normalize_approval_id(approval_payload.get("approval_id"))
+        shutil.rmtree(
+            _resolve_self_run_delete_target(admin_self_run_root, deleted_approval_id),
+            ignore_errors=True,
         )
-        shutil.rmtree(delete_target, ignore_errors=True)
         latest_after_cleanup: Optional[Dict[str, Any]] = None
         next_record_path = latest_self_run_record_path_func()
         if next_record_path and next_record_path.exists():
@@ -333,14 +347,11 @@ async def normalize_workspace_self_run_record_response(
             "latest": approval_payload_to_response(approval_payload),
         }
 
-    deleted_approval_id = str(approval_payload.get("approval_id") or "").strip()
-    if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", deleted_approval_id):
-        raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
-    delete_target = require_allowed_root_path(
-        admin_self_run_root() / deleted_approval_id,
-        detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
+    deleted_approval_id = _normalize_approval_id(approval_payload.get("approval_id"))
+    shutil.rmtree(
+        _resolve_self_run_delete_target(admin_self_run_root, deleted_approval_id),
+        ignore_errors=True,
     )
-    shutil.rmtree(delete_target, ignore_errors=True)
     latest_after_cleanup: Optional[Dict[str, Any]] = None
     next_record_path = latest_self_run_record_path_func()
     if next_record_path and next_record_path.exists():
@@ -354,6 +365,8 @@ async def normalize_workspace_self_run_record_response(
         "deleted_approval_id": deleted_approval_id,
         "latest": latest_after_cleanup,
     }
+
+
 def assert_self_run_record_contract() -> None:
     sample = approval_payload_to_self_run_response({
         "approval_id": "sample",
