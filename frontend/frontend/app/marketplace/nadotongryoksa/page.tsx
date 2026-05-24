@@ -86,6 +86,17 @@ function osmEmbedUrl(lat: number, lon: number): string {
     return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d},${lat - d},${lon + d},${lat + d}&layer=mapnik&marker=${lat},${lon}`;
 }
 
+function sanitizeCoordinate(value: unknown, fallback: number): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function buildOpenStreetMapLink(latValue: unknown, lonValue: unknown, fallbackLat: number, fallbackLon: number): string {
+    const lat = sanitizeCoordinate(latValue, fallbackLat);
+    const lon = sanitizeCoordinate(lonValue, fallbackLon);
+    return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lon))}#map=15/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lon))}`;
+}
+
 const LANGS = [
     { label: '한국어', code: 'ko' },
     { label: 'English', code: 'en' },
@@ -1457,8 +1468,8 @@ export default function WorldLincoPage() {
                         />
                         <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <a href={mapPlace.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🌐 {t('openGoogleMap')}</a>
-                            <a href={mapPlace.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🗺️ Naver 지도</a>
-                            <a href={`https://www.openstreetmap.org/?mlat=${mapPlace.latitude ?? lat}&mlon=${mapPlace.longitude ?? lon}#map=15/${mapPlace.latitude ?? lat}/${mapPlace.longitude ?? lon}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>{t('openStreetMap')}</a>
+                            <a href={mapPlace.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🗺️ {t('naverMap')}</a>
+                            <a href={buildOpenStreetMapLink(mapPlace.latitude, mapPlace.longitude, Number(lat), Number(lon))} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>{t('openStreetMap')}</a>
                         </div>
                     </section>
                 )}
