@@ -361,6 +361,8 @@ async def normalize_workspace_self_run_record_response(
         "deleted_approval_id": deleted_approval_id,
         "latest": latest_after_cleanup,
     }
+
+
 def assert_self_run_record_contract() -> None:
     sample = approval_payload_to_self_run_response({
         "approval_id": "sample",
