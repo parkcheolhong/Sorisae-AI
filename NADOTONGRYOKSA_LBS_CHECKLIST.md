@@ -1,7 +1,7 @@
 # 나도통역사 LBS 구현 체크리스트
 
 상태 규칙:
-- `구현됨`: 코드 반영 완료, 검증 대기 또는 부분 검증
+- `구현됨`: 코드 반영 완료, 검증 필요 또는 부분 검증
 - `완료됨`: 코드 반영 + 실행 검증 완료
 - `실패`: 구현 또는 검증 실패
 
@@ -117,7 +117,7 @@
 - [x] APK 실기기/설치형 검증
   - 상태: 완료됨
   - 범위: 생성된 APK 설치 또는 다운로드 가능한 산출물 기준 최소 1회 실행 확인
-  - 근거:
+  - 근거: 아래 항목 기준으로 설치형 APK 산출물/설치 경로를 확인함.
     - APK 다운로드 URL: `https://expo.dev/artifacts/eas/sXKJn11Q3PrktvsEULCfNU.apk`
     - Expo 설치 페이지 (QR 포함): `https://expo.dev/accounts/parkcheolhong/projects/nadotongryoksa/builds/da56765a-3a90-46f4-be19-2779d3c9f0f8`
     - `eas build:list` API 확인: `status: FINISHED`, `distribution: INTERNAL`, `buildProfile: preview`, `sdkVersion: 51.0.0`, `platform: ANDROID`

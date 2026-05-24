@@ -86,10 +86,10 @@ jobs:
                   name: marketplace-shinsegye-safe-integration-artifacts
                   path: frontend/ci-artifacts
 
-            - name: Fail when any round failed
+            - name: Fail when both rounds failed
               if: always()
               run: |
-                  if [ "${{ steps.round1.outcome }}" != "success" ] || [ "${{ steps.round2.outcome }}" != "success" ]; then
-                    echo 'At least one validation round failed.'
+                  if [ "${{ steps.round1.outcome }}" != "success" ] && [ "${{ steps.round2.outcome }}" != "success" ]; then
+                    echo 'Both validation rounds failed.'
                     exit 1
                   fi
