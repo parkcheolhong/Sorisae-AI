@@ -5,6 +5,7 @@ from typing import List, Optional
 import os
 import re
 import tempfile
+from fastapi import HTTPException
 
 
 def admin_workspace_root() -> Path:
@@ -71,3 +72,20 @@ def resolve_marketplace_upload_root_path() -> Path:
     if configured_upload_root:
         return Path(configured_upload_root).expanduser().resolve()
     return (admin_workspace_root() / "uploads").resolve()
+
+
+def require_allowed_root_path(path_value: Path, *, detail: str) -> Path:
+    candidate = path_value.resolve()
+    if any(is_relative_to(candidate, allowed_root) for allowed_root in admin_allowed_roots()):
+        return candidate
+    raise HTTPException(status_code=400, detail=detail)
+
+
+def resolve_safe_child_path(root: Path, relative_path: str, *, detail: str) -> Path:
+    normalized = str(relative_path or "").replace("\\", "/").strip().lstrip("/")
+    if not normalized:
+        raise HTTPException(status_code=400, detail=detail)
+    relative = Path(normalized)
+    if relative.is_absolute() or any(part == ".." for part in relative.parts):
+        raise HTTPException(status_code=400, detail=detail)
+    return require_allowed_root_path((root.resolve() / relative), detail=detail)

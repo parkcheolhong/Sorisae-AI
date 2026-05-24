@@ -4,9 +4,11 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Optional
 from datetime import datetime
 import shutil
+import re
 
 from fastapi import HTTPException
 from fastapi.responses import Response
+from .path_utils import require_allowed_root_path
 
 
 def _build_terminal_evidence(approval_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -137,11 +139,19 @@ def _delete_all_pending_self_run_records(
         }
 
     deleted_approval_ids: list[str] = []
+    root_dir = require_allowed_root_path(
+        root_dir,
+        detail="자가 실행 루트 경로가 허용 범위를 벗어났습니다.",
+    )
     for candidate_dir in sorted(
         (path for path in root_dir.iterdir() if path.is_dir()),
         key=lambda path: path.name,
         reverse=True,
     ):
+        candidate_dir = require_allowed_root_path(
+            candidate_dir,
+            detail="자가 실행 삭제 대상 경로가 허용 범위를 벗어났습니다.",
+        )
         record_path = candidate_dir / "approval.json"
         if not record_path.exists():
             continue
@@ -173,7 +183,10 @@ def get_workspace_self_run_record_response(
 ) -> Dict[str, Any] | Response:
     record_path: Optional[Path] = None
     if approval_id:
-        record_path = approval_record_path(approval_id)
+        normalized_approval_id = str(approval_id or "").strip()
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", normalized_approval_id):
+            raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
+        record_path = approval_record_path(normalized_approval_id)
     elif latest:
         record_path = latest_self_run_record_path_func(pending_only=pending_only)
 
@@ -227,7 +240,10 @@ async def normalize_workspace_self_run_record_response(
 
     record_path: Optional[Path] = None
     if request.approval_id:
-        record_path = approval_record_path(request.approval_id)
+        normalized_approval_id = str(request.approval_id or "").strip()
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", normalized_approval_id):
+            raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
+        record_path = approval_record_path(normalized_approval_id)
     else:
         record_path = latest_self_run_record_path_func()
 
@@ -244,7 +260,11 @@ async def normalize_workspace_self_run_record_response(
     current_status = str(approval_payload.get("status") or "")
     if current_status == "pending_approval" and request.cleanup_only:
         deleted_approval_id = str(approval_payload.get("approval_id") or "")
-        shutil.rmtree(record_path.parent, ignore_errors=True)
+        delete_target = require_allowed_root_path(
+            record_path.parent,
+            detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
+        )
+        shutil.rmtree(delete_target, ignore_errors=True)
         latest_after_cleanup: Optional[Dict[str, Any]] = None
         next_record_path = latest_self_run_record_path_func()
         if next_record_path and next_record_path.exists():
@@ -312,7 +332,11 @@ async def normalize_workspace_self_run_record_response(
         }
 
     deleted_approval_id = str(approval_payload.get("approval_id") or "")
-    shutil.rmtree(record_path.parent, ignore_errors=True)
+    delete_target = require_allowed_root_path(
+        record_path.parent,
+        detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
+    )
+    shutil.rmtree(delete_target, ignore_errors=True)
     latest_after_cleanup: Optional[Dict[str, Any]] = None
     next_record_path = latest_self_run_record_path_func()
     if next_record_path and next_record_path.exists():

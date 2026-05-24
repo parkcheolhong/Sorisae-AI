@@ -23,6 +23,7 @@ import zipfile
 import threading
 import tempfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from datetime import datetime
 from uuid import uuid4
 from urllib.parse import urlparse
@@ -125,6 +126,50 @@ from backend.orchestrator.chat.project_context_store import is_workspace_root_sc
 router = APIRouter(prefix="/api/llm", tags=["orchestrator"])
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
+ORCH_ALLOWED_OUTPUT_ROOTS = [
+    REPO_ROOT.resolve(),
+    (REPO_ROOT / "uploads").resolve(),
+    Path(tempfile.gettempdir()).resolve(),
+]
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _sanitize_orchestration_relative_path(path_text: str) -> str:
+    normalized = str(path_text or "").replace("\\", "/").strip().lstrip("/")
+    if not normalized:
+        raise HTTPException(status_code=400, detail="상대 경로가 비어 있습니다.")
+    relative = PurePosixPath(normalized)
+    if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
+        raise HTTPException(status_code=400, detail="허용되지 않은 상대 경로입니다.")
+    return str(relative)
+
+
+def _resolve_orchestration_output_root(path_text: str) -> Path:
+    raw = str(path_text or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="출력 경로가 비어 있습니다.")
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = REPO_ROOT / candidate
+    resolved = candidate.resolve()
+    if any(_is_relative_to(resolved, root) for root in ORCH_ALLOWED_OUTPUT_ROOTS):
+        return resolved
+    raise HTTPException(status_code=400, detail="출력 경로는 허용된 루트 내부여야 합니다.")
+
+
+def _resolve_orchestration_output_child_path(output_dir: Path, relative_path: str) -> Path:
+    safe_relative = _sanitize_orchestration_relative_path(relative_path)
+    candidate = (output_dir.resolve() / Path(safe_relative)).resolve()
+    if not _is_relative_to(candidate, output_dir.resolve()):
+        raise HTTPException(status_code=400, detail="출력 파일 경로가 출력 디렉터리를 벗어납니다.")
+    return candidate
 
 
 def _log_orchestration_phase(
@@ -4970,9 +5015,9 @@ def _compat_project_name(request: OrchestrationRequest) -> str:
 
 def _compat_output_dir(request: OrchestrationRequest, project_name: str) -> Path:
     if str(request.output_dir or "").strip():
-        output_dir = Path(str(request.output_dir)).resolve()
+        output_dir = _resolve_orchestration_output_root(str(request.output_dir))
     else:
-        base_dir = Path(str(request.output_base_dir or "uploads/projects")).resolve()
+        base_dir = _resolve_orchestration_output_root(str(request.output_base_dir or "uploads/projects"))
         output_dir = base_dir / f"{project_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
@@ -4984,11 +5029,12 @@ def _compat_write_manifest(output_dir: Path, manifest: List[Dict[str, str]]) -> 
         relative_path = str(item.get("path") or "").strip().replace('\\', '/')
         if not relative_path:
             continue
-        target_path = output_dir / relative_path
+        safe_relative_path = _sanitize_orchestration_relative_path(relative_path)
+        target_path = _resolve_orchestration_output_child_path(output_dir, safe_relative_path)
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        rendered_content = _decorate_generated_file_with_ids(relative_path, str(item.get("content") or ""))
+        rendered_content = _decorate_generated_file_with_ids(safe_relative_path, str(item.get("content") or ""))
         target_path.write_text(rendered_content, encoding="utf-8")
-        written_files.append(relative_path)
+        written_files.append(safe_relative_path)
     return written_files
 
 
@@ -11788,7 +11834,11 @@ def _build_completion_judge(
     ])
     test_file_count = len([path for path in written_files if str(path).startswith("tests/")])
     docs_file_count = len([path for path in written_files if str(path).startswith("docs/")])
-    unique_dirs = {str(Path(p).parent) for p in written_files if str(Path(p).parent) not in {"", "."}}
+    unique_dirs = {
+        str(PurePosixPath(p).parent)
+        for p in written_files
+        if str(PurePosixPath(p).parent) not in {"", "."}
+    }
     dir_count = len(unique_dirs)
     thin_file_markers: Dict[str, List[str]] = {
         "Makefile": ["run:", "test:", "check:"],
@@ -11809,7 +11859,7 @@ def _build_completion_judge(
     }
     tiny_files: List[str] = []
     for path in written_files:
-        target_path = output_dir / path
+        target_path = _resolve_orchestration_output_child_path(output_dir, str(path))
         if not target_path.exists() or not target_path.is_file() or "__pycache__" in str(path):
             continue
         normalized_path = str(path)
@@ -11838,16 +11888,16 @@ def _build_completion_judge(
         quality_findings.append(f"test coverage too small: {test_file_count}")
     generic_runtime_sources: List[str] = []
     for candidate in [
-        output_dir / "README.md",
-        output_dir / "docs" / "deployment.md",
-        output_dir / "docs" / "testing.md",
-        output_dir / "docs" / "runbook.md",
-        output_dir / "app" / "auth_routes.py",
-        output_dir / "app" / "ops_routes.py",
-        output_dir / "backend" / "core" / "auth.py",
-        output_dir / "backend" / "core" / "security.py",
-        output_dir / "infra" / "prometheus.yml",
-        output_dir / "infra" / "deploy" / "security.md",
+        _resolve_orchestration_output_child_path(output_dir, "README.md"),
+        _resolve_orchestration_output_child_path(output_dir, "docs/deployment.md"),
+        _resolve_orchestration_output_child_path(output_dir, "docs/testing.md"),
+        _resolve_orchestration_output_child_path(output_dir, "docs/runbook.md"),
+        _resolve_orchestration_output_child_path(output_dir, "app/auth_routes.py"),
+        _resolve_orchestration_output_child_path(output_dir, "app/ops_routes.py"),
+        _resolve_orchestration_output_child_path(output_dir, "backend/core/auth.py"),
+        _resolve_orchestration_output_child_path(output_dir, "backend/core/security.py"),
+        _resolve_orchestration_output_child_path(output_dir, "infra/prometheus.yml"),
+        _resolve_orchestration_output_child_path(output_dir, "infra/deploy/security.md"),
     ]:
         if candidate.exists():
             generic_runtime_sources.append(candidate.read_text(encoding="utf-8", errors="ignore").lower())
@@ -11872,11 +11922,14 @@ def _build_completion_judge(
             "marketplace publish payload": ["publish", "shipment"],
         }
         readme_text = ""
-        readme_path = output_dir / "README.md"
+        readme_path = _resolve_orchestration_output_child_path(output_dir, "README.md")
         if readme_path.exists():
             readme_text = readme_path.read_text(encoding="utf-8", errors="ignore").lower()
         frontend_page_text = ""
-        for candidate in [output_dir / "frontend" / "app" / "page.tsx", output_dir / "app" / "page.tsx"]:
+        for candidate in [
+            _resolve_orchestration_output_child_path(output_dir, "frontend/app/page.tsx"),
+            _resolve_orchestration_output_child_path(output_dir, "app/page.tsx"),
+        ]:
             if candidate.exists():
                 frontend_page_text = candidate.read_text(encoding="utf-8", errors="ignore").lower()
                 break
@@ -11898,15 +11951,15 @@ def _build_completion_judge(
         }
         runtime_sources: List[str] = []
         for candidate in [
-            output_dir / "README.md",
-            output_dir / "docs" / "deployment.md",
-            output_dir / "docs" / "testing.md",
-            output_dir / "docs" / "runbook.md",
-            output_dir / "docs" / "shipping_readme.md",
-            output_dir / "app" / "routes.py",
-            output_dir / "app" / "ops_routes.py",
-            output_dir / "app" / "auth_routes.py",
-            output_dir / "app" / "services" / "runtime_service.py",
+            _resolve_orchestration_output_child_path(output_dir, "README.md"),
+            _resolve_orchestration_output_child_path(output_dir, "docs/deployment.md"),
+            _resolve_orchestration_output_child_path(output_dir, "docs/testing.md"),
+            _resolve_orchestration_output_child_path(output_dir, "docs/runbook.md"),
+            _resolve_orchestration_output_child_path(output_dir, "docs/shipping_readme.md"),
+            _resolve_orchestration_output_child_path(output_dir, "app/routes.py"),
+            _resolve_orchestration_output_child_path(output_dir, "app/ops_routes.py"),
+            _resolve_orchestration_output_child_path(output_dir, "app/auth_routes.py"),
+            _resolve_orchestration_output_child_path(output_dir, "app/services/runtime_service.py"),
         ]:
             if candidate.exists():
                 runtime_sources.append(candidate.read_text(encoding="utf-8", errors="ignore").lower())
@@ -11943,7 +11996,10 @@ def _build_completion_judge(
     )
     verified_target_count = int(operational_evidence_payload.get("verified_target_count") or 0)
     integration_status = str(operational_evidence_payload.get("integration_status") or "unknown").strip()
-    customer_generation_mode = bool(output_dir.exists() and (output_dir / "docs" / "generation-plan.json").exists())
+    customer_generation_mode = bool(
+        output_dir.exists()
+        and _resolve_orchestration_output_child_path(output_dir, "docs/generation-plan.json").exists()
+    )
     if required_target_count > 0 and verified_target_count < required_target_count:
         if not customer_generation_mode:
             failed_reasons.append(
