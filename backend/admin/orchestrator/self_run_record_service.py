@@ -167,10 +167,6 @@ def _delete_all_pending_self_run_records(
         key=lambda path: path.name,
         reverse=True,
     ):
-        candidate_dir = require_allowed_root_path(
-            candidate_dir,
-            detail="자가 실행 삭제 대상 경로가 허용 범위를 벗어났습니다.",
-        )
         record_path = candidate_dir / "approval.json"
         if not record_path.exists():
             continue
@@ -181,7 +177,13 @@ def _delete_all_pending_self_run_records(
         if str(payload.get("status") or "") != "pending_approval":
             continue
         deleted_approval_ids.append(str(payload.get("approval_id") or candidate_dir.name))
-        shutil.rmtree(candidate_dir, ignore_errors=True)
+        shutil.rmtree(
+            require_allowed_root_path(
+                root_dir / candidate_dir.name,
+                detail="자가 실행 삭제 대상 경로가 허용 범위를 벗어났습니다.",
+            ),
+            ignore_errors=True,
+        )
 
     return {
         "deleted_approval_ids": deleted_approval_ids,
@@ -200,17 +202,16 @@ def get_workspace_self_run_record_response(
     stabilize_running_self_run_record: Callable[[Path, Dict[str, Any]], Dict[str, Any]],
     approval_payload_to_response: Callable[[Dict[str, Any]], Dict[str, Any]],
 ) -> Dict[str, Any] | Response:
+    if not approval_id and not latest:
+        raise HTTPException(status_code=404, detail="자가 실행 기록을 찾을 수 없습니다.")
+
     record_path: Optional[Path] = None
     if approval_id:
         record_path = approval_record_path(_normalize_approval_id(approval_id))
-    elif latest:
-        record_path = latest_self_run_record_path_func(pending_only=pending_only)
     else:
-        raise HTTPException(status_code=404, detail="자가 실행 기록을 찾을 수 없습니다.")
+        record_path = latest_self_run_record_path_func(pending_only=pending_only)
 
     if not record_path or not record_path.exists():
-        if approval_id:
-            return Response(status_code=204)
         return Response(status_code=204)
 
     approval_payload = load_json_file(record_path)

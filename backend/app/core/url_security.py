@@ -61,7 +61,7 @@ def _validate_http_parts(parsed: ParseResult, allow_private_hosts: bool) -> tupl
     if not hostname:
         raise ValueError("base URL hostname is required")
 
-    if parsed.port is not None and not (1 <= int(parsed.port) <= 65535):
+    if parsed.port is not None and not (1 <= parsed.port <= 65535):
         raise ValueError("base URL port is out of range")
     if not allow_private_hosts and _is_private_or_loopback(hostname):
         raise ValueError("private/loopback hosts are not allowed")
@@ -69,7 +69,7 @@ def _validate_http_parts(parsed: ParseResult, allow_private_hosts: bool) -> tupl
 
 
 def _build_normalized_url(parsed: ParseResult, scheme: str, hostname: str) -> str:
-    netloc = hostname if parsed.port is None else f"{hostname}:{int(parsed.port)}"
+    netloc = hostname if parsed.port is None else f"{hostname}:{parsed.port}"
     path = str(parsed.path or "").rstrip("/")
     return f"{scheme}://{netloc}{path}"
 
