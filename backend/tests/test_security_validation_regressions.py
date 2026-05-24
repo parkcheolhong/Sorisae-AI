@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 
 from backend.app.core.url_security import parse_http_base_url
 from backend.admin.orchestrator.path_utils import require_allowed_root_path
@@ -25,9 +26,12 @@ def test_parse_http_base_url_marks_placeholder_domains() -> None:
 
 
 def test_require_allowed_root_path_blocks_parent_traversal() -> None:
+    # Paths containing ".." must be rejected regardless of resolved location.
     traversal_path = Path("/tmp/../etc/passwd")
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException) as exc_info:
         require_allowed_root_path(traversal_path, detail="blocked")
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "blocked"
 
 
 def test_split_multi_command_text_handles_long_linear_input() -> None:
