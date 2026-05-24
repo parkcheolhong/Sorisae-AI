@@ -55,7 +55,8 @@
     "@xmldom/xmldom": "^0.9.10",
     "postcss": "^8.5.15",
     "fast-xml-parser": "^5.7.3",
-    "send": "^1.2.1"
+    "send": "^1.2.1",
+    "uuid": "^11.1.1"
   },
   "expo": {
     "install": {
