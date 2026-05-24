@@ -84,7 +84,10 @@ def split_multi_command_text(source_text: str) -> List[str]:
     normalized = str(source_text or "").replace("\r", "\n")
     if not normalized.strip():
         return []
-    raw_parts = re.split(r"\n+|\s+/\s+|\s*;\s*", normalized)
+    raw_parts = list(
+        part
+        for part in normalized.replace("\n", ";").replace(" / ", ";").split(";")
+    )
     commands: List[str] = []
     for part in raw_parts:
         cleaned = re.sub(r"^\s*(?:\d+[.)-]\s*|[-•*]+\s*)", "", str(part or "")).strip()

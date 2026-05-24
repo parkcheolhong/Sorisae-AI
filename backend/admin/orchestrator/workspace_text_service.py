@@ -6,7 +6,7 @@ import re
 
 from fastapi import HTTPException
 
-from .path_utils import admin_allowed_roots, admin_workspace_root, is_relative_to, resolve_marketplace_upload_root_path
+from .path_utils import admin_workspace_root, is_relative_to, require_allowed_root_path, resolve_marketplace_upload_root_path
 
 ADMIN_TEXT_FILE_SUFFIXES = {
     ".txt", ".md", ".json", ".yml", ".yaml", ".py", ".ts", ".tsx", ".js", ".jsx", ".html", ".css", ".scss", ".env", ".log", ".mmd",
@@ -16,6 +16,7 @@ ADMIN_TEXT_FILE_NAMES = {
 }
 ADMIN_TEXT_MAX_BYTES = 200 * 1024
 ADMIN_TEXT_LIST_LIMIT = 200
+ADMIN_WORKSPACE_PATH_DENIED_DETAIL = "허용된 관리자 런타임/워크스페이스 내부 경로만 열 수 있습니다."
 
 
 def resolve_marketplace_host_root_text(read_admin_env_values, admin_env_path) -> str:
@@ -69,27 +70,27 @@ def resolve_admin_workspace_path(
 
         candidate = None
         for next_candidate in candidates:
-            resolved_candidate = next_candidate.resolve()
-            if any(
-                is_relative_to(resolved_candidate, allowed_root)
-                for allowed_root in admin_allowed_roots()
-            ):
+            try:
+                resolved_candidate = require_allowed_root_path(
+                    next_candidate,
+                    detail=ADMIN_WORKSPACE_PATH_DENIED_DETAIL,
+                )
                 candidate = resolved_candidate
                 break
+            except HTTPException:
+                continue
         if candidate is None:
-            candidate = candidates[0].resolve()
+            candidate = require_allowed_root_path(
+                candidates[0],
+                detail=ADMIN_WORKSPACE_PATH_DENIED_DETAIL,
+            )
     else:
         candidate = workspace_root
 
-    if not any(
-        is_relative_to(candidate, allowed_root)
-        for allowed_root in admin_allowed_roots()
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="허용된 관리자 런타임/워크스페이스 내부 경로만 열 수 있습니다.",
-        )
-    return candidate
+    return require_allowed_root_path(
+        candidate,
+        detail=ADMIN_WORKSPACE_PATH_DENIED_DETAIL,
+    )
 
 
 def is_admin_text_file(path: Path) -> bool:

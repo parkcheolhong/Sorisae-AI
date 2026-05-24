@@ -6,6 +6,8 @@ import os
 import re
 import tempfile
 
+from fastapi import HTTPException
+
 
 def admin_workspace_root() -> Path:
     return Path(__file__).resolve().parents[3]
@@ -71,3 +73,13 @@ def resolve_marketplace_upload_root_path() -> Path:
     if configured_upload_root:
         return Path(configured_upload_root).expanduser().resolve()
     return (admin_workspace_root() / "uploads").resolve()
+
+
+def require_allowed_root_path(path: Path, *, detail: str) -> Path:
+    resolved_path = path.resolve()
+    if any(
+        is_relative_to(resolved_path, allowed_root)
+        for allowed_root in admin_allowed_roots()
+    ):
+        return resolved_path
+    raise HTTPException(status_code=400, detail=detail)
