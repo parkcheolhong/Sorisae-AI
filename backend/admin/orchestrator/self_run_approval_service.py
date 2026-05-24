@@ -4,9 +4,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from datetime import datetime
 import shutil
+import json
+import re
 
 from fastapi import HTTPException
 from backend.llm.target_patch_registry import build_target_patch_registry_snapshot
+from .path_utils import is_relative_to, require_allowed_root_path, resolve_safe_child_path
 
 
 def _unique_ordered(values: List[Any]) -> List[str]:
@@ -50,7 +53,11 @@ def _load_traceability_registry_metadata(clone_dir: Path, orchestration_result: 
             continue
         traceability_path = Path(relative_path)
         if not traceability_path.is_absolute():
-            traceability_path = clone_dir / traceability_path
+            traceability_path = resolve_safe_child_path(
+                clone_dir,
+                relative_path,
+                detail="traceability 경로가 허용 범위를 벗어났습니다.",
+            )
         if not traceability_path.exists() or not traceability_path.is_file():
             continue
         try:
@@ -160,15 +167,27 @@ def sync_clone_into_source(
 
     diff_summary = diff_workspace_trees(source_dir, clone_dir)
     for rel_path in diff_summary["deleted_files"]:
-        target = source_dir / Path(rel_path)
+        target = resolve_safe_child_path(
+            source_dir,
+            str(rel_path or ""),
+            detail="동기화 대상 삭제 경로가 허용 범위를 벗어났습니다.",
+        )
         if target.exists() and target.is_file():
             target.unlink()
 
     for rel_path in (
         diff_summary["added_files"] + diff_summary["modified_files"]
     ):
-        clone_file = clone_dir / Path(rel_path)
-        target_file = source_dir / Path(rel_path)
+        clone_file = resolve_safe_child_path(
+            clone_dir,
+            str(rel_path or ""),
+            detail="동기화 원본 경로가 허용 범위를 벗어났습니다.",
+        )
+        target_file = resolve_safe_child_path(
+            source_dir,
+            str(rel_path or ""),
+            detail="동기화 대상 경로가 허용 범위를 벗어났습니다.",
+        )
         target_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(clone_file, target_file)
 
@@ -191,7 +210,13 @@ def approve_workspace_self_run_response(
     diff_workspace_trees: Callable[[Path, Path], Dict[str, Any]],
     sync_clone_into_source_func: Callable[[Path, Path], Dict[str, Any]],
 ) -> Dict[str, Any]:
-    record_path = approval_record_path(payload.approval_id)
+    approval_id = str(getattr(payload, "approval_id", "") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", approval_id):
+        raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
+    record_path = require_allowed_root_path(
+        approval_record_path(approval_id),
+        detail="승인 기록 경로가 허용 범위를 벗어났습니다.",
+    )
     if not record_path.exists():
         raise HTTPException(status_code=404, detail="승인 대기 기록을 찾을 수 없습니다.")
 

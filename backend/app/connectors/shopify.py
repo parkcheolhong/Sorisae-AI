@@ -4,15 +4,20 @@
 # CHUNK-ID: CHUNK-BACKEND-APP-CONNECTORS-SHOPIFY-PY-001
 
 import httpx
+import os
 
 from backend.app.connectors.base import BaseConnector
+from backend.app.core.url_security import parse_http_base_url
 
 class ShopifyConnector(BaseConnector):
     def __init__(self, base_url: str) -> None:
-        self.base_url = base_url.rstrip('/')
+        allow_private_hosts = str(os.getenv("ALLOW_PRIVATE_SHOPIFY_HOSTS", "false")).strip().lower() in {"1", "true", "yes", "on"}
+        parsed = parse_http_base_url(base_url, allow_private_hosts=allow_private_hosts)
+        self.base_url = parsed.normalized.rstrip('/')
+        self._simulated = parsed.placeholder
 
     def sync_products(self) -> list[dict]:
-        if 'example.com' in self.base_url:
+        if self._simulated:
             return [
                 {'id': 1, 'name': 'Starter', 'price': 10.0},
                 {'id': 2, 'name': 'Growth', 'price': 19.0},

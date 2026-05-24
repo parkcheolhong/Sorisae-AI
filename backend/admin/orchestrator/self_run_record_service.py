@@ -8,7 +8,6 @@ import re
 
 from fastapi import HTTPException
 from fastapi.responses import Response
-
 from .path_utils import require_allowed_root_path
 
 
@@ -167,6 +166,10 @@ def _delete_all_pending_self_run_records(
         key=lambda path: path.name,
         reverse=True,
     ):
+        candidate_dir = require_allowed_root_path(
+            candidate_dir,
+            detail="자가 실행 삭제 대상 경로가 허용 범위를 벗어났습니다.",
+        )
         record_path = candidate_dir / "approval.json"
         if not record_path.exists():
             continue

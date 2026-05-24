@@ -41,7 +41,13 @@ def inspect_worker_log_tail(
             admin_env_path=admin_env_path,
         )
     except Exception:
-        target = Path(normalized)
+        return {
+            'status': 'failed',
+            'detail': f'허용된 워크스페이스 경로가 아닙니다: {normalized}',
+            'tail': '',
+            'exists': False,
+            'is_recent': False,
+        }
     if not target.exists() or not target.is_file():
         return {
             'status': 'failed',
