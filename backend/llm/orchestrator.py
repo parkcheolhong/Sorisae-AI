@@ -155,9 +155,15 @@ def _resolve_orchestration_output_root(path_text: str) -> Path:
     raw = str(path_text or "").strip()
     if not raw:
         raise HTTPException(status_code=400, detail="출력 경로가 비어 있습니다.")
-    candidate = Path(raw).expanduser()
-    if not candidate.is_absolute():
-        candidate = REPO_ROOT / candidate
+    normalized = raw.replace("\\", "/").strip()
+    if normalized.startswith("/"):
+        normalized = normalize_project_root(normalized)
+    if re.match(r"^[A-Za-z]:/", normalized):
+        normalized = normalize_project_root(normalized)
+    safe_normalized = re.sub(r"[^a-zA-Z0-9._/-]+", "-", normalized).strip("/.-")
+    if not safe_normalized:
+        safe_normalized = "uploads/projects"
+    candidate = REPO_ROOT / safe_normalized
     resolved = candidate.resolve()
     if any(_is_relative_to(resolved, root) for root in ORCH_ALLOWED_OUTPUT_ROOTS):
         return resolved
@@ -166,7 +172,10 @@ def _resolve_orchestration_output_root(path_text: str) -> Path:
 
 def _resolve_orchestration_output_child_path(output_dir: Path, relative_path: str) -> Path:
     safe_relative = _sanitize_orchestration_relative_path(relative_path)
-    candidate = (output_dir.resolve() / Path(safe_relative)).resolve()
+    candidate = output_dir.resolve()
+    for part in safe_relative.split("/"):
+        candidate = candidate / part
+    candidate = candidate.resolve()
     if not _is_relative_to(candidate, output_dir.resolve()):
         raise HTTPException(status_code=400, detail="출력 파일 경로가 출력 디렉터리를 벗어납니다.")
     return candidate

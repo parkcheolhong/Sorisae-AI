@@ -75,7 +75,7 @@ def resolve_marketplace_upload_root_path() -> Path:
 
 
 def require_allowed_root_path(path_value: Path, *, detail: str) -> Path:
-    candidate = path_value.resolve()
+    candidate = path_value
     if any(is_relative_to(candidate, allowed_root) for allowed_root in admin_allowed_roots()):
         return candidate
     raise HTTPException(status_code=400, detail=detail)

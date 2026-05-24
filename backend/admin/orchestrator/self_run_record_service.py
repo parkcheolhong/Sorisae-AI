@@ -259,9 +259,11 @@ async def normalize_workspace_self_run_record_response(
     approval_payload = stabilize_running_self_run_record(record_path, approval_payload)
     current_status = str(approval_payload.get("status") or "")
     if current_status == "pending_approval" and request.cleanup_only:
-        deleted_approval_id = str(approval_payload.get("approval_id") or "")
+        deleted_approval_id = str(approval_payload.get("approval_id") or "").strip()
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", deleted_approval_id):
+            raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
         delete_target = require_allowed_root_path(
-            record_path.parent,
+            admin_self_run_root() / deleted_approval_id,
             detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
         )
         shutil.rmtree(delete_target, ignore_errors=True)
@@ -331,9 +333,11 @@ async def normalize_workspace_self_run_record_response(
             "latest": approval_payload_to_response(approval_payload),
         }
 
-    deleted_approval_id = str(approval_payload.get("approval_id") or "")
+    deleted_approval_id = str(approval_payload.get("approval_id") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", deleted_approval_id):
+        raise HTTPException(status_code=400, detail="approval_id 형식이 올바르지 않습니다.")
     delete_target = require_allowed_root_path(
-        record_path.parent,
+        admin_self_run_root() / deleted_approval_id,
         detail="삭제 대상 경로가 허용 범위를 벗어났습니다.",
     )
     shutil.rmtree(delete_target, ignore_errors=True)
