@@ -199,7 +199,7 @@ def add_missing_columns(
     *,
     inspector=None,
 ) -> bool:
-    active_inspector = inspector or sqlalchemy_inspect(engine)
+    active_inspector = inspector or sqlalchemy_inspect(connection)
     if not active_inspector.has_table(table_name):
         return False
 
