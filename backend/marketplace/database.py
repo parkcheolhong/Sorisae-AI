@@ -5,8 +5,8 @@ import threading
 from pathlib import Path
 from urllib.parse import quote_plus
 
-from sqlalchemy import create_engine, inspect as sqlalchemy_inspect
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy import create_engine, inspect as sqlalchemy_inspect, text
+from sqlalchemy.engine import Connection, Engine, make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -190,6 +190,30 @@ SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+
+def add_missing_columns(
+    connection: Connection,
+    table_name: str,
+    columns: dict[str, str],
+    *,
+    inspector=None,
+) -> bool:
+    active_inspector = inspector or sqlalchemy_inspect(engine)
+    if not active_inspector.has_table(table_name):
+        return False
+
+    existing_columns = {
+        column["name"]
+        for column in active_inspector.get_columns(table_name)
+    }
+    for column_name, column_type in columns.items():
+        if column_name in existing_columns:
+            continue
+        connection.execute(
+            text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+        )
+    return True
 
 
 def _get_or_create_engine() -> Engine:
