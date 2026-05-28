@@ -17,7 +17,8 @@
         "e2e:marketplace:shinsegye-safe": "playwright test -c playwright.config.ts tests/marketplace-shinsegye-safe-integration.playwright.spec.ts --project chromium --no-deps",
         "ci:marketplace:shinsegye-safe:2round": "npm run e2e:marketplace:shinsegye-safe && npm run e2e:marketplace:shinsegye-safe",
         "ci:admin-regression:smoke": "playwright test -c playwright.config.ts tests/admin-login.playwright.spec.ts tests/admin-dashboard-ops.playwright.spec.ts tests/admin-dashboard-capability-notice.playwright.spec.ts --project chromium",
-        "ci:admin-regression:full": "playwright test -c playwright.config.ts tests/admin*.playwright.spec.ts --project chromium"
+
+      
     },
     "dependencies": {
         "@types/node": "^20.14.12",
