@@ -2080,7 +2080,7 @@ export default function MarketplaceOrchestratorClient({
                                                 <button type="button" onClick={() => void createStageRun()} disabled={!token || submitLoading} className="rounded-2xl border border-[#30363d] bg-[#11161d] px-5 py-3 text-base font-semibold text-white">
                                                     단계 카드 시작
                                                 </button>
-                                                <button type="button" onClick={submitOrchestration} disabled={!token || submitLoading} className="rounded-2xl bg-[#2a7cff] px-5 py-3 text-base font-bold text-white">
+                                                <button type="button" onClick={() => void submitOrchestration()} disabled={!token || submitLoading} className="rounded-2xl bg-[#2a7cff] px-5 py-3 text-base font-bold text-white">
                                                     {submitLoading ? '실행 중...' : '주문하기'}
                                                 </button>
                                             </div>
