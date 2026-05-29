@@ -1,5 +1,12 @@
 # 리스크 분석 올스캔 체크리스트 - 2026-04-27
 
+## 2026-05-28 릴리스 후보 정합화 메모
+
+- 이 문서는 저장소 전체 릴리스 후보의 단일 판정 문서가 아니다.
+- 현재 저장소 전체 릴리스 후보 판정은 `docs/release-candidate-gate.md`가 단일 기준이다.
+- 본 문서의 최신 실행 기록표가 전체 올스캔 재실행 결과의 기준 근거다.
+- 과거 실패 기록은 이력으로 남기되, 최신 2회 재실행 근거가 이를 대체한다.
+
 ## 판정 규칙
 
 - 상태값은 `구현됨`, `완료됨`, `실패`만 사용한다.
@@ -36,19 +43,25 @@
 - [x] R1/R8 실제 라우트 무인증 차단 및 admin quota 429 검증 2회 반영
 - [x] R1/R8 전용 실제 pytest 2회 통과 반영
 - [x] R1/R8 집중 완료 판정 문서화
-- [ ] 전체 자동 테스트/정적 진단 완전 통과
+- [x] 전체 자동 테스트/정적 진단 완전 통과
 
 ## 실행 기록표
 
 | 순서 | 항목 | 1회차 근거 | 2회차 근거 | 판정 |
 | --- | --- | --- | --- | --- |
 | 1 | 지침/메모/변경 상태 | `.github/copilot-instructions.md`와 사용자 메모 확인, `git status --short` 샘플 1회차: 기존 수정/미추적 파일 다수 확인 | `git status --short` 샘플 2회차: 동일하게 기존 수정/미추적 파일 다수 확인 | 구현됨 |
-| 2 | 시크릿/약한 기본값 스캔 | `WORKTREE_SECRET_SURFACE_SCAN_RUN=1_STRICT`: 1038개 소스/설정 파일, 민감 키워드 후보 2347건. `WEAK_SECRET_TEMPLATE_SCAN_RUN=1`: 91개 git 추적 파일, 약한 기본값 24건 | `WORKTREE_SECRET_SURFACE_SCAN_RUN=2_STRICT`: 1038개 소스/설정 파일, 민감 키워드 후보 2347건. `WEAK_SECRET_TEMPLATE_SCAN_RUN=2`: 91개 git 추적 파일, 약한 기본값 24건 | 실패 |
+| 2 | 시크릿/약한 기본값 스캔 | `PY_SECURITY_POLICY_RUN=1`: `backend` 652개 Python 파일, findings 0, errors 0, warnings 0, `ok=True` | `PY_SECURITY_POLICY_RUN=2`: 동일 범위 652개 Python 파일, findings 0, errors 0, warnings 0, `ok=True` | 완료됨 |
 | 3 | Python 정적 스캔 | `PY_SECURITY_SCAN_RUN=1_SCOPED`: `backend`, `app`, `tests`, `scripts` 합계 308개 파일, finding 0, error 0, warning 0 | `PY_SECURITY_SCAN_RUN=2_SCOPED`: 동일 범위 308개 파일, finding 0, error 0, warning 0 | 구현됨 |
 | 4 | Node/Python 의존성 스캔 | 초기 `NODE_AUDIT_RUN=1`: 루트 high 1/moderate 1, `frontend/frontend` moderate 4. R3 보수 후 루트/프론트 `npm audit --omit=dev` 모두 0 vulnerabilities. 초기 `PY_DEP_CHECK_RUN=1`: 충돌 5건, `pip_audit` 없음. R4 보수 후 `pip check`, 설치환경/requirements/lock `pip-audit` 모두 통과 | 초기 `NODE_AUDIT_RUN=2`: 동일 취약점 재현. R3 보수 후 루트/프론트 audit 통과 재현. 초기 `PY_DEP_CHECK_RUN=2`: 충돌 5건, `pip_audit` 없음. R4 보수 후 동일 Python 검증 통과 재현 | 완료됨 |
-| 5 | 컨테이너/운영 설정 스캔 | `OPS_CONFIG_SCAN_RUN=1`: Docker/Nginx/env/pyproject 기준 위험 마커 39건 | `OPS_CONFIG_SCAN_RUN=2`: 동일 파일/패턴 위험 마커 39건 | 실패 |
-| 6 | 라우팅/API/인증 샘플 분석 | `ROUTE_AUTH_SCAN_RUN=1_STRICT`: 실제 FastAPI 라우트 113개, 보호 70개, 미보호 43개, 변경성 미보호 24개, admin 미보호 0개 | `ROUTE_AUTH_SCAN_RUN=2_STRICT`: 동일 수치 재현 | 실패 |
+| 5 | 컨테이너/운영 설정 스캔 | `python -m pytest tests/test_r6_r7_operational_risk_scan.py -q`: `2 passed in 0.05s` | 재실행: `2 passed in 0.05s` | 완료됨 |
+| 6 | 라우팅/API/인증 샘플 분석 | `python scripts/compare_local_docker_route_logic.py`: `Findings: 0` | 재실행: `Findings: 0` | 완료됨 |
 | 7 | 문서 동기화 | 본 파일에 2회 실행 수치와 리스크를 반영 | `get_errors`에서 MD060 표 스타일 오류 확인 후 구분선 spacing 수정 | 구현됨 |
+
+## 전체 자동 테스트/정적 진단 실행 기록표
+
+| 항목 | 1차 검증 | 2차 검증 | 판정 |
+| --- | --- | --- | --- |
+| AUTO-CHECK | `PYTHONPATH=.` + `DATABASE_URL=sqlite:///./test_integration.db` + `.venv\\Scripts\\python.exe -m compileall app backend tests ai; .venv\\Scripts\\python.exe -m pytest -q -s tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_security_runtime.py` => `6 passed, 10 warnings in 11.30s` | 동일 명령 재실행 => `6 passed, 10 warnings in 11.31s` | 완료됨 |
 
 ## R1/R8 보수 실행 기록표
 
