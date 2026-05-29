@@ -15,6 +15,7 @@ from .flow_trace import (
 )
 from .project_context_store import get_project_context_bundle, upsert_project_memory_snapshot
 from .llm_client import call_orchestrator_chat_llm
+from .session_store import load_chat_session_snapshot, save_chat_session_snapshot
 from .web_search import build_web_grounding_block, fetch_web_grounding, should_use_web_search
 from .models import (
     AutoConnectMeta,
@@ -26,6 +27,7 @@ from .models import (
     OrchestratorChatResponse,
     ProposalItem,
     TargetPatchHint,
+    TechnologyRecommendation,
     WebGroundingItem,
 )
 
@@ -111,6 +113,77 @@ def _should_force_reciprocal_question(requested_conversation_mode: str, response
     if "reverse_question" in style or "reciprocal" in style:
         return True
     return False
+
+
+def _merge_conversation_dicts(*conversation_sets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    merged: List[Dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for conversation in conversation_sets:
+        for item in conversation or []:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role") or "").strip()
+            content = str(item.get("content") or "").strip()
+            timestamp = str(item.get("timestamp") or "").strip()
+            if not role or not content:
+                continue
+            key = (role, content, timestamp)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(dict(item))
+    return merged[-60:]
+
+
+def _message_models_to_dicts(messages: List[ConversationMessage]) -> List[Dict[str, Any]]:
+    return [message.model_dump() for message in messages]
+
+
+def _extract_session_id(request: OrchestratorChatRequest, auto_connect: AutoConnectMeta) -> str:
+    return str(request.session_id or request.run_id or auto_connect.connection_id or "").strip()
+
+
+def _load_session_state(
+    request: OrchestratorChatRequest,
+    auto_connect: AutoConnectMeta,
+) -> tuple[str, Dict[str, Any]]:
+    session_id = _extract_session_id(request, auto_connect)
+    snapshot = load_chat_session_snapshot(session_id) if session_id else {}
+    if snapshot:
+        request.conversation = _merge_conversation_dicts(
+            list(snapshot.get("conversation") or []),
+            list(request.conversation or []),
+        )
+        session_memory = dict(snapshot.get("project_memory") or {})
+        session_memory.update(dict(request.project_memory or {}))
+        request.project_memory = session_memory
+    return session_id, snapshot
+
+
+def _save_response_session(
+    session_id: str,
+    response: OrchestratorChatResponse,
+    *,
+    project_memory: Dict[str, Any],
+) -> None:
+    if not session_id:
+        return
+    save_chat_session_snapshot(
+        session_id,
+        {
+            "session_id": session_id,
+            "run_id": response.run_id,
+            "updated_at": datetime.now().isoformat(),
+            "conversation": _message_models_to_dicts(response.conversation),
+            "conversation_summary": response.conversation_summary,
+            "inferred_goal": response.inferred_goal,
+            "project_memory": project_memory,
+            "open_questions": [item.prompt for item in response.clarification_questions],
+            "technology_recommendations": [item.model_dump() for item in response.technology_recommendations],
+            "new_technology_candidates": list(response.new_technology_candidates or []),
+            "next_action_suggestions": [item.model_dump() for item in response.next_action_suggestions],
+        },
+    )
 
 
 def _resolve_tone_preset(
@@ -601,11 +674,17 @@ def build_chat_system_prompt(
             "설명만 끝내지 말고 사용자가 바로 이어서 실험·검증·자가확장으로 넘어갈 수 있게 다음 선택지를 제안하세요.",
             "자동 패널 숨김 여부와 관계없이 대화 자체는 막지 말고 자유 질의에 계속 응답하세요.",
         ])
-    if _is_freepace_conversation_mode(requested_conversation_mode):
+    if _should_force_reciprocal_question(requested_conversation_mode, response_style):
+        base_lines.extend([
+            "역질문 모드입니다. 답변 끝에는 반드시 사용자가 다음 결정을 쉽게 내릴 수 있는 확인 질문 1개를 붙이세요.",
+            "질문은 구현 조건, 기술 후보 선택, 리스크 허용 범위, 실행 여부 중 현재 맥락에 가장 중요한 1개만 선택하세요.",
+            "자유대화 톤은 유지하되, 실행은 사용자가 /run 또는 명시 버튼으로 승인하기 전까지 시작하지 마세요.",
+        ])
+    elif _is_freepace_conversation_mode(requested_conversation_mode):
         base_lines.extend([
             "자연 대화 모드입니다. 사람과 대화하듯 짧고 자연스럽게 답하세요.",
             "답변은 먼저 질문 의도에 바로 반응하고, 필요 시에만 후속 질문 1개를 덧붙이세요.",
-            "불필요한 체크리스트, 고정 템플릿, 강제 역질문을 붙이지 마세요.",
+            "역질문 모드가 명시되지 않은 자유대화에서는 불필요한 체크리스트와 고정 템플릿을 붙이지 마세요.",
             "사용자가 명시적으로 요청할 때만 단계화/형식화된 응답을 제공합니다.",
         ])
     return "\n".join(base_lines)
@@ -797,6 +876,75 @@ def build_new_technology_candidates(message: str, conversation_stage: str) -> Li
             "websocket handshake monitor",
         ])
     return list(dict.fromkeys(candidates))[:5]
+
+
+def build_technology_recommendations(
+    message: str,
+    reply_content: str,
+    *,
+    web_results: List[WebGroundingItem],
+    fallback_candidates: List[str],
+) -> List[TechnologyRecommendation]:
+    signal = f"{message}\n{reply_content}".lower()
+    source_candidates: List[tuple[str, str]] = []
+    for item in web_results[:3]:
+        title = str(item.title or "").strip()
+        if title:
+            source_candidates.append((title[:80], "web"))
+    for candidate in fallback_candidates:
+        normalized = str(candidate or "").strip()
+        if normalized:
+            source_candidates.append((normalized, "llm-reply"))
+    if not source_candidates and any(token in signal for token in ("대화", "역질문", "오케스트레이터", "세션", "맥락")):
+        source_candidates.extend([
+            ("dialogue state memory", "llm-reply"),
+            ("structured proposal renderer", "llm-reply"),
+            ("reciprocal-question policy router", "llm-reply"),
+        ])
+
+    recommendations: List[TechnologyRecommendation] = []
+    for title, source in source_candidates:
+        lowered_title = title.lower()
+        if any(token in lowered_title for token in ("memory", "session", "state", "맥락")):
+            risk = "중간: 개인정보/장기 메모리 보존 정책과 삭제 UX가 필요합니다."
+            difficulty = "중간: session_id 저장소, 요약기, 충돌 병합이 필요합니다."
+            cost = "낮음~중간: 텍스트 요약 저장 중심이면 인프라 비용은 작고 LLM 요약 호출 비용이 추가됩니다."
+            alternative = "브라우저 localStorage-only 대화 복원"
+        elif any(token in lowered_title for token in ("proposal", "structured", "renderer", "card", "제안")):
+            risk = "낮음: 응답 스키마와 UI 렌더링 불일치만 관리하면 됩니다."
+            difficulty = "낮음~중간: 기존 proposal/next_action 필드를 확장 렌더링하면 됩니다."
+            cost = "낮음: 추가 API 없이 기존 chat 응답에 포함 가능합니다."
+            alternative = "일반 텍스트 답변에 제안 섹션만 포함"
+        elif any(token in lowered_title for token in ("question", "reciprocal", "reverse", "역질문")):
+            risk = "낮음: 과도한 질문으로 UX가 느려질 수 있어 선택 모드에서만 강제해야 합니다."
+            difficulty = "낮음: conversation_mode와 prompt 정책 연결이 핵심입니다."
+            cost = "낮음: 별도 인프라 없이 프롬프트/후처리 정책으로 구현 가능합니다."
+            alternative = "사용자가 직접 '역질문해줘'라고 요청할 때만 질문"
+        else:
+            risk = "중간: 최신성, 라이선스, 운영 안정성을 별도 검증해야 합니다."
+            difficulty = "중간: 현재 코드 경계와 데이터 계약에 맞춘 어댑터가 필요합니다."
+            cost = "중간: 검색/검증 호출과 운영 모니터링 비용이 추가될 수 있습니다."
+            alternative = "검증된 내부 패턴을 먼저 적용하고 최신 후보는 실험 플래그로 격리"
+        recommendations.append(
+            TechnologyRecommendation(
+                title=title,
+                source=source,
+                adoption_risk=risk,
+                implementation_difficulty=difficulty,
+                operating_cost=cost,
+                alternative=alternative,
+                rationale="현재 대화와 LLM/검색 응답에서 반복적으로 나타난 신호를 기반으로 추천했습니다.",
+            )
+        )
+    deduped: List[TechnologyRecommendation] = []
+    seen: set[str] = set()
+    for item in recommendations:
+        key = item.title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped[:5]
 
 
 def build_target_patch_hints(message: str, conversation_stage: str) -> List[TargetPatchHint]:
@@ -1005,9 +1153,19 @@ async def answer_orchestrator_chat(
     message = str(request.message or "").strip() or "요청 내용을 다시 입력하세요."
     message_lower = message.lower()
     lightweight = is_lightweight_chat_request(request, request_context)
+    session_id, session_snapshot = _load_session_state(request, auto_connect)
     requested_conversation_mode = str(request.conversation_mode or "auto").strip().lower() or "auto"
     response_style = str(request.response_style or "balanced").strip().lower() or "balanced"
     tone_preset = str(request.tone_preset or "auto").strip().lower() or "auto"
+    reverse_question_mode = str(
+        request.reverse_question_mode
+        or (request.project_memory or {}).get("reverse_question_mode")
+        or "",
+    ).strip().lower()
+    if reverse_question_mode and requested_conversation_mode not in {"directive_fixed", "research_fixed"}:
+        requested_conversation_mode = "reverse_question"
+        if response_style in {"", "auto", "balanced"}:
+            response_style = f"reverse_question:{reverse_question_mode}"
     selected_tone_from_message = _extract_tone_preset_from_text(message)
     selected_tone_from_history = _infer_tone_preset_from_history(request.conversation)
     if _needs_tone_selection(
@@ -1052,6 +1210,7 @@ async def answer_orchestrator_chat(
                 conversation=history,
                 output_dir=request.output_dir,
                 run_id=request.run_id or uuid4().hex,
+                session_id=session_id or None,
                 grounding_mode="internal",
                 grounding_note="대화 스타일 선택 유도",
                 companion_mode=request.companion_mode,
@@ -1141,6 +1300,7 @@ async def answer_orchestrator_chat(
             conversation=history,
             output_dir=request.output_dir,
             run_id=request.run_id or uuid4().hex,
+            session_id=session_id or None,
             grounding_mode="internal",
             grounding_note="대화 스타일 적용 확인",
             companion_mode=request.companion_mode,
@@ -1364,6 +1524,9 @@ async def answer_orchestrator_chat(
         "emotion_signal": emotion_signal,
         "web_grounding_used": bool(web_results),
         "web_grounding_count": len(web_results),
+        "session_id": session_id or None,
+        "session_loaded": bool(session_snapshot),
+        "reverse_question_mode": reverse_question_mode or None,
     }
     fast_reply_content = build_fast_admin_chat_reply(
         message,
@@ -1400,11 +1563,26 @@ async def answer_orchestrator_chat(
             if isinstance(item, dict)
         ]
         history.append(reply)
-        return OrchestratorChatResponse(
+        fast_updated_project_memory = build_updated_project_memory(
+            project_memory,
+            project_root=project_root,
+            message=message,
+            reply_content=fast_reply_content,
+            conversation_stage=conversation_stage,
+            message_kind=message_kind,
+        )
+        fast_technology_recommendations = build_technology_recommendations(
+            message,
+            fast_reply_content,
+            web_results=web_results,
+            fallback_candidates=new_technology_candidates,
+        )
+        fast_response = OrchestratorChatResponse(
             reply=reply,
             conversation=history,
             output_dir=request.output_dir,
             run_id=request.run_id or uuid4().hex,
+            session_id=session_id or None,
             grounding_mode="web" if web_results else "internal",
             grounding_note="관리자 빠른 응답 경로 (웹 검색 근거 포함)" if web_results else "관리자 빠른 응답 경로",
             companion_mode=request.companion_mode,
@@ -1431,19 +1609,15 @@ async def answer_orchestrator_chat(
             inferred_goal=inferred_goal,
             proposal_items=proposal_items,
             new_technology_candidates=new_technology_candidates,
+            technology_recommendations=fast_technology_recommendations,
             target_patch_hints=target_patch_hints,
             project_root=project_root,
-            project_memory=build_updated_project_memory(
-                project_memory,
-                project_root=project_root,
-                message=message,
-                reply_content=fast_reply_content,
-                conversation_stage=conversation_stage,
-                message_kind=message_kind,
-            ),
+            project_memory=fast_updated_project_memory,
             auto_connect=auto_connect,
             diagnostics=diagnostics,
         )
+        _save_response_session(session_id, fast_response, project_memory=fast_updated_project_memory)
+        return fast_response
     system_prompt = build_chat_system_prompt(
         mode_label,
         conversation_stage,
@@ -1561,11 +1735,18 @@ async def answer_orchestrator_chat(
             updated_project_memory = dict((persisted_context or {}).get("memory") or updated_project_memory)
         finally:
             db.close()
-    return OrchestratorChatResponse(
+    technology_recommendations = build_technology_recommendations(
+        message,
+        reply_content,
+        web_results=web_results,
+        fallback_candidates=new_technology_candidates,
+    )
+    response = OrchestratorChatResponse(
         reply=reply,
         conversation=history,
         output_dir=request.output_dir,
         run_id=request.run_id or uuid4().hex,
+        session_id=session_id or None,
         grounding_mode="web" if web_results else "internal",
         grounding_note=grounding_note,
         companion_mode=request.companion_mode,
@@ -1590,9 +1771,12 @@ async def answer_orchestrator_chat(
         inferred_goal=inferred_goal,
         proposal_items=proposal_items,
         new_technology_candidates=new_technology_candidates,
+        technology_recommendations=technology_recommendations,
         target_patch_hints=target_patch_hints,
         project_root=project_root,
         project_memory=updated_project_memory,
         auto_connect=auto_connect,
         diagnostics=diagnostics,
     )
+    _save_response_session(session_id, response, project_memory=updated_project_memory)
+    return response

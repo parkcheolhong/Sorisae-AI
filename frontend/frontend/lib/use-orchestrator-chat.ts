@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { postOrchestratorChat } from '@/lib/orchestrator-chat-client';
 import {
@@ -17,6 +17,8 @@ const parseOrchestratorChatAbortMs = (): number => {
 };
 
 const ORCHESTRATOR_CHAT_ABORT_MS = parseOrchestratorChatAbortMs();
+const ADMIN_ORCHESTRATOR_CHAT_SESSION_KEY = 'admin_orchestrator_chat_session_v1';
+const ADMIN_ORCHESTRATOR_CHAT_CONVERSATION_KEY = 'admin_orchestrator_chat_conversation_v1';
 
 export type CompanionMode = 'research' | 'project' | 'hybrid';
 export type OrchestratorAgentKey = 'chat' | 'voice_chat' | 'reasoner' | 'coder';
@@ -115,6 +117,16 @@ export interface ProposalItem {
     tradeoff?: string | null;
 }
 
+export interface TechnologyRecommendation {
+    title: string;
+    source?: string;
+    adoption_risk: string;
+    implementation_difficulty: string;
+    operating_cost: string;
+    alternative: string;
+    rationale: string;
+}
+
 export interface TargetPatchHint {
     file_id: string;
     section_id?: string | null;
@@ -168,7 +180,9 @@ export interface OrchestratorChatResponse {
     inferred_goal?: string | null;
     proposal_items?: ProposalItem[];
     new_technology_candidates?: string[];
+    technology_recommendations?: TechnologyRecommendation[];
     target_patch_hints?: TargetPatchHint[];
+    session_id?: string | null;
 }
 
 export interface VoiceResponse {
@@ -284,14 +298,37 @@ interface UseOrchestratorChatOptions {
 
 export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     const recognitionRef = useRef<any>(null);
-    const [conversation, setConversation] = useState<OrchestratorConversationMessage[]>([
+    const [chatSessionId, setChatSessionId] = useState(() => {
+        if (typeof window === 'undefined') {
+            return `admin-chat-${Date.now()}`;
+        }
+        const existing = window.localStorage.getItem(ADMIN_ORCHESTRATOR_CHAT_SESSION_KEY);
+        if (existing) {
+            return existing;
+        }
+        const next = `admin-chat-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        window.localStorage.setItem(ADMIN_ORCHESTRATOR_CHAT_SESSION_KEY, next);
+        return next;
+    });
+    const [conversation, setConversation] = useState<OrchestratorConversationMessage[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = JSON.parse(window.localStorage.getItem(ADMIN_ORCHESTRATOR_CHAT_CONVERSATION_KEY) || '[]');
+                if (Array.isArray(saved) && saved.length > 0) {
+                    return saved;
+                }
+            } catch {
+            }
+        }
+        return [
         {
             role: 'assistant',
             speaker: '오케스트레이터',
             step_title: '실행 안내',
             content: '관리자 오케스트레이터는 자유 대화형 모드입니다. 질문-응답-역질문을 이어가며 설계/구현/운영을 함께 진행할 수 있습니다.',
         },
-    ]);
+        ];
+    });
     const [chatInput, setChatInput] = useState('');
     const [chatLoading, setChatLoading] = useState(false);
     const [voiceListening, setVoiceListening] = useState(false);
@@ -313,6 +350,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     const [inferredGoal, setInferredGoal] = useState('');
     const [proposalItems, setProposalItems] = useState<ProposalItem[]>([]);
     const [newTechnologyCandidates, setNewTechnologyCandidates] = useState<string[]>([]);
+    const [technologyRecommendations, setTechnologyRecommendations] = useState<TechnologyRecommendation[]>([]);
     const [targetPatchHints, setTargetPatchHints] = useState<TargetPatchHint[]>([]);
     const [conversationAssistExpanded, setConversationAssistExpanded] = useState(false);
     const [suggestedSelfRunPreview, setSuggestedSelfRunPreview] = useState<SuggestedSelfRunPreview | null>(null);
@@ -320,6 +358,17 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     const appendConversationMessage = (message: OrchestratorConversationMessage) => {
         setConversation((prev) => dedupeConversationMessages([...prev, message]));
     };
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage.setItem(ADMIN_ORCHESTRATOR_CHAT_SESSION_KEY, chatSessionId);
+            window.localStorage.setItem(ADMIN_ORCHESTRATOR_CHAT_CONVERSATION_KEY, JSON.stringify(conversation.slice(-60)));
+        } catch {
+        }
+    }, [chatSessionId, conversation]);
 
     const pushUserMessage = async () => {
         const content = chatInput.trim();
@@ -366,6 +415,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                     companion_mode: 'hybrid',
                     output_dir: resolveReusableOutputDir(),
                     run_id: options.liveRunIdRef.current || undefined,
+                    session_id: chatSessionId,
                     max_tokens: getConversationRequestMaxTokens(),
                     conversation: nextConversation,
                 },
@@ -385,6 +435,9 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                 options.setWorkOutputDir(data.output_dir);
             } else if (data.failed_output_dir) {
                 options.setLiveOutputDir(data.failed_output_dir);
+            }
+            if (data.run_id && !chatSessionId) {
+                setChatSessionId(data.run_id);
             }
             if (!playReturnedAudio(data.audio_base64, data.audio_format)) {
                 options.speakText?.(data.response_text);
@@ -549,6 +602,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                     tone_preset: conversationTonePreset,
                     output_dir: resolveReusableOutputDir(),
                     run_id: options.liveRunIdRef.current || undefined,
+                    session_id: chatSessionId,
                     max_tokens: getConversationRequestMaxTokens(),
                     conversation: nextConversation,
                     context_tags: ['admin-orchestrator', 'free-dialogue', tonePresetPayload.tag],
@@ -572,7 +626,11 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
             setInferredGoal(data.inferred_goal || '');
             setProposalItems(Array.isArray(data.proposal_items) ? data.proposal_items : []);
             setNewTechnologyCandidates(Array.isArray(data.new_technology_candidates) ? data.new_technology_candidates : []);
+            setTechnologyRecommendations(Array.isArray(data.technology_recommendations) ? data.technology_recommendations : []);
             setTargetPatchHints(Array.isArray(data.target_patch_hints) ? data.target_patch_hints : []);
+            if (data.session_id) {
+                setChatSessionId(data.session_id);
+            }
             if (data.output_dir) {
                 options.setWorkOutputDir(data.output_dir);
             } else if (data.failed_output_dir) {
@@ -622,6 +680,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         inferredGoal,
         proposalItems,
         newTechnologyCandidates,
+        technologyRecommendations,
         targetPatchHints,
         conversationAssistExpanded,
         suggestedSelfRunPreview,
