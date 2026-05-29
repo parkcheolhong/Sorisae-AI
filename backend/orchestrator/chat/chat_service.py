@@ -1488,6 +1488,13 @@ async def answer_orchestrator_chat(
         message_kind=message_kind,
         advisory_controls=advisory_controls,
     )
+    if _should_force_reciprocal_question(requested_conversation_mode, response_style) and not clarification_questions:
+        clarification_questions = [
+            AdvisoryQuestion(
+                prompt="지금 이 주제에서 먼저 확정할 우선순위 1번은 무엇인가요?",
+                reason="역질문 모드에서는 대화가 실행으로 튀지 않도록 다음 결정을 명시적으로 확인합니다.",
+            )
+        ]
     evidence_highlights = build_evidence_highlights(
         conversation_stage=conversation_stage,
         advisory_controls=advisory_controls,
