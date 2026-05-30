@@ -4,9 +4,10 @@
  * HelpPanel — 시각적 사용설명 패널 (모바일 친화)
  *
  * 범위: 모바일 웹앱 시각적 사용설명 전용
- * - 50개국어 도움말 콘텐츠 딕셔너리 기반
- * - 언어 수동 전환 가능 (localStorage 저장)
- * - 접기/펼치기 지원
+ * - 언어 선택 목록: 50개국어 (helpLangList.ts)
+ * - 완전 번역 콘텐츠: 17개 언어 (helpContent.ts), 나머지는 영어 폴백
+ * - 언어 수동 전환 가능 (localStorage 저장, useHelpLanguage hook)
+ * - 모바일 bottom-sheet 스타일
  */
 
 import React from 'react';

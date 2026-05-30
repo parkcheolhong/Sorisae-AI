@@ -43,7 +43,10 @@ const COUNTRY_TO_HELP_LANG: Record<string, string> = {
 function normalizeLangCode(code: string | undefined | null): string | null {
     if (!code) return null;
     const lower = code.toLowerCase().trim();
-    // 'zh-cn' → 'zh', 'zh-tw' stays, 'en-us' → 'en', etc.
+    // Normalize language codes:
+    // - Simplified Chinese variants (zh-cn, zh-hans) → 'zh'
+    // - Traditional Chinese variants (zh-tw, zh-hant, zh-hk) → 'zh-tw'
+    // - All other regional tags are reduced to base code (e.g. 'en-US' → 'en', 'pt-BR' → 'pt')
     if (lower === 'zh-cn' || lower === 'zh-hans') return 'zh';
     if (lower === 'zh-tw' || lower === 'zh-hant' || lower === 'zh-hk') return 'zh-tw';
     // keep full code if it's a known compound (e.g. 'zh-tw' already handled above)
