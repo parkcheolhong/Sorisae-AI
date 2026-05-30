@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -31,7 +32,8 @@ def _session_path(session_id: str) -> Path | None:
     if not normalized:
         return None
     root = _session_root()
-    candidate = (root / f"{normalized}.json").resolve()
+    digest = hashlib.sha256(normalized.encode("utf-8", errors="ignore")).hexdigest()
+    candidate = (root / f"{digest}.json").resolve()
     if not _is_relative_to(candidate, root):
         return None
     return candidate
