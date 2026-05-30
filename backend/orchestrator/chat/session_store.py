@@ -54,7 +54,15 @@ def save_chat_session_snapshot(session_id: str, snapshot: Dict[str, Any]) -> Non
     path = _session_path(session_id)
     if path is None:
         return
-    path.write_text(
-        json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    payload = json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True)
+    tmp_path = path.with_suffix(f"{path.suffix}.tmp")
+    tmp_path.write_text(payload, encoding="utf-8")
+    try:
+        os.chmod(tmp_path, 0o600)
+    except Exception:
+        pass
+    os.replace(tmp_path, path)
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        pass
