@@ -442,9 +442,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
             } else if (data.failed_output_dir) {
                 options.setLiveOutputDir(data.failed_output_dir);
             }
-            if (data.run_id && !chatSessionId) {
-                setChatSessionId(data.run_id);
-            }
+            // chatSessionId is generated/persisted locally and sent as session_id; do not overwrite it from run_id.
             if (!playReturnedAudio(data.audio_base64, data.audio_format)) {
                 options.speakText?.(data.response_text);
             }
