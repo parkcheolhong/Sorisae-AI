@@ -388,6 +388,9 @@ export async function PUT(req: NextRequest) {
     return jsonNoStore({ detail: 'Authorization 헤더가 필요합니다.' }, 401);
   }
   if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    if (auth.trim() !== `Bearer ${ADMIN_REGRESSION_MOCK_TOKEN}`) {
+      return jsonNoStore({ detail: '관리자 회귀(mock) 토큰이 올바르지 않습니다.' }, 401);
+    }
     return jsonNoStore({
       access_token: ADMIN_REGRESSION_MOCK_TOKEN,
       token_type: 'bearer',
