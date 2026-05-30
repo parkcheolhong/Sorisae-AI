@@ -1217,7 +1217,14 @@ export default function NadoTongryoksaPage() {
                         <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <a href={mapPlace.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🌐 Google Maps</a>
                             <a href={mapPlace.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🗺️ Naver 지도</a>
-                            <a href={`https://www.openstreetmap.org/?mlat=${mapPlace.latitude ?? lat}&mlon=${mapPlace.longitude ?? lon}#map=15/${mapPlace.latitude ?? lat}/${mapPlace.longitude ?? lon}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🌍 OpenStreetMap</a>
+                            <a
+                                href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(mapPlace.latitude ?? Number(lat)))}&mlon=${encodeURIComponent(String(mapPlace.longitude ?? Number(lon)))}#map=15/${encodeURIComponent(String(mapPlace.latitude ?? Number(lat)))}/${encodeURIComponent(String(mapPlace.longitude ?? Number(lon)))}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ textDecoration: 'none', background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}
+                            >
+                                🌍 OpenStreetMap
+                            </a>
                         </div>
                     </section>
                 )}
