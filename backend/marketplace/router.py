@@ -32,6 +32,7 @@ from uuid import uuid4
 from redis.exceptions import RedisError
 from . import models, schemas, crud
 from .subscription_service import subscription_service
+from .database import add_missing_columns
 from .ad_strategy_engine import plan_ad_strategy
 from .audience_profile_engine import infer_audience_profiles
 from .campaign_orchestrator_engine import plan_local_campaign
@@ -1094,9 +1095,12 @@ def _ensure_video_service_user_schema() -> None:
         return
 
     with engine.begin() as conn:
-        conn.execute(text(
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_balance INTEGER"
-        ))
+        add_missing_columns(
+            conn,
+            "users",
+            {"credit_balance": "INTEGER"},
+            inspector=inspector,
+        )
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
@@ -1144,6 +1148,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     task: str = ""
     conversation: List[Dict[str, Any]] = []
     run_id: Optional[str] = None
+    session_id: Optional[str] = None
     stage_id: Optional[str] = None
     project_name: Optional[str] = None
     output_dir: Optional[str] = None
@@ -1153,6 +1158,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     companion_mode: str = "hybrid"
     response_style: str = "balanced"
     tone_preset: str = "auto"
+    reverse_question_mode: Optional[str] = None
     max_tokens: int = 768
 
 

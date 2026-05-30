@@ -18,6 +18,12 @@ type UserInfo = {
     username?: string;
 };
 
+type ProjectSummary = {
+    id: number;
+    title?: string | null;
+    demo_url?: string | null;
+};
+
 // ── 인증 헬퍼 ─────────────────────────────────────────────
 function setStoredToken(token: string) {
     if (typeof window === 'undefined') return;
@@ -54,13 +60,13 @@ async function callMeApi(apiBase: string, token: string): Promise<UserInfo> {
     return res.json();
 }
 
-async function callCreatePurchaseApi(apiBase: string, amount: number): Promise<PurchaseResult> {
+async function callCreatePurchaseApi(apiBase: string, projectId: number, amount: number): Promise<PurchaseResult> {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '') : '';
     if (!token) throw new Error('결제는 로그인 후 사용할 수 있습니다.');
     const res = await fetch(`${apiBase}/api/marketplace/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ project_id: 0, amount, payment_method: 'card' }),
+        body: JSON.stringify({ project_id: projectId, amount, payment_method: 'card' }),
         signal: AbortSignal.timeout(10_000),
     });
     const result = await res.json().catch(() => ({}));
@@ -263,6 +269,9 @@ type BookingResponse = {
 };
 
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
+const NADO_PROJECT_SEARCH = '나도통역사';
+const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
+let cachedNadoProjectId: number | null = null;
 
 const UI_KO_TEXT = {
     uiLanguage: 'UI 언어',
@@ -380,6 +389,33 @@ function getStoredToken(): string {
         return '';
     }
     return localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '';
+}
+
+async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> {
+    if (cachedNadoProjectId !== null) {
+        return cachedNadoProjectId;
+    }
+
+    const query = new URLSearchParams({ search: NADO_PROJECT_SEARCH, limit: '12' });
+    const response = await fetch(`${apiBase}/api/marketplace/projects?${query.toString()}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8_000),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload.detail || `프로젝트 조회 실패 HTTP ${response.status}`);
+    }
+
+    const projects: ProjectSummary[] = Array.isArray(payload.projects) ? payload.projects : [];
+    const project = projects.find((item) => String(item.demo_url ?? '').includes(NADO_APK_FILENAME))
+        ?? projects.find((item) => String(item.title ?? '').includes(NADO_PROJECT_SEARCH))
+        ?? projects[0];
+    if (!project?.id) {
+        throw new Error('나도통역사 상품을 찾을 수 없습니다.');
+    }
+
+    cachedNadoProjectId = Number(project.id);
+    return cachedNadoProjectId;
 }
 
 function resolveUiLangForTranslation(lang: UiLangCode): string {
@@ -663,7 +699,7 @@ export default function WorldLincoPage() {
             const res = await fetch(`${apiBase}/api/marketplace/purchases`, { headers: { Authorization: `Bearer ${t}` } });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            setMyPurchases(Array.isArray(data) ? data : (data.items ?? []));
+            setMyPurchases(Array.isArray(data) ? data : (data.purchases ?? data.items ?? []));
         } catch {
             setMyPurchases([]);
         } finally {
@@ -679,7 +715,8 @@ export default function WorldLincoPage() {
         try {
             const nights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000));
             const amount = nights * roomCount * 80000;
-            const purchase = await callCreatePurchaseApi(API_BASE, amount);
+            const projectId = await resolveNadotongryoksaProjectId(API_BASE);
+            const purchase = await callCreatePurchaseApi(API_BASE, projectId, amount);
             setPurchaseResult(purchase);
             const payData = await callInitiatePaymentApi(API_BASE, purchase.id);
             setPayUrl(payData.payment_url);
@@ -746,7 +783,7 @@ export default function WorldLincoPage() {
                     body: JSON.stringify({ text: spokenText, from_lang: listenLang, to_lang: translateTo }),
                 });
                 const data = await res.json();
-                const translatedText: string = data.result || spokenText;
+                const translatedText: string = data.translated ?? data.result ?? spokenText;
                 setInterCallLog((prev) => [...prev.slice(-19), { turn, text: spokenText, translated: translatedText }]);
                 if (!interCallActiveRef.current) return;
                 const toLabel = LANGS.find((l) => l.code === translateTo)?.label ?? translateTo;
@@ -948,7 +985,7 @@ export default function WorldLincoPage() {
             return;
         }
         try {
-            const res = await fetch(`${API_BASE}/api/marketplace/apk/test-token/nadotongryoksa-v8.apk`, {
+            const res = await fetch(`${API_BASE}/api/marketplace/apk/test-token/${NADO_APK_FILENAME}`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
             });

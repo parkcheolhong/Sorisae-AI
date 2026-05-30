@@ -93,7 +93,6 @@ import { buildAdminRunResultNotice } from '@/lib/admin-run-result-notice';
 import { createRuntimeConfigMutationHelpers } from '@/lib/admin-runtime-config-mutations';
 import {
     applyAdminStageCommand as applyAdminStageCommandAdapter,
-    detectsExecutionIntent,
     applyStageIdeaPresetValue,
     DEFAULT_STAGE_IDEA_PRESETS,
 } from '@/lib/admin-stage-command-adapter';
@@ -2245,6 +2244,7 @@ export default function AdminLLMPage() {
         inferredGoal,
         proposalItems,
         newTechnologyCandidates,
+        technologyRecommendations,
         targetPatchHints,
         conversationAssistExpanded,
         suggestedSelfRunPreview,
@@ -3610,10 +3610,6 @@ export default function AdminLLMPage() {
             return null;
         }
 
-        if (detectsExecutionIntent(prompt)) {
-            return await run({ task: prompt });
-        }
-
         await sendChatMessage(prompt);
         return null;
     };
@@ -4226,6 +4222,17 @@ export default function AdminLLMPage() {
                             </div>
                             <div className="rounded-lg border border-[#30363d] bg-[#0d1117] p-4 text-xs text-[#8b949e] space-y-2">
                                 <p className="text-sm font-semibold text-[#e6edf3]">신규 기술 / 타겟 수정 힌트</p>
+                                <div className="space-y-2">
+                                    {(technologyRecommendations.length > 0 ? technologyRecommendations : []).map((item) => (
+                                        <div key={`${item.title}-${item.source || 'llm'}`} className="rounded-md border border-[#244766] bg-[#101826] px-3 py-2 text-[#c9d1d9]">
+                                            <p className="font-semibold text-[#9ecbff]">{item.title}</p>
+                                            <p className="mt-1 text-[11px] text-[#ffcf8a]">도입 리스크: {item.adoption_risk}</p>
+                                            <p className="text-[11px] text-[#d2d9e3]">구현 난이도: {item.implementation_difficulty}</p>
+                                            <p className="text-[11px] text-[#d2d9e3]">운영비: {item.operating_cost}</p>
+                                            <p className="text-[11px] text-[#8fb0d4]">대체안: {item.alternative}</p>
+                                        </div>
+                                    ))}
+                                </div>
                                 <div className="space-y-1">
                                     {(newTechnologyCandidates.length > 0 ? newTechnologyCandidates : ['후보 없음']).map((item) => (
                                         <p key={item} className="rounded-md border border-[#30363d] bg-[#161b22] px-3 py-2 text-[#c9d1d9]">{item}</p>

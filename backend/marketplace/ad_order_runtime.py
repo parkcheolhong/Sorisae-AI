@@ -11,7 +11,7 @@ from redis.exceptions import RedisError
 from sqlalchemy import inspect, text
 
 from . import models
-from .database import SessionLocal, engine
+from .database import SessionLocal, add_missing_columns, engine
 
 logger = logging.getLogger(__name__)
 
@@ -42,71 +42,76 @@ def ensure_ad_video_orders_schema() -> None:
     if not inspector.has_table("ad_video_orders"):
         return
 
-    statements = [
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS title VARCHAR(200)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS image_prompt TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS portrait_image_prompt TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS product_image_prompts TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS storyboard_json TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS storyboard_review_json TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS storyboard_review_history_json TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS subject_type VARCHAR(30)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS background_prompt TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS caption_text TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS scenario_script TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS voice_gender VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS engine_type VARCHAR(30)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS action_template_key VARCHAR(100)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS motion_tempo VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS duration_seconds INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS visual_style VARCHAR(100)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS cut_count INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS subtitle_speed DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS render_quality VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS audio_volume INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS status VARCHAR(20)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS progress_percent INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS external_job_id VARCHAR(255)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_file_key VARCHAR(500)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_filename VARCHAR(255)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_video_key VARCHAR(500)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS output_video_filename VARCHAR(255)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_score DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_gate_passed BOOLEAN",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_feedback TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS face_consistency_score DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS product_consistency_score DOUBLE PRECISION",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS sales_quality_decision VARCHAR(30)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_retry_count INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS quality_checked_at TIMESTAMP",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS public_job_id VARCHAR(36)",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS error_message TEXT",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS download_count INTEGER",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
-        "ALTER TABLE ad_video_orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
-        (
-            "DO $$ BEGIN "
-            "IF EXISTS ("
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name='ad_video_orders' AND column_name='product_name'"
-            ") THEN "
-            "ALTER TABLE ad_video_orders ALTER COLUMN product_name DROP NOT NULL; "
-            "END IF; END $$"
-        ),
-        (
-            "DO $$ BEGIN "
-            "IF EXISTS ("
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name='ad_video_orders' AND column_name='concept'"
-            ") THEN "
-            "ALTER TABLE ad_video_orders ALTER COLUMN concept DROP NOT NULL; "
-            "END IF; END $$"
-        ),
-    ]
+    column_specs = {
+        "title": "VARCHAR(200)",
+        "image_prompt": "TEXT",
+        "portrait_image_prompt": "TEXT",
+        "product_image_prompts": "TEXT",
+        "storyboard_json": "TEXT",
+        "storyboard_review_json": "TEXT",
+        "storyboard_review_history_json": "TEXT",
+        "subject_type": "VARCHAR(30)",
+        "background_prompt": "TEXT",
+        "caption_text": "TEXT",
+        "scenario_script": "TEXT",
+        "voice_gender": "VARCHAR(20)",
+        "engine_type": "VARCHAR(30)",
+        "action_template_key": "VARCHAR(100)",
+        "motion_tempo": "VARCHAR(20)",
+        "duration_seconds": "INTEGER",
+        "visual_style": "VARCHAR(100)",
+        "cut_count": "INTEGER",
+        "subtitle_speed": "DOUBLE PRECISION",
+        "render_quality": "VARCHAR(20)",
+        "audio_volume": "INTEGER",
+        "status": "VARCHAR(20)",
+        "progress_percent": "INTEGER",
+        "external_job_id": "VARCHAR(255)",
+        "output_file_key": "VARCHAR(500)",
+        "output_filename": "VARCHAR(255)",
+        "output_video_key": "VARCHAR(500)",
+        "output_video_filename": "VARCHAR(255)",
+        "quality_score": "DOUBLE PRECISION",
+        "quality_gate_passed": "BOOLEAN",
+        "quality_feedback": "TEXT",
+        "face_consistency_score": "DOUBLE PRECISION",
+        "product_consistency_score": "DOUBLE PRECISION",
+        "sales_quality_decision": "VARCHAR(30)",
+        "quality_retry_count": "INTEGER",
+        "quality_checked_at": "TIMESTAMP",
+        "public_job_id": "VARCHAR(36)",
+        "error_message": "TEXT",
+        "download_count": "INTEGER",
+        "created_at": "TIMESTAMP",
+        "updated_at": "TIMESTAMP",
+    }
 
     with engine.begin() as conn:
-        for stmt in statements:
-            conn.execute(text(stmt))
+        add_missing_columns(
+            conn,
+            "ad_video_orders",
+            column_specs,
+            inspector=inspector,
+        )
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "DO $$ BEGIN "
+                "IF EXISTS ("
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='ad_video_orders' AND column_name='product_name'"
+                ") THEN "
+                "ALTER TABLE ad_video_orders ALTER COLUMN product_name DROP NOT NULL; "
+                "END IF; END $$"
+            ))
+            conn.execute(text(
+                "DO $$ BEGIN "
+                "IF EXISTS ("
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='ad_video_orders' AND column_name='concept'"
+                ") THEN "
+                "ALTER TABLE ad_video_orders ALTER COLUMN concept DROP NOT NULL; "
+                "END IF; END $$"
+            ))
         conn.execute(text(
             "UPDATE ad_video_orders SET engine_type='internal_ffmpeg' WHERE engine_type IS NULL"
         ))
