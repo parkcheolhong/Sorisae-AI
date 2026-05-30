@@ -508,7 +508,10 @@ export default function MarketplaceOrchestratorClient({
         if (existing) {
             return existing;
         }
-        const next = `market-chat-${selectedProduct.id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const randomSuffix = Array.from(window.crypto.getRandomValues(new Uint8Array(8)), (byte) =>
+            byte.toString(16).padStart(2, '0'),
+        ).join('');
+        const next = `market-chat-${selectedProduct.id}-${Date.now()}-${randomSuffix}`;
         window.localStorage.setItem(key, next);
         return next;
     });
