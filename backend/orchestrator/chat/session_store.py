@@ -15,14 +15,26 @@ def _session_root() -> Path:
     configured = os.getenv("ORCHESTRATOR_CHAT_SESSION_DIR", "").strip()
     root = Path(configured) if configured else Path(tempfile.gettempdir()) / "codeai_orchestrator_chat_sessions"
     root.mkdir(parents=True, exist_ok=True)
-    return root
+    return root.resolve()
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def _session_path(session_id: str) -> Path | None:
     normalized = _SAFE_SESSION_ID.sub("_", str(session_id or "").strip())[:160]
     if not normalized:
         return None
-    return _session_root() / f"{normalized}.json"
+    root = _session_root()
+    candidate = (root / f"{normalized}.json").resolve()
+    if not _is_relative_to(candidate, root):
+        return None
+    return candidate
 
 
 def load_chat_session_snapshot(session_id: str) -> Dict[str, Any]:
