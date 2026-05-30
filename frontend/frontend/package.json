@@ -22,7 +22,7 @@
         "@types/node": "^20.14.12",
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
-        "axios": "^1.7.2",
+        "axios": "^1.16.0",
         "clsx": "^2.1.1",
         "jszip": "^3.10.1",
         "lucide-react": "^0.408.0",
