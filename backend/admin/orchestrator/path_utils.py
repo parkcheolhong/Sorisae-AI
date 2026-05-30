@@ -92,10 +92,3 @@ def require_allowed_root_path(path: Path, *, detail: str) -> Path:
     ):
         return resolved_path
     raise HTTPException(status_code=400, detail=detail)
-
-
-def resolve_safe_child_path(root: Path, child: str | Path, *, detail: str) -> Path:
-    child_path = Path(child).expanduser()
-    if child_path.is_absolute() or _has_parent_reference(child_path):
-        raise HTTPException(status_code=400, detail=detail)
-    return require_allowed_root_path(root / child_path, detail=detail)

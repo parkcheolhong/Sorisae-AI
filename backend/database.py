@@ -1,14 +1,7 @@
 """공용 백엔드 데이터베이스 호환 레이어"""
 from sqlalchemy import inspect, text
 
-from backend.marketplace.database import (
-    Base,
-    SessionLocal,
-    add_missing_columns,
-    check_database_availability,
-    engine,
-    get_db,
-)
+from backend.marketplace.database import Base, SessionLocal, check_database_availability, engine, get_db
 
 
 def ensure_user_role_columns() -> None:
@@ -17,27 +10,70 @@ def ensure_user_role_columns() -> None:
     if not inspector.has_table("users"):
         return
 
-    with engine.begin() as connection:
-        add_missing_columns(
-            connection,
-            "users",
-            {
-                "is_active": "BOOLEAN NOT NULL DEFAULT TRUE",
-                "is_admin": "BOOLEAN NOT NULL DEFAULT FALSE",
-                "is_superuser": "BOOLEAN NOT NULL DEFAULT FALSE",
-                "member_type": "VARCHAR(30) NOT NULL DEFAULT 'individual'",
-                "business_name": "VARCHAR(200)",
-                "business_registration_number": "VARCHAR(50)",
-                "representative_name": "VARCHAR(120)",
-                "passkey_enabled": "BOOLEAN NOT NULL DEFAULT FALSE",
-                "passkey_credential_id": "VARCHAR(255) UNIQUE",
-                "passkey_public_key": "TEXT",
-                "passkey_device_label": "VARCHAR(120)",
-                "passkey_sign_count": "INTEGER NOT NULL DEFAULT 0",
-                "passkey_registered_at": "TIMESTAMP",
-            },
-            inspector=inspector,
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("users")
+    }
+    statements = []
+    if "is_active" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE"
         )
+    if "is_admin" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE"
+        )
+    if "is_superuser" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT FALSE"
+        )
+    if "member_type" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN member_type VARCHAR(30) NOT NULL DEFAULT 'individual'"
+        )
+    if "business_name" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN business_name VARCHAR(200)"
+        )
+    if "business_registration_number" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN business_registration_number VARCHAR(50)"
+        )
+    if "representative_name" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN representative_name VARCHAR(120)"
+        )
+    if "passkey_enabled" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN passkey_enabled BOOLEAN NOT NULL DEFAULT FALSE"
+        )
+    if "passkey_credential_id" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN passkey_credential_id VARCHAR(255) UNIQUE"
+        )
+    if "passkey_public_key" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN passkey_public_key TEXT"
+        )
+    if "passkey_device_label" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN passkey_device_label VARCHAR(120)"
+        )
+    if "passkey_sign_count" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN passkey_sign_count INTEGER NOT NULL DEFAULT 0"
+        )
+    if "passkey_registered_at" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN passkey_registered_at TIMESTAMP"
+        )
+
+    if not statements:
+        return
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
 
 
 def ensure_traceability_schema() -> None:
@@ -65,30 +101,28 @@ def ensure_traceability_schema() -> None:
 
     with engine.begin() as connection:
         for table_name, columns in table_column_specs.items():
-            add_missing_columns(
-                connection,
-                table_name,
-                columns,
-                inspector=inspector,
-            )
+            if not inspector.has_table(table_name):
+                continue
+            existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+            for column_name, column_type in columns.items():
+                if column_name in existing_columns:
+                    continue
+                connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
 
         if inspector.has_table("feature_execution_logs"):
-            add_missing_columns(
-                connection,
-                "feature_execution_logs",
-                {
-                    "feature_id": "VARCHAR(100)",
-                    "entity_type": "VARCHAR(80)",
-                    "entity_id": "VARCHAR(120)",
-                    "run_id": "VARCHAR(120)",
-                    "prompt": "TEXT",
-                    "message": "TEXT",
-                    "payload_json": "TEXT",
-                    "output_payload_json": "TEXT",
-                    "error_message": "TEXT",
-                },
-                inspector=inspector,
-            )
+            feature_execution_statements = [
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS feature_id VARCHAR(100)",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS entity_type VARCHAR(80)",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS entity_id VARCHAR(120)",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS run_id VARCHAR(120)",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS prompt TEXT",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS message TEXT",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS payload_json TEXT",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS output_payload_json TEXT",
+                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS error_message TEXT",
+            ]
+            for statement in feature_execution_statements:
+                connection.execute(text(statement))
             connection.execute(text(
                 "UPDATE feature_execution_logs SET feature_id = COALESCE(NULLIF(feature_id, ''), entity_type, 'feature_execution')"
             ))
@@ -106,22 +140,19 @@ def ensure_traceability_schema() -> None:
             ))
 
         if inspector.has_table("feature_retry_queue"):
-            add_missing_columns(
-                connection,
-                "feature_retry_queue",
-                {
-                    "user_id": "INTEGER",
-                    "feature_id": "VARCHAR(100)",
-                    "entity_type": "VARCHAR(80)",
-                    "entity_id": "VARCHAR(120)",
-                    "queue_name": "VARCHAR(80)",
-                    "last_error": "TEXT",
-                    "attempt_count": "INTEGER",
-                    "max_attempts": "INTEGER",
-                    "retry_count": "INTEGER",
-                },
-                inspector=inspector,
-            )
+            feature_retry_statements = [
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS user_id INTEGER",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS feature_id VARCHAR(100)",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS entity_type VARCHAR(80)",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS entity_id VARCHAR(120)",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS queue_name VARCHAR(80)",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS last_error TEXT",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS attempt_count INTEGER",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS max_attempts INTEGER",
+                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS retry_count INTEGER",
+            ]
+            for statement in feature_retry_statements:
+                connection.execute(text(statement))
             connection.execute(text(
                 "UPDATE feature_retry_queue SET feature_id = COALESCE(NULLIF(feature_id, ''), entity_type, queue_name, 'feature_retry')"
             ))
