@@ -16,6 +16,12 @@ const parseOrchestratorChatAbortMs = (): number => {
     return Math.min(300_000, Math.max(30_000, Math.trunc(raw)));
 };
 
+const secureRandomIdSegment = (length = 8): string => {
+    const bytes = new Uint8Array(Math.ceil(length / 2));
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+};
+
 const ORCHESTRATOR_CHAT_ABORT_MS = parseOrchestratorChatAbortMs();
 const ADMIN_ORCHESTRATOR_CHAT_SESSION_KEY = 'admin_orchestrator_chat_session_v1';
 const ADMIN_ORCHESTRATOR_CHAT_CONVERSATION_KEY = 'admin_orchestrator_chat_conversation_v1';
@@ -306,7 +312,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         if (existing) {
             return existing;
         }
-        const next = `admin-chat-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const next = `admin-chat-${Date.now()}-${secureRandomIdSegment(8)}`;
         window.localStorage.setItem(ADMIN_ORCHESTRATOR_CHAT_SESSION_KEY, next);
         return next;
     });
