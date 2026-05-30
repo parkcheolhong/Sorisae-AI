@@ -15,7 +15,11 @@ _SAFE_SESSION_ID = re.compile(r"[^a-zA-Z0-9_.:-]+")
 def _session_root() -> Path:
     configured = os.getenv("ORCHESTRATOR_CHAT_SESSION_DIR", "").strip()
     root = Path(configured) if configured else Path(tempfile.gettempdir()) / "codeai_orchestrator_chat_sessions"
-    root.mkdir(parents=True, exist_ok=True)
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        os.chmod(root, 0o700)
+    except Exception:
+        pass
     return root.resolve()
 
 
