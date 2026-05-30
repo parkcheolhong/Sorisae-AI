@@ -67,6 +67,8 @@ class User(Base):
     passkey_device_label = Column(String(120), nullable=True)
     passkey_sign_count = Column(Integer, nullable=False, default=0)
     passkey_registered_at = Column(DateTime, nullable=True)
+    native_language = Column(String(10), nullable=True)
+    country = Column(String(10), nullable=True)
     created_at = Column(DateTime, default=_utcnow_naive)
 
     projects = relationship("Project", back_populates="author")

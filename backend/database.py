@@ -35,6 +35,8 @@ def ensure_user_role_columns() -> None:
                 "passkey_device_label": "VARCHAR(120)",
                 "passkey_sign_count": "INTEGER NOT NULL DEFAULT 0",
                 "passkey_registered_at": "TIMESTAMP",
+                "native_language": "VARCHAR(10)",
+                "country": "VARCHAR(10)",
             },
             inspector=inspector,
         )

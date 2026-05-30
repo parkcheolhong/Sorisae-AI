@@ -11,6 +11,122 @@ import WorkspaceChrome from '@/components/ui/workspace-chrome';
 
 const CUSTOMER_TOKEN_KEY = 'customer_token';
 
+// 회원가입 폼용 자국어/국가 선택 목록 (주요 50개국어/국가)
+const SIGNUP_LANG_OPTIONS = [
+    { code: 'ko', label: '한국어' },
+    { code: 'en', label: 'English' },
+    { code: 'ja', label: '日本語' },
+    { code: 'zh', label: '中文(简体)' },
+    { code: 'zh-tw', label: '繁體中文' },
+    { code: 'es', label: 'Español' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
+    { code: 'pt', label: 'Português' },
+    { code: 'it', label: 'Italiano' },
+    { code: 'ru', label: 'Русский' },
+    { code: 'uk', label: 'Українська' },
+    { code: 'pl', label: 'Polski' },
+    { code: 'nl', label: 'Nederlands' },
+    { code: 'tr', label: 'Türkçe' },
+    { code: 'ar', label: 'العربية' },
+    { code: 'hi', label: 'हिन्दी' },
+    { code: 'bn', label: 'বাংলা' },
+    { code: 'vi', label: 'Tiếng Việt' },
+    { code: 'th', label: 'ภาษาไทย' },
+    { code: 'id', label: 'Indonesia' },
+    { code: 'ms', label: 'Melayu' },
+    { code: 'tl', label: 'Filipino' },
+    { code: 'sv', label: 'Svenska' },
+    { code: 'no', label: 'Norsk' },
+    { code: 'da', label: 'Dansk' },
+    { code: 'fi', label: 'Suomi' },
+    { code: 'cs', label: 'Čeština' },
+    { code: 'hu', label: 'Magyar' },
+    { code: 'ro', label: 'Română' },
+    { code: 'el', label: 'Ελληνικά' },
+    { code: 'he', label: 'עברית' },
+    { code: 'fa', label: 'فارسی' },
+    { code: 'sw', label: 'Kiswahili' },
+    { code: 'mn', label: 'Монгол' },
+    { code: 'kk', label: 'Қазақша' },
+    { code: 'uz', label: "O'zbekcha" },
+    { code: 'am', label: 'አማርኛ' },
+    { code: 'yo', label: 'Yorùbá' },
+    { code: 'ha', label: 'Hausa' },
+    { code: 'sr', label: 'Српски' },
+    { code: 'hr', label: 'Hrvatski' },
+    { code: 'sk', label: 'Slovenčina' },
+    { code: 'bg', label: 'Български' },
+    { code: 'af', label: 'Afrikaans' },
+    { code: 'zu', label: 'isiZulu' },
+    { code: 'ig', label: 'Igbo' },
+    { code: 'ta', label: 'தமிழ்' },
+    { code: 'te', label: 'తెలుగు' },
+    { code: 'ur', label: 'اردو' },
+];
+
+const SIGNUP_COUNTRY_OPTIONS = [
+    { code: 'KR', label: '🇰🇷 한국' },
+    { code: 'US', label: '🇺🇸 미국' },
+    { code: 'JP', label: '🇯🇵 일본' },
+    { code: 'CN', label: '🇨🇳 중국' },
+    { code: 'TW', label: '🇹🇼 대만' },
+    { code: 'GB', label: '🇬🇧 영국' },
+    { code: 'DE', label: '🇩🇪 독일' },
+    { code: 'FR', label: '🇫🇷 프랑스' },
+    { code: 'ES', label: '🇪🇸 스페인' },
+    { code: 'IT', label: '🇮🇹 이탈리아' },
+    { code: 'PT', label: '🇵🇹 포르투갈' },
+    { code: 'BR', label: '🇧🇷 브라질' },
+    { code: 'RU', label: '🇷🇺 러시아' },
+    { code: 'UA', label: '🇺🇦 우크라이나' },
+    { code: 'PL', label: '🇵🇱 폴란드' },
+    { code: 'NL', label: '🇳🇱 네덜란드' },
+    { code: 'SE', label: '🇸🇪 스웨덴' },
+    { code: 'NO', label: '🇳🇴 노르웨이' },
+    { code: 'DK', label: '🇩🇰 덴마크' },
+    { code: 'FI', label: '🇫🇮 핀란드' },
+    { code: 'TR', label: '🇹🇷 터키' },
+    { code: 'SA', label: '🇸🇦 사우디아라비아' },
+    { code: 'AE', label: '🇦🇪 UAE' },
+    { code: 'IN', label: '🇮🇳 인도' },
+    { code: 'BD', label: '🇧🇩 방글라데시' },
+    { code: 'PK', label: '🇵🇰 파키스탄' },
+    { code: 'VN', label: '🇻🇳 베트남' },
+    { code: 'TH', label: '🇹🇭 태국' },
+    { code: 'ID', label: '🇮🇩 인도네시아' },
+    { code: 'MY', label: '🇲🇾 말레이시아' },
+    { code: 'PH', label: '🇵🇭 필리핀' },
+    { code: 'SG', label: '🇸🇬 싱가포르' },
+    { code: 'HK', label: '🇭🇰 홍콩' },
+    { code: 'MN', label: '🇲🇳 몽골' },
+    { code: 'KZ', label: '🇰🇿 카자흐스탄' },
+    { code: 'UZ', label: '🇺🇿 우즈베키스탄' },
+    { code: 'ET', label: '🇪🇹 에티오피아' },
+    { code: 'NG', label: '🇳🇬 나이지리아' },
+    { code: 'KE', label: '🇰🇪 케냐' },
+    { code: 'ZA', label: '🇿🇦 남아프리카' },
+    { code: 'EG', label: '🇪🇬 이집트' },
+    { code: 'GH', label: '🇬🇭 가나' },
+    { code: 'CA', label: '🇨🇦 캐나다' },
+    { code: 'AU', label: '🇦🇺 호주' },
+    { code: 'NZ', label: '🇳🇿 뉴질랜드' },
+    { code: 'MX', label: '🇲🇽 멕시코' },
+    { code: 'AR', label: '🇦🇷 아르헨티나' },
+    { code: 'CL', label: '🇨🇱 칠레' },
+    { code: 'CO', label: '🇨🇴 콜롬비아' },
+    { code: 'CZ', label: '🇨🇿 체코' },
+    { code: 'HU', label: '🇭🇺 헝가리' },
+    { code: 'RO', label: '🇷🇴 루마니아' },
+    { code: 'RS', label: '🇷🇸 세르비아' },
+    { code: 'HR', label: '🇭🇷 크로아티아' },
+    { code: 'GR', label: '🇬🇷 그리스' },
+    { code: 'IL', label: '🇮🇱 이스라엘' },
+    { code: 'IR', label: '🇮🇷 이란' },
+    { code: 'SK', label: '🇸🇰 슬로바키아' },
+    { code: 'BG', label: '🇧🇬 불가리아' },
+];
+
 type CategoryItem = {
     id: number;
     name: string;
@@ -125,6 +241,8 @@ export default function MarketplacePage() {
     const [businessRegistrationNumber, setBusinessRegistrationNumber] = React.useState('');
     const [representativeName, setRepresentativeName] = React.useState('');
     const [password, setPassword] = React.useState('');
+    const [nativeLanguage, setNativeLanguage] = React.useState('');
+    const [signupCountry, setSignupCountry] = React.useState('');
     const [authLoading, setAuthLoading] = React.useState(false);
     const [authMessage, setAuthMessage] = React.useState('');
 
@@ -252,6 +370,8 @@ export default function MarketplacePage() {
                         business_name: memberType === 'individual' ? null : businessName.trim(),
                         business_registration_number: memberType === 'individual' ? null : businessRegistrationNumber.trim(),
                         representative_name: memberType === 'corporation' ? representativeName.trim() : null,
+                        native_language: nativeLanguage || null,
+                        country: signupCountry || null,
                     }),
                 });
                 const signupPayload = await signupResponse.json().catch(() => null);
@@ -284,7 +404,7 @@ export default function MarketplacePage() {
         } finally {
             setAuthLoading(false);
         }
-    }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadMyInfo, memberType, password, representativeName, username]);
+    }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadMyInfo, memberType, nativeLanguage, password, representativeName, signupCountry, username]);
 
     const handleLogout = React.useCallback(() => {
         if (typeof window !== 'undefined') {
@@ -332,6 +452,36 @@ export default function MarketplacePage() {
                                 {memberType === 'corporation' && (
                                     <input id="marketplace-repname" name="representativeName" autoComplete="name" value={representativeName} onChange={(event) => setRepresentativeName(event.target.value)} placeholder="대표자명" className="workspace-input" />
                                 )}
+                                {/* 자국어 선택 (도움말 언어 자동 설정에 사용) */}
+                                <select
+                                    id="marketplace-nativelang"
+                                    name="nativeLanguage"
+                                    value={nativeLanguage}
+                                    onChange={(event) => setNativeLanguage(event.target.value)}
+                                    className="workspace-select"
+                                    aria-label="자국어 선택"
+                                    title="자국어 선택"
+                                >
+                                    <option value="">자국어 선택 (선택)</option>
+                                    {SIGNUP_LANG_OPTIONS.map((lang) => (
+                                        <option key={lang.code} value={lang.code}>{lang.label}</option>
+                                    ))}
+                                </select>
+                                {/* 국가 선택 */}
+                                <select
+                                    id="marketplace-country"
+                                    name="country"
+                                    value={signupCountry}
+                                    onChange={(event) => setSignupCountry(event.target.value)}
+                                    className="workspace-select"
+                                    aria-label="국가 선택"
+                                    title="국가 선택"
+                                >
+                                    <option value="">국가 선택 (선택)</option>
+                                    {SIGNUP_COUNTRY_OPTIONS.map((c) => (
+                                        <option key={c.code} value={c.code}>{c.label}</option>
+                                    ))}
+                                </select>
                             </>
                         )}
                         <input type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호" className="workspace-input" />
