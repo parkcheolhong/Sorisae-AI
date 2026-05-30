@@ -110,19 +110,24 @@ def ensure_traceability_schema() -> None:
                 connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
 
         if inspector.has_table("feature_execution_logs"):
-            feature_execution_statements = [
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS feature_id VARCHAR(100)",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS entity_type VARCHAR(80)",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS entity_id VARCHAR(120)",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS run_id VARCHAR(120)",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS prompt TEXT",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS message TEXT",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS payload_json TEXT",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS output_payload_json TEXT",
-                "ALTER TABLE feature_execution_logs ADD COLUMN IF NOT EXISTS error_message TEXT",
-            ]
-            for statement in feature_execution_statements:
-                connection.execute(text(statement))
+            existing_columns = {column["name"] for column in inspector.get_columns("feature_execution_logs")}
+            feature_execution_columns = {
+                "feature_id": "VARCHAR(100)",
+                "entity_type": "VARCHAR(80)",
+                "entity_id": "VARCHAR(120)",
+                "run_id": "VARCHAR(120)",
+                "prompt": "TEXT",
+                "message": "TEXT",
+                "payload_json": "TEXT",
+                "output_payload_json": "TEXT",
+                "error_message": "TEXT",
+            }
+            for column_name, column_type in feature_execution_columns.items():
+                if column_name in existing_columns:
+                    continue
+                connection.execute(text(
+                    f"ALTER TABLE feature_execution_logs ADD COLUMN {column_name} {column_type}"
+                ))
             connection.execute(text(
                 "UPDATE feature_execution_logs SET feature_id = COALESCE(NULLIF(feature_id, ''), entity_type, 'feature_execution')"
             ))
