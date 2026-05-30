@@ -97,7 +97,7 @@ make check
 
 ### Known caveats
 
-- `frontend/frontend/package.json` has a trailing comma after the last script entry that causes `npm ci` to fail. Fix it before running `npm ci`.
+- Ensure `frontend/frontend/package.json` remains valid JSON (no trailing commas), otherwise `npm ci` will fail.
 - The GPU warning in health checks is expected in environments without NVIDIA GPU.
 - Redis is exposed on host port **6380** (not 6379) to avoid conflicts.
 - Some backend tests (`test_orchestrator_compat_manifest_write`, `test_runtime_config_persistence`) have pre-existing failures unrelated to environment setup.
