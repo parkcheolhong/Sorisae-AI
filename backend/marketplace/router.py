@@ -1148,6 +1148,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     task: str = ""
     conversation: List[Dict[str, Any]] = []
     run_id: Optional[str] = None
+    session_id: Optional[str] = None
     stage_id: Optional[str] = None
     project_name: Optional[str] = None
     output_dir: Optional[str] = None
@@ -1157,6 +1158,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     companion_mode: str = "hybrid"
     response_style: str = "balanced"
     tone_preset: str = "auto"
+    reverse_question_mode: Optional[str] = None
     max_tokens: int = 768
 
 

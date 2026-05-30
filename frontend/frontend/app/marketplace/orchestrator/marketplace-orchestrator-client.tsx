@@ -20,6 +20,36 @@ type ConversationMessage = {
     step_title?: string | null;
 };
 
+type AdvisoryQuestion = {
+    prompt: string;
+    reason?: string | null;
+};
+
+type AdvisoryNextAction = {
+    title: string;
+    action_type: string;
+    detail: string;
+    recommended_mode?: string | null;
+};
+
+type ProposalItem = {
+    title: string;
+    category?: string;
+    detail: string;
+    benefit?: string | null;
+    tradeoff?: string | null;
+};
+
+type TechnologyRecommendation = {
+    title: string;
+    source?: string;
+    adoption_risk: string;
+    implementation_difficulty: string;
+    operating_cost: string;
+    alternative: string;
+    rationale: string;
+};
+
 type Product = {
     id: string;
     title: string;
@@ -101,6 +131,9 @@ type SlotExperimentResult = {
     output_preview?: unknown;
     callable?: string | null;
 };
+
+const MARKETPLACE_ORCHESTRATOR_CHAT_SESSION_KEY = 'marketplace_orchestrator_chat_session_v1';
+const MARKETPLACE_ORCHESTRATOR_CHAT_CONVERSATION_KEY = 'marketplace_orchestrator_chat_conversation_v1';
 
 const CATEGORY_USAGE_GUIDE: Record<string, string> = {
     interpreter: '요구사항 번역/정리, 다국어 문맥 변환',
@@ -466,9 +499,38 @@ export default function MarketplaceOrchestratorClient({
     const [completions, setCompletions] = React.useState<CompletionItem[]>([]);
     const [retryQueue, setRetryQueue] = React.useState<RetryQueueItem[]>([]);
     const [generatedProgramSummary, setGeneratedProgramSummary] = React.useState<GeneratedProgramSummary | null>(null);
-    const [conversation, setConversation] = React.useState<ConversationMessage[]>([]);
+    const [chatSessionId, setChatSessionId] = React.useState(() => {
+        if (typeof window === 'undefined') {
+            return `market-chat-${selectedProduct.id}-${Date.now()}`;
+        }
+        const key = `${MARKETPLACE_ORCHESTRATOR_CHAT_SESSION_KEY}:${selectedProduct.id}`;
+        const existing = window.localStorage.getItem(key);
+        if (existing) {
+            return existing;
+        }
+        const next = `market-chat-${selectedProduct.id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        window.localStorage.setItem(key, next);
+        return next;
+    });
+    const [conversation, setConversation] = React.useState<ConversationMessage[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = JSON.parse(window.localStorage.getItem(`${MARKETPLACE_ORCHESTRATOR_CHAT_CONVERSATION_KEY}:${selectedProduct.id}`) || '[]');
+                if (Array.isArray(saved)) {
+                    return saved;
+                }
+            } catch {
+            }
+        }
+        return [];
+    });
     const [chatInput, setChatInput] = React.useState('');
     const [chatLoading, setChatLoading] = React.useState(false);
+    const [clarificationQuestions, setClarificationQuestions] = React.useState<AdvisoryQuestion[]>([]);
+    const [proposalItems, setProposalItems] = React.useState<ProposalItem[]>([]);
+    const [nextActionSuggestions, setNextActionSuggestions] = React.useState<AdvisoryNextAction[]>([]);
+    const [newTechnologyCandidates, setNewTechnologyCandidates] = React.useState<string[]>([]);
+    const [technologyRecommendations, setTechnologyRecommendations] = React.useState<TechnologyRecommendation[]>([]);
     const [engineRails, setEngineRails] = React.useState<MarketplaceEngineRail[] | undefined>(undefined);
     const [engineSlots, setEngineSlots] = React.useState<MarketplaceSlotRow[]>([]);
     const [selectedEngineRailId, setSelectedEngineRailId] = React.useState<string>('RAIL-01');
@@ -966,6 +1028,15 @@ export default function MarketplaceOrchestratorClient({
     }, [loadHistory, loadMyInfo]);
 
     React.useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(`${MARKETPLACE_ORCHESTRATOR_CHAT_SESSION_KEY}:${selectedProduct.id}`, chatSessionId);
+            window.localStorage.setItem(`${MARKETPLACE_ORCHESTRATOR_CHAT_CONVERSATION_KEY}:${selectedProduct.id}`, JSON.stringify(conversation.slice(-60)));
+        } catch {
+        }
+    }, [chatSessionId, conversation, selectedProduct.id]);
+
+    React.useEffect(() => {
         if (typeof window === 'undefined') {
             return;
         }
@@ -1121,10 +1192,11 @@ export default function MarketplaceOrchestratorClient({
         }
     }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadHistory, loadMyInfo, memberType, password, representativeName, username]);
 
-    const createStageRun = React.useCallback(async () => {
+    const createStageRun = React.useCallback(async (taskOverride?: string) => {
         if (!authHeaders) {
             throw new Error('로그인 후 주문을 시작할 수 있습니다.');
         }
+        const effectiveTaskDraft = taskOverride ?? taskDraft;
         const response = await fetch(`${apiBaseUrl}/api/marketplace/customer-orchestrate/stage-runs`, {
             method: 'POST',
             headers: {
@@ -1132,7 +1204,7 @@ export default function MarketplaceOrchestratorClient({
                 ...authHeaders,
             },
             body: JSON.stringify({
-                task: buildTask(selectedProduct, taskDraft, projectName),
+                task: buildTask(selectedProduct, effectiveTaskDraft, projectName),
                 mode: 'full',
                 project_name: projectName.trim() || selectedProduct.id,
             }),
@@ -1146,11 +1218,12 @@ export default function MarketplaceOrchestratorClient({
         return payload.run_id as string;
     }, [apiBaseUrl, authHeaders, projectName, selectedProduct, taskDraft]);
 
-    const submitOrchestration = React.useCallback(async () => {
+    const submitOrchestration = React.useCallback(async (taskOverride?: string) => {
         setSubmitLoading(true);
         setErrorText('');
         try {
-            const effectiveRunId = runId || await createStageRun();
+            const effectiveTaskDraft = taskOverride ?? taskDraft;
+            const effectiveRunId = runId || await createStageRun(effectiveTaskDraft);
             const effectiveStageId = stageRun?.current_stage_id || 'ARCH-001';
             const acceptedResponse = await fetch(`${apiBaseUrl}/api/marketplace/customer-orchestrate/accepted`, {
                 method: 'POST',
@@ -1159,7 +1232,7 @@ export default function MarketplaceOrchestratorClient({
                     ...(authHeaders || {}),
                 },
                 body: JSON.stringify({
-                    task: buildTask(selectedProduct, taskDraft, projectName),
+                    task: buildTask(selectedProduct, effectiveTaskDraft, projectName),
                     mode: 'full',
                     project_name: projectName.trim() || selectedProduct.id,
                     stage_run_id: effectiveRunId,
@@ -1185,7 +1258,7 @@ export default function MarketplaceOrchestratorClient({
                     ...(authHeaders || {}),
                 },
                 body: JSON.stringify({
-                    task: buildTask(selectedProduct, taskDraft, projectName),
+                    task: buildTask(selectedProduct, effectiveTaskDraft, projectName),
                     mode: 'full',
                     project_name: projectName.trim() || selectedProduct.id,
                     stage_run_id: effectiveRunId,
@@ -1264,6 +1337,19 @@ export default function MarketplaceOrchestratorClient({
     const sendStageChat = React.useCallback(async () => {
         const content = chatInput.trim();
         if (!content || !authHeaders) return;
+        if (/^\/run(?:\s+|$)/i.test(content)) {
+            const nextTask = content.replace(/^\/run\s*/i, '').trim();
+            if (nextTask) {
+                setTaskDraft(nextTask);
+            }
+            setChatInput('');
+            await submitOrchestration(nextTask || undefined);
+            return;
+        }
+        if (/^\/(pass|fix|fail)(?:\s+|$)/i.test(content)) {
+            setErrorText('단계 판정은 채팅 명령이 아니라 통과/보정/미통과 버튼으로 처리합니다. Enter는 자유 대화 전용입니다.');
+            return;
+        }
         setChatLoading(true);
         setErrorText('');
         try {
@@ -1287,13 +1373,15 @@ export default function MarketplaceOrchestratorClient({
                     message: content,
                     conversation: nextConversation,
                     run_id: runId || undefined,
+                    session_id: chatSessionId,
                     stage_id: stageRun?.current_stage_id || undefined,
                     project_name: projectName.trim() || selectedProduct.id,
                     companion_mode: 'hybrid',
-                    conversation_mode: conversationTonePresetConfig.conversationMode,
+                    conversation_mode: 'reverse_question',
                     multi_turn_enabled: true,
-                    response_style: conversationTonePresetConfig.responseStyle,
+                    response_style: `reverse_question:${reverseQuestionMode}`,
                     tone_preset: conversationTonePreset,
+                    reverse_question_mode: reverseQuestionMode,
                     max_tokens: 640,
                     output_dir: generatedProgramSummary?.output_dir || undefined,
                     project_memory: {
@@ -1316,16 +1404,18 @@ export default function MarketplaceOrchestratorClient({
                 throw new Error(data?.detail || '고객 협업 대화 호출에 실패했습니다.');
             }
             setConversation(Array.isArray(data.conversation) ? data.conversation : nextConversation);
+            setClarificationQuestions(Array.isArray(data.clarification_questions) ? data.clarification_questions : []);
+            setProposalItems(Array.isArray(data.proposal_items) ? data.proposal_items : []);
+            setNextActionSuggestions(Array.isArray(data.next_action_suggestions) ? data.next_action_suggestions : []);
+            setNewTechnologyCandidates(Array.isArray(data.new_technology_candidates) ? data.new_technology_candidates : []);
+            setTechnologyRecommendations(Array.isArray(data.technology_recommendations) ? data.technology_recommendations : []);
+            if (data.session_id) {
+                setChatSessionId(data.session_id);
+            }
             if (data.stage_chat?.pending_revision_note && content.startsWith('/revise')) {
                 setStageRevisionNote((prev) => [prev, data.stage_chat.pending_revision_note].filter(Boolean).join('\n'));
             }
-            if (content.startsWith('/pass')) {
-                await updateStageStatus('passed');
-            } else if (content.startsWith('/fix') || content.startsWith('/revise')) {
-                await updateStageStatus('manual_correction');
-            } else if (content.startsWith('/fail')) {
-                await updateStageStatus('failed');
-            } else if (content.startsWith('/verify') || content.startsWith('/resume')) {
+            if (content.startsWith('/verify') || content.startsWith('/resume')) {
                 await refreshStageRun();
                 await loadHistory();
             }
@@ -1335,7 +1425,7 @@ export default function MarketplaceOrchestratorClient({
         } finally {
             setChatLoading(false);
         }
-    }, [activeStage?.title, apiBaseUrl, authHeaders, chatInput, conversation, conversationTonePreset, conversationTonePresetConfig.conversationMode, conversationTonePresetConfig.responseStyle, conversationTonePresetConfig.tag, generatedProgramSummary?.output_dir, loadHistory, projectName, refreshStageRun, reverseQuestionMode, reverseQuestionModeConfig.tag, runId, selectedProduct, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, taskDraft, updateStageStatus]);
+    }, [activeStage?.title, apiBaseUrl, authHeaders, chatInput, chatSessionId, conversation, conversationTonePreset, conversationTonePresetConfig.tag, generatedProgramSummary?.output_dir, loadHistory, projectName, refreshStageRun, reverseQuestionMode, reverseQuestionModeConfig.tag, runId, selectedProduct, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, submitOrchestration, taskDraft]);
 
     return (
         <div className="workspace-shell">
@@ -1371,9 +1461,9 @@ export default function MarketplaceOrchestratorClient({
                                     <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#58c9ff]">오케스트레이터 핵심 사용법</p>
                                     <div className="mt-3 space-y-2 text-sm text-[#d2d9e3]">
                                         <p>1. 프로젝트명과 주문 내용을 입력합니다.</p>
-                                        <p>2. 시작은 버튼 또는 `/run` 하나만 사용합니다.</p>
-                                        <p>3. 카드 판정은 `/pass`, `/fix`, `/fail`로 처리합니다.</p>
-                                        <p>4. 상태 확인은 `/verify`, 질문/수정은 `/ask`, `/search`, `/news`, `/revise`를 사용합니다.</p>
+                                        <p>2. Enter는 항상 자유 대화입니다. 실행은 `/run` 또는 주문하기 버튼으로만 시작합니다.</p>
+                                        <p>3. 카드 판정은 통과/보정/미통과 버튼으로 처리합니다.</p>
+                                        <p>4. 역질문 모드를 선택하면 백엔드 conversation_mode가 reverse_question으로 고정됩니다.</p>
                                     </div>
                                 </>
                             )}
@@ -1920,10 +2010,10 @@ export default function MarketplaceOrchestratorClient({
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-[11px] font-semibold tracking-[0.28em] text-[#58c9ff]">CODE GENERATOR</span>
                                         <p className="text-2xl font-bold text-white">마켓플레이스 오케스트레이터</p>
-                                        <span className="rounded-full bg-[#12381f] px-2 py-1 text-[11px] text-[#3fb950]">Enter 실행형</span>
+                                        <span className="rounded-full bg-[#12381f] px-2 py-1 text-[11px] text-[#3fb950]">Enter 자유대화</span>
                                         {terminalFocusedView && <span className="rounded-full bg-[#0f2747] px-2 py-1 text-[11px] text-[#9ecbff]">기능만 표시</span>}
                                     </div>
-                                    <p className="mt-2 text-xs text-[#8b949e]">로그인 후 프로젝트 설정과 주문 내용을 입력하면 오케스트레이터가 역질문식으로 바로 진행합니다.</p>
+                                    <p className="mt-2 text-xs text-[#8b949e]">로그인 후 Enter로 대화하며 조건을 좁히고, `/run` 또는 주문하기 버튼으로만 실행합니다.</p>
                                     <div className={`mt-4 grid gap-4 ${terminalFocusedView ? 'xl:grid-cols-[220px_1fr]' : ''}`}>
                                         <div className="rounded-2xl border border-[#25304a] bg-[#0f1523] p-4">
                                             <div className="flex items-center justify-between gap-2">
@@ -1987,10 +2077,10 @@ export default function MarketplaceOrchestratorClient({
                                             <input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명" className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                             <textarea value={taskDraft} onChange={(e) => setTaskDraft(e.target.value)} rows={7} className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                             <div className="flex flex-wrap gap-3">
-                                                <button type="button" onClick={createStageRun} disabled={!token || submitLoading} className="rounded-2xl border border-[#30363d] bg-[#11161d] px-5 py-3 text-base font-semibold text-white">
+                                                <button type="button" onClick={() => void createStageRun()} disabled={!token || submitLoading} className="rounded-2xl border border-[#30363d] bg-[#11161d] px-5 py-3 text-base font-semibold text-white">
                                                     단계 카드 시작
                                                 </button>
-                                                <button type="button" onClick={submitOrchestration} disabled={!token || submitLoading} className="rounded-2xl bg-[#2a7cff] px-5 py-3 text-base font-bold text-white">
+                                                <button type="button" onClick={() => void submitOrchestration()} disabled={!token || submitLoading} className="rounded-2xl bg-[#2a7cff] px-5 py-3 text-base font-bold text-white">
                                                     {submitLoading ? '실행 중...' : '주문하기'}
                                                 </button>
                                             </div>
@@ -2035,6 +2125,54 @@ export default function MarketplaceOrchestratorClient({
                                     chatLoading={chatLoading}
                                     onSubmitChat={sendStageChat}
                                 />
+
+                                <div data-testid="marketplace-orchestrator-structured-response" className="grid gap-3 xl:grid-cols-2">
+                                    <div className="rounded-[24px] border border-[#244766] bg-[#0f1728] p-4 text-xs text-[#c9d1d9]">
+                                        <p className="text-sm font-semibold text-white">확인 질문 / 제안 카드</p>
+                                        <div className="mt-3 space-y-2">
+                                            {(clarificationQuestions.length > 0 ? clarificationQuestions : [{ prompt: '역질문 모드 선택 후 대화를 보내면 자동 확인 질문이 표시됩니다.' } as AdvisoryQuestion]).map((item, index) => (
+                                                <div key={`${item.prompt}-${index}`} className="rounded-xl border border-[#2a3a5f] bg-[#0b1322] px-3 py-2">
+                                                    <p className="font-semibold text-[#9ecbff]">{item.prompt}</p>
+                                                    {item.reason && <p className="mt-1 text-[#8fb0d4]">{item.reason}</p>}
+                                                </div>
+                                            ))}
+                                            {(proposalItems.length > 0 ? proposalItems : []).map((item) => (
+                                                <div key={`${item.title}-${item.category || 'proposal'}`} className="rounded-xl border border-[#2a3a5f] bg-[#0b1322] px-3 py-2">
+                                                    <p className="font-semibold text-white">{item.title}</p>
+                                                    <p className="mt-1 text-[#9fb0c2]">{item.detail}</p>
+                                                    {item.benefit && <p className="mt-1 text-[#7ab9ff]">효과: {item.benefit}</p>}
+                                                    {item.tradeoff && <p className="mt-1 text-[#f0a000]">트레이드오프: {item.tradeoff}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-[24px] border border-[#244766] bg-[#0f1728] p-4 text-xs text-[#c9d1d9]">
+                                        <p className="text-sm font-semibold text-white">기술 후보 / 실행 제안</p>
+                                        <div className="mt-3 space-y-2">
+                                            {(technologyRecommendations.length > 0 ? technologyRecommendations : []).map((item) => (
+                                                <div key={`${item.title}-${item.source || 'llm'}`} className="rounded-xl border border-[#2a3a5f] bg-[#0b1322] px-3 py-2">
+                                                    <p className="font-semibold text-[#9ecbff]">{item.title}</p>
+                                                    <p className="mt-1 text-[#ffcf8a]">도입 리스크: {item.adoption_risk}</p>
+                                                    <p>구현 난이도: {item.implementation_difficulty}</p>
+                                                    <p>운영비: {item.operating_cost}</p>
+                                                    <p className="text-[#8fb0d4]">대체안: {item.alternative}</p>
+                                                </div>
+                                            ))}
+                                            {technologyRecommendations.length === 0 && newTechnologyCandidates.length > 0 && (
+                                                <div className="rounded-xl border border-[#2a3a5f] bg-[#0b1322] px-3 py-2">
+                                                    <p className="font-semibold text-[#9ecbff]">후보</p>
+                                                    <p>{newTechnologyCandidates.join(', ')}</p>
+                                                </div>
+                                            )}
+                                            {(nextActionSuggestions.length > 0 ? nextActionSuggestions : [{ title: '대화 계속', action_type: 'follow-up', detail: '추가 조건을 답하면 다음 제안으로 이어갑니다.' }]).map((item, index) => (
+                                                <div key={`${item.title}-${index}`} className="rounded-xl border border-[#2a3a5f] bg-[#0b1322] px-3 py-2">
+                                                    <p className="font-semibold text-white">{item.title}</p>
+                                                    <p className="mt-1 text-[#9fb0c2]">{item.detail}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {!compactUi && (
                                     <SharedOrchestratorFollowUpCard
