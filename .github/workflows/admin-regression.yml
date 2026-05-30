@@ -33,7 +33,7 @@ jobs:
               - 'frontend/frontend/components/admin/**'
               - 'frontend/frontend/lib/admin*'
               - 'frontend/frontend/tests/admin*.playwright.spec.ts'
-              - 'frontend/frontend/playwright.config.cjs'
+              - 'frontend/frontend/playwright.config.ts'
               - 'frontend/frontend/package.json'
               - 'frontend/frontend/proxy.ts'
               - 'frontend/frontend/next.config.ts'
