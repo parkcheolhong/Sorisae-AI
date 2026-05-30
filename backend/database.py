@@ -140,19 +140,24 @@ def ensure_traceability_schema() -> None:
             ))
 
         if inspector.has_table("feature_retry_queue"):
-            feature_retry_statements = [
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS user_id INTEGER",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS feature_id VARCHAR(100)",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS entity_type VARCHAR(80)",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS entity_id VARCHAR(120)",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS queue_name VARCHAR(80)",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS last_error TEXT",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS attempt_count INTEGER",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS max_attempts INTEGER",
-                "ALTER TABLE feature_retry_queue ADD COLUMN IF NOT EXISTS retry_count INTEGER",
-            ]
-            for statement in feature_retry_statements:
-                connection.execute(text(statement))
+            feature_retry_columns = {column["name"] for column in inspector.get_columns("feature_retry_queue")}
+            feature_retry_column_specs = {
+                "user_id": "INTEGER",
+                "feature_id": "VARCHAR(100)",
+                "entity_type": "VARCHAR(80)",
+                "entity_id": "VARCHAR(120)",
+                "queue_name": "VARCHAR(80)",
+                "last_error": "TEXT",
+                "attempt_count": "INTEGER",
+                "max_attempts": "INTEGER",
+                "retry_count": "INTEGER",
+            }
+            for column_name, column_type in feature_retry_column_specs.items():
+                if column_name in feature_retry_columns:
+                    continue
+                connection.execute(
+                    text(f"ALTER TABLE feature_retry_queue ADD COLUMN {column_name} {column_type}")
+                )
             connection.execute(text(
                 "UPDATE feature_retry_queue SET feature_id = COALESCE(NULLIF(feature_id, ''), entity_type, queue_name, 'feature_retry')"
             ))
