@@ -59,7 +59,13 @@ def load_chat_session_snapshot(session_id: str, session_owner_id: Any = None) ->
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
-    return payload if isinstance(payload, dict) else {}
+    if not isinstance(payload, dict):
+        return {}
+    stored_owner = str(payload.get("session_owner_id") or "").strip()
+    requested_owner = _normalize_session_owner(session_owner_id)
+    if stored_owner and requested_owner and stored_owner != requested_owner:
+        return {}
+    return payload
 
 
 def save_chat_session_snapshot(session_id: str, snapshot: Dict[str, Any], session_owner_id: Any = None) -> None:

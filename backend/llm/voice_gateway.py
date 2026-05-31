@@ -14,11 +14,12 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from backend.auth import get_current_user
 from backend.llm.model_config import (
     build_ollama_options,
     get_chat_model,
@@ -40,6 +41,13 @@ VOICE_CHAT_REQUEST_MAX_TOKENS = max(128, int(os.getenv('ORCH_CHAT_REQUEST_MAX_TO
 VOICE_LIGHTWEIGHT_CHAT_MAX_TOKENS = max(64, int(os.getenv('ORCH_LIGHTWEIGHT_CHAT_MAX_TOKENS', '192')))
 VOICE_CHAT_AGENT_TIMEOUT_SEC = max(5.0, float(os.getenv('ORCH_CHAT_AGENT_TIMEOUT_SEC', '75')))
 VOICE_REASONER_BRIEF_TIMEOUT_SEC = max(5.0, float(os.getenv('ORCH_REASONER_BRIEF_TIMEOUT_SEC', '45')))
+
+
+def _chat_session_owner_id(current_user: Any) -> str | None:
+    user_id = getattr(current_user, "id", None)
+    if user_id is None:
+        return None
+    return f"user:{user_id}"
 
 
 def _resolve_voice_chat_model(agent_key: str, *, lightweight: bool) -> str:
@@ -213,7 +221,7 @@ def _synthesize_tts(text: str) -> tuple[Optional[str], Optional[str]]:
 
 
 @router.post("/voice/orchestrate", response_model=VoiceResponse)
-async def voice_orchestrate(request_context: Request, request: VoiceRequest):
+async def voice_orchestrate(request_context: Request, request: VoiceRequest, current_user: Any = Depends(get_current_user)):
     transcript = (request.transcript or "").strip()
     detected_language: Optional[str] = None
 
@@ -317,6 +325,7 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
                     logger=logger,
                     re_module=re,
                     session_factory=None,
+                    session_owner_id=_chat_session_owner_id(current_user),
                 )
             )
         )

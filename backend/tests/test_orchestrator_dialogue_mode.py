@@ -148,3 +148,42 @@ async def test_session_id_is_isolated_by_owner(monkeypatch, tmp_path):
     assert "사용자 B가 같은 세션 ID" in joined
     assert "사용자 A의 비공개 요구사항" not in joined
     assert response.diagnostics["session_loaded"] is False
+
+
+def test_load_snapshot_rejects_mismatched_owner(tmp_path, monkeypatch):
+    """Snapshot saved by user:1 must not be returned when loaded as user:2."""
+    from backend.orchestrator.chat.session_store import (
+        load_chat_session_snapshot,
+        save_chat_session_snapshot,
+    )
+
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+
+    save_chat_session_snapshot(
+        "sid-owner-check",
+        {"conversation": [{"role": "user", "content": "secret"}]},
+        session_owner_id="user:1",
+    )
+
+    result = load_chat_session_snapshot("sid-owner-check", session_owner_id="user:2")
+    assert result == {}
+
+
+def test_load_snapshot_accepts_matching_owner(tmp_path, monkeypatch):
+    """Snapshot saved by user:1 is returned when loaded with the same owner."""
+    from backend.orchestrator.chat.session_store import (
+        load_chat_session_snapshot,
+        save_chat_session_snapshot,
+    )
+
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+
+    save_chat_session_snapshot(
+        "sid-owner-match",
+        {"conversation": [{"role": "user", "content": "data"}]},
+        session_owner_id="user:1",
+    )
+
+    result = load_chat_session_snapshot("sid-owner-match", session_owner_id="user:1")
+    assert result.get("session_owner_id") == "user:1"
+    assert result.get("conversation") == [{"role": "user", "content": "data"}]
