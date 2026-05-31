@@ -17,7 +17,7 @@ class _NoOpBase:
     metadata = _NoOpMetadata()
 
 
-def _stub_song_translation_modules(monkeypatch) -> None:
+def _stub_backend_mobile_dependencies(monkeypatch) -> None:
     fake_mobile_package = types.ModuleType("backend.mobile.song_translation")
     fake_mobile_models = types.ModuleType("backend.mobile.song_translation.models")
     fake_mobile_package.models = fake_mobile_models
@@ -25,7 +25,7 @@ def _stub_song_translation_modules(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "backend.mobile.song_translation.models", fake_mobile_models)
 
 
-def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(monkeypatch) -> None:
+def test_ensure_traceability_schema_migrates_sqlite_feature_retry_queue(monkeypatch) -> None:
     sqlite_engine = create_engine("sqlite:///:memory:")
     with sqlite_engine.begin() as connection:
         connection.execute(text(
@@ -46,7 +46,8 @@ def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(m
             """
         ))
 
-    _stub_song_translation_modules(monkeypatch)
+    # ensure_traceability_schema imports backend.mobile.song_translation.models before migrating tables.
+    _stub_backend_mobile_dependencies(monkeypatch)
     monkeypatch.setattr(backend_database, "engine", sqlite_engine)
     monkeypatch.setattr(backend_database, "Base", _NoOpBase())
 
