@@ -1093,10 +1093,16 @@ def _ensure_video_service_user_schema() -> None:
     if not inspector.has_table("users"): # type: ignore
         return
 
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("users")
+    }
+
     with engine.begin() as conn:
-        conn.execute(text(
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_balance INTEGER"
-        ))
+        if "credit_balance" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
