@@ -38,12 +38,12 @@ jobs:
     environment: ${{ inputs.release_target }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "20"
 
       - name: Install mobile dependencies
         run: npm ci --prefix apps/mobile-stock-ai
