@@ -49,6 +49,13 @@ def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(m
         for column in inspect(sqlite_engine).get_columns("feature_retry_queue")
     }
     assert {
+        "id",
+        "status",
+        "trace_id",
+        "retry_count",
+        "created_at",
+    }.issubset(columns)
+    assert {
         "user_id",
         "feature_id",
         "entity_type",
@@ -62,13 +69,29 @@ def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(m
     with sqlite_engine.begin() as connection:
         row = connection.execute(text(
             """
-            SELECT feature_id, entity_type, entity_id, queue_name, attempt_count, max_attempts
+            SELECT
+                id,
+                status,
+                trace_id,
+                retry_count,
+                created_at,
+                feature_id,
+                entity_type,
+                entity_id,
+                queue_name,
+                attempt_count,
+                max_attempts
             FROM feature_retry_queue
             WHERE id = 1
             """
         )).mappings().one()
 
     assert dict(row) == {
+        "id": 1,
+        "status": "pending",
+        "trace_id": "trace-1",
+        "retry_count": 2,
+        "created_at": None,
         "feature_id": "feature_retry",
         "entity_type": "feature_retry",
         "entity_id": "trace-1",
