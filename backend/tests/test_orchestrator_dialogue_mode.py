@@ -9,6 +9,11 @@ from backend.orchestrator.chat import chat_service
 from backend.orchestrator.chat.models import OrchestratorChatRequest
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 def _request(path: str = "/api/llm/orchestrate/chat") -> Request:
     return Request(
         {
@@ -24,7 +29,7 @@ def _request(path: str = "/api/llm/orchestrate/chat") -> Request:
     )
 
 
-async def _answer(request_model: OrchestratorChatRequest):
+async def _answer(request_model: OrchestratorChatRequest, *, session_owner_id: str | None = None):
     return await chat_service.answer_orchestrator_chat(
         request_context=_request(),
         request=request_model,
@@ -39,10 +44,11 @@ async def _answer(request_model: OrchestratorChatRequest):
         logger=logging.getLogger("test"),
         re_module=__import__("re"),
         session_factory=None,
+        session_owner_id=session_owner_id,
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
 
@@ -74,7 +80,7 @@ async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp
     assert response.technology_recommendations
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
 
@@ -105,3 +111,79 @@ async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     joined = "\n".join(item.content for item in response.conversation)
     assert "첫 결정은 실행을 /run으로만 제한" in joined
     assert "이전 결정을 이어서 기술 후보" in joined
+
+
+@pytest.mark.anyio
+async def test_session_id_is_isolated_by_owner(monkeypatch, tmp_path):
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+
+    async def fake_llm(**kwargs):
+        return "세션 소유자 기준으로만 이전 대화를 이어갑니다."
+
+    monkeypatch.setattr(chat_service, "call_orchestrator_chat_llm", fake_llm)
+
+    await _answer(
+        OrchestratorChatRequest(
+            message="사용자 A의 비공개 요구사항은 결제 데이터 보존입니다.",
+            conversation=[{"role": "user", "content": "사용자 A의 비공개 요구사항은 결제 데이터 보존입니다."}],
+            session_id="shared-session",
+            reverse_question_mode="implementation",
+            project_memory={"reverse_question_mode": "implementation"},
+        ),
+        session_owner_id="user:1",
+    )
+
+    response = await _answer(
+        OrchestratorChatRequest(
+            message="사용자 B가 같은 세션 ID로 새 대화를 시작합니다.",
+            conversation=[{"role": "user", "content": "사용자 B가 같은 세션 ID로 새 대화를 시작합니다."}],
+            session_id="shared-session",
+            reverse_question_mode="implementation",
+            project_memory={"reverse_question_mode": "implementation"},
+        ),
+        session_owner_id="user:2",
+    )
+
+    joined = "\n".join(item.content for item in response.conversation)
+    assert "사용자 B가 같은 세션 ID" in joined
+    assert "사용자 A의 비공개 요구사항" not in joined
+    assert response.diagnostics["session_loaded"] is False
+
+
+def test_load_snapshot_rejects_mismatched_owner(tmp_path, monkeypatch):
+    """Snapshot saved by user:1 must not be returned when loaded as user:2."""
+    from backend.orchestrator.chat.session_store import (
+        load_chat_session_snapshot,
+        save_chat_session_snapshot,
+    )
+
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+
+    save_chat_session_snapshot(
+        "sid-owner-check",
+        {"conversation": [{"role": "user", "content": "secret"}]},
+        session_owner_id="user:1",
+    )
+
+    result = load_chat_session_snapshot("sid-owner-check", session_owner_id="user:2")
+    assert result == {}
+
+
+def test_load_snapshot_accepts_matching_owner(tmp_path, monkeypatch):
+    """Snapshot saved by user:1 is returned when loaded with the same owner."""
+    from backend.orchestrator.chat.session_store import (
+        load_chat_session_snapshot,
+        save_chat_session_snapshot,
+    )
+
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+
+    save_chat_session_snapshot(
+        "sid-owner-match",
+        {"conversation": [{"role": "user", "content": "data"}]},
+        session_owner_id="user:1",
+    )
+
+    result = load_chat_session_snapshot("sid-owner-match", session_owner_id="user:1")
+    assert result.get("session_owner_id") == "user:1"
+    assert result.get("conversation") == [{"role": "user", "content": "data"}]
