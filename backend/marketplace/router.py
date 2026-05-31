@@ -1093,12 +1093,11 @@ def _ensure_video_service_user_schema() -> None:
     if not inspector.has_table("users"): # type: ignore
         return
 
-    existing_columns = {
-        column["name"]
-        for column in inspector.get_columns("users")
-    }
-
     with engine.begin() as conn:
+        existing_columns = {
+            column["name"]
+            for column in inspector.get_columns("users")
+        }
         if "credit_balance" not in existing_columns:
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
