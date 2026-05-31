@@ -78,19 +78,20 @@ def test_r7_long_timeout_markers_mitigated() -> None:
         re.DOTALL,
     )
 
-    assert first_server_block is not None
-    assert second_server_block is not None
-
     first_server_body = first_server_block.group('body')
     second_server_body = second_server_block.group('body')
+
+    assert 'location /api/ {' in first_server_body
+
     api_location_body = _extract_braced_block(first_server_body, 'location /api/')
+    assert (
+        api_location_body is not None
+    ), 'Expected to find `location /api/ { ... }` block in first server nginx config'
 
     assert 'location = /api/admin/system-settings {' in first_server_body
     assert 'proxy_read_timeout 120s;' in first_server_body
     assert 'proxy_send_timeout 120s;' in first_server_body
 
-    assert 'location /api/ {' in first_server_body
-    assert api_location_body is not None
     assert 'proxy_read_timeout 300s;' in api_location_body
     assert 'proxy_send_timeout 300s;' in api_location_body
 
