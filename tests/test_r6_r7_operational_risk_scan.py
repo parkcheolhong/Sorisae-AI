@@ -62,14 +62,20 @@ def test_r7_long_timeout_markers_mitigated() -> None:
 
     first_server_body = first_server_block.group('body')
     second_server_body = second_server_block.group('body')
+    first_server_api_location = re.search(
+        r'location /api/ \{(?P<body>.*?)\n\s*}',
+        first_server_body,
+        re.DOTALL,
+    )
 
     assert 'location = /api/admin/system-settings {' in first_server_body
     assert 'proxy_read_timeout 120s;' in first_server_body
     assert 'proxy_send_timeout 120s;' in first_server_body
 
-    assert 'location /api/ {' in first_server_body
-    assert 'proxy_read_timeout 300s;' in first_server_body
-    assert 'proxy_send_timeout 300s;' in first_server_body
+    assert first_server_api_location is not None
+    first_server_api_location_body = first_server_api_location.group('body')
+    assert 'proxy_read_timeout 300s;' in first_server_api_location_body
+    assert 'proxy_send_timeout 300s;' in first_server_api_location_body
 
     assert second_server_body.count('location = /api/llm/ws {') == 1
     assert second_server_body.count('proxy_read_timeout 300s;') >= 2
