@@ -10,7 +10,7 @@ import backend.database as backend_database
 
 class _NoOpMetadata:
     def create_all(self, bind) -> None:
-        return None
+        pass
 
 
 class _NoOpBase:
@@ -46,7 +46,7 @@ def test_ensure_traceability_schema_migrates_sqlite_feature_retry_queue(monkeypa
             """
         ))
 
-    # ensure_traceability_schema imports backend.mobile.song_translation.models before migrating tables.
+    # Ensure traceability_schema imports backend.mobile.song_translation.models before migrating tables.
     _stub_backend_mobile_dependencies(monkeypatch)
     monkeypatch.setattr(backend_database, "engine", sqlite_engine)
     monkeypatch.setattr(backend_database, "Base", _NoOpBase())
