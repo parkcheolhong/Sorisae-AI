@@ -24,11 +24,11 @@ jobs:
       run_full: ${{ steps.paths.outputs.admin_full }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Detect full-lane impact paths
         id: paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             admin_full:
@@ -54,12 +54,12 @@ jobs:
         working-directory: frontend/frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/frontend/package-lock.json
 
@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload smoke Playwright report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: admin-regression-smoke-playwright-report
           path: frontend/frontend/playwright-report
@@ -97,12 +97,12 @@ jobs:
         working-directory: frontend/frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/frontend/package-lock.json
 
@@ -124,7 +124,7 @@ jobs:
 
       - name: Upload full Playwright report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: admin-regression-full-playwright-report
           path: frontend/frontend/playwright-report
