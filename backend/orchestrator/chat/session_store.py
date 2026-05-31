@@ -61,7 +61,7 @@ def load_chat_session_snapshot(session_id: str, session_owner_id: Any = None) ->
         return {}
     if not isinstance(payload, dict):
         return {}
-    stored_owner = str(payload.get("session_owner_id") or "").strip()
+    stored_owner = _normalize_session_owner(payload.get("session_owner_id"))
     requested_owner = _normalize_session_owner(session_owner_id)
     if stored_owner and requested_owner and stored_owner != requested_owner:
         return {}
