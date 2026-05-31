@@ -1094,9 +1094,10 @@ def _ensure_video_service_user_schema() -> None:
         return
 
     with engine.begin() as conn:
+        conn_inspector = inspect(conn)
         existing_columns = {
             column["name"]
-            for column in inspector.get_columns("users")
+            for column in conn_inspector.get_columns("users")
         }
         if "credit_balance" not in existing_columns:
             conn.execute(text(
