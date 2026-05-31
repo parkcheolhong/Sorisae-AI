@@ -17,7 +17,7 @@ def _extract_braced_block(text: str, block_header: str) -> str | None:
     if block_start == -1:
         return None
 
-    brace_start = text.find('{', block_start)
+    brace_start = text.find('{', block_start + len(block_header))
     if brace_start == -1:
         return None
 
@@ -83,15 +83,15 @@ def test_r7_long_timeout_markers_mitigated() -> None:
 
     first_server_body = first_server_block.group('body')
     second_server_body = second_server_block.group('body')
-    first_server_api_location_body = _extract_braced_block(first_server_body, 'location /api/ {')
+    api_location_body = _extract_braced_block(first_server_body, 'location /api/')
 
     assert 'location = /api/admin/system-settings {' in first_server_body
     assert 'proxy_read_timeout 120s;' in first_server_body
     assert 'proxy_send_timeout 120s;' in first_server_body
 
-    assert first_server_api_location_body is not None
-    assert 'proxy_read_timeout 300s;' in first_server_api_location_body
-    assert 'proxy_send_timeout 300s;' in first_server_api_location_body
+    assert api_location_body is not None
+    assert 'proxy_read_timeout 300s;' in api_location_body
+    assert 'proxy_send_timeout 300s;' in api_location_body
 
     assert second_server_body.count('location = /api/llm/ws {') == 1
     assert second_server_body.count('proxy_read_timeout 300s;') >= 2
