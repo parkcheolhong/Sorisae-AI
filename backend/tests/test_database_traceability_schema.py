@@ -2,11 +2,27 @@ from __future__ import annotations
 
 import sys
 import types
-from types import SimpleNamespace
 
 from sqlalchemy import create_engine, inspect, text
 
 import backend.database as backend_database
+
+
+class _NoOpMetadata:
+    def create_all(self, bind) -> None:
+        return None
+
+
+class _NoOpBase:
+    metadata = _NoOpMetadata()
+
+
+def _stub_song_translation_modules(monkeypatch) -> None:
+    fake_mobile_package = types.ModuleType("backend.mobile.song_translation")
+    fake_mobile_models = types.ModuleType("backend.mobile.song_translation.models")
+    fake_mobile_package.models = fake_mobile_models
+    monkeypatch.setitem(sys.modules, "backend.mobile.song_translation", fake_mobile_package)
+    monkeypatch.setitem(sys.modules, "backend.mobile.song_translation.models", fake_mobile_models)
 
 
 def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(monkeypatch) -> None:
@@ -30,17 +46,9 @@ def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(m
             """
         ))
 
-    fake_mobile_package = types.ModuleType("backend.mobile.song_translation")
-    fake_mobile_models = types.ModuleType("backend.mobile.song_translation.models")
-    fake_mobile_package.models = fake_mobile_models
-    monkeypatch.setitem(sys.modules, "backend.mobile.song_translation", fake_mobile_package)
-    monkeypatch.setitem(sys.modules, "backend.mobile.song_translation.models", fake_mobile_models)
+    _stub_song_translation_modules(monkeypatch)
     monkeypatch.setattr(backend_database, "engine", sqlite_engine)
-    monkeypatch.setattr(
-        backend_database,
-        "Base",
-        SimpleNamespace(metadata=SimpleNamespace(create_all=lambda bind: None)),
-    )
+    monkeypatch.setattr(backend_database, "Base", _NoOpBase())
 
     backend_database.ensure_traceability_schema()
 
@@ -86,16 +94,14 @@ def test_ensure_traceability_schema_adds_feature_retry_queue_columns_on_sqlite(m
             """
         )).mappings().one()
 
-    assert dict(row) == {
-        "id": 1,
-        "status": "pending",
-        "trace_id": "trace-1",
-        "retry_count": 2,
-        "created_at": None,
-        "feature_id": "feature_retry",
-        "entity_type": "feature_retry",
-        "entity_id": "trace-1",
-        "queue_name": "feature_retry",
-        "attempt_count": 2,
-        "max_attempts": 3,
-    }
+    assert row["id"] == 1
+    assert row["status"] == "pending"
+    assert row["trace_id"] == "trace-1"
+    assert row["retry_count"] == 2
+    assert row["created_at"] is None
+    assert row["feature_id"] == "feature_retry"
+    assert row["entity_type"] == "feature_retry"
+    assert row["entity_id"] == "trace-1"
+    assert row["queue_name"] == "feature_retry"
+    assert row["attempt_count"] == 2
+    assert row["max_attempts"] == 3
