@@ -89,6 +89,7 @@ def test_r7_long_timeout_markers_mitigated() -> None:
     assert 'proxy_read_timeout 120s;' in first_server_body
     assert 'proxy_send_timeout 120s;' in first_server_body
 
+    assert 'location /api/ {' in first_server_body
     assert api_location_body is not None
     assert 'proxy_read_timeout 300s;' in api_location_body
     assert 'proxy_send_timeout 300s;' in api_location_body
