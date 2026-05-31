@@ -146,9 +146,11 @@ def _extract_session_id(request: OrchestratorChatRequest, auto_connect: AutoConn
 def _load_session_state(
     request: OrchestratorChatRequest,
     auto_connect: AutoConnectMeta,
+    *,
+    session_owner_id: Any = None,
 ) -> tuple[str, Dict[str, Any]]:
     session_id = _extract_session_id(request, auto_connect)
-    snapshot = load_chat_session_snapshot(session_id) if session_id else {}
+    snapshot = load_chat_session_snapshot(session_id, session_owner_id=session_owner_id) if session_id else {}
     if snapshot:
         request.conversation = _merge_conversation_dicts(
             list(snapshot.get("conversation") or []),
@@ -165,6 +167,7 @@ def _save_response_session(
     response: OrchestratorChatResponse,
     *,
     project_memory: Dict[str, Any],
+    session_owner_id: Any = None,
 ) -> None:
     if not session_id:
         return
@@ -183,6 +186,7 @@ def _save_response_session(
             "new_technology_candidates": list(response.new_technology_candidates or []),
             "next_action_suggestions": [item.model_dump() for item in response.next_action_suggestions],
         },
+        session_owner_id=session_owner_id,
     )
 
 
@@ -1141,6 +1145,7 @@ async def answer_orchestrator_chat(
     logger,
     re_module,
     session_factory,
+    session_owner_id: Any = None,
 ) -> OrchestratorChatResponse:
     auto_connect = request.auto_connect or AutoConnectMeta(
         connection_id=request.run_id or uuid4().hex,
@@ -1153,7 +1158,11 @@ async def answer_orchestrator_chat(
     message = str(request.message or "").strip() or "요청 내용을 다시 입력하세요."
     message_lower = message.lower()
     lightweight = is_lightweight_chat_request(request, request_context)
-    session_id, session_snapshot = _load_session_state(request, auto_connect)
+    session_id, session_snapshot = _load_session_state(
+        request,
+        auto_connect,
+        session_owner_id=session_owner_id,
+    )
     requested_conversation_mode = str(request.conversation_mode or "auto").strip().lower() or "auto"
     response_style = str(request.response_style or "balanced").strip().lower() or "balanced"
     tone_preset = str(request.tone_preset or "auto").strip().lower() or "auto"
@@ -1623,7 +1632,12 @@ async def answer_orchestrator_chat(
             auto_connect=auto_connect,
             diagnostics=diagnostics,
         )
-        _save_response_session(session_id, fast_response, project_memory=fast_updated_project_memory)
+        _save_response_session(
+            session_id,
+            fast_response,
+            project_memory=fast_updated_project_memory,
+            session_owner_id=session_owner_id,
+        )
         return fast_response
     system_prompt = build_chat_system_prompt(
         mode_label,
@@ -1785,5 +1799,10 @@ async def answer_orchestrator_chat(
         auto_connect=auto_connect,
         diagnostics=diagnostics,
     )
-    _save_response_session(session_id, response, project_memory=updated_project_memory)
+    _save_response_session(
+        session_id,
+        response,
+        project_memory=updated_project_memory,
+        session_owner_id=session_owner_id,
+    )
     return response
