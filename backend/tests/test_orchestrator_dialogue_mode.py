@@ -9,6 +9,11 @@ from backend.orchestrator.chat import chat_service
 from backend.orchestrator.chat.models import OrchestratorChatRequest
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 def _request(path: str = "/api/llm/orchestrate/chat") -> Request:
     return Request(
         {
@@ -43,7 +48,7 @@ async def _answer(request_model: OrchestratorChatRequest, *, session_owner_id: s
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
 
@@ -75,7 +80,7 @@ async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp
     assert response.technology_recommendations
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
 
@@ -108,7 +113,7 @@ async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     assert "이전 결정을 이어서 기술 후보" in joined
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_session_id_is_isolated_by_owner(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
 
