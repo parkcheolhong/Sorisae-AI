@@ -12,6 +12,27 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding='utf-8')
 
 
+def _extract_braced_block(text: str, block_header: str) -> str | None:
+    block_start = text.find(block_header)
+    if block_start == -1:
+        return None
+
+    brace_start = text.find('{', block_start + len(block_header))
+    if brace_start == -1:
+        return None
+
+    depth = 0
+    for index in range(brace_start, len(text)):
+        if text[index] == '{':
+            depth += 1
+        elif text[index] == '}':
+            depth -= 1
+            if depth == 0:
+                return text[brace_start + 1 : index]
+
+    return None
+
+
 def test_r6_operational_exposure_markers_mitigated() -> None:
     compose_text = _read_text(DOCKER_COMPOSE_PATH)
     env_text = _read_text(ENV_EXAMPLE_PATH)
@@ -57,20 +78,20 @@ def test_r7_long_timeout_markers_mitigated() -> None:
         re.DOTALL,
     )
 
-    assert first_server_block is not None
-    assert second_server_block is not None
-
     first_server_body = first_server_block.group('body')
     second_server_body = second_server_block.group('body')
+
+    assert 'location /api/ {' in first_server_body
+
+    api_location_body = _extract_braced_block(first_server_body, 'location /api/')
+    assert (
+        api_location_body is not None
+    ), 'Expected to find `location /api/ { ... }` block in first server nginx config'
 
     assert 'location = /api/admin/system-settings {' in first_server_body
     assert 'proxy_read_timeout 120s;' in first_server_body
     assert 'proxy_send_timeout 120s;' in first_server_body
 
-    assert 'location /api/ {' in first_server_body
-    api_location_block = re.search(r'location /api/ \{([^}]*)\}', first_server_body)
-    assert api_location_block is not None
-    api_location_body = api_location_block.group(1)
     assert 'proxy_read_timeout 300s;' in api_location_body
     assert 'proxy_send_timeout 300s;' in api_location_body
 
