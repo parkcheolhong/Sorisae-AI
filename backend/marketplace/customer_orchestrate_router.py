@@ -56,6 +56,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
                 auto_connect=auto_connect,
             ),
             agent_key="customer_orchestrator",
+            current_user=current_user,
         )
         chat_response.stage_chat = contract._build_customer_stage_chat_context(stage_run_payload, request)
         chat_response.diagnostics = {

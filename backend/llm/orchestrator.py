@@ -13098,4 +13098,5 @@ async def answer_orchestrator_chat(
         logger=logger,
         re_module=re,
         session_factory=SessionLocal,
+        current_user=current_user,
     )
