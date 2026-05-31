@@ -133,6 +133,13 @@ ORCH_ALLOWED_OUTPUT_ROOTS = [
 ]
 
 
+def _chat_session_owner_id(current_user: Any) -> str | None:
+    user_id = getattr(current_user, "id", None)
+    if user_id is None:
+        return None
+    return f"user:{user_id}"
+
+
 def _is_relative_to(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)
@@ -13098,4 +13105,5 @@ async def answer_orchestrator_chat(
         logger=logger,
         re_module=re,
         session_factory=SessionLocal,
+        session_owner_id=_chat_session_owner_id(current_user),
     )
