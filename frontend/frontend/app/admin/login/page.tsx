@@ -292,22 +292,22 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+
+    const authUrl = "/api/proxy";
+    const normalizedEmail = email.trim();
+    const normalizedPassword = password;
+
+    if (!normalizedEmail || !normalizedPassword) {
+      setError("이메일과 비밀번호를 모두 입력해주세요.");
+      return;
+    }
+
+    setLoading(true);
     const loginFlowStartedAt = performance.now();
+    const loginRequest = createTimeoutSignal(ADMIN_LOGIN_REQUEST_TIMEOUT_MS);
 
     try {
-      const authUrl = "/api/proxy";
-      const normalizedEmail = email.trim();
-      const normalizedPassword = password;
-
-      if (!normalizedEmail || !normalizedPassword) {
-        setError("이메일과 비밀번호를 모두 입력해주세요.");
-        return;
-      }
-
-      const loginRequest = createTimeoutSignal(ADMIN_LOGIN_REQUEST_TIMEOUT_MS);
-
       const res = await fetchWithAdminBootstrapRetry(authUrl, {
         method: "POST",
         headers: {
@@ -327,7 +327,6 @@ export default function AdminLoginPage() {
           console.info('[admin-login-metric]', metric);
         },
       });
-      loginRequest.cleanup();
       console.info('[admin-login-flow]', {
         stage: 'post-response',
         status: res.status,
@@ -380,7 +379,6 @@ export default function AdminLoginPage() {
 
       setAdminToken(data.access_token);
 
-      // /me 호출로 관리자 권한 확인
       const me = data.user;
       if (!me || (typeof me !== 'object')) {
         setError("관리자 정보 응답 형식이 올바르지 않습니다. 프록시와 백엔드 상태를 확인해주세요.");
@@ -397,11 +395,12 @@ export default function AdminLoginPage() {
       window.location.replace("/admin");
     } catch (err) {
       const message = err instanceof DOMException && err.name === 'AbortError'
-        ? `서버 응답이 ${Math.floor(ADMIN_LOGIN_REQUEST_TIMEOUT_MS / 1000)}초 이상 지연되어 로그인을 중단했습니다. 관리자 프록시와 백엔드 상태를 먼저 확인한 뒤 다시 시도해주세요.`
+        ? `서버 응답이 ${Math.floor(ADMIN_LOGIN_REQUEST_TIMEOUT_MS / 1000)}초 이상 지연되어 로그인을 중단했습니다. 관리자 프록시와 백엔드 상태를 먼저 확인해주세요.`
         : '서버 연결에 실패했습니다. 관리자 프록시 또는 백엔드 연결 상태를 확인한 뒤 다시 시도해주세요.';
       clearAdminToken();
       setError(message);
     } finally {
+      loginRequest.cleanup();
       setLoading(false);
     }
   };
@@ -425,13 +424,13 @@ export default function AdminLoginPage() {
 
         {/* 오류 메시지 */}
         {error && (
-          <div data-testid="admin-login-error" className="mb-5 rounded-lg border border-[#ffcccc] bg-[#fff0f0] px-4 py-3 text-sm text-[#cc0000]">
+          <div data-testid="admin-login-error" role="alert" className="mb-5 rounded-lg border border-[#ffcccc] bg-[#fff0f0] px-4 py-3 text-sm text-[#cc0000]">
             ⚠️ {error}
           </div>
         )}
 
         {/* 로그인 폼 */}
-        <form onSubmit={handleLogin} data-testid="admin-login-form">
+        <form onSubmit={handleLogin} data-testid="admin-login-form" noValidate>
           <div className="mb-[18px]">
             <label htmlFor="admin-login-email" className="mb-1.5 block text-[13px] font-semibold text-[#444]">
               이메일
@@ -444,7 +443,6 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@example.com"
               autoComplete="username"
-              required
               data-testid="admin-login-email"
               className="box-border w-full rounded-lg border-[1.5px] border-[#e0e0e0] px-[14px] py-3 text-[15px] outline-none transition-colors focus:border-[#667eea]"
             />
@@ -462,7 +460,6 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
-              required
               data-testid="admin-login-password"
               className="box-border w-full rounded-lg border-[1.5px] border-[#e0e0e0] px-[14px] py-3 text-[15px] outline-none transition-colors focus:border-[#667eea]"
             />
@@ -526,7 +523,7 @@ export default function AdminLoginPage() {
             type="button"
             disabled={!passkeyReady || passkeyBusy}
             data-testid="admin-login-passkey-button"
-            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${allowPasskeyOnDevice ? 'border-[#667eea] bg-white text-[#5b67d8] hover:bg-[#f4f6ff]' : 'cursor-not-allowed border-[#ddd] bg-[#f3f3f3] text-[#999]'}`}
+            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${allowPasskeyOnDevice ? 'border-[#667eea] bg-white text-[#5b67d8] hover:bg-[#f4f6ff]' : 'border-[#d6d8e6] bg-[#f3f4f8] text-[#8b90a8]'} ${(!passkeyReady || passkeyBusy) ? 'cursor-not-allowed opacity-60' : ''}`}
             onClick={() => void handlePasskeyLogin()}
           >
             {passkeyBusy ? '⏳ 패스키 처리 중...' : '📱 지문/패스키 로그인'}
@@ -537,7 +534,7 @@ export default function AdminLoginPage() {
             disabled={!passkeyReady || passkeyBusy}
             data-testid="admin-login-passkey-register"
             onClick={() => void handlePasskeyRegister()}
-            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${passkeyReady ? 'border-[#764ba2] bg-white text-[#764ba2] hover:bg-[#f7f0ff]' : 'cursor-not-allowed border-[#ddd] bg-[#f3f3f3] text-[#999]'}`}
+            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${passkeyReady ? 'border-[#764ba2] bg-white text-[#764ba2] hover:bg-[#f7f0ff]' : 'cursor-not-allowed border-[#d8d8e8] bg-[#f4f4f8] text-[#9c9cb0]'} ${passkeyBusy ? 'opacity-60' : ''}`}
           >
             {passkeyBusy ? '⏳ 패스키 등록 중...' : '🪪 이 기기 패스키 등록'}
           </button>
