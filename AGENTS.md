@@ -98,7 +98,7 @@ make check
 ### Known caveats
 
 - Ensure `frontend/frontend/package.json` remains valid JSON (no trailing commas), otherwise `npm ci` will fail.
-- The GPU warning in health checks is expected in environments without NVIDIA GPU.
+- **GPU**: The actual dev/production server has an RTX 5090 32GB. Cursor Cloud Agent VMs do not have GPU hardware, so the health check GPU warning is expected only in cloud agent sessions. On the real server, GPU is fully available and torch/CUDA will work normally.
 - Redis is exposed on host port **6380** (not 6379) to avoid conflicts.
 - Some backend tests (`test_orchestrator_compat_manifest_write`, `test_runtime_config_persistence`) have pre-existing failures unrelated to environment setup.
 - The `test_orchestrator_operational_evidence_targets.py` test file has an import error (missing function) and must be excluded.
