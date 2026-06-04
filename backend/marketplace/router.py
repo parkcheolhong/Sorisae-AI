@@ -759,11 +759,12 @@ def create_marketplace_purchase(
     if not project:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
     
+    server_price = float(project.price or 0)
     purchase = payment_service.create_purchase(
         db=db,
         project_id=request.project_id,
         buyer_id=current_user.id,
-        amount=request.amount or float(project.price or 0),
+        amount=server_price,
         payment_method=request.payment_method,
     )
     
@@ -886,7 +887,7 @@ def create_marketplace_download_token(
     purchases = db.query(models.Purchase).filter(
         models.Purchase.project_id == request.project_id,
         models.Purchase.buyer_id == current_user.id,
-        models.Purchase.status.in_(["completed", "pending"]),
+        models.Purchase.status == "completed",
     ).all()
     
     if not purchases:

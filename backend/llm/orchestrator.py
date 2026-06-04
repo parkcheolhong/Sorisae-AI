@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict, Any, Callable
+from backend.auth import get_current_user
 import httpx
 import json
 import re
@@ -3895,6 +3896,16 @@ async def update_runtime_config(
 
 @router.websocket("/ws")
 async def orchestrator_ws(websocket: WebSocket):
+    token = websocket.query_params.get("token", "")
+    if token:
+        try:
+            from jose import jwt as _jwt
+            from backend.auth import SECRET_KEY, ALGORITHM
+            _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            await websocket.close(code=4001, reason="인증 실패")
+            return
+
     await ws_channel.connect(websocket)
     try:
         await websocket.send_json({
@@ -13120,7 +13131,10 @@ async def orchestrate_accepted(
 
 
 @router.get("/orchestrate/progress/{run_id}")
-async def get_orchestration_progress(run_id: str) -> Dict[str, Any]:
+async def get_orchestration_progress(
+    run_id: str,
+    current_user: Any = Depends(get_current_user),
+) -> Dict[str, Any]:
     payload = _load_orchestration_progress(run_id)
     if not payload:
         raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")

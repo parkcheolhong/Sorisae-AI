@@ -3,7 +3,7 @@ import os
 import bcrypt
 import secrets
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -104,7 +104,7 @@ def create_access_token(
 ) -> str:
     to_encode = data.copy()
     if not no_expiry:
-        expire = datetime.utcnow() + (
+        expire = datetime.now(timezone.utc) + (
             expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         to_encode.update({"exp": expire})
@@ -151,9 +151,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         if not isinstance(username, str) or not username:
             raise credentials_exception
     except JWTError:
-        username = _resolve_registered_subject(token)
-        if not isinstance(username, str) or not username:
-            raise credentials_exception
+        raise credentials_exception
 
     # DB에서 유저 조회
     from backend.database import SessionLocal
