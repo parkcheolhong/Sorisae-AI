@@ -183,6 +183,9 @@ def _resolve_orchestration_output_child_path(output_dir: Path, relative_path: st
 
 
 def _trusted_orchestration_output_dir(output_dir: Path) -> Path:
+    resolved = output_dir.resolve()
+    if any(_is_relative_to(resolved, root) for root in ORCH_ALLOWED_OUTPUT_ROOTS):
+        return resolved
     safe_dir_name = re.sub(r"[^a-zA-Z0-9._-]+", "-", str(output_dir.name or "")).strip("-._")
     if not safe_dir_name:
         raise HTTPException(status_code=400, detail="출력 디렉터리 이름이 올바르지 않습니다.")
@@ -3841,13 +3844,19 @@ def _apply_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
 def _load_runtime_config_from_disk() -> Dict[str, Any]:
     path = _runtime_config_file_path()
     if not path.exists():
-        return _runtime_config_payload()
+        payload = _runtime_config_payload()
+        _save_runtime_config_to_disk(payload)
+        return payload
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        return _runtime_config_payload()
+        payload = _runtime_config_payload()
+        _save_runtime_config_to_disk(payload)
+        return payload
     if not isinstance(payload, dict):
-        return _runtime_config_payload()
+        payload = _runtime_config_payload()
+        _save_runtime_config_to_disk(payload)
+        return payload
     return _apply_runtime_config(payload)
 
 
@@ -5048,6 +5057,17 @@ def _compat_write_manifest(output_dir: Path, manifest: List[Dict[str, str]]) -> 
         target_path = _resolve_orchestration_output_child_path(output_dir, safe_relative_path)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         rendered_content = _decorate_generated_file_with_ids(safe_relative_path, str(item.get("content") or ""))
+        if target_path.exists():
+            existing_content = target_path.read_text(encoding="utf-8")
+            existing_stripped = _strip_generated_id_headers(existing_content).strip()
+            new_stripped = _strip_generated_id_headers(rendered_content).strip()
+            if existing_stripped and new_stripped:
+                existing_defs = set(re.findall(r'\bdef\s+\w+|from\s+\S+\s+import\s+[^;\n]+|\bimport\s+\S+', existing_stripped))
+                new_defs = set(re.findall(r'\bdef\s+\w+|from\s+\S+\s+import\s+[^;\n]+|\bimport\s+\S+', new_stripped))
+                has_new_definitions = bool(new_defs - existing_defs)
+                if not has_new_definitions and len(new_stripped) <= len(existing_stripped):
+                    written_files.append(safe_relative_path)
+                    continue
         target_path.write_text(rendered_content, encoding="utf-8")
         written_files.append(safe_relative_path)
     return written_files
@@ -9115,6 +9135,35 @@ def _compat_write_auxiliary_outputs(
             "generated_at": datetime.now().isoformat(),
         },
     )
+
+    auto_link_map_path = output_dir / "docs" / "auto_link_map.json"
+    auto_link_map_payload = {
+        "auto_connect_policy": {
+            "self_link_enabled": True,
+            "cross_link_enabled": True,
+        },
+        "links": [
+            {
+                "path": path,
+                "file_id": f"FILE-{re.sub(r'[^A-Za-z0-9]+', '-', path.upper()).strip('-')}",
+                "section_id": f"SECTION-{re.sub(r'[^A-Za-z0-9]+', '-', path.upper()).strip('-')}-MAIN",
+            }
+            for path in written_files
+        ],
+        "anchor_path": anchor_path,
+    }
+    _compat_write_json(auto_link_map_path, auto_link_map_payload)
+
+    section_id_index_path = output_dir / "docs" / "section_id_index.txt"
+    section_lines = []
+    for path in written_files:
+        file_stub = re.sub(r'[^A-Za-z0-9]+', '-', path.upper()).strip('-')
+        section_lines.append(f"# FILE-ID: FILE-{file_stub}")
+        section_lines.append(f"# SECTION-ID: SECTION-{file_stub}-MAIN")
+        section_lines.append(f"  path: {path}")
+        section_lines.append("")
+    _compat_write_text(section_id_index_path, "\n".join(section_lines))
+
     return {
         "checklist_path": _compat_relative_path(checklist_path, output_dir),
         "manifest_path": _compat_relative_path(manifest_path, output_dir),
@@ -9123,6 +9172,8 @@ def _compat_write_auxiliary_outputs(
         "id_registry_schema_path": _compat_relative_path(id_registry_schema_path, output_dir),
         "id_registry_path": _compat_relative_path(id_registry_path, output_dir),
         "product_identity_path": _compat_relative_path(product_identity_path, output_dir),
+        "auto_link_map_path": _compat_relative_path(auto_link_map_path, output_dir),
+        "section_id_index_path": _compat_relative_path(section_id_index_path, output_dir),
     }
 
 
