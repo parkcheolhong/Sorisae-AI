@@ -5,7 +5,7 @@ import { fetchBackendWithFallback, isAbortLike, jsonNoStore } from '@/app/api/_s
 const ADMIN_PROXY_RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const ADMIN_PROXY_RETRY_ATTEMPTS = 3;
 const ADMIN_PROXY_RETRY_DELAY_MS = 700;
-const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.NODE_ENV !== 'production';
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1' && process.env.NODE_ENV !== 'production';
 const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
 const ADMIN_REGRESSION_MOCK_USER = {
   username: 'ui.admin.round@devanalysis.local',
