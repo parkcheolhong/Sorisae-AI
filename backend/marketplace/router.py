@@ -1205,6 +1205,30 @@ def _get_customer_stage_execution_metadata(stage_run_payload: Dict[str, Any]) ->
     return dict(metadata.get("orchestration_execution") or {})
 
 
+def _customer_stage_run_owner_id(stage_run_payload: Dict[str, Any]) -> str:
+    requested_by = stage_run_payload.get("requested_by") if isinstance(stage_run_payload, dict) else {}
+    if not isinstance(requested_by, dict):
+        return ""
+    return str(requested_by.get("id") or "").strip()
+
+
+def _current_customer_user_id(current_user: models.User) -> str:
+    return str(getattr(current_user, "id", "") or "").strip()
+
+
+def _customer_stage_run_owned_by_current_user(stage_run_payload: Dict[str, Any], current_user: models.User) -> bool:
+    owner_id = _customer_stage_run_owner_id(stage_run_payload)
+    current_user_id = _current_customer_user_id(current_user)
+    return bool(owner_id and current_user_id and owner_id == current_user_id)
+
+
+def _load_customer_stage_run_for_user(run_id: str, current_user: models.User) -> Dict[str, Any]:
+    payload = load_stage_run(run_id)
+    if not payload or not _customer_stage_run_owned_by_current_user(payload, current_user):
+        raise HTTPException(status_code=404, detail="고객 stage run을 찾을 수 없습니다.")
+    return payload
+
+
 def _update_customer_stage_execution_metadata(run_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
     payload = load_stage_run(run_id)
     if not payload:
@@ -1410,7 +1434,7 @@ def _resolve_stage_run_for_request(
     current_user: models.User,
 ) -> Optional[Dict[str, Any]]:
     if request.stage_run_id:
-        return load_stage_run(request.stage_run_id)
+        return _load_customer_stage_run_for_user(request.stage_run_id, current_user)
     project_name = (request.project_name or "customer-product").strip() or "customer-product"
     return initialize_stage_run(
         scope="marketplace",
