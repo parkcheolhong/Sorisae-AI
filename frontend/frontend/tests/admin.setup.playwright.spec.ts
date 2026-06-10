@@ -7,6 +7,8 @@ const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? '';
 const STORAGE_STATE_PATH = process.env.PLAYWRIGHT_STORAGE_STATE ?? 'playwright/.auth/adminAuthState.json';
 const PLAYWRIGHT_ADMIN_BASE_URL = (process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? 'http://localhost:3005').replace(/\/$/, '');
 const ADMIN_DASHBOARD_WAIT_MS = 30_000;
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1';
+const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
 
 function readExistingAdminToken(): string {
     try {
@@ -39,7 +41,9 @@ async function writeStorageStateWithToken(page: any, token: string) {
 test('create admin storage state', async ({ page }) => {
     test.setTimeout(60_000);
     fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
-    if (ADMIN_USERNAME && ADMIN_PASSWORD) {
+    if (ADMIN_REGRESSION_MOCK_BACKEND) {
+        await writeStorageStateWithToken(page, ADMIN_REGRESSION_MOCK_TOKEN);
+    } else if (ADMIN_USERNAME && ADMIN_PASSWORD) {
         await page.goto('/admin/login');
         await page.getByTestId('admin-login-email').fill(ADMIN_USERNAME);
         await page.getByTestId('admin-login-password').fill(ADMIN_PASSWORD);
