@@ -1495,6 +1495,14 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] external search router skipped: {e}")
 
+# ── Autonomous Multi-Agent Orchestrator ──
+try:
+    from backend.orchestrator.autonomous.router import router as autonomous_router
+    app.include_router(autonomous_router)
+    logger.info("[OK] autonomous multi-agent orchestrator router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] autonomous orchestrator router skipped: {e}")
+
 # ── Face Recognition / ML Detectors / Vector Search ──
 # NOTE: These routers are registered via the marketplace contract router (with
 # proper JWT auth).  The module-level noop-auth wrappers must NOT be mounted
