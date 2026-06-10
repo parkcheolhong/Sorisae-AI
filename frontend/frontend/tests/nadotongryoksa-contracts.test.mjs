@@ -6,10 +6,17 @@
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const pageSource = fs.readFileSync('app/marketplace/nadotongryoksa/page.tsx', 'utf8');
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-const adminWorkflow = fs.readFileSync('../../.github/workflows/admin-regression.yml', 'utf8');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(frontendRoot, '..', '..');
+
+const pageSource = fs.readFileSync(path.join(frontendRoot, 'app/marketplace/nadotongryoksa/page.tsx'), 'utf8');
+const packageJson = JSON.parse(fs.readFileSync(path.join(frontendRoot, 'package.json'), 'utf8'));
+const adminWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/admin-regression.yml'), 'utf8');
 
 assert.ok(
     !pageSource.includes('project_id: 0'),
