@@ -260,6 +260,16 @@ def _issue_recovery_token(prefix: str) -> tuple[str, datetime]:
     return f"{prefix}_{token_urlsafe(24)}", expires_at
 
 
+def _session_expiry_has_passed(expires_at: object) -> bool:
+    if not isinstance(expires_at, datetime):
+        return True
+    if expires_at.tzinfo is None or expires_at.utcoffset() is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    else:
+        expires_at = expires_at.astimezone(timezone.utc)
+    return expires_at <= datetime.now(timezone.utc)
+
+
 # ---------- 엔드포인트 ----------
 @router.post("/signup", response_model=UserResponse, status_code=201)
 def signup(payload: UserCreate, db: Session = Depends(get_db)):
@@ -383,7 +393,7 @@ def finish_passkey_registration(
         raise HTTPException(status_code=404, detail="패스키 등록 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
+    if _session_expiry_has_passed(expires_at):
         _passkey_registration_store.pop(payload.registration_token, None)
         raise HTTPException(status_code=410, detail="패스키 등록 세션이 만료되었습니다")
 
@@ -473,7 +483,7 @@ def finish_passkey_login(
         raise HTTPException(status_code=404, detail="패스키 로그인 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
+    if _session_expiry_has_passed(expires_at):
         _passkey_login_store.pop(str(user.email), None)
         raise HTTPException(status_code=410, detail="패스키 로그인 세션이 만료되었습니다")
 
@@ -563,7 +573,7 @@ def verify_password_recovery_identity(payload: PasswordRecoveryVerifyIdentityReq
         raise HTTPException(status_code=404, detail="복구 세션을 찾을 수 없습니다")
 
     expires_at = session_state.get("expires_at")
-    if isinstance(expires_at, datetime) and expires_at <= datetime.now(timezone.utc):
+    if _session_expiry_has_passed(expires_at):
         _password_recovery_store.pop(payload.recovery_session_token, None)
         raise HTTPException(status_code=410, detail="복구 세션이 만료되었습니다")
 
@@ -618,7 +628,7 @@ def reset_password_via_recovery(
         raise HTTPException(status_code=403, detail="본인확인이 완료되지 않은 세션입니다")
 
     reset_expires_at = session_state.get("reset_expires_at")
-    if isinstance(reset_expires_at, datetime) and reset_expires_at <= datetime.now(timezone.utc):
+    if _session_expiry_has_passed(reset_expires_at):
         _password_recovery_store.pop(session_token, None)
         raise HTTPException(status_code=410, detail="재설정 토큰이 만료되었습니다")
 

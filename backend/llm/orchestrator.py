@@ -3845,17 +3845,17 @@ def _apply_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
 def _load_runtime_config_from_disk() -> Dict[str, Any]:
     path = _runtime_config_file_path()
     if not path.exists():
-        payload = _runtime_config_payload()
+        payload = _apply_runtime_config(_runtime_config_payload())
         _save_runtime_config_to_disk(payload)
         return payload
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        payload = _runtime_config_payload()
+        payload = _apply_runtime_config(_runtime_config_payload())
         _save_runtime_config_to_disk(payload)
         return payload
     if not isinstance(payload, dict):
-        payload = _runtime_config_payload()
+        payload = _apply_runtime_config(_runtime_config_payload())
         _save_runtime_config_to_disk(payload)
         return payload
     return _apply_runtime_config(payload)

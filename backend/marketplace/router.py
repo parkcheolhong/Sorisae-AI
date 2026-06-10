@@ -736,6 +736,47 @@ class PurchaseCreateRequest(BaseModel):
     project_id: int
     amount: float
     payment_method: str = "card"
+    pricing_context: Optional[str] = None
+    hotel_checkin_date: Optional[str] = None
+    hotel_checkout_date: Optional[str] = None
+    hotel_room_count: Optional[int] = None
+
+
+_NADO_APK_FILENAME = "nadotongryoksa-v1.apk"
+_NADO_PROJECT_TITLE_MARKER = "나도통역사"
+_NADO_HOTEL_ROOM_NIGHT_PRICE = 80000.0
+
+
+def _is_nadotongryoksa_project(project: Any) -> bool:
+    return (
+        _NADO_APK_FILENAME in str(getattr(project, "demo_url", "") or "")
+        or _NADO_PROJECT_TITLE_MARKER in str(getattr(project, "title", "") or "")
+    )
+
+
+def _parse_purchase_date(value: Optional[str], field_name: str):
+    try:
+        return datetime.fromisoformat(str(value or "")).date()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"{field_name} 형식이 올바르지 않습니다.") from exc
+
+
+def _resolve_purchase_amount(request: PurchaseCreateRequest, project: Any) -> float:
+    if not request.pricing_context:
+        return float(project.price or 0)
+
+    if request.pricing_context != "nadotongryoksa_hotel_booking":
+        raise HTTPException(status_code=400, detail="지원하지 않는 가격 산정 컨텍스트입니다.")
+    if not _is_nadotongryoksa_project(project):
+        raise HTTPException(status_code=400, detail="나도통역사 호텔 예약 상품이 아닙니다.")
+
+    room_count = int(request.hotel_room_count or 0)
+    if room_count < 1 or room_count > 4:
+        raise HTTPException(status_code=400, detail="객실 수는 1~4개만 지원됩니다.")
+    checkin_date = _parse_purchase_date(request.hotel_checkin_date, "hotel_checkin_date")
+    checkout_date = _parse_purchase_date(request.hotel_checkout_date, "hotel_checkout_date")
+    nights = max(1, (checkout_date - checkin_date).days)
+    return float(nights * room_count * _NADO_HOTEL_ROOM_NIGHT_PRICE)
 
 
 class DownloadTokenRequest(BaseModel):
@@ -759,7 +800,7 @@ def create_marketplace_purchase(
     if not project:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
     
-    server_price = float(project.price or 0)
+    server_price = _resolve_purchase_amount(request, project)
     purchase = payment_service.create_purchase(
         db=db,
         project_id=request.project_id,

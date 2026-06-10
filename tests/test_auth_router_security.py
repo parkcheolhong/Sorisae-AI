@@ -2,6 +2,7 @@ import importlib
 import sys
 import types
 
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -97,6 +98,7 @@ def test_password_recovery_verify_identity_limits_failed_attempts(monkeypatch):
         "verified": False,
         "verification_code": "654321",
         "verification_attempts": 0,
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
 
     }
     payload = auth_router.PasswordRecoveryVerifyIdentityRequest(
@@ -114,6 +116,56 @@ def test_password_recovery_verify_identity_limits_failed_attempts(monkeypatch):
         auth_router.verify_password_recovery_identity(payload)
     assert exc_info.value.status_code == 429
     assert recovery_session_token not in auth_router._password_recovery_store
+
+
+def test_password_recovery_verify_identity_rejects_missing_expiry(monkeypatch):
+    auth_router = _load_auth_router(monkeypatch)
+    auth_router._password_recovery_store.clear()
+    recovery_session_token = "recovery_test"
+    auth_router._password_recovery_store[recovery_session_token] = {
+        "user_id": 1,
+        "scope": "admin",
+        "verified": False,
+        "verification_code": "654321",
+        "verification_attempts": 0,
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        auth_router.verify_password_recovery_identity(
+            auth_router.PasswordRecoveryVerifyIdentityRequest(
+                recovery_session_token=recovery_session_token,
+                identity_session_token="identity-proof",
+                verification_code="654321",
+            )
+        )
+
+    assert exc_info.value.status_code == 410
+    assert recovery_session_token not in auth_router._password_recovery_store
+
+
+def test_password_recovery_verify_identity_accepts_naive_future_expiry(monkeypatch):
+    auth_router = _load_auth_router(monkeypatch)
+    auth_router._password_recovery_store.clear()
+    recovery_session_token = "recovery_test"
+    auth_router._password_recovery_store[recovery_session_token] = {
+        "user_id": 1,
+        "scope": "admin",
+        "verified": False,
+        "verification_code": "654321",
+        "verification_attempts": 0,
+        "expires_at": datetime.now() + timedelta(minutes=5),
+    }
+
+    response = auth_router.verify_password_recovery_identity(
+        auth_router.PasswordRecoveryVerifyIdentityRequest(
+            recovery_session_token=recovery_session_token,
+            identity_session_token="identity-proof",
+            verification_code="654321",
+        )
+    )
+
+    assert response["verified"] is True
+    assert response["reset_token"].startswith("reset_")
 
 
 def test_reset_password_requires_verified_identity(monkeypatch):
@@ -151,6 +203,7 @@ def test_reset_password_updates_hash_and_clears_session(monkeypatch):
         "verified": True,
         "identity_session_token": "identity-proof",
         "reset_token": "reset_token",
+        "reset_expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
 
     }
 
@@ -166,4 +219,29 @@ def test_reset_password_updates_hash_and_clears_session(monkeypatch):
     assert response == {"reset": True, "must_relogin": True}
     assert user.hashed_password != "old"
     assert db.committed is True
+    assert "recovery_test" not in auth_router._password_recovery_store
+
+
+def test_reset_password_rejects_missing_reset_expiry(monkeypatch):
+    auth_router = _load_auth_router(monkeypatch)
+    auth_router._password_recovery_store.clear()
+    auth_router._password_recovery_store["recovery_test"] = {
+        "user_id": 1,
+        "scope": "admin",
+        "verified": True,
+        "identity_session_token": "identity-proof",
+        "reset_token": "reset_token",
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        auth_router.reset_password_via_recovery(
+            auth_router.PasswordRecoveryResetRequest(
+                scope="admin",
+                reset_token="reset_token",
+                new_password="new-password-123",
+            ),
+            _FakeDB(SimpleNamespace(id=1, hashed_password="old")),
+        )
+
+    assert exc_info.value.status_code == 410
     assert "recovery_test" not in auth_router._password_recovery_store

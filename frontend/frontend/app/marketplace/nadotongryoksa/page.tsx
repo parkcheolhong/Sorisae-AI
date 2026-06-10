@@ -24,6 +24,12 @@ type ProjectSummary = {
     demo_url?: string | null;
 };
 
+type HotelBookingPricing = {
+    checkinDate: string;
+    checkoutDate: string;
+    roomCount: number;
+};
+
 // ── 인증 헬퍼 ─────────────────────────────────────────────
 function setStoredToken(token: string) {
     if (typeof window === 'undefined') return;
@@ -60,13 +66,22 @@ async function callMeApi(apiBase: string, token: string): Promise<UserInfo> {
     return res.json();
 }
 
-async function callCreatePurchaseApi(apiBase: string, projectId: number, amount: number): Promise<PurchaseResult> {
+async function callCreatePurchaseApi(apiBase: string, projectId: number, amount: number, hotelBooking?: HotelBookingPricing): Promise<PurchaseResult> {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '') : '';
     if (!token) throw new Error('결제는 로그인 후 사용할 수 있습니다.');
+    const requestBody = hotelBooking ? {
+        project_id: projectId,
+        amount,
+        payment_method: 'card',
+        pricing_context: 'nadotongryoksa_hotel_booking',
+        hotel_checkin_date: hotelBooking.checkinDate,
+        hotel_checkout_date: hotelBooking.checkoutDate,
+        hotel_room_count: hotelBooking.roomCount,
+    } : { project_id: projectId, amount, payment_method: 'card' };
     const res = await fetch(`${apiBase}/api/marketplace/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ project_id: projectId, amount, payment_method: 'card' }),
+        body: JSON.stringify(requestBody),
         signal: AbortSignal.timeout(10_000),
     });
     const result = await res.json().catch(() => ({}));
@@ -271,6 +286,7 @@ type BookingResponse = {
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
 const NADO_PROJECT_SEARCH = '나도통역사';
 const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
+const NADO_HOTEL_ROOM_NIGHT_PRICE = 80000;
 let cachedNadoProjectId: number | null = null;
 
 const UI_KO_TEXT = {
@@ -408,8 +424,7 @@ async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> 
 
     const projects: ProjectSummary[] = Array.isArray(payload.projects) ? payload.projects : [];
     const project = projects.find((item) => String(item.demo_url ?? '').includes(NADO_APK_FILENAME))
-        ?? projects.find((item) => String(item.title ?? '').includes(NADO_PROJECT_SEARCH))
-        ?? projects[0];
+        ?? projects.find((item) => String(item.title ?? '').includes(NADO_PROJECT_SEARCH));
     if (!project?.id) {
         throw new Error('나도통역사 상품을 찾을 수 없습니다.');
     }
@@ -560,6 +575,11 @@ function todayPlus(days: number): string {
     const now = new Date();
     now.setDate(now.getDate() + days);
     return now.toISOString().slice(0, 10);
+}
+
+function calculateHotelBookingAmount(checkinDate: string, checkoutDate: string, roomCount: number): number {
+    const nights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000));
+    return nights * roomCount * NADO_HOTEL_ROOM_NIGHT_PRICE;
 }
 
 export default function WorldLincoPage() {
@@ -713,10 +733,9 @@ export default function WorldLincoPage() {
         if (!token) { setShowLoginModal(true); setPayError(t('loginForPayment')); return; }
         setPayLoading(true); setPayError('');
         try {
-            const nights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000));
-            const amount = nights * roomCount * 80000;
+            const amount = calculateHotelBookingAmount(checkinDate, checkoutDate, roomCount);
             const projectId = await resolveNadotongryoksaProjectId(API_BASE);
-            const purchase = await callCreatePurchaseApi(API_BASE, projectId, amount);
+            const purchase = await callCreatePurchaseApi(API_BASE, projectId, amount, { checkinDate, checkoutDate, roomCount });
             setPurchaseResult(purchase);
             const payData = await callInitiatePaymentApi(API_BASE, purchase.id);
             setPayUrl(payData.payment_url);
@@ -1522,7 +1541,7 @@ export default function WorldLincoPage() {
                                 {' '}{Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000))}{t('nights')}
                             </div>
                             <div style={{ fontSize: 16, fontWeight: 800, color: '#ffd166' }}>
-                                {t('paymentAmount')}: {(Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000)) * roomCount * 80000).toLocaleString('ko-KR')}{t('currencyWon')}
+                                {t('paymentAmount')}: {calculateHotelBookingAmount(checkinDate, checkoutDate, roomCount).toLocaleString('ko-KR')}{t('currencyWon')}
                             </div>
                         </div>
                         {payError && <div style={{ background: '#2a1616', border: '1px solid #5e2727', color: '#ffb4b4', borderRadius: 10, padding: '10px 12px', fontSize: 13, marginBottom: 12 }}>{payError}</div>}
