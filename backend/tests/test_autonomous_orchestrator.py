@@ -1,10 +1,13 @@
 """멀티 에이전트 자율대화 오케스트레이터 테스트"""
+import json
+
 import pytest
 
 from backend.orchestrator.autonomous.turn_controller import TurnController, STAGE_DEFINITIONS
-from backend.orchestrator.autonomous.session import AutonomousSession
+from backend.orchestrator.autonomous.session import AutonomousSession, StageState
 from backend.orchestrator.autonomous.agent_bus import AgentMessageBus, AgentMessage
 from backend.orchestrator.autonomous.agents.base import AgentContext, AgentResult
+from backend.orchestrator.autonomous.agents.reviewer import ReviewerAgent
 
 
 class TestAgentMessageBus:
@@ -91,6 +94,32 @@ class TestAutonomousSession:
         assert loaded.project_name == "test-project"
         assert len(loaded.conversation) == 1
 
+    def test_save_and_load_restores_execution_state(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        session = AutonomousSession.create(owner_id="user1")
+        session.agent_results.append(AgentResult(agent="planner", status="success", output="계획"))
+        session.stages = [
+            StageState(stage_id="S1", stage_label="1단계", status="completed"),
+            StageState(stage_id="S2", stage_label="2단계", status="in_progress", revision_count=1),
+        ]
+        session.current_stage_index = 1
+        session.execution_state = "awaiting_approval"
+        session.approval_state = "pending"
+        session.pending_approval_data = {"pipeline": ["planner"]}
+        session.save()
+
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None
+        assert loaded.agent_results[0].agent == "planner"
+        assert loaded.stages[1].stage_id == "S2"
+        assert loaded.stages[1].revision_count == 1
+        assert loaded.current_stage_index == 1
+        assert loaded.execution_state == "awaiting_approval"
+        assert loaded.pending_approval_data == {"pipeline": ["planner"]}
+
     def test_load_rejects_other_user(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
@@ -102,9 +131,26 @@ class TestAutonomousSession:
         loaded = AutonomousSession.load(session.session_id, "user2")
         assert loaded is None
 
+    def test_load_rejects_path_traversal(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path / "sessions"),
+        )
+        outside = tmp_path / "escape.json"
+        outside.write_text(
+            json.dumps({
+                "session_id": "escape",
+                "owner_id": "user1",
+                "mode": "semi_auto",
+            }),
+            encoding="utf-8",
+        )
+
+        loaded = AutonomousSession.load("../escape", "user1")
+        assert loaded is None
+
     def test_stage_management(self):
         session = AutonomousSession.create(owner_id="user1")
-        from backend.orchestrator.autonomous.session import StageState
         session.stages = [
             StageState(stage_id="S1", stage_label="1단계", status="in_progress"),
             StageState(stage_id="S2", stage_label="2단계", status="pending"),
@@ -161,6 +207,21 @@ class TestTurnController:
         assert result["session_id"] == session.session_id
 
     @pytest.mark.asyncio
+    async def test_process_greeting_persists_session(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="semi_auto")
+
+        await controller.process_turn("안녕하세요", session)
+
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None
+        assert loaded.conversation[-1].content.startswith("안녕하세요")
+
+    @pytest.mark.asyncio
     async def test_process_status(self):
         controller = TurnController()
         session = AutonomousSession.create(owner_id="user1")
@@ -185,6 +246,32 @@ class TestTurnController:
         result = await controller.process_turn("FastAPI로 블로그 만들어줘", session)
         assert result["requires_approval"] is True
         assert session.approval_state == "pending"
+
+    @pytest.mark.asyncio
+    async def test_process_code_generation_full_auto_executes_coder(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="full_auto")
+        called = False
+
+        async def fake_execute_coder_pipeline(active_session):
+            nonlocal called
+            called = True
+            active_session.execution_state = "completed"
+            result = AgentResult(agent="coder", status="success", output="생성 완료")
+            active_session.agent_results.append(result)
+            return [result]
+
+        controller._execute_coder_pipeline = fake_execute_coder_pipeline
+
+        result = await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        assert called is True
+        assert result["requires_approval"] is False
+        assert any(r["agent"] == "coder" for r in result["agent_results"])
+        assert session.execution_state == "completed"
 
     @pytest.mark.asyncio
     async def test_process_approval_without_pending(self):
@@ -218,3 +305,23 @@ class TestTurnController:
             assert "label" in stage
             assert "agents" in stage
             assert len(stage["agents"]) >= 1
+
+
+class TestReviewerAgent:
+    @pytest.mark.asyncio
+    async def test_korean_no_issue_review_does_not_request_revision(self):
+        async def llm_call(**kwargs):
+            return "## 검토 결과\n- 발견된 문제 없음\n\n## 개선 제안\n- 없습니다."
+
+        reviewer = ReviewerAgent(llm_call=llm_call)
+        context = AgentContext(
+            run_id="run1",
+            task="테스트",
+            project_name="project",
+            validation_profile="python_fastapi",
+            previous_results=[AgentResult(agent="coder", status="success", output="완료")],
+        )
+
+        result = await reviewer.execute(context)
+        assert result.status == "success"
+        assert result.artifacts["needs_revision"] is False

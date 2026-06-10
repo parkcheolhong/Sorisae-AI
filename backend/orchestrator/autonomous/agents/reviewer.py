@@ -38,8 +38,15 @@ class ReviewerAgent(BaseAgent):
 
         output = await self._call_llm(system_prompt, user_prompt, context)
 
-        approved = "approved: true" in output.lower() or "approved:true" in output.lower()
-        needs_revision = not approved and ("approved: false" in output.lower() or "문제" in output)
+        output_lower = output.lower()
+        normalized_output = "".join(output_lower.split())
+        approved = "approved: true" in output_lower or "approved:true" in output_lower
+        no_issue = any(
+            phrase in normalized_output
+            for phrase in ("문제없음", "문제없습니다", "문제가없", "문제는없")
+        )
+        has_issue = "문제" in output and not no_issue
+        needs_revision = not approved and ("approved: false" in output_lower or has_issue)
 
         return AgentResult(
             agent=self.agent_id,

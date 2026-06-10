@@ -130,20 +130,27 @@ class AutonomousSession:
             "current_stage_index": self.current_stage_index,
             "execution_state": self.execution_state,
             "approval_state": self.approval_state,
+            "pending_approval_data": self.pending_approval_data,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "output_dir": self.output_dir,
+            "model_routes": self.model_routes,
+            "extra": self.extra,
         }
 
     def save(self) -> None:
         dir_path = Path(AUTONOMOUS_SESSION_DIR)
         dir_path.mkdir(parents=True, exist_ok=True)
-        path = dir_path / f"{self.session_id}.json"
+        path = _session_file_path(self.session_id)
+        if path is None:
+            raise ValueError(f"Invalid autonomous session id: {self.session_id!r}")
         path.write_text(json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
 
     @classmethod
     def load(cls, session_id: str, owner_id: str) -> Optional["AutonomousSession"]:
-        path = Path(AUTONOMOUS_SESSION_DIR) / f"{session_id}.json"
+        path = _session_file_path(session_id)
+        if path is None:
+            return None
         if not path.exists():
             return None
         try:
@@ -160,15 +167,39 @@ class AutonomousSession:
                 current_stage_index=data.get("current_stage_index", 0),
                 execution_state=data.get("execution_state", "idle"),
                 approval_state=data.get("approval_state", "none"),
+                pending_approval_data=data.get("pending_approval_data"),
                 created_at=data.get("created_at", time.time()),
                 updated_at=data.get("updated_at", time.time()),
                 output_dir=data.get("output_dir"),
+                model_routes=data.get("model_routes", {}),
+                extra=data.get("extra", {}),
             )
             for turn_data in data.get("conversation", []):
                 session.conversation.append(ConversationTurn(**{
                     k: v for k, v in turn_data.items() if k in ConversationTurn.__dataclass_fields__
                 }))
+            for result_data in data.get("agent_results", []):
+                session.agent_results.append(AgentResult(**{
+                    k: v for k, v in result_data.items() if k in AgentResult.__dataclass_fields__
+                }))
+            for stage_data in data.get("stages", []):
+                session.stages.append(StageState(**{
+                    k: v for k, v in stage_data.items() if k in StageState.__dataclass_fields__
+                }))
             return session
         except Exception as exc:
             logger.warning("Failed to load autonomous session %s: %s", session_id, exc)
             return None
+
+
+def _session_file_path(session_id: str) -> Optional[Path]:
+    if not session_id:
+        return None
+    try:
+        base_dir = Path(AUTONOMOUS_SESSION_DIR).resolve()
+        path = (base_dir / f"{session_id}.json").resolve()
+    except (OSError, ValueError):
+        return None
+    if not path.is_relative_to(base_dir):
+        return None
+    return path

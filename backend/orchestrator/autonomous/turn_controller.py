@@ -107,11 +107,13 @@ class TurnController:
         if intent == "greeting":
             reply = self._build_greeting(session)
             session.add_system_message(reply)
+            session.save()
             return self._build_response(session, reply, intent=intent)
 
         if intent == "status":
             reply = self._build_status(session)
             session.add_system_message(reply)
+            session.save()
             return self._build_response(session, reply, intent=intent)
 
         if intent == "approval":
@@ -126,6 +128,7 @@ class TurnController:
         if not agent_pipeline:
             reply = "요청을 처리할 수 있는 에이전트를 결정하지 못했습니다. 더 구체적으로 말씀해 주세요."
             session.add_system_message(reply)
+            session.save()
             return self._build_response(session, reply, intent=intent)
 
         context = self._build_context(session, message)
@@ -168,6 +171,13 @@ class TurnController:
                     "pipeline": agent_pipeline,
                     "results_summary": [{"agent": r.agent, "status": r.status} for r in results],
                 }
+            elif (
+                session.mode == "full_auto"
+                and not any(r.agent == "coder" for r in results)
+                and all(r.status != "error" for r in results)
+            ):
+                execution_results = await self._execute_coder_pipeline(session)
+                results.extend(execution_results)
 
         combined_output = self._combine_results(results, session)
         session.save()
@@ -216,19 +226,30 @@ class TurnController:
         if session.approval_state != "pending":
             reply = "현재 승인 대기 중인 작업이 없습니다."
             session.add_system_message(reply)
+            session.save()
             return self._build_response(session, reply, intent="approval")
 
         session.approval_state = "approved"
-        session.execution_state = "executing"
         session.add_system_message("승인되었습니다. 코드 생성을 시작합니다.")
+
+        execution_results = await self._execute_coder_pipeline(session)
+
+        combined = self._combine_results(execution_results, session)
+        session.save()
+        return self._build_response(session, combined, intent="approval", agent_results=execution_results)
+
+    async def _execute_coder_pipeline(self, session: AutonomousSession) -> List[AgentResult]:
+        session.execution_state = "executing"
 
         context = self._build_context(session, session.task)
         context.previous_results = list(session.agent_results)
+        results: List[AgentResult] = []
 
         coder = self.agents["coder"]
         coder_result = await coder.execute(context)
         session.agent_results.append(coder_result)
         session.add_agent_message("coder", coder_result.output, coder_result.artifacts)
+        results.append(coder_result)
 
         if coder_result.status == "success":
             context.previous_results.append(coder_result)
@@ -236,16 +257,20 @@ class TurnController:
             val_result = await validator.execute(context)
             session.agent_results.append(val_result)
             session.add_agent_message("validator", val_result.output, val_result.artifacts)
+            results.append(val_result)
 
             if val_result.status == "needs_revision" and val_result.errors:
                 for attempt in range(MAX_REVISION_ATTEMPTS):
                     fix_result = await coder.fix(context, val_result.errors)
                     session.agent_results.append(fix_result)
                     session.add_agent_message("coder", f"[자동수정 {attempt+1}] {fix_result.output}")
+                    results.append(fix_result)
 
                     context.previous_results.append(fix_result)
                     val_result = await validator.execute(context)
                     session.agent_results.append(val_result)
+                    session.add_agent_message("validator", val_result.output, val_result.artifacts)
+                    results.append(val_result)
                     if val_result.artifacts.get("passed"):
                         break
 
@@ -260,9 +285,7 @@ class TurnController:
         else:
             session.execution_state = "failed"
 
-        combined = self._combine_results(session.agent_results[-5:], session)
-        session.save()
-        return self._build_response(session, combined, intent="approval", agent_results=session.agent_results[-5:])
+        return results
 
     def _initialize_stages(self, session: AutonomousSession) -> None:
         session.stages = [
