@@ -236,8 +236,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         run_id: str,
         current_user=Depends(contract.get_current_user),
     ):
-        del current_user
-        payload = contract.load_stage_run(run_id)
+        payload = contract._load_customer_stage_run_for_user(run_id, current_user)
         if not payload:
             raise HTTPException(status_code=404, detail="stage run을 찾을 수 없습니다.")
         return payload
@@ -247,7 +246,8 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         payload: contract.CustomerOrchestrateStageUpdateRequest,
         current_user=Depends(contract.get_current_user),
     ):
-        del current_user
+        if not contract._load_customer_stage_run_for_user(payload.run_id, current_user):
+            raise HTTPException(status_code=404, detail="stage run을 찾을 수 없습니다.")
         try:
             return contract.update_stage_run(
                 run_id=payload.run_id,
