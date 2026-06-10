@@ -28,7 +28,7 @@ jobs:
 
       - name: Detect full-lane impact paths
         id: paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             admin_full:
