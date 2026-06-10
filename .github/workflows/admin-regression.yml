@@ -73,6 +73,7 @@ jobs:
           PLAYWRIGHT_ADMIN_PORT: "3005"
           PLAYWRIGHT_ADMIN_BASE_URL: "http://127.0.0.1:3005"
           BACKEND_PROXY_TARGET: "http://127.0.0.1:8000"
+          ADMIN_REGRESSION_MOCK_BACKEND: "1"
         run: npm run ci:admin-regression:smoke
 
       - name: Upload smoke Playwright report
