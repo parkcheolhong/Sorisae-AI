@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import HelpPanel from './HelpPanel';
+import { useHelpLanguage } from './useHelpLanguage';
 
 // ── 추가 타입 ──────────────────────────────────────────────
 type PurchaseResult = {
@@ -16,6 +18,8 @@ type UserInfo = {
     id: number;
     email: string;
     username?: string;
+    native_language?: string | null;
+    country?: string | null;
 };
 
 type ProjectSummary = {
@@ -582,6 +586,10 @@ export default function WorldLincoPage() {
     const [myPurchases, setMyPurchases] = useState<{ id: number, amount: number, status: string, payment_method: string, created_at?: string }[] | null>(null);
     const [myPurchasesLoading, setMyPurchasesLoading] = useState(false);
 
+    // ── 도움말 패널 ──────────────────────────────────────
+    const [showHelpPanel, setShowHelpPanel] = useState(false);
+    const { helpLang, setHelpLang } = useHelpLanguage(userInfo);
+
     const [from, setFrom] = useState<LangCode>('ko');
     const [to, setTo] = useState<LangCode>('en');
     const [input, setInput] = useState('');
@@ -1114,7 +1122,35 @@ export default function WorldLincoPage() {
                         🔐 {t('login')}
                     </button>
                 )}
+                {/* 도움말 버튼 */}
+                <button
+                    onClick={() => setShowHelpPanel(true)}
+                    title="사용설명 / Help"
+                    style={{
+                        background: '#111b2a',
+                        border: '1px solid #31c45d55',
+                        color: '#31c45d',
+                        borderRadius: 10,
+                        padding: '8px 12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: 16,
+                        lineHeight: 1,
+                    }}
+                    aria-label="Help"
+                >
+                    ❓
+                </button>
             </div>
+
+            {/* ── 도움말 패널 ── */}
+            {showHelpPanel && (
+                <HelpPanel
+                    helpLang={helpLang}
+                    onChangeLang={(lang) => setHelpLang(lang)}
+                    onClose={() => setShowHelpPanel(false)}
+                />
+            )}
 
             <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px 40px' }}>
                 <div
