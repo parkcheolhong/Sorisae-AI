@@ -28,10 +28,10 @@ jobs:
             PLAYWRIGHT_API_BASE_URL: "https://xn--114-2p7l635dz3bh5j.com"
         steps:
             - name: Checkout
-              uses: actions/checkout@v5
+              uses: actions/checkout@v4
 
             - name: Setup Node.js
-              uses: actions/setup-node@v5
+              uses: actions/setup-node@v4
               with:
                   node-version: "20"
                   cache: npm
@@ -81,7 +81,7 @@ jobs:
 
             - name: Upload CI artifacts
               if: always()
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v4
               with:
                   name: marketplace-shinsegye-safe-integration-artifacts
                   path: frontend/ci-artifacts

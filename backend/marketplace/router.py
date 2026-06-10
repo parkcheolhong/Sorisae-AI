@@ -32,7 +32,6 @@ from uuid import uuid4
 from redis.exceptions import RedisError
 from . import models, schemas, crud
 from .subscription_service import subscription_service
-from .database import add_missing_columns
 from .ad_strategy_engine import plan_ad_strategy
 from .audience_profile_engine import infer_audience_profiles
 from .campaign_orchestrator_engine import plan_local_campaign
@@ -1096,12 +1095,15 @@ def _ensure_video_service_user_schema() -> None:
         return
 
     with engine.begin() as conn:
-        add_missing_columns(
-            conn,
-            "users",
-            {"credit_balance": "INTEGER"},
-            inspector=inspector,
-        )
+        conn_inspector = inspect(conn)
+        existing_columns = {
+            column["name"]
+            for column in conn_inspector.get_columns("users")
+        }
+        if "credit_balance" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
