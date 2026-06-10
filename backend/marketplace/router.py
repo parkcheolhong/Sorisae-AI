@@ -1226,6 +1226,29 @@ def _guard_customer_orchestrate_execution(stage_run_payload: Dict[str, Any]) -> 
         raise HTTPException(status_code=409, detail="이미 생성이 끝난 stage run입니다. 새 stage run으로 다시 시작하세요.")
 
 
+def _normalize_customer_stage_owner_id(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _guard_customer_stage_run_owner(stage_run_payload: Dict[str, Any], current_user: models.User) -> None:
+    requested_by = stage_run_payload.get("requested_by")
+    requested_by_payload = requested_by if isinstance(requested_by, dict) else {}
+    owner_id = _normalize_customer_stage_owner_id(requested_by_payload.get("id"))
+    current_user_id = _normalize_customer_stage_owner_id(getattr(current_user, "id", None))
+    if not owner_id or owner_id != current_user_id:
+        raise HTTPException(status_code=403, detail="본인 stage run만 조회하거나 수정할 수 있습니다.")
+
+
+def _load_customer_stage_run_for_user(run_id: str, current_user: models.User) -> Optional[Dict[str, Any]]:
+    stage_run_payload = load_stage_run(run_id)
+    if not stage_run_payload:
+        return None
+    _guard_customer_stage_run_owner(stage_run_payload, current_user)
+    return stage_run_payload
+
+
 def _ensure_customer_stage_run_payload(
     request: CustomerOrchestrateRequest,
     current_user: models.User,
@@ -1410,7 +1433,7 @@ def _resolve_stage_run_for_request(
     current_user: models.User,
 ) -> Optional[Dict[str, Any]]:
     if request.stage_run_id:
-        return load_stage_run(request.stage_run_id)
+        return _load_customer_stage_run_for_user(request.stage_run_id, current_user)
     project_name = (request.project_name or "customer-product").strip() or "customer-product"
     return initialize_stage_run(
         scope="marketplace",
