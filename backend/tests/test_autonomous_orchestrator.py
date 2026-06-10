@@ -218,3 +218,83 @@ class TestTurnController:
             assert "label" in stage
             assert "agents" in stage
             assert len(stage["agents"]) >= 1
+
+
+class TestValidatorAgent:
+    """ValidatorAgent 단위 테스트 — PR #67 버그 수정 회귀 검증"""
+
+    @pytest.mark.asyncio
+    async def test_uses_last_coder_result_not_first(self, tmp_path):
+        """validator는 첫 번째가 아닌 가장 최근 코더 결과를 사용해야 한다."""
+        from backend.orchestrator.autonomous.agents.validator import ValidatorAgent
+
+        first_out = tmp_path / "first"
+        first_out.mkdir()
+        (first_out / "main.py").write_text("def bad(:\n    pass\n")  # 문법 오류
+
+        second_out = tmp_path / "second"
+        second_out.mkdir()
+        (second_out / "main.py").write_text("def hello():\n    return 'world'\n")
+
+        ctx = AgentContext(
+            run_id="r",
+            task="t",
+            project_name="p",
+            validation_profile="default",
+            previous_results=[
+                AgentResult(
+                    agent="coder",
+                    status="success",
+                    output="1차",
+                    artifacts={"written_files": ["main.py"], "output_dir": str(first_out)},
+                ),
+                AgentResult(
+                    agent="coder",
+                    status="success",
+                    output="2차 수정",
+                    artifacts={"written_files": ["main.py"], "output_dir": str(second_out)},
+                ),
+            ],
+        )
+        result = await ValidatorAgent()._run(ctx)
+        assert result.artifacts["passed"] is True, (
+            f"최신 코더 결과를 사용하지 않았습니다. errors={result.errors}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_coder_result_passes(self):
+        from backend.orchestrator.autonomous.agents.validator import ValidatorAgent
+
+        ctx = AgentContext(
+            run_id="r", task="t", project_name="p", validation_profile="default"
+        )
+        result = await ValidatorAgent()._run(ctx)
+        assert result.status == "success"
+        assert result.artifacts["passed"] is True
+
+    @pytest.mark.asyncio
+    async def test_compile_error_triggers_revision(self, tmp_path):
+        from backend.orchestrator.autonomous.agents.validator import ValidatorAgent
+
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        (out_dir / "main.py").write_text("def bad(:\n    pass\n")
+
+        ctx = AgentContext(
+            run_id="r",
+            task="t",
+            project_name="p",
+            validation_profile="default",
+            previous_results=[
+                AgentResult(
+                    agent="coder",
+                    status="success",
+                    output="코드",
+                    artifacts={"written_files": ["main.py"], "output_dir": str(out_dir)},
+                )
+            ],
+        )
+        result = await ValidatorAgent()._run(ctx)
+        assert result.artifacts["passed"] is False
+        assert result.status == "needs_revision"
+        assert "coder" in result.next_agents

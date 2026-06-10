@@ -19,7 +19,7 @@ class ValidatorAgent(BaseAgent):
 
     async def _run(self, context: AgentContext) -> AgentResult:
         coder_result = None
-        for r in context.previous_results:
+        for r in reversed(context.previous_results):
             if r.agent == "coder" and r.artifacts.get("written_files"):
                 coder_result = r
                 break
