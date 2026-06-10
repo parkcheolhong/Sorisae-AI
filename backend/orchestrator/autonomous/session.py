@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -24,6 +25,8 @@ EXECUTION_MODES = {
     "semi_auto": "반자동 (실행 전 사용자 승인 필요)",
     "full_auto": "완전자동 (위험도 낮은 작업은 자동 실행)",
 }
+
+SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 
 
 @dataclass
@@ -143,6 +146,9 @@ class AutonomousSession:
 
     @classmethod
     def load(cls, session_id: str, owner_id: str) -> Optional["AutonomousSession"]:
+        if not SESSION_ID_PATTERN.fullmatch(session_id):
+            logger.warning("Invalid autonomous session id format: %s", session_id)
+            return None
         path = Path(AUTONOMOUS_SESSION_DIR) / f"{session_id}.json"
         if not path.exists():
             return None
