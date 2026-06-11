@@ -106,10 +106,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 >
 > 📐 **백엔드 스캐폴딩 설계안**: `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` (모바일 계약 1:1 매핑, REST 3종 + WebSocket 시그널링 룸 릴레이, Phase P1~P3, 테스트 전략 포함). 아래 B-2-1/B-2-2는 이 설계의 P1로 구현 예정.
 
-- [ ] **(B-2-1) 백엔드 VoIP API 부재** — 모바일은 `POST /api/v1/voip/calls/initiate` 등 호출(`apps/mobile-nadotongryoksa/src/hooks/useVoIPCall.ts:54`)하나, `backend/`에 `api/v1/voip/*` 구현 **0건**(코드 검색 확인).
-  - **방향**: `calls/initiate` · `calls/{id}/end` · `calls/{id}/audit` 라우터와 통화 세션 모델 스캐폴딩부터. (브랜치/외부 서비스에 이미 있는지 먼저 확인)
-- [ ] **(B-2-2) 시그널링 서버 / TURN 부재** — `signaling_server`, `turn_servers` 백엔드 0건. 모바일 `voipCallClient.ts`는 WebSocket 연결만 가정.
-  - **방향**: WebSocket 시그널링(Offer/Answer/ICE 중계) 서버 추가 + TURN/STUN 구성값 정의.
+- [x] **(B-2-1) 백엔드 VoIP API 부재** ✅ **P1 구현 완료** — `backend/voip/`(router/models/registry/signaling/config). REST `POST /calls/initiate`(앱↔앱 자동매칭+PSTN 폴백) · `GET /calls/{id}/audit` · `POST /calls/{id}/end`. `main.py` 등록. 라이브 서버 검증 완료.
+- [x] **(B-2-2) 시그널링 서버 / TURN 부재** ✅ **P1 구현 완료** — `WS /api/v1/voip/ws/{call_id}` 룸 릴레이(offer/answer/candidate/chat/voice_translation/ping-pong/hangup) + `config.py`의 STUN/TURN(env) 주입. TestClient 2-클라이언트 통합 테스트 + 라이브 uvicorn ws 릴레이로 E2E 검증(`backend/tests/test_voip_signaling.py`, 5 passed).
 - [ ] **(B-2-3) FCM/presence 미구성** — 실기기 로그 `No Firebase App '[DEFAULT]' has been created` → `VOIP_PRESENCE_ERROR` (`monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md:5-11`).
   - **방향**: Firebase 초기화/푸시 presence 경로 정비(앱 + 서버 키).
 - [ ] **(B-2-4) 패키지 lineage 불일치** — 설치본 `com.parkcheolhong.worldlinco` vs 워크스페이스 `com.shinsegye.nadotongryoksa` (checklist:13-17). 실기기 검증 신뢰성 저하.
