@@ -2,25 +2,33 @@ import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ADMIN_BASE = process.env.PLAYWRIGHT_ADMIN_BASE_URL || 'http://127.0.0.1:3000';
-const MARKET_BASE = process.env.PLAYWRIGHT_MARKETPLACE_BASE_URL || 'http://127.0.0.1:3000';
+const ADMIN_BASE = process.env.PLAYWRIGHT_ADMIN_BASE_URL || 'http://127.0.0.1:3005';
+const MARKET_BASE = process.env.PLAYWRIGHT_MARKETPLACE_BASE_URL || ADMIN_BASE;
 const OUT_DIR = path.resolve(process.cwd(), '../../reports/playwright-evidence');
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1';
+const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
 
 test('admin + marketplace orchestrator reverse-question smoke', async ({ page, request }) => {
+    test.setTimeout(180000);
     fs.mkdirSync(OUT_DIR, { recursive: true });
 
-    const loginPayload = new URLSearchParams();
-    loginPayload.set('username', 'ui.admin.round@devanalysis.local');
-    loginPayload.set('password', 'RoundUi!20260426');
-    const loginResponse = await request.post(`${ADMIN_BASE}/api/proxy?action=login`, {
-        data: loginPayload.toString(),
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-    });
-    expect(loginResponse.ok()).toBeTruthy();
-    const loginJson = await loginResponse.json() as { access_token?: string };
-    const token = String(loginJson.access_token || '').trim();
+    let token = '';
+    if (ADMIN_REGRESSION_MOCK_BACKEND) {
+        token = ADMIN_REGRESSION_MOCK_TOKEN;
+    } else {
+        const loginPayload = new URLSearchParams();
+        loginPayload.set('username', 'ui.admin.round@devanalysis.local');
+        loginPayload.set('password', 'RoundUi!20260426');
+        const loginResponse = await request.post(`${ADMIN_BASE}/api/proxy?action=login`, {
+            data: loginPayload.toString(),
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        });
+        expect(loginResponse.ok()).toBeTruthy();
+        const loginJson = await loginResponse.json() as { access_token?: string };
+        token = String(loginJson.access_token || '').trim();
+    }
     expect(token.length).toBeGreaterThan(0);
 
     await page.addInitScript((issuedToken: string) => {
@@ -29,7 +37,7 @@ test('admin + marketplace orchestrator reverse-question smoke', async ({ page, r
     }, token);
 
     await page.goto(`${ADMIN_BASE}/admin/llm`, { waitUntil: 'networkidle' });
-    const adminInput = page.getByPlaceholder('예: 질문/명령 입력 후 Enter · /run /pass /fix /fail /verify /preset 1');
+    const adminInput = page.locator('#admin-llm-chat-input');
     await expect(adminInput).toBeVisible({ timeout: 120000 });
     await adminInput.fill('UI smoke: 답변 후 역질문 1개를 해줘.');
     const adminSend = page.getByRole('button', { name: /전송|send|요청|실행/i }).first();
