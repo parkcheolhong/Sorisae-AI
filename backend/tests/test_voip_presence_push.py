@@ -117,6 +117,28 @@ def test_initiate_offline_callee_no_tokens_push_skipped(client, monkeypatch):
     assert "push_skipped" in {e["type"] for e in audit["events"]}
 
 
+def test_accept_call_joins_as_callee(client):
+    # 발신자 통화 개시 → 콜리가 push로 받은 call_id로 accept 합류.
+    init = client.post("/api/v1/voip/calls/initiate",
+                       json={"callee_user_id": 3002}, headers={"X-Test-User": "alice"}).json()
+    call_id = init["call_id"]
+
+    resp = client.post(f"/api/v1/voip/calls/{call_id}/accept", headers={"X-Test-User": "bob"})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["call_id"] == call_id
+    assert data["participant_role"] == "callee"
+    assert "role=callee" in data["signaling_server"]
+
+    audit = client.get(f"/api/v1/voip/calls/{call_id}/audit", headers={"X-Test-User": "alice"}).json()
+    assert "accept" in {e["type"] for e in audit["events"]}
+
+
+def test_accept_unknown_call_returns_404(client):
+    resp = client.post("/api/v1/voip/calls/c_nonexistent/accept", headers={"X-Test-User": "bob"})
+    assert resp.status_code == 404
+
+
 def test_push_adapter_skips_when_not_configured(monkeypatch):
     import asyncio
     monkeypatch.delenv("FCM_ENABLED", raising=False)

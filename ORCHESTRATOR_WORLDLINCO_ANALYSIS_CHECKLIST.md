@@ -113,6 +113,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **(B-3-3 백엔드) `POST /api/llm/voice-translate`** ✅ **구현 완료** — STT(whisper 폴백)+`NadoTranslator` 번역, 모바일 `VoiceTranslateResult` 계약 일치. 라이브 검증(hello→안녕하세요), `test_voice_translate_endpoint.py` 3 passed. 모바일 `voiceTranslate`/VoIP 음성 릴레이 실동작.
 - [x] **(B-2-3 / P3-A) FCM presence + 콜리 착신** ✅ **구현 완료** — `backend/voip/presence.py`(디바이스 토큰/presence, 인메모리+Redis), `push.py`(FCM 어댑터, `firebase-admin`+자격 구성 시 전송·아니면 안전 no-op). `POST /api/v1/voip/devices/register`, initiate가 콜리 presence 산정 + 착신 푸시 + `push_sent/push_skipped` 감사, WS 접속 시 presence 갱신. 테스트 `test_voip_presence_push.py` 4 passed, 라이브 검증. 비고: `firebase-admin`은 선택 의존성(요건 미포함), 실제 전송엔 `FCM_ENABLED=true`+서비스계정 키 필요. — 실기기 로그 `No Firebase App '[DEFAULT]' has been created` → `VOIP_PRESENCE_ERROR` (`monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md:5-11`).
   - **방향**: Firebase 초기화/푸시 presence 경로 정비(앱 + 서버 키).
+- [x] **(B-2 accept/모바일 FCM) 착신 수신 경로** ✅ **백엔드+모바일 클라이언트 완료** — 백엔드 `POST /calls/{call_id}/accept`(콜리 합류) + `accept_callee` 스토어. 모바일 `voipPresence.ts`(register/parse/accept) + `useVoipIncomingCalls` 훅 + `App.tsx` 연결(typecheck 통과). 남은 작업: Firebase 네이티브 설치 + `VoipMessagingAdapter` 주입.
+- [x] **(B-2 P3-B) PSTN 다이얼아웃 공급자 어댑터** ✅ **구현 완료(어댑터)** — `pstn.py`(`VOIP_PSTN_PROVIDER`: dialer_fallback/simulated/twilio), `initiate` 연결. 미디어 브리지/통역 삽입·통신사 계약은 후속. 테스트 3 passed, 라이브 폴백 검증.
 - [ ] **(B-2-4) 패키지 lineage 불일치** — 설치본 `com.parkcheolhong.worldlinco` vs 워크스페이스 `com.shinsegye.nadotongryoksa` (checklist:13-17). 실기기 검증 신뢰성 저하.
   - **방향**: 워크스페이스 소스로 빌드한 APK의 패키지 ID 통일 후 재설치 검증.
 - [ ] **(B-2-5) 네이티브 APK 빌드 실패** — `expo-av`/`expo-modules-core` `CXX1210 No compatible library found` (checklist:58-64).
