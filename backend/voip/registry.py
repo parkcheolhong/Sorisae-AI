@@ -55,6 +55,33 @@ class CallRoom:
             for p in (self.caller, self.callee)
         ]
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "call_id": self.call_id,
+            "status": self.status,
+            "created_at": self.created_at,
+            "caller": vars(self.caller),
+            "callee": vars(self.callee),
+            "session_id": self.session_id,
+            "mode": self.mode,
+            "auto_relay": self.auto_relay,
+            "events": self.events,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CallRoom":
+        return cls(
+            call_id=data["call_id"],
+            status=data["status"],
+            created_at=data["created_at"],
+            caller=Participant(**data["caller"]),
+            callee=Participant(**data["callee"]),
+            session_id=data.get("session_id"),
+            mode=data.get("mode", "voip_full_auto"),
+            auto_relay=data.get("auto_relay", False),
+            events=data.get("events", []),
+        )
+
 
 class CallRegistry:
     def __init__(self) -> None:
@@ -131,6 +158,23 @@ class CallRegistry:
                 room.status = "connecting"
             room.add_event("ws_connected", role, {})
             return room
+
+    async def add_event(
+        self,
+        call_id: str,
+        event_type: str,
+        role: Optional[str] = None,
+        detail: Optional[Dict[str, Any]] = None,
+        *,
+        set_status: Optional[str] = None,
+    ) -> None:
+        async with self._lock:
+            room = self._rooms.get(call_id)
+            if room is None:
+                return
+            room.add_event(event_type, role, detail)
+            if set_status:
+                room.status = set_status
 
     async def clear(self) -> None:
         async with self._lock:

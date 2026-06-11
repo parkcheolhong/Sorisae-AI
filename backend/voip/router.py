@@ -1,7 +1,8 @@
-"""VoIP 통역 통화 API (Phase P1) — REST initiate/audit/end + WebSocket 시그널링.
+"""VoIP 통역 통화 API (P1 + P2) — REST initiate/audit/end + WebSocket 시그널링.
 
 설계: NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md
 인증: REST 3종은 Bearer(get_current_user). WebSocket은 query token(initiate가 발급한 단기 JWT).
+스토어/릴레이는 환경변수 VOIP_REDIS_URL 유무에 따라 인메모리(P1) 또는 Redis pub/sub(P2)로 동작.
 """
 from __future__ import annotations
 
@@ -16,8 +17,8 @@ from backend.auth import ALGORITHM, SECRET_KEY, create_access_token, get_current
 
 from .config import build_signaling_url, get_ice_servers, signaling_token_ttl_sec
 from .models import AuditResponse, CallInitiateRequest, CallInitResponse
-from .registry import registry
-from .signaling import RELAY_TYPES, hub
+from .redis_backend import get_relay, get_store
+from .signaling import RELAY_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,8 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
             detail={"code": "no_target", "message": "통화 대상(callee_user_id/voice_id/friend_id/phone)이 필요합니다."},
         )
 
-    room, role = await registry.create_or_match(
+    store = get_store()
+    room, role = await store.create_or_match(
         caller_user_id=caller_user_id,
         caller_username=caller_username,
         callee_user_id=payload.callee_user_id,
@@ -108,7 +110,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
 
 @router.get("/calls/{call_id}/audit", response_model=AuditResponse)
 async def audit_call(call_id: str, user=Depends(get_current_user)) -> AuditResponse:
-    room = await registry.get(call_id)
+    room = await get_store().get(call_id)
     if room is None:
         raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
     return AuditResponse(
@@ -124,17 +126,11 @@ async def audit_call(call_id: str, user=Depends(get_current_user)) -> AuditRespo
 
 @router.post("/calls/{call_id}/end")
 async def end_call(call_id: str, user=Depends(get_current_user)) -> Dict[str, Any]:
-    room = await registry.end(call_id, role=None)
+    room = await get_store().end(call_id, role=None)
     if room is None:
         raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
-    # 남은 참가자에게 hangup 통지(있다면).
-    for role in ("caller", "callee"):
-        peer = hub._rooms.get(call_id, {}).get(role)
-        if peer is not None:
-            try:
-                await peer.send_json({"type": "hangup", "call_id": call_id})
-            except Exception:
-                pass
+    # 연결된 참가자에게 hangup 통지.
+    await get_relay().notify_hangup(call_id)
     return {"call_id": call_id, "status": "ended"}
 
 
@@ -157,19 +153,20 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     if role not in ("caller", "callee"):
         await websocket.close(code=1008)
         return
-    payload = _decode_ws_token(token, call_id, role)
-    if payload is None:
+    if _decode_ws_token(token, call_id, role) is None:
         await websocket.close(code=1008)
         return
 
-    room = await registry.get(call_id)
+    store = get_store()
+    room = await store.get(call_id)
     if room is None or room.status == "ended":
         await websocket.close(code=1008)
         return
 
+    relay = get_relay()
     await websocket.accept()
-    hub.add(call_id, role, websocket)
-    await registry.mark_connected(call_id, role)
+    await relay.register(call_id, role, websocket)
+    await store.mark_connected(call_id, role)
 
     try:
         while True:
@@ -182,14 +179,14 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
                 continue
 
             if msg_type == "hangup":
-                await hub.relay(call_id, role, {"type": "hangup", "call_id": call_id})
-                await registry.end(call_id, role=role)
+                await relay.send_to_peer(call_id, role, {"type": "hangup", "call_id": call_id})
+                await store.end(call_id, role=role)
                 break
 
             if msg_type in RELAY_TYPES:
                 message["from_role"] = role
-                delivered = await hub.relay(call_id, role, message)
-                _record_relay_event(call_id, role, msg_type, message, delivered)
+                await relay.send_to_peer(call_id, role, message)
+                await _record_relay_event(store, call_id, role, msg_type, message)
                 continue
 
             logger.debug("[VoIP] unknown signaling type ignored: %s", msg_type)
@@ -198,21 +195,16 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("[VoIP] signaling loop error (call_id=%s role=%s): %s", call_id, role, exc)
     finally:
-        hub.remove(call_id, role)
-        room = await registry.get(call_id)
-        if room is not None:
-            room.add_event("ws_disconnected", role, {})
+        await relay.unregister(call_id, role, websocket)
+        await store.add_event(call_id, "ws_disconnected", role, {})
 
 
-def _record_relay_event(call_id: str, role: str, msg_type: str, message: Dict[str, Any], delivered: bool) -> None:
-    room = registry._rooms.get(call_id)
-    if room is None:
-        return
-    detail: Dict[str, Any] = {"delivered": delivered}
+async def _record_relay_event(store, call_id: str, role: str, msg_type: str, message: Dict[str, Any]) -> None:
+    detail: Dict[str, Any] = {}
     if msg_type in ("offer", "answer"):
         detail["sdp_length"] = len(str(message.get("sdp") or ""))
     elif msg_type == "candidate":
         detail["has_candidate"] = bool(message.get("candidate"))
-    room.add_event(msg_type, role, detail)
-    if msg_type == "answer":
-        room.status = "connected"
+    # answer 수신 시 통화 상태를 connected로 전이.
+    set_status = "connected" if msg_type == "answer" else None
+    await store.add_event(call_id, msg_type, role, detail, set_status=set_status)
