@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ADMIN_BASE = process.env.PLAYWRIGHT_ADMIN_BASE_URL || 'http://127.0.0.1:3005';
-const MARKET_BASE = process.env.PLAYWRIGHT_MARKETPLACE_BASE_URL || ADMIN_BASE;
+const MARKET_BASE = process.env.PLAYWRIGHT_MARKETPLACE_BASE_URL || process.env.PLAYWRIGHT_ADMIN_BASE_URL || 'http://127.0.0.1:3000';
 const OUT_DIR = path.resolve(process.cwd(), '../../reports/playwright-evidence');
 const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1';
-const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
+const ADMIN_REGRESSION_MOCK_TOKEN = process.env.ADMIN_REGRESSION_MOCK_TOKEN || 'admin-regression-mock-token';
 
 test('admin + marketplace orchestrator reverse-question smoke', async ({ page, request }) => {
     test.setTimeout(180000);
