@@ -76,15 +76,20 @@ class CoderAgent(BaseAgent):
             output_dir=output_path,
         )
 
+        # _compat_manifest_for_request 시그니처: (task, project_name, validation_profile, required_files)
+        # required_files는 compat_defaults/템플릿과 병합되므로(빈 리스트 안전), 자율 코더는 빈 목록을 넘긴다.
         anchor_path, manifest, _ = _compat_manifest_for_request(
-            project_name=context.project_name,
-            validation_profile=context.validation_profile,
-            task=enriched_task,
-            output_dir=output_path,
-            b_brain_result=b_result,
+            enriched_task,
+            context.project_name,
+            context.validation_profile,
+            [],
         )
 
         written_files = _compat_write_manifest(output_path, manifest)
+        # B뇌 generator가 직접 작성한 파일을 매니페스트 결과와 병합(메인 오케스트레이터 경로와 동일).
+        for generated_file in (b_result or {}).get("written_files", []):
+            if generated_file not in written_files:
+                written_files.append(generated_file)
         return written_files
 
     async def fix(self, context: AgentContext, errors: List[str]) -> AgentResult:

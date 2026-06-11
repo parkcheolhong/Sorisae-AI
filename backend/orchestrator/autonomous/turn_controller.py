@@ -170,7 +170,6 @@ class TurnController:
                 }
 
         combined_output = self._combine_results(results, session)
-        session.save()
         return self._build_response(session, combined_output, intent=intent, agent_results=results)
 
     async def _handle_auto_revision(
@@ -261,7 +260,6 @@ class TurnController:
             session.execution_state = "failed"
 
         combined = self._combine_results(session.agent_results[-5:], session)
-        session.save()
         return self._build_response(session, combined, intent="approval", agent_results=session.agent_results[-5:])
 
     def _initialize_stages(self, session: AutonomousSession) -> None:
@@ -357,6 +355,9 @@ class TurnController:
         intent: str = "",
         agent_results: Optional[List[AgentResult]] = None,
     ) -> Dict[str, Any]:
+        # 모든 턴 응답은 이 헬퍼를 거치므로, 여기서 세션을 영속화해
+        # greeting/status/빈 파이프라인 등 모든 분기에서 후속 load()가 404 나지 않도록 보장한다.
+        session.save()
         return {
             "session_id": session.session_id,
             "mode": session.mode,
