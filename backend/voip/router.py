@@ -19,6 +19,7 @@ from . import push
 from .config import build_signaling_url, get_ice_servers, signaling_token_ttl_sec
 from .models import AuditResponse, CallInitiateRequest, CallInitResponse, DeviceRegisterRequest
 from .presence import get_presence
+from .pstn import get_pstn_provider
 from .redis_backend import get_relay, get_store
 from .signaling import RELAY_TYPES
 
@@ -53,24 +54,30 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
 
     has_app_target = bool(payload.callee_user_id or payload.callee_voice_id or payload.friend_id)
 
-    # PSTN-only 요청은 P1에서 다이얼러 폴백(앱↔앱만 실제 연결).
+    # PSTN-only 요청은 P3-B 공급자 어댑터로 처리(기본: 다이얼러 폴백).
     if not has_app_target:
         if payload.callee_phone:
+            provider = get_pstn_provider()
+            result = await provider.dial(
+                callee_phone=payload.callee_phone,
+                caller_label=caller_username,
+            )
             return CallInitResponse(
-                call_id="",
+                call_id=result.get("provider_call_id") or "",
                 signaling_server="",
                 turn_servers=[],
                 session_id=payload.session_id,
-                call_route="pstn_fallback",
-                phone_dialer_required=True,
-                fallback_dial_url=f"tel:{payload.callee_phone}",
-                user_message="앱 통화 대상이 아니어서 전화 다이얼러로 연결합니다.",
-                status="dialer_required",
+                call_route=result.get("call_route"),
+                phone_dialer_required=result.get("phone_dialer_required"),
+                fallback_dial_url=result.get("fallback_dial_url"),
+                user_message=result.get("user_message"),
+                status=result.get("status"),
                 requested_mode=payload.mode,
-                resolved_mode="pstn_fallback",
+                resolved_mode=result.get("resolved_mode"),
                 auto_relay_requested=payload.auto_relay,
                 auto_relay_applied=False,
                 participant_role="caller",
+                error_code=result.get("error_code"),
             )
         raise HTTPException(
             status_code=400,
@@ -140,6 +147,43 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
         resolved_mode=room.mode,
         auto_relay_requested=payload.auto_relay,
         auto_relay_applied=room.auto_relay,
+    )
+
+
+@router.post("/calls/{call_id}/accept", response_model=CallInitResponse)
+async def accept_call(call_id: str, request: Request, user=Depends(get_current_user)) -> CallInitResponse:
+    """P3-A: 착신 푸시로 받은 call_id에 콜리로 합류해 시그널링 URL 발급."""
+    user_id = getattr(user, "id", None)
+    username = getattr(user, "username", None) or getattr(user, "email", None) or "callee"
+    store = get_store()
+    room = await store.accept_callee(call_id, user_id, username)
+    if room is None:
+        raise HTTPException(status_code=404, detail="합류 가능한 통화를 찾을 수 없습니다.")
+
+    token = _mint_ws_token(username=username, user_id=user_id, call_id=call_id, role="callee")
+    signaling_url = build_signaling_url(
+        call_id=call_id,
+        token=token,
+        role="callee",
+        request_scheme=request.url.scheme,
+        request_host=request.headers.get("host"),
+    )
+    if user_id is not None:
+        await get_presence().mark_online(user_id)
+
+    return CallInitResponse(
+        call_id=call_id,
+        signaling_server=signaling_url,
+        turn_servers=get_ice_servers(user_key=str(user_id or call_id)),
+        session_id=room.session_id,
+        call_route="app",
+        phone_dialer_required=False,
+        callee_app_online=True,
+        caller_user_id=room.caller.user_id,
+        callee_user_id=room.callee.user_id,
+        participant_role="callee",
+        status=room.status,
+        resolved_mode=room.mode,
     )
 
 

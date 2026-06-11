@@ -159,6 +159,19 @@ class CallRegistry:
             room.add_event("ws_connected", role, {})
             return room
 
+    async def accept_callee(self, call_id: str, user_id: int, username: Optional[str]) -> Optional[CallRoom]:
+        """P3-A: 푸시로 받은 call_id에 콜리로 합류(착신 수락)."""
+        async with self._lock:
+            room = self._rooms.get(call_id)
+            if room is None or room.status == "ended":
+                return None
+            if room.callee.user_id not in (None, user_id):
+                return None
+            room.callee.user_id = user_id
+            room.callee.username = username
+            room.add_event("accept", "callee", {"user_id": user_id, "via": "push"})
+            return room
+
     async def add_event(
         self,
         call_id: str,

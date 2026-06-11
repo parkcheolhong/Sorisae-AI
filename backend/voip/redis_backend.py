@@ -206,6 +206,22 @@ class RedisCallStore:
         await self._push_event(call_id, "ws_connected", role, {})
         return await self._load(call_id)
 
+    async def accept_callee(self, call_id: str, user_id: int, username: Optional[str]) -> Optional[CallRoom]:
+        client = get_client()
+        raw = await client.hget(_room_key(call_id), "callee")
+        status = await client.hget(_room_key(call_id), "status")
+        if raw is None or status == "ended":
+            return None
+        callee = json.loads(raw)
+        if callee.get("user_id") not in (None, user_id):
+            return None
+        callee["user_id"] = user_id
+        callee["username"] = username
+        await client.hset(_room_key(call_id), "callee", json.dumps(callee))
+        await client.srem(_incoming_key(user_id), call_id)
+        await self._push_event(call_id, "accept", "callee", {"user_id": user_id, "via": "push"})
+        return await self._load(call_id)
+
     async def add_event(
         self,
         call_id: str,
