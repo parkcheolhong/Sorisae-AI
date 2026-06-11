@@ -41,6 +41,9 @@ _USERS = {"alice": _FakeUser(2001, "alice2"), "bob": _FakeUser(2002, "bob2")}
 @pytest.fixture()
 def client(monkeypatch):
     monkeypatch.setenv("VOIP_REDIS_URL", REDIS_TEST_URL)
+    # 테스트 간 잔여 상태 제거를 위해 db를 비운다.
+    import redis as _redis
+    _redis.Redis.from_url(REDIS_TEST_URL).flushdb()
     # 모듈 전역 캐시 초기화(다른 테스트의 인메모리 선택 영향 제거).
     import backend.voip.redis_backend as rb
     rb._client = None
