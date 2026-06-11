@@ -2490,6 +2490,8 @@ export default function App() {
                                         calleePhone={voipPhone.trim() || VOIP_TEST_DEFAULT_PHONE}
                                         apiBaseUrl={API_BASE}
                                         authToken={token}
+                                        localSourceLang={fromLang}
+                                        localTargetLang={toLang}
                                         onHangup={handleCloseVoipTester}
                                     />
                                 </View>
