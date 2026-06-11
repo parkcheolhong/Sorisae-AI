@@ -91,6 +91,37 @@ class TestAutonomousSession:
         assert loaded.project_name == "test-project"
         assert len(loaded.conversation) == 1
 
+    def test_save_load_restores_stages_results_and_approval(self, tmp_path, monkeypatch):
+        """load()는 conversation뿐 아니라 stages/agent_results/pending_approval_data/model_routes/extra까지 복원해야 한다(회귀)."""
+        from backend.orchestrator.autonomous.session import StageState
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        session = AutonomousSession.create(owner_id="user1", project_name="p")
+        session.task = "FastAPI로 블로그 만들어줘"
+        session.stages = [
+            StageState(stage_id="STAGE-01", stage_label="1단계", status="completed"),
+            StageState(stage_id="STAGE-02", stage_label="2단계", status="in_progress"),
+        ]
+        session.current_stage_index = 1
+        session.agent_results.append(AgentResult(agent="reasoner", status="success", output="설계 완료"))
+        session.pending_approval_data = {"pipeline": ["coder", "validator"]}
+        session.model_routes = {"reasoner": "model-a"}
+        session.extra = {"foo": "bar"}
+        session.save()
+
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None
+        assert len(loaded.stages) == 2
+        assert loaded.stages[1].stage_id == "STAGE-02"
+        assert loaded.current_stage_index == 1
+        assert len(loaded.agent_results) == 1
+        assert loaded.agent_results[0].agent == "reasoner"
+        assert loaded.pending_approval_data == {"pipeline": ["coder", "validator"]}
+        assert loaded.model_routes == {"reasoner": "model-a"}
+        assert loaded.extra == {"foo": "bar"}
+
     def test_load_rejects_other_user(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
@@ -159,6 +190,19 @@ class TestTurnController:
         assert result["intent"] == "greeting"
         assert "멀티 에이전트" in result["content"]
         assert result["session_id"] == session.session_id
+
+    @pytest.mark.asyncio
+    async def test_greeting_turn_persists_session(self, tmp_path, monkeypatch):
+        """인사 턴도 세션을 저장해야 후속 load()가 404 나지 않는다(회귀)."""
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="semi_auto")
+        await controller.process_turn("안녕하세요", session)
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None, "인사 턴 이후 세션이 저장되지 않았습니다."
 
     @pytest.mark.asyncio
     async def test_process_status(self):
@@ -298,3 +342,41 @@ class TestValidatorAgent:
         assert result.artifacts["passed"] is False
         assert result.status == "needs_revision"
         assert "coder" in result.next_agents
+
+
+class TestCoderAgent:
+    """CoderAgent 코드 생성 — 매니페스트 호출 시그니처 버그 수정 회귀 검증"""
+
+    @pytest.mark.asyncio
+    async def test_generate_code_runs_without_type_error(self, tmp_path):
+        """_compat_manifest_for_request 호출이 TypeError 없이 동작하고 파일을 생성해야 한다."""
+        from backend.orchestrator.autonomous.agents.coder import CoderAgent
+
+        ctx = AgentContext(
+            run_id="r",
+            task="FastAPI로 간단한 블로그 API 만들어줘",
+            project_name="blog-api",
+            validation_profile="python_fastapi",
+            output_dir=str(tmp_path),
+        )
+        written = await CoderAgent()._generate_code(ctx, "", "")
+        assert isinstance(written, list)
+        assert len(written) > 0
+        # 매니페스트가 디스크에 실제로 작성되었는지 확인
+        assert any((tmp_path / f).exists() for f in written)
+
+    @pytest.mark.asyncio
+    async def test_execute_returns_success_status(self, tmp_path):
+        from backend.orchestrator.autonomous.agents.coder import CoderAgent
+
+        ctx = AgentContext(
+            run_id="r",
+            task="FastAPI로 메모 API 만들어줘",
+            project_name="memo-api",
+            validation_profile="python_fastapi",
+            output_dir=str(tmp_path),
+        )
+        result = await CoderAgent().execute(ctx)
+        assert result.status == "success"
+        assert result.artifacts["file_count"] > 0
+        assert "validator" in result.next_agents
