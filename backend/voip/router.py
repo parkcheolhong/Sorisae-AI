@@ -91,7 +91,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
     return CallInitResponse(
         call_id=room.call_id,
         signaling_server=signaling_url,
-        turn_servers=get_ice_servers(),
+        turn_servers=get_ice_servers(user_key=str(caller_user_id or room.call_id)),
         session_id=room.session_id,
         call_route="app",
         phone_dialer_required=False,
@@ -164,8 +164,10 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
         return
 
     relay = get_relay()
-    await websocket.accept()
+    # register(구독)을 accept보다 먼저 수행 → 클라이언트가 메시지를 보내기 전에
+    # 릴레이 구독이 활성화되도록 보장(Redis pub/sub 메시지 유실 방지).
     await relay.register(call_id, role, websocket)
+    await websocket.accept()
     await store.mark_connected(call_id, role)
 
     try:
@@ -179,8 +181,9 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
                 continue
 
             if msg_type == "hangup":
-                await relay.send_to_peer(call_id, role, {"type": "hangup", "call_id": call_id})
+                # 상태를 먼저 ended로 확정한 뒤 상대에게 통지(수신 측이 audit를 조회해도 일관).
                 await store.end(call_id, role=role)
+                await relay.send_to_peer(call_id, role, {"type": "hangup", "call_id": call_id})
                 break
 
             if msg_type in RELAY_TYPES:

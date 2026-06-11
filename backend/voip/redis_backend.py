@@ -50,6 +50,10 @@ def _room_key(call_id: str) -> str:
     return f"voip:room:{call_id}"
 
 
+def _events_key(call_id: str) -> str:
+    return f"voip:events:{call_id}"
+
+
 def _incoming_key(user_id: int) -> str:
     return f"voip:incoming:{user_id}"
 
@@ -58,17 +62,60 @@ def _relay_channel(call_id: str) -> str:
     return f"voip:relay:{call_id}"
 
 
+def _now() -> float:
+    return round(time.time(), 3)
+
+
+# 상태 단조 전이(ringing<connecting<connected<ended)를 원자적으로 강제하는 Lua.
+# 'ended'가 종단 — 지연된 'connected' 등이 종료 상태를 덮어쓰지 못한다.
+_STATUS_LUA = """
+local cur = redis.call('HGET', KEYS[1], 'status')
+local rank = {ringing=1, connecting=2, connected=3, ended=4}
+local nr = rank[ARGV[1]] or 0
+local cr = rank[cur] or 0
+if cur == false or nr > cr then
+  redis.call('HSET', KEYS[1], 'status', ARGV[1])
+  return 1
+end
+return 0
+"""
+
+
 class RedisCallStore:
-    """CallRegistry와 동일한 비동기 API를 Redis로 구현."""
+    """CallRegistry와 동일한 비동기 API를 Redis로 구현.
+
+    동시성: 룸 핵심 필드는 HASH(상태/참가자 — 단일 필드 HSET), 감사 이벤트는 LIST(RPUSH)로 저장해
+    여러 코루틴/워커의 read-modify-write 경쟁(상태·이벤트 유실)을 제거한다.
+    """
+
+    async def _set_status(self, call_id: str, status: str) -> None:
+        """상태를 단조 전이로만 변경(원자적). ended는 종단."""
+        await get_client().eval(_STATUS_LUA, 1, _room_key(call_id), status)
+
+    async def _push_event(self, call_id: str, event_type: str, role: Optional[str], detail: Optional[Dict[str, Any]]) -> None:
+        client = get_client()
+        event = {"ts": _now(), "type": event_type, "role": role, "detail": detail or {}}
+        await client.rpush(_events_key(call_id), json.dumps(event))
+        await client.expire(_events_key(call_id), ROOM_TTL_SEC)
 
     async def _load(self, call_id: str) -> Optional[CallRoom]:
-        raw = await get_client().get(_room_key(call_id))
-        if not raw:
+        client = get_client()
+        data = await client.hgetall(_room_key(call_id))
+        if not data:
             return None
-        return CallRoom.from_dict(json.loads(raw))
-
-    async def _save(self, room: CallRoom) -> None:
-        await get_client().set(_room_key(room.call_id), json.dumps(room.to_dict()), ex=ROOM_TTL_SEC)
+        raw_events = await client.lrange(_events_key(call_id), 0, -1)
+        events = [json.loads(e) for e in raw_events]
+        return CallRoom(
+            call_id=call_id,
+            status=data.get("status", "ringing"),
+            created_at=float(data.get("created_at", _now())),
+            caller=Participant(**json.loads(data["caller"])),
+            callee=Participant(**json.loads(data["callee"])),
+            session_id=data.get("session_id") or None,
+            mode=data.get("mode", "voip_full_auto"),
+            auto_relay=data.get("auto_relay") == "1",
+            events=events,
+        )
 
     async def create_or_match(
         self,
@@ -83,13 +130,14 @@ class RedisCallStore:
     ) -> Tuple[CallRoom, str]:
         client = get_client()
 
-        # 1) 내가 callee인 ringing room이 있으면 합류.
+        # 1) 내가 callee인 ringing room이 있으면 합류(인덱스에서 원자적으로 꺼냄).
         if caller_user_id is not None:
-            incoming = await client.smembers(_incoming_key(caller_user_id))
-            for cid in incoming:
+            while True:
+                cid = await client.spop(_incoming_key(caller_user_id))
+                if not cid:
+                    break
                 room = await self._load(cid)
                 if room is None:
-                    await client.srem(_incoming_key(caller_user_id), cid)
                     continue
                 if (
                     room.status == "ringing"
@@ -98,9 +146,9 @@ class RedisCallStore:
                     and room.caller.user_id != caller_user_id
                 ):
                     room.callee.username = caller_username
-                    room.add_event("accept", "callee", {"user_id": caller_user_id})
-                    await self._save(room)
-                    await client.srem(_incoming_key(caller_user_id), cid)
+                    await client.hset(_room_key(cid), "callee", json.dumps(vars(room.callee)))
+                    await self._push_event(cid, "accept", "callee", {"user_id": caller_user_id})
+                    room.events.append({"ts": _now(), "type": "accept", "role": "callee", "detail": {"user_id": caller_user_id}})
                     return room, "callee"
 
         # 2) 새 통화 생성.
@@ -108,19 +156,27 @@ class RedisCallStore:
         room = CallRoom(
             call_id=call_id,
             status="ringing",
-            created_at=round(time.time(), 3),
+            created_at=_now(),
             caller=Participant(role="caller", user_id=caller_user_id, username=caller_username),
             callee=Participant(role="callee", user_id=callee_user_id, voice_id=callee_voice_id),
             session_id=session_id,
             mode=mode,
             auto_relay=auto_relay,
         )
-        room.add_event("initiate", "caller", {
-            "user_id": caller_user_id,
-            "callee_user_id": callee_user_id,
+        await client.hset(_room_key(call_id), mapping={
+            "status": room.status,
+            "created_at": str(room.created_at),
+            "caller": json.dumps(vars(room.caller)),
+            "callee": json.dumps(vars(room.callee)),
+            "session_id": session_id or "",
             "mode": mode,
+            "auto_relay": "1" if auto_relay else "0",
         })
-        await self._save(room)
+        await client.expire(_room_key(call_id), ROOM_TTL_SEC)
+        await self._push_event(call_id, "initiate", "caller", {
+            "user_id": caller_user_id, "callee_user_id": callee_user_id, "mode": mode,
+        })
+        room.events.append({"ts": _now(), "type": "initiate", "role": "caller", "detail": {}})
         if callee_user_id is not None:
             await client.sadd(_incoming_key(callee_user_id), call_id)
             await client.expire(_incoming_key(callee_user_id), ROOM_TTL_SEC)
@@ -130,25 +186,25 @@ class RedisCallStore:
         return await self._load(call_id)
 
     async def end(self, call_id: str, role: Optional[str] = None) -> Optional[CallRoom]:
-        room = await self._load(call_id)
-        if room is None:
+        client = get_client()
+        if not await client.exists(_room_key(call_id)):
             return None
-        room.status = "ended"
-        room.add_event("end", role, {})
-        await self._save(room)
-        return room
+        await self._set_status(call_id, "ended")
+        await self._push_event(call_id, "end", role, {})
+        return await self._load(call_id)
 
     async def mark_connected(self, call_id: str, role: str) -> Optional[CallRoom]:
-        room = await self._load(call_id)
-        if room is None:
+        client = get_client()
+        field = "caller" if role == "caller" else "callee"
+        raw = await client.hget(_room_key(call_id), field)
+        if raw is None:
             return None
-        participant = room.caller if role == "caller" else room.callee
-        participant.connected_at = round(time.time(), 3)
-        if room.status == "ringing":
-            room.status = "connecting"
-        room.add_event("ws_connected", role, {})
-        await self._save(room)
-        return room
+        participant = json.loads(raw)
+        participant["connected_at"] = _now()
+        await client.hset(_room_key(call_id), field, json.dumps(participant))
+        await self._set_status(call_id, "connecting")  # 단조 전이(연결됨/종료는 미하향)
+        await self._push_event(call_id, "ws_connected", role, {})
+        return await self._load(call_id)
 
     async def add_event(
         self,
@@ -159,20 +215,18 @@ class RedisCallStore:
         *,
         set_status: Optional[str] = None,
     ) -> None:
-        room = await self._load(call_id)
-        if room is None:
+        client = get_client()
+        if not await client.exists(_room_key(call_id)):
             return
-        room.add_event(event_type, role, detail)
+        await self._push_event(call_id, event_type, role, detail)
         if set_status:
-            room.status = set_status
-        await self._save(room)
+            await self._set_status(call_id, set_status)  # 단조 전이로 원자 처리
 
     async def clear(self) -> None:
         client = get_client()
-        async for key in client.scan_iter("voip:room:*"):
-            await client.delete(key)
-        async for key in client.scan_iter("voip:incoming:*"):
-            await client.delete(key)
+        for pattern in ("voip:room:*", "voip:events:*", "voip:incoming:*"):
+            async for key in client.scan_iter(pattern):
+                await client.delete(key)
 
 
 # ── 릴레이(시그널링 메시지 전달) ──────────────────────────────────────────────
