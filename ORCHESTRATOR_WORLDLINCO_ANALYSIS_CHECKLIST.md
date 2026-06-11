@@ -108,6 +108,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 - [x] **(B-2-1) 백엔드 VoIP API 부재** ✅ **P1 구현 완료** — `backend/voip/`(router/models/registry/signaling/config). REST `POST /calls/initiate`(앱↔앱 자동매칭+PSTN 폴백) · `GET /calls/{id}/audit` · `POST /calls/{id}/end`. `main.py` 등록. 라이브 서버 검증 완료.
 - [x] **(B-2-2) 시그널링 서버 / TURN 부재** ✅ **P1 구현 완료** — `WS /api/v1/voip/ws/{call_id}` 룸 릴레이(offer/answer/candidate/chat/voice_translation/ping-pong/hangup) + `config.py`의 STUN/TURN(env) 주입. TestClient 2-클라이언트 통합 테스트 + 라이브 uvicorn ws 릴레이로 E2E 검증(`backend/tests/test_voip_signaling.py`, 5 passed).
+- [x] **(B-2 P2) Redis 백엔드 + pub/sub 릴레이** ✅ **구현 완료(플래그 `VOIP_REDIS_URL`, 기본 인메모리)** — `backend/voip/redis_backend.py`(RedisCallStore 룸/감사 + RedisRelay pub/sub). 라이브 Redis로 멀티워커 릴레이/스토어 검증(`test_voip_signaling_redis.py`, 2 passed). 서버측 chat 번역은 모바일이 클라이언트에서 수행하므로 P2에서 제외.
 - [ ] **(B-2-3) FCM/presence 미구성** — 실기기 로그 `No Firebase App '[DEFAULT]' has been created` → `VOIP_PRESENCE_ERROR` (`monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md:5-11`).
   - **방향**: Firebase 초기화/푸시 presence 경로 정비(앱 + 서버 키).
 - [ ] **(B-2-4) 패키지 lineage 불일치** — 설치본 `com.parkcheolhong.worldlinco` vs 워크스페이스 `com.shinsegye.nadotongryoksa` (checklist:13-17). 실기기 검증 신뢰성 저하.
@@ -121,8 +122,9 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **(B-3-1) `detected_language` 응답 스키마 누락** ✅ 수정 완료 — `VoiceResponse`에 `detected_language: Optional[str] = None` 필드 추가 + `# pyright: ignore` 제거. 회귀 테스트 `test_voice_gateway_schema.py`.
 - [ ] **(B-3-2) STT 언어 힌트 미전송** — `App.tsx:2109` 요청 바디에 `language` 힌트 없음 → CJK 오인식 위험.
   - **방향**: 모바일에서 `language: fromLang`(또는 자동) 힌트 전달 → `_run_faster_whisper(language=...)` 활용(`voice_gateway.py:126`).
-- [ ] **(B-3-3) 죽은 엔드포인트** — `translate.ts:196`이 `POST /api/llm/voice-translate` 호출하나 백엔드 라우트 없음(존재하는 건 `/api/llm/voice/orchestrate`). 게다가 호출부 `VoIPCallScreen.tsx:528`은 인자 4개를 넘기는데 함수 정의는 3개(추가 시그니처 불일치).
-  - **보류(이번 PR 제외)**: 이 함수는 차단된 VoIP 트랙(B-2)에서만 사용되고, `voice/orchestrate`는 번역이 아니라 STT+채팅이라 단순 URL 교체로는 계약이 깨짐. 신규 `voice-translate`(STT→번역) 백엔드 엔드포인트 설계가 필요 → B-2와 함께 진행 권장.
+- [~] **(B-3-3) 죽은 엔드포인트 / 모바일 클라이언트 버그** — 모바일 측 버그는 수정 완료, 백엔드 `voice-translate` 엔드포인트는 아직 미구현(후속).
+  - ✅ **모바일 수정 완료(typecheck 통과)**: `voipCallClient.ts` WebRTC import 오타(`react-native-wert`→`react-native-webrtc`, `WBTC`→`webrtc`, `ONameStream`→`onaddstream`), `voiceTranslate` 4번째 인자(`regionHint`) + `audio_base64/format` 타입, `TranslateOptions.regionHint`, `VoIPCallScreen` `playwingbackTone`→`playRingbackTone`, `App.tsx`에서 `VoIPCallScreen`에 `localSourceLang/localTargetLang` 전달.
+  - ⏳ **남은 작업**: 백엔드 `POST /api/llm/voice-translate`(STT→번역) 신규 엔드포인트 — 음성 STT 경로라 별도 진행.
 
 ### B-4. 🟡 P2 — 실기기/안정성 검증 미완 (기존 체크리스트에 이미 추적 중)
 
