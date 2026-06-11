@@ -102,3 +102,5 @@ make check
 - Redis is exposed on host port **6380** (not 6379) to avoid conflicts.
 - Some backend tests (`test_orchestrator_compat_manifest_write`, `test_runtime_config_persistence`) have pre-existing failures unrelated to environment setup.
 - The `test_orchestrator_operational_evidence_targets.py` test file has an import error (missing function) and must be excluded.
+- Frontend `npm run test` has a pre-existing failure in `tests/rail-labels.test.mjs` (asserts the marketplace page still contains the legacy label `5가지 AI 엔진 상품`, which the current code no longer uses). The other two checks (`smoke`, `nadotongryoksa-contracts`) pass. There is no `lint` script defined for the frontend.
+- There is no root `/` route; the app renders at `/marketplace` and `/admin` (a bare `/` returns 404, and `/login` redirects to `/admin/login`). The marketplace login/signup form is embedded in the right sidebar of `/marketplace`, not on a separate page.
