@@ -130,26 +130,45 @@ class RedisCallStore:
     ) -> Tuple[CallRoom, str]:
         client = get_client()
 
-        # 1) 내가 callee인 ringing room이 있으면 합류(인덱스에서 원자적으로 꺼냄).
+        # 1) 내가 callee인 대기 room이 있으면 합류한다.
         if caller_user_id is not None:
-            while True:
-                cid = await client.spop(_incoming_key(caller_user_id))
-                if not cid:
-                    break
+            incoming_key = _incoming_key(caller_user_id)
+            for cid in await client.smembers(incoming_key):
                 room = await self._load(cid)
                 if room is None:
+                    await client.srem(incoming_key, cid)
                     continue
                 if (
-                    room.status == "ringing"
+                    room.status in ("ringing", "connecting")
                     and room.callee.user_id == caller_user_id
                     and room.callee.connected_at is None
                     and room.caller.user_id != caller_user_id
                 ):
+                    removed = await client.srem(incoming_key, cid)
+                    if not removed:
+                        continue
+                    room = await self._load(cid)
+                    if room is None:
+                        continue
+                    if not (
+                        room.status in ("ringing", "connecting")
+                        and room.callee.user_id == caller_user_id
+                        and room.callee.connected_at is None
+                        and room.caller.user_id != caller_user_id
+                    ):
+                        continue
                     room.callee.username = caller_username
                     await client.hset(_room_key(cid), "callee", json.dumps(vars(room.callee)))
                     await self._push_event(cid, "accept", "callee", {"user_id": caller_user_id})
                     room.events.append({"ts": _now(), "type": "accept", "role": "callee", "detail": {"user_id": caller_user_id}})
                     return room, "callee"
+                if (
+                    room.status == "ended"
+                    or room.callee.user_id != caller_user_id
+                    or room.callee.connected_at is not None
+                    or room.caller.user_id == caller_user_id
+                ):
+                    await client.srem(incoming_key, cid)
 
         # 2) 새 통화 생성.
         call_id = "c_" + uuid.uuid4().hex[:12]
@@ -285,6 +304,8 @@ class RedisRelay:
                 if envelope.get("target_role") != role:
                     continue
                 try:
+                    while getattr(getattr(websocket, "application_state", None), "name", "") == "CONNECTING":
+                        await asyncio.sleep(0)
                     await websocket.send_json(envelope.get("payload") or {})
                 except Exception:  # noqa: BLE001
                     break
