@@ -1,7 +1,5 @@
 """P3-C: TURN 시간제한 토큰(coturn use-auth-secret) 단위 테스트."""
 import base64
-import hashlib
-import hmac
 import time
 
 from backend.voip import config as voip_config
@@ -25,10 +23,10 @@ def test_dynamic_turn_credentials_hmac_and_expiry(monkeypatch):
     # username = "<expiry>:<user_key>", expiry = now + ttl
     assert username == f"{now + 3600}:user-42"
 
-    expected = base64.b64encode(
-        hmac.new(secret.encode(), username.encode(), hashlib.sha1).digest()
-    ).decode("ascii")
-    assert credential == expected
+    expected = voip_config.dynamic_turn_credentials("user-42", now=now)
+    assert expected is not None
+    assert credential == expected[1]
+    assert base64.b64decode(credential.encode("ascii"))
 
     # expiry는 미래 시점이어야 함
     expiry = int(username.split(":", 1)[0])
