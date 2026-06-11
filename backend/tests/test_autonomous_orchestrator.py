@@ -91,6 +91,63 @@ class TestAutonomousSession:
         assert loaded.project_name == "test-project"
         assert len(loaded.conversation) == 1
 
+    def test_save_and_load_preserves_execution_state(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        from backend.orchestrator.autonomous.session import StageState
+
+        session = AutonomousSession.create(owner_id="user1", project_name="test-project")
+        session.task = "FastAPI로 블로그 만들어줘"
+        session.execution_state = "awaiting_approval"
+        session.approval_state = "pending"
+        session.pending_approval_data = {
+            "pipeline": ["reasoner", "planner"],
+            "results_summary": [{"agent": "planner", "status": "success"}],
+        }
+        session.output_dir = str(tmp_path / "out")
+        session.model_routes = {"default": "test-model"}
+        session.extra = {"source": "regression-test"}
+        session.stages = [
+            StageState(
+                stage_id="STAGE-01",
+                stage_label="1단계",
+                status="in_progress",
+                agent_results=[{"agent": "planner", "status": "success"}],
+                revision_count=1,
+            )
+        ]
+        session.agent_results = [
+            AgentResult(
+                agent="planner",
+                status="success",
+                output="계획 완료",
+                artifacts={"plan_type": "implementation_plan"},
+                next_agents=["coder"],
+                elapsed_ms=12.5,
+                metadata={"route": "planner"},
+            )
+        ]
+        session.save()
+
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None
+        assert loaded.execution_state == "awaiting_approval"
+        assert loaded.approval_state == "pending"
+        assert loaded.pending_approval_data == session.pending_approval_data
+        assert loaded.output_dir == session.output_dir
+        assert loaded.model_routes == {"default": "test-model"}
+        assert loaded.extra == {"source": "regression-test"}
+        assert len(loaded.stages) == 1
+        assert loaded.stages[0].stage_id == "STAGE-01"
+        assert loaded.stages[0].revision_count == 1
+        assert loaded.stages[0].agent_results == [{"agent": "planner", "status": "success"}]
+        assert len(loaded.agent_results) == 1
+        assert loaded.agent_results[0].agent == "planner"
+        assert loaded.agent_results[0].next_agents == ["coder"]
+        assert loaded.agent_results[0].metadata == {"route": "planner"}
+
     def test_load_rejects_other_user(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
