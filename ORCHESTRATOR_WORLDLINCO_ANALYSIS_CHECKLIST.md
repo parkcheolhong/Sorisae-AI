@@ -103,6 +103,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 ### B-2. 🔴 P0 — 진도 정체의 중심: VoIP 실시간 통역 통화
 
 > 모바일(WebRTC/시그널링 클라이언트/통화 UI)은 상당 부분 있으나, **백엔드와 실기기 빌드가 비어 있어 통화 시그널링 경로가 연결되지 않음.**
+>
+> 📐 **백엔드 스캐폴딩 설계안**: `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` (모바일 계약 1:1 매핑, REST 3종 + WebSocket 시그널링 룸 릴레이, Phase P1~P3, 테스트 전략 포함). 아래 B-2-1/B-2-2는 이 설계의 P1로 구현 예정.
 
 - [ ] **(B-2-1) 백엔드 VoIP API 부재** — 모바일은 `POST /api/v1/voip/calls/initiate` 등 호출(`apps/mobile-nadotongryoksa/src/hooks/useVoIPCall.ts:54`)하나, `backend/`에 `api/v1/voip/*` 구현 **0건**(코드 검색 확인).
   - **방향**: `calls/initiate` · `calls/{id}/end` · `calls/{id}/audit` 라우터와 통화 세션 모델 스캐폴딩부터. (브랜치/외부 서비스에 이미 있는지 먼저 확인)
