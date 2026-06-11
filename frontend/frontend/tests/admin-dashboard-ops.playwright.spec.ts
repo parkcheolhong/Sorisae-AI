@@ -158,7 +158,10 @@ test.describe('admin dashboard ops regression', () => {
             .then(() => true)
             .catch(() => false);
         if (!movedToLlm) {
-            await page.goto('/admin/llm');
+            const currentUrl = page.url();
+            if (!/\/admin\/llm(?:\/)?(?:\?.*)?$/.test(currentUrl)) {
+                await page.goto('/admin/llm');
+            }
             await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
         }
         await page.waitForLoadState('networkidle');
@@ -187,8 +190,12 @@ test.describe('admin dashboard ops regression', () => {
                 .waitForURL(/\/admin\/login(?:\/)?(?:\?.*)?$/, { timeout: 8000 })
                 .then(() => true)
                 .catch(() => false);
-            if (!movedToLogin && !ADMIN_REGRESSION_MOCK_BACKEND) {
-                await page.waitForURL(/\/admin\/login(?:\/)?(?:\?.*)?$/);
+            if (!movedToLogin) {
+                if (!ADMIN_REGRESSION_MOCK_BACKEND) {
+                    await page.waitForURL(/\/admin\/login(?:\/)?(?:\?.*)?$/);
+                } else {
+                    await page.waitForLoadState('networkidle');
+                }
             }
         }
         if (ADMIN_REGRESSION_MOCK_BACKEND) {

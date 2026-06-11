@@ -60,9 +60,7 @@ test.describe('admin dashboard capability bootstrap notice', () => {
             await page.getByTestId('admin-topnav-refresh').click();
 
             const bootstrapNotice = page.getByTestId('admin-dashboard-capability-bootstrap-notice');
-            if (await bootstrapNotice.count()) {
-                await expect(bootstrapNotice).toContainText('오케스트레이터 기능군 상세 데이터가 잠시 지연되어 기본 건강상태 카드만 먼저 표시합니다.');
-            }
+            await expect(bootstrapNotice).toContainText('오케스트레이터 기능군 상세 데이터가 잠시 지연되어 기본 건강상태 카드만 먼저 표시합니다.');
             await expect(page.getByTestId('admin-dashboard-error-banner')).toHaveCount(0);
             await expect(page.getByText('자동 건강상태 점수')).toBeVisible();
             await expect(page.getByText('자동 건강상태 안정 · 기능군 재동기화 대기')).toBeVisible();
