@@ -932,6 +932,7 @@ class VoiceResponse(BaseModel):
     output_dir: Optional[str] = None
     run_id: Optional[str] = None
     conversation: list[dict] = []
+    detected_language: Optional[str] = None  # Whisper 감지 언어(zh, ja, ko, en 등) — 모바일 자동 언어전환에 사용
 
 
 def _run_whisper_cpp(audio_bytes: bytes) -> str:
@@ -1792,7 +1793,7 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest, cur
         output_dir=output_dir,
         run_id=run_id,
         conversation=conversation,
-        detected_language=detected_language, # pyright: ignore[reportCallIssue]
+        detected_language=detected_language,
     )
 
 
