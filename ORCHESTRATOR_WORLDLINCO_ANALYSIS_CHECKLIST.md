@@ -4,6 +4,14 @@
 > 본 문서는 **현재 막혀 있는 두 작업(① 오케스트레이터 멀티 자율형 대화, ② 월드링코 통번역)** 의 진단과 **다음에 진행할 방향**을 체크리스트로 정리한 것입니다.
 > 모든 항목에 근거 `파일:라인`을 표기했으며, 표시는 다음과 같습니다: `[ ]` 미착수 · `[~]` 부분 구현/검증중 · `[x]` 완료.
 
+> ### ✅ 이번 PR에서 수정/검증 완료
+> - **A-1-1** `CoderAgent` 매니페스트 호출 시그니처 수정 + `written_files` 병합 → 실제 API E2E에서 `coder success` 확인(이전 `TypeError`).
+> - **A-1-2** `AutonomousSession.load()`가 `stages`/`agent_results`/`pending_approval_data`/`model_routes`/`extra` 복원하도록 보강 + `to_dict()` 보완.
+> - **A-1-3** 모든 턴 응답이 `_build_response`에서 세션 저장 → greeting/status 턴 후에도 재조회 가능.
+> - **B-3-1** `VoiceResponse.detected_language` 필드 추가 → 모바일 자동 언어전환 응답 복구.
+> - 회귀 테스트 추가: `backend/tests/test_autonomous_orchestrator.py`(coder/세션/persist), `backend/tests/test_voice_gateway_schema.py`. 31개 통과.
+> - 비고: 비동기 테스트 실행에는 `pytest-asyncio`가 필요합니다(`python -m pytest ... -p asyncio --asyncio-mode=auto`). 현재 `requirements.txt`에 없음.
+
 ---
 
 ## PART A. 오케스트레이터 멀티 자율형 대화
@@ -20,7 +28,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 ### A-1. 🔴 P0 — 치명적 버그 (먼저 수정해야 진행 가능)
 
-- [ ] **(A-1-1) `CoderAgent`의 매니페스트 호출 시그니처 불일치 → 승인 후 코드 생성 시 `TypeError`**
+- [x] **(A-1-1) `CoderAgent`의 매니페스트 호출 시그니처 불일치 → 승인 후 코드 생성 시 `TypeError`** ✅ 수정 완료
   - 실제 함수 정의: `backend/llm/orchestrator.py:9191`
     `def _compat_manifest_for_request(task, project_name, validation_profile, required_files)`
   - 잘못된 호출: `backend/orchestrator/autonomous/agents/coder.py:79-85`
@@ -28,12 +36,12 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
   - 올바른 사용 예(메인 오케스트레이터): `backend/llm/orchestrator.py:12665-12669`
   - **방향**: `coder.py`에서 `required_files`를 산출해 위치 인자로 호출하고, `output_dir`/`b_brain_result`는 제거. 이어서 `b_result["written_files"]`를 `_compat_write_manifest` 결과와 **병합**(메인 경로 12666-12669 참고)하여 validator가 검사할 파일 목록 누락 방지.
 
-- [ ] **(A-1-2) 세션 복원 불완전 → 멀티턴 재개 시 상태 소실**
+- [x] **(A-1-2) 세션 복원 불완전 → 멀티턴 재개 시 상태 소실** ✅ 수정 완료
   - 저장은 전체: `session.py:122-139` (`stages`, `agent_results` 포함)
   - 복원은 `conversation`만: `session.py:173-177` → `stages`/`agent_results`/`pending_approval_data`/`model_routes` 미복원.
   - **방향**: `load()`에 `stages`(`StageState`), `agent_results`(`AgentResult`), 승인 대기 컨텍스트를 역직렬화해 복원. 라우팅·승인 흐름이 재개 후에도 일관되게 동작하도록.
 
-- [ ] **(A-1-3) 세션 `save()` 누락 경로 → 첫 턴이 인사/상태면 다음 요청에서 404**
+- [x] **(A-1-3) 세션 `save()` 누락 경로 → 첫 턴이 인사/상태면 다음 요청에서 404** ✅ 수정 완료
   - `save()` 호출은 파이프라인 종료(`turn_controller.py:173`)와 `_handle_approval()`(`:264`)에서만.
   - greeting(`:107-110`)·status·승인 대기 없는 approval·빈 파이프라인 응답은 저장 안 됨.
   - **방향**: `process_turn()` 반환 직전 모든 분기에서 `session.save()` 보장(또는 응답 빌드 헬퍼 안에서 일괄 저장).
@@ -110,12 +118,11 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 ### B-3. 🟠 P1 — 음성(STT)·자동 언어감지 API 계약 버그
 
-- [ ] **(B-3-1) `detected_language` 응답 스키마 누락** — `VoiceResponse`(`backend/llm/voice_gateway.py:82-89`)에 `detected_language` 필드 **없음**. 그런데 `:349`에서 `detected_language=...`를 `# pyright: ignore`로 전달 → Pydantic이 필드를 **무시(드롭)** → 모바일이 항상 `undefined` 수신.
-  - **방향**: `VoiceResponse`에 `detected_language: Optional[str] = None` 필드 추가(STT가 이미 감지값을 반환: `:161`, `:190`, `:238`).
+- [x] **(B-3-1) `detected_language` 응답 스키마 누락** ✅ 수정 완료 — `VoiceResponse`에 `detected_language: Optional[str] = None` 필드 추가 + `# pyright: ignore` 제거. 회귀 테스트 `test_voice_gateway_schema.py`.
 - [ ] **(B-3-2) STT 언어 힌트 미전송** — `App.tsx:2109` 요청 바디에 `language` 힌트 없음 → CJK 오인식 위험.
   - **방향**: 모바일에서 `language: fromLang`(또는 자동) 힌트 전달 → `_run_faster_whisper(language=...)` 활용(`voice_gateway.py:126`).
-- [ ] **(B-3-3) 죽은 엔드포인트** — `translate.ts:196`이 `POST /api/llm/voice-translate` 호출하나 백엔드 라우트 없음(존재하는 건 `/api/llm/voice/orchestrate`).
-  - **방향**: 클라이언트를 실제 라우트로 정정하거나 백엔드에 별칭 라우트 추가.
+- [ ] **(B-3-3) 죽은 엔드포인트** — `translate.ts:196`이 `POST /api/llm/voice-translate` 호출하나 백엔드 라우트 없음(존재하는 건 `/api/llm/voice/orchestrate`). 게다가 호출부 `VoIPCallScreen.tsx:528`은 인자 4개를 넘기는데 함수 정의는 3개(추가 시그니처 불일치).
+  - **보류(이번 PR 제외)**: 이 함수는 차단된 VoIP 트랙(B-2)에서만 사용되고, `voice/orchestrate`는 번역이 아니라 STT+채팅이라 단순 URL 교체로는 계약이 깨짐. 신규 `voice-translate`(STT→번역) 백엔드 엔드포인트 설계가 필요 → B-2와 함께 진행 권장.
 
 ### B-4. 🟡 P2 — 실기기/안정성 검증 미완 (기존 체크리스트에 이미 추적 중)
 
