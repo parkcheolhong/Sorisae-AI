@@ -115,11 +115,15 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
             caller_label=str(caller_username),
             data={"caller_user_id": caller_user_id, "session_id": room.session_id or ""},
         )
+        sent_count = push_result.get("sent", 0) or 0
+        push_event_type = (
+            "push_sent" if not push_result.get("skipped") and sent_count > 0 else "push_skipped"
+        )
         await store.add_event(
             room.call_id,
-            "push_skipped" if push_result.get("skipped") else "push_sent",
+            push_event_type,
             "caller",
-            {"sent": push_result.get("sent", 0), "reason": push_result.get("reason"),
+            {"sent": sent_count, "reason": push_result.get("reason"),
              "callee_online": callee_online, "device_count": len(tokens)},
         )
 
@@ -205,13 +209,16 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     await relay.register(call_id, role, websocket)
     await websocket.accept()
     await store.mark_connected(call_id, role)
-    # P3-A: ws 접속 = 해당 사용자 온라인 표시(presence 갱신).
-    uid = payload.get("uid")
-    if uid is not None:
+    # P3-A: ws 접속/하트비트 = 해당 사용자 온라인 표시(presence 갱신).
+    presence = get_presence()
+    uid = None
+    raw_uid = payload.get("uid")
+    if raw_uid is not None:
         try:
-            await get_presence().mark_online(int(uid))
+            uid = int(raw_uid)
+            await presence.mark_online(uid)
         except (TypeError, ValueError):
-            pass
+            uid = None
 
     try:
         while True:
@@ -220,6 +227,8 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
             message.setdefault("call_id", call_id)
 
             if msg_type == "ping":
+                if uid is not None:
+                    await presence.mark_online(uid)
                 await websocket.send_json({"type": "pong", "call_id": call_id})
                 continue
 

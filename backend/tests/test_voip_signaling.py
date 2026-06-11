@@ -3,6 +3,8 @@
 REST initiate(앱↔앱 자동매칭) → WebSocket offer/answer/candidate/chat/voice_translation
 릴레이 + ping/pong + hangup 을 caller/callee 두 소켓으로 E2E 검증한다.
 """
+import asyncio
+import time
 from urllib.parse import urlparse, parse_qs
 
 import pytest
@@ -10,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.auth import get_current_user
+from backend.voip.presence import get_presence
 from backend.voip.router import router as voip_router
 from backend.voip.registry import registry
 
@@ -26,6 +29,14 @@ _USERS = {
     "alice": _FakeUser(1001, "alice"),
     "bob": _FakeUser(1002, "bob"),
 }
+
+
+def _run(coro):
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def _override_user_from_header(request_user_header: str):
@@ -50,13 +61,16 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-def _clear_registry():
+def _clear_registry(monkeypatch):
     from backend.voip.signaling import hub
+    monkeypatch.delenv("VOIP_REDIS_URL", raising=False)
     registry._rooms.clear()
     hub._rooms.clear()
+    _run(get_presence().clear())
     yield
     registry._rooms.clear()
     hub._rooms.clear()
+    _run(get_presence().clear())
 
 
 def _ws_path_from_signaling_url(url: str) -> str:
@@ -99,7 +113,8 @@ def test_initiate_response_has_turn_servers(client):
     assert any("stun:" in u for s in resp["turn_servers"] for u in s["urls"])
 
 
-def test_full_signaling_relay_between_two_clients(client):
+def test_full_signaling_relay_between_two_clients(client, monkeypatch):
+    monkeypatch.setenv("VOIP_PRESENCE_TTL_SEC", "1")
     caller = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
     callee = _initiate(client, as_user="bob", body={"callee_user_id": 1001})
     call_id = caller["call_id"]
@@ -148,10 +163,13 @@ def test_full_signaling_relay_between_two_clients(client):
         assert received["type"] == "voice_translation"
         assert received["translated_text"] == "안녕"
 
-        # 6) ping -> pong (송신자에게)
+        # 6) ping -> pong (송신자에게), presence TTL 갱신
+        time.sleep(1.1)
         ws_caller.send_json({"type": "ping", "call_id": call_id})
         pong = ws_caller.receive_json()
         assert pong["type"] == "pong"
+        online = _run(get_presence().is_online(1001))
+        assert online is True
 
         # 7) hangup -> 상대 수신
         ws_caller.send_json({"type": "hangup", "call_id": call_id})

@@ -1,4 +1,6 @@
 """P3-A: 디바이스 등록 + presence + 콜리 착신 FCM 푸시 테스트(인메모리, 푸시 모킹)."""
+import asyncio
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
@@ -21,6 +23,14 @@ class _FakeUser:
 _USERS = {"alice": _FakeUser(3001, "alice3"), "bob": _FakeUser(3002, "bob3")}
 
 
+def _run(coro):
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
 @pytest.fixture()
 def client():
     app = FastAPI()
@@ -37,20 +47,24 @@ def client():
 
 @pytest.fixture(autouse=True)
 def _reset():
-    import asyncio
-    from backend.voip.registry import registry
+    import backend.voip.redis_backend as rb
+    from backend.voip.redis_backend import get_store
     from backend.voip.signaling import hub
-    registry._rooms.clear()
+
+    def _reset_redis_cache():
+        rb._client = None
+        rb._redis_store = None
+        rb._redis_relay = None
+
+    _reset_redis_cache()
+    _run(get_store().clear())
     hub._rooms.clear()
-    # 인메모리 presence 초기화
-    p = get_presence()
-    p._devices.clear()
-    p._presence.clear()
+    _run(get_presence().clear())
+    _reset_redis_cache()
     yield
 
 
 def test_device_register_stores_token_and_marks_online(client):
-    import asyncio
     resp = client.post("/api/v1/voip/devices/register",
                        json={"fcm_token": "tok-bob-1", "platform": "android"},
                        headers={"X-Test-User": "bob"})
@@ -58,9 +72,9 @@ def test_device_register_stores_token_and_marks_online(client):
     assert resp.json()["ok"] is True
 
     p = get_presence()
-    devices = asyncio.get_event_loop().run_until_complete(p.get_devices(3002))
+    devices = _run(p.get_devices(3002))
     assert "tok-bob-1" in devices
-    online = asyncio.get_event_loop().run_until_complete(p.is_online(3002))
+    online = _run(p.is_online(3002))
     assert online is True
 
 
@@ -117,11 +131,28 @@ def test_initiate_offline_callee_no_tokens_push_skipped(client, monkeypatch):
     assert "push_skipped" in {e["type"] for e in audit["events"]}
 
 
+def test_initiate_records_zero_delivery_push_as_skipped(client, monkeypatch):
+    async def _fake_push(tokens, *, call_id, caller_label="", data=None):
+        return {"sent": 0, "skipped": False, "reason": None}
+
+    monkeypatch.setattr(push, "send_incoming_call_push", _fake_push)
+
+    client.post("/api/v1/voip/devices/register",
+                json={"fcm_token": "tok-bob-1"}, headers={"X-Test-User": "bob"})
+
+    resp = client.post("/api/v1/voip/calls/initiate",
+                       json={"callee_user_id": 3002}, headers={"X-Test-User": "alice"})
+    assert resp.status_code == 200, resp.text
+
+    call_id = resp.json()["call_id"]
+    audit = client.get(f"/api/v1/voip/calls/{call_id}/audit", headers={"X-Test-User": "alice"}).json()
+    event_types = {e["type"] for e in audit["events"]}
+    assert "push_skipped" in event_types
+    assert "push_sent" not in event_types
+
+
 def test_push_adapter_skips_when_not_configured(monkeypatch):
-    import asyncio
     monkeypatch.delenv("FCM_ENABLED", raising=False)
-    result = asyncio.get_event_loop().run_until_complete(
-        push.send_incoming_call_push(["tok"], call_id="c_1", caller_label="alice")
-    )
+    result = _run(push.send_incoming_call_push(["tok"], call_id="c_1", caller_label="alice"))
     assert result["skipped"] is True
     assert result["reason"] == "not_configured"
