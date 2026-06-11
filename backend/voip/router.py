@@ -133,7 +133,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
     return CallInitResponse(
         call_id=room.call_id,
         signaling_server=signaling_url,
-        turn_servers=get_ice_servers(),
+        turn_servers=get_ice_servers(user_key=str(room.call_id)),
         session_id=room.session_id,
         call_route="app",
         phone_dialer_required=False,
@@ -174,7 +174,7 @@ async def accept_call(call_id: str, request: Request, user=Depends(get_current_u
     return CallInitResponse(
         call_id=call_id,
         signaling_server=signaling_url,
-        turn_servers=get_ice_servers(),
+        turn_servers=get_ice_servers(user_key=str(call_id)),
         session_id=room.session_id,
         call_route="app",
         phone_dialer_required=False,

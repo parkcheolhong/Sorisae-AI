@@ -25,7 +25,8 @@ def test_dynamic_turn_credentials_hmac_and_expiry(monkeypatch):
 
     expected = voip_config.dynamic_turn_credentials("user-42", now=now)
     assert expected is not None
-    assert credential == expected[1]
+    _, expected_credential = expected
+    assert credential == expected_credential
     assert base64.b64decode(credential.encode("ascii"))
 
     # expiry는 미래 시점이어야 함
