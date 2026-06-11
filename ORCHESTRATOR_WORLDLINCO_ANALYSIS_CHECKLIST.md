@@ -109,6 +109,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **(B-2-1) 백엔드 VoIP API 부재** ✅ **P1 구현 완료** — `backend/voip/`(router/models/registry/signaling/config). REST `POST /calls/initiate`(앱↔앱 자동매칭+PSTN 폴백) · `GET /calls/{id}/audit` · `POST /calls/{id}/end`. `main.py` 등록. 라이브 서버 검증 완료.
 - [x] **(B-2-2) 시그널링 서버 / TURN 부재** ✅ **P1 구현 완료** — `WS /api/v1/voip/ws/{call_id}` 룸 릴레이(offer/answer/candidate/chat/voice_translation/ping-pong/hangup) + `config.py`의 STUN/TURN(env) 주입. TestClient 2-클라이언트 통합 테스트 + 라이브 uvicorn ws 릴레이로 E2E 검증(`backend/tests/test_voip_signaling.py`, 5 passed).
 - [x] **(B-2 P2) Redis 백엔드 + pub/sub 릴레이** ✅ **구현 완료(플래그 `VOIP_REDIS_URL`, 기본 인메모리)** — `backend/voip/redis_backend.py`(RedisCallStore 룸/감사 + RedisRelay pub/sub). 라이브 Redis로 멀티워커 릴레이/스토어 검증(`test_voip_signaling_redis.py`, 2 passed). 서버측 chat 번역은 모바일이 클라이언트에서 수행하므로 P2에서 제외.
+- [x] **(B-2 P3-C) TURN 시간제한 토큰** ✅ **구현 완료** — `config.py`의 coturn `use-auth-secret` HMAC 동적 자격(`VOIP_TURN_STATIC_AUTH_SECRET`/`_TTL_SEC`), 정적 폴백. `get_ice_servers(user_key)` 통화/사용자별 발급. 단위 테스트 `test_voip_turn_tokens.py` 4 passed.
+- [x] **(B-3-3 백엔드) `POST /api/llm/voice-translate`** ✅ **구현 완료** — STT(whisper 폴백)+`NadoTranslator` 번역, 모바일 `VoiceTranslateResult` 계약 일치. 라이브 검증(hello→안녕하세요), `test_voice_translate_endpoint.py` 3 passed. 모바일 `voiceTranslate`/VoIP 음성 릴레이 실동작.
 - [ ] **(B-2-3) FCM/presence 미구성** — 실기기 로그 `No Firebase App '[DEFAULT]' has been created` → `VOIP_PRESENCE_ERROR` (`monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md:5-11`).
   - **방향**: Firebase 초기화/푸시 presence 경로 정비(앱 + 서버 키).
 - [ ] **(B-2-4) 패키지 lineage 불일치** — 설치본 `com.parkcheolhong.worldlinco` vs 워크스페이스 `com.shinsegye.nadotongryoksa` (checklist:13-17). 실기기 검증 신뢰성 저하.
