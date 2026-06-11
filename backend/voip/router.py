@@ -31,6 +31,25 @@ def _mint_ws_token(*, username: str, user_id: Optional[int], call_id: str, role:
     )
 
 
+def _participant_role_for_user(room: Any, user: Any) -> Optional[str]:
+    user_id = getattr(user, "id", None)
+    if user_id is None:
+        return None
+    normalized_user_id = str(user_id)
+    if room.caller.user_id is not None and str(room.caller.user_id) == normalized_user_id:
+        return "caller"
+    if room.callee.user_id is not None and str(room.callee.user_id) == normalized_user_id:
+        return "callee"
+    return None
+
+
+def _require_call_participant(room: Any, user: Any) -> str:
+    role = _participant_role_for_user(room, user)
+    if role is None:
+        raise HTTPException(status_code=403, detail="해당 통화의 참가자만 접근할 수 있습니다.")
+    return role
+
+
 @router.post("/calls/initiate", response_model=CallInitResponse)
 async def initiate_call(payload: CallInitiateRequest, request: Request, user=Depends(get_current_user)) -> CallInitResponse:
     caller_user_id = getattr(user, "id", None)
@@ -65,8 +84,10 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
     room, role = await registry.create_or_match(
         caller_user_id=caller_user_id,
         caller_username=caller_username,
+        caller_id=payload.caller_id,
         callee_user_id=payload.callee_user_id,
         callee_voice_id=payload.callee_voice_id,
+        friend_id=payload.friend_id,
         session_id=payload.session_id,
         mode=payload.mode,
         auto_relay=payload.auto_relay,
@@ -95,6 +116,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
         phone_dialer_required=False,
         callee_app_online=True,  # P1: 낙관적. 정확한 presence는 FCM(P3).
         caller_user_id=room.caller.user_id,
+        caller_voice_id=room.caller.voice_id,
         callee_user_id=room.callee.user_id,
         callee_voice_id=room.callee.voice_id,
         participant_role=role,
@@ -111,6 +133,7 @@ async def audit_call(call_id: str, user=Depends(get_current_user)) -> AuditRespo
     room = await registry.get(call_id)
     if room is None:
         raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
+    _require_call_participant(room, user)
     return AuditResponse(
         call_id=room.call_id,
         status=room.status,
@@ -124,9 +147,11 @@ async def audit_call(call_id: str, user=Depends(get_current_user)) -> AuditRespo
 
 @router.post("/calls/{call_id}/end")
 async def end_call(call_id: str, user=Depends(get_current_user)) -> Dict[str, Any]:
-    room = await registry.end(call_id, role=None)
+    room = await registry.get(call_id)
     if room is None:
         raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
+    role = _require_call_participant(room, user)
+    room = await registry.end(call_id, role=role)
     # 남은 참가자에게 hangup 통지(있다면).
     for role in ("caller", "callee"):
         peer = hub._rooms.get(call_id, {}).get(role)
@@ -177,6 +202,14 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
             msg_type = str(message.get("type") or "").strip().lower()
             message.setdefault("call_id", call_id)
 
+            current_room = await registry.get(call_id)
+            if current_room is None or current_room.status == "ended":
+                try:
+                    await websocket.send_json({"type": "hangup", "call_id": call_id})
+                except Exception:
+                    pass
+                break
+
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong", "call_id": call_id})
                 continue
@@ -198,7 +231,7 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("[VoIP] signaling loop error (call_id=%s role=%s): %s", call_id, role, exc)
     finally:
-        hub.remove(call_id, role)
+        hub.remove(call_id, role, websocket)
         room = await registry.get(call_id)
         if room is not None:
             room.add_event("ws_disconnected", role, {})

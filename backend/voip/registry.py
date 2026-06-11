@@ -21,6 +21,7 @@ class Participant:
     user_id: Optional[int] = None
     username: Optional[str] = None
     voice_id: Optional[str] = None
+    friend_id: Optional[str] = None
     connected_at: Optional[float] = None
 
 
@@ -50,6 +51,7 @@ class CallRoom:
                 "role": p.role,
                 "user_id": p.user_id,
                 "voice_id": p.voice_id,
+                "friend_id": p.friend_id,
                 "connected": p.connected_at is not None,
             }
             for p in (self.caller, self.callee)
@@ -66,26 +68,30 @@ class CallRegistry:
         *,
         caller_user_id: Optional[int],
         caller_username: Optional[str],
+        caller_id: Optional[str],
         callee_user_id: Optional[int],
         callee_voice_id: Optional[str],
+        friend_id: Optional[Any],
         session_id: Optional[str],
         mode: str,
         auto_relay: bool,
     ) -> Tuple[CallRoom, str]:
         """(room, role) 반환. role은 'caller' 또는 'callee'."""
+        caller_id = self._normalize_identifier(caller_id)
+        callee_voice_id = self._normalize_identifier(callee_voice_id)
+        friend_id = self._normalize_identifier(friend_id)
         async with self._lock:
             # 1) 내가 callee인 대기중(ringing) room이 있으면 그 통화에 합류한다.
-            if caller_user_id is not None:
-                for room in self._rooms.values():
-                    if (
-                        room.status == "ringing"
-                        and room.callee.user_id == caller_user_id
-                        and room.callee.connected_at is None
-                        and room.caller.user_id != caller_user_id
-                    ):
-                        room.callee.username = caller_username
-                        room.add_event("accept", "callee", {"user_id": caller_user_id})
-                        return room, "callee"
+            for room in self._rooms.values():
+                if (
+                    room.status == "ringing"
+                    and room.callee.connected_at is None
+                    and self._matches_callee(room, caller_user_id, caller_id, friend_id)
+                ):
+                    room.callee.user_id = caller_user_id
+                    room.callee.username = caller_username
+                    room.add_event("accept", "callee", {"user_id": caller_user_id})
+                    return room, "callee"
 
             # 2) 새 통화 생성(내가 caller).
             call_id = "c_" + uuid.uuid4().hex[:12]
@@ -93,8 +99,8 @@ class CallRegistry:
                 call_id=call_id,
                 status="ringing",
                 created_at=round(time.time(), 3),
-                caller=Participant(role="caller", user_id=caller_user_id, username=caller_username),
-                callee=Participant(role="callee", user_id=callee_user_id, voice_id=callee_voice_id),
+                caller=Participant(role="caller", user_id=caller_user_id, username=caller_username, voice_id=caller_id),
+                callee=Participant(role="callee", user_id=callee_user_id, voice_id=callee_voice_id, friend_id=friend_id),
                 session_id=session_id,
                 mode=mode,
                 auto_relay=auto_relay,
@@ -102,10 +108,45 @@ class CallRegistry:
             room.add_event("initiate", "caller", {
                 "user_id": caller_user_id,
                 "callee_user_id": callee_user_id,
+                "callee_voice_id": callee_voice_id,
+                "friend_id": friend_id,
                 "mode": mode,
             })
             self._rooms[call_id] = room
             return room, "caller"
+
+    def _matches_callee(
+        self,
+        room: CallRoom,
+        caller_user_id: Optional[int],
+        caller_id: Optional[str],
+        friend_id: Optional[Any],
+    ) -> bool:
+        if caller_user_id is not None and room.caller.user_id == caller_user_id:
+            return False
+
+        if caller_user_id is not None:
+            if room.callee.user_id == caller_user_id:
+                return True
+            if room.callee.friend_id and room.callee.friend_id == str(caller_user_id):
+                return True
+
+        normalized_caller_id = self._normalize_identifier(caller_id)
+        if normalized_caller_id and room.callee.voice_id == normalized_caller_id:
+            return True
+
+        normalized_friend_id = self._normalize_identifier(friend_id)
+        if normalized_friend_id and room.callee.friend_id == normalized_friend_id:
+            return True
+
+        return False
+
+    @staticmethod
+    def _normalize_identifier(value: Optional[Any]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
 
     async def get(self, call_id: str) -> Optional[CallRoom]:
         async with self._lock:

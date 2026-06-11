@@ -25,9 +25,11 @@ class SignalingHub:
     def add(self, call_id: str, role: str, websocket: Any) -> None:
         self._rooms.setdefault(call_id, {})[role] = websocket
 
-    def remove(self, call_id: str, role: str) -> None:
+    def remove(self, call_id: str, role: str, websocket: Optional[Any] = None) -> None:
         room = self._rooms.get(call_id)
         if not room:
+            return
+        if websocket is not None and room.get(role) is not websocket:
             return
         if room.get(role) is not None:
             room.pop(role, None)

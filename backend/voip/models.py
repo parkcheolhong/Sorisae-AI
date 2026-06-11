@@ -12,7 +12,7 @@ class CallInitiateRequest(BaseModel):
     callee_phone: Optional[str] = None
     callee_user_id: Optional[int] = None
     callee_voice_id: Optional[str] = None
-    friend_id: Optional[str] = None
+    friend_id: Optional[str | int] = None
     caller_id: Optional[str] = None
     session_id: Optional[str] = None
     mode: str = "voip_full_auto"

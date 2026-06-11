@@ -3,10 +3,10 @@
 REST initiate(앱↔앱 자동매칭) → WebSocket offer/answer/candidate/chat/voice_translation
 릴레이 + ping/pong + hangup 을 caller/callee 두 소켓으로 E2E 검증한다.
 """
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from backend.auth import get_current_user
@@ -25,6 +25,7 @@ class _FakeUser:
 _USERS = {
     "alice": _FakeUser(1001, "alice"),
     "bob": _FakeUser(1002, "bob"),
+    "charlie": _FakeUser(1003, "charlie"),
 }
 
 
@@ -86,6 +87,29 @@ def test_initiate_creates_room_and_matches_callee(client):
     assert callee["participant_role"] == "callee"
 
 
+def test_initiate_matches_voice_and_friend_targets(client):
+    voice_caller = _initiate(
+        client,
+        as_user="alice",
+        body={"caller_id": "voice-alice", "callee_voice_id": "voice-bob"},
+    )
+    voice_callee = _initiate(
+        client,
+        as_user="bob",
+        body={"caller_id": "voice-bob", "callee_voice_id": "voice-alice"},
+    )
+    assert voice_callee["call_id"] == voice_caller["call_id"]
+    assert voice_callee["participant_role"] == "callee"
+    assert voice_callee["callee_user_id"] == 1002
+
+    registry._rooms.clear()
+
+    friend_caller = _initiate(client, as_user="alice", body={"friend_id": 1002})
+    friend_callee = _initiate(client, as_user="bob", body={"callee_user_id": 1001})
+    assert friend_callee["call_id"] == friend_caller["call_id"]
+    assert friend_callee["participant_role"] == "callee"
+
+
 def test_pstn_only_falls_back_to_dialer(client):
     resp = _initiate(client, as_user="alice", body={"callee_phone": "+821012345678"})
     assert resp["call_route"] == "pstn_fallback"
@@ -97,6 +121,34 @@ def test_initiate_response_has_turn_servers(client):
     resp = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
     assert len(resp["turn_servers"]) >= 1
     assert any("stun:" in u for s in resp["turn_servers"] for u in s["urls"])
+
+
+def test_audit_and_end_require_participant(client):
+    caller = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
+    call_id = caller["call_id"]
+
+    audit = client.get(f"/api/v1/voip/calls/{call_id}/audit", headers={"X-Test-User": "charlie"})
+    assert audit.status_code == 403
+
+    ended = client.post(f"/api/v1/voip/calls/{call_id}/end", headers={"X-Test-User": "charlie"})
+    assert ended.status_code == 403
+
+    participant_audit = client.get(f"/api/v1/voip/calls/{call_id}/audit", headers={"X-Test-User": "alice"})
+    assert participant_audit.status_code == 200
+    assert participant_audit.json()["status"] == "ringing"
+
+
+def test_stale_disconnect_does_not_remove_replacement_socket():
+    from backend.voip.signaling import hub
+
+    old_socket = object()
+    replacement_socket = object()
+    hub.add("call-stale", "caller", old_socket)
+    hub.add("call-stale", "caller", replacement_socket)
+
+    hub.remove("call-stale", "caller", old_socket)
+
+    assert hub._rooms["call-stale"]["caller"] is replacement_socket
 
 
 def test_full_signaling_relay_between_two_clients(client):
@@ -165,10 +217,28 @@ def test_full_signaling_relay_between_two_clients(client):
     assert audit["status"] == "ended"
 
 
+def test_ended_call_stops_subsequent_relay(client):
+    caller = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
+    callee = _initiate(client, as_user="bob", body={"callee_user_id": 1001})
+    call_id = caller["call_id"]
+
+    caller_path = _ws_path_from_signaling_url(caller["signaling_server"])
+    callee_path = _ws_path_from_signaling_url(callee["signaling_server"])
+
+    with client.websocket_connect(caller_path) as ws_caller, \
+            client.websocket_connect(callee_path) as ws_callee:
+        ended = client.post(f"/api/v1/voip/calls/{call_id}/end", headers={"X-Test-User": "alice"})
+        assert ended.status_code == 200
+        assert ws_caller.receive_json()["type"] == "hangup"
+        assert ws_callee.receive_json()["type"] == "hangup"
+
+        ws_caller.send_json({"type": "offer", "call_id": call_id, "sdp": "AFTER_END"})
+        assert ws_caller.receive_json()["type"] == "hangup"
+
+
 def test_ws_rejects_invalid_token(client):
     caller = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
     call_id = caller["call_id"]
-    from fastapi import WebSocketDisconnect
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect(f"/api/v1/voip/ws/{call_id}?token=bogus&role=caller") as ws:
             ws.receive_json()
