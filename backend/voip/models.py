@@ -19,6 +19,11 @@ class CallInitiateRequest(BaseModel):
     auto_relay: bool = False
 
 
+class DeviceRegisterRequest(BaseModel):
+    fcm_token: str
+    platform: Optional[str] = None  # android | ios | web
+
+
 class TurnServerModel(BaseModel):
     urls: List[str]
     username: Optional[str] = None

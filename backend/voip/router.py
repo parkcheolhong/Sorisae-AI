@@ -15,8 +15,10 @@ from jose import JWTError, jwt
 
 from backend.auth import ALGORITHM, SECRET_KEY, create_access_token, get_current_user
 
+from . import push
 from .config import build_signaling_url, get_ice_servers, signaling_token_ttl_sec
-from .models import AuditResponse, CallInitiateRequest, CallInitResponse
+from .models import AuditResponse, CallInitiateRequest, CallInitResponse, DeviceRegisterRequest
+from .presence import get_presence
 from .redis_backend import get_relay, get_store
 from .signaling import RELAY_TYPES
 
@@ -30,6 +32,18 @@ def _mint_ws_token(*, username: str, user_id: Optional[int], call_id: str, role:
         {"sub": username, "uid": user_id, "voip_call_id": call_id, "voip_role": role},
         expires_delta=timedelta(seconds=signaling_token_ttl_sec()),
     )
+
+
+@router.post("/devices/register")
+async def register_device(payload: DeviceRegisterRequest, user=Depends(get_current_user)) -> Dict[str, Any]:
+    """P3-A: 콜리 착신용 FCM 디바이스 토큰 등록 + presence 갱신."""
+    user_id = getattr(user, "id", None)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="사용자 식별 실패")
+    presence = get_presence()
+    await presence.register_device(user_id, payload.fcm_token.strip(), payload.platform)
+    await presence.mark_online(user_id)
+    return {"ok": True, "user_id": user_id}
 
 
 @router.post("/calls/initiate", response_model=CallInitResponse)
@@ -88,6 +102,27 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
         request_host=request.headers.get("host"),
     )
 
+    # P3-A: 발신자(caller) 턴에서 콜리 presence 확인 + FCM 착신 푸시.
+    callee_online = True
+    if role == "caller" and room.callee.user_id is not None:
+        presence = get_presence()
+        await presence.mark_online(caller_user_id)  # 발신자도 온라인 표시
+        callee_online = await presence.is_online(room.callee.user_id)
+        tokens = await presence.get_devices(room.callee.user_id)
+        push_result = await push.send_incoming_call_push(
+            tokens,
+            call_id=room.call_id,
+            caller_label=str(caller_username),
+            data={"caller_user_id": caller_user_id, "session_id": room.session_id or ""},
+        )
+        await store.add_event(
+            room.call_id,
+            "push_skipped" if push_result.get("skipped") else "push_sent",
+            "caller",
+            {"sent": push_result.get("sent", 0), "reason": push_result.get("reason"),
+             "callee_online": callee_online, "device_count": len(tokens)},
+        )
+
     return CallInitResponse(
         call_id=room.call_id,
         signaling_server=signaling_url,
@@ -95,7 +130,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
         session_id=room.session_id,
         call_route="app",
         phone_dialer_required=False,
-        callee_app_online=True,  # P1: 낙관적. 정확한 presence는 FCM(P3).
+        callee_app_online=callee_online,
         caller_user_id=room.caller.user_id,
         callee_user_id=room.callee.user_id,
         callee_voice_id=room.callee.voice_id,
@@ -153,7 +188,8 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     if role not in ("caller", "callee"):
         await websocket.close(code=1008)
         return
-    if _decode_ws_token(token, call_id, role) is None:
+    payload = _decode_ws_token(token, call_id, role)
+    if payload is None:
         await websocket.close(code=1008)
         return
 
@@ -169,6 +205,13 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     await relay.register(call_id, role, websocket)
     await websocket.accept()
     await store.mark_connected(call_id, role)
+    # P3-A: ws 접속 = 해당 사용자 온라인 표시(presence 갱신).
+    uid = payload.get("uid")
+    if uid is not None:
+        try:
+            await get_presence().mark_online(int(uid))
+        except (TypeError, ValueError):
+            pass
 
     try:
         while True:
