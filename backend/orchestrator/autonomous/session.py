@@ -133,9 +133,12 @@ class AutonomousSession:
             "current_stage_index": self.current_stage_index,
             "execution_state": self.execution_state,
             "approval_state": self.approval_state,
+            "pending_approval_data": self.pending_approval_data,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "output_dir": self.output_dir,
+            "model_routes": self.model_routes,
+            "extra": self.extra,
         }
 
     def save(self) -> None:
@@ -166,13 +169,24 @@ class AutonomousSession:
                 current_stage_index=data.get("current_stage_index", 0),
                 execution_state=data.get("execution_state", "idle"),
                 approval_state=data.get("approval_state", "none"),
+                pending_approval_data=data.get("pending_approval_data"),
                 created_at=data.get("created_at", time.time()),
                 updated_at=data.get("updated_at", time.time()),
                 output_dir=data.get("output_dir"),
+                model_routes=data.get("model_routes") or {},
+                extra=data.get("extra") or {},
             )
             for turn_data in data.get("conversation", []):
                 session.conversation.append(ConversationTurn(**{
                     k: v for k, v in turn_data.items() if k in ConversationTurn.__dataclass_fields__
+                }))
+            for stage_data in data.get("stages", []):
+                session.stages.append(StageState(**{
+                    k: v for k, v in stage_data.items() if k in StageState.__dataclass_fields__
+                }))
+            for result_data in data.get("agent_results", []):
+                session.agent_results.append(AgentResult(**{
+                    k: v for k, v in result_data.items() if k in AgentResult.__dataclass_fields__
                 }))
             return session
         except Exception as exc:

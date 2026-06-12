@@ -1066,8 +1066,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }
 
         if (participantRole === 'caller' && connectionState === 'connecting') {
-            console.log('[VoIPScreen] Playing wingback tone...');
-            toneService.playwingbackTone();
+            console.log('[VoIPScreen] Playing ringback tone...');
+            toneService.playRingbackTone();
         } else {
             // In-call screen for callee should stay silent while waiting for media path.
             toneService.stopAll();

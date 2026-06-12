@@ -30,6 +30,7 @@ import { CallModePolicyBanner } from './src/features/call-mode/CallModePolicyBan
 import { useCallModeController } from './src/features/call-mode/useCallModeController';
 import { usePstnAssistController } from './src/features/pstn-assist/usePstnAssistController';
 import { useVoipAutoController } from './src/features/voip-auto/useVoipAutoController';
+import { useVoipIncomingCalls } from './src/features/voip-auto/useVoipIncomingCalls';
 import { VoIPCallScreen } from './src/screens/VoIPCallScreen';
 import { PhoneDialer } from './src/components/PhoneDialer';
 import { CallInitResponse } from './src/services/voipCallClient';
@@ -810,6 +811,19 @@ export default function App() {
     const [voipInitError, setVoipInitError] = useState('');
     const [voipCallInitResponse, setVoipCallInitResponse] = useState<CallInitResponse | null>(null);
     const { initiateVoipCall, validatePhoneNumber } = useVoipAutoController(API_BASE, token);
+
+    // P3-A: FCM 디바이스 토큰 등록 + 착신 수신 → 통화 화면(콜리)으로 진입.
+    // messaging은 Firebase 설치 후 VoipMessagingAdapter를 주입(미설치 시 no-op).
+    const handleIncomingCall = useCallback((callInit: CallInitResponse, _callerLabel: string) => {
+        setVoipCallInitResponse(callInit);
+        setShowVoipTester(true);
+    }, []);
+    useVoipIncomingCalls({
+        apiBaseUrl: API_BASE,
+        authToken: token,
+        messaging: null,
+        onIncomingCall: handleIncomingCall,
+    });
 
     const logUiPressProbe = useCallback((event: string, details: Record<string, unknown> = {}) => {
         const payload = {
@@ -2490,6 +2504,8 @@ export default function App() {
                                         calleePhone={voipPhone.trim() || VOIP_TEST_DEFAULT_PHONE}
                                         apiBaseUrl={API_BASE}
                                         authToken={token}
+                                        localSourceLang={fromLang}
+                                        localTargetLang={toLang}
                                         onHangup={handleCloseVoipTester}
                                     />
                                 </View>

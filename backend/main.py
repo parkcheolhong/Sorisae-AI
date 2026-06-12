@@ -1447,6 +1447,14 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] mobile song translation router skipped: {e}")
 
+# ── VoIP Interpretation Calls (WorldLinco) ──
+try:
+    from backend.voip.router import router as voip_router
+    app.include_router(voip_router)
+    logger.info("[OK] voip router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] voip router skipped: {e}")
+
 # ── Marketplace ──
 try:
     from backend.marketplace.router import router as marketplace_router

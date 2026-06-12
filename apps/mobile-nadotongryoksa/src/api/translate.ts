@@ -16,12 +16,15 @@ export interface TranslateResult {
 export interface VoiceTranslateResult extends TranslateResult {
   original_text: string;
   audio_url?: string;
+  audio_base64?: string;
+  audio_format?: string;
 }
 
 export type TranslateServiceMode = 'default' | 'lyrics';
 
 export interface TranslateOptions {
   serviceMode?: TranslateServiceMode;
+  regionHint?: string;
 }
 
 // 오프라인 폴력 사전 (24개 언어 주요 표현 포함)
@@ -192,11 +195,17 @@ export async function voiceTranslate(
   audioBase64: string,
   from: string,
   to: string,
+  regionHint?: string,
 ): Promise<VoiceTranslateResult> {
   const res = await fetch(`${BASE_URL}/api/llm/voice-translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_base64: audioBase64, from_lang: from, to_lang: to }),
+    body: JSON.stringify({
+      audio_base64: audioBase64,
+      from_lang: from,
+      to_lang: to,
+      region_hint: regionHint,
+    }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -208,5 +217,7 @@ export async function voiceTranslate(
     engine: data.engine ?? 'nado-voice',
     offline: false,
     audio_url: data.audio_url,
+    audio_base64: data.audio_base64,
+    audio_format: data.audio_format,
   };
 }

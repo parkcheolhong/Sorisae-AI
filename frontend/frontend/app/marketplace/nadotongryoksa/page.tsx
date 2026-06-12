@@ -136,6 +136,7 @@ const RADIUS_OPTIONS = [
 ] as const;
 
 type LangCode = (typeof LANGS)[number]['code'];
+type UiLangCode = LangCode;
 type SearchCategory = (typeof CATEGORY_OPTIONS)[number]['value'];
 
 /** ISO 3166-1 alpha-2 국가코드 → 대상 언어 자동 매핑 (GPS 기반) */

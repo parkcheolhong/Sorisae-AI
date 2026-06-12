@@ -87,6 +87,28 @@ class VoiceResponse(BaseModel):
     output_dir: Optional[str] = None
     run_id: Optional[str] = None
     conversation: list[dict] = []
+    detected_language: Optional[str] = None  # Whisper 감지 언어(zh, ja, ko, en 등) — 모바일 자동 언어전환에 사용
+
+
+class VoiceTranslateRequest(BaseModel):
+    audio_base64: Optional[str] = None
+    transcript: Optional[str] = None  # STT 생략용(테스트/이미 전사된 경우)
+    from_lang: str = "ko"
+    to_lang: str = "en"
+    region_hint: Optional[str] = None
+    tts: bool = False
+
+
+class VoiceTranslateResponse(BaseModel):
+    original_text: str
+    translated: str
+    from_lang: str
+    to_lang: str
+    engine: str = "nado"
+    detected_language: Optional[str] = None
+    audio_base64: Optional[str] = None
+    audio_format: Optional[str] = None
+    audio_url: Optional[str] = None
 
 
 def _run_whisper_cpp(audio_bytes: bytes) -> str:
@@ -191,6 +213,31 @@ print(json.dumps({"transcript": transcript, "detected_language": detected}, ensu
         )
 
 
+def _transcribe_audio(audio_bytes: bytes, language: Optional[str] = None) -> tuple[str, Optional[str]]:
+    """whisper.cpp → faster-whisper 폴백으로 음성을 전사. (transcript, detected_language) 반환."""
+    errors: list[str] = []
+    transcript = ""
+    detected_language: Optional[str] = None
+
+    whisper_bin = os.getenv("WHISPER_CPP_BIN", "").strip()
+    whisper_model = os.getenv("WHISPER_CPP_MODEL", "").strip()
+    if whisper_bin and whisper_model:
+        try:
+            transcript = _run_whisper_cpp(audio_bytes)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"whisper.cpp: {exc}")
+
+    if not transcript:
+        try:
+            transcript, detected_language = _run_faster_whisper(audio_bytes, language)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"faster-whisper: {exc}")
+
+    if not transcript and errors:
+        raise RuntimeError(" | ".join(errors))
+    return transcript, detected_language
+
+
 def _synthesize_tts(text: str) -> tuple[Optional[str], Optional[str]]:
     tts_command = os.getenv("VOICE_TTS_COMMAND", "").strip()
     if not tts_command:
@@ -210,6 +257,59 @@ def _synthesize_tts(text: str) -> tuple[Optional[str], Optional[str]]:
             or "tts failed"
         )
     return base64.b64encode(proc.stdout).decode("ascii"), "audio/wav"
+
+
+@router.post("/voice-translate", response_model=VoiceTranslateResponse)
+async def voice_translate(request: VoiceTranslateRequest) -> VoiceTranslateResponse:
+    """음성(또는 텍스트) → STT → NadoTranslator 번역. 모바일 voiceTranslate / VoIP 음성 릴레이용.
+
+    `from_lang`을 STT 언어 힌트로 사용해 CJK 오인식을 줄인다.
+    """
+    transcript = (request.transcript or "").strip()
+    detected_language: Optional[str] = None
+
+    if not transcript:
+        if not request.audio_base64:
+            raise HTTPException(status_code=400, detail="audio_base64 또는 transcript가 필요합니다.")
+        try:
+            audio_bytes = base64.b64decode(request.audio_base64)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=400, detail=f"audio_base64 디코딩 실패: {exc}")
+        try:
+            transcript, detected_language = await asyncio.to_thread(
+                _transcribe_audio, audio_bytes, request.from_lang
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=400, detail=f"STT 실패: {exc}")
+
+    if not transcript:
+        raise HTTPException(status_code=400, detail="전사 결과가 비어 있습니다.")
+
+    from backend.services.nadotongryoksa.translator import NadoTranslator
+
+    translator = NadoTranslator.get_instance()
+    translated = await asyncio.to_thread(
+        translator.translate, transcript, request.from_lang, request.to_lang
+    )
+
+    audio_base64: Optional[str] = None
+    audio_format: Optional[str] = None
+    if request.tts and translated:
+        try:
+            audio_base64, audio_format = await asyncio.to_thread(_synthesize_tts, translated)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[voice-translate] TTS 실패(무시): %s", exc)
+
+    return VoiceTranslateResponse(
+        original_text=transcript,
+        translated=translated,
+        from_lang=request.from_lang,
+        to_lang=request.to_lang,
+        engine="nado",
+        detected_language=detected_language,
+        audio_base64=audio_base64,
+        audio_format=audio_format,
+    )
 
 
 @router.post("/voice/orchestrate", response_model=VoiceResponse)
@@ -346,5 +446,5 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
         output_dir=output_dir,
         run_id=run_id,
         conversation=conversation,
-        detected_language=detected_language, # pyright: ignore[reportCallIssue]
+        detected_language=detected_language,
     )

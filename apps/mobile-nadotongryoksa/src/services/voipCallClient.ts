@@ -15,10 +15,10 @@ let WebRTCMediaDevices: any;
 let WebRTCMediaStream: any;
 
 try {
-    const wert = require('react-native-wert');
-    RTCPeerConnection = WBTC.RTCPeerConnection;
-    RTCSessionDescription = WBTC.RTCSessionDescription;
-    RTCIceCandidate = WBTC.RTCIceCandidate;
+    const webrtc = require('react-native-webrtc');
+    RTCPeerConnection = webrtc.RTCPeerConnection;
+    RTCSessionDescription = webrtc.RTCSessionDescription;
+    RTCIceCandidate = webrtc.RTCIceCandidate;
     WebRTCMediaDevices = webrtc.mediaDevices;
     WebRTCMediaStream = webrtc.MediaStream;
 } catch (err) {
@@ -281,10 +281,10 @@ export class VoIPCallClient {
             }
         };
 
-        // Handle both ONameStream (legacy) and ontrack (modern)
-        this.peerConnection.ONameStream = (event: any) => {
+        // Handle both onaddstream (legacy) and ontrack (modern)
+        this.peerConnection.onaddstream = (event: any) => {
             this.remoteStream = event.stream;
-            console.log('[VoIP] Remote stream received (ONameStream)', event.stream);
+            console.log('[VoIP] Remote stream received (onaddstream)', event.stream);
             if (this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(event.stream);
             }
