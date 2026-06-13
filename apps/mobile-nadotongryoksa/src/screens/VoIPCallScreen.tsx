@@ -24,6 +24,7 @@ import * as Speech from 'expo-speech';
 import { VoIPCallClient, CallInitResponse, VoIPChatMessage, VoIPVoiceTranslationMessage } from '../services/voipCallClient';
 import { getVoIPToneService } from '../services/voipToneService';
 import { translateText, voiceTranslate } from '../api/translate';
+import { resolveVoipSignalingServerUrl } from '../utils/voipSignalingUrl';
 
 type CallChatEntry = {
     id: string;
@@ -703,13 +704,17 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     // Initialize VoIP client and establish connection
     useEffect(() => {
         const initializeCall = async () => {
+            let client: VoIPCallClient | null = null;
             try {
-                // Permission already requested in parent (App.tsx)
-                // No need to request again here
+                const signalingServerUrl = resolveVoipSignalingServerUrl(
+                    callInitResponse.signaling_server,
+                    participantRole,
+                    apiBaseUrl,
+                );
 
-                const client = new VoIPCallClient({
+                client = new VoIPCallClient({
                     callId: callInitResponse.call_id,
-                    signalingServerUrl: callInitResponse.signaling_server,
+                    signalingServerUrl,
                     turnServers: callInitResponse.turn_servers,
                     mediaConstraints: {
                         audio: {
@@ -735,11 +740,12 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 }
 
                 voipClientRef.current = client;
+                const boundClient = client;
                 setVoipClient(client);
                 setConnectionState(client.getConnectionState());
 
                 // Register state change callback
-                client.onStateChange((state: string) => {
+                boundClient.onStateChange((state: string) => {
                     console.log('[VoIPScreen] State change callback:', state);
                     if (forcedTerminalStateRef.current) {
                         setConnectionState(forcedTerminalStateRef.current);
@@ -750,9 +756,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         clearTimeout(connectionTimeoutRef.current);
                         connectionTimeoutRef.current = null;
                     }
-                    if (state === 'connected' && !client.hasRemoteAudioTrack() && !remoteAudioTimeoutRef.current) {
+                    if (state === 'connected' && !boundClient.hasRemoteAudioTrack() && !remoteAudioTimeoutRef.current) {
                         remoteAudioTimeoutRef.current = setTimeout(() => {
-                            if (!client.hasRemoteAudioTrack()) {
+                            if (!boundClient.hasRemoteAudioTrack()) {
                                 console.warn('[VoIPScreen] Remote audio timeout after connection');
                                 void failCallAndStopTone('상대 음성 경로가 연결되지 않았습니다. 번호를 확인하거나 다시 걸어주세요.');
                             }
@@ -765,7 +771,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
                 });
 
-                client.onRemoteStream((stream: any) => {
+                boundClient.onRemoteStream((stream: any) => {
                     const audioTracks = stream?.getAudioTracks?.() ?? [];
                     const hasAudio = audioTracks.some((track: any) => track?.enabled !== false && track?.readyState !== 'ended');
                     console.log('[VoIPScreen] Remote stream update:', { hasAudio, audioTrackCount: audioTracks.length });
@@ -776,7 +782,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
                 });
 
-                client.onChatMessage((message: VoIPChatMessage) => {
+                boundClient.onChatMessage((message: VoIPChatMessage) => {
                     const text = typeof message.text === 'string' ? message.text.trim() : '';
                     if (!text) {
                         return;
@@ -815,7 +821,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     setChatError(null);
                 });
 
-                client.onVoiceTranslation((message: VoIPVoiceTranslationMessage) => {
+                boundClient.onVoiceTranslation((message: VoIPVoiceTranslationMessage) => {
                     const transcript = typeof message.transcript === 'string' ? message.transcript.trim() : '';
                     const translatedText = typeof message.translated_text === 'string' ? message.translated_text.trim() : '';
                     if (!transcript || !translatedText) {
@@ -853,14 +859,41 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
                 // Stop ringing/wingback after 60 seconds if the call never reaches a live media path.
                 connectionTimeoutRef.current = setTimeout(() => {
-                    const state = client.getConnectionState();
+                    const state = boundClient.getConnectionState();
                     if (state !== 'connected') {
                         console.warn('[VoIPScreen] Connection timeout after 60s, state:', state);
                         void failCallAndStopTone('60초 내에 연결되지 않았습니다. 네트워크 상태를 확인해주세요.');
                     }
                 }, CALL_CONNECT_TIMEOUT_MS);
             } catch (err) {
+                const reason = err instanceof Error
+                    ? err.message.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'initialization_exception'
+                    : 'initialization_exception';
+                const signalingSnapshot = client?.getSignalingStateSnapshot?.() ?? {
+                    hasSocket: false,
+                    socketState: 'null',
+                    connectionState: 'connecting',
+                    hasRemoteAudio: false,
+                };
                 console.warn('[VoIPScreen] Initialization failed', err);
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_CONNECTION_FAIL_CONTEXT',
+                    call_id: callInitResponse.call_id,
+                    state: 'failed',
+                    reason,
+                    signaling_server: resolveVoipSignalingServerUrl(
+                        callInitResponse.signaling_server,
+                        participantRole,
+                        apiBaseUrl,
+                    ),
+                    turn_servers_count: Array.isArray(callInitResponse.turn_servers)
+                        ? callInitResponse.turn_servers.length
+                        : 0,
+                    participant_role: participantRole,
+                    has_remote_audio: false,
+                    signaling: signalingSnapshot,
+                    timestamp: new Date().toISOString(),
+                }));
                 setError(err instanceof Error ? err.message : String(err));
                 setConnectionState('failed');
             }
@@ -889,7 +922,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 clearTimeout(remoteAudioTimeoutRef.current);
             }
         };
-    }, [appendChatEntry, appendVoiceRelayEntry, callInitResponse.call_id, callInitResponse.participant_role, callInitResponse.signaling_server, callInitResponse.turn_servers, localSourceLang, localTargetLang, participantRole, playVoiceRelayOutput, resolveChatLanguagePair, stopVoiceRelayPlayback, stopVoiceRelaySegment]);
+    }, [appendChatEntry, appendVoiceRelayEntry, apiBaseUrl, callInitResponse.call_id, callInitResponse.participant_role, callInitResponse.signaling_server, callInitResponse.turn_servers, localSourceLang, localTargetLang, participantRole, playVoiceRelayOutput, resolveChatLanguagePair, stopVoiceRelayPlayback, stopVoiceRelaySegment]);
 
     useEffect(() => {
         chatScrollRef.current?.scrollToEnd({ animated: false });
@@ -1066,8 +1099,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }
 
         if (participantRole === 'caller' && connectionState === 'connecting') {
-            console.log('[VoIPScreen] Playing wingback tone...');
-            toneService.playwingbackTone();
+            console.log('[VoIPScreen] Playing ringback tone...');
+            toneService.playRingbackTone();
         } else {
             // In-call screen for callee should stay silent while waiting for media path.
             toneService.stopAll();

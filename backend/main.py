@@ -1447,6 +1447,42 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] mobile song translation router skipped: {e}")
 
+# ── VoIP Interpretation Calls (WorldLinco) ──
+try:
+    from backend.voip.router import router as voip_router
+    app.include_router(voip_router)
+    logger.info("[OK] voip router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] voip router skipped: {e}")
+
+# ── WorldLinco mobile: friends / chat / OCR ──
+try:
+    from backend.marketplace.nadotongryoksa_friends_router import (
+        router as nadotongryoksa_friends_router,
+    )
+    app.include_router(nadotongryoksa_friends_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa friends router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa friends router skipped: {e}")
+
+try:
+    from backend.marketplace.nadotongryoksa_chat_router import (
+        router as nadotongryoksa_chat_router,
+    )
+    app.include_router(nadotongryoksa_chat_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa chat router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa chat router skipped: {e}")
+
+try:
+    from backend.mobile.image_translation.router import (
+        router as mobile_image_translation_router,
+    )
+    app.include_router(mobile_image_translation_router)
+    logger.info("[OK] mobile image translation router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] mobile image translation router skipped: {e}")
+
 # ── Marketplace ──
 try:
     from backend.marketplace.router import router as marketplace_router
