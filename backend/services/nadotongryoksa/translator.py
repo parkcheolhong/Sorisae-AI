@@ -1,5 +1,5 @@
 """
-나도통역사 전용 번역 엔진 (NadoTranslator)
+WorldLinco 전용 번역 엔진 (NadoTranslator)
 - 소리새(SorisaeInterpreter)와 완전 독립
 - 24개 언어 지원
 - googletrans 3.x async + ThreadPoolExecutor (FastAPI 이벤트루프 충돌 방지)
@@ -77,7 +77,7 @@ _PHRASE_DICT: Dict[Tuple[str, str, str], str] = {
 
 
 class NadoTranslator:
-    """나도통역사 전용 번역기. 소리새 의존성 없음."""
+    """WorldLinco 전용 번역기. 소리새 의존성 없음."""
 
     _instance: Optional["NadoTranslator"] = None
     _lock: Lock = Lock()

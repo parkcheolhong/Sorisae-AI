@@ -53,7 +53,12 @@ import { CallInitResponse, type TURNServer } from './src/services/voipCallClient
 import { getVoIPToneService } from './src/services/voipToneService';
 import { parsePersistedGpsSnapshot, serializePersistedGpsSnapshot } from './src/utils/hybridGpsCache';
 import { detectHybridGpsMode, scoreLocationQuality, type HybridGpsMode } from './src/utils/hybridGps';
-import { resolveNadotongryoksaProjectId } from './src/utils/nadotongryoksaProject';
+import {
+    WORLDLINGO_BRAND_NAME,
+    WORLDLINGO_ENGINE_LABEL,
+    matchesWorldLincoProjectTitle,
+} from './src/constants/worldlincoBrand';
+import { resolveWorldLincoProjectId } from './src/utils/worldlincoProject';
 
 type MonetizationPlanKey = 'voip_lite' | 'voip_pro' | 'song_pass';
 
@@ -327,12 +332,12 @@ const API_BASE: string =
     (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
     'http://10.0.2.2:8000';
 
-const WORLDLINGO_APP_NAME = 'WorldLinco';
+const WORLDLINGO_APP_NAME = WORLDLINGO_BRAND_NAME;
 const APP_VERSION_NUMBER = String(Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.13');
 const APP_BUILD_NUMBER = String(Constants.nativeBuildVersion ?? Constants.expoConfig?.android?.versionCode ?? '14');
 const APP_VERSION_LABEL = `v${APP_VERSION_NUMBER} · build ${APP_BUILD_NUMBER}`;
-const APP_FOOTER_BRAND = `NadoTranslator v${APP_VERSION_NUMBER} · NadoTranslator AI`;
-const APP_FOOTER_BRAND_KO = `WorldLinco v${APP_VERSION_NUMBER} · NadoTranslator AI`;
+const APP_FOOTER_BRAND = `${WORLDLINGO_BRAND_NAME} v${APP_VERSION_NUMBER} · ${WORLDLINGO_ENGINE_LABEL}`;
+const APP_FOOTER_BRAND_KO = `${WORLDLINGO_BRAND_NAME} v${APP_VERSION_NUMBER} · ${WORLDLINGO_ENGINE_LABEL}`;
 const LATEST_APK_METADATA_PATH = '/api/marketplace/latest-apk-metadata';
 const VERSION_CHECK_KEY = 'app_latest_version_check';
 const VERSION_IGNORE_KEY = 'app_version_ignore';
@@ -884,7 +889,7 @@ async function checkForAppUpdate() {
 
         const data = await response.json();
         const nadoProject = data.projects?.find(
-            (p: any) => p.title?.includes('WorldLingo') || p.title?.includes('월드링코') || p.title?.includes('나도통역사') || p.title?.includes('신세계소리새')
+            (p: any) => matchesWorldLincoProjectTitle(p.title) || matchesWorldLincoProjectTitle(p.description),
         );
 
         if (nadoProject?.demo_url) {
@@ -1222,7 +1227,7 @@ async function callBookingApi(token: string, payload: {
 }
 
 async function callCreatePurchaseApi(token: string, amount: number): Promise<PurchaseResult> {
-    const projectId = await resolveNadotongryoksaProjectId(API_BASE);
+    const projectId = await resolveWorldLincoProjectId(API_BASE);
     const res = await fetch(`${API_BASE}/api/marketplace/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -2063,7 +2068,7 @@ function getUiText(lang: string) {
 }
 
 // ─────────────────────────────────────────────
-// 색상 팔레트 (나도통역사 다크 테마)
+// 색상 팔레트 (WorldLinco 다크 테마)
 // ─────────────────────────────────────────────
 const C = {
     bg: '#0b0f16',

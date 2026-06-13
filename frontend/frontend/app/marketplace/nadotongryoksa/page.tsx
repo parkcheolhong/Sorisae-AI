@@ -1,6 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    matchesWorldLincoApkFilename,
+    matchesWorldLincoProjectTitle,
+    WORLDLINGO_BRAND_NAME,
+    WORLDLINGO_BRAND_NAME_KO,
+    WORLDLINGO_ENGINE_LABEL,
+    WORLDLINGO_MARKETPLACE_API_PREFIX,
+} from '../../../lib/worldlincoBrand';
 
 // ── 추가 타입 ──────────────────────────────────────────────
 type PurchaseResult = {
@@ -204,9 +212,7 @@ type BookingResponse = {
 };
 
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
-const NADO_PROJECT_SEARCH = '나도통역사';
-const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
-let cachedNadoProjectId: number | null = null;
+let cachedWorldLincoProjectId: number | null = null;
 
 const OFFLINE_DICT: Record<string, string> = {
     '안녕하세요': 'Hello',
@@ -224,13 +230,12 @@ function getStoredToken(): string {
     return localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '';
 }
 
-async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> {
-    if (cachedNadoProjectId !== null) {
-        return cachedNadoProjectId;
+async function resolveWorldLincoProjectId(apiBase: string): Promise<number> {
+    if (cachedWorldLincoProjectId !== null) {
+        return cachedWorldLincoProjectId;
     }
 
-    const query = new URLSearchParams({ search: NADO_PROJECT_SEARCH, limit: '12' });
-    const response = await fetch(`${apiBase}/api/marketplace/projects?${query.toString()}`, {
+    const response = await fetch(`${apiBase}/api/marketplace/projects?skip=0&limit=50`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(8_000),
     });
@@ -240,15 +245,16 @@ async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> 
     }
 
     const projects: ProjectSummary[] = Array.isArray(payload.projects) ? payload.projects : [];
-    const project = projects.find((item) => String(item.demo_url ?? '').includes(NADO_APK_FILENAME))
-        ?? projects.find((item) => String(item.title ?? '').includes(NADO_PROJECT_SEARCH))
+    const project = projects.find((item) => matchesWorldLincoApkFilename(item.demo_url))
+        ?? projects.find((item) => matchesWorldLincoProjectTitle(item.title))
+        ?? projects.find((item) => matchesWorldLincoProjectTitle(item.demo_url))
         ?? projects[0];
     if (!project?.id) {
-        throw new Error('나도통역사 상품을 찾을 수 없습니다.');
+        throw new Error(`${WORLDLINGO_BRAND_NAME}(${WORLDLINGO_BRAND_NAME_KO}) 상품을 찾을 수 없습니다.`);
     }
 
-    cachedNadoProjectId = Number(project.id);
-    return cachedNadoProjectId;
+    cachedWorldLincoProjectId = Number(project.id);
+    return cachedWorldLincoProjectId;
 }
 
 function resolveUiLangForTranslation(lang: UiLangCode): string {
@@ -317,7 +323,7 @@ async function callNearbyPlacesApi(params: {
         target_lang: params.targetLang,
         limit: '8',
     });
-    const response = await fetch(`${API_BASE}/api/marketplace/nadotongryoksa/lbs/nearby?${query.toString()}`, {
+    const response = await fetch(`${API_BASE}${WORLDLINGO_MARKETPLACE_API_PREFIX}/lbs/nearby?${query.toString()}`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(10_000),
     });
@@ -359,7 +365,7 @@ async function callBookingApi(payload: {
     if (!token) {
         throw new Error('예약은 로그인 후 사용할 수 있습니다.');
     }
-    const response = await fetch(`${API_BASE}/api/marketplace/nadotongryoksa/lbs/bookings`, {
+    const response = await fetch(`${API_BASE}${WORLDLINGO_MARKETPLACE_API_PREFIX}/lbs/bookings`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -394,7 +400,7 @@ function todayPlus(days: number): string {
     return now.toISOString().slice(0, 10);
 }
 
-export default function NadoTongryoksaPage() {
+export default function WorldLincoPage() {
     // ── 로그인/내정보 ─────────────────────────────────────
     const [token, setToken] = useState('');
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -505,7 +511,7 @@ export default function NadoTongryoksaPage() {
         try {
             const nights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000));
             const amount = nights * roomCount * 80000;
-            const projectId = await resolveNadotongryoksaProjectId(API_BASE);
+            const projectId = await resolveWorldLincoProjectId(API_BASE);
             const purchase = await callCreatePurchaseApi(API_BASE, projectId, amount);
             setPurchaseResult(purchase);
             const payData = await callInitiatePaymentApi(API_BASE, purchase.id);
@@ -848,8 +854,8 @@ export default function NadoTongryoksaPage() {
             >
                 <span style={{ fontSize: 28 }}>📱</span>
                 <div style={{ flex: 1 }}>
-                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#58c9ff' }}>나도통역사</h1>
-                    <p style={{ margin: 0, fontSize: 13, color: '#8b949e' }}>신세계소리새 AI · 통번역 · 지도 · 예약 · 결제</p>
+                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#58c9ff' }}>{WORLDLINGO_BRAND_NAME}</h1>
+                    <p style={{ margin: 0, fontSize: 13, color: '#8b949e' }}>{WORLDLINGO_BRAND_NAME_KO} · 신세계소리새 AI · 통번역 · 지도 · 예약 · 결제</p>
                 </div>
                 {engine && (
                     <span style={{ background: '#1a2535', border: '1px solid #21262d', borderRadius: 20, padding: '3px 10px', fontSize: 12, color: offline ? '#f0b050' : '#31c45d' }}>
@@ -1341,7 +1347,7 @@ export default function NadoTongryoksaPage() {
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: 24, color: '#6b7280', fontSize: 12 }}>
-                    나도통역사 v3.0 · NadoTranslator AI 엔진<br />
+                    {WORLDLINGO_BRAND_NAME} v3.0 · {WORLDLINGO_ENGINE_LABEL} 엔진<br />
                     한국어 · English · 中文 · 繁體 · 日本語 · Español · Français · Deutsch · Português · Русский · العربية · हिन्दी · Italiano · Türkçe · Tiếng Việt · ภาษาไทย · Indonesia · Melayu · Nederlands · Polski · Українська · Svenska · Norsk · Dansk (24개 언어)
                 </div>
             </div>
