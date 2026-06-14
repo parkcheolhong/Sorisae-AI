@@ -212,6 +212,7 @@ type BookingResponse = {
 };
 
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
+const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
 let cachedWorldLincoProjectId: number | null = null;
 
 const OFFLINE_DICT: Record<string, string> = {
@@ -257,12 +258,12 @@ async function resolveWorldLincoProjectId(apiBase: string): Promise<number> {
     return cachedWorldLincoProjectId;
 }
 
-function resolveUiLangForTranslation(lang: UiLangCode): string {
+function resolveUiLangForTranslation(lang: LangCode): string {
     if (lang === 'zh-tw') return 'zh';
     return String(lang).split('-')[0] || 'en';
 }
 
-async function callUiTranslateApi(text: string, uiLang: UiLangCode): Promise<string> {
+async function callUiTranslateApi(text: string, uiLang: LangCode): Promise<string> {
     if (!text.trim() || uiLang === 'ko') return text;
     const toLang = resolveUiLangForTranslation(uiLang);
     const response = await fetch(`${API_BASE}/api/llm/translate`, {

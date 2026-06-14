@@ -118,6 +118,7 @@ describe('Local mobile validation guards', () => {
                     from_lang: 'en',
                     to_lang: 'ko',
                     region_hint: 'kansai',
+                    language: 'auto',
                 }),
             }),
         );

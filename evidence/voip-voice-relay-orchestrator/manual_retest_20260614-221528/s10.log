@@ -1,0 +1,3 @@
+--------- beginning of main
+06-14 22:16:24.735 I/ReactNativeJS( 4771): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...iWKvrY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 22:16:24.783 I/ReactNativeJS( 4771): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...iWKvrY","user_id":226,"status":200,"ok":true}'

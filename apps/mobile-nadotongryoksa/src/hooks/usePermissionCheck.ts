@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert, Linking, PermissionsAndroid, Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import { Audio } from '../compat/expoAvAudio';
 import * as Location from 'expo-location';
 
 export type PermissionType = 'RECORD_AUDIO' | 'ACCESS_FINE_LOCATION' | 'ACCESS_COARSE_LOCATION' | 'POST_NOTIFICATIONS';

@@ -160,10 +160,14 @@ DATABASE_URL = _resolve_database_url()
 
 
 def _build_engine_kwargs(database_url: str) -> tuple[str, dict]:
+    pool_size = max(5, int(os.getenv("POSTGRES_POOL_SIZE", "20")))
+    max_overflow = max(0, int(os.getenv("POSTGRES_MAX_OVERFLOW", "30")))
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 1800,
-        "pool_timeout": 10,
+        "pool_timeout": max(10, int(os.getenv("POSTGRES_POOL_TIMEOUT", "30"))),
+        "pool_size": pool_size,
+        "max_overflow": max_overflow,
     }
 
     try:

@@ -113,6 +113,10 @@ services:
       <<: *video-env
       SECRET_KEY: ${JWT_SECRET_KEY:-}
       SECRET_KEY_FILE: ${JWT_SECRET_KEY_FILE:-}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      POSTGRES_POOL_SIZE: ${POSTGRES_POOL_SIZE:-20}
+      POSTGRES_MAX_OVERFLOW: ${POSTGRES_MAX_OVERFLOW:-30}
+      POSTGRES_POOL_TIMEOUT: ${POSTGRES_POOL_TIMEOUT:-30}
       CORS_ORIGINS: http://localhost:3000,http://localhost:3005,http://127.0.0.1:3000,http://127.0.0.1:3005,https://metanova1004.com,https://xn--114-2p7l635dz3bh5j.com
       QDRANT_URL: http://qdrant:6333
       NVIDIA_VISIBLE_DEVICES: all
@@ -155,6 +159,9 @@ services:
       AD_DOWNLOAD_MAX_COUNT: ${AD_DOWNLOAD_MAX_COUNT:-2}
       INTERPRETER_SERVICE_URL: ${INTERPRETER_SERVICE_URL:-http://interpreter-service:8011}
       MUSIC_SERVICE_URL: ${MUSIC_SERVICE_URL:-http://music-service:8012}
+      FASTER_WHISPER_MODEL: ${FASTER_WHISPER_MODEL:-small}
+      FASTER_WHISPER_DEVICE: ${FASTER_WHISPER_DEVICE:-cuda}
+      FASTER_WHISPER_COMPUTE_TYPE: ${FASTER_WHISPER_COMPUTE_TYPE:-float16}
       # Stripe 결제 실연동 설정 (기본 simulation 모드)
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: ${MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT:-true}
@@ -199,6 +206,18 @@ services:
               count: 1
               capabilities: [ gpu ]
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     command: >-
       python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
     networks:
@@ -359,7 +378,7 @@ services:
     container_name: devanalysis114-nginx
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       frontend-admin:
         condition: service_started
     volumes:

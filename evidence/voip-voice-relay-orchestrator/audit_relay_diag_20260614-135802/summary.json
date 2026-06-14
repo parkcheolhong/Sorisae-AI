@@ -1,0 +1,45 @@
+﻿{
+    "timestamp":  "2026-06-14T14:00:56.4043117+09:00",
+    "run_dir":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\voip-voice-relay-orchestrator\\audit_relay_diag_20260614-135802",
+    "accept_ok":  true,
+    "signaling_ok":  true,
+    "audit_logcat_loaded":  true,
+    "audit_ui":  {
+                     "has_audit_error_403":  false,
+                     "has_audit_fetch_failed":  false,
+                     "has_call_initiated":  false,
+                     "has_call_accepted":  false,
+                     "has_empty_audit":  false,
+                     "sample_texts":  "🌐 119cash@naver.com\n발신자: 119cash@naver.com\n보이스 ID: nado-000001\ncall_id: call-fffba06174b9\n[통번역 모드] voip_full_auto -\u003e voip_full_auto\nrelay: 1/1\n받기\n거절\n기본 중심\n번역 채팅\n운영비가 가장 낮고, 사용자를 가장 오래 붙잡을 수 있는 기본 상품입니다.\n원가 우선순위 1\n문자 번역 호출 중심\n현재 번역 화면으로 돌아가기\n프리미엄"
+                 },
+    "callee_relay":  {
+                         "relay_sent":  false,
+                         "relay_sent_meta":  false,
+                         "translate_request":  false,
+                         "translate_result":  false,
+                         "relay_start_blocked":  false,
+                         "relay_error":  false,
+                         "audit_loaded":  true,
+                         "audit_failed":  false,
+                         "audit_fetch_403":  false,
+                         "incoming_suppressed":  false,
+                         "signaling_open":  false,
+                         "connected":  false,
+                         "accept_api_ok":  false
+                     },
+    "caller_relay":  {
+                         "relay_sent":  false,
+                         "relay_sent_meta":  false,
+                         "translate_request":  false,
+                         "translate_result":  false,
+                         "relay_start_blocked":  false,
+                         "relay_error":  false,
+                         "audit_loaded":  true,
+                         "audit_failed":  false,
+                         "audit_fetch_403":  false,
+                         "incoming_suppressed":  false,
+                         "signaling_open":  true,
+                         "connected":  true,
+                         "accept_api_ok":  false
+                     }
+}

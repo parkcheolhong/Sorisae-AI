@@ -15,11 +15,21 @@ const BASE_URL: string =
   (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
   'http://10.0.2.2:8000';
 
+function mapFriendApiError(status: number, fallback: string): Error {
+  if (status === 401 || status === 403) {
+    return new Error('로그인 세션이 만료되었습니다. 로그아웃 후 다시 로그인해 주세요.');
+  }
+  if (status === 502 || status === 503 || status === 504) {
+    return new Error('서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  return new Error(`${fallback}: ${status}`);
+}
+
 export async function getFriends(userId: number, token: string): Promise<FriendListResponse> {
   const res = await fetch(`${BASE_URL}/api/users/${userId}/friends`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`친구 목록 조회 실패: ${res.status}`);
+  if (!res.ok) throw mapFriendApiError(res.status, '친구 목록 조회 실패');
   return res.json() as Promise<FriendListResponse>;
 }
 
@@ -100,7 +110,7 @@ export async function getOutgoingFriendRequests(token: string): Promise<Outgoing
   const res = await fetch(`${BASE_URL}/api/friends/requests/outgoing`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`보낸 친구 요청 조회 실패: ${res.status}`);
+  if (!res.ok) throw mapFriendApiError(res.status, '보낸 친구 요청 조회 실패');
   return res.json() as Promise<OutgoingFriendRequestResponse>;
 }
 

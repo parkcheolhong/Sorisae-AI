@@ -11,8 +11,9 @@ import asyncio
 import concurrent.futures
 import logging
 import os
+import re
 from threading import Lock
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger("nado.translator")
 
@@ -44,6 +45,42 @@ SUPPORTED_LANGUAGES: Dict[str, str] = {
     "sv": "스웨덴어",
     "no": "노르웨이어",
     "da": "덴마크어",
+    "he": "히브리어",
+    "fil": "필리핀어",
+}
+
+SUPPORTED_DIALECT_COUNTRY_PROFILES: Dict[str, Dict[str, str]] = {
+    "jeju": {"language": "ko", "label": "제주"},
+    "guangdong": {"language": "zh", "label": "광둥"},
+    "kansai": {"language": "ja", "label": "간사이"},
+    "bihar": {"language": "hi", "label": "비하르"},
+    "naples": {"language": "it", "label": "나폴리"},
+}
+
+_DIALECT_REPLACEMENTS: Dict[Tuple[str, str], List[Tuple[re.Pattern[str], str]]] = {
+    ("ko", "jeju"): [
+        (re.compile(r"혼저\s*옵서예", re.IGNORECASE), "어서 오세요"),
+        (re.compile(r"하영\s*고맙수다", re.IGNORECASE), "많이 고맙습니다"),
+    ],
+    ("zh", "guangdong"): [
+        (re.compile(r"唔该"), "谢谢"),
+        (re.compile(r"喺边度食饭"), "在哪里吃饭"),
+    ],
+    ("ja", "kansai"): [
+        (re.compile(r"ほんま"), "本当"),
+        (re.compile(r"おおきに"), "ありがとう"),
+        (re.compile(r"あかんで"), "だめで"),
+    ],
+    ("hi", "bihar"): [
+        (
+            re.compile(r"humra kitna hai re, jaldi karo na", re.IGNORECASE),
+            "hamara kitna hai, kripya jaldi kijiye",
+        ),
+    ],
+    ("it", "naples"): [
+        (re.compile(r"Uaglio", re.IGNORECASE), "ragazzo"),
+        (re.compile(r"che fai mo", re.IGNORECASE), "cosa fai adesso"),
+    ],
 }
 
 # googletrans에서 사용하는 언어코드 매핑 (차이가 있는 것만)
@@ -100,7 +137,13 @@ class NadoTranslator:
     # 공개 API
     # ──────────────────────────────────────────────
 
-    def translate(self, text: str, from_lang: str = "ko", to_lang: str = "en") -> str:
+    def translate(
+        self,
+        text: str,
+        from_lang: str = "ko",
+        to_lang: str = "en",
+        region_hint: str | None = None,
+    ) -> str:
         """
         텍스트를 번역한다.
         1) 로컬 사전 캐시 우선
@@ -113,6 +156,7 @@ class NadoTranslator:
 
         from_lang = from_lang.lower().strip()
         to_lang = to_lang.lower().strip()
+        text = self._normalize_dialect_text(text, from_lang, region_hint)
 
         # 동일 언어이면 그대로
         if from_lang == to_lang:
@@ -137,6 +181,21 @@ class NadoTranslator:
 
     def supported_languages(self) -> Dict[str, str]:
         return dict(SUPPORTED_LANGUAGES)
+
+    @staticmethod
+    def _normalize_dialect_text(
+        text: str,
+        source_lang: str,
+        region_hint: str | None,
+    ) -> str:
+        normalized_region = str(region_hint or "").strip().lower()
+        if not normalized_region:
+            return text
+        replacements = _DIALECT_REPLACEMENTS.get((source_lang, normalized_region), [])
+        normalized = text
+        for pattern, replacement in replacements:
+            normalized = pattern.sub(replacement, normalized)
+        return normalized
 
     # ──────────────────────────────────────────────
     # 내부 구현
@@ -171,5 +230,15 @@ class NadoTranslator:
 
 
 # 모듈 레벨 편의 함수
-def translate(text: str, from_lang: str = "ko", to_lang: str = "en") -> str:
-    return NadoTranslator.get_instance().translate(text, from_lang, to_lang)
+def translate(
+    text: str,
+    from_lang: str = "ko",
+    to_lang: str = "en",
+    region_hint: str | None = None,
+) -> str:
+    return NadoTranslator.get_instance().translate(
+        text,
+        from_lang=from_lang,
+        to_lang=to_lang,
+        region_hint=region_hint,
+    )

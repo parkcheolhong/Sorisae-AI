@@ -63,10 +63,28 @@ api_base: https://metanova1004.com
 
 ## 다음 조치 (백엔드 배포 후 재검증)
 
-1. `main.py` 라우터 마운트 포함 버전을 `metanova1004.com`에 배포·재시작
-2. 위 API 404 → 200/401 전환 확인
-3. 탭에서 채팅 레일·친구 폴더 재캡처 (404 문구 사라져야 함)
-4. VoIP presence 1006은 라우터 배포 후에도 WSS/프록시 설정 추가 점검 필요
+1. ~~`main.py` 라우터 마운트 포함 버전을 `metanova1004.com`에 배포·재시작~~ ✅ (2026-06-13 컨테이너 기준 API 200)
+2. ~~위 API 404 → 200/401 전환 확인~~ ✅
+3. ~~탭에서 채팅 레일·친구 폴더 재캡처 (404 문구 사라져야 함)~~ ✅ **재검증 통과** (아래 §재검증)
+4. ~~VoIP presence 1006은 라우터 배포 후에도 WSS/프록시 설정 추가 점검 필요~~ ✅ nginx WSS + `VOIP_PRESENCE_CONNECTED`
+
+---
+
+## 재검증 (2026-06-13 build35, 배포·nginx WSS 후)
+
+**기기:** 탭 `R83W70QY11H`, S10 `10.92.246.175:5555` (동일 `build35` / `v1.0.25`)
+
+| 항목 | 결과 |
+|------|------|
+| 채팅 레일 UI | ✅ `채팅 + 친구 허브` 표시 |
+| 친구 목록 404 문구 | ✅ **사라짐** — `nado-000517` 등 12명 로드 |
+| VoIP presence | ✅ logcat `VOIP_PRESENCE_CONNECTED` (이전 1006/404 해소) |
+| VoIP pending-incoming | ✅ `status=200` 폴링 |
+| image-translation (서버) | ✅ RapidOCR E2E 200 (`서울역에 오신 것을 환영합니다`) |
+
+**증거:** `ui_retest_chat3.xml`, `ui_retest_chat3_s10.xml`, `retest_logcat_tab.txt`, `retest_logcat_s10.txt`, `retest_02b_chat_rail_ok.png`
+
+**미완:** B-2-6 통화 offer/answer `connected` 2회 E2E, 실기기 카메라 OCR UI, Firebase FCM 네이티브.
 
 ---
 

@@ -4,25 +4,37 @@
  * Integrates with existing interpreter session for translation
  */
 
+import { Platform } from 'react-native';
+
 // Declare navigator for TypeScript
 declare const navigator: any;
 
-// React Native WebRTC types (lazy-loaded to avoid module issues)
+/** Native VoIP requires this exact package name — do not typo (e.g. react-native-wert). */
+const REACT_NATIVE_WEBRTC_MODULE = 'react-native-webrtc';
+
+// React Native WebRTC (lazy-loaded; web has no native module)
 let RTCPeerConnection: any;
 let RTCSessionDescription: any;
 let RTCIceCandidate: any;
 let WebRTCMediaDevices: any;
 let WebRTCMediaStream: any;
 
-try {
-    const wert = require('react-native-wert');
-    RTCPeerConnection = WBTC.RTCPeerConnection;
-    RTCSessionDescription = WBTC.RTCSessionDescription;
-    RTCIceCandidate = WBTC.RTCIceCandidate;
-    WebRTCMediaDevices = webrtc.mediaDevices;
-    WebRTCMediaStream = webrtc.MediaStream;
-} catch (err) {
-    console.warn('[VoIP] react-native-webrtc not available (expected in web/dev)', err);
+if (Platform.OS !== 'web') {
+    try {
+        const webrtc = require(REACT_NATIVE_WEBRTC_MODULE);
+        RTCPeerConnection = webrtc.RTCPeerConnection;
+        RTCSessionDescription = webrtc.RTCSessionDescription;
+        RTCIceCandidate = webrtc.RTCIceCandidate;
+        WebRTCMediaDevices = webrtc.mediaDevices;
+        WebRTCMediaStream = webrtc.MediaStream;
+        console.log('[VoIP] WebRTC module loaded', {
+            module: REACT_NATIVE_WEBRTC_MODULE,
+            hasPeerConnection: typeof RTCPeerConnection === 'function',
+            hasMediaDevices: Boolean(WebRTCMediaDevices),
+        });
+    } catch (err) {
+        console.warn('[VoIP] react-native-webrtc not available', err);
+    }
 }
 
 export interface VoIPCallConfig {
@@ -100,11 +112,18 @@ export interface VoIPVoiceTranslationMessage {
     audio_format?: string;
     sent_at?: string;
     from_role?: 'caller' | 'callee';
+    seq_id?: number;
+    utterance_id?: string;
+    chunk_index?: number;
+    is_final?: boolean;
+    detected_lang?: string;
+    capture_trust?: string;
 }
 
 export class VoIPCallClient {
     private peerConnection: any = null;
     private localStream: any = null;
+    private localAudioSuspendedForRelay = false;
     private remoteStream: any = null;
     private signalingSocket: WebSocket | null = null;
     private signalingKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
@@ -281,13 +300,14 @@ export class VoIPCallClient {
             }
         };
 
-        // Handle both ONameStream (legacy) and ontrack (modern)
-        this.peerConnection.ONameStream = (event: any) => {
+        // Handle both onaddstream (legacy) and ontrack (modern)
+        this.peerConnection.onaddstream = (event: any) => {
             this.remoteStream = event.stream;
-            console.log('[VoIP] Remote stream received (ONameStream)', event.stream);
+            console.log('[VoIP] Remote stream received (onaddstream)', event.stream);
             if (this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(event.stream);
             }
+            this.emitStateChange();
         };
 
         this.peerConnection.ontrack = (event: any) => {
@@ -561,6 +581,12 @@ export class VoIPCallClient {
         audioBase64?: string;
         audioFormat?: string;
         sentAt?: string;
+        seqId?: number;
+        utteranceId?: string;
+        chunkIndex?: number;
+        isFinal?: boolean;
+        detectedLang?: string;
+        captureTrust?: string;
     }): boolean {
         const transcript = payload.transcript.trim();
         const translatedText = payload.translatedText.trim();
@@ -575,18 +601,36 @@ export class VoIPCallClient {
             return false;
         }
 
-        this.sendSignalingMessage({
+        // Stenographer relay: text ledger over WS only (audio_base64 breaks WS size limits).
+        const message: Record<string, unknown> = {
             type: 'voice_translation',
             call_id: this.config.callId,
             transcript: transcript.slice(0, 280),
             translated_text: translatedText.slice(0, 280),
             source_lang: payload.sourceLang,
             target_lang: payload.targetLang,
-            audio_url: payload.audioUrl,
-            audio_base64: payload.audioBase64,
-            audio_format: payload.audioFormat,
             sent_at: payload.sentAt || new Date().toISOString(),
-        });
+            tts_delivery: 'device_speech',
+        };
+        if (typeof payload.seqId === 'number' && Number.isFinite(payload.seqId)) {
+            message.seq_id = payload.seqId;
+        }
+        if (typeof payload.utteranceId === 'string' && payload.utteranceId.trim()) {
+            message.utterance_id = payload.utteranceId.trim().slice(0, 128);
+        }
+        if (typeof payload.chunkIndex === 'number' && Number.isFinite(payload.chunkIndex)) {
+            message.chunk_index = Math.max(0, Math.floor(payload.chunkIndex));
+        }
+        if (typeof payload.isFinal === 'boolean') {
+            message.is_final = payload.isFinal;
+        }
+        if (typeof payload.detectedLang === 'string' && payload.detectedLang.trim()) {
+            message.detected_lang = payload.detectedLang.trim().slice(0, 32);
+        }
+        if (typeof payload.captureTrust === 'string' && payload.captureTrust.trim()) {
+            message.capture_trust = payload.captureTrust.trim().slice(0, 16);
+        }
+        this.sendSignalingMessage(message);
         return true;
     }
 
@@ -757,6 +801,12 @@ export class VoIPCallClient {
                             audio_format: typeof message.audio_format === 'string' ? message.audio_format : undefined,
                             sent_at: message.sent_at,
                             from_role: message.from_role === 'callee' ? 'callee' : 'caller',
+                            seq_id: typeof message.seq_id === 'number' ? message.seq_id : undefined,
+                            utterance_id: typeof message.utterance_id === 'string' ? message.utterance_id.trim() : undefined,
+                            chunk_index: typeof message.chunk_index === 'number' ? message.chunk_index : undefined,
+                            is_final: typeof message.is_final === 'boolean' ? message.is_final : undefined,
+                            detected_lang: typeof message.detected_lang === 'string' ? message.detected_lang.trim() : undefined,
+                            capture_trust: typeof message.capture_trust === 'string' ? message.capture_trust.trim() : undefined,
                         });
                     }
                     break;
@@ -878,8 +928,20 @@ export class VoIPCallClient {
     }
 
     hasRemoteAudioTrack(): boolean {
-        const tracks = this.remoteStream?.getAudioTracks?.() ?? [];
-        return tracks.some((track: any) => track?.enabled !== false && track?.readyState !== 'ended');
+        const isLiveAudioTrack = (track: any): boolean => (
+            track?.kind === 'audio'
+            && track?.enabled !== false
+            && track?.readyState !== 'ended'
+            && track?.readyState !== 'failed'
+        );
+
+        const streamTracks = this.remoteStream?.getAudioTracks?.() ?? [];
+        if (streamTracks.some(isLiveAudioTrack)) {
+            return true;
+        }
+
+        const receivers = this.peerConnection?.getReceivers?.() ?? [];
+        return receivers.some((receiver: any) => isLiveAudioTrack(receiver?.track));
     }
 
     /**
@@ -890,6 +952,78 @@ export class VoIPCallClient {
             this.localStream.getAudioTracks().forEach((track: any) => {
                 track.enabled = enabled;
             });
+        }
+    }
+
+    suspendLocalAudioForVoiceRelay(): void {
+        if (!this.localStream || this.localAudioSuspendedForRelay) {
+            return;
+        }
+
+        this.localAudioSuspendedForRelay = true;
+        this.localStream.getAudioTracks().forEach((track: any) => {
+            track.enabled = false;
+            track.stop();
+        });
+
+        if (this.peerConnection) {
+            this.peerConnection.getSenders().forEach((sender: any) => {
+                if (sender.track?.kind === 'audio') {
+                    void sender.replaceTrack(null);
+                }
+            });
+        }
+
+        this.localStream = null;
+        console.log('[VoIP][Diag] suspendLocalAudioForVoiceRelay', {
+            callId: this.config.callId,
+            connectionState: this.getConnectionState(),
+        });
+    }
+
+    async restoreLocalAudioAfterVoiceRelay(): Promise<void> {
+        if (!this.localAudioSuspendedForRelay || !this.peerConnection) {
+            return;
+        }
+
+        const constraints = this.config.mediaConstraints || {
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+            video: false,
+        };
+
+        try {
+            const mediaDevices = WebRTCMediaDevices || (navigator as any).mediaDevices;
+            if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
+                throw new Error('mediaDevices.getUserMedia not available');
+            }
+
+            const stream = await mediaDevices.getUserMedia(constraints);
+            const track = stream.getAudioTracks()[0];
+            const sender = this.peerConnection.getSenders().find((candidate: any) => (
+                candidate.track == null || candidate.track?.kind === 'audio'
+            ));
+
+            if (sender && track) {
+                await sender.replaceTrack(track);
+            } else if (track) {
+                this.peerConnection.addTrack(track, stream);
+            }
+
+            this.localStream = stream;
+            this.localAudioSuspendedForRelay = false;
+            console.log('[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', {
+                callId: this.config.callId,
+                connectionState: this.getConnectionState(),
+                trackCount: stream.getAudioTracks().length,
+            });
+        } catch (err) {
+            this.localAudioSuspendedForRelay = false;
+            console.error('[VoIP] Failed to restore local audio after voice relay', err);
+            throw err;
         }
     }
 

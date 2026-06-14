@@ -114,6 +114,20 @@ def create_access_token(
 JWT_SECRET = SECRET_KEY
 
 
+def resolve_token_subject(token: str) -> Optional[str]:
+    token_value = str(token or "").strip()
+    if not token_value:
+        return None
+    try:
+        payload = jwt.decode(token_value, SECRET_KEY, algorithms=[ALGORITHM])
+        subject = payload.get("sub")
+        if isinstance(subject, str) and subject.strip():
+            return subject.strip()
+    except JWTError:
+        return None
+    return None
+
+
 def is_weak_secret_key() -> bool:
     normalized_secret = str(SECRET_KEY or JWT_SECRET or "").strip()
     if not normalized_secret:

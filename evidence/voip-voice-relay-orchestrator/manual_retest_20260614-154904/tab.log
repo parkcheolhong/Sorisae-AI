@@ -1,0 +1,353 @@
+﻿--------- beginning of main
+06-14 15:49:52.236 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_CALL_MODE_AUDIT_LOADED","call_id":"call-0d9e07ccfa95","event_count":2,"event_types":["call_initiated","call_accepted"],"show_loading":false,"timestamp":"2026-06-14T06:49:52.236Z"}'
+06-14 15:49:56.013 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:49:56.013Z"}'
+06-14 15:49:56.069 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:49:56.069Z"}'
+06-14 15:49:56.077 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:49:56.077 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:49:56.077Z"}'
+06-14 15:49:56.085 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:49:56.085 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:49:56.085 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:49:56.587 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:49:56.587Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:49:56.589 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:49:56.737 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:49:56.737 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:49:56.737Z"}'
+06-14 15:49:56.738 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:49:56.737Z"}'
+06-14 15:49:57.655 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:49:57.655Z"}'
+06-14 15:50:01.562 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-02e02cfa31fc state=OPEN rawLength=61
+06-14 15:50:01.564 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-02e02cfa31fc',
+06-14 15:50:01.564 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:01.564 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:50:01.564 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-02e02cfa31fc","role":"caller"}' }
+06-14 15:50:01.566 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-02e02cfa31fc',
+06-14 15:50:01.566 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:01.566 I/ReactNativeJS( 6765):   summary: 
+06-14 15:50:01.566 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      call_id: 'call-02e02cfa31fc',
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:50:01.566 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:50:01.566 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:50:01.567 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-02e02cfa31fc', socketState: 'OPEN' }
+06-14 15:50:02.145 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-0d9e07ccfa95 state=OPEN rawLength=61
+06-14 15:50:02.146 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:02.146 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:02.146 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:50:02.146 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-0d9e07ccfa95","role":"caller"}' }
+06-14 15:50:02.148 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:02.148 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:02.148 I/ReactNativeJS( 6765):   summary: 
+06-14 15:50:02.148 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      call_id: 'call-0d9e07ccfa95',
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:50:02.148 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:50:02.148 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:50:02.149 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-0d9e07ccfa95', socketState: 'OPEN' }
+06-14 15:50:02.750 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:02.749Z"}'
+06-14 15:50:02.803 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:02.803Z"}'
+06-14 15:50:02.808 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:02.809 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:02.808Z"}'
+06-14 15:50:02.819 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:02.819 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:02.819 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:03.309 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:03.308Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:03.310 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:03.463 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:03.464 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:03.463Z"}'
+06-14 15:50:03.464 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:03.464Z"}'
+06-14 15:50:04.381 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:04.380Z"}'
+06-14 15:50:09.475 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:09.474Z"}'
+06-14 15:50:09.521 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:09.521Z"}'
+06-14 15:50:09.526 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:09.527 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:09.527Z"}'
+06-14 15:50:09.534 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:09.534 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:09.534 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:10.049 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:10.049Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:10.051 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:10.218 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:10.219 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:10.219Z"}'
+06-14 15:50:10.219 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:10.219Z"}'
+06-14 15:50:11.139 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:11.139Z"}'
+06-14 15:50:16.234 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:16.233Z"}'
+06-14 15:50:16.284 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:16.283Z"}'
+06-14 15:50:16.288 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:16.289 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:16.288Z"}'
+06-14 15:50:16.303 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:16.303 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:16.303 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:16.798 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:16.797Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:16.800 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:16.938 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:16.938 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:16.938Z"}'
+06-14 15:50:16.938 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:16.938Z"}'
+06-14 15:50:17.864 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:17.863Z"}'
+06-14 15:50:21.583 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-02e02cfa31fc state=OPEN rawLength=61
+06-14 15:50:21.584 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-02e02cfa31fc',
+06-14 15:50:21.584 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:21.584 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:50:21.584 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-02e02cfa31fc","role":"caller"}' }
+06-14 15:50:21.587 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-02e02cfa31fc',
+06-14 15:50:21.587 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:21.587 I/ReactNativeJS( 6765):   summary: 
+06-14 15:50:21.587 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      call_id: 'call-02e02cfa31fc',
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:50:21.587 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:50:21.587 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:50:21.588 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-02e02cfa31fc', socketState: 'OPEN' }
+06-14 15:50:22.158 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-0d9e07ccfa95 state=OPEN rawLength=61
+06-14 15:50:22.159 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:22.159 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:22.159 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:50:22.159 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-0d9e07ccfa95","role":"caller"}' }
+06-14 15:50:22.163 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:22.163 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:22.163 I/ReactNativeJS( 6765):   summary: 
+06-14 15:50:22.163 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      call_id: 'call-0d9e07ccfa95',
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:50:22.163 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:50:22.163 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:50:22.164 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-0d9e07ccfa95', socketState: 'OPEN' }
+06-14 15:50:22.299 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_CALL_MODE_AUDIT_LOADED","call_id":"call-0d9e07ccfa95","event_count":2,"event_types":["call_initiated","call_accepted"],"show_loading":false,"timestamp":"2026-06-14T06:50:22.298Z"}'
+06-14 15:50:22.958 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:22.957Z"}'
+06-14 15:50:23.026 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:23.026Z"}'
+06-14 15:50:23.031 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:23.031 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:23.031Z"}'
+06-14 15:50:23.041 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:23.041 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:23.041 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:23.481 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:23.480Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:23.482 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:23.637 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:23.638 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:23.637Z"}'
+06-14 15:50:23.638 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:23.638Z"}'
+06-14 15:50:24.555 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:24.555Z"}'
+06-14 15:50:29.654 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:29.653Z"}'
+06-14 15:50:29.704 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:29.703Z"}'
+06-14 15:50:29.711 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:29.711 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:29.711Z"}'
+06-14 15:50:29.721 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:29.721 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:29.721 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:30.194 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:30.193Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:30.195 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:30.342 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:30.342 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:30.342Z"}'
+06-14 15:50:30.343 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:30.342Z"}'
+06-14 15:50:31.264 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:31.263Z"}'
+06-14 15:50:36.358 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:36.358Z"}'
+06-14 15:50:36.432 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:36.430Z"}'
+06-14 15:50:36.440 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:36.440 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:36.440Z"}'
+06-14 15:50:36.449 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:36.449 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:36.449 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:36.928 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:36.928Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:36.929 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:37.064 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:37.064 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:37.064Z"}'
+06-14 15:50:37.064 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:37.064Z"}'
+06-14 15:50:37.989 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:37.989Z"}'
+06-14 15:50:41.589 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-02e02cfa31fc state=OPEN rawLength=61
+06-14 15:50:41.590 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-02e02cfa31fc',
+06-14 15:50:41.590 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:41.590 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:50:41.590 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-02e02cfa31fc","role":"caller"}' }
+06-14 15:50:41.591 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-02e02cfa31fc',
+06-14 15:50:41.591 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:41.591 I/ReactNativeJS( 6765):   summary: 
+06-14 15:50:41.591 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      call_id: 'call-02e02cfa31fc',
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:50:41.591 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:50:41.591 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:50:41.592 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-02e02cfa31fc', socketState: 'OPEN' }
+06-14 15:50:42.161 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-0d9e07ccfa95 state=OPEN rawLength=61
+06-14 15:50:42.161 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:42.161 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:42.161 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:50:42.161 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-0d9e07ccfa95","role":"caller"}' }
+06-14 15:50:42.162 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:42.162 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:50:42.162 I/ReactNativeJS( 6765):   summary: 
+06-14 15:50:42.162 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      call_id: 'call-0d9e07ccfa95',
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:50:42.162 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:50:42.162 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:50:42.163 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-0d9e07ccfa95', socketState: 'OPEN' }
+06-14 15:50:43.087 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:43.086Z"}'
+06-14 15:50:43.167 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:43.166Z"}'
+06-14 15:50:43.171 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:43.171 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:43.171Z"}'
+06-14 15:50:43.180 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:43.180 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:43.180 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:43.626 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:43.626Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:43.628 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:43.762 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:43.762 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:43.762Z"}'
+06-14 15:50:43.762 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:43.762Z"}'
+06-14 15:50:44.681 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:44.681Z"}'
+06-14 15:50:49.777 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:49.776Z"}'
+06-14 15:50:49.827 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:49.827Z"}'
+06-14 15:50:49.832 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:49.833 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:49.832Z"}'
+06-14 15:50:49.848 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:49.848 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:49.848 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:50.320 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:50.319Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:50.323 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:50.447 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:50.447 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:50.447Z"}'
+06-14 15:50:50.448 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:50.448Z"}'
+06-14 15:50:51.375 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:51.374Z"}'
+06-14 15:50:52.265 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_CALL_MODE_AUDIT_LOADED","call_id":"call-0d9e07ccfa95","event_count":2,"event_types":["call_initiated","call_accepted"],"show_loading":false,"timestamp":"2026-06-14T06:50:52.265Z"}'
+06-14 15:50:56.466 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:50:56.466Z"}'
+06-14 15:50:56.526 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:50:56.524Z"}'
+06-14 15:50:56.532 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:50:56.532 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:50:56.532Z"}'
+06-14 15:50:56.542 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:50:56.542 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:50:56.542 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:50:57.033 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:50:57.032Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:50:57.035 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:50:57.174 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:50:57.174 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:50:57.174Z"}'
+06-14 15:50:57.174 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:50:57.174Z"}'
+06-14 15:50:58.097 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:50:58.096Z"}'
+06-14 15:51:01.596 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-02e02cfa31fc state=OPEN rawLength=61
+06-14 15:51:01.597 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-02e02cfa31fc',
+06-14 15:51:01.597 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:51:01.597 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:51:01.597 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-02e02cfa31fc","role":"caller"}' }
+06-14 15:51:01.599 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-02e02cfa31fc',
+06-14 15:51:01.599 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:51:01.599 I/ReactNativeJS( 6765):   summary: 
+06-14 15:51:01.599 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      call_id: 'call-02e02cfa31fc',
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:51:01.599 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:51:01.599 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:51:01.599 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-02e02cfa31fc', socketState: 'OPEN' }
+06-14 15:51:02.334 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-0d9e07ccfa95 state=OPEN rawLength=61
+06-14 15:51:02.336 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-0d9e07ccfa95',
+06-14 15:51:02.336 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:51:02.336 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:51:02.336 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-0d9e07ccfa95","role":"caller"}' }
+06-14 15:51:02.339 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-0d9e07ccfa95',
+06-14 15:51:02.339 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:51:02.339 I/ReactNativeJS( 6765):   summary: 
+06-14 15:51:02.339 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      call_id: 'call-0d9e07ccfa95',
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:51:02.339 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:51:02.339 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:51:02.340 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-0d9e07ccfa95', socketState: 'OPEN' }
+06-14 15:51:03.193 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:51:03.192Z"}'
+06-14 15:51:03.245 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:51:03.245Z"}'
+06-14 15:51:03.251 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:51:03.251 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:51:03.251Z"}'
+06-14 15:51:03.260 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:51:03.260 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:51:03.260 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:51:03.724 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:51:03.723Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:51:03.725 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:51:03.867 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:51:03.867 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:51:03.867Z"}'
+06-14 15:51:03.867 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:51:03.867Z"}'
+06-14 15:51:04.792 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:51:04.792Z"}'
+06-14 15:51:09.890 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:51:09.889Z"}'
+06-14 15:51:09.945 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:51:09.945Z"}'
+06-14 15:51:09.951 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:51:09.951 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:51:09.951Z"}'
+06-14 15:51:09.959 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:51:09.959 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:51:09.959 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:51:10.452 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:51:10.452Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:51:10.454 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:51:10.581 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:51:10.581 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:51:10.581Z"}'
+06-14 15:51:10.581 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:51:10.581Z"}'
+06-14 15:51:11.497 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:51:11.496Z"}'
+06-14 15:51:16.592 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_FLUSH","call_id":"call-0d9e07ccfa95","reason":"fixed_interval","is_final":true,"peak_meter_db":-160,"meter_unavailable":true,"timestamp":"2026-06-14T06:51:16.591Z"}'
+06-14 15:51:16.640 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SKIP","call_id":"call-0d9e07ccfa95","reason":"echo_suppression_window","timestamp":"2026-06-14T06:51:16.640Z"}'
+06-14 15:51:16.650 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: true, trackCount: 1 }
+06-14 15:51:16.651 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":false,"timestamp":"2026-06-14T06:51:16.651Z"}'
+06-14 15:51:16.661 I/ReactNativeJS( 6765): '[VoIP][Diag] restoreLocalAudioAfterVoiceRelay', { callId: 'call-0d9e07ccfa95',
+06-14 15:51:16.661 I/ReactNativeJS( 6765):   connectionState: 'connected',
+06-14 15:51:16.661 I/ReactNativeJS( 6765):   trackCount: 1 }
+06-14 15:51:17.163 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T06:51:17.163Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-0d9e07ccfa95","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 15:51:17.165 I/ReactNativeJS( 6765): '[VoIP][Diag] suspendLocalAudioForVoiceRelay', { callId: 'call-0d9e07ccfa95', connectionState: 'connected' }
+06-14 15:51:17.312 I/ReactNativeJS( 6765): '[VoIP][Diag] setRemoteAudioEnabled', { callId: 'call-0d9e07ccfa95', enabled: false, trackCount: 1 }
+06-14 15:51:17.312 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_REMOTE_AUDIO_SUPPRESSION","call_id":"call-0d9e07ccfa95","suppressed":true,"timestamp":"2026-06-14T06:51:17.312Z"}'
+06-14 15:51:17.312 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_SEGMENT_STARTED","call_id":"call-0d9e07ccfa95","connection_state":"connected","source_lang":"ko","target_lang":"en","timestamp":"2026-06-14T06:51:17.312Z"}'
+06-14 15:51:18.240 I/ReactNativeJS( 6765): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_METER_UNAVAILABLE","call_id":"call-0d9e07ccfa95","poll_misses":5,"last_meter_db":null,"timestamp":"2026-06-14T06:51:18.240Z"}'
+06-14 15:51:21.600 I/ReactNativeJS( 6765): [VoIP][DiagLine] connectSignaling:onmessage callId=call-02e02cfa31fc state=OPEN rawLength=61
+06-14 15:51:21.602 I/ReactNativeJS( 6765): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-02e02cfa31fc',
+06-14 15:51:21.602 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:51:21.602 I/ReactNativeJS( 6765):   rawLength: 61,
+06-14 15:51:21.602 I/ReactNativeJS( 6765):   rawPreview: '{"type":"pong","call_id":"call-02e02cfa31fc","role":"caller"}' }
+06-14 15:51:21.604 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-02e02cfa31fc',
+06-14 15:51:21.604 I/ReactNativeJS( 6765):   socketState: 'OPEN',
+06-14 15:51:21.604 I/ReactNativeJS( 6765):   summary: 
+06-14 15:51:21.604 I/ReactNativeJS( 6765):    { type: 'pong',
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      call_id: 'call-02e02cfa31fc',
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      from_role: null,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      has_sdp: false,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      sdp_length: 0,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      has_candidate: false,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      candidate_length: 0,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      sdp_mid: null,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      sdp_Milne_index: null,
+06-14 15:51:21.604 I/ReactNativeJS( 6765):      username_fragment: null },
+06-14 15:51:21.604 I/ReactNativeJS( 6765):   normalizedType: 'pong' }
+06-14 15:51:21.604 I/ReactNativeJS( 6765): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-02e02cfa31fc', socketState: 'OPEN' }

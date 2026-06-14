@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import logging
+import re
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -8,6 +10,7 @@ from backend.llm.loader import llm_loader
 from backend.llm.voice_gateway import _synthesize_tts
 
 router = APIRouter(prefix="/api/llm", tags=["llm-status"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/status")
@@ -42,16 +45,199 @@ def _decode_mobile_voice_audio(audio_base64: str) -> bytes:
 def _transcribe_mobile_voice_audio(
     audio_bytes: bytes,
     language_hint: str | None = None,
-) -> tuple[str, str | None]:
-    from backend.llm.voice_gateway import _run_faster_whisper
-
-    transcript, detected_language = _run_faster_whisper(
-        audio_bytes,
-        language_hint,
+    source_lang_hint: str | None = None,
+) -> tuple[str, str | None, dict[str, object]]:
+    from backend.llm.voice_gateway import (
+        _normalize_voice_audio_bytes,
+        _normalize_whisper_language_hint,
+        classify_voice_relay_stt_trust,
+        _run_faster_whisper,
     )
-    if normalized := str(transcript or "").strip():
-        return normalized, str(detected_language or "").strip() or None
-    raise RuntimeError("음성 인식 결과가 비어 있습니다")
+
+    normalized_audio = _normalize_voice_audio_bytes(audio_bytes)
+    hinted_language = _normalize_whisper_language_hint(language_hint)
+    source_language = _normalize_whisper_language_hint(source_lang_hint)
+    initial_prompt = ""
+    attempts: list[str | None] = []
+    if hinted_language:
+        attempts.append(hinted_language)
+    if source_language and source_language not in attempts:
+        attempts.append(source_language)
+    if None not in attempts:
+        attempts.append(None)
+
+    last_error: Exception | None = None
+    best_payload: dict[str, object] | None = None
+    for attempt_language in attempts:
+        try:
+            payload = _run_faster_whisper(
+                normalized_audio,
+                attempt_language,
+                initial_prompt,
+            )
+            transcript = str(payload.get("transcript") or "").strip()
+            if not transcript:
+                continue
+            trust = str(payload.get("stt_trust") or classify_voice_relay_stt_trust(
+                transcript,
+                float(payload.get("avg_logprob", -5.0)),
+                float(payload.get("max_no_speech_prob", 1.0)),
+            ))
+            if trust == "low":
+                continue
+            best_payload = payload
+            break
+        except Exception as exc:
+            last_error = exc
+
+    if best_payload is not None:
+        transcript = str(best_payload.get("transcript") or "").strip()
+        detected = str(best_payload.get("detected_language") or "").strip() or None
+        return transcript, detected, best_payload
+
+    if last_error is not None:
+        raise RuntimeError(str(last_error)) from last_error
+    raise RuntimeError("음성이 감지되지 않았습니다. 다시 말씀해 주세요.")
+
+
+def _is_likely_silence_hallucination(transcript: str, source_lang: str) -> bool:
+    normalized = " ".join(str(transcript or "").strip().lower().split())
+    if not normalized:
+        return True
+    lang = str(source_lang or "en").strip().lower().split("-")[0] or "en"
+    patterns = {
+        "en": (
+            r"^hello\.?$",
+            r"^hi\.?$",
+            r"^hey\.?$",
+            r"^you\.?$",
+            r"^thank you\.?$",
+            r"^thanks\.?$",
+            r"^ok(?:ay)?\.?$",
+            r"^bye\.?$",
+            r"^um+\.?$",
+            r"^uh+\.?$",
+            r"^hmm+\.?$",
+        ),
+        "ko": (
+            r"^안녕(?:하세요|히)?\.?$",
+            r"^너\.?$",
+            r"^음+\.?$",
+            r"^어+\.?$",
+        ),
+    }.get(lang, ())
+
+    if any(re.fullmatch(pattern, normalized) for pattern in patterns):
+        return True
+    if lang == "en" and len(normalized) <= 3:
+        return True
+    return False
+
+
+_WHISPER_NOISE_SCRIPT_PATTERNS = (
+    re.compile(r"[\u10A0-\u10FF]"),  # Georgian
+    re.compile(r"[\u0530-\u058F]"),  # Armenian
+    re.compile(r"[\u1200-\u137F]"),  # Ethiopic
+    re.compile(r"[\u2C00-\u2C5F]"),  # Glagolitic
+)
+
+_RELAY_LANG_CHAR_CHECKS: dict[str, re.Pattern[str]] = {
+    "ko": re.compile(r"[\uAC00-\uD7A3\u3131-\u318E]"),
+    "en": re.compile(r"[A-Za-z]"),
+    "ja": re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]"),
+    "zh": re.compile(r"[\u4E00-\u9FFF]"),
+    "vi": re.compile(r"[\u00C0-\u024FA-Za-z\u1E00-\u1EFF]"),
+    "th": re.compile(r"[\u0E00-\u0E7F]"),
+    "ar": re.compile(r"[\u0600-\u06FF]"),
+    "ru": re.compile(r"[\u0400-\u04FF]"),
+}
+
+_RELAY_NEUTRAL_CHAR = re.compile(r"[\s\d\.,!?;:'\"()\[\]{}<>/\\|@#$%^&*+=~`\-—…·]")
+
+
+def _normalize_relay_lang_code(lang: str | None) -> str:
+    return str(lang or "").strip().lower().split("-")[0]
+
+
+def _char_matches_relay_langs(char: str, langs: set[str]) -> bool:
+    if _RELAY_NEUTRAL_CHAR.fullmatch(char):
+        return True
+    for lang in langs:
+        pattern = _RELAY_LANG_CHAR_CHECKS.get(lang)
+        if pattern and pattern.search(char):
+            return True
+        if lang not in _RELAY_LANG_CHAR_CHECKS and re.search(r"[A-Za-z\u00C0-\u024F]", char):
+            return True
+    return False
+
+
+_WELSH_HALLUCINATION = re.compile(r"\b(?:rwy'n|rwyf|ddweud|dweud)\b", re.IGNORECASE)
+
+
+def _contains_unexpected_noise_script(text: str, expected_langs: set[str]) -> bool:
+    if expected_langs & {"ka", "hy", "am", "cy"}:
+        return False
+    if _WELSH_HALLUCINATION.search(text):
+        return True
+    return any(pattern.search(text) for pattern in _WHISPER_NOISE_SCRIPT_PATTERNS)
+
+
+def _is_likely_gibberish_relay_transcript(
+    transcript: str,
+    *expected_langs: str | None,
+) -> bool:
+    trimmed = str(transcript or "").strip()
+    if not trimmed:
+        return True
+    if "\ufffd" in trimmed:
+        return True
+
+    langs = {_normalize_relay_lang_code(lang) for lang in expected_langs if _normalize_relay_lang_code(lang)}
+    if not langs:
+        langs = {"en"}
+
+    if _contains_unexpected_noise_script(trimmed, langs):
+        return True
+
+    compact = _RELAY_NEUTRAL_CHAR.sub("", trimmed)
+    if not compact:
+        return True
+    if re.search(r"(.)\1{3,}", compact):
+        return True
+
+    letter_like = [char for char in compact if not _RELAY_NEUTRAL_CHAR.fullmatch(char)]
+    if not letter_like:
+        return True
+
+    allowed = sum(1 for char in letter_like if _char_matches_relay_langs(char, langs))
+    ratio = allowed / len(letter_like)
+    # Ratio-only rejection: keep strict for obvious noise, lenient for mixed/natural speech.
+    if ratio < 0.35:
+        return True
+    return False
+
+
+def _collapse_repeated_relay_phrases(text: str, min_repeat: int = 3) -> str:
+    import re
+
+    trimmed = re.sub(r"\s+", " ", str(text or "").strip())
+    if not trimmed:
+        return ""
+    sentence_parts = [
+        part.strip().rstrip(".!?。")
+        for part in re.split(r"\.\s+", trimmed)
+        if part.strip()
+    ]
+    if len(sentence_parts) >= min_repeat:
+        first_norm = sentence_parts[0].casefold()
+        if all(part.casefold() == first_norm for part in sentence_parts):
+            return sentence_parts[0]
+    comma_parts = [part.strip() for part in trimmed.split(", ") if part.strip()]
+    if len(comma_parts) >= min_repeat:
+        first_norm = comma_parts[0].casefold()
+        if all(part.casefold() == first_norm for part in comma_parts):
+            return comma_parts[0]
+    return trimmed
 
 
 @router.post("/translate", tags=["mobile-public"])
@@ -136,6 +322,7 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
     detected_language = normalize_voice_lang(
         payload.language,
     ) or normalize_voice_lang(from_lang)
+    stt_meta: dict[str, object] = {}
     if not transcript:
         audio_base64 = (payload.audio_base64 or "").strip()
         if not audio_base64:
@@ -146,31 +333,111 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         try:
             language_hint = payload.language
-            if language_hint is None or not str(language_hint).strip():
+            if language_hint is None or not str(language_hint).strip() or str(language_hint).strip().lower() == "auto":
                 language_hint = from_lang
-            elif str(language_hint).strip().lower() == "auto":
-                language_hint = None
-            transcript = await asyncio.to_thread(
+            transcript, detected_language, stt_meta = await asyncio.to_thread(
                 _transcribe_mobile_voice_audio,
                 audio_bytes,
                 language_hint,
+                from_lang,
             )
-            transcript, detected_language = transcript
         except Exception as exc:
+            message = str(exc)
+            status_code = 422 if (
+                "너무 짧습니다" in message
+                or "음성이 감지되지 않았습니다" in message
+            ) else 400
             raise HTTPException(
-                status_code=400,
-                detail=f"STT 실패: {exc}",
+                status_code=status_code,
+                detail=message if status_code == 422 else f"STT 실패: {message}",
             ) from exc
 
-    effective_from_lang = normalize_voice_lang(detected_language) or from_lang
+    detected_from_lang = normalize_voice_lang(detected_language)
+    effective_from_lang = detected_from_lang or from_lang
+
+    def _resolve_voice_relay_target(
+        client_from: str,
+        client_to: str,
+        detected: str | None,
+    ) -> str:
+        if not detected or detected == client_from:
+            return client_to
+        if detected == client_to:
+            return client_from
+        return client_to
+
+    effective_to_lang = _resolve_voice_relay_target(from_lang, to_lang, detected_from_lang)
+    if detected_from_lang and detected_from_lang != from_lang:
+        logger.warning(
+            "[voice-translate] stt language mismatch client_from=%s detected=%s — relay %s→%s",
+            from_lang,
+            detected_from_lang,
+            effective_from_lang,
+            effective_to_lang,
+        )
+
+    # Silence hallucination filtering is applied on mobile for meter-dead / fixed-interval
+    # captures only. Backend accepts short natural utterances from real speech segments.
+
+    if _is_likely_gibberish_relay_transcript(
+        transcript,
+        effective_from_lang,
+        effective_to_lang,
+        from_lang,
+        to_lang,
+    ):
+        logger.info(
+            "[voice-translate] rejected gibberish transcript from=%s to=%s text=%r",
+            effective_from_lang,
+            effective_to_lang,
+            transcript,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail="음성이 감지되지 않았습니다. 다시 말씀해 주세요.",
+        )
+
+    transcript = _collapse_repeated_relay_phrases(transcript)
+
+    logger.info(
+        "[voice-translate] stt from=%s to=%s detected=%s transcript=%r",
+        from_lang,
+        to_lang,
+        detected_from_lang or effective_from_lang,
+        (transcript[:120] + "…") if len(transcript) > 120 else transcript,
+    )
 
     try:
         translator = NadoTranslator.get_instance()
         translated = translator.translate(
             transcript,
             from_lang=effective_from_lang,
-            to_lang=to_lang,
+            to_lang=effective_to_lang,
             region_hint=payload.region_hint,
+        )
+        translated = _collapse_repeated_relay_phrases(translated)
+        if _is_likely_gibberish_relay_transcript(
+            translated,
+            effective_from_lang,
+            effective_to_lang,
+            from_lang,
+            to_lang,
+        ):
+            logger.info(
+                "[voice-translate] rejected gibberish translation from=%s to=%s text=%r",
+                effective_from_lang,
+                effective_to_lang,
+                translated,
+            )
+            raise HTTPException(
+                status_code=422,
+                detail="음성이 감지되지 않았습니다. 다시 말씀해 주세요.",
+            )
+        logger.info(
+            "[voice-translate] translated from=%s to=%s text=%r",
+            effective_from_lang,
+            effective_to_lang,
+            (translated[:120] + "…") if len(translated) > 120 else translated,
         )
         audio_base64 = None
         audio_format = None
@@ -195,11 +462,14 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
             "translated": translated,
             "engine": "nado-voice",
             "from": effective_from_lang,
-            "to": to_lang,
-            "detected_language": effective_from_lang,
+            "to": effective_to_lang,
+            "detected_language": detected_from_lang or effective_from_lang,
             "audio_url": None,
             "audio_base64": audio_base64,
             "audio_format": audio_format,
+            "tts_delivery": "server_audio" if audio_base64 else "device_speech",
+            "stt_trust": str(stt_meta.get("stt_trust") or "high"),
+            "stt_avg_logprob": float(stt_meta.get("avg_logprob", 0.0)) if stt_meta else None,
         }
     except Exception as exc:
         raise HTTPException(

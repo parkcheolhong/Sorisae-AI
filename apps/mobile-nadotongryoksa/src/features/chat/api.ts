@@ -12,6 +12,12 @@ import type {
 async function parseApiResponse<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('로그인 세션이 만료되었습니다. 로그아웃 후 다시 로그인해 주세요.');
+    }
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.');
+    }
     const message = typeof payload.detail === 'string' ? payload.detail : `HTTP ${response.status}`;
     throw new Error(message);
   }

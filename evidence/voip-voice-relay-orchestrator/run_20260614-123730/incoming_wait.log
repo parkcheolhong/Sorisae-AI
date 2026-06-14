@@ -1,0 +1,318 @@
+﻿--------- beginning of main
+06-14 12:40:53.339 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:40:53.340 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:40:53.340 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:40:53.340 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:40:53.340 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:40:53.341 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:40:53.341 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:40:53.341 I/ReactNativeJS(19472):   summary: 
+06-14 12:40:53.341 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:40:53.341 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:40:53.341 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:40:53.341 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:40:53.341 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:40:53.342 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:41:13.351 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:41:13.352 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:41:13.352 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:41:13.352 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:41:13.352 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:41:13.354 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:41:13.354 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:41:13.354 I/ReactNativeJS(19472):   summary: 
+06-14 12:41:13.354 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:41:13.354 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:41:13.354 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:41:13.354 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:41:13.354 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:41:13.354 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:41:33.552 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:41:33.553 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:41:33.553 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:41:33.553 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:41:33.553 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:41:33.554 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:41:33.554 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:41:33.554 I/ReactNativeJS(19472):   summary: 
+06-14 12:41:33.554 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:41:33.554 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:41:33.554 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:41:33.554 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:41:33.554 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:41:33.554 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:41:53.523 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:41:53.523 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:41:53.523 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:41:53.523 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:41:53.523 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:41:53.524 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:41:53.524 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:41:53.524 I/ReactNativeJS(19472):   summary: 
+06-14 12:41:53.524 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:41:53.524 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:41:53.524 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:41:53.524 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:41:53.524 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:41:53.525 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:42:13.498 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:42:13.499 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:42:13.499 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:42:13.499 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:42:13.499 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:42:13.501 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:42:13.501 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:42:13.501 I/ReactNativeJS(19472):   summary: 
+06-14 12:42:13.501 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:42:13.501 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:42:13.501 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:42:13.501 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:42:13.501 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:42:13.501 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:42:33.471 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:42:33.472 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:42:33.472 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:42:33.472 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:42:33.472 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:42:33.473 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:42:33.473 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:42:33.473 I/ReactNativeJS(19472):   summary: 
+06-14 12:42:33.473 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:42:33.473 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:42:33.473 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:42:33.473 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:42:33.473 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:42:33.474 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:42:53.440 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:42:53.441 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:42:53.441 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:42:53.441 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:42:53.441 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:42:53.442 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:42:53.442 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:42:53.442 I/ReactNativeJS(19472):   summary: 
+06-14 12:42:53.442 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:42:53.442 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:42:53.442 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:42:53.442 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:42:53.442 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:42:53.443 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:43:13.424 I/ReactNativeJS(19472): [VoIP][DiagLine] connectSignaling:onmessage callId=call-b86526df2ff1 state=OPEN rawLength=61
+06-14 12:43:13.425 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-b86526df2ff1',
+06-14 12:43:13.425 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:43:13.425 I/ReactNativeJS(19472):   rawLength: 61,
+06-14 12:43:13.425 I/ReactNativeJS(19472):   rawPreview: '{"type":"pong","call_id":"call-b86526df2ff1","role":"callee"}' }
+06-14 12:43:13.427 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-b86526df2ff1',
+06-14 12:43:13.427 I/ReactNativeJS(19472):   socketState: 'OPEN',
+06-14 12:43:13.427 I/ReactNativeJS(19472):   summary: 
+06-14 12:43:13.427 I/ReactNativeJS(19472):    { type: 'pong',
+06-14 12:43:13.427 I/ReactNativeJS(19472):      call_id: 'call-b86526df2ff1',
+06-14 12:43:13.427 I/ReactNativeJS(19472):      from_role: null,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      has_sdp: false,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      sdp_length: 0,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      has_candidate: false,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      candidate_length: 0,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      sdp_mid: null,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      sdp_Milne_index: null,
+06-14 12:43:13.427 I/ReactNativeJS(19472):      username_fragment: null },
+06-14 12:43:13.427 I/ReactNativeJS(19472):   normalizedType: 'pong' }
+06-14 12:43:13.427 I/ReactNativeJS(19472): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-b86526df2ff1', socketState: 'OPEN' }
+06-14 12:43:21.137 W/ReactNativeJS(19472): Method deleteAsync imported from "expo-file-system" is deprecated.
+06-14 12:43:21.137 W/ReactNativeJS(19472): You can migrate to the new filesystem API using "File" and "Directory" classes or import the legacy API from "expo-file-system/legacy".
+06-14 12:43:21.137 W/ReactNativeJS(19472): API reference and examples are available in the filesystem docs: https://docs.expo.dev/versions/v54.0.0/sdk/filesystem/
+06-14 12:43:21.137 W/ReactNativeJS(19472): '[VoIPScreen] Failed to stop voice relay segment', [Error: Method deleteAsync imported from "expo-file-system" is deprecated.
+06-14 12:43:21.137 W/ReactNativeJS(19472): You can migrate to the new filesystem API using "File" and "Directory" classes or import the legacy API from "expo-file-system/legacy".
+06-14 12:43:21.137 W/ReactNativeJS(19472): API reference and examples are available in the filesystem docs: https://docs.expo.dev/versions/v54.0.0/sdk/filesystem/]
+06-14 12:43:21.137 I/ReactNativeJS(19472): [VoIP] Hanging up
+06-14 12:43:21.138 I/ReactNativeJS(19472): rn-webrtc:pc:DEBUG 0 close +6m
+06-14 12:43:21.138 I/ReactNativeJS(19472): '[VoIPScreen] State change callback:', 'disconnected'
+06-14 12:43:21.156 I/ReactNativeJS(19472): [VoIP] Connection state: disconnected
+06-14 12:43:21.156 I/ReactNativeJS(19472): '[VoIPScreen] State change callback:', 'disconnected'
+06-14 12:43:21.157 I/ReactNativeJS(19472): [VoIP] Connection state: disconnected
+06-14 12:43:21.157 I/ReactNativeJS(19472): '[VoIPScreen] State change callback:', 'disconnected'
+06-14 12:43:21.157 I/ReactNativeJS(19472): '[VoIP][Diag] connectSignaling:close:stale-socket-ignored', { callId: 'call-b86526df2ff1',
+06-14 12:43:21.157 I/ReactNativeJS(19472):   code: 1000,
+06-14 12:43:21.157 I/ReactNativeJS(19472):   reason: '',
+06-14 12:43:21.157 I/ReactNativeJS(19472):   wasClean: false }
+06-14 12:43:21.158 I/ReactNativeJS(19472): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-b86526df2ff1","state":"disconnected","timestamp":"2026-06-14T03:43:21.158Z"}'
+06-14 12:43:21.158 I/ReactNativeJS(19472): [VoIPScreen] Stopping tone - call ended
+06-14 12:43:21.429 I/ReactNativeJS(19472): [VoIP] Hanging up
+06-14 12:43:21.429 I/ReactNativeJS(19472): '[VoIPScreen] State change callback:', 'disconnected'
+06-14 12:43:21.430 W/ReactNativeJS(19472): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 12:43:21.430 W/ReactNativeJS(19472): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+06-14 12:43:21.430 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_initial","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":true}'
+06-14 12:43:21.432 I/ReactNativeJS(19472): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-06-14T03:43:21.432Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start","api_base":"https://metanova1004.com"}'
+06-14 12:43:21.434 W/ReactNativeJS(19472): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 12:43:21.434 I/ReactNativeJS(19472): '[VoIPFCM] firebase bootstrap failed', [Error: Missing or invalid FirebaseOptions property 'databaseURL'.]
+06-14 12:43:21.483 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_initial","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:21.489 I/ReactNativeJS(19472): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECTED","timestamp":"2026-06-14T03:43:21.489Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start"}'
+06-14 12:43:23.944 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:23.993 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:26.454 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:26.502 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:28.962 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:29.008 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:31.473 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:31.522 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:33.983 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:34.197 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:36.495 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:36.606 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:39.004 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:39.055 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:41.515 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:41.566 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:44.022 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:44.054 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:46.535 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:46.593 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:49.045 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:49.096 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:51.555 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:51.600 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:54.066 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:54.183 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:56.576 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:56.630 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:43:59.087 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:43:59.142 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:01.599 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:01.642 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:04.109 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:04.158 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:06.620 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:06.673 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:09.130 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:09.173 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:11.641 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:11.751 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:14.154 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:14.210 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:16.664 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:16.720 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:19.174 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:19.222 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:21.686 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:21.740 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:24.196 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:24.250 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:26.707 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:26.752 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:29.217 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:29.344 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:31.728 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:31.762 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:34.240 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:34.485 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:36.749 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:36.795 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:39.260 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:39.302 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:41.771 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:41.820 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:44.282 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:44.328 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:46.794 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:46.919 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:49.303 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:49.348 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:51.814 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:51.859 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:54.325 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:54.369 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:56.836 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:56.875 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:44:59.348 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:44:59.398 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:01.862 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:01.905 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:04.373 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:04.494 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:06.880 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:07.064 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:09.390 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:09.442 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:11.898 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:11.942 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:14.407 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:14.454 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:16.917 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:16.978 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:19.424 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:19.663 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:21.933 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:22.059 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:24.442 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:24.478 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:26.951 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:26.987 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:29.462 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:29.500 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:31.970 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:32.003 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:34.479 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:34.519 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:36.988 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:37.025 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:39.495 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:39.633 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:42.005 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:42.034 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:44.514 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:44.544 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:47.024 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:47.069 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:49.534 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:49.579 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:52.042 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:52.100 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:54.554 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:54.608 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:57.060 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:57.221 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:45:59.570 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:45:59.623 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 12:46:02.078 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 12:46:02.133 I/ReactNativeJS(19472): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'

@@ -1,9 +1,8 @@
 import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
+import { Audio } from './src/compat/expoAvAudio';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
-import * as Contacts from 'expo-contacts';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,6 +48,7 @@ import { usePermissionCheck } from './src/hooks/usePermissionCheck';
 import { PhoneDialer } from './src/components/PhoneDialer';
 import { VoipCallErrorBoundary } from './src/components/VoipCallErrorBoundary';
 import { VoIPCallScreen } from './src/screens/VoIPCallScreen';
+import { acceptIncomingCall } from './src/services/voipPresence';
 import { CallInitResponse, type TURNServer } from './src/services/voipCallClient';
 import { getVoIPToneService } from './src/services/voipToneService';
 import { parsePersistedGpsSnapshot, serializePersistedGpsSnapshot } from './src/utils/hybridGpsCache';
@@ -59,6 +59,11 @@ import {
     matchesWorldLincoProjectTitle,
 } from './src/constants/worldlincoBrand';
 import { resolveWorldLincoProjectId } from './src/utils/worldlincoProject';
+import {
+    isIncomingRingVoipStatus,
+    isResumableIncomingVoipStatus,
+    shouldDeferCalleeResumeToIncomingAccept,
+} from './src/utils/voipIncomingCallStatus';
 
 type MonetizationPlanKey = 'voip_lite' | 'voip_pro' | 'song_pass';
 
@@ -201,16 +206,28 @@ function isTerminalVoipStatus(status?: string | null): boolean {
 }
 
 const PENDING_INCOMING_RING_MAX_MS = 65_000;
-const RESUMABLE_INCOMING_VOIP_STATUSES = new Set([
-    'initiated',
-    'ringing',
-    'callee_offline',
-    'connecting',
-    'active',
-]);
 
-function isResumableIncomingVoipStatus(status?: string | null): boolean {
-    return Boolean(status && RESUMABLE_INCOMING_VOIP_STATUSES.has(status));
+async function requestEndVoipCall(
+    apiBase: string,
+    token: string,
+    callId: string,
+    callQuality: string,
+): Promise<void> {
+    try {
+        await fetch(`${apiBase}/api/v1/voip/calls/${callId}/end`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                duration_sec: 0,
+                call_quality: callQuality,
+            }),
+        });
+    } catch (error) {
+        console.warn('[VoIP] Failed to end stale call cleanly', error);
+    }
 }
 
 async function fetchVoipCallResumeSnapshot(
@@ -2252,6 +2269,7 @@ export default function App() {
     const voipPresenceSocketRef = useRef<WebSocket | null>(null);
     const voipTopicRef = useRef<string | null>(null);
     const pendingIncomingPollInFlightRef = useRef(false);
+    const voipAuditFetchInFlightRef = useRef(false);
     const acceptedIncomingVoipCallIdRef = useRef<string | null>(null);
     const acceptingIncomingVoipCallRef = useRef(false);
     const acceptingIncomingVoipCallIdRef = useRef<string | null>(null);
@@ -2859,6 +2877,23 @@ export default function App() {
             return;
         }
 
+        const activeCallId = voipCallInitResponseRef.current?.call_id ?? null;
+        const acceptedCallId = acceptedIncomingVoipCallIdRef.current;
+        if (
+            activeCallId === normalizedPayload.call_id
+            || acceptedCallId === normalizedPayload.call_id
+        ) {
+            logUiPressProbe('VOIP_INCOMING_CALL_SUPPRESSED_ACTIVE_SESSION', {
+                source,
+                call_id: normalizedPayload.call_id,
+                active_call_id: activeCallId,
+                accepted_call_id: acceptedCallId,
+                status: normalizedPayload.status ?? null,
+                caller_voice_id: payload.caller_voice_id ?? null,
+            });
+            return;
+        }
+
         const existingPendingCall = pendingIncomingVoipCallRef.current;
         if (
             existingPendingCall?.call_id === normalizedPayload.call_id
@@ -2867,7 +2902,7 @@ export default function App() {
             && (existingPendingCall.caller_voice_id ?? null) === (payload.caller_voice_id ?? null)
             && !voipCallInitResponseRef.current
         ) {
-            if (isResumableIncomingVoipStatus(normalizedPayload.status)) {
+            if (isIncomingRingVoipStatus(normalizedPayload.status)) {
                 logUiPressProbe('VOIP_INCOMING_CALL_DUPLICATE_REAPPLIED', {
                     source,
                     call_id: normalizedPayload.call_id,
@@ -2890,6 +2925,28 @@ export default function App() {
                 status: normalizedPayload.status ?? null,
                 caller_voice_id: payload.caller_voice_id ?? null,
             });
+            return;
+        }
+
+        if (
+            inferredParticipantRole === 'callee'
+            && !isIncomingRingVoipStatus(normalizedPayload.status)
+        ) {
+            stopIncomingVoipAlert('non_ring_incoming_payload');
+            logUiPressProbe('VOIP_INCOMING_CALL_IGNORED', {
+                source,
+                reason: 'non_ring_incoming_status',
+                call_id: normalizedPayload.call_id,
+                status: normalizedPayload.status ?? null,
+                caller_voice_id: payload.caller_voice_id ?? null,
+            });
+            if (
+                token
+                && normalizedPayload.status === 'connecting'
+                && acceptedIncomingVoipCallIdRef.current !== normalizedPayload.call_id
+            ) {
+                void requestEndVoipCall(API_BASE, token, normalizedPayload.call_id, 'stale_non_ring_session');
+            }
             return;
         }
 
@@ -2932,7 +2989,7 @@ export default function App() {
             caller_label: payload.caller_label,
             caller_voice_id: payload.caller_voice_id,
         });
-    }, [logUiPressProbe, populateIncomingVoipPresentation, stopIncomingVoipAlert, summarizeIncomingVoipPayload, userInfo]);
+    }, [API_BASE, logUiPressProbe, populateIncomingVoipPresentation, stopIncomingVoipAlert, summarizeIncomingVoipPayload, token, userInfo]);
 
     const autoAcceptIncomingVoipDeepLink = useCallback(async (
         payload: CallInitResponse & { caller_label?: string; caller_voice_id?: string },
@@ -3024,10 +3081,10 @@ export default function App() {
         }
 
         const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, localPending.call_id);
-        if (snapshot?.call_id === localPending.call_id && isResumableIncomingVoipStatus(snapshot.status)) {
+        if (snapshot?.call_id === localPending.call_id && isIncomingRingVoipStatus(snapshot.status)) {
             logUiPressProbe('VOIP_PENDING_CALL_CLEAR_SKIPPED', {
                 source,
-                reason: 'server_still_resumable',
+                reason: 'server_still_ringing',
                 call_id: localPending.call_id,
                 status: snapshot.status ?? null,
                 caller_voice_id: localPending.caller_voice_id ?? null,
@@ -3035,9 +3092,23 @@ export default function App() {
             return false;
         }
 
+        if (snapshot?.call_id === localPending.call_id && snapshot.status === 'connecting') {
+            await requestEndVoipCall(API_BASE, token, localPending.call_id, 'stale_pending_connecting');
+            stopIncomingVoipAlert(`${source}:${reason}`);
+            setPendingIncomingVoipCall(null);
+            logUiPressProbe('VOIP_PENDING_CALL_CLEARED_STALE_CONNECTING', {
+                source,
+                reason,
+                call_id: localPending.call_id,
+                status: snapshot.status ?? null,
+                caller_voice_id: localPending.caller_voice_id ?? null,
+            });
+            return true;
+        }
+
         dismissPendingIncomingAsMissed(source, reason, localPending);
         return true;
-    }, [API_BASE, dismissPendingIncomingAsMissed, logUiPressProbe, token]);
+    }, [API_BASE, dismissPendingIncomingAsMissed, logUiPressProbe, stopIncomingVoipAlert, token]);
 
     const fetchPendingIncomingVoipCall = useCallback(async (source: string) => {
         if (!token || !userInfo) {
@@ -3046,7 +3117,7 @@ export default function App() {
         if (pendingIncomingPollInFlightRef.current) {
             return;
         }
-        if (voipCallInitResponse) {
+        if (voipCallInitResponseRef.current?.call_id) {
             return;
         }
 
@@ -3214,14 +3285,22 @@ export default function App() {
         }
     }, [API_BASE, applyIncomingVoipPayload, buildVoipRemoteProfile, dismissPendingIncomingAsMissed, logUiPressProbe, resolveStalePendingIncomingCall, token, userInfo, voipCallInitResponse]);
 
-    const refreshVoipAudit = useCallback(async (callId: string) => {
+    const refreshVoipAudit = useCallback(async (callId: string, options?: { showLoading?: boolean; force?: boolean }) => {
+        const showLoading = options?.showLoading ?? true;
+        const force = options?.force ?? false;
         if (!token) {
             setVoipAuditEvents([]);
             setVoipAuditError('');
             return [] as CallModeAuditEvent[];
         }
+        if (voipAuditFetchInFlightRef.current && !force) {
+            return [] as CallModeAuditEvent[];
+        }
 
-        setVoipAuditLoading(true);
+        voipAuditFetchInFlightRef.current = true;
+        if (showLoading) {
+            setVoipAuditLoading(true);
+        }
         setVoipAuditError('');
         try {
             const response = await fetch(`${API_BASE}/api/v1/voip/calls/${callId}/audit`, {
@@ -3240,11 +3319,14 @@ export default function App() {
         } catch (error: any) {
             const message = error?.message || 'VoIP 감사 로그 조회 실패';
             setVoipAuditError(message);
-            return voipAuditEvents;
+            return [] as CallModeAuditEvent[];
         } finally {
-            setVoipAuditLoading(false);
+            voipAuditFetchInFlightRef.current = false;
+            if (showLoading) {
+                setVoipAuditLoading(false);
+            }
         }
-    }, [token, voipAuditEvents]);
+    }, [token]);
 
     const resolveActiveRegionHint = useCallback((source: LangCode) => {
         return resolveRegionHintForSourceLanguage(source, gpsCountryCode, gpsRegionHint);
@@ -3440,7 +3522,8 @@ export default function App() {
 
     useEffect(() => {
         const pendingCallId = pendingIncomingVoipCall?.call_id;
-        if (!pendingCallId || voipCallInitResponse?.call_id) {
+        const pendingStatus = pendingIncomingVoipCall?.status;
+        if (!pendingCallId || voipCallInitResponse?.call_id || !isIncomingRingVoipStatus(pendingStatus)) {
             stopIncomingVoipAlert('no_pending_or_active_call');
             return;
         }
@@ -3452,6 +3535,7 @@ export default function App() {
     }, [
         pendingIncomingVoipCall?.call_id,
         pendingIncomingVoipCall?.caller_voice_id,
+        pendingIncomingVoipCall?.status,
         startIncomingVoipAlert,
         stopIncomingVoipAlert,
         voipCallInitResponse?.call_id,
@@ -5289,27 +5373,55 @@ export default function App() {
             caller_voice_id: acceptedPayload.caller_voice_id ?? null,
         });
 
+        let mergedAcceptedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string } = {
+            ...acceptedPayload,
+            participant_role: 'callee',
+        };
+
         if (token) {
-            const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, acceptedPayload.call_id);
-            logUiPressProbe('VOIP_INCOMING_ACCEPT_RESUME_SNAPSHOT', {
-                call_id: acceptedPayload.call_id,
-                snapshot_call_id: snapshot?.call_id ?? null,
-                snapshot_status: snapshot?.status ?? null,
-                caller_voice_id: acceptedPayload.caller_voice_id ?? null,
-            });
-            if (!snapshot?.call_id || !isResumableIncomingVoipStatus(snapshot.status)) {
-                setIncomingVoipAcceptInFlight(null);
-                dismissPendingIncomingAsMissed('manual_accept', 'call_no_longer_active', acceptedPayload);
-                return;
+            try {
+                const acceptedFromServer = await acceptIncomingCall(API_BASE, token, acceptedPayload.call_id);
+                mergedAcceptedPayload = {
+                    ...acceptedPayload,
+                    ...acceptedFromServer,
+                    participant_role: 'callee',
+                    caller_label: acceptedPayload.caller_label,
+                    caller_voice_id: acceptedPayload.caller_voice_id ?? acceptedFromServer.caller_voice_id,
+                };
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_OK', {
+                    call_id: mergedAcceptedPayload.call_id,
+                    signaling_server: mergedAcceptedPayload.signaling_server ?? null,
+                    status: mergedAcceptedPayload.status ?? null,
+                });
+            } catch (acceptError: any) {
+                const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, acceptedPayload.call_id);
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_FAIL', {
+                    call_id: acceptedPayload.call_id,
+                    error_message: acceptError?.message || 'unknown',
+                    snapshot_call_id: snapshot?.call_id ?? null,
+                    snapshot_status: snapshot?.status ?? null,
+                });
+                if (!snapshot?.call_id || !isResumableIncomingVoipStatus(snapshot.status)) {
+                    setIncomingVoipAcceptInFlight(null);
+                    dismissPendingIncomingAsMissed('manual_accept', 'call_no_longer_active', acceptedPayload);
+                    return;
+                }
+                mergedAcceptedPayload = {
+                    ...acceptedPayload,
+                    ...snapshot,
+                    participant_role: 'callee',
+                    caller_label: acceptedPayload.caller_label,
+                    caller_voice_id: acceptedPayload.caller_voice_id ?? snapshot.caller_voice_id,
+                };
             }
         }
 
         logUiPressProbe('VOIP_INCOMING_ALERT_STOPPED_ON_ACCEPT', {
-            call_id: acceptedPayload.call_id,
-            caller_voice_id: acceptedPayload.caller_voice_id ?? null,
+            call_id: mergedAcceptedPayload.call_id,
+            caller_voice_id: mergedAcceptedPayload.caller_voice_id ?? null,
         });
 
-        activateAcceptedIncomingVoipCall(acceptedPayload, 'manual_accept');
+        activateAcceptedIncomingVoipCall(mergedAcceptedPayload, 'manual_accept');
     }, [API_BASE, activateAcceptedIncomingVoipCall, dismissPendingIncomingAsMissed, logUiPressProbe, pendingIncomingVoipCall, requestPermissions, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert, token]);
 
     const handleIncomingAcceptPress = useCallback((sourceVariant: string) => {
@@ -5418,8 +5530,18 @@ export default function App() {
                 ? isRuntimeAcceptedCalleeVoipSession(storedSession, payload.call_id, acceptedIncomingVoipCallIdRef.current)
                 : storedSession?.callId === payload.call_id;
             const shouldDeferActiveResumeToAccept = payload.participant_role === 'callee'
-                && payload.status !== 'active'
-                && !isStoredAcceptedSession;
+                && shouldDeferCalleeResumeToIncomingAccept(payload.status, isStoredAcceptedSession);
+            if (payload.participant_role === 'callee' && payload.status === 'connecting' && !isStoredAcceptedSession) {
+                await requestEndVoipCall(API_BASE, token, payload.call_id, 'stale_connecting_resume');
+                await clearStoredActiveVoipSession();
+                logUiPressProbe('VOIP_ACTIVE_CALL_RESUME_ENDED_STALE_CONNECTING', {
+                    source,
+                    call_id: payload.call_id,
+                    participant_role: payload.participant_role ?? null,
+                    status: payload.status ?? null,
+                });
+                return;
+            }
             if (shouldDeferActiveResumeToAccept) {
                 await clearStoredActiveVoipSession();
                 logUiPressProbe('VOIP_ACTIVE_CALL_RESUME_DEFERRED_TO_ACCEPT', {
@@ -6677,7 +6799,7 @@ export default function App() {
                         from_lang: fromLang,
                         to_lang: toLang,
                         region_hint: gpsRegionHint || undefined,
-                        language: 'auto',
+                        language: autoVoiceModeEnabled ? 'auto' : fromLang,
                     };
                 const res = await fetch(voiceEndpoint, {
                     method: 'POST',
@@ -7065,6 +7187,7 @@ export default function App() {
         setInterCallContactError('');
 
         try {
+            const Contacts = await import('expo-contacts');
             const permission = await Contacts.requestPermissionsAsync();
             if (permission.status !== 'granted') {
                 setInterCallContactError('연락처 권한이 없어 단말 전화번호 저장소를 열 수 없습니다.');
@@ -8167,7 +8290,7 @@ export default function App() {
                                                 <Pressable
                                                     style={styles.inlineGhostBtn}
                                                     onPress={() => {
-                                                        void refreshVoipAudit(voipAuditCallId);
+                                                        void refreshVoipAudit(voipAuditCallId, { showLoading: true, force: true });
                                                     }}
                                                 >
                                                     <Text style={styles.inlineGhostBtnText}>{voipAuditLoading ? '갱신 중...' : '새로고침'}</Text>
@@ -9289,7 +9412,7 @@ export default function App() {
                         <Text style={styles.loginModeHint}>기기 연락처에서 번호를 불러와 일반 통역 통화 입력칸에 바로 채웁니다.</Text>
                         {interCallContactError ? <Text style={styles.errorText}>{interCallContactError}</Text> : null}
                         <ScrollView style={styles.contactPickerList} contentContainerStyle={styles.contactPickerListBody}>
-                            {interCallContactOptions.map((contact) => (
+                            {(interCallContactOptions ?? []).map((contact) => (
                                 <Pressable
                                     key={`inter-contact-${contact.id}`}
                                     style={styles.contactPickerRow}

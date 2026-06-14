@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { Audio } from '../compat/expoAvAudio';
 import * as FileSystem from 'expo-file-system';
 
 /**

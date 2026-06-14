@@ -382,6 +382,22 @@ def _start_admin_capability_warmup_thread() -> None:
     ).start()
 
 
+def _start_voice_stt_warmup_thread() -> None:
+    def _warmup() -> None:
+        try:
+            from backend.llm.voice_gateway import warmup_faster_whisper_model
+
+            warmup_faster_whisper_model()
+        except Exception as exc:
+            logger.warning(f"[WARN] voice STT warmup failed: {exc}")
+
+    threading.Thread(
+        target=_warmup,
+        name="voice-stt-warmup",
+        daemon=True,
+    ).start()
+
+
 def _run_post_startup_bootstrap() -> None:
     started_at = _mark_bootstrap_stage_started(
         "post_startup_bootstrap",
@@ -525,6 +541,7 @@ def _run_post_startup_bootstrap() -> None:
     _start_ad_order_worker_thread()
     _start_self_run_video_worker_thread()
     _start_admin_capability_warmup_thread()
+    _start_voice_stt_warmup_thread()
     _bootstrap_status["completed_at"] = datetime.now(timezone.utc).isoformat()
     _bootstrap_status["duration_ms"] = round((time.perf_counter() - started_at) * 1000, 1)
     _mark_bootstrap_stage_completed(
@@ -1449,11 +1466,13 @@ except Exception as e:
 
 # ── VoIP Interpretation Calls (WorldLinco) ──
 try:
-    from backend.voip.router import router as voip_router
-    app.include_router(voip_router)
-    logger.info("[OK] voip router loaded")
+    from backend.marketplace.nadotongryoksa_voip_router import (
+        router as nadotongryoksa_voip_router,
+    )
+    app.include_router(nadotongryoksa_voip_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa voip router loaded")
 except Exception as e:
-    logger.warning(f"[WARN] voip router skipped: {e}")
+    logger.warning(f"[WARN] nadotongryoksa voip router skipped: {e}")
 
 # ── WorldLinco mobile: friends / chat / OCR ──
 try:

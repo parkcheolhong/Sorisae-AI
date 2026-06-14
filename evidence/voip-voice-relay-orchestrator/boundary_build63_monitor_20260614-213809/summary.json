@@ -1,0 +1,31 @@
+﻿{
+    "build":  63,
+    "version":  "1.0.38",
+    "run_dir":  "c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\voip-voice-relay-orchestrator\\boundary_build63_monitor_20260614-213809",
+    "tab":  {
+                "silero_end":  2,
+                "flush_true":  1,
+                "flush_false":  0,
+                "defer_reasons":  "",
+                "flush_reasons":  "recording_in_progress=1",
+                "segment_ms":  "8991",
+                "speech_span_ms":  "8237",
+                "relay_sent":  0,
+                "playback":  3,
+                "fixed_interval":  0
+            },
+    "s10":  {
+                "silero_end":  1,
+                "flush_true":  1,
+                "flush_false":  0,
+                "defer_reasons":  "",
+                "flush_reasons":  "segment_stop=1",
+                "segment_ms":  "4437",
+                "speech_span_ms":  "8782",
+                "relay_sent":  3,
+                "playback":  0,
+                "fixed_interval":  0
+            },
+    "s10_to_tab":  true,
+    "defer_working":  false
+}
