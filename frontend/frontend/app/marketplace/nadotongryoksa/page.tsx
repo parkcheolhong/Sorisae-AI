@@ -1008,7 +1008,7 @@ const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEX
                                 {UI_LANGS.map((lang) => (
                                     <button
                                         key={lang.code}
-                                        onClick={() => setUiLang(lang.code as UiLangCode)}
+                                        onClick={() => setUiLang(lang.code)}
                                         style={{
                                             background: uiLang === lang.code ? '#11243d' : '#0f1623',
                                             border: `1px solid ${uiLang === lang.code ? '#2a7cff' : '#21262d'}`,
