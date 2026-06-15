@@ -130,7 +130,7 @@ Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
 | **APK** | `1.0.45` / **versionCode 74** — turn/VAD/Silero 타이밍 단축 |
 | **Marketplace** | `nadotongryoksa-v1.manifest.json` + `GET /api/marketplace/apk/worldlinco/manifest` · UI 동적 버전 표기 |
 | **Latency** | `playbackMinMs` 2800→**2200** · `silenceFlushMs` 1900→**1500** · Silero `minSegmentMs` 3200→**2800** · `remoteListenHoldMs` 2500→**2100** |
-| **E-3-4** | **보류** — 지인 10명 베타 일시 중단, latency/LTE 정비 우선 |
+| **E-3-4** | **재개** — backend **`v1.0.46`** 프로필 API + build 74 APK |
 
 **LTE 베타 보안 (v1.0 현재):**
 
@@ -140,6 +140,16 @@ Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
 | APK 배포 | 로그인 + HMAC **7일 test_token** (`/apk/test-token`) |
 | API | JWT Bearer · voice-translate rate limit (nginx/backend) |
 | v1.1 추가 | LTE 전용 QA 매트릭스 · FCM · TURN short-lived token · 데이터 사용량 UI |
+
+### 0.8 v1.0.46 · signup profile API (2026-06-16)
+
+| 항목 | 내용 |
+|------|------|
+| **Tag** | **`v1.0.46`** @ `88adda287` (GitHub `gpu-llm-server-awq-20260427`) |
+| **APK** | build **74** 유지 (`v1.0.45`) — 모바일 재빌드 불필요 |
+| **API** | `POST /api/auth/signup` · `GET/PATCH /api/auth/me` — `preferred_language` + `country_code` |
+| **Chat** | 1:1 방 생성 시 `default_source_lang` / `default_target_lang` = 양쪽 프로필 |
+| **VoIP** | DB 프로필 + 기존 invite/deeplink 언어 힌트 (build 73+ strict 유지) |
 
 ---
 
@@ -523,7 +533,7 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 | **E-3-8 ko↔ja VoIP (1차)** | **69** | **PASS** ja STT + Tab PLAYBACK | `ko_ja_smoke_20260616-005906` |
 | **E-3-8 ko↔ja strict** | **73** | **PASS** `target_lang=ko` + Tab KO TTS | `ko_ja_smoke_20260616-023813` |
 | E-3-4 beta ×10 | — | **ON HOLD** | `E3-4_beta_users.csv` |
-| E-3-5 git tag | 74 | **PASS** | tag **`v1.0.45`** @ build 74 |
+| E-3-5 git tag | 74+46 | **PASS** | **`v1.0.45`** @ build 74 · **`v1.0.46`** profile API |
 
 ### 8.5 Silero·경계 실측 (2026-06-14)
 
@@ -565,7 +575,7 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 - [x] **E-3-8** ko↔ja VoIP smoke (build 69) — ja STT + Tab playback
 - [x] **E-3-8 strict** ja→ko · `target_lang=ko` · Tab 한국어 TTS (build **73**)
 - [~] **E-3-4** 지인·커뮤니티 실사용 **10명** — **보류**
-- [x] **E-3-5** git tag **`v1.0.45`** @ build 74 (2026-06-16)
+- [x] **E-3-5** git tag **`v1.0.45`** @ build 74 · **`v1.0.46`** profile API (2026-06-16)
 - [ ] LTE 베타 QA 매트릭스 (보안 전제: TLS + token APK)
 - [ ] `voip_boundary_cap_defer_test.ps1` cap phase **summary.json PASS** 안정화
 

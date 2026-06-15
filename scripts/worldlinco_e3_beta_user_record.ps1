@@ -13,7 +13,7 @@ param(
     [string]$Relay1Turn = "yes",
     [string]$Feedback = "",
     [string]$Notes = "",
-    [int]$Build = 73,
+    [int]$Build = 74,
     [string]$CsvPath = ""
 )
 

@@ -349,8 +349,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **E-3-8)** **ko↔ja VoIP 실기기 E2E** — **2026-06-16** build **73** · `call-0f44540d27f6` **PASS (strict)**: S10 `detected_lang=ja` · **`target_lang=ko`** · Tab `PLAYBACK` 한국어 TTS `안녕하세요, 잘 부탁드립니다.` · backend accept `display_language=ko` · repetition **0**. 증적: `ko_ja_smoke_20260616-023813` · `E3-8_KO_JA_VOIP_REPORT.md`. *(build 71 `target_lang=en` → accept/merge fix)*
 - [x] **E-3-3)** marketplace 페이지 **「WorldLinco 통역 통화 베타」** + WiFi 권장·알려진 한계 1페이지.
   - UI: `frontend/.../marketplace/nadotongryoksa/page.tsx` · 전문: `docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`.
-- [~] **E-3-4)** 실사용 **10명** — **보류** (v1.0 베타 일시 중단) · 기록: `E3-4_beta_users.csv` · `worldlinco_e3_beta_user_record.ps1`
-- [x] **E-3-5)** git tag **`v1.0.45`** @ build **74** (2026-06-16)
+- [~] **E-3-4)** 실사용 **10명** — **재개** (2026-06-16) · 전제: build **74** APK + backend tag **`v1.0.46`** (signup `preferred_language`/`country_code` 저장) · 기록: `E3-4_beta_users.csv` · `worldlinco_e3_beta_user_record.ps1`
+- [x] **E-3-5)** git tag — **`v1.0.45`** @ build **74** APK (2026-06-16) · **`v1.0.46`** @ profile API (2026-06-16, `88adda287`)
 
 #### E-3 검증 명령 (실기기)
 
@@ -379,10 +379,10 @@ pwsh -File scripts\worldlinco_e3_beta_user_record.ps1 -DisplayName "테스터1" 
 
 | 주차 | 작업 | 금지 |
 |------|------|------|
-| 1~2 | ~~E-3-1, E-3-2, E-3-8 strict~~ ✅ · **relay latency tuning (build 74)** · E-3-4 보류 | V2 폴더·Redis cluster |
+| 1~2 | ~~E-3-1, E-3-2, E-3-8 strict~~ ✅ · build **74** · tag **`v1.0.46`** · **E-3-4** 10명 수집 | V2 폴더·Redis cluster |
 | 3 | ~~E-3-3 (베타 페이지·안내)~~ ✅ 2026-06-15 | 오케스트레이터 A-2 |
 | 4 | 지인·커뮤니티 실사용 시작 | iOS · 새 플랫폼명 |
-| 5~6 | 피드백 1회 반영 → E-3-5 태그 | Communication OS 코드 |
+| 5~6 | ~~E-3-5 태그~~ ✅ `v1.0.45`+`v1.0.46` · E-3-4 완료 후 v1.0 베타 종료 | Communication OS 코드 |
 
 ### E-5. v1.0 이후 버전 (요약)
 
