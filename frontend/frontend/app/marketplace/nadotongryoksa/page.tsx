@@ -127,6 +127,61 @@ const LANGS = [
     { label: 'Dansk', code: 'da' },
 ] as const;
 
+const UI_LANGS = [
+    { label: '한국어', code: 'ko' },
+    { label: 'English', code: 'en' },
+    { label: '日本語', code: 'ja' },
+    { label: '中文(简体)', code: 'zh' },
+    { label: '繁體中文', code: 'zh-tw' },
+    { label: 'Español', code: 'es' },
+    { label: 'Français', code: 'fr' },
+    { label: 'Deutsch', code: 'de' },
+    { label: 'Português', code: 'pt' },
+    { label: 'Italiano', code: 'it' },
+    { label: 'Русский', code: 'ru' },
+    { label: 'Українська', code: 'uk' },
+    { label: 'Polski', code: 'pl' },
+    { label: 'Nederlands', code: 'nl' },
+    { label: 'Svenska', code: 'sv' },
+    { label: 'Norsk', code: 'no' },
+    { label: 'Dansk', code: 'da' },
+    { label: 'Suomi', code: 'fi' },
+    { label: 'Čeština', code: 'cs' },
+    { label: 'Slovenčina', code: 'sk' },
+    { label: 'Magyar', code: 'hu' },
+    { label: 'Română', code: 'ro' },
+    { label: 'Български', code: 'bg' },
+    { label: 'Ελληνικά', code: 'el' },
+    { label: 'Türkçe', code: 'tr' },
+    { label: 'العربية', code: 'ar' },
+    { label: 'فارسی', code: 'fa' },
+    { label: 'עברית', code: 'he' },
+    { label: 'हिन्दी', code: 'hi' },
+    { label: 'বাংলা', code: 'bn' },
+    { label: 'اردو', code: 'ur' },
+    { label: 'தமிழ்', code: 'ta' },
+    { label: 'తెలుగు', code: 'te' },
+    { label: 'ภาษาไทย', code: 'th' },
+    { label: 'Tiếng Việt', code: 'vi' },
+    { label: 'Indonesia', code: 'id' },
+    { label: 'Melayu', code: 'ms' },
+    { label: 'Filipino', code: 'tl' },
+    { label: 'Kiswahili', code: 'sw' },
+    { label: 'አማርኛ', code: 'am' },
+    { label: 'isiZulu', code: 'zu' },
+    { label: 'Afrikaans', code: 'af' },
+    { label: 'Yorùbá', code: 'yo' },
+    { label: 'Igbo', code: 'ig' },
+    { label: 'Hausa', code: 'ha' },
+    { label: 'Монгол', code: 'mn' },
+    { label: 'Қазақша', code: 'kk' },
+    { label: 'Oʻzbekcha', code: 'uz' },
+    { label: 'Српски', code: 'sr' },
+    { label: 'Hrvatski', code: 'hr' },
+] as const;
+
+type UiLangCode = (typeof UI_LANGS)[number]['code'];
+
 const CATEGORY_OPTIONS = [
     { label: '전체', value: 'all' },
     { label: '호텔', value: 'hotel' },
@@ -212,8 +267,132 @@ type BookingResponse = {
 };
 
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
+const NADO_PROJECT_SEARCH = '나도통역사';
+const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
+let cachedNadoProjectId: number | null = null;
 let cachedWorldLincoProjectId: number | null = null;
 
+const UI_KO_TEXT = {
+    uiLanguage: 'UI 언어',
+    loginTitle: '로그인',
+    loginEmail: '이메일',
+    loginPassword: '비밀번호',
+    loginLoading: '로그인 중...',
+    login: '로그인',
+    close: '닫기',
+    signupGuidePrefix: '계정이 없으면',
+    signup: '회원가입',
+    appTitle: 'WorldLinco',
+    appSubtitle: '신세계소리새 AI · 통번역 · 지도 · 예약 · 결제',
+    offlineBadge: '🔴 오프라인',
+    myInfo: '내 정보',
+    loadingDots: '⏳ 불러오는 중...',
+    hideHistory: '📋 내역 닫기',
+    bookingHistory: '📋 구매/예약 내역',
+    noPurchases: '구매 내역이 없습니다.',
+    logout: '로그아웃',
+    sourceLanguage: '원본 언어',
+    gpsDetectTitle: '현재 위치로 번역 언어 자동 감지',
+    gpsDetectLoading: '⏳ 감지 중...',
+    gpsDetect: '🌐 GPS 언어 감지',
+    inputPlaceholder: '번역할 텍스트를 입력하세요 (Ctrl+Enter로 번역)',
+    voiceInput: '음성 입력',
+    readAloud: '읽기',
+    swapLanguage: '⇄ 언어 스왑',
+    translating: '번역 중...',
+    translate: '번역',
+    targetLanguage: '번역 언어',
+    translatingWithAi: '신세계소리새 AI 번역 중...',
+    copy: '복사',
+    resultPlaceholder: '번역 결과가 여기에 표시됩니다',
+    offlineNotice: '📡 오프라인 모드 — 백엔드 연결 후 신세계소리새 전체 통역 엔진 사용 가능',
+    endCall: '📵 통역 통화 종료',
+    startCall: '📞 통역 통화 시작',
+    inCall: '통화 중',
+    preparing: '준비 중...',
+    nearbyTitle: '📍 주변 검색',
+    nearbyDesc: '호텔 · 공항 · 식당 · 관광명소를 현재 좌표 기준으로 찾습니다.',
+    categoryAll: '전체',
+    categoryHotel: '호텔',
+    categoryAirport: '공항',
+    categoryRestaurant: '식당',
+    categoryAttraction: '관광명소',
+    currentLocation: '현재 위치',
+    latitude: '위도',
+    longitude: '경도',
+    searchingNearby: '주변 검색 중...',
+    findNearby: '주변 장소 찾기',
+    map: '🗺️ 지도',
+    naverMap: 'Naver 지도',
+    openStreetMap: '🌍 OpenStreetMap',
+    closeMap: '✕ 닫기',
+    mapTitlePrefix: '지도',
+    openHotelLocation: '호텔 위치 열기',
+    loadingReviews: '리뷰 조회 중...',
+    googleReviews: 'Google 리뷰',
+    hotelBooking: '호텔 예약',
+    review: '리뷰',
+    noReviewSummary: '요약이 없습니다.',
+    hotelPanelTitle: '🏨 호텔 예약 패널',
+    hotelPanelDesc: '주변검색 결과에서 호텔을 선택하면 예약 요청을 보낼 수 있습니다.',
+    viewOnMap: '🗺️ 지도에서 보기',
+    selectBookableHotel: '주변검색 결과에서 예약 가능한 호텔을 선택하세요.',
+    bookingName: '예약자명',
+    checkin: '체크인',
+    checkout: '체크아웃',
+    guests: '인원',
+    roomCount: '객실 수',
+    bookingNote: '추가 요청사항 (예: 금연실, 늦은 체크인)',
+    bookingLoading: '예약 요청 중...',
+    sendBookingRequest: '예약 요청 보내기',
+    bookingConfirmation: '예약 확인번호',
+    translatedMessage: '현지어 안내',
+    supportPhone: '고객센터',
+    openGoogleMap: 'Google Maps 열기',
+    paymentPanelTitle: '💳 결제 패널',
+    paymentPanelDesc: '예약 확정 후 결제를 진행하면 바우처가 활성화됩니다.',
+    selectHotelForPayment: '예약 대상 호텔을 먼저 선택해 주세요.',
+    paymentAmount: '결제 예정 금액',
+    purchaseIdStatus: '구매 ID',
+    status: '상태',
+    nights: '박',
+    currencyWon: '원',
+    openPaymentPage: '🔗 결제 페이지 열기',
+    loadingPaymentUrl: '결제 URL을 불러오는 중...',
+    paying: '결제 처리 중...',
+    proceedPayment: '💳 결제 진행하기',
+    loginForPayment: '🔐 로그인 후 결제',
+    paymentLoginRequiredPrefix: '결제를 진행하려면',
+    paymentLoginRequiredSuffix: '이 필요합니다.',
+    mobileInstallTitle: '📱 모바일 앱 설치',
+    mobileInstallDesc: 'Android 기기에 설치해 오프라인에서도 사용하세요.',
+    apkDownload: '📥 APK 다운로드 (로그인 필요)',
+    backToMarketplace: '마켓플레이스로 돌아가기',
+    apkGuideLine1: 'APK 패키지에는 Expo React Native 소스 + EAS 빌드 가이드가 포함됩니다.',
+    apkGuideLine2: 'EAS CLI로 클라우드 빌드하면 실제 설치 가능한 APK가 생성됩니다.',
+    footerEngine: 'WorldLinco v3.0 · WorldLinco AI Engine',
+    footerLanguages: 'UI 50개국어 지원',
+    helpBtn: '사용법',
+    helpTitle: '📖 WorldLinco 사용 가이드',
+    helpClose: '닫기',
+    helpLangNote: '이 안내는 우측 상단의 UI 언어 설정에 따라 자동으로 번역됩니다.',
+    helpStep1Title: '1️⃣ 언어 선택',
+    helpStep1Desc: '화면 우측 상단의 "UI 언어" 드롭다운에서 자국어를 선택하면 모든 안내 텍스트가 해당 언어로 자동 표시됩니다. 50개 언어를 지원합니다.',
+    helpStep2Title: '2️⃣ 텍스트 번역',
+    helpStep2Desc: '원본 언어 드롭다운으로 입력 언어를 고른 뒤 텍스트를 입력하고 "번역" 버튼을 누르거나 Ctrl+Enter를 사용하세요. 번역 결과는 하단에 표시됩니다.',
+    helpStep3Title: '3️⃣ 음성 입력 · 읽기',
+    helpStep3Desc: '입력창의 마이크(🎤) 버튼으로 음성을 텍스트로 변환하여 입력할 수 있습니다. 스피커(🔊) 버튼을 누르면 입력 또는 번역 결과를 음성으로 읽어줍니다.',
+    helpStep4Title: '4️⃣ GPS 언어 자동 감지',
+    helpStep4Desc: '"🌐 GPS 언어 감지" 버튼을 누르면 현재 위치를 기반으로 해당 국가의 언어가 번역 대상 언어로 자동 설정됩니다.',
+    helpStep5Title: '5️⃣ 실시간 통역 통화 모드',
+    helpStep5Desc: '"📞 통역 통화 시작" 버튼을 누르면 두 언어 간 실시간 음성 통역이 시작됩니다. A 측이 말하면 자동으로 번역 후 B 측 언어로 읽어주고, 이후 B 측 음성을 다시 받아 통역합니다.',
+    helpStep6Title: '6️⃣ 주변 장소 검색',
+    helpStep6Desc: '"현재 위치" 버튼으로 좌표를 가져온 뒤, 카테고리(호텔/공항/식당/관광명소)와 반경을 선택하고 "주변 장소 찾기" 버튼을 누르세요. 결과는 번역 대상 언어로 표시됩니다.',
+    helpStep7Title: '7️⃣ 호텔 예약',
+    helpStep7Desc: '주변 검색 결과에서 예약 가능 호텔을 선택하면 하단에 예약 패널이 나타납니다. 예약자명, 체크인/체크아웃 날짜, 인원, 객실 수를 입력하고 "예약 요청 보내기"를 누르세요.',
+    helpStep8Title: '8️⃣ 결제',
+    helpStep8Desc: '예약 완료 후 나타나는 결제 패널에서 "💳 결제 진행하기"를 누르면 결제 페이지로 이동합니다. 결제는 로그인 후 이용할 수 있습니다.',
+} as const;
 const OFFLINE_DICT: Record<string, string> = {
     '안녕하세요': 'Hello',
     '감사합니다': 'Thank you',
@@ -401,6 +580,13 @@ function todayPlus(days: number): string {
 }
 
 export default function WorldLincoPage() {
+const [uiLang, setUiLang] = useState<UiLangCode>('ko');
+const [uiText, setUiText] = useState<Record<keyof typeof UI_KO_TEXT, string>>({ ...UI_KO_TEXT });
+const [showHelp, setShowHelp] = useState(false);
+const uiTextCacheRef = useRef<Record<UiLangCode, Record<keyof typeof UI_KO_TEXT, string>>>({
+    ko: { ...UI_KO_TEXT },
+} as Record<UiLangCode, Record<keyof typeof UI_KO_TEXT, string>>);
+const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEXT[key], [uiText]);
     // ── 로그인/내정보 ─────────────────────────────────────
     const [token, setToken] = useState('');
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -837,6 +1023,77 @@ export default function WorldLincoPage() {
                 </div>
             )}
 
+            {/* ── 사용법 가이드 모달 ── */}
+            {showHelp && (
+                <div
+                    style={{ position: 'fixed', inset: 0, background: '#000c', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowHelp(false); }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="worldlinco-help-title"
+                        onKeyDown={(e) => { if (e.key === 'Escape') setShowHelp(false); }}
+                        style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 18, padding: '24px 20px', width: '100%', maxWidth: 540, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 16px 48px #000c' }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <h2 id="worldlinco-help-title" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#58c9ff' }}>{t('helpTitle')}</h2>
+                            <button autoFocus onClick={() => setShowHelp(false)} style={{ background: 'none', border: '1px solid #21262d', color: '#8b949e', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{t('helpClose')}</button>
+                        </div>
+
+                        <div style={{ background: '#0d1e2e', border: '1px solid #1e3a52', borderRadius: 10, padding: '10px 14px', marginBottom: 18, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                            <span style={{ fontSize: 18, lineHeight: 1.4 }}>💡</span>
+                            <p style={{ margin: 0, fontSize: 12, color: '#79c0ff', lineHeight: 1.6 }}>{t('helpLangNote')}</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            {([
+                                ['helpStep1Title', 'helpStep1Desc'],
+                                ['helpStep2Title', 'helpStep2Desc'],
+                                ['helpStep3Title', 'helpStep3Desc'],
+                                ['helpStep4Title', 'helpStep4Desc'],
+                                ['helpStep5Title', 'helpStep5Desc'],
+                                ['helpStep6Title', 'helpStep6Desc'],
+                                ['helpStep7Title', 'helpStep7Desc'],
+                                ['helpStep8Title', 'helpStep8Desc'],
+                            ] as [keyof typeof UI_KO_TEXT, keyof typeof UI_KO_TEXT][]).map(([titleKey, descKey]) => (
+                                <div key={titleKey} style={{ background: '#0f1623', border: '1px solid #21262d', borderRadius: 12, padding: '12px 14px' }}>
+                                    <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: '#e6edf3' }}>{t(titleKey)}</p>
+                                    <p style={{ margin: 0, fontSize: 13, color: '#8b949e', lineHeight: 1.65 }}>{t(descKey)}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 480 }}>
+                                {UI_LANGS.map((lang) => (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => setUiLang(lang.code)}
+                                        style={{
+                                            background: uiLang === lang.code ? '#11243d' : '#0f1623',
+                                            border: `1px solid ${uiLang === lang.code ? '#2a7cff' : '#21262d'}`,
+                                            color: uiLang === lang.code ? '#79c0ff' : '#8b949e',
+                                            borderRadius: 20,
+                                            padding: '5px 12px',
+                                            fontSize: 12,
+                                            cursor: 'pointer',
+                                            fontWeight: uiLang === lang.code ? 700 : 400,
+                                        }}
+                                    >
+                                        {lang.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: '#4a5568' }}>
+                            {t('uiLanguage')}: {UI_LANGS.find((l) => l.code === uiLang)?.label} · {t('footerLanguages')}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── 상단 헤더 (sticky) ── */}
             <div
                 style={{
@@ -862,6 +1119,35 @@ export default function WorldLincoPage() {
                         {offline ? '🔴 오프라인' : `🟢 ${engine}`}
                     </span>
                 )}
+<label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8b949e', fontSize: 12 }}>
+    {t('uiLanguage')}
+    <select
+        value={uiLang}
+        onChange={(e) => setUiLang(e.target.value as UiLangCode)}
+        style={{ background: '#0f1623', border: '1px solid #21262d', color: '#e6edf3', borderRadius: 8, padding: '6px 8px', fontSize: 12 }}
+    >
+        {UI_LANGS.map((lang) => (
+            <option key={lang.code} value={lang.code}>{lang.label}</option>
+        ))}
+    </select>
+</label>
+<button
+    onClick={() => setShowHelp(true)}
+    title={t('helpBtn')}
+    style={{
+        background: '#0e1e30',
+        border: '1px solid #35506c',
+        color: '#79c0ff',
+        borderRadius: 8,
+        padding: '6px 12px',
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+    }}
+>
+    ❓ {t('helpBtn')}
+</button>
                 {/* 로그인/내정보 레일 */}
                 {userInfo ? (
                     <div style={{ position: 'relative' }}>
