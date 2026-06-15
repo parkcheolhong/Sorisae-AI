@@ -571,7 +571,7 @@ def download_marketplace_apk(
     test_token: Optional[str] = None,
     current_user: Any = None,
 ) -> Any:
-    """모바일 APK 직접 다운로드 엔드포인트 — 신세계소리새 나도통역사 등
+    """모바일 APK 직접 다운로드 엔드포인트 — WorldLinco(월드링코) 등
     
     인증 필수: 구매자 또는 유효한 다운로드 토큰 보유
     토큰은 query parameter로 전달: /apk/file.apk?token=abc123

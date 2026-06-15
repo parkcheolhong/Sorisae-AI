@@ -2,8 +2,9 @@
   "expo": {
     "name": "WorldLinco",
     "slug": "nadotongryoksa",
-    "version": "1.0.15",
-    "runtimeVersion": "1.0.15",
+    "scheme": "worldlingo",
+    "version": "1.0.25",
+    "runtimeVersion": "1.0.25",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "platforms": [
@@ -21,18 +22,17 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shinsegye.nadotongryoksa",
+      "bundleIdentifier": "com.parkcheolhong.worldlinco",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성 통역을 위해 마이크 권한이 필요합니다.",
         "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하기 위해 음성 인식 권한이 필요합니다."
-      },
-      "runtimeVersion": "1.0.15"
+      }
     },
     "android": {
-      "package": "com.shinsegye.nadotongryoksa",
-      "versionCode": 15,
+      "package": "com.parkcheolhong.worldlinco",
+      "versionCode": 35,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0f16"
       },
       "permissions": [
@@ -66,6 +66,8 @@
     ],
     "owner": "parkcheolhong",
     "updates": {
+      "enabled": false,
+      "checkAutomatically": "NEVER",
       "url": "https://u.expo.dev/25954146-4067-4c4f-9835-24382678e4b2"
     }
   }
