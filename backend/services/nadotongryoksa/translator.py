@@ -1,7 +1,7 @@
 """
 WorldLinco 전용 번역 엔진 (NadoTranslator)
 - 소리새(SorisaeInterpreter)와 완전 독립
-- 24개 언어 지원
+- 50개국어 지원
 - googletrans 3.x async + ThreadPoolExecutor (FastAPI 이벤트루프 충돌 방지)
 - 자체 여행 필수 문장 사전 캐시 (DB 없이 즉시 응답)
 """
@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger("nado.translator")
 
 # ──────────────────────────────────────────────
-# 24개 지원 언어
+# 50개국어 (모바일 App.tsx LANGS 와 동기화)
 # ──────────────────────────────────────────────
 SUPPORTED_LANGUAGES: Dict[str, str] = {
     "ko": "한국어",
@@ -45,9 +45,36 @@ SUPPORTED_LANGUAGES: Dict[str, str] = {
     "sv": "스웨덴어",
     "no": "노르웨이어",
     "da": "덴마크어",
+    "fi": "핀란드어",
+    "cs": "체코어",
+    "ro": "루마니아어",
+    "hu": "헝가리어",
+    "el": "그리스어",
     "he": "히브리어",
+    "bg": "불가리아어",
+    "hr": "크로아티아어",
+    "sr": "세르비아어",
+    "sk": "슬로바키아어",
+    "sl": "슬로베니아어",
+    "lt": "리투아니아어",
+    "lv": "라트비아어",
+    "et": "에스토니아어",
+    "fa": "페르시아어",
+    "ur": "우르두어",
+    "bn": "벵골어",
+    "ta": "타밀어",
+    "te": "텔루구어",
+    "ml": "말라얄람어",
+    "gu": "구자라트어",
+    "mr": "마라티어",
     "fil": "필리핀어",
+    "sw": "스와힐리어",
+    "ca": "카탈루냐어",
+    "am": "암하라어",
 }
+
+# 모바일 `App.tsx` LANGS 코드 목록 (정합 감사용 SSOT)
+MOBILE_SUPPORTED_LANGUAGE_CODES: Tuple[str, ...] = tuple(SUPPORTED_LANGUAGES.keys())
 
 SUPPORTED_DIALECT_COUNTRY_PROFILES: Dict[str, Dict[str, str]] = {
     "jeju": {"language": "ko", "label": "제주"},
@@ -106,6 +133,12 @@ _PHRASE_DICT: Dict[Tuple[str, str, str], str] = {
     ("ko", "zh", "안녕하세요"): "你好",
     ("ko", "zh", "감사합니다"): "谢谢",
     ("ko", "zh", "얼마예요?"): "多少钱？",
+    # 한국어 → 일본어
+    ("ko", "ja", "안녕하세요"): "こんにちは",
+    ("ko", "ja", "감사합니다"): "ありがとうございます",
+    # 일본어 → 한국어
+    ("ja", "ko", "こんにちは"): "안녕하세요",
+    ("ja", "ko", "ありがとう"): "감사합니다",
     # 영어 → 한국어
     ("en", "ko", "hello"): "안녕하세요",
     ("en", "ko", "thank you"): "감사합니다",

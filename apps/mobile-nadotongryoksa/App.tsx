@@ -494,7 +494,7 @@ function parseSectionRailKey(value: string | null | undefined): SectionRailKey |
 
 type AppEntryDeepLinkTarget =
     | { type: 'rail'; section: SectionRailKey }
-    | { type: 'voip'; action: 'open' | 'validation' | 'demo'; calleeVoiceId?: string };
+    | { type: 'voip'; action: 'open' | 'validation' | 'demo'; calleeVoiceId?: string; forceRetry?: boolean; preferredLanguage?: string };
 
 function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | null {
     try {
@@ -516,13 +516,16 @@ function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | null {
 
         const action = String(parsed.searchParams.get('action') || 'open').trim().toLowerCase();
         const calleeVoiceId = String(parsed.searchParams.get('callee_voice_id') || '').trim() || undefined;
+        const preferredLanguage = String(parsed.searchParams.get('preferred_language') || parsed.searchParams.get('source_lang') || '').trim().toLowerCase() || undefined;
+        const forceRetry = String(parsed.searchParams.get('force') || '').trim() === '1'
+            || String(parsed.searchParams.get('retry') || '').trim() === '1';
         if (action === 'validation') {
-            return { type: 'voip', action: 'validation', calleeVoiceId };
+            return { type: 'voip', action: 'validation', calleeVoiceId, forceRetry, preferredLanguage };
         }
         if (action === 'demo') {
-            return { type: 'voip', action: 'demo' };
+            return { type: 'voip', action: 'demo', forceRetry, preferredLanguage };
         }
-        return { type: 'voip', action: 'open', calleeVoiceId };
+        return { type: 'voip', action: 'open', calleeVoiceId, forceRetry, preferredLanguage };
     } catch {
         return null;
     }
@@ -2277,7 +2280,11 @@ export default function App() {
     const voipCallInitResponseRef = useRef<CallInitResponse | null>(null);
     const activeRailSectionRef = useRef<SectionRailKey | null>(null);
     const voipCallInitiatingRef = useRef(false);
+    const friendCallDispatchKeyRef = useRef<string | null>(null);
+    const friendCallDispatchAtRef = useRef(0);
     const voipValidationFriendCallBypassRef = useRef(false);
+    const consumedAppEntryDeepLinkUrlRef = useRef('');
+    const consumedValidationAutoCallKeyRef = useRef('');
     const canUseFullAutoVoipWithoutPurchasePrompt = Boolean(effectiveVoipPlan || voipValidationOverride || isInstantDemoSession);
     const [acceptingIncomingVoipCallId, setAcceptingIncomingVoipCallId] = useState<string | null>(null);
     const { initiateVoipCall, validatePhoneNumber } = useVoipAutoController(API_BASE, token);
@@ -5091,11 +5098,65 @@ export default function App() {
             return;
         }
 
+        const normalizedPreferredLanguage = String(target.preferredLanguage || '').trim().toLowerCase();
+        if (normalizedPreferredLanguage && isSupportedLangCode(normalizedPreferredLanguage)) {
+            setFromLang(normalizedPreferredLanguage);
+            setToLang((currentTarget) => resolveAutoTargetLang(normalizedPreferredLanguage, currentTarget));
+            setUserInfo((prev) => (prev ? { ...prev, preferred_language: normalizedPreferredLanguage } : prev));
+            logUiPressProbe('VOIP_DEEPLINK_PREFERRED_LANGUAGE_APPLIED', {
+                source,
+                preferred_language: normalizedPreferredLanguage,
+            });
+        }
+
         logUiPressProbe('APP_ENTRY_DEEP_LINK_VOIP_OPEN', { source, action: target.action });
         setActiveRailSection('voip');
 
         if (target.action === 'validation') {
             if (target.calleeVoiceId) {
+                const normalizedCalleeVoiceId = target.calleeVoiceId.trim().toLowerCase();
+                const validationAutoCallKey = `validation:${normalizedCalleeVoiceId}`;
+                if (!target.forceRetry && consumedValidationAutoCallKeyRef.current === validationAutoCallKey) {
+                    logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_SKIPPED_ALREADY_CONSUMED', {
+                        source,
+                        callee_voice_id: target.calleeVoiceId,
+                        active_call_id: voipCallInitResponseRef.current?.call_id ?? null,
+                    });
+                    if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
+                        setShowFriendFolder(false);
+                        setVoipAutoCallVoiceId(null);
+                        setActiveRailSection('voip');
+                        setShowVoipTester(true);
+                    }
+                    return;
+                }
+                if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
+                    consumedValidationAutoCallKeyRef.current = validationAutoCallKey;
+                    logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_SKIPPED_ACTIVE_CALL', {
+                        source,
+                        callee_voice_id: target.calleeVoiceId,
+                        active_call_id: voipCallInitResponseRef.current?.call_id ?? null,
+                        pending_call_id: pendingIncomingVoipCallRef.current?.call_id ?? null,
+                    });
+                    setShowFriendFolder(false);
+                    setVoipAutoCallVoiceId(null);
+                    setActiveRailSection('voip');
+                    setShowVoipTester(true);
+                    return;
+                }
+
+                const ownVoiceId = userInfo ? buildVoiceId(userInfo.id) : null;
+                if (ownVoiceId && normalizedCalleeVoiceId === ownVoiceId.toLowerCase()) {
+                    setVoipInitError('자기 자신의 보이스 ID로는 통화할 수 없습니다. 친구 보이스 ID를 지정해 주세요.');
+                    logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_REJECTED_SELF', {
+                        source,
+                        callee_voice_id: target.calleeVoiceId,
+                        own_voice_id: ownVoiceId,
+                        auth_ready: Boolean(token && userInfo),
+                    });
+                    return;
+                }
+
                 setVoipValidationOverride(true);
                 voipValidationFriendCallBypassRef.current = true;
                 void persistVoipValidationFriendCallBypass(true);
@@ -5110,6 +5171,7 @@ export default function App() {
                     callee_voice_id: target.calleeVoiceId,
                     auth_ready: Boolean(token && userInfo),
                 });
+                consumedValidationAutoCallKeyRef.current = validationAutoCallKey;
                 setVoipAutoCallVoiceId(target.calleeVoiceId);
                 setSelectedChatRoom(null);
                 setShowVoipTester(false);
@@ -5133,15 +5195,13 @@ export default function App() {
 
     useEffect(() => {
         let active = true;
-        let lastConsumedUrl = '';
 
         const consumeIncomingUrl = (url: string | null, source: string) => {
-            if (!url || url === lastConsumedUrl) {
+            if (!url) {
                 return;
             }
             const payload = parseIncomingVoipDeepLink(url);
             if (payload) {
-                lastConsumedUrl = url;
                 void autoAcceptIncomingVoipDeepLink(payload, source);
                 return;
             }
@@ -5151,7 +5211,16 @@ export default function App() {
                 return;
             }
 
-            lastConsumedUrl = url;
+            if (url === consumedAppEntryDeepLinkUrlRef.current) {
+                const allowRetry = entryTarget.type === 'voip' && Boolean(entryTarget.forceRetry);
+                if (!allowRetry) {
+                    logUiPressProbe('APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED', { source, url });
+                    return;
+                }
+                logUiPressProbe('APP_ENTRY_DEEP_LINK_FORCE_RETRY', { source, url });
+            }
+
+            consumedAppEntryDeepLinkUrlRef.current = url;
             handleAppEntryDeepLink(entryTarget, source);
         };
 
@@ -5596,10 +5665,25 @@ export default function App() {
             accepting_call_id: acceptingIncomingVoipCallIdRef.current,
             active_section: restoredRailSection,
         });
+        setShowFriendFolder(false);
+        setShowFriendMapDiscovery(false);
+        setVoipAutoCallVoiceId(null);
         setActiveRailSection('voip');
         setIsRailMenuOpen(false);
         setShowVoipTester(true);
     }, [logUiPressProbe, pendingIncomingVoipCall, voipCallInitResponse]);
+
+    const handleCloseFriendFolder = useCallback((source: string) => {
+        setShowFriendFolder(false);
+        setVoipAutoCallVoiceId(null);
+        setVoipValidationOverride(false);
+        voipValidationFriendCallBypassRef.current = false;
+        void persistVoipValidationFriendCallBypass(false);
+        logUiPressProbe('FRIEND_FOLDER_CLOSE', { source });
+        if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
+            restoreVoipRailState(`friend_folder_close_${source}`);
+        }
+    }, [logUiPressProbe, persistVoipValidationFriendCallBypass, restoreVoipRailState]);
 
     const handleStartFriendVoiceCall = useCallback(async (friend: Friend) => {
         if (!token || !userInfo) {
@@ -5640,6 +5724,22 @@ export default function App() {
         if (!hasPermission) {
             return;
         }
+
+        const dispatchKey = `${friend.id}:${friend.friendVoiceId ?? friend.friendUserId ?? 'unknown'}`;
+        const dispatchNow = Date.now();
+        if (
+            friendCallDispatchKeyRef.current === dispatchKey
+            && dispatchNow - friendCallDispatchAtRef.current < 8000
+        ) {
+            logUiPressProbe('VOIP_FRIEND_CALL_DISPATCH_SUPPRESSED', {
+                friend_id: friend.id,
+                friend_voice_id: friend.friendVoiceId ?? null,
+                dispatch_key: dispatchKey,
+            });
+            return;
+        }
+        friendCallDispatchKeyRef.current = dispatchKey;
+        friendCallDispatchAtRef.current = dispatchNow;
 
         setVoipInitLoading(true);
         setVoipInitError('');
@@ -5693,6 +5793,11 @@ export default function App() {
                 call_id: (payload as any)?.call_id ?? null,
                 callee_voice_id: friend.friendVoiceId ?? null,
             });
+            setVoipAutoCallVoiceId(null);
+            setVoipValidationOverride(false);
+            if (friend.friendVoiceId) {
+                consumedValidationAutoCallKeyRef.current = `validation:${friend.friendVoiceId.trim().toLowerCase()}`;
+            }
         } catch (error: any) {
             setVoipInitError(error?.message || '친구 보이스톡 시작 실패');
             setShowVoipTester(false);
@@ -7788,12 +7893,12 @@ export default function App() {
                     visible={showFriendFolder}
                     transparent
                     animationType="slide"
-                    onRequestClose={() => setShowFriendFolder(false)}
+                    onRequestClose={() => handleCloseFriendFolder('modal_request_close')}
                 >
                     <View style={styles.voipModalOverlay}>
                         <View style={[styles.voipModalCard, { paddingTop: 0 }]}>
                             <View style={styles.modalCloseRow}>
-                                <Pressable onPress={() => setShowFriendFolder(false)} style={styles.friendModalCloseBtn}>
+                                <Pressable onPress={() => handleCloseFriendFolder('modal_close_button')} style={styles.friendModalCloseBtn}>
                                     <Text style={styles.friendModalCloseBtnText}>✕ 닫기</Text>
                                 </Pressable>
                             </View>
@@ -8036,7 +8141,7 @@ export default function App() {
                                         visible={isChatRailSectionVisible}
                                         refreshKey={chatRefreshKey}
                                         onOpenRoom={handleOpenChatRoom}
-                                        autoCallVoiceId={voipAutoCallVoiceId}
+                                        autoCallVoiceId={showFriendFolder ? null : voipAutoCallVoiceId}
                                         onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
                                         onStartFriendVoiceCall={(friend) => void handleStartFriendVoiceCall(friend)}
                                     />
@@ -8071,7 +8176,7 @@ export default function App() {
                                                     currentUserEmail={userInfo.email}
                                                     visible={isChatRailSectionVisible && showFriendFolder}
                                                     embeddedInScrollView
-                                                    autoCallVoiceId={voipAutoCallVoiceId}
+                                                    autoCallVoiceId={null}
                                                     onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
                                                     onFriendSelected={(friend) => {
                                                         setVoipAutoCallVoiceId(null);
