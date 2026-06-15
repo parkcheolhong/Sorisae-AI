@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-06-14T22:16:27.8753358+09:00",
+  "run_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\voip-voice-relay-orchestrator\\manual_retest_20260614-221528",
+  "s10_segment_started": false,
+  "s10_relay_sent": false,
+  "tab_playback": false,
+  "tab_relay_sent": false,
+  "s10_playback": false,
+  "verdict": "FAIL"
+}

@@ -40,6 +40,10 @@ VOICE_CHAT_REQUEST_MAX_TOKENS = max(128, int(os.getenv('ORCH_CHAT_REQUEST_MAX_TO
 VOICE_LIGHTWEIGHT_CHAT_MAX_TOKENS = max(64, int(os.getenv('ORCH_LIGHTWEIGHT_CHAT_MAX_TOKENS', '192')))
 VOICE_CHAT_AGENT_TIMEOUT_SEC = max(5.0, float(os.getenv('ORCH_CHAT_AGENT_TIMEOUT_SEC', '75')))
 VOICE_REASONER_BRIEF_TIMEOUT_SEC = max(5.0, float(os.getenv('ORCH_REASONER_BRIEF_TIMEOUT_SEC', '45')))
+VOICE_RELAY_MIN_SEGMENT_MS = max(800, int(os.getenv("VOICE_RELAY_MIN_SEGMENT_MS", "2400")))
+VOICE_RELAY_MIN_SEGMENT_TOLERANCE_MS = max(0, int(os.getenv("VOICE_RELAY_MIN_SEGMENT_TOLERANCE_MS", "350")))
+VOICE_RELAY_MIN_SPEECH_RMS_DB = float(os.getenv("VOICE_RELAY_MIN_SPEECH_RMS_DB", "-58"))
+VOICE_RELAY_PCM_SAMPLE_RATE = 16_000
 
 
 def _resolve_voice_chat_model(agent_key: str, *, lightweight: bool) -> str:
@@ -122,19 +126,176 @@ def _run_whisper_cpp(audio_bytes: bytes) -> str:
         return txt_path.read_text(encoding="utf-8").strip()
 
 
-def _run_faster_whisper(audio_bytes: bytes, language: Optional[str] = None) -> tuple[str, Optional[str]]:
-    """Returns (transcript, detected_language). language hint prevents CJK misidentification."""
-    model_name = os.getenv("FASTER_WHISPER_MODEL", "tiny")
-    device = os.getenv("FASTER_WHISPER_DEVICE", "cpu")
-    compute_type = os.getenv("FASTER_WHISPER_COMPUTE_TYPE", "int8")
-
-    # 앱에서 전달한 LangCode → ISO 639-1 정규화 (zh-tw → zh 등)
-    lang_hint = language.split("-")[0].lower() if language else ""
+def _normalize_whisper_language_hint(language: Optional[str]) -> Optional[str]:
+    """앱 LangCode → ISO 639-1 정규화 (zh-tw → zh, auto/빈값 → 자동 감지)."""
+    lang_hint = str(language or "").strip().lower().split("-")[0]
+    if not lang_hint or lang_hint == "auto":
+        return None
     valid_langs = {
         "ko", "en", "zh", "ja", "es", "fr", "de", "pt", "ru", "ar",
         "hi", "it", "tr", "th", "vi", "id", "ms", "nl", "pl",
     }
-    whisper_lang = lang_hint if lang_hint in valid_langs else None
+    return lang_hint if lang_hint in valid_langs else None
+
+
+def _resolve_whisper_initial_prompt(language: Optional[str]) -> str:
+    lang = _normalize_whisper_language_hint(language)
+    # Avoid greeting words — they become silence hallucinations on tiny Whisper models.
+    prompts = {
+        "ko": "회의 통역 문장입니다.",
+        "en": "Conversation translation sentence.",
+        "ja": "会議の通訳文です。",
+        "zh": "会议翻译句子。",
+        "vi": "Câu dịch thuật hội thoại.",
+        "th": "ประโยคแปลบทสนทนา",
+    }
+    return prompts.get(lang or "", "")
+
+
+def _pcm16_mono_rms_db(audio_bytes: bytes, sample_rate: int = VOICE_RELAY_PCM_SAMPLE_RATE) -> float:
+    import math
+    import struct
+
+    pcm_offset = 44 if audio_bytes[:4] == b"RIFF" else 0
+    pcm = audio_bytes[pcm_offset:]
+    if len(pcm) < 2:
+        return -160.0
+    sample_count = len(pcm) // 2
+    samples = struct.unpack("<" + "h" * sample_count, pcm[: sample_count * 2])
+    if not samples:
+        return -160.0
+    mean_square = sum(sample * sample for sample in samples) / len(samples)
+    rms = math.sqrt(mean_square)
+    if rms <= 0:
+        return -160.0
+    return 20.0 * math.log10(rms / 32768.0)
+
+
+def _assert_min_voice_energy(normalized_wav: bytes) -> None:
+    rms_db = _pcm16_mono_rms_db(normalized_wav)
+    if rms_db < VOICE_RELAY_MIN_SPEECH_RMS_DB:
+        raise RuntimeError("음성이 감지되지 않았습니다. 다시 말씀해 주세요.")
+
+
+def _pcm16_mono_duration_ms(audio_bytes: bytes, sample_rate: int = VOICE_RELAY_PCM_SAMPLE_RATE) -> float:
+    pcm_offset = 44 if audio_bytes[:4] == b"RIFF" else 0
+    pcm_len = max(0, len(audio_bytes) - pcm_offset)
+    return (pcm_len / (sample_rate * 2)) * 1000.0
+
+
+def _assert_min_voice_capture_duration(normalized_wav: bytes) -> None:
+    duration_ms = _pcm16_mono_duration_ms(normalized_wav)
+    if duration_ms < (VOICE_RELAY_MIN_SEGMENT_MS - VOICE_RELAY_MIN_SEGMENT_TOLERANCE_MS):
+        raise RuntimeError(
+            "녹음 길이가 너무 짧습니다. "
+            f"({duration_ms:.0f}ms / 최소 {VOICE_RELAY_MIN_SEGMENT_MS}ms)"
+        )
+
+
+def _normalize_voice_audio_bytes(audio_bytes: bytes) -> bytes:
+    """Expo/모바일 m4a·aac 등을 16kHz mono PCM wav로 정규화 + 음성 대역·잡음 제거."""
+    if not audio_bytes:
+        raise RuntimeError("오디오 데이터가 비어 있습니다")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        src = Path(temp_dir) / "voice_input.bin"
+        dst = Path(temp_dir) / "voice_normalized.wav"
+        src.write_bytes(audio_bytes)
+        audio_filter = os.getenv(
+            "VOICE_STT_AUDIO_FILTER",
+            "highpass=f=80,lowpass=f=4200",
+        )
+        proc = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(src),
+                "-af",
+                audio_filter,
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-c:a",
+                "pcm_s16le",
+                str(dst),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        if proc.returncode != 0 or not dst.exists():
+            stderr = (proc.stderr or "").strip()
+            raise RuntimeError(stderr or "오디오 정규화에 실패했습니다")
+        normalized = dst.read_bytes()
+        if not normalized:
+            raise RuntimeError("정규화된 오디오가 비어 있습니다")
+        _assert_min_voice_capture_duration(normalized)
+        _assert_min_voice_energy(normalized)
+        return normalized
+
+
+_WHISPER_MODEL_LOCK = __import__("threading").Lock()
+
+
+def warmup_faster_whisper_model() -> None:
+    """Warm ffmpeg + whisper subprocess path with a tiny silent clip."""
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            silent = Path(temp_dir) / "warmup.wav"
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "anullsrc=r=16000:cl=mono",
+                    "-t",
+                    "0.2",
+                    str(silent),
+                ],
+                capture_output=True,
+                check=False,
+            )
+            if silent.exists():
+                _run_faster_whisper(silent.read_bytes(), "ko", "")
+        logger.info("[voice-stt] faster-whisper warmup complete")
+    except Exception as exc:
+        logger.warning("[voice-stt] faster-whisper warmup skipped: %s", exc)
+
+
+VOICE_RELAY_MIN_AVG_LOGPROB = float(os.getenv("VOICE_RELAY_MIN_AVG_LOGPROB", "-0.95"))
+VOICE_RELAY_MAX_NO_SPEECH_PROB = float(os.getenv("VOICE_RELAY_MAX_NO_SPEECH_PROB", "0.62"))
+
+
+def classify_voice_relay_stt_trust(
+    transcript: str,
+    avg_logprob: float,
+    max_no_speech_prob: float,
+) -> str:
+    if not str(transcript or "").strip():
+        return "low"
+    if avg_logprob < VOICE_RELAY_MIN_AVG_LOGPROB:
+        return "low"
+    if max_no_speech_prob > VOICE_RELAY_MAX_NO_SPEECH_PROB:
+        return "low"
+    return "high"
+
+
+def _run_faster_whisper(
+    audio_bytes: bytes,
+    language: Optional[str] = None,
+    initial_prompt: Optional[str] = None,
+) -> dict[str, object]:
+    """Returns whisper payload including transcript, language, and confidence metrics."""
+    model_name = os.getenv("FASTER_WHISPER_MODEL", "tiny")
+    device = os.getenv("FASTER_WHISPER_DEVICE", "cpu")
+    compute_type = os.getenv("FASTER_WHISPER_COMPUTE_TYPE", "int8")
+    whisper_lang = _normalize_whisper_language_hint(language)
+    prompt = str(initial_prompt or _resolve_whisper_initial_prompt(language) or "").strip()
 
     with tempfile.TemporaryDirectory() as temp_dir:
         audio_path = Path(temp_dir) / "voice_input.wav"
@@ -150,15 +311,43 @@ model_name = sys.argv[2]
 device = sys.argv[3]
 compute_type = sys.argv[4]
 lang_hint = sys.argv[5] if len(sys.argv) > 5 else ""
+initial_prompt = sys.argv[6] if len(sys.argv) > 6 else ""
 
 model = WhisperModel(model_name, device=device, compute_type=compute_type)
-kwargs = {}
+kwargs = {
+    "vad_filter": False,
+    "condition_on_previous_text": False,
+    "no_speech_threshold": 0.45,
+    "log_prob_threshold": -1.2,
+    "compression_ratio_threshold": 3.2,
+    "beam_size": 5,
+    "best_of": 3,
+    "temperature": 0.0,
+}
 if lang_hint:
     kwargs["language"] = lang_hint
+if initial_prompt:
+    kwargs["initial_prompt"] = initial_prompt
 segments, info = model.transcribe(audio_path, **kwargs)
-transcript = " ".join((seg.text or "").strip() for seg in segments).strip()
+segment_rows = list(segments)
+transcript = " ".join((seg.text or "").strip() for seg in segment_rows).strip()
 detected = getattr(info, "language", None) or ""
-print(json.dumps({"transcript": transcript, "detected_language": detected}, ensure_ascii=False))
+avg_logprob = (
+    sum(float(getattr(seg, "avg_logprob", -5.0)) for seg in segment_rows) / len(segment_rows)
+    if segment_rows
+    else -5.0
+)
+max_no_speech_prob = (
+    max(float(getattr(seg, "no_speech_prob", 1.0)) for seg in segment_rows)
+    if segment_rows
+    else 1.0
+)
+print(json.dumps({
+    "transcript": transcript,
+    "detected_language": detected,
+    "avg_logprob": avg_logprob,
+    "max_no_speech_prob": max_no_speech_prob,
+}, ensure_ascii=False))
 """
 
         cmd = [
@@ -172,23 +361,38 @@ print(json.dumps({"transcript": transcript, "detected_language": detected}, ensu
         ]
         if whisper_lang:
             cmd.append(whisper_lang)
+        else:
+            cmd.append("")
+        cmd.append(prompt)
 
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=240,
-        )
+        with _WHISPER_MODEL_LOCK:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=240,
+            )
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
             raise RuntimeError(stderr or "faster-whisper subprocess failed")
 
         payload = json.loads((proc.stdout or "{}").strip())
-        return (
-            str(payload.get("transcript") or "").strip(),
-            str(payload.get("detected_language") or "").strip() or None,
-        )
+        transcript = str(payload.get("transcript") or "").strip()
+        detected = str(payload.get("detected_language") or "").strip() or None
+        avg_logprob = float(payload.get("avg_logprob", -5.0))
+        max_no_speech_prob = float(payload.get("max_no_speech_prob", 1.0))
+        return {
+            "transcript": transcript,
+            "detected_language": detected,
+            "avg_logprob": avg_logprob,
+            "max_no_speech_prob": max_no_speech_prob,
+            "stt_trust": classify_voice_relay_stt_trust(
+                transcript,
+                avg_logprob,
+                max_no_speech_prob,
+            ),
+        }
 
 
 def _synthesize_tts(text: str) -> tuple[Optional[str], Optional[str]]:
@@ -235,11 +439,13 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
 
             if not transcript:
                 try:
-                    transcript, detected_language = await asyncio.to_thread(
+                    whisper_payload = await asyncio.to_thread(
                         _run_faster_whisper,
                         audio_bytes,
                         request.language,
                     )
+                    transcript = str(whisper_payload.get("transcript") or "").strip()
+                    detected_language = whisper_payload.get("detected_language")
                 except Exception as exc:
                     stt_errors.append(f"faster-whisper: {exc}")
 

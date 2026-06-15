@@ -677,6 +677,64 @@ def test_voip_audit_endpoint_returns_initiate_and_end_events(monkeypatch):
     assert events[1]["call_quality"] == "good"
 
 
+def test_voip_audit_endpoint_allows_callee_participant(monkeypatch):
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_ENABLED", raising=False)
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("SIP_TRUNK_URI", raising=False)
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_FROM_NUMBER", raising=False)
+
+    client = _build_client()
+    callee_token = create_access_token({"sub": "callee@example.com"})
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    with client.websocket_connect(f"/api/v1/voip/presence?token={callee_token}") as presence_socket:
+        presence_socket.receive_json()
+
+        initiate_response = client.post(
+            "/api/v1/voip/calls/initiate",
+            json={
+                "friend_id": friend_id,
+                "caller_id": "caller",
+                "session_id": "audit-callee-session",
+                "mode": "voip_full_auto",
+                "auto_relay": True,
+            },
+        )
+        assert initiate_response.status_code == 200
+        call_id = initiate_response.json()["call_id"]
+        presence_socket.receive_json()
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+    )
+    callee_audit_before_accept = client.get(f"/api/v1/voip/calls/{call_id}/audit")
+    assert callee_audit_before_accept.status_code == 200
+    assert [event["event_type"] for event in callee_audit_before_accept.json()] == [
+        "call_initiated",
+    ]
+
+    accept_response = client.post(f"/api/v1/voip/calls/{call_id}/accept")
+    assert accept_response.status_code == 200
+
+    callee_audit_after_accept = client.get(f"/api/v1/voip/calls/{call_id}/audit")
+    assert callee_audit_after_accept.status_code == 200
+    assert [event["event_type"] for event in callee_audit_after_accept.json()] == [
+        "call_initiated",
+        "call_accepted",
+    ]
+
+
 def test_voip_records_and_lists_recent_missed_calls_for_callee():
     client = _build_client()
     token = create_access_token({"sub": "callee@example.com"})

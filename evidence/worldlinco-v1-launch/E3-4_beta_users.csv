@@ -1,0 +1,4 @@
+user_id,display_name,locale,device,wifi,connected,relay_1turn,feedback,date,notes
+# E-3-4: 10 real users — 1+ successful WiFi call each (build 66+)
+# Example row:
+# 1,홍길동,ko-KR,Galaxy S10,yes,yes,yes,"TTS 잘 들림",2026-06-15,friend nado-000001

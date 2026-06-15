@@ -448,7 +448,7 @@ export default function MarketplacePage() {
                                             </div>
                                             <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
                                                 <div className="flex flex-wrap gap-2">
-                                                    <Link href={`/marketplace/shinsegye/${project.demo_url}`} className="workspace-secondary-button">상세 보기</Link>
+                                                    <Link href={project.demo_url || '#'} className="workspace-secondary-button">상세 보기</Link>
                                                     <Link href={`/marketplace/orchestrator?product=${encodeURIComponent(project.title)}&projectId=${project.id}&projectTitle=${encodeURIComponent(project.title)}&projectSummary=${encodeURIComponent(project.description || '')}`} className="workspace-primary-button">패키지 주문</Link>
                                                 </div>
                                             </div>

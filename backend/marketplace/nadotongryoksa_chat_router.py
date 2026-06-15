@@ -1123,6 +1123,7 @@ def _create_room_member(
         role=role,
         membership_status=ACTIVE_MEMBERSHIP,
         joined_at=_utcnow(),
+        mute_notifications=False,
     )
 
 

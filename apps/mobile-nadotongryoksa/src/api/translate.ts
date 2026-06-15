@@ -15,13 +15,27 @@ export interface TranslateResult {
 
 export interface VoiceTranslateResult extends TranslateResult {
   original_text: string;
+  detected_language?: string;
   audio_url?: string;
+  audio_base64?: string;
+  audio_format?: string;
+  tts_delivery?: 'server_audio' | 'device_speech';
+  stt_trust?: 'high' | 'low' | string;
+  stt_avg_logprob?: number | null;
 }
 
 export type TranslateServiceMode = 'default' | 'lyrics';
 
 export interface TranslateOptions {
   serviceMode?: TranslateServiceMode;
+  regionHint?: string;
+}
+
+export interface ImageTranslateResult extends TranslateResult {
+  original_text: string;
+  file_name: string;
+  content_type: string;
+  line_count: number;
 }
 
 // 오프라인 폴력 사전 (24개 언어 주요 표현 포함)
@@ -124,11 +138,16 @@ async function requestTranslate(
   from: string,
   to: string,
   signal: AbortSignal,
+  regionHint?: string,
 ): Promise<{ translated: string; engine: string }> {
+  const body: Record<string, string> = { text, from_lang: from, to_lang: to };
+  if (regionHint) {
+    body.region_hint = regionHint;
+  }
   const res = await fetch(`${BASE_URL}/api/llm/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, from_lang: from, to_lang: to }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -155,11 +174,11 @@ export async function translateText(
     let translated: string;
     let engine: string;
     try {
-      const first = await requestTranslate(normalizedText, from, to, controller.signal);
+      const first = await requestTranslate(normalizedText, from, to, controller.signal, options.regionHint);
       translated = first.translated;
       engine = first.engine;
     } catch {
-      const second = await requestTranslate(normalizedText, from, to, controller.signal);
+      const second = await requestTranslate(normalizedText, from, to, controller.signal, options.regionHint);
       translated = second.translated;
       engine = second.engine;
     }
@@ -188,25 +207,90 @@ export async function translateText(
   }
 }
 
+export interface VoiceTranslateOptions {
+  regionHint?: string;
+  language?: string;
+}
+
 export async function voiceTranslate(
   audioBase64: string,
   from: string,
   to: string,
+  regionHint?: string,
+  language: string = 'auto',
 ): Promise<VoiceTranslateResult> {
+  const body: Record<string, string> = {
+    audio_base64: audioBase64,
+    from_lang: from,
+    to_lang: to,
+    language,
+  };
+  if (regionHint) {
+    body.region_hint = regionHint;
+  }
   const res = await fetch(`${BASE_URL}/api/llm/voice-translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_base64: audioBase64, from_lang: from, to_lang: to }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    const message = typeof payload.detail === 'string' ? payload.detail : `HTTP ${res.status}`;
+    throw new Error(message);
+  }
   const data = await res.json();
   return {
     original_text: data.original_text ?? '',
     translated: data.translated ?? '',
-    from,
-    to,
+    from: data.from ?? from,
+    to: data.to ?? to,
     engine: data.engine ?? 'nado-voice',
     offline: false,
+    detected_language: data.detected_language ?? data.from,
     audio_url: data.audio_url,
+    audio_base64: data.audio_base64,
+    audio_format: data.audio_format,
+    tts_delivery: data.tts_delivery,
+    stt_trust: data.stt_trust,
+    stt_avg_logprob: typeof data.stt_avg_logprob === 'number' ? data.stt_avg_logprob : null,
+  };
+}
+
+export async function translateImage(
+  asset: { uri: string; name?: string | null; mimeType?: string | null },
+  from: string,
+  to: string,
+  regionHint?: string,
+): Promise<ImageTranslateResult> {
+  const formData = new FormData();
+  const fileName = asset.name || `ocr-${Date.now()}.jpg`;
+  const mimeType = asset.mimeType || 'image/jpeg';
+  formData.append('file', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
+  formData.append('source_language', from);
+  formData.append('target_language', to);
+  if (regionHint) {
+    formData.append('region_hint', regionHint);
+  }
+
+  const res = await fetch(`${BASE_URL}/api/mobile/image-translation`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    const message = typeof payload.detail === 'string' ? payload.detail : `HTTP ${res.status}`;
+    throw new Error(message);
+  }
+  const data = await res.json();
+  return {
+    original_text: String(data.original_text ?? ''),
+    translated: String(data.translated ?? ''),
+    from: String(data.source_language ?? from),
+    to: String(data.target_language ?? to),
+    engine: String(data.engine ?? 'rapidocr+nado'),
+    offline: Boolean(data.offline),
+    file_name: String(data.file_name ?? fileName),
+    content_type: String(data.content_type ?? mimeType),
+    line_count: Number(data.line_count ?? 0),
   };
 }

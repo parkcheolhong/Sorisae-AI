@@ -1,16 +1,29 @@
 # 오케스트레이터 자율형 대화 & 월드링코(WorldLinco) 통번역 — 분석 및 방향 체크리스트
 
-> 작성: Cursor Cloud Agent 코드 분석 결과 (코드 직접 검증 완료). 날짜 기준 `main` 브랜치.
-> 본 문서는 **현재 막혀 있는 두 작업(① 오케스트레이터 멀티 자율형 대화, ② 월드링코 통번역)** 의 진단과 **다음에 진행할 방향**을 체크리스트로 정리한 것입니다.
-> 모든 항목에 근거 `파일:라인`을 표기했으며, 표시는 다음과 같습니다: `[ ]` 미착수 · `[~]` 부분 구현/검증중 · `[x]` 완료.
+> **최종 갱신:** 2026-06-14 · 브랜치 `gpu-llm-server-awq-20260427` @ `a989bc9f0` · **APK build 65** (`1.0.40`)  
+> 본 문서는 **① 오케스트레이터 멀티 자율형 대화**, **② 월드링코 통번역/VoIP** 진단과 다음 방향을 정리합니다.  
+> **마스터 기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` · **Voice Relay:** `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` · **검증:** `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md`  
+> **1차 출시 (개인 APK):** **PART E** · **베타 안내:** [`docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`](docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md) · **V2 미래 버전:** **PART F** + [`docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md`](docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md) *(계획 고정 · v1.0 범위 아님)*  
+> 표시: `[ ]` 미착수 · `[~]` 부분 구현/검증중 · `[x]` 완료.
 
-> ### ✅ 이번 PR에서 수정/검증 완료
-> - **A-1-1** `CoderAgent` 매니페스트 호출 시그니처 수정 + `written_files` 병합 → 실제 API E2E에서 `coder success` 확인(이전 `TypeError`).
-> - **A-1-2** `AutonomousSession.load()`가 `stages`/`agent_results`/`pending_approval_data`/`model_routes`/`extra` 복원하도록 보강 + `to_dict()` 보완.
-> - **A-1-3** 모든 턴 응답이 `_build_response`에서 세션 저장 → greeting/status 턴 후에도 재조회 가능.
-> - **B-3-1** `VoiceResponse.detected_language` 필드 추가 → 모바일 자동 언어전환 응답 복구.
-> - 회귀 테스트 추가: `backend/tests/test_autonomous_orchestrator.py`(coder/세션/persist), `backend/tests/test_voice_gateway_schema.py`. 31개 통과.
-> - 비고: 비동기 테스트 실행에는 `pytest-asyncio`가 필요합니다(`python -m pytest ... -p asyncio --asyncio-mode=auto`). 현재 `requirements.txt`에 없음.
+> ### 📌 문서 우선순위 (2026-06-14 확정)
+> 1. **지금:** PART E — WorldLinco **v1.0 개인 APK 1차 출시** (다문화 한국 · 통역 통화)
+> 2. **출시 후:** PART F / `WORLDLINCO_V2_ROADMAP.md` — Communication OS **업그레이드** (hot path 유지)
+> 3. **병행 금지:** PART A/D-3 오케스트레이터 full_auto·STAGE — **v1.0 출시 전 보류**
+
+> ### ✅ 초기 PR (P0 오케스트레이터 · VoIP P1/P2)에서 수정/검증 완료
+> - **A-1-1~3** CoderAgent 매니페스트, 세션 복원/저장.
+> - **B-3-1** `VoiceResponse.detected_language` 필드.
+> - 회귀: `test_autonomous_orchestrator.py`, `test_voice_gateway_schema.py`.
+> - 비고: async 테스트는 `pytest-asyncio` 필요(`-p asyncio --asyncio-mode=auto`).
+
+> ### ✅ 2026-06-14 build 65까지 추가 완료 (코드·배포·문서)
+> - **운영 VoIP:** `backend/marketplace/nadotongryoksa_voip_router.py` (`/api/v1/voip/signal`, `/presence`, initiate/accept/end).
+> - **voice-translate:** `POST /api/llm/voice-translate` + 모바일 Voice Relay 파이프라인.
+> - **Silero VAD** 네이티브 + phrase boundary(defer 3종) + **14s safety cap**.
+> - **build 65:** `repetition_hallucination` 가드(Tab 무한 반복 버그 대응).
+> - **APK:** marketplace `nadotongryoksa-v1.apk` · Tab/S10 **versionCode 65** 설치·백엔드 재배포·Git push 완료.
+> - **증적:** defer Tab PASS (`cap_defer_test_20260614-225011`), cap ~13.8s logcat, 단위 테스트 15+ (mobile orchestrator).
 
 ---
 
@@ -85,12 +98,13 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 ## PART B. 월드링코(WorldLinco) 통번역 — "막힌 구간" 진단
 
 ### B-0. 명칭 매핑 (혼선 정리)
+
 | 레이어 | 이름 | 위치 |
 |--------|------|------|
 | 모바일 앱 표시명(브랜드) | **WorldLinco** | `apps/mobile-nadotongryoksa/app.json` (`"name": "WorldLinco"`) |
 | 내부 슬러그/프로젝트 | **나도통역사 / nadotongryoksa** | `apps/mobile-nadotongryoksa/`, API 접두 |
-| Android 패키지(현재) | `com.shinsegye.nadotongryoksa` | `app.json` |
-| Android 패키지(구 실기기) | `com.parkcheolhong.worldlinco` | `monitoring/reports/voip-*` 로그 |
+| Android 패키지(현재) | `com.parkcheolhong.worldlinco` | `app.json` (2026-06-13 통일) |
+| Android 패키지(구 실기기) | `com.parkcheolhong.worldlinco` | `monitoring/reports/voip-*` 로그 — 현재 워크스페이스와 일치 |
 | 모바일 번역 엔진 | **NadoTranslator** | `backend/services/nadotongryoksa/translator.py`, `POST /api/llm/translate` |
 | 마켓플레이스 통역 엔진 | **SorisaeInterpreter** | `backend/services/shinsegye/interpreter/sorisae_interpreter.py` |
 
@@ -100,37 +114,64 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] LBS — `NADOTONGRYOKSA_LBS_CHECKLIST.md` "완료됨"
 - [x] 사용자 목소리 preview 정책/계약 — `NADOTONGRYOKSA_USER_VOICE_SINGING_CHECKLIST.md`(배포/export는 정책상 기본 보류)
 
-### B-2. 🔴 P0 — 진도 정체의 중심: VoIP 실시간 통역 통화
+### B-2. 🔴 P0 — VoIP 실시간 통역 통화 (2026-06-14 현황)
 
-> 모바일(WebRTC/시그널링 클라이언트/통화 UI)은 상당 부분 있으나, **백엔드와 실기기 빌드가 비어 있어 통화 시그널링 경로가 연결되지 않음.**
->
-> 📐 **백엔드 스캐폴딩 설계안**: `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` (모바일 계약 1:1 매핑, REST 3종 + WebSocket 시그널링 룸 릴레이, Phase P1~P3, 테스트 전략 포함). 아래 B-2-1/B-2-2는 이 설계의 P1로 구현 예정.
+> ~~백엔드·APK 비어 있음~~ → **구현·배포 완료(build 65).** 잔여: **실기기 E2E 안정화**, **FCM 네이티브**, **devices/register 운영 정합**, **repetition guard 재검**.
 
-- [x] **(B-2-1) 백엔드 VoIP API 부재** ✅ **P1 구현 완료** — `backend/voip/`(router/models/registry/signaling/config). REST `POST /calls/initiate`(앱↔앱 자동매칭+PSTN 폴백) · `GET /calls/{id}/audit` · `POST /calls/{id}/end`. `main.py` 등록. 라이브 서버 검증 완료.
-- [x] **(B-2-2) 시그널링 서버 / TURN 부재** ✅ **P1 구현 완료** — `WS /api/v1/voip/ws/{call_id}` 룸 릴레이(offer/answer/candidate/chat/voice_translation/ping-pong/hangup) + `config.py`의 STUN/TURN(env) 주입. TestClient 2-클라이언트 통합 테스트 + 라이브 uvicorn ws 릴레이로 E2E 검증(`backend/tests/test_voip_signaling.py`, 5 passed).
-- [x] **(B-2 P2) Redis 백엔드 + pub/sub 릴레이** ✅ **구현 완료(플래그 `VOIP_REDIS_URL`, 기본 인메모리)** — `backend/voip/redis_backend.py`(RedisCallStore 룸/감사 + RedisRelay pub/sub). 라이브 Redis로 멀티워커 릴레이/스토어 검증(`test_voip_signaling_redis.py`, 2 passed). 서버측 chat 번역은 모바일이 클라이언트에서 수행하므로 P2에서 제외.
-- [x] **(B-2 P3-C) TURN 시간제한 토큰** ✅ **구현 완료** — `config.py`의 coturn `use-auth-secret` HMAC 동적 자격(`VOIP_TURN_STATIC_AUTH_SECRET`/`_TTL_SEC`), 정적 폴백. `get_ice_servers(user_key)` 통화/사용자별 발급. 단위 테스트 `test_voip_turn_tokens.py` 4 passed.
-- [x] **(B-3-3 백엔드) `POST /api/llm/voice-translate`** ✅ **구현 완료** — STT(whisper 폴백)+`NadoTranslator` 번역, 모바일 `VoiceTranslateResult` 계약 일치. 라이브 검증(hello→안녕하세요), `test_voice_translate_endpoint.py` 3 passed. 모바일 `voiceTranslate`/VoIP 음성 릴레이 실동작.
-- [x] **(B-2-3 / P3-A) FCM presence + 콜리 착신** ✅ **구현 완료** — `backend/voip/presence.py`(디바이스 토큰/presence, 인메모리+Redis), `push.py`(FCM 어댑터, `firebase-admin`+자격 구성 시 전송·아니면 안전 no-op). `POST /api/v1/voip/devices/register`, initiate가 콜리 presence 산정 + 착신 푸시 + `push_sent/push_skipped` 감사, WS 접속 시 presence 갱신. 테스트 `test_voip_presence_push.py` 4 passed, 라이브 검증. 비고: `firebase-admin`은 선택 의존성(요건 미포함), 실제 전송엔 `FCM_ENABLED=true`+서비스계정 키 필요. — 실기기 로그 `No Firebase App '[DEFAULT]' has been created` → `VOIP_PRESENCE_ERROR` (`monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md:5-11`).
-  - **방향**: Firebase 초기화/푸시 presence 경로 정비(앱 + 서버 키).
-- [x] **(B-2 accept/모바일 FCM) 착신 수신 경로** ✅ **백엔드+모바일 클라이언트 완료** — 백엔드 `POST /calls/{call_id}/accept`(콜리 합류) + `accept_callee` 스토어. 모바일 `voipPresence.ts`(register/parse/accept) + `useVoipIncomingCalls` 훅 + `App.tsx` 연결(typecheck 통과). 남은 작업: Firebase 네이티브 설치 + `VoipMessagingAdapter` 주입.
-- [x] **(B-2 P3-B) PSTN 다이얼아웃 공급자 어댑터** ✅ **구현 완료(어댑터)** — `pstn.py`(`VOIP_PSTN_PROVIDER`: dialer_fallback/simulated/twilio), `initiate` 연결. 미디어 브리지/통역 삽입·통신사 계약은 후속. 테스트 3 passed, 라이브 폴백 검증.
-- [ ] **(B-2-4) 패키지 lineage 불일치** — 설치본 `com.parkcheolhong.worldlinco` vs 워크스페이스 `com.shinsegye.nadotongryoksa` (checklist:13-17). 실기기 검증 신뢰성 저하.
-  - **방향**: 워크스페이스 소스로 빌드한 APK의 패키지 ID 통일 후 재설치 검증.
-- [ ] **(B-2-5) 네이티브 APK 빌드 실패** — `expo-av`/`expo-modules-core` `CXX1210 No compatible library found` (checklist:58-64).
-  - **방향**: Expo/모듈 버전 정합 + NDK/JDK17 구성으로 EAS/로컬 빌드 복구.
-- [ ] **(B-2-6) 실기기 2회 통화 시그널 검증 미달** — `VOIP_START_CALL_PRESS`, `[VoIP] Offer sent`, `Connection state: connected` 로그 absent. 판정 `FAIL (blocked before call signaling path)` (checklist:31-49, 72).
+#### B-2-0. ⚠️ VoIP 이중 스택 (운영 vs 테스트)
+
+| 스택 | 경로 | `main.py` | 용도 |
+|------|------|-----------|------|
+| **운영** | `backend/marketplace/nadotongryoksa_voip_router.py` | ✅ | 모바일 · `WS /signal`, `/presence` |
+| **테스트** | `backend/voip/` | ❌ | `test_voip_*.py` 전용 |
+
+- [x] **(B-2-0) 운영 라우터 식별** — `main.py:1469-1473` marketplace router만 등록. `backend/voip/` 테스트 통과 ≠ 운영 노출.
+
+- [x] **(B-2-1) VoIP REST** ✅ — **운영:** initiate / pending / accept / end / mode-audit (`nadotongryoksa_voip_router`). **테스트:** `backend/voip/router.py`(미마운트).
+
+- [x] **(B-2-2) 시그널링 / TURN** ✅ — **운영:** `WS /api/v1/voip/signal`. **테스트:** `WS /api/v1/voip/ws/{call_id}`.
+
+- [x] **(B-2 P2) Redis pub/sub** ✅ — `backend/voip/redis_backend.py` + `test_voip_signaling_redis.py`.
+
+- [x] **(B-2 P3-C) TURN HMAC** ✅ — `backend/voip/config.py` + `test_voip_turn_tokens.py`.
+
+- [x] **(B-3-voice) `POST /api/llm/voice-translate`** ✅ — `backend/llm/router.py`. 테스트: `test_voice_translate_stt.py`, `test_voip_voice_translation_meta.py`. *(구 B-3-3 번호와 OCR 항목 혼동 주의 — OCR은 아래 B-3-3)*
+
+- [~] **(B-2-3 / P3-A) FCM + presence**
+  - ✅ marketplace: initiate push, `WS /presence`, FCM v1/legacy.
+  - ✅ 모바일: `voipPresence.ts`, accept 연동.
+  - ❌ **`POST /devices/register` 운영 gap** — 모바일 호출 O, marketplace router **엔드포인트 없음** (`backend/voip`에만 존재).
+  - ❌ Firebase `No Firebase App '[DEFAULT]'` — `VoipMessagingAdapter` 미주입.
+
+- [x] **(B-2 accept) 착신 REST** ✅ — `POST /calls/{call_id}/accept`. B26 `VOIP_INCOMING_ACCEPT_API_OK`.
+
+- [x] **(B-2 P3-B) PSTN 어댑터** ✅ — `backend/voip/pstn.py`. 미디어 브리지 후속.
+
+- [x] **(B-2-4) 패키지 lineage** ✅ — `com.parkcheolhong.worldlinco`, **build 65** Tab/S10.
+
+- [x] **(B-2-5) APK 빌드·배포** ✅ — `publish_worldlinco_apk.ps1`, marketplace APK, versionCode **65**.
+
+- [~] **(B-2-6) 실기기 WebRTC·Relay** — B26 시그널 PASS; connected×2·자동 E2E flaky; Voice Relay SENT는 **수동 발화** 필요.
+
+- [x] **(B-2-7) nginx WS 프록시** ✅ — presence/signal Upgrade.
+
+- [x] **(B-2-8) Call mode 감사** ✅ — `call_mode_schema`, `call_mode_audit_service`.
+
+- [ ] **(B-2-9) devices/register 운영 정합** — marketplace router에 이식 또는 모바일 presence-only 정렬.
+
+> 📐 `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` · 상세 `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` §4.
 
 ### B-3. 🟠 P1 — 음성(STT)·자동 언어감지 API 계약 버그
 
 - [x] **(B-3-1) `detected_language` 응답 스키마 누락** ✅ 수정 완료 — `VoiceResponse`에 `detected_language: Optional[str] = None` 필드 추가 + `# pyright: ignore` 제거. 회귀 테스트 `test_voice_gateway_schema.py`.
-- [ ] **(B-3-2) STT 언어 힌트 미전송** — `App.tsx:2109` 요청 바디에 `language` 힌트 없음 → CJK 오인식 위험.
-  - **방향**: 모바일에서 `language: fromLang`(또는 자동) 힌트 전달 → `_run_faster_whisper(language=...)` 활용(`voice_gateway.py:126`).
-- [~] **(B-3-3) 죽은 엔드포인트 / 모바일 클라이언트 버그** — 모바일 측 버그는 수정 완료, 백엔드 `voice-translate` 엔드포인트는 아직 미구현(후속).
-  - ✅ **모바일 수정 완료(typecheck 통과)**: `voipCallClient.ts` WebRTC import 오타(`react-native-wert`→`react-native-webrtc`, `WBTC`→`webrtc`, `ONameStream`→`onaddstream`), `voiceTranslate` 4번째 인자(`regionHint`) + `audio_base64/format` 타입, `TranslateOptions.regionHint`, `VoIPCallScreen` `playwingbackTone`→`playRingbackTone`, `App.tsx`에서 `VoIPCallScreen`에 `localSourceLang/localTargetLang` 전달.
-  - ⏳ **남은 작업**: 백엔드 `POST /api/llm/voice-translate`(STT→번역) 신규 엔드포인트 — 음성 STT 경로라 별도 진행.
+- [x] **(B-3-2) STT 언어 힌트 미전송** ✅ **코드 수정 완료** — `App.tsx` STT 요청에 `language: autoVoiceModeEnabled ? 'auto' : fromLang` 전달. 실기기 음성 품질 검증은 `VOICE_DETECTION_TEST_PROTOCOL.md` 대기.
+- [x] **(B-3-3) 이미지 번역(OCR) 엔드포인트** ✅ **2026-06-13 완료** — `backend/mobile/image_translation/` (`POST /api/mobile/image-translation`), 모바일 `translateImage()`·`regionHint` 연동. RapidOCR E2E(영문→한글) 200. 계약 테스트 35 passed.
+  - ⏳ **남은 작업**: `Dockerfile.backend` 재빌드 시 `rapidocr-onnxruntime==1.2.3` 영구 반영(현재 컨테이너 `pip install` 적용). 실기기 카메라/OCR UI 검증.
+- [x] **(B-3-4) RapidOCR 백엔드 의존성** ✅ **2026-06-13 완료** — `requirements.txt`에 `rapidocr-onnxruntime==1.2.3`(Python 3.13 호환; ≥1.3.x는 `<3.13` 제약). 컨테이너 설치·OCR E2E 확인.
 
 ### B-4. 🟡 P2 — 실기기/안정성 검증 미완 (기존 체크리스트에 이미 추적 중)
+
+- [x] **(B-4-0) build35 채팅·친구 404 재검증** ✅ **2026-06-13** — build **65**에서도 채팅 레일 정상 유지(기능 회귀 없음, 별도 증적 `mobile-restore-functional-verify-20260613/`).
 
 - [ ] **(B-4-1)** BT 이어폰 MIC + 안정성(5회 중 2회 오류) — `mobile-nadotongryoksa-bt-hybrid-verification.md`(항목 4, 10, Round 2 미기록).
 - [ ] **(B-4-2)** 음성 국가명 자동 전환(미국/일본/중국) — `VOICE_DETECTION_TEST_PROTOCOL.md:173-178` 전부 미체크.
@@ -143,20 +184,257 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [ ] Song Job 저장소가 DB 실패 시 in-memory 폴백(`service.py:222,264`) → 멀티워커/재시작 시 job 유실 가능.
 
 ### B-6. 외부 의존성 / GPU
-- googletrans(네트워크), faster-whisper(기본 `cpu`+`tiny`+`int8`, GPU 선택), whisper.cpp(CPU), pyttsx3/SpeechRecognition(서버 TTS/STT), react-native-webrtc(네이티브 빌드 필수 → CXX1210 블로커), Firebase/FCM(presence).
-- GPU 없이도 텍스트/노래 번역·STT(tiny)는 동작. 실서버 RTX 5090은 LLM/STT 가속용(AGENTS.md 참조).
+- googletrans, faster-whisper, Silero VAD (Android native), react-native-webrtc, Firebase/FCM, expo-audio/Speech TTS.
+- **CXX1210 블로커** — build 65 `assembleRelease` 성공으로 **해소**(로컬 Gradle). EAS는 별도.
+- GPU 없이도 텍스트/노래 번역·STT(tiny) 동작. 실서버 RTX 5090(AGENTS.md).
+
+### B-7. VoIP Voice Relay Auto Orchestrator (build 65)
+
+> **구조도·파라미터:** [`docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md`](docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md) (구 0.8s/12s/overlap mermaid **폐기** — 문서 내 build 65 다이어그램 사용)
+
+| ID | 항목 | 파일 | 상태 |
+|----|------|------|------|
+| V-1 | 아키텍처 문서 (build 65 갱신) | `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` | [x] |
+| V-2 | Sender VAD·필터 | `voiceRelayOrchestrator.ts` | [x] |
+| V-3 | 재생 큐 (순차, overlap 없음) | `voiceRelayPlaybackQueue.ts` | [x] |
+| V-4 | WS 메타 | `voipCallClient.ts` | [x] |
+| V-5 | 통화 UI 파이프라인 | `VoIPCallScreen.tsx` | [x] |
+| V-6 | 백엔드 relay | `nadotongryoksa_voip_router.py` | [x] |
+| V-7 | 단위 테스트 | orchestrator/segment/turn/silero tests + `test_voip_*` | [x] |
+| V-8 | **Silero native VAD** | `VoiceRelaySileroVadModule.kt`, `voiceRelaySileroVad.ts` | [x] POC |
+| V-9 | **Phrase boundary defer** | `voiceRelaySegmentBoundary.ts` — 3종 defer | [x] Tab PASS `225011` |
+| V-10 | **14s safety cap** | `safetyCapMs:14000` | [x] logcat ~13848ms |
+| V-11 | **Turn controller** | `voiceRelayTurnController.ts` | [x] |
+| V-12 | **repetition guard** | `isLikelyRepetitionHallucination` (build 65) | [x] 코드 · [ ] 실기기 재검 |
+| V-13 | 실기기 relay E2E | `scripts/voip_boundary_cap_defer_test.ps1` | [~] defer OK, cap/E2E flaky |
+| V-14 | streaming STT (Phase 2) | — | [ ] |
+| V-15 | full-duplex (Phase 3) | — | [ ] |
+
+**Silero 파라미터 (운영):** silence 1100 · minSegment 3200 · minSpeechSpan 2000 · cap **14000** · cooldown 1200 ms.
+
+**알려진 버그 (build 64, build 65 수정):** Tab TTS 피드백 → Whisper 반복 환각 → `repetition_hallucination` skip.
+
+**언어쌍 자동 보정:** `resolveVoiceRelayLanguagePair` + backend `detected_lang` 스왑 — 코드 [x], VoIP 통화 UI 실기기 검증 [ ].
 
 ---
 
-## PART C. 권장 진행 순서 (다음 액션)
+## PART C. 권장 진행 순서 (2026-06-14 · v1.0 출시 우선)
 
-1. **(A-1-1)** `CoderAgent` 매니페스트 호출 수정 → 자율 오케스트레이터의 실제 코드생성 경로 복구(가장 빠른 가시 성과, GPU 불필요로 검증 가능).
-2. **(A-1-2)(A-1-3)** 세션 복원/저장 보강 → 멀티턴 대화·승인 흐름 안정화.
-3. **(B-3-1)** `VoiceResponse.detected_language` 필드 추가 → 모바일 자동 언어감지 즉시 복구(작고 영향 큼).
-4. **(B-2-1)(B-2-2)** VoIP 백엔드/시그널링 스캐폴딩 → 실시간 통역 통화 트랙의 근본 블로커 해소(가장 큰 작업, 별도 설계 필요).
-5. 위 수정 후 **(A-4)** 테스트 보강 및 **(B-2-5/6)** 실기기 빌드·2회 검증 재개.
+> **v1.0 출시 전에는 아래 1~4만.** 5~6은 **v1.0 이후**(PART F). 오케스트레이터(A-2)는 **출시 후**.
 
-### 방향 문서(체크리스트) 운용 제안
-- 오케스트레이터: 본 문서 PART A 사용.
-- 통번역 VoIP: 루트에 전용 마스터가 없으므로 `monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md`를 루트로 승격(`NADOTONGRYOKSA_VOIP_INTERPRETATION_CHECKLIST.md`)하여 PART B-2를 이관 관리 권장. 음성 품질은 `mobile-nadotongryoksa-bt-hybrid-verification.md`를 하위 트랙으로.
-- `TRANSLATION_VERIFICATION_COMPLETE.md`는 VoIP·음성 계약 버그·실기기 미검증을 **반영하지 않은** 과거 문서이므로 "완료" 근거로 사용하지 말 것.
+### C-1. v1.0 1차 출시 (PART E — 4~6주)
+
+1. **(E-1 / V-12 / D-1-4)** build 65 repetition guard Tab 실기기 재검.
+2. **(E-2 / V-13 / D-1-2)** Voice Relay 수동 통역 — WiFi 2대 **10통 중 8통** relay 1턴 이상.
+3. **(E-3 / B-2-6 / D-1-1)** 2대 WebRTC connected (v1.0: **WiFi ↔ WiFi** 우선; LTE 매트릭스는 v1.1).
+4. **(E-4)** marketplace **「통역 통화 베타」** 공개 + 이용 한계 1페이지 + 실사용 10명.
+
+### C-2. v1.0 이후 (PART F — 미래 버전)
+
+5. **(F-1~3 / v1.1~v1.2)** 구독·Session Core 얇은 버전 — `WORLDLINCO_V2_ROADMAP.md` #2~3.
+6. **(F-4~7 / v2.0)** Redis · Signal · Coturn · Monitoring — 로드맵 #4~7.
+7. **(D-2 / v1.1+)** BT·음성 자동전환·WiFi 폴백 — 1차 출시 범위 **외**.
+8. **(D-3 / A-2~A-4)** 오케스트레이터 full_auto·STAGE — **MetaNova 플랫폼** 트랙, WorldLinco v1.0 **무관**.
+
+### 방향 문서 운용
+- **1차 출시:** 본 문서 **PART E**.
+- **V2 업그레이드 (고정):** **PART F** + `docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md` + `FILE_MAP.md`.
+- **VoIP/Voice Relay:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` + 본 문서 B-2/B-7.
+- **VoIP retest:** `monitoring/reports/voip-retest-20260524-011147/voip-retest-checklist.md`.
+- **`TRANSLATION_VERIFICATION_COMPLETE.md`** — VoIP·Voice Relay **미반영** 과거 문서. "완료" 근거로 사용 금지.
+
+---
+
+## PART D. 사용자 지정 운영 우선 체크리스트
+
+> 아래 항목은 현재 문서에 흩어진 내용을 사용자가 지정한 우선순위대로 다시 모은 실행용 체크리스트다. 각 항목은 실제 실기기/운영 검증 근거가 채워질 때만 `[x]`로 전환한다.  
+> **v1.0 출시:** D-1 중 **WiFi·수동 통역·repetition** → PART E. **D-2·D-3·D-4** → v1.0 **이후** (PART F).
+
+### D-1. 1순위: VoIP 실기기/음성 검증
+
+- [ ] **D-1-1) 실기기 2대 WebRTC 완전 연결 검증**
+  - Android 2대 기준으로 `WiFi ↔ LTE`, `WiFi ↔ WiFi`, `LTE ↔ LTE` 조합을 각각 2회 이상 검증한다.
+  - 확인 로그: `Offer`, `Answer`, `ICE Candidate`, `Connected`, `Audio Stream`, `Disconnect`.
+  - 관련 근거: `B-2-6`, `B-2-7`, `V-8`.
+- [ ] **D-1-2) Voice Relay 실제 음성 검증**
+  - `한국어 → STT → 번역 → TTS → 상대방 재생` 전체 경로. 짧은/긴/빠른 대화 포함.
+  - 관련: `B-7 V-13`, `B-3-voice`, `scripts/voip_boundary_cap_defer_test.ps1`.
+- [ ] **D-1-3) Firebase + devices/register**
+  - `No Firebase App` 제거, FCM 토큰·푸시 수신.
+  - **`POST /api/v1/voip/devices/register` marketplace router 정합** (B-2-9).
+- [ ] **D-1-4) repetition guard (build 65)**
+  - Tab TTS 피드백 루프 재현 시 logcat `repetition_hallucination` skip 확인 (B-7 V-12).
+
+### D-2. 2순위: 단말/네트워크 안정성 검증
+
+- [ ] **D-2-1) Bluetooth 이어폰 및 오디오 라우팅 검증**
+  - 블루투스 마이크, 유선 이어폰, 스피커폰 각각에서 STT, TTS, 통화가 정상 동작하는지 확인한다.
+- [ ] **D-2-2) 음성 자동 언어감지 실전 검증**
+  - 한국어, 영어, 일본어, 중국어 자동 전환을 검증한다.
+  - `detected_language`가 실제 응답/전환에 반영되는지 확인한다.
+- [ ] **D-2-3) WiFi 폴백 및 재연결 검증**
+  - `4G → WiFi`, `WiFi → LTE` 전환 중 통화 유지와 재연결을 확인한다.
+  - 전환 시 끊김, 지연, 재시도 동작을 함께 기록한다.
+
+### D-3. 3순위: 오케스트레이터 자동화 확장
+
+- [ ] **D-3-1) Full Auto 루프 구현**
+  - `reasoner → planner → coder → validator → reviewer → 수정 반복 → 완성` 자동 루프를 구현한다.
+- [ ] **D-3-2) STAGE 11단계 자동 순회**
+  - `Stage01`부터 `Stage10`까지 정의만이 아니라 실제 자동 진행을 구현한다.
+- [ ] **D-3-3) Rejected 처리**
+  - 승인만이 아니라 거절 시 `재계획 → 재생성` 경로를 구현한다.
+
+### D-4. 4순위: 운영 안정화 및 자동화
+
+- [ ] **D-4-1) 운영 장애 복구 경로 정리**
+  - `Redis 장애 복구`, `TURN 장애 복구`, `FCM 장애 복구`를 우선 반영한다.
+- [ ] **D-4-2) Rate Limit 적용**
+  - `/llm/autonomous/chat`에 사용량 제한, 토큰 제한, 쿼터 제한을 적용한다.
+- [ ] **D-4-3) 테스트 자동화 확대**
+  - `VoIP`, `Autonomous`, `Voice Translate` 중심으로 테스트 수를 `50~70개` 범위까지 확대한다.
+
+---
+
+## PART E. 1차 출시 — WorldLinco v1.0 (개인 APK)
+
+> **제품 정의:** 한국에 사는 내국인·외국인이 **친구와 통화하며 실시간 통역**하는 **개인용 Android APK**.  
+> **한 줄:** 「친구랑 전화하면, 말하는 대로 상대방 언어로 들려준다」  
+> **V2 Communication OS:** **본 PART 범위 아님** — 출시 후 PART F 참조.
+
+### E-0. 시장·포지셔닝 (고정)
+
+- 인구 감소·다문화 확대 → 일상 **개인** 언어 장벽 해소 (가족·친구·연인·이웃).
+- 배포: marketplace APK (`nadotongryoksa-v1.apk`) · Play Store는 **v1.1+**.
+- 수입: v1.0 **무료 베타** → v1.1 **월 N분 무료 + 구독** (`check_mobile_license`).
+
+### E-1. v1.0 범위 (포함)
+
+| 항목 | 근거 | 상태 |
+|------|------|------|
+| 가입·로그인 | `App.tsx` auth | [x] |
+| 친구·연락 | `FriendFolderScreen`, friends API | [x] |
+| 통역 통화 (발신) | VoIP + Voice Relay | [x] build66 E-3-1 5/5 · build69 E-3-8 ko↔ja |
+| voice-translate (≈2.8s) | `POST /api/llm/voice-translate` | [x] |
+| APK 배포 | build **66** (`1.0.41`), marketplace | [x] |
+| repetition guard | build 65+ 코드 · E-3-2 echo | [x] `e3-2_echo_20260615-232900` |
+| 50개국어 API | mobile LANGS ↔ backend | [x] E-3-6 `50lang_audit_20260615-235805` |
+| WiFi 2대 통화 | D-1-1 (WiFi↔WiFi만) | [x] E-3-1 |
+
+### E-2. v1.0 범위 (제외 → v1.1 / PART F)
+
+- FCM 착신 · `devices/register` (v1.1 — 발신-only로 v1.0 가능)
+- LTE/BT/WiFi 폴백 매트릭스 (D-2)
+- Communication OS · Session Core · Redis Cluster · Agent Hub
+- 오케스트레이터 full_auto · STAGE (PART A/D-3)
+- iOS · Desktop · streaming STT · full-duplex (V-14/V-15)
+
+### E-3. v1.0 출시 DoD (Definition of Done)
+
+- [x] **E-3-1)** Android 2대, **WiFi**, 수동 **10통 중 8통** — connected + relay 1턴 이상.
+  - **2026-06-15 run A** (`e3_verify_20260615-174834`): **0/10** — `CalleeVoiceId=nado-000226` Tab 자기 발신 버그.
+  - **2026-06-15 run B** (`e3_verify_20260615-182202`): **5/10**.
+  - **2026-06-15 run C** (`e3_verify_20260615-191431`): **+3/5** · **누적 8/10 PASS** (hangup·accept 패치 후).
+  - **2026-06-15 run D (build 66)** (`e3_verify_20260615-212949`): **5/5 PASS** — self-call·deeplink accept·triple initiate 수정 후.
+  - 실패 원인(해소): UI `받기` 탭 flaky, stale call, Tab 자기 발신 → **build 66 + 스크립트 패치**.
+  - 증적: `evidence/worldlinco-v1-launch/` · `BUILD66_LAUNCH_STATUS.md` · `E3-1_call_matrix.csv`
+- [x] **E-3-2)** Tab repetition guard logcat `repetition_hallucination` skip 확인 (V-12).
+  - 단위 테스트 **15/15 PASS** (`voiceRelayOrchestrator.test.ts`).
+  - **2026-06-15** `e3-2_echo_20260615-232900`: S10 ko → Tab en **PLAYBACK** · `repetition_hallucination` **0**.
+  - runaway 없음 (60s window). Tab 스피커·근거리 에코는 물리 환경 이슈로 분리 기록.
+- [x] **E-3-6)** **50개국어 백엔드 정합** — mobile LANGS 50 ↔ `SUPPORTED_LANGUAGES` 50 ↔ API `/translate/languages` 50.
+  - **2026-06-15** `50lang_audit_20260615-235805` · `backend/tests/test_supported_languages_50.py` 3/3 PASS.
+  - 증적: `evidence/worldlinco-v1-launch/50LANG_ALIGNMENT_REPORT.md`
+- [x] **E-3-7)** **ko↔ja API 스모크** — `voice-translate` ko→ja / ja→ko transcript PASS (동일 audit run).
+- [x] **E-3-8)** **ko↔ja VoIP 실기기 E2E** — **2026-06-16** build **69** · deeplink `preferred_language=ja`(S10)/`ko`(Tab) · `call-71a7256e4490` **PASS**: S10 `detected_lang=ja` · transcript `こんにちは、よろしくお願いします。` · Tab `PLAYBACK` · repetition **0**. 증적: `ko_ja_smoke_20260616-005906` · `E3-8_KO_JA_VOIP_REPORT.md`. *(참고: Tab TTS는 영문 relay 경로 `Hello, nice to meet you.` — ja→ko TTS는 후속 tuning)*
+- [x] **E-3-3)** marketplace 페이지 **「WorldLinco 통역 통화 베타」** + WiFi 권장·알려진 한계 1페이지.
+  - UI: `frontend/.../marketplace/nadotongryoksa/page.tsx` · 전문: `docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`.
+- [ ] **E-3-4)** 실사용 **10명** (외국인·한국인 혼합 목표) — 각 1통 이상 성공 기록. → **`evidence/worldlinco-v1-launch/E3-4_beta_users.csv`** ← **다음 DoD**
+- [x] **E-3-5)** APK **v1.0.44** (build **69**) + `publish_worldlinco_apk.ps1` 재현 · git tag **`v1.0.44`** (2026-06-16, 로컬)
+
+#### E-3 검증 명령 (실기기)
+
+```powershell
+# 사전: Tab(R83W70QY11H) · S10(172.30.1.19:5555) 앱에서 로그인 완료
+
+# E-3-1: 10라운드 (8/10 목표) — CalleeVoiceId Tab→S10 = nado-000001
+pwsh -File scripts\worldlinco_e3_launch_verify.ps1 -Rounds 10 -PassThreshold 8
+
+# E-3-2: Tab 스피커 echo — repetition skip 관찰
+adb -s R83W70QY11H logcat -c
+# → WiFi 통화 connected · S10 TTS 재생 · Tab 스피커 ON
+adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* | Select-String 'repetition_hallucination|PLAYBACK_SKIPPED'
+
+# E-3-6: 50개국어 백엔드 정합 + ko↔ja API 스모크
+pwsh -File scripts\worldlinco_50lang_alignment_audit.ps1
+
+# E-3-8: ko↔ja VoIP (앱 force-stop 후 수동 통화 권장)
+pwsh -File scripts\worldlinco_ko_ja_voip_smoke.ps1 -MonitorSec 55
+```
+
+### E-4. v1.0 출시 전 4~6주 실행표
+
+| 주차 | 작업 | 금지 |
+|------|------|------|
+| 1~2 | ~~E-3-1, E-3-2 (통화 8/10, repetition)~~ E-3-1 ✅ · **E-3-2 echo 수동** · E-3-4 베타 10명 | V2 폴더·Redis cluster |
+| 3 | ~~E-3-3 (베타 페이지·안내)~~ ✅ 2026-06-15 | 오케스트레이터 A-2 |
+| 4 | 지인·커뮤니티 실사용 시작 | iOS · 새 플랫폼명 |
+| 5~6 | 피드백 1회 반영 → E-3-5 태그 | Communication OS 코드 |
+
+### E-5. v1.0 이후 버전 (요약)
+
+| 버전 | 내용 | 로드맵 |
+|------|------|--------|
+| **v1.1** | FCM 착신, 구독·분당 제한 | F-1 |
+| **v1.2** | 언어쌍·통화 맥락 기억 | F-2 Session Core |
+| **v2.0** | Redis, Signal, Coturn, Monitoring | F-4~7 |
+| **V2 Ultimate** | Memory · Meaning · Agent · Communication OS | F-8~10 |
+
+---
+
+## PART F. V2 미래 버전 — Communication OS (계획 고정)
+
+> **SSOT:** [`docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md`](docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md) · [`docs/worldlinco-v2/FILE_MAP.md`](docs/worldlinco-v2/FILE_MAP.md)  
+> **원칙:** VoIP·Voice Relay·`voice-translate` **hot path 유지**. V2는 **상위 계층 Strangler Fig**.  
+> **시작 조건:** PART E **v1.0 출시 DoD (E-3) 전부 `[x]`** 이후.
+
+### F-0. 구현 우선순위 (고정 · 변경 시 문서 PR)
+
+| # | 목표 | 체크 | v1.0 |
+|---|------|------|------|
+| 1 | VoIP 통역 안정화 | PART E | **지금** |
+| 2 | Session Core | [ ] | v1.2 |
+| 3 | Call Orchestrator | [ ] | v1.2 |
+| 4 | Redis Cluster | [ ] | v2.0 |
+| 5 | Signal Cluster | [ ] | v2.0 |
+| 6 | Coturn Cluster | [ ] | v2.0 |
+| 7 | Monitoring | [ ] | v2.0 |
+| 8 | Memory Engine | [ ] | V2+ |
+| 9 | Meaning Engine | [ ] | V2+ |
+| 10 | Agent Engine | [ ] | V2+ |
+
+### F-1. 아키텍처 층 (요약 — 상세는 SSOT)
+
+- **Client → API Gateway → Communication Orchestrator → Signal/Agent/Event Hubs**
+- **Session Core → Intelligence Engine → Language Engine → Voice Pipeline → Delivery Engine**
+- **Fabrics:** AI Control/Compute · Event · Memory · Storage · Realtime · Observability · Security
+
+전체 ASCII 다이어그램·Fabric 정의·마이그레이션 원칙 → **`WORLDLINCO_V2_ROADMAP.md`**.
+
+### F-2. 목표 코드 경계 (rename 전)
+
+- `backend/communication/` — orchestrator · session · hubs · delivery adapters
+- `backend/voip/` — Signal Hub 운영 승격 (`nadotongryoksa_voip_router` adapter → swap)
+- `apps/.../voip-voice-relay/` — **변경 최소** (Voice Pipeline client)
+- `infra/realtime/`, `infra/observability/`, `infra/event/` — v2.0+
+
+상세 파일 매핑 → **`FILE_MAP.md`**.
+
+### F-3. PART F 착수 금지 (v1.0 출시 전)
+
+- [ ] ~~Session Core DB 마이그레이션~~
+- [ ] ~~Kafka/NATS 도입~~
+- [ ] ~~`backend/communication/` 대규모 scaffold~~
+- [ ] ~~Communication OS 마케팅·네이밍 전면 교체~~
+
+> v1.0 = **좁게 출시**. V2 = **출시 후 로드맵 #2부터 순차**. 2.8초 통역 엔진은 전 구간 **고정 자산**.
