@@ -16,8 +16,8 @@ on:
 
 jobs:
   copilot-setup-steps:
-    # Copilot cloud agent runs this setup job before task execution.
-    # Exporting COPILOT_AGENT_MODEL here makes it available to later steps in this job.
+    # GitHub Copilot cloud agent uses this job as repository setup before running Copilot tasks.
+    # push/pull_request triggers exist only to validate changes to this workflow file.
     runs-on: ubuntu-latest
     permissions:
       contents: read
