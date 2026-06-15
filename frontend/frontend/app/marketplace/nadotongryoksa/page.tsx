@@ -975,10 +975,15 @@ const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEX
                     onClick={(e) => { if (e.target === e.currentTarget) setShowHelp(false); }}
                     onKeyDown={(e) => { if (e.key === 'Escape') setShowHelp(false); }}
                 >
-                    <div style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 18, padding: '24px 20px', width: '100%', maxWidth: 540, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 16px 48px #000c' }}>
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="worldlinco-help-title"
+                        style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 18, padding: '24px 20px', width: '100%', maxWidth: 540, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 16px 48px #000c' }}
+                    >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#58c9ff' }}>{t('helpTitle')}</h2>
-                            <button onClick={() => setShowHelp(false)} style={{ background: 'none', border: '1px solid #21262d', color: '#8b949e', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{t('helpClose')}</button>
+                            <h2 id="worldlinco-help-title" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#58c9ff' }}>{t('helpTitle')}</h2>
+                            <button autoFocus onClick={() => setShowHelp(false)} style={{ background: 'none', border: '1px solid #21262d', color: '#8b949e', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{t('helpClose')}</button>
                         </div>
 
                         <div style={{ background: '#0d1e2e', border: '1px solid #1e3a52', borderRadius: 10, padding: '10px 14px', marginBottom: 18, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
