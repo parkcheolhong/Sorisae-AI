@@ -2,7 +2,7 @@
 # It runs before each Copilot agent session and exports COPILOT_AGENT_MODEL
 # into $GITHUB_ENV so that the Copilot agent action (actions/ai-inference or
 # the built-in coding-agent runner) picks up the model override at startup.
-# Without this, the agent would use the organisation/repo default model.
+# Without this, the agent would use the organization/repo default model.
 name: "Copilot Setup Steps"
 
 on:
