@@ -1027,7 +1027,7 @@ const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEX
                         </div>
 
                         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: '#4a5568' }}>
-                            {t('uiLanguage')}: {UI_LANGS.find((l) => l.code === uiLang)?.label} · {UI_LANGS.length} {t('footerLanguages')}
+                            {t('uiLanguage')}: {UI_LANGS.find((l) => l.code === uiLang)?.label} · {t('footerLanguages')}
                         </div>
                     </div>
                 </div>
