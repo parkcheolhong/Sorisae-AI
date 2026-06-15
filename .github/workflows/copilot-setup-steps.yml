@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      # GitHub Copilot cloud agent executes this setup hook before the main copilot workflow job,
-      # and that job consumes COPILOT_AGENT_MODEL from the environment.
+      # When invoked as the GitHub Copilot cloud-agent setup hook, this runs before the main copilot workflow job
+      # and sets COPILOT_AGENT_MODEL via $GITHUB_ENV for downstream consumption.
       - name: Force a supported Copilot model
         run: echo "COPILOT_AGENT_MODEL=sweagent-capi:claude-haiku-4.5" >> "$GITHUB_ENV"
