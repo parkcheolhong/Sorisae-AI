@@ -2,6 +2,11 @@ name: "Copilot Setup Steps"
 
 on:
   workflow_dispatch:
+    inputs:
+      copilot_agent_model:
+        description: "Optional override for COPILOT_AGENT_MODEL"
+        required: false
+        type: string
   push:
     paths:
       - .github/workflows/copilot-setup-steps.yml
@@ -11,9 +16,29 @@ on:
 
 jobs:
   copilot-setup-steps:
+    # GitHub Copilot cloud agent uses this job as repository setup before running Copilot tasks.
+    # push/pull_request triggers exist only to validate changes to this workflow file.
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Force a supported Copilot model
-        run: echo "COPILOT_AGENT_MODEL=sweagent-capi:claude-haiku-4.5" >> "$GITHUB_ENV"
+      - name: Resolve and export Copilot model
+        run: |
+          # Precedence: manual dispatch input > repository variable > safe default.
+          DISPATCH_INPUT_MODEL="${{ github.event.inputs.copilot_agent_model }}"
+          REPO_VAR_MODEL="${{ vars.COPILOT_AGENT_MODEL }}"
+          if [ "${DISPATCH_INPUT_MODEL}" != "" ]; then
+            COPILOT_MODEL="${DISPATCH_INPUT_MODEL}"
+          elif [ "${REPO_VAR_MODEL}" != "" ]; then
+            COPILOT_MODEL="${REPO_VAR_MODEL}"
+          else
+            COPILOT_MODEL="sweagent-capi:claude-haiku-4.5"
+          fi
+          case "${COPILOT_MODEL}" in
+            *$'\n'*|*$'\r'*) echo "ERROR: COPILOT_AGENT_MODEL must be a single line" >&2; exit 1 ;;
+          esac
+          printf 'COPILOT_AGENT_MODEL=%s\n' "${COPILOT_MODEL}" >> "$GITHUB_ENV"
+      - name: Verify Copilot model export
+        run: |
+          [ "${COPILOT_AGENT_MODEL}" != "" ] || { echo "ERROR: COPILOT_AGENT_MODEL was not exported by previous step" >&2; exit 1; }
+          printf 'Configured COPILOT_AGENT_MODEL="%s"\n' "${COPILOT_AGENT_MODEL}" >> "$GITHUB_STEP_SUMMARY"
