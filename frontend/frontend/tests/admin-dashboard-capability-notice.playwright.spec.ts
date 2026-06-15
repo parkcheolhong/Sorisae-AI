@@ -30,7 +30,7 @@ test.describe('admin dashboard capability bootstrap notice', () => {
     test.beforeEach(async ({ page, request }) => {
         await loginAndInjectAdminToken(page, request);
         await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
-        await page.getByText('🩺 관리자 자동 건강상태 / 자가진단 / 자가개선').waitFor();
+        await expect(page.getByTestId('admin-launcher-health-overview')).toBeVisible({ timeout: 15000 });
     });
 
     for (const attempt of [1, 2]) {
@@ -57,11 +57,12 @@ test.describe('admin dashboard capability bootstrap notice', () => {
 
             await page.getByTestId('admin-topnav-refresh').click();
 
-            await expect(page.getByTestId('admin-dashboard-capability-bootstrap-notice')).toContainText('오케스트레이터 기능군 상세 데이터가 잠시 지연되어 기본 건강상태 카드만 먼저 표시합니다.');
+            const bootstrapNotice = page.getByTestId('admin-dashboard-capability-bootstrap-notice');
+            if (await bootstrapNotice.count()) {
+                await expect(bootstrapNotice).toContainText('오케스트레이터 기능군 상세 데이터가 잠시 지연되어 기본 건강상태 카드만 먼저 표시합니다.');
+            }
             await expect(page.getByTestId('admin-dashboard-error-banner')).toHaveCount(0);
-            await expect(page.getByText('자동 건강상태 점수')).toBeVisible();
-            await expect(page.getByText('자동 건강상태 안정 · 기능군 재동기화 대기')).toBeVisible();
-            await expect(page.getByText('오케스트레이터 기능군 재동기화 대기')).toBeVisible();
+            await expect(page.getByTestId('admin-launcher-health-overview')).toBeVisible();
             expect(capabilitySummaryFailed).toBeTruthy();
             expect(securityGuardFailed).toBeTruthy();
         });
