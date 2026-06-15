@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-06-16T02:41:37.5963788+09:00",
+  "run_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\worldlinco-v1-launch\\ko_ja_smoke_20260616-023813",
+  "call_id": "call-0f44540d27f6",
+  "callee_preferred_language": "ja",
+  "s10_relay_sent": true,
+  "s10_ja_segment": true,
+  "s10_deeplink_ja": false,
+  "s10_target_lang_ko": true,
+  "tab_playback": true,
+  "ja_detected": true,
+  "tab_ko_playback": true,
+  "ko_ja_translate": true,
+  "repetition_skip": 0,
+  "pass": true
+}

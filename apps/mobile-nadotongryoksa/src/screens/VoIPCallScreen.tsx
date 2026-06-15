@@ -54,6 +54,7 @@ import {
     isVoiceRelayListenActive,
     markRemotePlaybackFinished,
     resolveVoiceRelayLanguagePair,
+    normalizeLangCode,
     shouldDeferVoiceRelayFlush,
     shouldPlayRemoteVoiceRelay,
     shouldSendVoiceRelaySegment,
@@ -1027,11 +1028,39 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 return;
             }
             const transcript = collapseRepeatedRelayPhrases(rawTranscript);
-            const translatedText = collapseRepeatedRelayPhrases(rawTranslatedText);
+            let translatedText = collapseRepeatedRelayPhrases(rawTranslatedText);
             const detectedLang = String(result.detected_language || result.from || localSourceLang).trim();
             const relayLangs = resolveVoiceRelayLanguagePair(localSourceLang, localTargetLang, detectedLang);
-            const relaySourceLang = String(result.from || relayLangs.sourceLang).trim();
-            const relayTargetLang = String(result.to || relayLangs.targetLang).trim();
+            const relaySourceLang = String(relayLangs.sourceLang || result.from || localSourceLang).trim();
+            const relayTargetLang = String(relayLangs.targetLang || result.to || localTargetLang).trim();
+            const initialTargetLang = normalizeLangCode(result.to || localTargetLang);
+            if (
+                relayTargetLang !== initialTargetLang
+                && transcript
+                && relaySourceLang !== relayTargetLang
+            ) {
+                try {
+                    const retarget = await translateText(
+                        transcript,
+                        relaySourceLang,
+                        relayTargetLang,
+                        8000,
+                        { regionHint },
+                    );
+                    const retargetedText = collapseRepeatedRelayPhrases(String(retarget.translated || '').trim());
+                    if (retargetedText) {
+                        translatedText = retargetedText;
+                    }
+                } catch (retargetError: any) {
+                    console.warn('[VoIPScreen] Voice relay retarget translate failed', {
+                        callId: callInitResponse.call_id,
+                        relaySourceLang,
+                        relayTargetLang,
+                        initialTargetLang,
+                        error: retargetError?.message || 'unknown',
+                    });
+                }
+            }
             const chunkMeta = voiceRelayChunkMetaRef.current ?? {
                 utteranceId: voiceRelayUtteranceIdRef.current,
                 chunkIndex: voiceRelaySegmentStateRef.current.chunkIndex,

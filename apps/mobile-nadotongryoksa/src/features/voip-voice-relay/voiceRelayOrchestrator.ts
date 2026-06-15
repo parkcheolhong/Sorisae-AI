@@ -2,10 +2,10 @@ import { VOICE_RELAY_FILE_SPEECH_RMS_DB } from './voiceRelayAudioMetrics';
 
 export const VOICE_RELAY_VAD_DEFAULTS = {
     /** Minimum capture window before any flush/send (prevents ultra-short STT clips). */
-    minSegmentMs: 2_400,
+    minSegmentMs: 2_200,
     maxSegmentMs: 12_000,
     /** Pause after last speech before ending an utterance (natural phrase boundary). */
-    silenceFlushMs: 1_900,
+    silenceFlushMs: 1_500,
     shortSpeechThresholdMs: 3_000,
     speechMeterMinDb: -52,
     meterPollMs: 180,

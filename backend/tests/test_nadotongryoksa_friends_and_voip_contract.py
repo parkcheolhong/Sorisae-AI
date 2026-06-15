@@ -291,7 +291,82 @@ def test_voip_initiate_routes_to_online_friend_app_when_voice_target_is_availabl
         assert invite["type"] == "incoming_call"
         assert invite["participant_role"] == "callee"
         assert invite["caller_voice_id"] == "nado-000001"
+        assert invite["display_language"] == "ko"
         assert "/api/v1/voip/signal" in invite["signaling_server"]
+
+
+def test_voip_initiate_prefers_client_language_hints_over_stale_db_profiles():
+    client = _build_client()
+    token = create_access_token({"sub": "callee@example.com"})
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    with client.websocket_connect(f"/api/v1/voip/presence?token={token}") as presence_socket:
+        presence_message = presence_socket.receive_json()
+        assert presence_message["type"] == "presence_ready"
+
+        response = client.post(
+            "/api/v1/voip/calls/initiate",
+            json={
+                "friend_id": friend_id,
+                "caller_id": "caller",
+                "session_id": "friend-session-language-hints",
+                "mode": "voip_full_auto",
+                "caller_preferred_language": "ja",
+                "callee_preferred_language": "ko",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["display_language"] == "ko"
+
+        invite = presence_socket.receive_json()
+        assert invite["display_language"] == "ja"
+
+
+def test_voip_accept_prefers_invite_caller_language_over_stale_db():
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-session-accept-language",
+            "mode": "voip_full_auto",
+            "caller_preferred_language": "ja",
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+        preferred_language="en",
+    )
+
+    accept_response = client.post(
+        f"/api/v1/voip/calls/{call_id}/accept",
+        headers={"Authorization": f"Bearer {create_access_token({'sub': 'callee@example.com'})}"},
+    )
+    assert accept_response.status_code == 200
+    assert accept_response.json()["display_language"] == "ja"
+    assert accept_response.json()["participant_role"] == "callee"
 
 
 def test_voip_initiate_rejects_self_app_call_targets():

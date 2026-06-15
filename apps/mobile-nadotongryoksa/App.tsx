@@ -494,7 +494,7 @@ function parseSectionRailKey(value: string | null | undefined): SectionRailKey |
 
 type AppEntryDeepLinkTarget =
     | { type: 'rail'; section: SectionRailKey }
-    | { type: 'voip'; action: 'open' | 'validation' | 'demo'; calleeVoiceId?: string; forceRetry?: boolean; preferredLanguage?: string };
+    | { type: 'voip'; action: 'open' | 'validation' | 'demo'; calleeVoiceId?: string; forceRetry?: boolean; preferredLanguage?: string; calleePreferredLanguage?: string };
 
 function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | null {
     try {
@@ -517,15 +517,16 @@ function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | null {
         const action = String(parsed.searchParams.get('action') || 'open').trim().toLowerCase();
         const calleeVoiceId = String(parsed.searchParams.get('callee_voice_id') || '').trim() || undefined;
         const preferredLanguage = String(parsed.searchParams.get('preferred_language') || parsed.searchParams.get('source_lang') || '').trim().toLowerCase() || undefined;
+        const calleePreferredLanguage = String(parsed.searchParams.get('callee_preferred_language') || parsed.searchParams.get('target_lang') || '').trim().toLowerCase() || undefined;
         const forceRetry = String(parsed.searchParams.get('force') || '').trim() === '1'
             || String(parsed.searchParams.get('retry') || '').trim() === '1';
         if (action === 'validation') {
-            return { type: 'voip', action: 'validation', calleeVoiceId, forceRetry, preferredLanguage };
+            return { type: 'voip', action: 'validation', calleeVoiceId, forceRetry, preferredLanguage, calleePreferredLanguage };
         }
         if (action === 'demo') {
-            return { type: 'voip', action: 'demo', forceRetry, preferredLanguage };
+            return { type: 'voip', action: 'demo', forceRetry, preferredLanguage, calleePreferredLanguage };
         }
-        return { type: 'voip', action: 'open', calleeVoiceId, forceRetry, preferredLanguage };
+        return { type: 'voip', action: 'open', calleeVoiceId, forceRetry, preferredLanguage, calleePreferredLanguage };
     } catch {
         return null;
     }
@@ -702,6 +703,8 @@ function parseIncomingVoipDeepLink(url: string): (CallInitResponse & { caller_la
             callee_voice_id: parsed.searchParams.get('callee_voice_id') || undefined,
             participant_role: inferredParticipantRole,
             display_label: parsed.searchParams.get('display_label') || undefined,
+            display_language: parsed.searchParams.get('display_language') || undefined,
+            display_country_code: parsed.searchParams.get('display_country_code') || undefined,
             status: parsed.searchParams.get('status') || undefined,
             caller_label: parsed.searchParams.get('caller_label') || undefined,
         };
@@ -2001,6 +2004,16 @@ function resolveAutoTargetLang(source: LangCode, currentTarget: LangCode): LangC
     return 'ko';
 }
 
+function resolveVoipRemoteLanguageHint(...values: Array<string | null | undefined>): LangCode | null {
+    for (const value of values) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (isSupportedLangCode(normalized)) {
+            return normalized;
+        }
+    }
+    return null;
+}
+
 function resolveSongFileTargetLang(currentSource: LangCode, currentTarget: LangCode): LangCode {
     if (currentSource === 'ko') return 'ko';
     if (currentTarget !== currentSource) return currentTarget;
@@ -2285,6 +2298,7 @@ export default function App() {
     const voipValidationFriendCallBypassRef = useRef(false);
     const consumedAppEntryDeepLinkUrlRef = useRef('');
     const consumedValidationAutoCallKeyRef = useRef('');
+    const voipAutoCallCalleeLanguageRef = useRef<LangCode | null>(null);
     const canUseFullAutoVoipWithoutPurchasePrompt = Boolean(effectiveVoipPlan || voipValidationOverride || isInstantDemoSession);
     const [acceptingIncomingVoipCallId, setAcceptingIncomingVoipCallId] = useState<string | null>(null);
     const { initiateVoipCall, validatePhoneNumber } = useVoipAutoController(API_BASE, token);
@@ -2752,9 +2766,16 @@ export default function App() {
         acceptedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string },
         source: string,
     ) => {
-        populateIncomingVoipPresentation(acceptedPayload, acceptedPayload);
+        const callerLanguageHint = resolveVoipRemoteLanguageHint(
+            acceptedPayload.display_language,
+            pendingIncomingVoipCallRef.current?.display_language,
+        );
+        const normalizedAcceptedPayload = callerLanguageHint
+            ? { ...acceptedPayload, display_language: callerLanguageHint }
+            : acceptedPayload;
+        populateIncomingVoipPresentation(normalizedAcceptedPayload, normalizedAcceptedPayload);
         const calleePayload: CallInitResponse = {
-            ...acceptedPayload,
+            ...normalizedAcceptedPayload,
             participant_role: 'callee',
         };
         logUiPressProbe('VOIP_INCOMING_CALL_ACCEPTED', {
@@ -3042,8 +3063,62 @@ export default function App() {
             caller_voice_id: payload.caller_voice_id ?? null,
         });
 
-        activateAcceptedIncomingVoipCall(payload, `${source}_deep_link_auto_accept`);
-    }, [activateAcceptedIncomingVoipCall, applyIncomingVoipPayload, logUiPressProbe, requestPermissions, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert]);
+        let mergedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string } = {
+            ...payload,
+            participant_role: 'callee',
+        };
+        if (token) {
+            try {
+                const acceptedFromServer = await acceptIncomingCall(API_BASE, token, payload.call_id);
+                const callerLanguageHint = resolveVoipRemoteLanguageHint(
+                    payload.display_language,
+                    pendingIncomingVoipCallRef.current?.display_language,
+                    acceptedFromServer.display_language,
+                );
+                mergedPayload = {
+                    ...payload,
+                    ...acceptedFromServer,
+                    participant_role: 'callee',
+                    caller_label: payload.caller_label,
+                    caller_voice_id: payload.caller_voice_id ?? acceptedFromServer.caller_voice_id,
+                    display_language: callerLanguageHint ?? acceptedFromServer.display_language,
+                };
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_OK', {
+                    source: `${source}_deep_link_auto_accept`,
+                    call_id: mergedPayload.call_id,
+                    display_language: mergedPayload.display_language ?? null,
+                    signaling_server: mergedPayload.signaling_server ?? null,
+                    status: mergedPayload.status ?? null,
+                });
+            } catch (acceptError: any) {
+                const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, payload.call_id);
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_FAIL', {
+                    source: `${source}_deep_link_auto_accept`,
+                    call_id: payload.call_id,
+                    error_message: acceptError?.message || 'unknown',
+                    snapshot_call_id: snapshot?.call_id ?? null,
+                    snapshot_display_language: snapshot?.display_language ?? null,
+                });
+                if (snapshot?.call_id) {
+                    const callerLanguageHint = resolveVoipRemoteLanguageHint(
+                        payload.display_language,
+                        pendingIncomingVoipCallRef.current?.display_language,
+                        snapshot.display_language,
+                    );
+                    mergedPayload = {
+                        ...payload,
+                        ...snapshot,
+                        participant_role: 'callee',
+                        caller_label: payload.caller_label,
+                        caller_voice_id: payload.caller_voice_id ?? snapshot.caller_voice_id,
+                        display_language: callerLanguageHint ?? snapshot.display_language,
+                    };
+                }
+            }
+        }
+
+        activateAcceptedIncomingVoipCall(mergedPayload, `${source}_deep_link_auto_accept`);
+    }, [API_BASE, activateAcceptedIncomingVoipCall, applyIncomingVoipPayload, logUiPressProbe, requestPermissions, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert, token]);
 
     const dismissPendingIncomingAsMissed = useCallback((
         source: string,
@@ -5169,9 +5244,13 @@ export default function App() {
                 logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_DEEPLINK', {
                     source,
                     callee_voice_id: target.calleeVoiceId,
+                    callee_preferred_language: target.calleePreferredLanguage ?? null,
                     auth_ready: Boolean(token && userInfo),
                 });
                 consumedValidationAutoCallKeyRef.current = validationAutoCallKey;
+                voipAutoCallCalleeLanguageRef.current = isSupportedLangCode(String(target.calleePreferredLanguage || '').trim().toLowerCase())
+                    ? String(target.calleePreferredLanguage).trim().toLowerCase() as LangCode
+                    : null;
                 setVoipAutoCallVoiceId(target.calleeVoiceId);
                 setSelectedChatRoom(null);
                 setShowVoipTester(false);
@@ -5317,6 +5396,7 @@ export default function App() {
                 session_id: bookingResult?.confirmation_id || 'mobile-voip-test-session',
                 mode: 'voip_full_auto',
                 auto_relay: true,
+                caller_preferred_language: currentVoipPreferredLanguage,
             });
             if ((payload as any)?.phone_dialer_required) {
                 await handlePhoneOnlyDialFallback(
@@ -5358,7 +5438,7 @@ export default function App() {
         } finally {
             setVoipInitLoading(false);
         }
-    }, [bookingResult?.confirmation_id, buildVoipRemoteProfile, emitUnifiedTranslationStatus, ensureVoipPremiumAccess, handlePhoneOnlyDialFallback, initiateVoipCall, logUiPressProbe, requestPermissions, selectedCallMode, token, userInfo, validatePhoneNumber, voipPhone, voipValidationOverride]);
+    }, [bookingResult?.confirmation_id, buildVoipRemoteProfile, currentVoipPreferredLanguage, emitUnifiedTranslationStatus, ensureVoipPremiumAccess, handlePhoneOnlyDialFallback, initiateVoipCall, logUiPressProbe, requestPermissions, selectedCallMode, token, userInfo, validatePhoneNumber, voipPhone, voipValidationOverride]);
 
     const handleCloseVoipTester = useCallback(() => {
         setPendingIncomingVoipCall(null);
@@ -5450,15 +5530,22 @@ export default function App() {
         if (token) {
             try {
                 const acceptedFromServer = await acceptIncomingCall(API_BASE, token, acceptedPayload.call_id);
+                const callerLanguageHint = resolveVoipRemoteLanguageHint(
+                    acceptedPayload.display_language,
+                    pendingIncomingVoipCallRef.current?.display_language,
+                    acceptedFromServer.display_language,
+                );
                 mergedAcceptedPayload = {
                     ...acceptedPayload,
                     ...acceptedFromServer,
                     participant_role: 'callee',
                     caller_label: acceptedPayload.caller_label,
                     caller_voice_id: acceptedPayload.caller_voice_id ?? acceptedFromServer.caller_voice_id,
+                    display_language: callerLanguageHint ?? acceptedFromServer.display_language,
                 };
                 logUiPressProbe('VOIP_INCOMING_ACCEPT_API_OK', {
                     call_id: mergedAcceptedPayload.call_id,
+                    display_language: mergedAcceptedPayload.display_language ?? null,
                     signaling_server: mergedAcceptedPayload.signaling_server ?? null,
                     status: mergedAcceptedPayload.status ?? null,
                 });
@@ -5755,7 +5842,7 @@ export default function App() {
             countryName: friend.friendCountryCode ? resolveCountryName(friend.friendCountryCode) : '국가 미상',
             voiceId: friend.friendVoiceId || `friend-${friend.id}`,
             countryFlag: friend.friendCountryFlag || (friend.friendCountryCode ? resolveCountryFlag(friend.friendCountryCode) : '🌐'),
-            preferredLanguage: friend.friendPreferredLanguage || undefined,
+            preferredLanguage: friend.friendPreferredLanguage || voipAutoCallCalleeLanguageRef.current || undefined,
         });
 
         try {
@@ -5768,6 +5855,8 @@ export default function App() {
                 session_id: bookingResult?.confirmation_id || `friend-voice-${friend.id}`,
                 mode: 'voip_full_auto',
                 auto_relay: true,
+                caller_preferred_language: currentVoipPreferredLanguage,
+                callee_preferred_language: friend.friendPreferredLanguage || voipAutoCallCalleeLanguageRef.current || undefined,
             });
             if ((payload as any)?.phone_dialer_required) {
                 setVoipInitError((payload as any)?.user_message || '보이스톡은 더 이상 전화번호 다이얼 패드를 사용하지 않습니다.');
@@ -5784,6 +5873,18 @@ export default function App() {
                 });
             }
             setVoipCallInitResponse(payload as CallInitResponse);
+            const resolvedCalleeLanguage = String(
+                (payload as any)?.display_language
+                || friend.friendPreferredLanguage
+                || voipAutoCallCalleeLanguageRef.current
+                || '',
+            ).trim().toLowerCase();
+            if (resolvedCalleeLanguage) {
+                setVoipActiveProfile((prev) => (prev ? {
+                    ...prev,
+                    preferredLanguage: resolvedCalleeLanguage,
+                } : prev));
+            }
             if ((payload as any)?.call_id) {
                 setVoipAuditCallId((payload as any).call_id);
                 await refreshVoipAudit((payload as any).call_id);
@@ -5794,6 +5895,7 @@ export default function App() {
                 callee_voice_id: friend.friendVoiceId ?? null,
             });
             setVoipAutoCallVoiceId(null);
+            voipAutoCallCalleeLanguageRef.current = null;
             setVoipValidationOverride(false);
             if (friend.friendVoiceId) {
                 consumedValidationAutoCallKeyRef.current = `validation:${friend.friendVoiceId.trim().toLowerCase()}`;
@@ -5811,7 +5913,7 @@ export default function App() {
             voipCallInitiatingRef.current = false;
             setVoipInitLoading(false);
         }
-    }, [bookingResult?.confirmation_id, ensureVoipPremiumAccess, initiateVoipCall, logUiPressProbe, persistVoipValidationFriendCallBypass, refreshVoipAudit, requestPermissions, showFriendFolder, showVoipTester, token, userInfo, voipAutoCallVoiceId, voipValidationOverride]);
+    }, [bookingResult?.confirmation_id, currentVoipPreferredLanguage, ensureVoipPremiumAccess, initiateVoipCall, logUiPressProbe, persistVoipValidationFriendCallBypass, refreshVoipAudit, requestPermissions, showFriendFolder, showVoipTester, token, userInfo, voipAutoCallVoiceId, voipValidationOverride]);
 
     const handleFriendAcceptedFromDiscovery = useCallback(async (payload?: AcceptedFriendActionPayload) => {
         setShowFriendMapDiscovery(false);

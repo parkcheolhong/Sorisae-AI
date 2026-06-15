@@ -40,6 +40,7 @@ from backend.marketplace.nadotongryoksa_chat_router import (
     _append_message as _append_chat_message,
     _create_room_member as _create_chat_room_member,
     _find_direct_room as _find_direct_chat_room,
+    _normalize_language_code,
     _normalize_text as _normalize_chat_text,
     _resolve_user_language,
     _serialize_message as _serialize_chat_message,
@@ -105,6 +106,8 @@ class CallInitiateRequest(BaseModel):
     # interpreter session ID for translation relay
     mode: Optional[str] = None
     auto_relay: Optional[bool] = None
+    caller_preferred_language: Optional[str] = None
+    callee_preferred_language: Optional[str] = None
 
 
 class CallInitiateResponse(BaseModel):
@@ -498,6 +501,14 @@ def _maybe_log_signal_queue_threshold(
 
 def _build_voice_id(user: Any) -> str:
     return f"nado-{int(user.id):06d}"
+
+
+def _resolve_call_language_hint(*values: Optional[str]) -> Optional[str]:
+    for value in values:
+        normalized = _normalize_language_code(value)
+        if normalized:
+            return normalized
+    return None
 
 
 def _build_voip_topic(voice_id: str) -> str:
@@ -946,10 +957,16 @@ def _build_active_call_response(
         or incoming_payload.get("caller_label")
         or call_state.caller_id
     )
-    counterpart_language = (
-        getattr(counterpart, "preferred_language", None)
-        or incoming_payload.get("display_language")
-    )
+    if participant_role == "callee":
+        # Invite payload carries the caller language hint captured at initiate time.
+        counterpart_language = _resolve_call_language_hint(
+            incoming_payload.get("display_language"),
+            getattr(counterpart, "preferred_language", None),
+        )
+    else:
+        counterpart_language = _resolve_call_language_hint(
+            getattr(counterpart, "preferred_language", None),
+        )
     counterpart_country_code = (
         getattr(counterpart, "country_code", None)
         or incoming_payload.get("display_country_code")
@@ -1150,8 +1167,9 @@ async def initiate_voip_call(
                 getattr(current_user, "username", None)
                 or getattr(current_user, "email", "caller")
             ),
-            "display_language": getattr(
-                current_user, "preferred_language", None
+            "display_language": _resolve_call_language_hint(
+                request.caller_preferred_language,
+                getattr(current_user, "preferred_language", None),
             ),
             "display_country_code": getattr(
                 current_user, "country_code", None
@@ -1250,7 +1268,10 @@ async def initiate_voip_call(
                 getattr(app_callee, "username", None)
                 or getattr(app_callee, "email", None)
             ),
-            display_language=getattr(app_callee, "preferred_language", None),
+            display_language=_resolve_call_language_hint(
+                request.callee_preferred_language,
+                getattr(app_callee, "preferred_language", None),
+            ),
             display_country_code=getattr(app_callee, "country_code", None),
             status=call_state.status,
             user_message=_append_mode_message(
@@ -1468,9 +1489,10 @@ async def accept_voip_call(
     )
 
     logger.info(
-        "[VoIP] Call accepted | call_id=%s | callee_user_id=%s",
+        "[VoIP] Call accepted | call_id=%s | callee_user_id=%s | display_language=%s",
         call_id,
         current_user.id,
+        response.display_language,
     )
     return response
 

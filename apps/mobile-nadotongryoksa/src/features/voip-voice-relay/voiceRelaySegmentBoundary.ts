@@ -3,17 +3,17 @@
  */
 export const VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS = {
     /** Native Silero trailing silence before speech_end. */
-    silenceMs: 1_100,
+    silenceMs: 950,
     /** Native Silero minimum voiced frames before speech_start. */
     speechMs: 120,
     /** Minimum captured segment length before endpoint flush. */
-    minSegmentMs: 3_200,
+    minSegmentMs: 2_800,
     /** Minimum voiced span (first speech_start → speech_end) in the segment. */
-    minSpeechSpanMs: 2_000,
+    minSpeechSpanMs: 1_800,
     /** Safety cap while Silero owns boundaries (no fixed_interval mid-phrase). */
     safetyCapMs: 14_000,
     /** Ignore rapid endpoint events right after a flush. */
-    postFlushCooldownMs: 1_200,
+    postFlushCooldownMs: 1_000,
 } as const;
 
 export function shouldFlushOnSileroSpeechEnd(params: {

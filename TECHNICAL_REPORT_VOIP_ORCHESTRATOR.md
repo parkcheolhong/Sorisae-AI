@@ -1,13 +1,15 @@
 # 기술서 — WorldLinco VoIP · Voice Relay Orchestrator · 오케스트레이터
 
 > **최종 갱신:** 2026-06-16  
-> **대상 브랜치/커밋:** `gpu-llm-server-awq-20260427` (로컬 build 69 미커밋)  
-> **현재 운영 APK:** `1.0.44` / **versionCode 69** (`com.parkcheolhong.worldlinco`)  
+> **대상 브랜치/커밋:** `gpu-llm-server-awq-20260427` (로컬 build 73 미커밋)  
+> **현재 운영 APK:** `1.0.45` / **versionCode 74** (`com.parkcheolhong.worldlinco`)  
 > **관련 문서:**  
 > - `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` — Voice Relay 파이프라인·파라미터·구조도  
 > - `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md` — 실기기 검증·증적 인덱스  
 > - `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` — 초기 VoIP 설계안  
 > - `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` — 오케스트레이터/월드링코 분석  
+> - `evidence/worldlinco-v1-launch/E3-8_KO_JA_VOIP_REPORT.md` — E-3-8 strict PASS  
+> - `evidence/worldlinco-v1-launch/BUILD73_LAUNCH_STATUS.md` — build 73 SSOT  
 > - `AGENTS.md` — 로컬/클라우드 운영 가이드  
 
 ---
@@ -65,11 +67,11 @@
 | **백엔드** | `SUPPORTED_LANGUAGES` **50개** (모바일 LANGS 동기화) · `devanalysis114-backend` restart |
 | **E-3-6** | `50lang_audit_20260615-235805` — local/remote **50/50** aligned |
 | **E-3-7** | ko→ja / ja→ko `voice-translate` API **PASS** |
-| **E-3-8** | ko↔ja VoIP E2E — API OK · 실기기 smoke **build 69에서 PASS** (§0.5) |
+| **E-3-8** | ko↔ja VoIP E2E — build **69** ja STT + playback · build **73** strict ja→ko (§0.6) |
 
 증적: `evidence/worldlinco-v1-launch/50LANG_ALIGNMENT_REPORT.md` · `BUILD67_LAUNCH_STATUS.md`
 
-### 0.5 build 69 · E-3-8 ko↔ja VoIP PASS (2026-06-16)
+### 0.5 build 69 · E-3-8 ko↔ja VoIP (1차 PASS, 2026-06-16)
 
 | 항목 | 내용 |
 |------|------|
@@ -77,12 +79,67 @@
 | **E-3-8** | **PASS** `call-71a7256e4490` — S10 `detected_lang=ja` · `こんにちは、よろしくお願いします。` · Tab `VOIP_VOICE_RELAY_PLAYBACK` · repetition **0** |
 | **프로필** | smoke 전 deeplink: S10 `ja` · Tab `ko` |
 | **call_id** | `-SetupOnly` + 8s stable + logcat filter by call_id |
-| **한계** | Tab TTS `Hello, nice to meet you.` (`target_lang=en`) — ja→ko 한국어 TTS는 v1.1 tuning |
+| **한계 (해소됨)** | Tab TTS `Hello, nice to meet you.` (`target_lang=en`) → **build 73 strict PASS** (§0.6) |
 
 **build 69 앱:** `parseAppEntryDeepLink` → `preferred_language` · `VOIP_DEEPLINK_PREFERRED_LANGUAGE_APPLIED`  
 **build 69 스크립트:** `worldlinco_ko_ja_voip_smoke.ps1` · `voip_manual_call_setup.ps1` (`-SetupOnly`, `-SetPreferredLanguage`)
 
 증적: `ko_ja_smoke_20260616-005906` · `E3-8_KO_JA_VOIP_REPORT.md` · `BUILD69_LAUNCH_STATUS.md`
+
+### 0.6 build 71~73 · ja→ko relay pairing fix · E-3-8 strict PASS (2026-06-16)
+
+| 항목 | 내용 |
+|------|------|
+| **APK** | `1.0.45` / **versionCode 73** · Tab+S10 marketplace 설치 확인 |
+| **E-3-8 strict** | **PASS** `call-0f44540d27f6` — S10 `ja→ko` · Tab 한국어 TTS `안녕하세요, 잘 부탁드립니다.` · repetition **0** |
+| **Backend accept** | `display_language=ko` (invite hint 우선, caller DB `en` 무시) |
+| **Tab caller pair** | initiate `display_language=ja` · segment `target_lang=ja` |
+| **S10 callee pair** | segment `source_lang=ja` · **`target_lang=ko`** · `VOIP_VOICE_RELAY_SENT` |
+
+**근본 원인 (build 71 FAIL `target_lang=en`):**
+
+1. **Backend** `_build_active_call_response` (callee `/accept`): caller DB `preferred_language`가 initiate invite `display_language=ko`보다 우선 → accept API가 `en` 반환.
+2. **Mobile** deeplink auto-accept 시 accept API merge가 invite/deeplink `ko`를 덮어씀 → `voipActiveProfile.preferredLanguage=en` → `effectiveVoipTargetLang=en`.
+3. **Tab caller** validation auto-call이 `callee_preferred_language` 미전달 → initiate `display_language`가 친구 DB `en` fallback.
+
+**수정 파일:**
+
+| 파일 | 변경 |
+|------|------|
+| `backend/marketplace/nadotongryoksa_voip_router.py` | callee accept: `_resolve_call_language_hint(invite, db)` 순서 · accept 로그 `display_language` |
+| `apps/mobile-nadotongryoksa/App.tsx` | `resolveVoipRemoteLanguageHint` · accept merge · `callee_preferred_language` deeplink |
+| `scripts/voip_manual_call_setup.ps1` | incoming `display_language=$CallerPreferredLanguage` · validation `callee_preferred_language` |
+| `scripts/worldlinco_ko_ja_voip_smoke.ps1` | stable wait timeout 45s→**90s** |
+| `backend/tests/test_nadotongryoksa_friends_and_voip_contract.py` | `test_voip_accept_prefers_invite_caller_language_over_stale_db` |
+
+**실기기 로그 (strict PASS):**
+
+```
+S10 VOIP_VOICE_TRANSLATE_RESULT  source_lang=ja target_lang=ko detected_lang=ja
+S10 VOIP_VOICE_RELAY_SENT        translated_text=안녕하세요, 잘 부탁드립니다.
+Tab VOIP_VOICE_RELAY_PLAYBACK    target_lang=ko translated_text=안녕하세요, 잘 부탁드립니다.
+Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
+```
+
+증적: `ko_ja_smoke_20260616-023813/` · `E3-8_KO_JA_VOIP_REPORT.md` · `BUILD73_LAUNCH_STATUS.md`
+
+### 0.7 build 74 · relay latency trim · marketplace version SSOT (2026-06-16)
+
+| 항목 | 내용 |
+|------|------|
+| **APK** | `1.0.45` / **versionCode 74** — turn/VAD/Silero 타이밍 단축 |
+| **Marketplace** | `nadotongryoksa-v1.manifest.json` + `GET /api/marketplace/apk/worldlinco/manifest` · UI 동적 버전 표기 |
+| **Latency** | `playbackMinMs` 2800→**2200** · `silenceFlushMs` 1900→**1500** · Silero `minSegmentMs` 3200→**2800** · `remoteListenHoldMs` 2500→**2100** |
+| **E-3-4** | **보류** — 지인 10명 베타 일시 중단, latency/LTE 정비 우선 |
+
+**LTE 베타 보안 (v1.0 현재):**
+
+| 항목 | 상태 |
+|------|------|
+| 앱 VoIP/WSS | `wss://metanova1004.com` TLS only (앱 WiFi-only 차단 **없음**) |
+| APK 배포 | 로그인 + HMAC **7일 test_token** (`/apk/test-token`) |
+| API | JWT Bearer · voice-translate rate limit (nginx/backend) |
+| v1.1 추가 | LTE 전용 QA 매트릭스 · FCM · TURN short-lived token · 데이터 사용량 UI |
 
 ---
 
@@ -289,7 +346,7 @@ WebRTC **원음 통화**와 **통역 릴레이**를 분리. Phase 1 = **half-dup
 |------|-----|
 | `remoteListenHoldMs` | 2500 |
 | `postPlaybackGuardMs` | 700 |
-| `playbackMinMs` ~ `playbackMaxMs` | 2800 ~ 5500 |
+| `playbackMinMs` ~ `playbackMaxMs` | 2200 ~ 5500 | 예상 재생 시간 (build 74) |
 | `playbackCharMs` | 45 |
 
 **게이트 함수:**
@@ -437,7 +494,8 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 | `scripts/voip_boundary_monitor.ps1` | Silero flush 실시간 모니터 |
 | `scripts/voip_manual_call_setup.ps1` | 수동 통화 연결 |
 | `scripts/voip_audit_relay_diag.ps1` | relay 감사 진단 |
-| `scripts/worldlinco_ko_ja_voip_smoke.ps1` | E-3-8 ko↔ja VoIP smoke (build 69+) |
+| `scripts/worldlinco_ko_ja_voip_smoke.ps1` | E-3-8 ko↔ja VoIP smoke strict (build 73+) |
+| `scripts/worldlinco_e3_beta_user_record.ps1` | E-3-4 beta user CSV append |
 | `scripts/worldlinco_50lang_alignment_audit.ps1` | E-3-6/7 50-lang + API smoke |
 | `scripts/worldlinco_e3_launch_verify.ps1` | E-3-1 multi-round WiFi verify |
 
@@ -455,9 +513,10 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 | E-3-2 repetition echo | 66 | **PASS** repetition 0 | `e3-2_echo_20260615-232900` |
 | E-3-6 50-lang align | 67 | **PASS** 50/50 | `50lang_audit_20260615-235805` |
 | E-3-7 ko↔ja API | 67 | **PASS** | 동일 audit |
-| **E-3-8 ko↔ja VoIP** | **69** | **PASS** ja STT + Tab PLAYBACK | `ko_ja_smoke_20260616-005906` |
-| E-3-4 beta ×10 | — | **OPEN** | `E3-4_beta_users.csv` |
-| E-3-5 git tag | 69 | **PARTIAL** APK publish OK · tag TBD | `BUILD69_LAUNCH_STATUS.md` |
+| **E-3-8 ko↔ja VoIP (1차)** | **69** | **PASS** ja STT + Tab PLAYBACK | `ko_ja_smoke_20260616-005906` |
+| **E-3-8 ko↔ja strict** | **73** | **PASS** `target_lang=ko` + Tab KO TTS | `ko_ja_smoke_20260616-023813` |
+| E-3-4 beta ×10 | — | **ON HOLD** | `E3-4_beta_users.csv` |
+| E-3-5 git tag | 74 | **PASS** | tag **`v1.0.45`** @ build 74 |
 
 ### 8.5 Silero·경계 실측 (2026-06-14)
 
@@ -491,15 +550,16 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 
 ## 10. 남은 방향 (미완 · Phase 2~3)
 
-### 10.1 즉시 후속 (build 69+)
+### 10.1 즉시 후속 (build 73+)
 - [x] E-3-1 WiFi 2대 connected 자동화 **5/5** (build 66)
 - [x] E2E accept — incoming deeplink + call_id 매칭
 - [x] Tab self-call / triple initiate 차단 (build 66)
 - [x] Tab **repetition_hallucination** echo (E-3-2)
 - [x] **E-3-8** ko↔ja VoIP smoke (build 69) — ja STT + Tab playback
-- [ ] **E-3-4** 지인·커뮤니티 실사용 **10명** (`E3-4_beta_users.csv`)
-- [ ] **E-3-5** git tag `v1.0.44` (build 69)
-- [ ] ja→ko Tab TTS (`target_lang` 페어링 tuning)
+- [x] **E-3-8 strict** ja→ko · `target_lang=ko` · Tab 한국어 TTS (build **73**)
+- [~] **E-3-4** 지인·커뮤니티 실사용 **10명** — **보류**
+- [x] **E-3-5** git tag **`v1.0.45`** @ build 74 (2026-06-16)
+- [ ] LTE 베타 QA 매트릭스 (보안 전제: TLS + token APK)
 - [ ] `voip_boundary_cap_defer_test.ps1` cap phase **summary.json PASS** 안정화
 
 ### 10.2 P3 (체크리스트·설계 잔여)

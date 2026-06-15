@@ -24,6 +24,13 @@ describe('voiceRelayTurnController', () => {
         });
     });
 
+    it('keeps ja to ko relay when callee speaks Japanese', () => {
+        expect(resolveVoiceRelayLanguagePair('ja', 'ko', 'ja')).toEqual({
+            sourceLang: 'ja',
+            targetLang: 'ko',
+        });
+    });
+
     it('blocks caller timer flush while hearing remote WebRTC before any callee relay', () => {
         const turn = createInitialVoiceRelayTurnSnapshot();
         const result = shouldDeferVoiceRelayFlush({

@@ -90,7 +90,7 @@ export type CallModeController = {
     voipIdentity: string;
     setVoipIdentity: (value: string) => void;
     voipActiveProfile: VoipParticipantProfile | null;
-    setVoipActiveProfile: (value: VoipParticipantProfile | null) => void;
+    setVoipActiveProfile: Dispatch<SetStateAction<VoipParticipantProfile | null>>;
 };
 
 export function useCallModeController(initialMode: CallMode = DEFAULT_CALL_MODE): CallModeController {

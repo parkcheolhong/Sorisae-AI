@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Response
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, func
 from typing import Any, Callable, Dict, List, Optional
@@ -516,6 +516,46 @@ def _resolve_latest_marketplace_apk_path() -> Path:
 
     apk_candidates.sort(key=lambda item: item.stat().st_mtime, reverse=True)
     return apk_candidates[0]
+
+
+def _read_worldlinco_apk_manifest() -> dict[str, Any]:
+    apk_dir = _resolve_marketplace_apk_dir()
+    manifest_path = apk_dir / "nadotongryoksa-v1.manifest.json"
+    if manifest_path.is_file():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except json.JSONDecodeError:
+            pass
+
+    target = apk_dir / "nadotongryoksa-v1.apk"
+    if not target.is_file():
+        target = _resolve_latest_marketplace_apk_path()
+    stat = target.stat()
+    return {
+        "package": "com.parkcheolhong.worldlinco",
+        "versionName": None,
+        "versionCode": None,
+        "apkFilename": target.name,
+        "downloadPath": f"/api/marketplace/apk/{target.name}",
+        "publishedAt": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        "sizeBytes": stat.st_size,
+        "manifestMissing": True,
+    }
+
+
+@router.get("/apk/worldlinco/manifest")
+def get_worldlinco_apk_manifest() -> Any:
+    """Marketplace UI용 WorldLinco APK 버전 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 @router.get("/latest.apk")

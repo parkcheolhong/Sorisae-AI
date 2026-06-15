@@ -9,11 +9,11 @@ export type VoiceRelayTurnSnapshot = {
 
 export const VOICE_RELAY_TURN_DEFAULTS = {
     /** Minimum post-playback guard before local mic capture resumes (echo avoidance). */
-    remoteListenHoldMs: 2_500,
+    remoteListenHoldMs: 2_100,
     /** Extra tail after estimated TTS playback before reopening the mic. */
-    postPlaybackGuardMs: 700,
+    postPlaybackGuardMs: 550,
     playbackCharMs: 45,
-    playbackMinMs: 2_800,
+    playbackMinMs: 2_200,
     playbackMaxMs: 5_500,
     speechMeterMinDb: -52,
 } as const;

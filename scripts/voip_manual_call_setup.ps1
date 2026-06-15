@@ -183,12 +183,14 @@ function Open-IncomingVoipDeepLinkAutoAccept {
     param(
         [string]$Device,
         [string]$CallId,
-        [string]$SignalingServer
+        [string]$SignalingServer,
+        [string]$DisplayLanguage = ""
     )
     $encSig = [uri]::EscapeDataString($SignalingServer)
+    $langQuery = if ($DisplayLanguage) { "&display_language=$DisplayLanguage" } else { "" }
     Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
     foreach ($scheme in @('worldlingo', 'worldlinco')) {
-        $deeplink = "${scheme}://voip/incoming?call_id=$CallId&signaling_server=$encSig&participant_role=callee&status=ringing&call_route=app_webrtc"
+        $deeplink = "${scheme}://voip/incoming?call_id=$CallId&signaling_server=$encSig&participant_role=callee&status=ringing&call_route=app_webrtc$langQuery"
         Write-Step "Launch incoming deeplink ($scheme) on $Device call_id=$CallId"
         $cmd = "am start -W -a android.intent.action.VIEW -d '$deeplink'"
         Invoke-Adb $Device @("shell", $cmd) | Out-Null
@@ -262,7 +264,7 @@ function Accept-IncomingVoipCall {
         "wss://metanova1004.com/api/v1/voip/signal?call_id=$ExpectedCallId&role=callee"
     }
 
-    if (Open-IncomingVoipDeepLinkAutoAccept -Device $Device -CallId $ExpectedCallId -SignalingServer $signaling) {
+    if (Open-IncomingVoipDeepLinkAutoAccept -Device $Device -CallId $ExpectedCallId -SignalingServer $signaling -DisplayLanguage $CallerPreferredLanguage) {
         return $true
     }
 
@@ -372,7 +374,8 @@ function Open-VoipValidationAutoCall([string]$Device) {
         throw "CalleeVoiceId must not equal CallerVoiceId (self-call): $CalleeVoiceId"
     }
     $runToken = Get-Date -Format "HHmmss"
-    $cmd = "am start -W -a android.intent.action.VIEW -d 'worldlingo://voip/open?action=validation&callee_voice_id=$CalleeVoiceId&force=1&run=$runToken'"
+    $calleeLangQuery = if ($CalleePreferredLanguage) { "&callee_preferred_language=$CalleePreferredLanguage" } else { "" }
+    $cmd = "am start -W -a android.intent.action.VIEW -d 'worldlingo://voip/open?action=validation&callee_voice_id=$CalleeVoiceId&force=1&run=$runToken$calleeLangQuery'"
     Invoke-Adb $Device @("shell", $cmd) | Out-Null
 }
 
