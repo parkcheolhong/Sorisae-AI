@@ -19,8 +19,8 @@ jobs:
         run: |
           model="${{ vars.COPILOT_AGENT_MODEL }}"
           if [ -z "$model" ]; then
-            echo "::error::COPILOT_AGENT_MODEL repository variable is not set. Configure it under Settings → Secrets and variables → Actions → Variables."
-            exit 1
+            model="claude-sonnet-4.5"
+            echo "::warning::COPILOT_AGENT_MODEL repository variable is not set. Falling back to ${model}."
           fi
           case "$model" in
             *$'\n'*|*$'\r'*)
