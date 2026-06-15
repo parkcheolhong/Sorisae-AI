@@ -22,4 +22,10 @@ jobs:
             echo "::error::COPILOT_AGENT_MODEL repository variable is not set. Configure it under Settings → Secrets and variables → Actions → Variables."
             exit 1
           fi
-          echo "COPILOT_AGENT_MODEL=${model}" >> "$GITHUB_ENV"
+          case "$model" in
+            *$'\n'*|*$'\r'*)
+              echo "::error::COPILOT_AGENT_MODEL contains invalid characters (newline or carriage return)."
+              exit 1
+              ;;
+          esac
+          printf 'COPILOT_AGENT_MODEL=%s\n' "${model}" >> "$GITHUB_ENV"
