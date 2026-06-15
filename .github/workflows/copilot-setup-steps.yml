@@ -16,6 +16,16 @@ jobs:
       contents: read
     steps:
       - name: Force a supported Copilot model
-        run: echo "COPILOT_AGENT_MODEL=sweagent-capi:claude-haiku-4.5" >> "$GITHUB_ENV"
-      - name: Verify Copilot model configuration
-        run: echo "Copilot agent model configured as $COPILOT_AGENT_MODEL"
+        run: |
+          model="${{ vars.COPILOT_AGENT_MODEL }}"
+          if [ -z "$model" ]; then
+            model="claude-sonnet-4.5"
+            echo "::warning::COPILOT_AGENT_MODEL repository variable is not set. Falling back to ${model}."
+          fi
+          case "$model" in
+            *$'\n'*|*$'\r'*)
+              echo "::error::COPILOT_AGENT_MODEL contains invalid characters (newline or carriage return)."
+              exit 1
+              ;;
+          esac
+          printf 'COPILOT_AGENT_MODEL=%s\n' "${model}" >> "$GITHUB_ENV"
