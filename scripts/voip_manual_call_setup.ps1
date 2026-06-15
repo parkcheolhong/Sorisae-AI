@@ -187,7 +187,8 @@ function Open-IncomingVoipDeepLinkAutoAccept {
         [string]$DisplayLanguage = ""
     )
     $encSig = [uri]::EscapeDataString($SignalingServer)
-    $langQuery = if ($DisplayLanguage) { "&display_language=$DisplayLanguage" } else { "" }
+    $encLang = if ($DisplayLanguage) { [uri]::EscapeDataString($DisplayLanguage) } else { "" }
+    $langQuery = if ($encLang) { "&display_language=$encLang" } else { "" }
     Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
     foreach ($scheme in @('worldlingo', 'worldlinco')) {
         $deeplink = "${scheme}://voip/incoming?call_id=$CallId&signaling_server=$encSig&participant_role=callee&status=ringing&call_route=app_webrtc$langQuery"
