@@ -17,3 +17,5 @@ jobs:
     steps:
       - name: Force a supported Copilot model
         run: echo "COPILOT_AGENT_MODEL=sweagent-capi:claude-haiku-4.5" >> "$GITHUB_ENV"
+      - name: Verify Copilot model configuration
+        run: echo "Copilot agent model configured as $COPILOT_AGENT_MODEL"
