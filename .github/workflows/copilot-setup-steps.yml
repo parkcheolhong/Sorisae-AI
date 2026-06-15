@@ -34,7 +34,10 @@ jobs:
           else
             COPILOT_MODEL="sweagent-capi:claude-haiku-4.5"
           fi
-          echo "COPILOT_AGENT_MODEL=${COPILOT_MODEL}" >> "$GITHUB_ENV"
+          case "${COPILOT_MODEL}" in
+            *$'\n'*|*$'\r'*) echo "ERROR: COPILOT_AGENT_MODEL must be a single line" >&2; exit 1 ;;
+          esac
+          printf 'COPILOT_AGENT_MODEL=%s\n' "${COPILOT_MODEL}" >> "$GITHUB_ENV"
       - name: Verify Copilot model export
         run: |
           [ "${COPILOT_AGENT_MODEL}" != "" ] || { echo "ERROR: COPILOT_AGENT_MODEL was not exported by previous step" >&2; exit 1; }
