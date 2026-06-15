@@ -17,16 +17,25 @@ on:
 jobs:
   copilot-setup-steps:
     # Copilot cloud agent runs this setup job before task execution.
-    # Exporting COPILOT_AGENT_MODEL here makes it available to subsequent setup steps.
+    # Exporting COPILOT_AGENT_MODEL here makes it available to later steps in this job.
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - name: Resolve and export Copilot model
         run: |
-          COPILOT_MODEL="${{ github.event.inputs.copilot_agent_model || vars.COPILOT_AGENT_MODEL || 'sweagent-capi:claude-haiku-4.5' }}"
+          # Precedence: manual dispatch input > repository variable > safe default.
+          DISPATCH_INPUT_MODEL="${{ github.event.inputs.copilot_agent_model }}"
+          REPO_VAR_MODEL="${{ vars.COPILOT_AGENT_MODEL }}"
+          if [ "${DISPATCH_INPUT_MODEL}" != "" ]; then
+            COPILOT_MODEL="${DISPATCH_INPUT_MODEL}"
+          elif [ "${REPO_VAR_MODEL}" != "" ]; then
+            COPILOT_MODEL="${REPO_VAR_MODEL}"
+          else
+            COPILOT_MODEL="sweagent-capi:claude-haiku-4.5"
+          fi
           echo "COPILOT_AGENT_MODEL=${COPILOT_MODEL}" >> "$GITHUB_ENV"
       - name: Verify Copilot model export
         run: |
-          test -n "${COPILOT_AGENT_MODEL}"
-          echo "Configured COPILOT_AGENT_MODEL=${COPILOT_AGENT_MODEL}" >> "$GITHUB_STEP_SUMMARY"
+          [ "${COPILOT_AGENT_MODEL}" != "" ] || { echo "ERROR: COPILOT_AGENT_MODEL was not exported by previous step" >&2; exit 1; }
+          printf 'Configured COPILOT_AGENT_MODEL="%s"\n' "${COPILOT_AGENT_MODEL}" >> "$GITHUB_STEP_SUMMARY"
