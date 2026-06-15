@@ -973,6 +973,7 @@ const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEX
                 <div
                     style={{ position: 'fixed', inset: 0, background: '#000c', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
                     onClick={(e) => { if (e.target === e.currentTarget) setShowHelp(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setShowHelp(false); }}
                 >
                     <div style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 18, padding: '24px 20px', width: '100%', maxWidth: 540, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 16px 48px #000c' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
