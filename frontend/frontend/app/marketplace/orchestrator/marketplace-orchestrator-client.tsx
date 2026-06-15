@@ -1032,6 +1032,32 @@ export default function MarketplaceOrchestratorClient({
 
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
+        const sessionKey = `${MARKETPLACE_ORCHESTRATOR_CHAT_SESSION_KEY}:${selectedProduct.id}`;
+        const conversationKey = `${MARKETPLACE_ORCHESTRATOR_CHAT_CONVERSATION_KEY}:${selectedProduct.id}`;
+        let session = window.localStorage.getItem(sessionKey);
+        if (!session) {
+            const randomSuffix = Array.from(window.crypto.getRandomValues(new Uint8Array(8)), (byte) =>
+                byte.toString(16).padStart(2, '0'),
+            ).join('');
+            session = `market-chat-${selectedProduct.id}-${Date.now()}-${randomSuffix}`;
+            window.localStorage.setItem(sessionKey, session);
+        }
+        setChatSessionId(session);
+        try {
+            const saved = JSON.parse(window.localStorage.getItem(conversationKey) || '[]');
+            setConversation(Array.isArray(saved) ? saved : []);
+        } catch {
+            setConversation([]);
+        }
+        setClarificationQuestions([]);
+        setProposalItems([]);
+        setNextActionSuggestions([]);
+        setNewTechnologyCandidates([]);
+        setTechnologyRecommendations([]);
+    }, [selectedProduct.id]);
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined') return;
         try {
             window.localStorage.setItem(`${MARKETPLACE_ORCHESTRATOR_CHAT_SESSION_KEY}:${selectedProduct.id}`, chatSessionId);
             window.localStorage.setItem(`${MARKETPLACE_ORCHESTRATOR_CHAT_CONVERSATION_KEY}:${selectedProduct.id}`, JSON.stringify(conversation.slice(-60)));

@@ -16,7 +16,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
     ):
         stage_run_payload = None
         if request.run_id:
-            stage_run_payload = contract.load_stage_run(request.run_id)
+            stage_run_payload = contract._load_customer_stage_run_for_user(request.run_id, current_user)
 
         from backend.llm.orchestrator import answer_orchestrator_chat as answer_orchestrator_chat_handler
 
@@ -56,6 +56,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
                 auto_connect=auto_connect,
             ),
             agent_key="customer_orchestrator",
+            current_user=current_user,
         )
         chat_response.stage_chat = contract._build_customer_stage_chat_context(stage_run_payload, request)
         chat_response.diagnostics = {
@@ -136,6 +137,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
                 "response": None,
                 "error": None,
             }
+            finalized = False
 
             def _worker() -> None:
                 try:
@@ -154,78 +156,96 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             )
             worker.start()
 
-            yield contract._build_customer_orchestrate_sse_event(
-                "accepted",
-                {
-                    "run_id": effective_request.stage_run_id,
-                    "stage_run": stage_run_payload,
-                    "message": "고객 오케스트레이터 실행을 시작합니다.",
-                },
-            )
-
-            heartbeat_started_at = contract.time.monotonic()
-            while not stream_state["done"]:
-                await contract.asyncio.sleep(1)
-                elapsed = contract.time.monotonic() - heartbeat_started_at
-                if elapsed < 5:
-                    continue
-                heartbeat_started_at = contract.time.monotonic()
+            try:
                 yield contract._build_customer_orchestrate_sse_event(
-                    "progress",
+                    "accepted",
                     {
                         "run_id": effective_request.stage_run_id,
-                        "stage_id": effective_request.stage_id,
-                        "status": "running",
-                        "message": "고객 오케스트레이터 생성 및 검증을 계속 진행 중입니다.",
+                        "stage_run": stage_run_payload,
+                        "message": "고객 오케스트레이터 실행을 시작합니다.",
                     },
                 )
 
-            try:
-                if stream_state["error"] is not None:
-                    raise stream_state["error"]
+                heartbeat_started_at = contract.time.monotonic()
+                while not stream_state["done"]:
+                    await contract.asyncio.sleep(1)
+                    elapsed = contract.time.monotonic() - heartbeat_started_at
+                    if elapsed < 5:
+                        continue
+                    heartbeat_started_at = contract.time.monotonic()
+                    yield contract._build_customer_orchestrate_sse_event(
+                        "progress",
+                        {
+                            "run_id": effective_request.stage_run_id,
+                            "stage_id": effective_request.stage_id,
+                            "status": "running",
+                            "message": "고객 오케스트레이터 생성 및 검증을 계속 진행 중입니다.",
+                        },
+                    )
 
-                response = stream_state["response"]
-                result_event_payload = contract._build_customer_orchestrate_result_payload(
-                    response=response,
-                    request=effective_request,
-                    current_user=current_user,
-                    stage_run_payload=stage_run_payload,
-                )
-                contract._persist_customer_orchestrator_completion(
-                    db,
-                    current_user=current_user,
-                    request=effective_request,
-                    result_payload=dict(result_event_payload.get("result") or {}),
-                )
-                db.commit()
-                result_payload = dict(result_event_payload.get("result") or {})
-                contract._update_customer_stage_execution_metadata(
-                    stage_run_id,
-                    status="completed",
-                    completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
-                    output_dir=result_payload.get("output_dir"),
-                    error_message=None,
-                )
-                yield contract._build_customer_orchestrate_sse_event("result", result_event_payload)
-            except Exception as exc:
-                if hasattr(db, "rollback"):
-                    db.rollback()
-                error_message = str(exc) or "고객 오케스트레이터 실행 중 오류가 발생했습니다."
-                contract._update_customer_stage_execution_metadata(
-                    stage_run_id,
-                    status="failed",
-                    completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
-                    error_message=error_message,
-                )
-                yield contract._build_customer_orchestrate_sse_event(
-                    "error",
-                    contract._build_customer_orchestrate_error_payload(
-                        error_message=error_message,
+                try:
+                    if stream_state["error"] is not None:
+                        raise stream_state["error"]
+
+                    response = stream_state["response"]
+                    result_event_payload = contract._build_customer_orchestrate_result_payload(
+                        response=response,
                         request=effective_request,
+                        current_user=current_user,
                         stage_run_payload=stage_run_payload,
-                    ),
-                )
+                    )
+                    contract._persist_customer_orchestrator_completion(
+                        db,
+                        current_user=current_user,
+                        request=effective_request,
+                        result_payload=dict(result_event_payload.get("result") or {}),
+                    )
+                    db.commit()
+                    result_payload = dict(result_event_payload.get("result") or {})
+                    contract._update_customer_stage_execution_metadata(
+                        stage_run_id,
+                        status="completed",
+                        completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
+                        output_dir=result_payload.get("output_dir"),
+                        error_message=None,
+                    )
+                    finalized = True
+                    yield contract._build_customer_orchestrate_sse_event("result", result_event_payload)
+                except Exception as exc:
+                    if hasattr(db, "rollback"):
+                        db.rollback()
+                    error_message = str(exc) or "고객 오케스트레이터 실행 중 오류가 발생했습니다."
+                    contract._update_customer_stage_execution_metadata(
+                        stage_run_id,
+                        status="failed",
+                        completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
+                        error_message=error_message,
+                    )
+                    finalized = True
+                    yield contract._build_customer_orchestrate_sse_event(
+                        "error",
+                        contract._build_customer_orchestrate_error_payload(
+                            error_message=error_message,
+                            request=effective_request,
+                            stage_run_payload=stage_run_payload,
+                        ),
+                    )
             finally:
+                if not finalized:
+                    if hasattr(db, "rollback"):
+                        db.rollback()
+                    error = stream_state.get("error")
+                    error_message = (
+                        str(error)
+                        if error is not None
+                        else "고객 오케스트레이터 스트림 연결이 완료 전에 종료되었습니다."
+                    )
+                    contract._update_customer_stage_execution_metadata(
+                        stage_run_id,
+                        status="failed",
+                        completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
+                        error_message=error_message,
+                    )
                 execution_lock.release()
 
         return contract.StreamingResponse(_event_stream(), media_type="text/event-stream")
@@ -235,19 +255,15 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         run_id: str,
         current_user=Depends(contract.get_current_user),
     ):
-        del current_user
-        payload = contract.load_stage_run(run_id)
-        if not payload:
-            raise HTTPException(status_code=404, detail="stage run을 찾을 수 없습니다.")
-        return payload
+        return contract._load_customer_stage_run_for_user(run_id, current_user)
 
     @router.post("/customer-orchestrate/stage-runs/update")
     def update_customer_orchestrate_stage_run(
         payload: contract.CustomerOrchestrateStageUpdateRequest,
         current_user=Depends(contract.get_current_user),
     ):
-        del current_user
         try:
+            contract._load_customer_stage_run_for_user(payload.run_id, current_user)
             return contract.update_stage_run(
                 run_id=payload.run_id,
                 stage_id=payload.stage_id,

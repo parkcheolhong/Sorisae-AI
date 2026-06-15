@@ -1778,7 +1778,11 @@ def _write_postgres_password_secret(password: str, env_values: Optional[Dict[str
 def _load_runtime_config_summary() -> Dict[str, Any]:
     config_path = _admin_orchestrator_runtime_config_path()
     if not config_path.exists():
-        return {}
+        try:
+            from backend.llm.orchestrator import _load_runtime_config_from_disk
+            return _load_runtime_config_from_disk()
+        except Exception:
+            return {}
     try:
         return json.loads(config_path.read_text(encoding="utf-8"))
     except Exception:

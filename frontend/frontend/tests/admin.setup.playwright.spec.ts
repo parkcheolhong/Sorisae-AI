@@ -7,6 +7,8 @@ const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? '';
 const STORAGE_STATE_PATH = process.env.PLAYWRIGHT_STORAGE_STATE ?? 'playwright/.auth/adminAuthState.json';
 const PLAYWRIGHT_ADMIN_BASE_URL = (process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? 'http://localhost:3005').replace(/\/$/, '');
 const ADMIN_DASHBOARD_WAIT_MS = 30_000;
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1';
+const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
 
 function readExistingAdminToken(): string {
     try {
@@ -48,9 +50,11 @@ test('create admin storage state', async ({ page }) => {
             timeout: 15000,
         }).not.toBeNull();
     } else {
-        const existingToken = readExistingAdminToken();
-        test.skip(!existingToken, 'PLAYWRIGHT_ADMIN_USERNAME / PLAYWRIGHT_ADMIN_PASSWORD 또는 기존 admin_token storageState 필요');
-        await writeStorageStateWithToken(page, existingToken);
+        const seedToken = ADMIN_REGRESSION_MOCK_BACKEND
+            ? ADMIN_REGRESSION_MOCK_TOKEN
+            : readExistingAdminToken();
+        test.skip(!seedToken, 'PLAYWRIGHT_ADMIN_USERNAME / PLAYWRIGHT_ADMIN_PASSWORD 또는 기존 admin_token storageState 필요');
+        await writeStorageStateWithToken(page, seedToken);
     }
     await page.goto('/admin');
     await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);

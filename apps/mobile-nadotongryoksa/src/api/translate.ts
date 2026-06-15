@@ -1,4 +1,4 @@
-// 나도통역사 통번역 API 클라이언트
+// WorldLinco 통번역 API 클라이언트
 import Constants from 'expo-constants';
 
 const BASE_URL: string =

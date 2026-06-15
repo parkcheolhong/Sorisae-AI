@@ -32,7 +32,6 @@ from uuid import uuid4
 from redis.exceptions import RedisError
 from . import models, schemas, crud
 from .subscription_service import subscription_service
-from .database import add_missing_columns
 from .ad_strategy_engine import plan_ad_strategy
 from .audience_profile_engine import infer_audience_profiles
 from .campaign_orchestrator_engine import plan_local_campaign
@@ -572,7 +571,7 @@ def download_marketplace_apk(
     test_token: Optional[str] = None,
     current_user: Any = None,
 ) -> Any:
-    """모바일 APK 직접 다운로드 엔드포인트 — 신세계소리새 나도통역사 등
+    """모바일 APK 직접 다운로드 엔드포인트 — WorldLinco(월드링코) 등
     
     인증 필수: 구매자 또는 유효한 다운로드 토큰 보유
     토큰은 query parameter로 전달: /apk/file.apk?token=abc123
@@ -759,11 +758,12 @@ def create_marketplace_purchase(
     if not project:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
     
+    server_price = float(project.price or 0)
     purchase = payment_service.create_purchase(
         db=db,
         project_id=request.project_id,
         buyer_id=current_user.id,
-        amount=request.amount or float(project.price or 0),
+        amount=server_price,
         payment_method=request.payment_method,
     )
     
@@ -886,7 +886,7 @@ def create_marketplace_download_token(
     purchases = db.query(models.Purchase).filter(
         models.Purchase.project_id == request.project_id,
         models.Purchase.buyer_id == current_user.id,
-        models.Purchase.status.in_(["completed", "pending"]),
+        models.Purchase.status == "completed",
     ).all()
     
     if not purchases:
@@ -1095,12 +1095,15 @@ def _ensure_video_service_user_schema() -> None:
         return
 
     with engine.begin() as conn:
-        add_missing_columns(
-            conn,
-            "users",
-            {"credit_balance": "INTEGER"},
-            inspector=inspector,
-        )
+        conn_inspector = inspect(conn)
+        existing_columns = {
+            column["name"]
+            for column in conn_inspector.get_columns("users")
+        }
+        if "credit_balance" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
@@ -1203,6 +1206,30 @@ def _get_customer_orchestrate_run_lock(run_id: str) -> threading.Lock:
 def _get_customer_stage_execution_metadata(stage_run_payload: Dict[str, Any]) -> Dict[str, Any]:
     metadata = dict(stage_run_payload.get("metadata") or {})
     return dict(metadata.get("orchestration_execution") or {})
+
+
+def _customer_stage_run_owner_id(stage_run_payload: Dict[str, Any]) -> str:
+    requested_by = stage_run_payload.get("requested_by") if isinstance(stage_run_payload, dict) else {}
+    if not isinstance(requested_by, dict):
+        return ""
+    return str(requested_by.get("id") or "").strip()
+
+
+def _current_customer_user_id(current_user: models.User) -> str:
+    return str(getattr(current_user, "id", "") or "").strip()
+
+
+def _customer_stage_run_owned_by_current_user(stage_run_payload: Dict[str, Any], current_user: models.User) -> bool:
+    owner_id = _customer_stage_run_owner_id(stage_run_payload)
+    current_user_id = _current_customer_user_id(current_user)
+    return bool(owner_id and current_user_id and owner_id == current_user_id)
+
+
+def _load_customer_stage_run_for_user(run_id: str, current_user: models.User) -> Dict[str, Any]:
+    payload = load_stage_run(run_id)
+    if not payload or not _customer_stage_run_owned_by_current_user(payload, current_user):
+        raise HTTPException(status_code=404, detail="고객 stage run을 찾을 수 없습니다.")
+    return payload
 
 
 def _update_customer_stage_execution_metadata(run_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
@@ -1410,7 +1437,7 @@ def _resolve_stage_run_for_request(
     current_user: models.User,
 ) -> Optional[Dict[str, Any]]:
     if request.stage_run_id:
-        return load_stage_run(request.stage_run_id)
+        return _load_customer_stage_run_for_user(request.stage_run_id, current_user)
     project_name = (request.project_name or "customer-product").strip() or "customer-product"
     return initialize_stage_run(
         scope="marketplace",

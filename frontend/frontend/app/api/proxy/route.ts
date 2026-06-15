@@ -5,7 +5,7 @@ import { fetchBackendWithFallback, isAbortLike, jsonNoStore } from '@/app/api/_s
 const ADMIN_PROXY_RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const ADMIN_PROXY_RETRY_ATTEMPTS = 3;
 const ADMIN_PROXY_RETRY_DELAY_MS = 700;
-const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1';
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1' && process.env.NODE_ENV !== 'production';
 const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
 const ADMIN_REGRESSION_MOCK_USER = {
   username: 'ui.admin.round@devanalysis.local',
@@ -332,6 +332,9 @@ export async function GET(req: NextRequest) {
     return jsonNoStore({ detail: 'Authorization 헤더가 필요합니다.' }, 401);
   }
   if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    if (auth.trim() !== `Bearer ${ADMIN_REGRESSION_MOCK_TOKEN}`) {
+      return jsonNoStore({ detail: '관리자 회귀(mock) 토큰이 올바르지 않습니다.' }, 401);
+    }
     return jsonNoStore(ADMIN_REGRESSION_MOCK_USER, 200);
   }
 
@@ -385,6 +388,9 @@ export async function PUT(req: NextRequest) {
     return jsonNoStore({ detail: 'Authorization 헤더가 필요합니다.' }, 401);
   }
   if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    if (auth.trim() !== `Bearer ${ADMIN_REGRESSION_MOCK_TOKEN}`) {
+      return jsonNoStore({ detail: '관리자 회귀(mock) 토큰이 올바르지 않습니다.' }, 401);
+    }
     return jsonNoStore({
       access_token: ADMIN_REGRESSION_MOCK_TOKEN,
       token_type: 'bearer',

@@ -33,9 +33,9 @@ test.describe('admin login regression', () => {
     });
 
     test('login timeout shows stable recovery guidance when admin proxy is slow', async ({ page }) => {
-        await page.route('**/api/proxy', async () => {
+        await page.route('**/api/proxy', async (route) => {
             await page.waitForTimeout(1000);
-            throw new Error('simulated proxy disconnect');
+            await route.abort('failed');
         });
 
         await page.goto('/admin/login');

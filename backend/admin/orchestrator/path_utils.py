@@ -81,6 +81,18 @@ def _has_parent_reference(path: Path) -> bool:
     return any(part == ".." for part in path.parts)
 
 
+def resolve_safe_child_path(parent: Path, relative_path: str, *, detail: str = ADMIN_ALLOWED_ROOT_PATH_DETAIL) -> Path:
+    normalized = str(relative_path or "").replace("\\", "/").strip().lstrip("/")
+    if not normalized:
+        raise HTTPException(status_code=400, detail=detail)
+    candidate = parent / normalized
+    resolved = candidate.resolve()
+    parent_resolved = parent.resolve()
+    if not is_relative_to(resolved, parent_resolved):
+        raise HTTPException(status_code=400, detail=detail)
+    return resolved
+
+
 def require_allowed_root_path(path: Path, *, detail: str) -> Path:
     candidate_path = path.expanduser()
     if _has_parent_reference(candidate_path):
@@ -92,10 +104,3 @@ def require_allowed_root_path(path: Path, *, detail: str) -> Path:
     ):
         return resolved_path
     raise HTTPException(status_code=400, detail=detail)
-
-
-def resolve_safe_child_path(root: Path, child: str | Path, *, detail: str) -> Path:
-    child_path = Path(child).expanduser()
-    if child_path.is_absolute() or _has_parent_reference(child_path):
-        raise HTTPException(status_code=400, detail=detail)
-    return require_allowed_root_path(root / child_path, detail=detail)

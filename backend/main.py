@@ -764,6 +764,23 @@ def _build_cors_origins() -> List[str]:
     return deduped
 
 
+_SAFE_DIAGNOSTIC_ERROR_CODES = {
+    "cpu_load_unavailable",
+    "gpu_runtime_unavailable",
+    "memory_snapshot_unavailable",
+    "queue_runtime_unavailable",
+}
+
+
+def _sanitize_diagnostic_error(error: Any, fallback_code: str) -> Optional[str]:
+    if error is None:
+        return None
+    raw = str(error).strip().lower() if not isinstance(error, Exception) else ""
+    if isinstance(error, Exception) or raw not in _SAFE_DIAGNOSTIC_ERROR_CODES:
+        return fallback_code
+    return raw
+
+
 def _relative_percent(numerator: float, denominator: float) -> Optional[float]:
     if denominator <= 0:
         return None
@@ -830,6 +847,14 @@ def _memory_snapshot() -> Dict[str, Any]:
             "available": False,
             "state": "warning",
             "note": "메모리 사용량을 수집하지 못했습니다.",
+        }
+
+    if "error" in snapshot:
+        return {
+            "available": False,
+            "state": "warning",
+            "note": "메모리 사용량을 수집하지 못했습니다.",
+            "error": _sanitize_diagnostic_error(snapshot["error"], "memory_snapshot_unavailable"),
         }
 
     usage_percent = snapshot.get("usage_percent")
@@ -959,7 +984,7 @@ def _cpu_snapshot() -> Dict[str, Any]:
         "usage_percent": usage_percent,
     }
     if error_message:
-        payload["error"] = error_message
+        payload["error"] = _sanitize_diagnostic_error(error_message, "cpu_load_unavailable")
     return payload
 
 
@@ -971,16 +996,13 @@ def _gpu_snapshot() -> Dict[str, Any]:
         else []
     )
     if not gpu_runtime.get("available"):
+        raw_error = gpu_runtime.get("error") if isinstance(gpu_runtime, dict) else None
         return {
             "available": False,
             "state": "warning",
             "note": "GPU 런타임이 감지되지 않았습니다. CPU fallback 또는 드라이버 상태를 확인하세요.",
             "devices": [],
-            "error": (
-                gpu_runtime.get("error")
-                if isinstance(gpu_runtime, dict)
-                else None
-            ),
+            "error": _sanitize_diagnostic_error(raw_error, "gpu_runtime_unavailable"),
         }
 
     peak_usage = 0.0
@@ -1425,6 +1447,42 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] mobile song translation router skipped: {e}")
 
+# ── VoIP Interpretation Calls (WorldLinco) ──
+try:
+    from backend.voip.router import router as voip_router
+    app.include_router(voip_router)
+    logger.info("[OK] voip router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] voip router skipped: {e}")
+
+# ── WorldLinco mobile: friends / chat / OCR ──
+try:
+    from backend.marketplace.nadotongryoksa_friends_router import (
+        router as nadotongryoksa_friends_router,
+    )
+    app.include_router(nadotongryoksa_friends_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa friends router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa friends router skipped: {e}")
+
+try:
+    from backend.marketplace.nadotongryoksa_chat_router import (
+        router as nadotongryoksa_chat_router,
+    )
+    app.include_router(nadotongryoksa_chat_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa chat router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa chat router skipped: {e}")
+
+try:
+    from backend.mobile.image_translation.router import (
+        router as mobile_image_translation_router,
+    )
+    app.include_router(mobile_image_translation_router)
+    logger.info("[OK] mobile image translation router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] mobile image translation router skipped: {e}")
+
 # ── Marketplace ──
 try:
     from backend.marketplace.router import router as marketplace_router
@@ -1472,6 +1530,14 @@ try:
     logger.info("[OK] external search router loaded")
 except Exception as e:
     logger.warning(f"[WARN] external search router skipped: {e}")
+
+# ── Autonomous Multi-Agent Orchestrator ──
+try:
+    from backend.orchestrator.autonomous.router import router as autonomous_router
+    app.include_router(autonomous_router)
+    logger.info("[OK] autonomous multi-agent orchestrator router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] autonomous orchestrator router skipped: {e}")
 
 # ── Face Recognition / ML Detectors / Vector Search ──
 # NOTE: These routers are registered via the marketplace contract router (with
