@@ -2,6 +2,11 @@ name: "Copilot Setup Steps"
 
 on:
   workflow_dispatch:
+    inputs:
+      copilot_agent_model:
+        description: "Optional override for COPILOT_AGENT_MODEL"
+        required: false
+        type: string
   push:
     paths:
       - .github/workflows/copilot-setup-steps.yml
@@ -11,9 +16,17 @@ on:
 
 jobs:
   copilot-setup-steps:
+    # Copilot cloud agent runs this setup job before task execution.
+    # Exporting COPILOT_AGENT_MODEL here makes it available to subsequent setup steps.
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Force a supported Copilot model
-        run: echo "COPILOT_AGENT_MODEL=sweagent-capi:claude-haiku-4.5" >> "$GITHUB_ENV"
+      - name: Resolve and export Copilot model
+        run: |
+          COPILOT_MODEL="${{ github.event.inputs.copilot_agent_model || vars.COPILOT_AGENT_MODEL || 'sweagent-capi:claude-haiku-4.5' }}"
+          echo "COPILOT_AGENT_MODEL=${COPILOT_MODEL}" >> "$GITHUB_ENV"
+      - name: Verify Copilot model export
+        run: |
+          test -n "${COPILOT_AGENT_MODEL}"
+          echo "Configured COPILOT_AGENT_MODEL=${COPILOT_AGENT_MODEL}" >> "$GITHUB_STEP_SUMMARY"
