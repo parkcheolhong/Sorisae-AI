@@ -16,8 +16,10 @@ jobs:
       contents: read
     steps:
       - name: Force a supported Copilot model
+        env:
+          COPILOT_AGENT_MODEL_RAW: ${{ vars.COPILOT_AGENT_MODEL }}
         run: |
-          model="${{ vars.COPILOT_AGENT_MODEL }}"
+          model="$COPILOT_AGENT_MODEL_RAW"
           if [ -z "$model" ]; then
             model="claude-sonnet-4.5"
             echo "::warning::COPILOT_AGENT_MODEL repository variable is not set. Falling back to ${model}."
