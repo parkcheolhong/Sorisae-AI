@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Append one E-3-4 beta user row (1+ successful WiFi call, build 66+)
+# Append one E-3-4 beta user row (1+ successful WiFi call, build 74+)
 param(
     [Parameter(Mandatory = $true)]
     [string]$DisplayName,

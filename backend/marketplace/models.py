@@ -56,6 +56,8 @@ class User(Base):
     representative_name = Column(String(120))
     hashed_password = Column(String(255))
     avatar_url = Column(String(500))
+    preferred_language = Column(String(16), nullable=True)
+    country_code = Column(String(8), nullable=True)
     credit_balance = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, nullable=False, default=False)

@@ -105,8 +105,8 @@
 
 - 파일: `evidence/worldlinco-v1-launch/E3-4_beta_users.csv`
 - 스크립트: `pwsh -File scripts/worldlinco_e3_beta_user_record.ps1 -DisplayName "이름" -Locale ko-KR -Feedback "한줄피드백"`
-- 필수: WiFi · connected · relay 1턴 이상 · build **73+** 권장
+- 필수: WiFi · connected · relay 1턴 이상 · build **74+** 권장
 
 ---
 
-*최종 갱신: 2026-06-16 · build 73 · E-3-8 strict PASS*
+*최종 갱신: 2026-06-16 · build 74 · E-3-8 strict PASS · v1.0.45*

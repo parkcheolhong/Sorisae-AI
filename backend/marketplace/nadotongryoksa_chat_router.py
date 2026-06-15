@@ -300,6 +300,7 @@ def _serialize_user_summary(
         "nickname": nickname,
         "voice_id": _build_voice_id(user.id),
         "preferred_language": getattr(user, "preferred_language", None),
+        "country_code": getattr(user, "country_code", None),
     }
 
 
@@ -1358,17 +1359,19 @@ def create_or_get_direct_room(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="친구 관계가 확인되지 않았습니다",
         )
-    _resolve_user(db, friend_user_id)
+    friend_user = _resolve_user(db, friend_user_id)
     room = _find_direct_room(db, current_user_id, friend_user_id)
     created_now = room is None
+    owner_language = _resolve_user_language(current_user)
+    friend_language = _resolve_user_language(friend_user)
     if room is None:
         now = _utcnow()
         room = models.ChatRoom(
             room_uuid=str(uuid4()),
             room_type="direct",
             owner_user_id=current_user_id,
-            default_source_lang=None,
-            default_target_lang=None,
+            default_source_lang=owner_language,
+            default_target_lang=friend_language,
             translation_mode="direct_auto",
             last_message_at=now,
             created_at=now,

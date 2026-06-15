@@ -1144,6 +1144,14 @@ def _ensure_video_service_user_schema() -> None:
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
             ))
+        if "preferred_language" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(16)"
+            ))
+        if "country_code" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN country_code VARCHAR(8)"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))

@@ -4378,7 +4378,7 @@ export default function App() {
         setLoginLoading(true);
         setLoginError('');
         try {
-            await callSignupApi({
+            const signedUpUser = await callSignupApi({
                 username: normalizedUsername,
                 email: normalizedEmail,
                 password: normalizedPassword,
@@ -4389,7 +4389,13 @@ export default function App() {
             });
             const tk = await callLoginApi(normalizedEmail, normalizedPassword);
             const me = await callMeApi(tk);
-            applyAuthenticatedSession(tk, me);
+            const mergedUserInfo: UserInfo = {
+                ...me,
+                preferred_language: me.preferred_language || signedUpUser.preferred_language || preferredLanguage,
+                country_code: me.country_code || signedUpUser.country_code || normalizedCountryCode || null,
+            };
+            applyAuthenticatedSession(tk, mergedUserInfo);
+            await saveStoredAuthState(tk, mergedUserInfo);
             setAuthModalMode('login');
             setSignupUsername('');
             setSignupFullName('');

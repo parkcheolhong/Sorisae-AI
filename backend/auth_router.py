@@ -41,6 +41,7 @@ from backend.auth import (
 )
 from backend.database import get_db
 from backend.models import User
+from backend.user_profile import normalize_country_code, normalize_preferred_language
 
 router = APIRouter()
 
@@ -67,6 +68,13 @@ class UserCreate(BaseModel):
     business_name: Optional[str] = None
     business_registration_number: Optional[str] = None
     representative_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+
+
+class UserProfileUpdate(BaseModel):
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -81,6 +89,8 @@ class UserResponse(BaseModel):
     business_name: Optional[str] = None
     business_registration_number: Optional[str] = None
     representative_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -260,6 +270,39 @@ def _issue_recovery_token(prefix: str) -> tuple[str, datetime]:
     return f"{prefix}_{token_urlsafe(24)}", expires_at
 
 
+def _validate_profile_fields(
+    preferred_language: Optional[str],
+    country_code: Optional[str],
+    *,
+    require_both: bool = False,
+) -> tuple[Optional[str], Optional[str]]:
+    normalized_language = normalize_preferred_language(preferred_language)
+    normalized_country = normalize_country_code(country_code)
+
+    if preferred_language is not None and str(preferred_language).strip():
+        if normalized_language is None:
+            raise HTTPException(
+                status_code=400,
+                detail="지원하지 않는 preferred_language 입니다",
+            )
+
+    if country_code is not None and str(country_code).strip():
+        if normalized_country is None:
+            raise HTTPException(
+                status_code=400,
+                detail="country_code 는 2자리 ISO 국가 코드여야 합니다",
+            )
+
+    if require_both:
+        if normalized_language is None or normalized_country is None:
+            raise HTTPException(
+                status_code=400,
+                detail="preferred_language 와 country_code 는 필수입니다",
+            )
+
+    return normalized_language, normalized_country
+
+
 # ---------- 엔드포인트 ----------
 @router.post("/signup", response_model=UserResponse, status_code=201)
 def signup(payload: UserCreate, db: Session = Depends(get_db)):
@@ -284,6 +327,11 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 사용자명입니다")
 
+    preferred_language, country_code = _validate_profile_fields(
+        payload.preferred_language,
+        payload.country_code,
+    )
+
     user = User(
         username=payload.username,
         email=payload.email,
@@ -293,6 +341,8 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
         business_registration_number=(payload.business_registration_number or "").strip() or None,
         representative_name=(payload.representative_name or "").strip() or None,
         hashed_password=get_password_hash(payload.password),
+        preferred_language=preferred_language,
+        country_code=country_code,
     )
     db.add(user)
     db.commit()
@@ -520,6 +570,34 @@ def extend_access_token(current_user: User = Depends(get_current_user)):
 
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    payload: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.preferred_language is None and payload.country_code is None:
+        raise HTTPException(
+            status_code=400,
+            detail="수정할 preferred_language 또는 country_code 가 필요합니다",
+        )
+
+    preferred_language, country_code = _validate_profile_fields(
+        payload.preferred_language,
+        payload.country_code,
+    )
+
+    if payload.preferred_language is not None:
+        current_user.preferred_language = preferred_language
+    if payload.country_code is not None:
+        current_user.country_code = country_code
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

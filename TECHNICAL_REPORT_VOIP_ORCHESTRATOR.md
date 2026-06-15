@@ -1,7 +1,7 @@
 # 기술서 — WorldLinco VoIP · Voice Relay Orchestrator · 오케스트레이터
 
 > **최종 갱신:** 2026-06-16  
-> **대상 브랜치/커밋:** `gpu-llm-server-awq-20260427` (로컬 build 73 미커밋)  
+> **대상 브랜치/커밋:** `gpu-llm-server-awq-20260427` · tag **`v1.0.45`** @ build **74**  
 > **현재 운영 APK:** `1.0.45` / **versionCode 74** (`com.parkcheolhong.worldlinco`)  
 > **관련 문서:**  
 > - `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` — Voice Relay 파이프라인·파라미터·구조도  
@@ -441,16 +441,23 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 
 | 항목 | 값 |
 |------|-----|
-| versionName | **1.0.41** |
-| versionCode | **66** |
+| versionName | **1.0.45** |
+| versionCode | **74** |
 | package | `com.parkcheolhong.worldlinco` |
 | canonical | `uploads/marketplace_local/apk/nadotongryoksa-v1.apk` |
-| versioned | `uploads/marketplace_local/apk/nadotongryoksa-v1.0.41-build66-current.apk` |
+| versioned | `uploads/marketplace_local/apk/nadotongryoksa-v1.0.45-build74-current.apk` |
+| manifest | `uploads/marketplace_local/apk/nadotongryoksa-v1.manifest.json` |
 | 빌드 스크립트 | `scripts/publish_worldlinco_apk.ps1` |
 | 다운로드 (공개 latest) | `GET /api/marketplace/latest.apk` |
+| manifest API | `GET /api/marketplace/apk/worldlinco/manifest` |
 | 다운로드 (구매/토큰) | `GET /api/marketplace/apk/nadotongryoksa-v1.apk?test_token=...` |
 
-**2026-06-15 배포 확인 (build 66):**
+**2026-06-16 배포 확인 (build 74):**
+- APK size: **~67.0 MB**
+- Tab `R83W70QY11H`, S10 `172.30.1.19:5555` — versionCode **74** 설치 확인
+- E-3-8 strict + latency smoke: `ko_ja_smoke_20260616-030406`
+
+**2026-06-15 배포 확인 (build 66, superseded by 74):**
 - APK size: **~63.9 MB**
 - Tab `R83W70QY11H`, S10 `172.30.1.19:5555` — versionCode **66** 설치 확인
 - E-3-1 자동 5/5: `e3_verify_20260615-212949`
