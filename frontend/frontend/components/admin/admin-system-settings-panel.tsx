@@ -31,6 +31,11 @@ export interface AdminSystemSettingsPanelProps {
     postgresPasswordConfirm: string;
     postgresPasswordSaving: boolean;
     postgresPasswordMessage: string;
+    adminPasswordCurrent: string;
+    adminPasswordNext: string;
+    adminPasswordConfirm: string;
+    adminPasswordChanging: boolean;
+    adminPasswordMessage: string;
     onApplyGlobalAutomaticMode: () => void;
     onLoadSystemSettings: () => void;
     onSaveSystemSettings: () => void;
@@ -40,6 +45,10 @@ export interface AdminSystemSettingsPanelProps {
     onPostgresPasswordNextChange: (value: string) => void;
     onPostgresPasswordConfirmChange: (value: string) => void;
     onUpdatePostgresRuntimePassword: () => void;
+    onAdminPasswordCurrentChange: (value: string) => void;
+    onAdminPasswordNextChange: (value: string) => void;
+    onAdminPasswordConfirmChange: (value: string) => void;
+    onChangeAdminPassword: () => void;
 }
 
 export default function AdminSystemSettingsPanel({
@@ -61,6 +70,11 @@ export default function AdminSystemSettingsPanel({
     postgresPasswordConfirm,
     postgresPasswordSaving,
     postgresPasswordMessage,
+    adminPasswordCurrent,
+    adminPasswordNext,
+    adminPasswordConfirm,
+    adminPasswordChanging,
+    adminPasswordMessage,
     onApplyGlobalAutomaticMode,
     onLoadSystemSettings,
     onSaveSystemSettings,
@@ -70,6 +84,10 @@ export default function AdminSystemSettingsPanel({
     onPostgresPasswordNextChange,
     onPostgresPasswordConfirmChange,
     onUpdatePostgresRuntimePassword,
+    onAdminPasswordCurrentChange,
+    onAdminPasswordNextChange,
+    onAdminPasswordConfirmChange,
+    onChangeAdminPassword,
 }: AdminSystemSettingsPanelProps) {
     return (
         <>
@@ -250,6 +268,77 @@ export default function AdminSystemSettingsPanel({
                     {systemSettingsMessage}
                 </div>
             )}
+
+            <div className="mb-4 rounded-lg border border-violet-200 bg-violet-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 className="text-sm font-semibold text-violet-900">🔑 관리자 계정 비밀번호 변경</h3>
+                        <p className="mt-1 text-xs text-violet-800">
+                            Admin 로그인에 쓰는 계정 비밀번호입니다. PostgreSQL DB 비밀번호와는 별개입니다.
+                            현재 비밀번호를 모르면 로그인 화면의 복구 페이지 또는 `scripts/reset_fixed_admin_password.py`를 사용하세요.
+                        </p>
+                    </div>
+                </div>
+                <form
+                    className="mt-3"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        onChangeAdminPassword();
+                    }}
+                >
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <label className="block">
+                            <span className="mb-2 block text-xs font-semibold text-violet-900">현재 비밀번호</span>
+                            <input
+                                type="password"
+                                value={adminPasswordCurrent}
+                                onChange={(event) => onAdminPasswordCurrentChange(event.target.value)}
+                                className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
+                                autoComplete="current-password"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="mb-2 block text-xs font-semibold text-violet-900">새 비밀번호</span>
+                            <input
+                                type="password"
+                                value={adminPasswordNext}
+                                onChange={(event) => onAdminPasswordNextChange(event.target.value)}
+                                className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
+                                autoComplete="new-password"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="mb-2 block text-xs font-semibold text-violet-900">새 비밀번호 확인</span>
+                            <input
+                                type="password"
+                                value={adminPasswordConfirm}
+                                onChange={(event) => onAdminPasswordConfirmChange(event.target.value)}
+                                className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
+                                autoComplete="new-password"
+                            />
+                        </label>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={
+                                adminPasswordChanging
+                                || !adminPasswordCurrent
+                                || !adminPasswordNext
+                                || !adminPasswordConfirm
+                            }
+                            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${adminPasswordChanging || !adminPasswordCurrent || !adminPasswordNext || !adminPasswordConfirm ? 'bg-violet-300' : 'bg-violet-600 hover:bg-violet-700'}`}
+                        >
+                            {adminPasswordChanging ? '변경 중...' : '관리자 비밀번호 변경'}
+                        </button>
+                        {adminPasswordMessage && (
+                            <p className={`whitespace-pre-line text-sm ${adminPasswordMessage.includes('실패') || adminPasswordMessage.includes('올바르지') ? 'text-red-700' : 'text-violet-900'}`}>
+                                {adminPasswordMessage}
+                            </p>
+                        )}
+                    </div>
+                </form>
+            </div>
 
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">

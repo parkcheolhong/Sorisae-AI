@@ -1,0 +1,37 @@
+# RTX 5090 32GB — vLLM 32B AWQ (OpenAI-compatible :8008)
+# Usage:
+#   docker compose -f docker-compose.vllm-32b.yml up -d --force-recreate vllm-server
+
+services:
+  vllm-server:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server
+    restart: unless-stopped
+    ports:
+      - "8008:8000"
+    volumes:
+      - ${HF_CACHE_ROOT:-C:/gpu-llm-server-cache/huggingface}:/root/.cache/huggingface
+    environment:
+      HF_HOME: /root/.cache/huggingface
+      VLLM_ENABLE_CUDA_COMPATIBILITY: "0"
+      VLLM_USAGE_SOURCE: production-docker-image
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command:
+      - --model
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      - --quantization
+      - awq_marlin
+      - --dtype
+      - half
+      - --max-model-len
+      - ${VLLM_MAX_MODEL_LEN:-8192}
+      - --gpu-memory-utilization
+      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.92}
+      - --tensor-parallel-size
+      - "1"

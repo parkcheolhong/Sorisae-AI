@@ -1311,10 +1311,13 @@ def _ensure_customer_stage_run_payload(
     return stage_run_payload
 
 
-async def _run_customer_orchestration_request(orchestration_request):
-    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+async def _run_customer_orchestration_request(orchestration_request, owner_id: str | None = None):
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_execution
 
-    return await execute_orchestration_handler(orchestration_request)
+    return await run_autonomous_surface_execution(
+        orchestration_request,
+        owner_id=str(owner_id or getattr(orchestration_request, "run_id", "") or "marketplace-customer"),
+    )
 
 
 def _build_customer_orchestrate_result_payload(
@@ -1736,6 +1739,7 @@ def _build_customer_orchestrate_request(
             request.manual_correction,
         ),
         mode=safe_mode,
+        run_id=str(request.stage_run_id or "").strip() or None,
         project_name=request.project_name,
         output_base_dir=user_dir,
         output_dir=validated_output_dir,

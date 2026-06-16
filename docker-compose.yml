@@ -162,7 +162,7 @@ services:
       FASTER_WHISPER_MODEL: ${FASTER_WHISPER_MODEL:-small}
       FASTER_WHISPER_DEVICE: ${FASTER_WHISPER_DEVICE:-cuda}
       FASTER_WHISPER_COMPUTE_TYPE: ${FASTER_WHISPER_COMPUTE_TYPE:-float16}
-      # Stripe 결제 실연동 설정 (기본 simulation 모드)
+      AUTONOMOUS_SESSION_DIR: /app/data/autonomous_sessions
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: ${MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT:-true}
       MARKETPLACE_STRIPE_WEBHOOK_SIGNING_SECRET: ${MARKETPLACE_STRIPE_WEBHOOK_SIGNING_SECRET:-}
@@ -181,6 +181,7 @@ services:
       - ./models:/app/models
       - ./reports:/app/reports
       - ${MARKETPLACE_HOST_ROOT:-./uploads}:/app/uploads
+      - autonomous-session-data:/app/data/autonomous_sessions
       - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
     ports:
       - "127.0.0.1:8000:8000"
@@ -541,6 +542,7 @@ volumes:
   postgres-data:
   qdrant-data:
   minio-data:
+  autonomous-session-data:
 
 networks:
   devanalysis114-network:

@@ -1886,6 +1886,11 @@ export default function AdminDashboardPage() {
         postgresPasswordConfirm,
         postgresPasswordSaving,
         postgresPasswordMessage,
+        adminPasswordCurrent,
+        adminPasswordNext,
+        adminPasswordConfirm,
+        adminPasswordChanging,
+        adminPasswordMessage,
         onApplyGlobalAutomaticMode: applyGlobalAutomaticMode,
         onLoadSystemSettings: loadSystemSettings,
         onSaveSystemSettings: saveSystemSettings,
@@ -1895,6 +1900,10 @@ export default function AdminDashboardPage() {
         onPostgresPasswordNextChange: setPostgresPasswordNext,
         onPostgresPasswordConfirmChange: setPostgresPasswordConfirm,
         onUpdatePostgresRuntimePassword: updatePostgresRuntimePassword,
+        onAdminPasswordCurrentChange: setAdminPasswordCurrent,
+        onAdminPasswordNextChange: setAdminPasswordNext,
+        onAdminPasswordConfirmChange: setAdminPasswordConfirm,
+        onChangeAdminPassword: () => { void changeAdminPassword(); },
     });
 
     const adminSampleProductsAssembly = buildAdminPageSampleProductsAssembly({

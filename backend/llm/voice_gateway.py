@@ -496,39 +496,23 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
             item.model_dump() for item in orch_response.conversation
         ]
     else:
-        chat_response = await asyncio.to_thread(
-            lambda: asyncio.run(
-                answer_orchestrator_chat_service(
-                    request_context=request_context,
-                    request=OrchestratorChatRequest(
-                        task=request.task or transcript,
-                        message=transcript,
-                        agent_key=request.agent_key or "reasoner",
-                        mode=request.mode,
-                        manual_mode=request.manual_mode,
-                        companion_mode=request.companion_mode,
-                        output_dir=request.output_dir,
-                        run_id=request.run_id,
-                        max_tokens=request.max_tokens,
-                        conversation=conversation,
-                    ),
-                    agent_key=request.agent_key or "reasoner",
-                    resolve_chat_model=_resolve_voice_chat_model,
-                    build_ollama_options=build_ollama_options,
-                    ollama_base=VOICE_OLLAMA_BASE,
-                    orch_chat_request_max_tokens=VOICE_CHAT_REQUEST_MAX_TOKENS,
-                    orch_lightweight_chat_max_tokens=VOICE_LIGHTWEIGHT_CHAT_MAX_TOKENS,
-                    orch_chat_agent_timeout_sec=VOICE_CHAT_AGENT_TIMEOUT_SEC,
-                    orch_reasoner_brief_timeout_sec=VOICE_REASONER_BRIEF_TIMEOUT_SEC,
-                    logger=logger,
-                    re_module=re,
-                    session_factory=None,
-                )
-            )
+        from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_chat
+
+        chat_response = await run_autonomous_surface_chat(
+            message=transcript,
+            owner_id=str(request.run_id or "voice-anonymous"),
+            surface="admin",
+            session_id=request.run_id,
+            run_id=request.run_id,
+            task=request.task or transcript,
+            mode=request.mode or "manual_9step",
+            manual_mode=bool(request.manual_mode),
+            conversation=conversation,
+            context_tags=["admin-orchestrator", "voice-stt"],
         )
         response_text = chat_response.reply.content
         output_dir = chat_response.output_dir
-        run_id = chat_response.run_id
+        run_id = chat_response.run_id or chat_response.session_id
         conversation = [
             item.model_dump() for item in chat_response.conversation
         ]
