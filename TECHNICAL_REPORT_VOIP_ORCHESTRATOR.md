@@ -8,6 +8,7 @@
 > - `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md` — 실기기 검증·증적 인덱스  
 > - `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` — 초기 VoIP 설계안  
 > - `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` — 오케스트레이터/월드링코 분석  
+> - `docs/ORCHESTRATOR_API_NAMING.md` — ① autonomous vs ② orchestrate/chat 명명  
 > - `evidence/worldlinco-v1-launch/E3-8_KO_JA_VOIP_REPORT.md` — E-3-8 strict PASS  
 > - `evidence/worldlinco-v1-launch/BUILD73_LAUNCH_STATUS.md` — build 73 SSOT  
 > - `AGENTS.md` — 로컬/클라우드 운영 가이드  
@@ -151,6 +152,53 @@ Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
 | **Chat** | 1:1 방 생성 시 `default_source_lang` / `default_target_lang` = 양쪽 프로필 |
 | **VoIP** | DB 프로필 + 기존 invite/deeplink 언어 힌트 (build 73+ strict 유지) |
 
+### 0.9 관리자 멀티 에이전트 오케스트레이터 (①) — PART A/D-3 (2026-06-16)
+
+| 항목 | 내용 |
+|------|------|
+| **모듈** | `backend/orchestrator/autonomous/` — `turn_controller` · `session` · `agents/*` |
+| **API** | `POST /api/llm/autonomous/chat` · `GET /api/llm/autonomous/session/{id}` |
+| **A-2** | `full_auto` coder→validator 자동 · `rejection` 재계획 · `require_llm_mutation_quota` |
+| **STAGE** | full_auto 턴당 `AUTONOMOUS_MAX_STAGES_PER_TURN` (기본 **11**) 순회 |
+| **GPU A-3-2** | vLLM **32B AWQ** · `verify_autonomous_llm_gpu.py` 3-probe **`overall_passed`** · `evidence/autonomous-a32-gpu-verify/` |
+| **vLLM ops** | `gpu-llm-server/docker-compose.vllm-32b.yml` · `scripts/start_vllm_rtx5090_32b.ps1` |
+| **Admin ops** | `scripts/reset_fixed_admin_password.py` · 설정 패널 관리자 비밀번호 변경 UI |
+| **Admin UI** | `/admin/llm` → `AutonomousOrchestratorPanel` · proxy `app/api/llm/autonomous/*` |
+| **명명 SSOT** | `docs/ORCHESTRATOR_API_NAMING.md` (① vs ② vs VoIP relay ③) |
+| **테스트** | `test_autonomous_orchestrator.py` **31** · `test_autonomous_orchestrator_http.py` **8** |
+
+**②와 구분:** 관리자 기존 대화형 패널 = `POST /api/llm/orchestrate/chat` (`use-orchestrator-chat.ts`). ①은 승인·STAGE·멀티 에이전트 파이프라인 전용.
+
+### 0.10 Autonomous TurnController 11단계 SSOT · 4-probe 실행 완료 (2026-06-16)
+
+| 항목 | 내용 |
+|------|------|
+| **SSOT 엔진** | `TurnController` — `stage_definitions.py` · `stage_commands.py` · `stage_coder_scope.py` |
+| **표면 어댑터** | `surface_adapter.run_autonomous_surface_chat` — Admin `orchestrate/chat` · Marketplace `customer-orchestrate/chat` **동일 코어** |
+| **단계 패치** | 단계당 2~9파일 (`get_stage_patch_scope`) — 기존 파일 필터 제거로 107파일 폭주 방지 |
+| **4.5단계** | reviewer → coder fix loop · validator 구조검증(기존 main.py 인정) · reviewer error 시 중단하지 않음 |
+| **프로브** | `scripts/run_11stage_orchestrator_probe.py` — `--mode stub|live|http` · `--admin` · `--marketplace` |
+
+**실행 결과 (2026-06-16, 태스크: FastAPI 헬스체크 API):**
+
+| Probe | 결과 | session_id | 증적 |
+|-------|------|------------|------|
+| stub | **11/11** completed | `064cf9f886464b72` | `evidence/orchestrator-11stage-probe-20260616-125507/` |
+| live (vLLM :8008) | **11/11** completed | `b5e16dfa41f94638` | `evidence/orchestrator-11stage-probe-20260616-125528/` |
+| http marketplace | **11/11** · stage_run sync OK | `73995f7646e94feb` | `evidence/orchestrator-11stage-probe-20260616-130503/` |
+| http admin | `--admin` 플래그 추가 · 배포 후 실행 | — | `evidence/orchestrator-11stage-probe-20260616/EXECUTION_STATUS_REPORT.md` |
+
+**재현:**
+
+```powershell
+python scripts/run_11stage_orchestrator_probe.py --mode stub
+$env:OLLAMA_BASE="http://127.0.0.1:8008/v1"; python scripts/run_11stage_orchestrator_probe.py --mode live
+python scripts/run_11stage_orchestrator_probe.py --mode http --marketplace
+python scripts/run_11stage_orchestrator_probe.py --mode http --admin
+```
+
+**배포:** `docker compose build backend && docker compose up -d backend` (`devanalysis114-backend` · `./backend` 볼륨 마운트)
+
 ---
 
 ## 1. 개발 환경 구성
@@ -170,21 +218,68 @@ Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
 
 ---
 
-## 2. P0 버그 수정 (자율 오케스트레이터 · 음성)
+## 2. 자율 오케스트레이터 (①) · 음성 P0
 
-### A-1-1 CoderAgent 매니페스트 (`backend/orchestrator/autonomous/agents/coder.py`)
-- `_compat_manifest_for_request` 호출 시그니처 정정 + `written_files` 병합.
+> 체크리스트: `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` PART A · D-3 · D-4-2
 
-### A-1-2/A-1-3 세션 복원·저장 (`session.py`, `turn_controller.py`)
-- `load()`에 stages/agent_results/pending_approval_data 복원.
-- `_build_response`에서 `session.save()` 보장.
+### 2.1 P0 — A-1 (완료)
 
-### B-3-1 VoiceResponse.detected_language (`backend/llm/voice_gateway.py`)
-- Pydantic 필드 추가 → 모바일 자동 언어전환 수신 가능.
+| ID | 파일 | 내용 |
+|----|------|------|
+| A-1-1 | `agents/coder.py` | `_compat_manifest_for_request` 시그니처 · `written_files` 병합 |
+| A-1-2 | `session.py` | `load()` — stages · agent_results · pending_approval_data · model_routes |
+| A-1-3 | `turn_controller.py` | 모든 턴 분기 `session.save()` |
 
-### 회귀 테스트
-- `backend/tests/test_autonomous_orchestrator.py` — 29 passed
-- `backend/tests/test_voice_gateway_schema.py` — 2 passed
+### 2.2 P1 — A-2 / D-3 (2026-06-16)
+
+| ID | 상태 | 구현 |
+|----|------|------|
+| A-2-1 | ✅ | `full_auto` → `_execute_code_pipeline()` (승인 생략) |
+| A-2-2 | ✅ | full_auto STAGE loop · 기본 `AUTONOMOUS_MAX_STAGES_PER_TURN=11` · env 조절 |
+| A-2-3 | ✅ | intent `rejection` · `_handle_rejection()` |
+| A-2-4 | ✅ | `router.py` · `Depends(require_llm_mutation_quota)` |
+
+### 2.3 P2 — A-3 (2026-06-16)
+
+| ID | 상태 | 구현 |
+|----|------|------|
+| A-3-3 | ✅ | LLM setup failure → `logger.warning` |
+| A-3-4 | ✅ | `autonomous/__init__.py` · `agents/__init__.py` |
+| A-3-5 | ✅ | `components/ui/AutonomousOrchestratorPanel.tsx` · `/admin/llm` |
+| A-3-1 | ✅ | `_run_agent_with_bus` · request/response/handoff · inbox |
+| A-3-2 | ✅ | A뇌 live LLM · `llm_connected` · **32B AWQ 3-probe** (`A32_GPU_VERIFY_20260615-220314.json`) |
+
+**A-3-2 GPU 검증 (2026-06-16):**
+
+| Probe | 결과 |
+|-------|------|
+| turn_controller | reasoner/planner `success` · reviewer `needs_revision` |
+| http_testclient | subprocess 격리 · reasoner `success` |
+| http_api | Admin login + `/api/llm/autonomous/chat` · `llm_connected: true` |
+| vLLM | `Qwen/Qwen2.5-Coder-32B-Instruct-AWQ` · `profile_aligned_32b_awq: true` |
+
+재현: `scripts/verify_autonomous_llm_gpu.py` · 보고서 `evidence/autonomous-a32-gpu-verify/A32_GPU_VERIFY_REPORT.md`
+
+### 2.4 테스트 — A-4 (2026-06-16)
+
+| 파일 | tests | 범위 |
+|------|-------|------|
+| `test_autonomous_orchestrator.py` | 35 | TurnController · session · validator · bus · stub · STAGE cap |
+| `test_autonomous_orchestrator_http.py` | 9 | HTTP greeting · semi_auto · approval · full_auto · rejection · llm_connected |
+| `test_model_config_live_routes.py` | 3 | live vLLM model route fallback |
+| `test_voice_voip_d4_extended.py` | 32 | VoIP relay · call mode · signaling helpers |
+| `test_voice_translate_stt.py` | 18 | STT energy · duration · language hint |
+| `test_voice_gateway_schema.py` | 2 | B-3-1 `detected_language` |
+
+실행:
+
+```powershell
+python -m pytest backend/tests/test_autonomous_orchestrator.py backend/tests/test_autonomous_orchestrator_http.py backend/tests/test_voice_voip_d4_extended.py backend/tests/test_voice_translate_stt.py -p asyncio --asyncio-mode=auto -q
+```
+
+### 2.5 B-3-1 VoiceResponse.detected_language
+
+- `backend/llm/voice_gateway.py` — Pydantic 필드 → 모바일 자동 언어전환
 
 ---
 

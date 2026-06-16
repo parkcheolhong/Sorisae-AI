@@ -1,6 +1,6 @@
 # 오케스트레이터 자율형 대화 & 월드링코(WorldLinco) 통번역 — 분석 및 방향 체크리스트
 
-> **최종 갱신:** 2026-06-14 · 브랜치 `gpu-llm-server-awq-20260427` @ `a989bc9f0` · **APK build 65** (`1.0.40`)  
+> **최종 갱신:** 2026-06-16 · 브랜치 `gpu-llm-server-awq-20260427` · **APK build 74** (`1.0.45`) · backend tag **`v1.0.46`**  
 > 본 문서는 **① 오케스트레이터 멀티 자율형 대화**, **② 월드링코 통번역/VoIP** 진단과 다음 방향을 정리합니다.  
 > **마스터 기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` · **Voice Relay:** `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` · **검증:** `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md`  
 > **1차 출시 (개인 APK):** **PART E** · **베타 안내:** [`docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`](docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md) · **V2 미래 버전:** **PART F** + [`docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md`](docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md) *(계획 고정 · v1.0 범위 아님)*  
@@ -16,6 +16,25 @@
 > - **B-3-1** `VoiceResponse.detected_language` 필드.
 > - 회귀: `test_autonomous_orchestrator.py`, `test_voice_gateway_schema.py`.
 > - 비고: async 테스트는 `pytest-asyncio` 필요(`-p asyncio --asyncio-mode=auto`).
+
+> ### ✅ 2026-06-16 Autonomous TurnController 11단계 SSOT · 4-probe 실행 완료
+> - **단일 코어:** Admin `orchestrate/chat` · Marketplace `customer-orchestrate/chat` → `surface_adapter` → `TurnController`.
+> - **11단계:** `stage_definitions` · `stage_commands` · `stage_coder_scope` — stub/live/http(marketplace) **11/11 PASS**.
+> - **패치 정밀도:** 단계당 2~9파일 · 4단계 107파일 폭주 수정 · 4.5 reviewer/validator 게이트 수정.
+> - **프로브:** `scripts/run_11stage_orchestrator_probe.py` — `--admin` · `--marketplace` · incomplete exit 1.
+> - **증적:** `evidence/orchestrator-11stage-probe-20260616/EXECUTION_STATUS_REPORT.md` · `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` §0.10.
+
+> ### ✅ 2026-06-16 A-3-2 GPU 검증 완료 (32B · Admin HTTP)
+> - vLLM **Qwen2.5-Coder-32B-Instruct-AWQ** @ `:8008` · `profile_aligned_32b_awq=true`
+> - `verify_autonomous_llm_gpu.py` **overall_passed** — turn_controller · http_testclient · **http_api** (Admin JWT)
+> - 증거: `evidence/autonomous-a32-gpu-verify/A32_GPU_VERIFY_REPORT.md` · `A32_GPU_VERIFY_20260615-220314.json`
+> - 백엔드: `devanalysis114-backend` 재기동 후 `llm_connected` API 계약 반영
+
+> ### ✅ 2026-06-16 관리자 오케스트레이터 (PART A/D-3) 진행
+> - **A-2-1~4** full_auto 자동 실행 · STAGE 턴당 순회 · 거절 재계획 · LLM mutation quota.
+> - **A-3-3~5** LLM setup warning · `__init__.py` · **관리자 UI** `/admin/llm` 패널.
+> - **A-4-1~4** 단위·HTTP 테스트 · route 정정 · `docs/ORCHESTRATOR_API_NAMING.md`.
+> - 테스트: `test_autonomous_orchestrator.py` 31 · `test_autonomous_orchestrator_http.py` 8.
 
 > ### ✅ 2026-06-14 build 65까지 추가 완료 (코드·배포·문서)
 > - **운영 VoIP:** `backend/marketplace/nadotongryoksa_voip_router.py` (`/api/v1/voip/signal`, `/presence`, initiate/accept/end).
@@ -33,11 +52,48 @@
 API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`backend/orchestrator/autonomous/router.py:14`)
 등록: `backend/main.py:1500-1501` (정상 로드 확인됨)
 
-### A-0. 먼저 알아야 할 구조적 혼선 (중요)
-- 이름이 비슷한 **별개의 두 시스템**이 공존합니다.
-  - ① 멀티 에이전트 자율 오케스트레이터 = `backend/orchestrator/autonomous/` (지금 구현 중인 것)
-  - ② 채팅 오케스트레이터 "대화 모드" = `backend/orchestrator/chat/chat_service.py`, API `POST /api/llm/orchestrate/chat`
-- `test_orchestrator_dialogue_mode.py` 와 `verify_autonomous_chat.py` 는 **이름과 달리 ②**를 검증합니다. → ① 전용 테스트가 사실상 부족.
+### A-0. SSOT · 두 표면 · 음성 우선 (2026-06-16 확정)
+
+**제품 원칙 (관리자 ↔ 직원 마켓 오케스트레이터):**
+
+| 원칙 | 내용 |
+|------|------|
+| **단일 엔진 SSOT** | 오케스트레이터 **코어는 하나**. STAGE · A뇌 에이전트 · LLM 라우트 · `llm_connected` 계약 **동일**. |
+| **두 표면** | ① **직원 마켓** `/marketplace/orchestrator` (customer-orchestrate) ② **관리자** `/admin/llm` — **권한·과금·output scope만 다름**. |
+| **음성 우선** | **두 표면 모두 음성으로 지시** 가능해야 함. 수동 버튼·모드 토글 중심 UI **지양**. |
+| **버튼 예외 (직원 마켓)** | **자가진단 / 자가개선 / 자가확장** 만 명시적 버튼 허용 — VoIP·운영 진단 트랙(PART B)과 연계. |
+| **VoIP (③)** | 실시간 통역 통화 · 모바일 Voice Relay — **코드 오케스트레이터 SSOT와 별도 엔진**. |
+
+**현재 코드 vs 목표 (gap):**
+
+| 항목 | 목표 SSOT 코어 | 현재 마켓 (직원) | 현재 관리자 |
+|------|----------------|------------------|-------------|
+| 엔진 | `backend/orchestrator/autonomous/` (`TurnController`) | `customer-orchestrate/*` → **②** `orchestrate/chat` · `llm/orchestrator.py` | 기본 UI **②** · ① 패널 **숨김** (`miniConsoleLayout`) |
+| 음성 지시 | 코어 진입 전 STT → 동일 `message` | **미연동** (capability 설명만) | **②** `useOrchestratorChat` · `/api/llm/voice/orchestrate` |
+| GPU 검증 (A-3-2) | ① 3-probe 통과 | — | Admin http_api 포함 |
+
+**레거시 ② (통합 대상, not SSOT):** `backend/orchestrator/chat/` · `POST /api/llm/orchestrate/chat` — 마켓·관리자가 **아직** 많이 의존. **→ ① 코어 어댑터로 흡수**가 SSOT 정렬 방향.
+
+**이름 혼선 (테스트·스크립트):**
+- `test_orchestrator_dialogue_mode.py` · `verify_autonomous_chat.py` → **②** 검증 (파일명 misleading).
+- `test_autonomous_orchestrator*.py` · `verify_autonomous_llm_gpu.py` → **①** 검증.
+- 명명 SSOT: `docs/ORCHESTRATOR_API_NAMING.md`.
+
+**어제(A-3-2) 작업 범위:** **① 코어** GPU live · Admin API probe · 32B — **②↔① 통합·마켓 음성·UI SSOT는 미착수**.
+
+### A-0b. SSOT 정렬 · 11단계 — 실행 상태 (2026-06-16)
+
+- [x] **(A-6-1) 단일 코어** — Admin `POST /api/llm/orchestrate/chat` · Marketplace `customer-orchestrate/chat` → `surface_adapter.run_autonomous_surface_chat` → **동일 TurnController**.
+- [x] **(A-6-5) 11단계 자연어 명령** — `설계해줘` · `N단계 진행해줘` · 4단계+ 협업 Q&A (`stage_commands.py`).
+- [x] **(A-6-6) 단계 패치 SSOT** — `stage_coder_scope.py` · 단계당 bounded files · validator 구조검증(기존 entry point 인정).
+- [x] **(A-6-7) 4-probe 검증** — stub **11/11** · live(vLLM) **11/11** · http marketplace **11/11** · http admin 플래그 추가.
+- [~] **(A-6-2) 음성 진입 공통** — STT → `message` → 코어 (마켓·관리자 동일); admin `voice/orchestrate` 존재 · **마켓 미연동**.
+- [~] **(A-6-3) UI 음성 우선** — admin STT hook · 마켓 orchestrator STT **부분**.
+- [x] **(A-6-4) stage_run 동기화** — marketplace `stage_run_sync.py` · http probe sync_checks PASS.
+
+### A-0b (legacy). SSOT 정렬 · 음성 — 미착수 체크
+
+### A-0 (legacy note) — 레거시 이원 구조 설명
 
 ### A-1. 🔴 P0 — 치명적 버그 (먼저 수정해야 진행 가능)
 
@@ -61,37 +117,31 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 ### A-2. 🟠 P1 — 설계/동작 불일치
 
-- [ ] **(A-2-1) `full_auto` 모드가 실제로 자동 실행되지 않음**
-  - `requires_approval()`는 `full_auto`에서 False (`session.py:115-120`)지만, coder 자동 실행 분기가 없어 reasoner만 돌고 멈춤.
-  - **방향**: `full_auto`일 때 승인 단계를 건너뛰고 coder→validator(→revision 루프)까지 자동 진행하는 경로 추가, 또는 모드 설명을 현실에 맞게 정정.
-- [ ] **(A-2-2) STAGE-02~10 자동 순회 미구현**
-  - `STAGE_DEFINITIONS`(11단계, `turn_controller.py:25-37`)는 정의돼 있으나, 승인 1회당 1스테이지만 advance하고 `_handle_approval()`은 coder+validator만 실행 → 스테이지별 에이전트 조합이 실질 미사용.
-  - **방향**: 스테이지 순회 상태머신을 구현하거나, 우선 STAGE 정의를 단순화하고 문서/코드 일치시키기.
-- [ ] **(A-2-3) 거절(`rejected`) 처리 로직 없음**
-  - `approval_state` 주석만 존재(`session.py:63`), 거절 시 분기 없음.
-  - **방향**: 거절 시 현재 스테이지 롤백/재계획 분기 추가.
-- [ ] **(A-2-4) 쿼터/레이트리밋 미적용**
-  - `/api/llm/orchestrate/chat`은 `require_llm_mutation_quota` 적용(`orchestrator.py:13150`), `/api/llm/autonomous/chat`은 `get_current_user`만.
-  - **방향**: autonomous에도 동일 쿼터/레이트리밋 정책 적용(LLM 비용 보호).
+- [x] **(A-2-1) `full_auto` 모드 자동 실행** ✅ 2026-06-16 — `turn_controller._execute_code_pipeline()` · 승인 없이 coder→validator.
+- [x] **(A-2-2) STAGE-02~10 자동 순회** ✅ 2026-06-16 — full_auto · 기본 `AUTONOMOUS_MAX_STAGES_PER_TURN=11` · `_run_stage_planning_agents` · env로 턴당 상한 조절.
+- [x] **(A-2-3) 거절(`rejected`) 처리** ✅ 2026-06-16 — intent `rejection` · reasoner/planner 재계획 · semi_auto 재승인 대기.
+- [x] **(A-2-4) 쿼터/레이트리밋** ✅ 2026-06-16 — `require_llm_mutation_quota` on `/api/llm/autonomous/chat`.
 
 ### A-3. 🟡 P2 — 협업/정리
 
-- [ ] **(A-3-1) `agent_bus`의 pub/sub가 실제 협업에 미사용** — `subscribe()` 정의만 있고 에이전트가 구독하지 않음(`agent_bus.py`). 현재는 로그/관찰용. 필요 시 실제 에이전트 간 메시지 소비 구현.
-- [ ] **(A-3-2) LLM 미연결 시 스텁 문자열 반환** — `agents/base.py:75-77` (`"[{agent_id}] LLM 미연결 — ..."`). 클라우드(GPU 없음)에서는 스텁으로 "성공" 처리되니, 품질 검증은 LLM 서버(실서버 RTX 5090) 연결 후 수행.
-- [ ] **(A-3-3) `_build_llm_call()` 예외 무음 삼킴** — `router.py:106-107`에서 실패 시 `llm_call=None`. 최소한 warning 로그 추가 권장.
-- [ ] **(A-3-4) 패키지 `__init__.py` 정리** — `autonomous/`·`agents/` 패키지 구조 정비.
-- [ ] **(A-3-5) 프론트엔드 연동 부재** — `/api/llm/autonomous/*` 호출 UI 없음. UI 연동 또는 API 문서화 결정 필요.
+- [x] **(A-3-1) `agent_bus` 실협업** ✅ 2026-06-16 — `_wire_agent_bus_subscriptions` · `_run_agent_with_bus`(request/response/handoff) · planning·pipeline 경로.
+- [x] **(A-3-2) LLM stub vs GPU 품질 검증** ✅ 2026-06-16 — A뇌 live LLM · API `llm_connected` · Admin UI · **3-probe 전체 통과** (`evidence/autonomous-a32-gpu-verify/A32_GPU_VERIFY_20260615-220314.json` · vLLM **32B AWQ** · turn_controller + http_testclient + **Admin http_api**).
+- [x] **(A-3-3) `_build_llm_call()` 예외 로그** ✅ 2026-06-16 — `router.py` warning.
+- [x] **(A-3-4) 패키지 `__init__.py` 정리** ✅ 2026-06-16 — `autonomous/` · `agents/` export.
+- [x] **(A-3-5) 프론트엔드 연동** ✅ 2026-06-16 — `/admin/llm` · `AutonomousOrchestratorPanel` · proxy `/api/llm/autonomous/*`.
 
 ### A-4. 테스트 방향
 
-- [ ] **(A-4-1)** `test_autonomous_orchestrator.py`에 **승인→coder→validator 통합 테스트** 추가(A-1-1 회귀 방지). LLM 없이 동작하도록 `llm_call` 페이크 주입.
-- [ ] **(A-4-2)** `/api/llm/autonomous/chat` **HTTP 레벨 테스트**(FastAPI TestClient) 추가 — 세션 생성/복원/승인 happy-path.
-- [ ] **(A-4-3)** `test_route_to_agents_code_generation_idle`이 실제 `process_turn` 첫 턴 동작(STAGE-01 → `reasoner`만)과 어긋남 → 테스트를 실제 동작에 맞게 정정.
-- [ ] **(A-4-4)** ①/② 명명 혼선 정리: `verify_autonomous_chat.py`, `test_orchestrator_dialogue_mode.py`가 ②를 본다는 점을 문서/파일명으로 명확화.
+- [x] **(A-4-1)** 승인→coder→validator 통합 테스트 ✅ `test_autonomous_orchestrator.py`.
+- [x] **(A-4-2)** HTTP TestClient ✅ `test_autonomous_orchestrator_http.py` (9 tests).
+- [x] **(A-4-3)** route 테스트 정정 ✅ idle vs STAGE-01 분리.
+- [x] **(A-4-4)** ①/② 명명 혼선 ✅ `docs/ORCHESTRATOR_API_NAMING.md`.
 
-### A-5. GPU/LLM 없이 가능한 검증 (이 클라우드 환경)
-- 가능: 의도 분류·인사/상태 응답·`ValidatorAgent`(`py_compile`)·버스 로그·세션 저장/복원.
-- 불가(LLM 서버 필요): reasoner/planner/reviewer 실품질, 실제 코드생성 E2E(단, **A-1-1 수정 후** generator 템플릿 경로는 GPU 없이도 동작 검증 가능).
+### A-5. GPU/LLM 없이 가능한 검증 (클라우드 vs GPU 서버)
+- 가능: 의도 분류·인사/상태 응답·`ValidatorAgent`(`py_compile`)·버스 request/handoff·세션 저장/복원·A뇌 **`status=stub`** · `llm_connected=false` 계약.
+- **GPU 서버 live (2026-06-16 최종):** vLLM **32B AWQ** · `profile_aligned_32b_awq=true` · `overall_passed=true` · reasoner/planner `success` · reviewer `needs_revision` · Admin JWT `http_api` 포함 · `scripts/verify_autonomous_llm_gpu.py` · 증거 `A32_GPU_VERIFY_20260615-220314.json`.
+- **vLLM 기동:** `gpu-llm-server/docker-compose.vllm-32b.yml` · `scripts/start_vllm_rtx5090_32b.ps1`.
+- **Admin ops:** `scripts/reset_fixed_admin_password.py` (host DB) · 전역 설정 패널 「관리자 계정 비밀번호 변경」UI.
 
 ---
 
@@ -278,21 +328,16 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 ### D-3. 3순위: 오케스트레이터 자동화 확장
 
-- [ ] **D-3-1) Full Auto 루프 구현**
-  - `reasoner → planner → coder → validator → reviewer → 수정 반복 → 완성` 자동 루프를 구현한다.
-- [ ] **D-3-2) STAGE 11단계 자동 순회**
-  - `Stage01`부터 `Stage10`까지 정의만이 아니라 실제 자동 진행을 구현한다.
-- [ ] **D-3-3) Rejected 처리**
-  - 승인만이 아니라 거절 시 `재계획 → 재생성` 경로를 구현한다.
+- [x] **D-3-1) Full Auto 루프** ✅ 2026-06-16 — A-2-1 `_execute_code_pipeline`.
+- [x] **D-3-2) STAGE 11단계 자동 순회** ✅ 2026-06-16 — A-2-2 · env `AUTONOMOUS_MAX_STAGES_PER_TURN`(기본 11).
+- [x] **D-3-3) Rejected 처리** ✅ 2026-06-16 — A-2-3.
 
 ### D-4. 4순위: 운영 안정화 및 자동화
 
 - [ ] **D-4-1) 운영 장애 복구 경로 정리**
   - `Redis 장애 복구`, `TURN 장애 복구`, `FCM 장애 복구`를 우선 반영한다.
-- [ ] **D-4-2) Rate Limit 적용**
-  - `/llm/autonomous/chat`에 사용량 제한, 토큰 제한, 쿼터 제한을 적용한다.
-- [ ] **D-4-3) 테스트 자동화 확대**
-  - `VoIP`, `Autonomous`, `Voice Translate` 중심으로 테스트 수를 `50~70개` 범위까지 확대한다.
+- [x] **D-4-2) Rate Limit 적용** ✅ 2026-06-16 — A-2-4 `require_llm_mutation_quota`.
+- [x] **D-4-3) 테스트 자동화 확대** ✅ 2026-06-16 — 통합 실행 **94** collected (Autonomous 44 · VoIP D-4-3 32 · Voice STT 18).
 
 ---
 

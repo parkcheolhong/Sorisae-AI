@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
 
 export type SharedOrchestratorSubstep = {
     id: string;
@@ -84,6 +85,8 @@ interface OrchestratorStageCardPanelProps {
     onChatInputChange?: (value: string) => void;
     chatLoading?: boolean;
     onSubmitChat?: () => void;
+    voiceListening?: boolean;
+    onVoiceToggle?: () => void;
 }
 
 const toneClasses = {
@@ -144,6 +147,8 @@ export default function OrchestratorStageCardPanel({
     onChatInputChange,
     chatLoading,
     onSubmitChat,
+    voiceListening = false,
+    onVoiceToggle,
 }: OrchestratorStageCardPanelProps) {
     const palette = toneClasses[tone];
     const fieldIdPrefix = React.useId().replace(/:/g, '');
@@ -358,6 +363,15 @@ export default function OrchestratorStageCardPanel({
                                     {chatLoading ? '대화 처리 중...' : '협업 대화 전송'}
                                 </button>
                             )}
+                            {onVoiceToggle && (
+                                <OrchestratorVoiceMicButton
+                                    listening={voiceListening}
+                                    disabled={Boolean(chatLoading)}
+                                    onClick={onVoiceToggle}
+                                    compact
+                                    testId="orchestrator-voice-input"
+                                />
+                            )}
                         </div>
                         <div className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-3 space-y-1">
                             <p>현재 카드를 통과시키면 stage run이 다음 카드로 자동 이동합니다.</p>
@@ -430,7 +444,16 @@ export default function OrchestratorStageCardPanel({
                             {chatLoading ? '대화 처리 중...' : '실행하기'}
                         </button>
                     )}
-                    {onSubmitChat && <p className="text-[11px] text-slate-400">Enter 실행 · Shift+Enter 줄바꿈</p>}
+                    {onVoiceToggle && (
+                        <OrchestratorVoiceMicButton
+                            listening={voiceListening}
+                            disabled={Boolean(chatLoading)}
+                            onClick={onVoiceToggle}
+                            compact
+                            testId="orchestrator-voice-input-fallback"
+                        />
+                    )}
+                    {onSubmitChat && <p className="text-[11px] text-slate-400">Enter 실행 · Shift+Enter 줄바꿈 · 음성 지시 버튼 지원</p>}
                 </div>
             )}
             {activeStage && (

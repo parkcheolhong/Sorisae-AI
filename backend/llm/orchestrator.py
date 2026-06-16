@@ -9392,7 +9392,12 @@ def _compat_manifest_for_request(
         "docs/deployment.md",
         "docs/testing.md",
     ]
-    for path in list(dict.fromkeys(required_files + compat_defaults + list(template_candidates.keys()))):
+    patch_only = bool(_extract_targeted_patch_paths(task))
+    if patch_only:
+        manifest_paths = list(dict.fromkeys(required_files))
+    else:
+        manifest_paths = list(dict.fromkeys(required_files + compat_defaults + list(template_candidates.keys())))
+    for path in manifest_paths:
         normalized_path = str(path or "").strip().replace('\\', '/')
         if not normalized_path:
             continue
@@ -13011,13 +13016,20 @@ async def _run_orchestration_core(
 async def execute_orchestration(
     request: OrchestrationRequest,
     progress_callback: Optional[Callable[[str, str], None]] = None,
+    owner_id: Optional[str] = None,
 ) -> OrchestrationResponse:
-    return await execute_customer_orchestration_service(
+    from backend.orchestrator.autonomous.surface_adapter import (
+        orchestration_payload_to_response,
+        run_autonomous_surface_execution,
+    )
+
+    effective_owner = str(owner_id or request.run_id or "admin-orchestrate")
+    payload = await run_autonomous_surface_execution(
         request,
-        run_orchestration_func=run_orchestration,
-        emit_orchestration_progress_func=_emit_orchestration_progress,
+        owner_id=effective_owner,
         progress_callback=progress_callback,
-    ) # pyright: ignore[reportReturnType]
+    )
+    return orchestration_payload_to_response(payload)
 
 
 async def _call_orchestrator_chat_llm(
@@ -13065,7 +13077,8 @@ async def orchestrate(
     current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestrationResponse:
     _enforce_global_orchestration_gate(request)
-    return await execute_orchestration(request)
+    owner_id = str(getattr(current_user, "id", "admin-orchestrate"))
+    return await execute_orchestration(request, owner_id=owner_id)
 
 
 @router.post("/orchestrate/accepted", response_model=OrchestrationAcceptedResponse)
@@ -13081,6 +13094,7 @@ async def orchestrate_accepted(
         )
     run_id = str(request.run_id or uuid4().hex)
     accepted_request = request.model_copy(update={"run_id": run_id})
+    owner_id = str(getattr(current_user, "id", "admin-orchestrate"))
     initial_payload = {
         "run_id": run_id,
         "project_name": accepted_request.project_name,
@@ -13107,7 +13121,13 @@ async def orchestrate_accepted(
 
     def _worker() -> None:
         try:
-            response = asyncio.run(execute_orchestration(accepted_request, progress_callback=_progress_callback))
+            response = asyncio.run(
+                execute_orchestration(
+                    accepted_request,
+                    progress_callback=_progress_callback,
+                    owner_id=owner_id,
+                )
+            )
             _mark_orchestration_progress_result(run_id, response)
         except Exception as exc:
             logger.exception("orchestrate accepted worker failed run_id=%s", run_id)
@@ -13149,19 +13169,20 @@ async def answer_orchestrator_chat(
     agent_key: str = "chat",
     current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestratorChatResponse:
-    return await answer_orchestrator_chat_service(
-        request_context=request_context,
-        request=request,
-        agent_key=agent_key,
-        resolve_chat_model=_resolve_admin_chat_model,
-        build_ollama_options=build_ollama_options,
-        ollama_base=OLLAMA_BASE,
-        orch_chat_request_max_tokens=ORCH_CHAT_REQUEST_MAX_TOKENS,
-        orch_lightweight_chat_max_tokens=ORCH_LIGHTWEIGHT_CHAT_MAX_TOKENS,
-        orch_chat_agent_timeout_sec=ORCH_CHAT_AGENT_TIMEOUT_SEC,
-        orch_reasoner_brief_timeout_sec=ORCH_REASONER_BRIEF_TIMEOUT_SEC,
-        logger=logger,
-        re_module=re,
-        session_factory=SessionLocal,
-        current_user=current_user,
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_chat
+
+    owner_id = str(getattr(current_user, "id", "unknown"))
+    effective_run_id = str(request.run_id or "").strip()
+    return await run_autonomous_surface_chat(
+        message=request.message,
+        owner_id=owner_id,
+        surface="admin",
+        session_id=request.session_id,
+        run_id=request.run_id,
+        stage_run_id=effective_run_id if effective_run_id.startswith("stage_run_") else None,
+        task=request.task,
+        mode=request.mode,
+        manual_mode=request.manual_mode,
+        conversation=request.conversation,
+        context_tags=list(request.context_tags or []) + [f"agent:{agent_key}"],
     )

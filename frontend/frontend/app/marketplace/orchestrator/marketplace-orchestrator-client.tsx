@@ -11,6 +11,9 @@ import {
     type MarketplaceOrchestratorBridgePayload,
 } from '@/lib/admin-orchestrator-bridge';
 import { getAdminToken } from '@/lib/admin-session';
+import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
+import { speakOrchestratorReply } from '@/lib/orchestrator-speech';
+import { useOrchestratorVoiceStt } from '@/lib/use-orchestrator-voice-stt';
 
 type ConversationMessage = {
     role: string;
@@ -1363,8 +1366,8 @@ export default function MarketplaceOrchestratorClient({
         }
     }, [apiBaseUrl, authHeaders, loadHistory, runId, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, stageSubstepChecks]);
 
-    const sendStageChat = React.useCallback(async () => {
-        const content = chatInput.trim();
+    const sendStageChat = React.useCallback(async (contentOverride?: string, speakerOverride?: string) => {
+        const content = String(contentOverride ?? chatInput).trim();
         if (!content || !authHeaders) return;
         if (/^\/run(?:\s+|$)/i.test(content)) {
             const nextTask = content.replace(/^\/run\s*/i, '').trim();
@@ -1384,7 +1387,7 @@ export default function MarketplaceOrchestratorClient({
         try {
             const userMessage: ConversationMessage = {
                 role: 'user',
-                speaker: '고객',
+                speaker: speakerOverride || '고객',
                 content,
                 timestamp: new Date().toISOString(),
                 step_title: activeStage?.title,
@@ -1441,6 +1444,17 @@ export default function MarketplaceOrchestratorClient({
             if (data.session_id) {
                 setChatSessionId(data.session_id);
             }
+            const syncedStageRun = data.diagnostics?.synced_stage_run;
+            if (syncedStageRun?.run_id) {
+                setStageRun(syncedStageRun);
+                setRunId(syncedStageRun.run_id);
+            } else if (
+                runId
+                && Number(data.diagnostics?.stages_completed || 0) > 0
+                && data.diagnostics?.autonomous_intent === 'approval'
+            ) {
+                await refreshStageRun(runId);
+            }
             if (data.stage_chat?.pending_revision_note && content.startsWith('/revise')) {
                 setStageRevisionNote((prev) => [prev, data.stage_chat.pending_revision_note].filter(Boolean).join('\n'));
             }
@@ -1448,13 +1462,36 @@ export default function MarketplaceOrchestratorClient({
                 await refreshStageRun();
                 await loadHistory();
             }
-            setChatInput('');
+            if (!contentOverride) {
+                setChatInput('');
+            }
+            if (speakerOverride?.includes('음성')) {
+                const replyText = [...(Array.isArray(data.conversation) ? data.conversation : nextConversation)]
+                    .reverse()
+                    .find((message) => message.role === 'assistant')?.content
+                    || '';
+                if (replyText) {
+                    void speakOrchestratorReply(replyText);
+                }
+            }
         } catch (error: any) {
             setErrorText(error?.message || '고객 협업 대화 처리 중 오류가 발생했습니다.');
         } finally {
             setChatLoading(false);
         }
     }, [activeStage?.title, apiBaseUrl, authHeaders, chatInput, chatSessionId, conversation, conversationTonePreset, conversationTonePresetConfig.tag, generatedProgramSummary?.output_dir, loadHistory, projectName, refreshStageRun, reverseQuestionMode, reverseQuestionModeConfig.tag, runId, selectedProduct, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, submitOrchestration, taskDraft]);
+
+    const { listening: marketVoiceListening, startListening: toggleMarketVoiceInput } = useOrchestratorVoiceStt({
+        onTranscript: async (transcript) => {
+            await sendStageChat(transcript, '고객(음성)');
+        },
+        onUnsupported: () => {
+            setErrorText('이 브라우저는 음성 인식을 지원하지 않습니다. 크롬 계열 브라우저를 사용해 주세요.');
+        },
+        onError: (detail) => {
+            setErrorText(`음성 인식 실패: ${detail}`);
+        },
+    });
 
     return (
         <div className="workspace-shell">
@@ -2106,6 +2143,12 @@ export default function MarketplaceOrchestratorClient({
                                             <input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명" className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                             <textarea value={taskDraft} onChange={(e) => setTaskDraft(e.target.value)} rows={7} className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                             <div className="flex flex-wrap gap-3">
+                                                <OrchestratorVoiceMicButton
+                                                    listening={marketVoiceListening}
+                                                    disabled={!token || chatLoading || submitLoading}
+                                                    onClick={toggleMarketVoiceInput}
+                                                    testId="marketplace-orchestrator-voice-input-top"
+                                                />
                                                 <button type="button" onClick={() => void createStageRun()} disabled={!token || submitLoading} className="rounded-2xl border border-[#30363d] bg-[#11161d] px-5 py-3 text-base font-semibold text-white">
                                                     단계 카드 시작
                                                 </button>
@@ -2152,7 +2195,9 @@ export default function MarketplaceOrchestratorClient({
                                     chatInput={chatInput}
                                     onChatInputChange={setChatInput}
                                     chatLoading={chatLoading}
-                                    onSubmitChat={sendStageChat}
+                                    onSubmitChat={() => { void sendStageChat(); }}
+                                    voiceListening={marketVoiceListening}
+                                    onVoiceToggle={toggleMarketVoiceInput}
                                 />
 
                                 <div data-testid="marketplace-orchestrator-structured-response" className="grid gap-3 xl:grid-cols-2">

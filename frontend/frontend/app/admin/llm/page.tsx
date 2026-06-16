@@ -10,6 +10,9 @@ import AdminExternalSearchPanel, {
     type AdminExternalSearchResponse,
 } from '@/components/ui/AdminExternalSearchPanel';
 import AdminGeneratorDetailModal from '@/components/admin/admin-generator-detail-modal';
+import AutonomousOrchestratorPanel from '@/components/ui/AutonomousOrchestratorPanel';
+import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
+import { speakOrchestratorReplySync } from '@/lib/orchestrator-speech';
 import { resolveApiBaseUrl } from '@/lib/api';
 import {
     buildSuggestedSelfRunDirectiveRequest,
@@ -2211,16 +2214,7 @@ export default function AdminLLMPage() {
         return response;
     };
 
-    const speakText = (text: string) => {
-        if (!text || typeof window === 'undefined' || !window.speechSynthesis || !hasSpeechSynthesisActivation()) {
-            return false;
-        }
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ko-KR';
-        window.speechSynthesis.speak(utterance);
-        return true;
-    };
+    const speakText = (text: string) => speakOrchestratorReplySync(text);
 
     const {
         conversation,
@@ -3930,6 +3924,12 @@ export default function AdminLLMPage() {
                     </div>
                 )}
 
+                {!miniConsoleLayout && (
+                    <div className="mb-6">
+                        <AutonomousOrchestratorPanel apiBaseUrl={api} getAccessToken={token} />
+                    </div>
+                )}
+
                 {!miniConsoleLayout && <div className="mb-6 rounded-xl border border-[#30363d] bg-[#161b22] p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
@@ -4199,16 +4199,24 @@ export default function AdminLLMPage() {
                                         placeholder="태스크 설명 (예: REST API 사용자 관리 시스템 생성)"
                                         className="w-full rounded-lg border border-[#2b3548] bg-[#0b1220] px-3 py-3 text-sm text-[#e6edf3] placeholder:text-[#6b7280]"
                                     />
-                                    <button
-                                        type="button"
-                                        disabled={chatLoading || loading}
-                                        onClick={async () => {
-                                            await submitPrimaryPrompt(chatInput);
-                                        }}
-                                        className="w-full rounded-xl bg-[#2f6f99] px-4 py-3 text-sm font-semibold text-[#041018]"
-                                    >
-                                        {(chatLoading || loading) ? '실행 중...' : '코드 생성'}
-                                    </button>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            disabled={chatLoading || loading}
+                                            onClick={async () => {
+                                                await submitPrimaryPrompt(chatInput);
+                                            }}
+                                            className="min-w-[140px] flex-1 rounded-xl bg-[#2f6f99] px-4 py-3 text-sm font-semibold text-[#041018]"
+                                        >
+                                            {(chatLoading || loading) ? '실행 중...' : '코드 생성'}
+                                        </button>
+                                        <OrchestratorVoiceMicButton
+                                            listening={voiceListening}
+                                            disabled={chatLoading || loading}
+                                            onClick={startVoiceInput}
+                                            testId="admin-orchestrator-voice-input-top"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4369,6 +4377,15 @@ export default function AdminLLMPage() {
                             className="box-border min-h-[108px] w-full resize-y rounded-lg border border-[#4b5563] bg-[#f8fafc] p-3 text-sm text-[#0f172a] placeholder:text-[#64748b]"
                         />
                         <p className="mt-3 text-xs text-[#8b949e]">Enter 실행, Shift+Enter 줄바꿈. 현재 모드: {ADMIN_TERMINAL_CORE_MODES.find((item) => item.id === adminCoreMode)?.label}</p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <OrchestratorVoiceMicButton
+                                listening={voiceListening}
+                                disabled={chatLoading}
+                                onClick={startVoiceInput}
+                                testId="admin-orchestrator-voice-input"
+                            />
+                            <p className="text-xs text-[#8b949e]">크롬에서 마이크 권한을 허용하면 음성 지시 → ① 코어 → 답변 낭독까지 이어집니다.</p>
+                        </div>
                     </div>
                 </div>
 

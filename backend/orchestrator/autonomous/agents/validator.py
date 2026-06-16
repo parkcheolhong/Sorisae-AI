@@ -92,11 +92,19 @@ class ValidatorAgent(BaseAgent):
         if not written_files:
             return {"check": "structure", "passed": False, "error": "생성된 파일이 없습니다"}
 
-        has_entry = any(
-            f.endswith("main.py") or f.endswith("app.py") or f.endswith("__init__.py")
+        has_entry_in_batch = any(
+            f.endswith("main.py") or f.endswith("app.py") or name.endswith("__init__.py")
             for f in written_files
+            for name in [f, f.rsplit("/", 1)[-1]]
         )
-        if not has_entry:
-            return {"check": "structure", "passed": False, "error": "진입점 파일(main.py/app.py)이 없습니다"}
+        if has_entry_in_batch:
+            return {"check": "structure", "passed": True, "error": None}
 
-        return {"check": "structure", "passed": True, "error": None}
+        if output_dir.exists():
+            for pattern in ("**/main.py", "**/app.py"):
+                if any(output_dir.glob(pattern)):
+                    return {"check": "structure", "passed": True, "error": None}
+            if any(output_dir.glob("**/__init__.py")):
+                return {"check": "structure", "passed": True, "error": None}
+
+        return {"check": "structure", "passed": False, "error": "진입점 파일(main.py/app.py)이 없습니다"}

@@ -5,6 +5,7 @@ import {
     dedupeConversationMessages,
     type OrchestratorConversationMessage,
 } from '@/lib/orchestrator-chat-normalizer';
+import { speakOrchestratorReply } from '@/lib/orchestrator-speech';
 
 export type { OrchestratorConversationMessage } from '@/lib/orchestrator-chat-normalizer';
 
@@ -382,81 +383,9 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         await sendChatMessage(content);
     };
 
-    const playReturnedAudio = (audioBase64?: string, audioFormat?: string) => {
-        if (!audioBase64 || !audioFormat || !audioFormat.startsWith('audio/')) {
-            return false;
-        }
-        const audio = new Audio(`data:${audioFormat};base64,${audioBase64}`);
-        void audio.play().catch(() => null);
-        return true;
-    };
-
     const pushVoiceMessage = async (transcript: string) => {
         if (!transcript.trim()) return;
-        const userMessage: OrchestratorConversationMessage = {
-            role: 'user',
-            speaker: '관리자(음성)',
-            content: transcript.trim(),
-            timestamp: new Date().toISOString(),
-        };
-        const nextConversation = [...conversation, userMessage];
-        setConversation(nextConversation);
-        const nextTask = getEffectiveTaskInput() || transcript.trim();
-        if (!options.task.trim()) {
-            options.setTask(transcript.trim());
-        }
-        setChatLoading(true);
-        try {
-            const data = await postOrchestratorChat<VoiceResponse>(
-                `${options.apiBaseUrl}/api/llm/voice/orchestrate`,
-                options.getAdminToken(),
-                {
-                    transcript: transcript.trim(),
-                    agent_key: voiceAgentKey,
-                    tts: true,
-                    auto_apply: false,
-                    task: nextTask,
-                    mode: options.manualMode ? 'manual_9step' : options.mode,
-                    manual_mode: options.manualMode,
-                    companion_mode: 'hybrid',
-                    output_dir: resolveReusableOutputDir(),
-                    run_id: options.liveRunIdRef.current || undefined,
-                    session_id: chatSessionId,
-                    max_tokens: getConversationRequestMaxTokens(),
-                    conversation: nextConversation,
-                },
-            );
-            if (Array.isArray(data.conversation) && data.conversation.length > 0) {
-                setConversation(dedupeConversationMessages(data.conversation));
-            } else {
-                appendConversationMessage({
-                    role: 'assistant',
-                    speaker: '오케스트레이터',
-                    step_title: '음성 응답',
-                    content: data.response_text,
-                    timestamp: new Date().toISOString(),
-                });
-            }
-            if (data.output_dir) {
-                options.setWorkOutputDir(data.output_dir);
-            } else if (data.failed_output_dir) {
-                options.setLiveOutputDir(data.failed_output_dir);
-            }
-            // chatSessionId is generated/persisted locally and sent as session_id; do not overwrite it from run_id.
-            if (!playReturnedAudio(data.audio_base64, data.audio_format)) {
-                options.speakText?.(data.response_text);
-            }
-        } catch (e: any) {
-            appendConversationMessage({
-                role: 'assistant',
-                speaker: '오케스트레이터',
-                step_title: '음성 오류',
-                content: `음성 응답 실패: ${e.message}`,
-                timestamp: new Date().toISOString(),
-            });
-        } finally {
-            setChatLoading(false);
-        }
+        await sendChatMessage(transcript.trim(), { userSpeaker: '관리자(음성)', speakReply: true });
     };
 
     const startVoiceInput = () => {
@@ -562,7 +491,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         return candidate;
     };
 
-    const sendChatMessage = async (content: string) => {
+    const sendChatMessage = async (content: string, sendOptions?: { userSpeaker?: string; speakReply?: boolean }) => {
         if (!content) return;
         const routedFeature = chatFunctionMode !== 'auto'
             ? chatFunctionMode
@@ -574,7 +503,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         const tonePresetPayload = resolveTonePresetPayload(conversationTonePreset);
         const userMessage: OrchestratorConversationMessage = {
             role: 'user',
-            speaker: '관리자',
+            speaker: sendOptions?.userSpeaker || '관리자',
             content,
             timestamp: new Date().toISOString(),
         };
@@ -639,6 +568,16 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                 options.setWorkOutputDir(data.output_dir);
             } else if (data.failed_output_dir) {
                 options.setLiveOutputDir(data.failed_output_dir);
+            }
+            if (sendOptions?.speakReply) {
+                const replyText = data.reply?.content
+                    || [...(Array.isArray(data.conversation) ? data.conversation : [])]
+                        .reverse()
+                        .find((message) => message.role === 'assistant')?.content
+                    || '';
+                if (replyText) {
+                    void speakOrchestratorReply(replyText);
+                }
             }
         } catch (e: any) {
             const elapsedMs = Math.max(0, Date.now() - requestStartedAt);

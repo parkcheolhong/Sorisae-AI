@@ -32,15 +32,17 @@ class PlannerAgent(BaseAgent):
             f"{previous}{revision_hint}"
         )
 
-        output = await self._call_llm(system_prompt, user_prompt, context)
+        output, llm_connected = await self._call_llm_tracked(system_prompt, user_prompt, context)
 
         return AgentResult(
             agent=self.agent_id,
-            status="success",
+            status="success" if llm_connected else "stub",
             output=output,
             next_agents=["coder"],
             artifacts={
                 "plan_type": "implementation_plan",
                 "stage_id": context.stage_id,
+                "llm_connected": llm_connected,
             },
+            metadata={"llm_connected": llm_connected},
         )
