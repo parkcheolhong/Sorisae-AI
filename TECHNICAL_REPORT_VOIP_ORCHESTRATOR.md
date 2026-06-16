@@ -186,7 +186,7 @@ Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
 | stub | **11/11** completed | `064cf9f886464b72` | `evidence/orchestrator-11stage-probe-20260616-125507/` |
 | live (vLLM :8008) | **11/11** completed | `b5e16dfa41f94638` | `evidence/orchestrator-11stage-probe-20260616-125528/` |
 | http marketplace | **11/11** · stage_run sync OK | `73995f7646e94feb` | `evidence/orchestrator-11stage-probe-20260616-130503/` |
-| http admin | `--admin` 플래그 추가 · 배포 후 실행 | — | `evidence/orchestrator-11stage-probe-20260616/EXECUTION_STATUS_REPORT.md` |
+| http admin | **11/11** · `orchestrator_core=autonomous_turn_controller` | `91c715c20e3c4bed` | `evidence/orchestrator-11stage-probe-20260616-131740/` |
 
 **재현:**
 

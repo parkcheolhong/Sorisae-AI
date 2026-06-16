@@ -86,7 +86,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **(A-6-1) 단일 코어** — Admin `POST /api/llm/orchestrate/chat` · Marketplace `customer-orchestrate/chat` → `surface_adapter.run_autonomous_surface_chat` → **동일 TurnController**.
 - [x] **(A-6-5) 11단계 자연어 명령** — `설계해줘` · `N단계 진행해줘` · 4단계+ 협업 Q&A (`stage_commands.py`).
 - [x] **(A-6-6) 단계 패치 SSOT** — `stage_coder_scope.py` · 단계당 bounded files · validator 구조검증(기존 entry point 인정).
-- [x] **(A-6-7) 4-probe 검증** — stub **11/11** · live(vLLM) **11/11** · http marketplace **11/11** · http admin 플래그 추가.
+- [x] **(A-6-7) 4-probe 검증** — stub **11/11** · live(vLLM) **11/11** · http marketplace **11/11** · http admin **11/11** (`131740`).
 - [~] **(A-6-2) 음성 진입 공통** — STT → `message` → 코어 (마켓·관리자 동일); admin `voice/orchestrate` 존재 · **마켓 미연동**.
 - [~] **(A-6-3) UI 음성 우선** — admin STT hook · 마켓 orchestrator STT **부분**.
 - [x] **(A-6-4) stage_run 동기화** — marketplace `stage_run_sync.py` · http probe sync_checks PASS.

@@ -438,6 +438,54 @@ def _print_summary(report: Dict[str, Any]) -> None:
         )
 
 
+def _load_project_env() -> None:
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip('"').strip("'")
+
+
+def _resolve_probe_credentials(email: str, password: str) -> tuple[str, str]:
+    """PROBE_* → VERIFY_* → FIXED_ADMIN_* → secrets file."""
+    resolved_email = email.strip()
+    resolved_password = password.strip()
+    if resolved_email and resolved_password:
+        return resolved_email, resolved_password
+
+    _load_project_env()
+    if not resolved_email:
+        resolved_email = (
+            os.getenv("PROBE_LOGIN_EMAIL", "").strip()
+            or os.getenv("VERIFY_ADMIN_EMAIL", "").strip()
+            or os.getenv("FIXED_ADMIN_EMAIL", "").strip()
+        )
+    if not resolved_password:
+        resolved_password = (
+            os.getenv("PROBE_LOGIN_PASSWORD", "").strip()
+            or os.getenv("VERIFY_ADMIN_PASSWORD", "").strip()
+            or os.getenv("FIXED_ADMIN_PASSWORD", "").strip()
+        )
+        if not resolved_password:
+            password_file = Path(
+                os.getenv(
+                    "FIXED_ADMIN_PASSWORD_FILE",
+                    str(ROOT / ".runtime" / "secrets" / "fixed_admin_password.txt"),
+                ).strip()
+            )
+            if password_file.is_file():
+                file_password = password_file.read_text(encoding="utf-8").strip()
+                if file_password and file_password != "SET_VIA_ENV_ONLY":
+                    resolved_password = file_password
+    return resolved_email, resolved_password
+
+
 async def main() -> int:
     parser = argparse.ArgumentParser(description="11단계 오케스트레이터 로컬 프로브")
     parser.add_argument(
@@ -491,12 +539,13 @@ async def main() -> int:
         http_surface = "marketplace" if args.marketplace else "admin"
 
         token = args.token.strip()
-        if not token and args.email.strip() and args.password.strip():
+        probe_email, probe_password = _resolve_probe_credentials(args.email, args.password)
+        if not token and probe_email and probe_password:
             try:
                 token = await _login_token(
                     args.base_url.rstrip("/"),
-                    args.email.strip(),
-                    args.password.strip(),
+                    probe_email,
+                    probe_password,
                 )
             except RuntimeError as exc:
                 print(str(exc), file=sys.stderr)

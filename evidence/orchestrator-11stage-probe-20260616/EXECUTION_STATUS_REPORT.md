@@ -13,7 +13,7 @@
 | **stub** | `--mode stub` | **11/11** · `execution_state=completed` · errors=0 | `064cf9f886464b72` | `evidence/orchestrator-11stage-probe-20260616-125507/report.json` |
 | **live** | `--mode live` + `OLLAMA_BASE=http://127.0.0.1:8008/v1` | **11/11** · vLLM 32B AWQ · errors=0 | `b5e16dfa41f94638` | `evidence/orchestrator-11stage-probe-20260616-125528/report.json` |
 | **http (marketplace)** | `--mode http --marketplace` | **11/11** · stage_run sync OK · errors=0 | `73995f7646e94feb` | `evidence/orchestrator-11stage-probe-20260616-130503/report.json` |
-| **http (admin)** | `--mode http --admin` | *(프로브 플래그 추가 — 배포 후 실행)* | — | — |
+| **http (admin)** | `--mode http --admin` | **11/11** · `/admin/llm` · errors=0 | `91c715c20e3c4bed` | `evidence/orchestrator-11stage-probe-20260616-131740/report.json` |
 
 **태스크:** `FastAPI 헬스체크 API 만들어줘`  
 **시퀀스:** register-task → 설계해줘 → 진행해 → 2~10단계 진행해줘 (+ 4단계 후 discuss-4 협업 Q&A)
@@ -91,6 +91,6 @@ python scripts/run_11stage_orchestrator_probe.py --mode http --admin
 
 ## 7. 잔여 / 후속
 
-- [ ] Admin HTTP 프로be 배포 후 11/11 증적 JSON 첨부
+- [x] Admin HTTP probe **11/11** (`131740/report.json`, session `91c715c20e3c4bed`)
 - [ ] `pytest-asyncio` 설치 후 async 단위 테스트 CI green
-- [ ] discuss-4 중 stage_run 카드 ARCH-005 선행 표시 — UX 정합 (기능 차단 아님)
+- [ ] discuss-4 중 stage_run 카드 ARCH-005 선행 표시 — UX 정합 (marketplace only, 기능 차단 아님)
