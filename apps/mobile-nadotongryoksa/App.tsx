@@ -32,6 +32,7 @@ import {
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { translateImage, translateText, type TranslateOptions } from './src/api/translate';
 import { CallModePolicyBanner } from './src/features/call-mode/CallModePolicyBanner';
+import { NetworkTestBanner } from './src/components/NetworkTestBanner';
 import type { CallMode } from './src/features/call-mode/types';
 import { useCallModeController } from './src/features/call-mode/useCallModeController';
 import { ChatRoomListScreen } from './src/features/chat/screens/ChatRoomListScreen';
@@ -45,9 +46,13 @@ import type { AcceptedFriendActionPayload, DiscoveryGender, Friend } from './src
 import { usePstnAssistController } from './src/features/pstn-assist/usePstnAssistController';
 import { useVoipAutoController } from './src/features/voip-auto/useVoipAutoController';
 import { usePermissionCheck } from './src/hooks/usePermissionCheck';
+import { useNetworkDiagnostics } from './src/hooks/useNetworkDiagnostics';
 import { PhoneDialer } from './src/components/PhoneDialer';
 import { VoipCallErrorBoundary } from './src/components/VoipCallErrorBoundary';
 import { VoIPCallScreen } from './src/screens/VoIPCallScreen';
+import { useVoipIncomingCalls } from './src/features/voip-auto/useVoipIncomingCalls';
+import { registerVoipDevice } from './src/services/voipPresence';
+import { createVoipMessagingAdapter } from './src/services/voipMessagingAdapter';
 import { acceptIncomingCall } from './src/services/voipPresence';
 import { CallInitResponse, type TURNServer } from './src/services/voipCallClient';
 import { getVoIPToneService } from './src/services/voipToneService';
@@ -64,6 +69,7 @@ import {
     isResumableIncomingVoipStatus,
     shouldDeferCalleeResumeToIncomingAccept,
 } from './src/utils/voipIncomingCallStatus';
+import { toClientNetworkContext } from './src/utils/networkDiagnostics';
 
 type MonetizationPlanKey = 'voip_lite' | 'voip_pro' | 'song_pass';
 
@@ -335,6 +341,8 @@ type SignupPayload = {
     preferred_language: string;
     country_code?: string | null;
     full_name?: string;
+    phone_number?: string;
+    verificationChannel?: 'email' | 'phone';
     member_type: 'individual';
 };
 
@@ -403,6 +411,8 @@ const ensureFirebaseDefaultApp = async (): Promise<boolean> => {
 
     return firebase.apps.length > 0;
 };
+
+const voipMessagingAdapter = createVoipMessagingAdapter(ensureFirebaseDefaultApp);
 
 const parseVersionTriplet = (value: string): number[] => {
     const raw = String(value || '').trim();
@@ -1026,6 +1036,49 @@ async function callSignupApi(payload: SignupPayload): Promise<UserInfo> {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `회원가입 실패 (HTTP ${res.status})`));
+    return data as UserInfo;
+}
+
+type SignupRequestCodeResponse = {
+    signupSessionToken: string;
+    verificationChannel: string;
+    maskedTarget: string;
+    expiresAt: string;
+    devOtpHint?: string;
+};
+
+async function callSignupRequestCodeApi(payload: SignupPayload): Promise<SignupRequestCodeResponse> {
+    const res = await fetch(`${API_BASE}/api/auth/signup/request-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            ...payload,
+            verificationChannel: payload.verificationChannel || 'email',
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `인증 코드 요청 실패 (HTTP ${res.status})`));
+    return data as SignupRequestCodeResponse;
+}
+
+async function callSignupConfirmApi(
+    signupSessionToken: string,
+    verificationCode: string,
+    profile: Pick<SignupPayload, 'preferred_language' | 'country_code' | 'full_name'>,
+): Promise<UserInfo> {
+    const res = await fetch(`${API_BASE}/api/auth/signup/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            signupSessionToken,
+            verificationCode,
+            preferred_language: profile.preferred_language,
+            country_code: profile.country_code,
+            full_name: profile.full_name,
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `이메일 인증 확인 실패 (HTTP ${res.status})`));
     return data as UserInfo;
 }
 
@@ -2196,6 +2249,12 @@ export default function App() {
     const [signupPreferredLanguage, setSignupPreferredLanguage] = useState<LangCode>('ko');
     const [signupCountryCode, setSignupCountryCode] = useState<SignupCountryCode>('KR');
     const [signupSelectionModal, setSignupSelectionModal] = useState<SignupSelectionModal>(null);
+    const [signupStep, setSignupStep] = useState<'form' | 'verify'>('form');
+    const [signupSessionToken, setSignupSessionToken] = useState('');
+    const [signupMaskedTarget, setSignupMaskedTarget] = useState('');
+    const [signupOtpCode, setSignupOtpCode] = useState('');
+    const [signupVerificationChannel, setSignupVerificationChannel] = useState<'email' | 'phone'>('email');
+    const [signupPhone, setSignupPhone] = useState('');
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginError, setLoginError] = useState('');
     const [demoSessionLoading, setDemoSessionLoading] = useState(false);
@@ -2245,6 +2304,12 @@ export default function App() {
         setSignupCountryCode(nextCountryCode);
         setSignupPreferredLanguage(deriveSignupPreferredLanguage(nextCountryCode));
         setSignupSelectionModal(null);
+        setSignupStep('form');
+        setSignupSessionToken('');
+        setSignupMaskedTarget('');
+        setSignupOtpCode('');
+        setSignupVerificationChannel('email');
+        setSignupPhone('');
     }, [deriveSignupCountryCode, deriveSignupPreferredLanguage]);
     useEffect(() => {
         if (!showMyInfo || !userInfo) {
@@ -2302,6 +2367,7 @@ export default function App() {
     const canUseFullAutoVoipWithoutPurchasePrompt = Boolean(effectiveVoipPlan || voipValidationOverride || isInstantDemoSession);
     const [acceptingIncomingVoipCallId, setAcceptingIncomingVoipCallId] = useState<string | null>(null);
     const { initiateVoipCall, validatePhoneNumber } = useVoipAutoController(API_BASE, token);
+    const networkDiagnostics = useNetworkDiagnostics(Boolean(token));
     const { requestPermissions } = usePermissionCheck();
     const { openDialPad, startPstnAssistDialFlow } = usePstnAssistController();
 
@@ -2320,6 +2386,20 @@ export default function App() {
         };
         console.log('[UI_PRESS_PROBE]', JSON.stringify(payload));
     }, [selectedCallMode, showLogin, showVoipTester, token, userInfo]);
+
+    const lastNetworkLabelRef = useRef<string | null>(null);
+    useEffect(() => {
+        const nextLabel = networkDiagnostics.label;
+        if (lastNetworkLabelRef.current === nextLabel) {
+            return;
+        }
+        const previousLabel = lastNetworkLabelRef.current;
+        lastNetworkLabelRef.current = nextLabel;
+        logUiPressProbe('NETWORK_TRANSPORT_CHANGED', {
+            ...toClientNetworkContext(networkDiagnostics),
+            previous_label: previousLabel,
+        });
+    }, [logUiPressProbe, networkDiagnostics]);
 
     const emitUnifiedTranslationStatus = useCallback((
         target: 'pstn' | 'voip',
@@ -2449,6 +2529,10 @@ export default function App() {
             }
             return nextMode;
         });
+        setSignupStep('form');
+        setSignupSessionToken('');
+        setSignupMaskedTarget('');
+        setSignupOtpCode('');
         setLoginError('');
     }, [resetSignupProfileDraft]);
 
@@ -3019,6 +3103,23 @@ export default function App() {
         });
     }, [API_BASE, logUiPressProbe, populateIncomingVoipPresentation, stopIncomingVoipAlert, summarizeIncomingVoipPayload, token, userInfo]);
 
+    const handleFcmIncomingCall = useCallback(
+        (callInit: CallInitResponse, callerLabel: string) => {
+            applyIncomingVoipPayload(
+                { ...callInit, caller_label: callerLabel },
+                'fcm_push',
+            );
+        },
+        [applyIncomingVoipPayload],
+    );
+
+    useVoipIncomingCalls({
+        apiBaseUrl: API_BASE,
+        authToken: token || '',
+        messaging: Platform.OS === 'android' ? voipMessagingAdapter : null,
+        onIncomingCall: handleFcmIncomingCall,
+    });
+
     const autoAcceptIncomingVoipDeepLink = useCallback(async (
         payload: CallInitResponse & { caller_label?: string; caller_voice_id?: string },
         source: string,
@@ -3572,6 +3673,9 @@ export default function App() {
             try {
                 await messaging().subscribeToTopic(nextTopic);
                 const pushToken = await messaging().getToken().catch(() => '');
+                if (pushToken && token) {
+                    await registerVoipDevice(API_BASE, token, pushToken);
+                }
                 if (!cancelled) {
                     voipTopicRef.current = nextTopic;
                     logUiPressProbe('VOIP_FCM_TOPIC_READY', {
@@ -3589,7 +3693,7 @@ export default function App() {
         return () => {
             cancelled = true;
         };
-    }, [authHydrated, logUiPressProbe, userInfo]);
+    }, [authHydrated, logUiPressProbe, token, userInfo]);
 
     useEffect(() => {
         return () => {
@@ -4355,14 +4459,14 @@ export default function App() {
         }
     }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw]);
 
-    const handleSignup = useCallback(async () => {
+    const handleSignupRequestCode = useCallback(async () => {
         const normalizedUsername = signupUsername.trim();
         const normalizedEmail = loginEmail.trim();
         const normalizedPassword = loginPw.trim();
         const normalizedCountryCode = signupCountryCode.trim().toUpperCase();
         const preferredLanguage = signupPreferredLanguage;
 
-        logUiPressProbe('SIGNUP_SUBMIT_PRESS', {
+        logUiPressProbe('SIGNUP_REQUEST_CODE_PRESS', {
             username_filled: Boolean(normalizedUsername),
             email_filled: Boolean(normalizedEmail),
             password_filled: Boolean(normalizedPassword),
@@ -4374,18 +4478,83 @@ export default function App() {
             setLoginError('사용자명, 이메일, 비밀번호를 입력하세요.');
             return;
         }
+        if (!normalizedEmail.includes('@')) {
+            setLoginError('올바른 이메일 형식을 입력하세요.');
+            return;
+        }
+        if (normalizedPassword.length < 8) {
+            setLoginError('비밀번호는 8자 이상이어야 합니다.');
+            return;
+        }
+        const trimmedPhone = signupPhone.trim();
+        if (signupVerificationChannel === 'phone') {
+            if (!trimmedPhone) {
+                setLoginError('전화 인증을 선택한 경우 +국가번호 형식 연락처를 입력하세요.');
+                return;
+            }
+            if (!trimmedPhone.startsWith('+')) {
+                setLoginError('전화번호는 +82-10-1234-5678 형식으로 입력하세요.');
+                return;
+            }
+        }
 
         setLoginLoading(true);
         setLoginError('');
         try {
-            const signedUpUser = await callSignupApi({
+            const response = await callSignupRequestCodeApi({
                 username: normalizedUsername,
                 email: normalizedEmail,
                 password: normalizedPassword,
                 full_name: signupFullName.trim() || undefined,
                 preferred_language: preferredLanguage,
                 country_code: normalizedCountryCode || undefined,
+                phone_number: trimmedPhone || undefined,
+                verificationChannel: signupVerificationChannel,
                 member_type: 'individual',
+            });
+            setSignupSessionToken(response.signupSessionToken);
+            setSignupMaskedTarget(response.maskedTarget);
+            if (response.devOtpHint) {
+                setSignupOtpCode(response.devOtpHint);
+            }
+            setSignupStep('verify');
+            logUiPressProbe('SIGNUP_REQUEST_CODE_SUCCESS', {
+                masked_target: response.maskedTarget,
+            });
+        } catch (e: any) {
+            setLoginError(e?.message || '이메일 인증 요청 실패');
+            logUiPressProbe('SIGNUP_REQUEST_CODE_FAIL', {
+                error: e?.message || '이메일 인증 요청 실패',
+            });
+        } finally {
+            setLoginLoading(false);
+        }
+    }, [logUiPressProbe, loginEmail, loginPw, signupCountryCode, signupFullName, signupPhone, signupPreferredLanguage, signupUsername, signupVerificationChannel]);
+
+    const handleSignupConfirm = useCallback(async () => {
+        const normalizedEmail = loginEmail.trim();
+        const normalizedPassword = loginPw.trim();
+        const preferredLanguage = signupPreferredLanguage;
+        const normalizedCountryCode = signupCountryCode.trim().toUpperCase();
+        const trimmedOtp = signupOtpCode.trim();
+
+        logUiPressProbe('SIGNUP_CONFIRM_PRESS', {
+            otp_filled: trimmedOtp.length >= 6,
+            email_filled: Boolean(normalizedEmail),
+        });
+
+        if (!signupSessionToken || trimmedOtp.length < 6) {
+            setLoginError('6자리 인증 코드를 입력하세요.');
+            return;
+        }
+
+        setLoginLoading(true);
+        setLoginError('');
+        try {
+            const signedUpUser = await callSignupConfirmApi(signupSessionToken, trimmedOtp, {
+                preferred_language: preferredLanguage,
+                country_code: normalizedCountryCode || undefined,
+                full_name: signupFullName.trim() || undefined,
             });
             const tk = await callLoginApi(normalizedEmail, normalizedPassword);
             const me = await callMeApi(tk);
@@ -4413,7 +4582,23 @@ export default function App() {
         } finally {
             setLoginLoading(false);
         }
-    }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw, resetSignupProfileDraft, signupCountryCode, signupFullName, signupPreferredLanguage, signupUsername]);
+    }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw, resetSignupProfileDraft, signupCountryCode, signupFullName, signupOtpCode, signupPreferredLanguage, signupSessionToken]);
+
+    const handleSignupSubmit = useCallback(async () => {
+        if (signupStep === 'verify') {
+            await handleSignupConfirm();
+            return;
+        }
+        await handleSignupRequestCode();
+    }, [handleSignupConfirm, handleSignupRequestCode, signupStep]);
+
+    const signupSubmitLabel = authModalMode === 'login'
+        ? '로그인'
+        : signupStep === 'verify'
+            ? '인증 후 가입 완료'
+            : signupVerificationChannel === 'phone'
+                ? '전화 인증 코드 받기'
+                : '이메일 인증 코드 받기';
 
     const handleSelectSignupLanguage = useCallback((code: LangCode) => {
         setSignupPreferredLanguage(code);
@@ -4498,7 +4683,7 @@ export default function App() {
                 <Text style={styles.signupPickerHint}>열기</Text>
             </Pressable>
             <Text style={styles.signupProfileHint}>
-                가입 후 채팅 자동 번역과 VoIP 통역 기본값은 현재 선택한 {getLangLabelText(signupPreferredLanguage)} / {signupCountryCode} 프로필을 기준으로 사용합니다.
+                VoIP 보이스톡·채팅 통역은 이 프로필의 사용 언어 {getLangLabelText(signupPreferredLanguage)} / 국가 {resolveCountryFlag(signupCountryCode)} {signupCountryCode} 를 상대 연결 기준으로 사용합니다. OTP 인증 단계에서도 변경할 수 있습니다.
             </Text>
             <Modal
                 visible={signupSelectionModal !== null}
@@ -4565,6 +4750,91 @@ export default function App() {
             </Modal>
         </>
     ), [handleSelectSignupCountry, handleSelectSignupLanguage, signupCountryCode, signupPreferredLanguage, signupSelectionModal]);
+
+    const renderSignupAuthFields = useCallback(() => {
+        return (
+            <>
+                {signupStep === 'form' ? (
+                    <>
+                        <View style={styles.signupChannelRow}>
+                            <Pressable
+                                style={[styles.signupChannelBtn, signupVerificationChannel === 'email' && styles.signupChannelBtnActive]}
+                                onPress={() => setSignupVerificationChannel('email')}
+                                testID="worldlinco-signup-channel-email"
+                            >
+                                <Text style={styles.signupChannelBtnText}>이메일 인증</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.signupChannelBtn, signupVerificationChannel === 'phone' && styles.signupChannelBtnActive]}
+                                onPress={() => setSignupVerificationChannel('phone')}
+                                testID="worldlinco-signup-channel-phone"
+                            >
+                                <Text style={styles.signupChannelBtnText}>전화 인증</Text>
+                            </Pressable>
+                        </View>
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder="사용자명"
+                            placeholderTextColor={C.sub}
+                            autoCapitalize="none"
+                            showSoftInputOnFocus
+                            value={signupUsername}
+                            onChangeText={setSignupUsername}
+                        />
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder="이름(선택)"
+                            placeholderTextColor={C.sub}
+                            showSoftInputOnFocus
+                            value={signupFullName}
+                            onChangeText={setSignupFullName}
+                        />
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder={signupVerificationChannel === 'phone' ? '연락처 (+82-10-1234-5678, 필수)' : '연락처 (+82, VoIP·친구용 권장)'}
+                            placeholderTextColor={C.sub}
+                            keyboardType="phone-pad"
+                            showSoftInputOnFocus
+                            value={signupPhone}
+                            onChangeText={setSignupPhone}
+                            testID="worldlinco-signup-phone-input"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <Text style={styles.inlineAuthHint}>
+                            {signupMaskedTarget || loginEmail.trim()} 으로 인증 코드를 보냈습니다. 아래 프로필 언어·국가를 확인한 뒤 6자리 코드를 입력해 주세요.
+                        </Text>
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder="6자리 인증 코드"
+                            placeholderTextColor={C.sub}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                            showSoftInputOnFocus
+                            value={signupOtpCode}
+                            onChangeText={setSignupOtpCode}
+                            accessibilityLabel="worldlinco-signup-otp-input"
+                            testID="worldlinco-signup-otp-input"
+                        />
+                        <Pressable
+                            style={styles.authModeToggleBtn}
+                            onPress={() => {
+                                setSignupStep('form');
+                                setSignupOtpCode('');
+                                setLoginError('');
+                            }}
+                            accessibilityLabel="worldlinco-signup-back-to-form"
+                            testID="worldlinco-signup-back-to-form"
+                        >
+                            <Text style={styles.authModeToggleText}>입력 다시하기</Text>
+                        </Pressable>
+                    </>
+                )}
+                {renderSignupProfileSelectors()}
+            </>
+        );
+    }, [loginEmail, renderSignupProfileSelectors, signupFullName, signupMaskedTarget, signupOtpCode, signupPhone, signupStep, signupUsername, signupVerificationChannel]);
 
     const handlePressLoginButton = useCallback(() => {
         openLoginModalForSource('header_account_row');
@@ -5396,6 +5666,10 @@ export default function App() {
             phone,
         });
         try {
+            logUiPressProbe('VOIP_NETWORK_SNAPSHOT', {
+                ...toClientNetworkContext(networkDiagnostics),
+                source: 'handleStartVoipCall',
+            });
             const payload = await initiateVoipCall({
                 callee_phone: phone,
                 caller_id: userInfo.username || userInfo.email || 'mobile-demo',
@@ -5403,6 +5677,7 @@ export default function App() {
                 mode: 'voip_full_auto',
                 auto_relay: true,
                 caller_preferred_language: currentVoipPreferredLanguage,
+                client_network_context: toClientNetworkContext(networkDiagnostics),
             });
             if ((payload as any)?.phone_dialer_required) {
                 await handlePhoneOnlyDialFallback(
@@ -5444,7 +5719,7 @@ export default function App() {
         } finally {
             setVoipInitLoading(false);
         }
-    }, [bookingResult?.confirmation_id, buildVoipRemoteProfile, currentVoipPreferredLanguage, emitUnifiedTranslationStatus, ensureVoipPremiumAccess, handlePhoneOnlyDialFallback, initiateVoipCall, logUiPressProbe, requestPermissions, selectedCallMode, token, userInfo, validatePhoneNumber, voipPhone, voipValidationOverride]);
+    }, [bookingResult?.confirmation_id, buildVoipRemoteProfile, currentVoipPreferredLanguage, emitUnifiedTranslationStatus, ensureVoipPremiumAccess, handlePhoneOnlyDialFallback, initiateVoipCall, logUiPressProbe, networkDiagnostics, requestPermissions, selectedCallMode, token, userInfo, validatePhoneNumber, voipPhone, voipValidationOverride]);
 
     const handleCloseVoipTester = useCallback(() => {
         setPendingIncomingVoipCall(null);
@@ -5852,6 +6127,11 @@ export default function App() {
         });
 
         try {
+            logUiPressProbe('VOIP_NETWORK_SNAPSHOT', {
+                ...toClientNetworkContext(networkDiagnostics),
+                source: 'handleStartFriendVoiceCall',
+                friend_id: friend.id,
+            });
             const payload = await initiateVoipCall({
                 callee_phone: friend.friendPhone,
                 callee_user_id: friend.friendUserId ?? undefined,
@@ -5863,6 +6143,7 @@ export default function App() {
                 auto_relay: true,
                 caller_preferred_language: currentVoipPreferredLanguage,
                 callee_preferred_language: friend.friendPreferredLanguage || voipAutoCallCalleeLanguageRef.current || undefined,
+                client_network_context: toClientNetworkContext(networkDiagnostics),
             });
             if ((payload as any)?.phone_dialer_required) {
                 setVoipInitError((payload as any)?.user_message || '보이스톡은 더 이상 전화번호 다이얼 패드를 사용하지 않습니다.');
@@ -5919,7 +6200,7 @@ export default function App() {
             voipCallInitiatingRef.current = false;
             setVoipInitLoading(false);
         }
-    }, [bookingResult?.confirmation_id, currentVoipPreferredLanguage, ensureVoipPremiumAccess, initiateVoipCall, logUiPressProbe, persistVoipValidationFriendCallBypass, refreshVoipAudit, requestPermissions, showFriendFolder, showVoipTester, token, userInfo, voipAutoCallVoiceId, voipValidationOverride]);
+    }, [bookingResult?.confirmation_id, currentVoipPreferredLanguage, ensureVoipPremiumAccess, initiateVoipCall, logUiPressProbe, networkDiagnostics, persistVoipValidationFriendCallBypass, refreshVoipAudit, requestPermissions, showFriendFolder, showVoipTester, token, userInfo, voipAutoCallVoiceId, voipValidationOverride]);
 
     const handleFriendAcceptedFromDiscovery = useCallback(async (payload?: AcceptedFriendActionPayload) => {
         setShowFriendMapDiscovery(false);
@@ -7656,57 +7937,44 @@ export default function App() {
                                 </Pressable>
                             </View>
                             <Text style={styles.inlineAuthHint}>
-                                여행 통번역과 레일 서비스 사용을 위해 여기서 바로 로그인합니다.
+                                {authModalMode === 'signup'
+                                    ? signupStep === 'verify'
+                                        ? '이메일 OTP 확인 전에도 프로필 언어·국가(국기) 선택은 유지됩니다. VoIP 연결 시 상대 ID에 이 값이 사용됩니다.'
+                                        : '가입 전 등록 이메일 OTP 인증이 필요합니다. 프로필 언어·국가(국기) 선택은 필수입니다.'
+                                    : '여행 통번역과 레일 서비스 사용을 위해 여기서 바로 로그인합니다.'}
                             </Text>
-                            {authModalMode === 'signup' ? (
+                            {authModalMode === 'signup' ? renderSignupAuthFields() : null}
+                            {authModalMode !== 'signup' || signupStep === 'form' ? (
                                 <>
                                     <TextInput
                                         style={styles.compactInput}
-                                        placeholder="사용자명"
+                                        placeholder="이메일"
                                         placeholderTextColor={C.sub}
                                         autoCapitalize="none"
+                                        keyboardType="email-address"
                                         showSoftInputOnFocus
-                                        value={signupUsername}
-                                        onChangeText={setSignupUsername}
+                                        accessibilityLabel="worldlinco-auth-email-input"
+                                        testID="worldlinco-auth-email-input"
+                                        value={loginEmail}
+                                        onFocus={handleLoginEmailFocus}
+                                        onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
+                                        onChangeText={handleLoginEmailChange}
                                     />
                                     <TextInput
                                         style={styles.compactInput}
-                                        placeholder="이름(선택)"
+                                        placeholder="비밀번호"
                                         placeholderTextColor={C.sub}
+                                        secureTextEntry
                                         showSoftInputOnFocus
-                                        value={signupFullName}
-                                        onChangeText={setSignupFullName}
+                                        accessibilityLabel="worldlinco-auth-password-input"
+                                        testID="worldlinco-auth-password-input"
+                                        value={loginPw}
+                                        onFocus={handleLoginPasswordFocus}
+                                        onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
+                                        onChangeText={handleLoginPasswordChange}
                                     />
-                                    {renderSignupProfileSelectors()}
                                 </>
                             ) : null}
-                            <TextInput
-                                style={styles.compactInput}
-                                placeholder="이메일"
-                                placeholderTextColor={C.sub}
-                                autoCapitalize="none"
-                                keyboardType="email-address"
-                                showSoftInputOnFocus
-                                accessibilityLabel="worldlinco-auth-email-input"
-                                testID="worldlinco-auth-email-input"
-                                value={loginEmail}
-                                onFocus={handleLoginEmailFocus}
-                                onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
-                                onChangeText={handleLoginEmailChange}
-                            />
-                            <TextInput
-                                style={styles.compactInput}
-                                placeholder="비밀번호"
-                                placeholderTextColor={C.sub}
-                                secureTextEntry
-                                showSoftInputOnFocus
-                                accessibilityLabel="worldlinco-auth-password-input"
-                                testID="worldlinco-auth-password-input"
-                                value={loginPw}
-                                onFocus={handleLoginPasswordFocus}
-                                onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
-                                onChangeText={handleLoginPasswordChange}
-                            />
                             {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
                             {demoSessionMessage ? <Text style={styles.inlineAuthStatus}>{demoSessionMessage}</Text> : null}
                             <View style={styles.inlineAuthActionRow}>
@@ -7722,7 +7990,7 @@ export default function App() {
                                 </Pressable>
                                 <Pressable
                                     style={[styles.translateBtn, loginLoading && styles.translateBtnDisabled, styles.inlineAuthSubmitBtn]}
-                                    onPress={authModalMode === 'login' ? handleLogin : handleSignup}
+                                    onPress={authModalMode === 'login' ? handleLogin : handleSignupSubmit}
                                     disabled={loginLoading}
                                     accessibilityRole="button"
                                     accessibilityLabel={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
@@ -7731,7 +7999,7 @@ export default function App() {
                                     {loginLoading ? (
                                         <ActivityIndicator color="#fff" size="small" />
                                     ) : (
-                                        <Text style={styles.translateBtnText}>{authModalMode === 'login' ? '로그인' : '회원가입'}</Text>
+                                        <Text style={styles.translateBtnText}>{signupSubmitLabel}</Text>
                                     )}
                                 </Pressable>
                             </View>
@@ -8397,6 +8665,7 @@ export default function App() {
                         <Text style={styles.sectionTitle}>💬 채팅 중심 통역 허브</Text>
                         <Text style={styles.sectionSub}>기본 사용은 채팅/번역채팅으로 두고, 실시간 VoIP 통역 통화는 프리미엄 구독으로 분리합니다.</Text>
                         <CallModePolicyBanner />
+                        <NetworkTestBanner snapshot={networkDiagnostics} />
                         <Text style={styles.songModeMetaText}>현재 통화 모드: {callModeLabel}</Text>
                         <View style={styles.voipQuickMetaRow}>
                             <Text style={styles.voipQuickMetaText}>현재 버전: {APP_VERSION_LABEL}</Text>
@@ -9457,7 +9726,9 @@ export default function App() {
                         <Text style={styles.loginModeHint}>
                             {authModalMode === 'login'
                                 ? '기존 계정으로 바로 로그인합니다.'
-                                : `가입 시 기본 언어 ${getLangLabelText(signupPreferredLanguage)} / 국가 ${signupCountryCode} 가 프로필 기준으로 저장됩니다.`}
+                                : signupStep === 'verify'
+                                    ? 'OTP 확인 전에도 프로필 언어·국가(국기) 선택 UI는 그대로 유지됩니다. VoIP는 상대 사용 언어 기준으로 연결됩니다.'
+                                    : `가입 전 이메일 OTP 인증이 필요합니다. 프로필 언어 ${getLangLabelText(signupPreferredLanguage)} / 국가 ${resolveCountryFlag(signupCountryCode)} ${signupCountryCode} 는 VoIP·채팅 통역 기준으로 저장됩니다.`}
                         </Text>
                         {showAuthDebugFloating ? (
                             <View style={styles.authDebugPanel} accessibilityLabel={`AUTH_DEBUG_STATE:${authDebugState}`} testID="auth-debug-modal-panel">
@@ -9478,55 +9749,38 @@ export default function App() {
                                 <Text style={styles.authDebugLine}>AUTH_DEBUG_SUBMIT_PRESSED:{authDebugSubmitPressedLabel}</Text>
                             </View>
                         ) : null}
-                        {authModalMode === 'signup' ? (
+                        {authModalMode === 'signup' ? renderSignupAuthFields() : null}
+                        {authModalMode !== 'signup' || signupStep === 'form' ? (
                             <>
                                 <TextInput
                                     style={styles.compactInput}
-                                    placeholder="사용자명"
+                                    placeholder="이메일"
                                     placeholderTextColor={C.sub}
                                     autoCapitalize="none"
+                                    keyboardType="email-address"
                                     showSoftInputOnFocus
-                                    value={signupUsername}
-                                    onChangeText={setSignupUsername}
+                                    accessibilityLabel="worldlinco-auth-email-input"
+                                    testID="worldlinco-auth-email-input"
+                                    value={loginEmail}
+                                    onFocus={handleLoginEmailFocus}
+                                    onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
+                                    onChangeText={handleLoginEmailChange}
                                 />
                                 <TextInput
                                     style={styles.compactInput}
-                                    placeholder="이름(선택)"
+                                    placeholder="비밀번호"
                                     placeholderTextColor={C.sub}
+                                    secureTextEntry
                                     showSoftInputOnFocus
-                                    value={signupFullName}
-                                    onChangeText={setSignupFullName}
+                                    accessibilityLabel="worldlinco-auth-password-input"
+                                    testID="worldlinco-auth-password-input"
+                                    value={loginPw}
+                                    onFocus={handleLoginPasswordFocus}
+                                    onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
+                                    onChangeText={handleLoginPasswordChange}
                                 />
-                                {renderSignupProfileSelectors()}
                             </>
                         ) : null}
-                        <TextInput
-                            style={styles.compactInput}
-                            placeholder="이메일"
-                            placeholderTextColor={C.sub}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                            showSoftInputOnFocus
-                            accessibilityLabel="worldlinco-auth-email-input"
-                            testID="worldlinco-auth-email-input"
-                            value={loginEmail}
-                            onFocus={handleLoginEmailFocus}
-                            onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
-                            onChangeText={handleLoginEmailChange}
-                        />
-                        <TextInput
-                            style={styles.compactInput}
-                            placeholder="비밀번호"
-                            placeholderTextColor={C.sub}
-                            secureTextEntry
-                            showSoftInputOnFocus
-                            accessibilityLabel="worldlinco-auth-password-input"
-                            testID="worldlinco-auth-password-input"
-                            value={loginPw}
-                            onFocus={handleLoginPasswordFocus}
-                            onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
-                            onChangeText={handleLoginPasswordChange}
-                        />
                         {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
                         <Pressable
                             style={styles.authModeToggleBtn}
@@ -9551,7 +9805,7 @@ export default function App() {
                             </Pressable>
                             <Pressable
                                 style={[styles.translateBtn, loginLoading && styles.translateBtnDisabled, styles.modalMainBtn]}
-                                onPress={authModalMode === 'login' ? handleLogin : handleSignup}
+                                onPress={authModalMode === 'login' ? handleLogin : handleSignupSubmit}
                                 disabled={loginLoading}
                                 accessibilityRole="button"
                                 accessibilityLabel={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
@@ -9560,7 +9814,7 @@ export default function App() {
                                 {loginLoading ? (
                                     <ActivityIndicator color="#fff" size="small" />
                                 ) : (
-                                    <Text style={styles.translateBtnText}>{authModalMode === 'login' ? '로그인' : '회원가입'}</Text>
+                                    <Text style={styles.translateBtnText}>{signupSubmitLabel}</Text>
                                 )}
                             </Pressable>
                             <Pressable
@@ -10826,6 +11080,21 @@ const styles = StyleSheet.create({
     loginModalTitle: { color: '#58c9ff', fontSize: 17, fontWeight: '800', marginBottom: 10 },
     loginModeHint: { color: C.sub, fontSize: 12, lineHeight: 18, marginBottom: 10 },
     signupProfileLabel: { color: '#dbeaff', fontSize: 12, fontWeight: '800', marginBottom: 6 },
+    signupChannelRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+    signupChannelBtn: {
+        flex: 1,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#3a4560',
+        backgroundColor: '#151822',
+        paddingVertical: 10,
+        alignItems: 'center',
+    },
+    signupChannelBtnActive: {
+        borderColor: '#4a8cff',
+        backgroundColor: '#1a2840',
+    },
+    signupChannelBtnText: { color: '#dbeaff', fontSize: 12, fontWeight: '700' },
     signupPickerTrigger: {
         minHeight: 58,
         borderRadius: 14,

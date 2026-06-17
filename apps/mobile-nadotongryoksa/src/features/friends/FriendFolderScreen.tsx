@@ -12,11 +12,12 @@ import {
   View,
 } from 'react-native';
 import {
-  addFriend,
+  confirmFriendInvite,
   getFriends,
   getOutgoingFriendRequests,
   getRecentMissedVoipCalls,
   removeFriend,
+  requestFriendInviteCode,
 } from '../../api/friends';
 import type { Friend, MissedVoipCall, OutgoingFriendRequestItem } from './types';
 
@@ -61,8 +62,14 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
   const [outgoingRequests, setOutgoingRequests] = useState<OutgoingFriendRequestItem[]>([]);
   const [missedCalls, setMissedCalls] = useState<MissedVoipCall[]>([]);
   const [loading, setLoading] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [verificationChannel, setVerificationChannel] = useState<'email' | 'phone'>('email');
+  const [inviteStep, setInviteStep] = useState<'form' | 'verify'>('form');
+  const [inviteSessionToken, setInviteSessionToken] = useState('');
+  const [maskedTarget, setMaskedTarget] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastLayoutLogRef = useRef<Record<string, string>>({});
@@ -193,22 +200,76 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
     });
   }, [error, friendTotal, friends, isNarrowWidth, loading, missedCalls.length, outgoingRequests.length, userId, visible, windowWidth]);
 
-  const handleAdd = useCallback(async () => {
-    const trimmed = email.trim();
-    if (!trimmed) return;
+  const resetInviteForm = useCallback(() => {
+    setInviteStep('form');
+    setInviteSessionToken('');
+    setMaskedTarget('');
+    setOtpCode('');
+    setDisplayName('');
+    setEmail('');
+    setPhone('');
+    setVerificationChannel('email');
+  }, []);
+
+  const handleRequestInviteCode = useCallback(async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = displayName.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedEmail) {
+      setError('친구 이메일을 입력해 주세요.');
+      return;
+    }
+    if (!trimmedEmail.includes('@')) {
+      setError('올바른 이메일 형식을 입력해 주세요.');
+      return;
+    }
+    if (verificationChannel === 'phone' && !trimmedPhone) {
+      setError('전화 인증을 선택한 경우 연락처를 입력해 주세요.');
+      return;
+    }
     setAddLoading(true);
     setError(null);
     try {
-      await addFriend({ targetEmail: trimmed, phoneNumber: phone.trim() || undefined }, token);
-      setEmail('');
-      setPhone('');
-      await load();
+      const response = await requestFriendInviteCode({
+        targetEmail: trimmedEmail,
+        displayName: trimmedName || undefined,
+        phoneNumber: trimmedPhone || undefined,
+        verificationChannel,
+      }, token);
+      setInviteSessionToken(response.sessionToken);
+      setMaskedTarget(response.maskedTarget);
+      if (response.devOtpHint) {
+        setOtpCode(response.devOtpHint);
+      }
+      setInviteStep('verify');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '친구 추가에 실패했습니다.');
+      setError(e instanceof Error ? e.message : '인증 코드 요청에 실패했습니다.');
     } finally {
       setAddLoading(false);
     }
-  }, [email, phone, token, load]);
+  }, [displayName, email, phone, token, verificationChannel]);
+
+  const handleConfirmInvite = useCallback(async () => {
+    const trimmedOtp = otpCode.trim();
+    if (!inviteSessionToken || trimmedOtp.length < 6) {
+      setError('6자리 인증 코드를 입력해 주세요.');
+      return;
+    }
+    setAddLoading(true);
+    setError(null);
+    try {
+      await confirmFriendInvite({
+        inviteSessionToken,
+        verificationCode: trimmedOtp,
+      }, token);
+      resetInviteForm();
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '친구 인증 확인에 실패했습니다.');
+    } finally {
+      setAddLoading(false);
+    }
+  }, [inviteSessionToken, load, otpCode, resetInviteForm, token]);
 
   const handleRemove = useCallback((friend: Friend) => {
     Alert.alert(
@@ -359,35 +420,104 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
         <Text style={styles.summaryText}>친구 수: {friendTotal}</Text>
       </View>
 
-      <View style={styles.addRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="친구 이름 입력"
-          placeholderTextColor="#888"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!addLoading}
-        />
-      </View>
-      <View style={[styles.addRow, isNarrowWidth && styles.addRowCompact]}>
-        <TextInput
-          style={[styles.input, isNarrowWidth && styles.inputCompact]}
-          placeholder="연락처 번호 (선택)"
-          placeholderTextColor="#888"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-          editable={!addLoading}
-        />
-        <Pressable
-          style={[styles.addBtn, isNarrowWidth && styles.addBtnCompact, addLoading && styles.addBtnDisabled]}
-          onPress={() => { void handleAdd(); }}
-          disabled={addLoading}
-        >
-          <Text style={styles.addBtnText}>{addLoading ? '추가 중...' : '+ 추가'}</Text>
-        </Pressable>
+      <View style={styles.manualSection}>
+        <Text style={styles.manualTitle}>✏️ 수기 등록 (OTP 인증 필수)</Text>
+        <Text style={styles.manualHint}>
+          베타·실전 모두 이메일 또는 전화 OTP 확인 후 친구가 등록됩니다.
+          앱 가입 계정은 이메일 인증만으로 연결됩니다.
+        </Text>
+        {inviteStep === 'form' ? (
+          <>
+            <View style={styles.channelRow}>
+              <Pressable
+                style={[styles.channelBtn, verificationChannel === 'email' && styles.channelBtnActive]}
+                onPress={() => setVerificationChannel('email')}
+              >
+                <Text style={styles.channelBtnText}>이메일 인증</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.channelBtn, verificationChannel === 'phone' && styles.channelBtnActive]}
+                onPress={() => setVerificationChannel('phone')}
+              >
+                <Text style={styles.channelBtnText}>전화 인증</Text>
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.inputFull}
+              placeholder="이름 (표시용, 예: 홍길동)"
+              placeholderTextColor="#888"
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCapitalize="words"
+              editable={!addLoading}
+              testID="friend-manual-display-name"
+            />
+            <TextInput
+              style={styles.inputFull}
+              placeholder="이메일 (필수, 예: friend@example.com)"
+              placeholderTextColor="#888"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!addLoading}
+              testID="friend-manual-email"
+            />
+            <TextInput
+              style={styles.inputFull}
+              placeholder={verificationChannel === 'phone' ? '연락처 (전화 인증 필수)' : '연락처 (미가입 시 권장)'}
+              placeholderTextColor="#888"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              editable={!addLoading}
+              testID="friend-manual-phone"
+            />
+            <Pressable
+              style={[styles.addBtnFull, addLoading && styles.addBtnDisabled]}
+              onPress={() => { void handleRequestInviteCode(); }}
+              disabled={addLoading}
+              testID="friend-manual-request-otp"
+            >
+              <Text style={styles.addBtnText}>{addLoading ? '요청 중...' : '인증 코드 받기'}</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.verifyHint}>
+              {maskedTarget} 으로 인증 코드를 보냈습니다. 6자리 코드를 입력해 주세요.
+            </Text>
+            <TextInput
+              style={styles.inputFull}
+              placeholder="6자리 인증 코드"
+              placeholderTextColor="#888"
+              value={otpCode}
+              onChangeText={setOtpCode}
+              keyboardType="number-pad"
+              maxLength={6}
+              editable={!addLoading}
+              testID="friend-manual-otp"
+            />
+            <Pressable
+              style={[styles.addBtnFull, addLoading && styles.addBtnDisabled]}
+              onPress={() => { void handleConfirmInvite(); }}
+              disabled={addLoading}
+              testID="friend-manual-submit"
+            >
+              <Text style={styles.addBtnText}>{addLoading ? '확인 중...' : '인증 후 친구 등록'}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => {
+                setInviteStep('form');
+                setOtpCode('');
+                setError(null);
+              }}
+            >
+              <Text style={styles.backBtnText}>입력 다시하기</Text>
+            </Pressable>
+          </>
+        )}
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -401,7 +531,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
             onLayout={handleMeasuredLayout('embedded_list_layout', { row_count: friends.length })}
           >
             {renderHeaderContent()}
-            {friends.length === 0 ? <Text style={styles.emptyText}>친구가 없습니다. 이메일로 추가해보세요.</Text> : friends.map(renderFriendRow)}
+            {friends.length === 0 ? <Text style={styles.emptyText}>친구가 없습니다. 위 수기 등록으로 베타 상대를 추가해 보세요.</Text> : friends.map(renderFriendRow)}
           </View>
         ) : (
           <FlatList
@@ -419,7 +549,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
               });
             }}
             ListHeaderComponent={renderHeaderContent()}
-            ListEmptyComponent={<Text style={styles.emptyText}>친구가 없습니다. 이메일로 추가해보세요.</Text>}
+            ListEmptyComponent={<Text style={styles.emptyText}>친구가 없습니다. 위 수기 등록으로 베타 상대를 추가해 보세요.</Text>}
             renderItem={({ item }) => renderFriendRow(item)}
             contentContainerStyle={styles.list}
           />
@@ -456,6 +586,77 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
     marginBottom: 4,
+  },
+  manualSection: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  manualTitle: {
+    color: '#93c5fd',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  manualHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  inputFull: {
+    backgroundColor: '#1e2533',
+    color: '#e2e8f0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  addBtnFull: {
+    backgroundColor: '#6ee7b7',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  channelRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  channelBtn: {
+    flex: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#1e2533',
+  },
+  channelBtnActive: {
+    borderColor: '#60a5fa',
+    backgroundColor: '#172554',
+  },
+  channelBtnText: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  verifyHint: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  backBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  backBtnText: {
+    color: '#93c5fd',
+    fontSize: 13,
   },
   addRow: {
     flexDirection: 'row',
