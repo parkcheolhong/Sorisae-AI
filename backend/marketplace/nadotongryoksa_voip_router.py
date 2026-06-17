@@ -108,6 +108,18 @@ class CallInitiateRequest(BaseModel):
     auto_relay: Optional[bool] = None
     caller_preferred_language: Optional[str] = None
     callee_preferred_language: Optional[str] = None
+    client_network_context: Optional[dict[str, Any]] = None
+
+
+def _call_initiate_audit_metadata(
+    request: CallInitiateRequest,
+    *,
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    metadata = dict(extra or {})
+    if request.client_network_context:
+        metadata["client_network"] = request.client_network_context
+    return metadata
 
 
 class CallInitiateResponse(BaseModel):
@@ -153,6 +165,12 @@ class CallEndRequest(BaseModel):
     """Request to end a call"""
     duration_sec: int
     call_quality: Optional[str] = None  # "good", "fair", "poor"
+
+
+class VoipDeviceRegisterRequest(BaseModel):
+    """FCM device token registration for incoming-call push (P3-A)."""
+    fcm_token: str
+    platform: str = "android"
 
 
 # ============================================================================
@@ -362,6 +380,7 @@ call_states: Dict[str, CallState] = {}
 connected_clients: Dict[str, WebSocket] = {}
 call_participants: Dict[str, Dict[str, WebSocket]] = {}
 online_voice_clients: Dict[str, WebSocket] = {}
+voip_device_registrations: Dict[int, List[Dict[str, str]]] = {}
 pending_signal_messages: Dict[str, Dict[str, List[dict]]] = {}
 signal_queue_alert_last_len: Dict[str, Dict[str, int]] = {}
 webrtc_peers: Dict[str, Any] = {}
@@ -1026,6 +1045,50 @@ async def get_voip_identity(current_user=Depends(get_current_user)) -> dict:
     }
 
 
+@router.post("/devices/register")
+async def register_voip_device(
+    payload: VoipDeviceRegisterRequest,
+    current_user=Depends(get_current_user),
+) -> dict:
+    """Register FCM token for VoIP incoming-call delivery (mobile voipPresence.ts)."""
+    user_id = int(getattr(current_user, "id", 0) or 0)
+    if user_id <= 0:
+        raise HTTPException(status_code=400, detail="사용자 식별 실패")
+
+    token = str(payload.fcm_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="fcm_token이 필요합니다.")
+
+    platform = str(payload.platform or "android").strip().lower() or "android"
+    rows = voip_device_registrations.setdefault(user_id, [])
+    rows[:] = [
+        row
+        for row in rows
+        if str(row.get("fcm_token") or "") != token
+    ]
+    rows.append(
+        {
+            "fcm_token": token,
+            "platform": platform,
+            "registered_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    voice_id = _build_voice_id(current_user)
+    logger.info(
+        "[VoIP] Device registered | user_id=%s | voice_id=%s | platform=%s | tokens=%s",
+        user_id,
+        voice_id,
+        platform,
+        len(rows),
+    )
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "voice_id": voice_id,
+        "registered_tokens": len(rows),
+    }
+
+
 @router.post("/calls/initiate", response_model=CallInitiateResponse)
 async def initiate_voip_call(
     http_request: Request,
@@ -1240,12 +1303,15 @@ async def initiate_voip_call(
             status=call_state.status,
             error_code=error_code,
             latency_ms=int((time.perf_counter() - started_at) * 1000),
-            metadata={
-                "requested_app_call": True,
-                "callee_app_online": callee_app_online,
-                "invite_sent": invite_sent,
-                "push_sent": push_sent,
-            },
+            metadata=_call_initiate_audit_metadata(
+                request,
+                extra={
+                    "requested_app_call": True,
+                    "callee_app_online": callee_app_online,
+                    "invite_sent": invite_sent,
+                    "push_sent": push_sent,
+                },
+            ),
         )
 
         response_payload = CallInitiateResponse(
@@ -1346,10 +1412,13 @@ async def initiate_voip_call(
         status=call_state.status,
         error_code=error_code,
         latency_ms=int((time.perf_counter() - started_at) * 1000),
-        metadata={
-            "requested_app_call": requested_app_call,
-            "pstn_gateway_configured": pstn_gateway_configured,
-        },
+        metadata=_call_initiate_audit_metadata(
+            request,
+            extra={
+                "requested_app_call": requested_app_call,
+                "pstn_gateway_configured": pstn_gateway_configured,
+            },
+        ),
     )
 
     return CallInitiateResponse(
@@ -2479,11 +2548,36 @@ async def websocket_signaling(
 @router.get("/health")
 async def voip_health() -> dict:
     """Health check for VoIP service"""
+    service_account_info = _load_fcm_service_account_info()
+    project_id = (
+        os.getenv("FCM_PROJECT_ID", "").strip()
+        or str((service_account_info or {}).get("project_id") or "").strip()
+    )
+    fcm_legacy_ready = bool(os.getenv("FCM_SERVER_KEY", "").strip())
+    fcm_v1_ready = bool(service_account_info and project_id)
     return {
         "status": "ok",
         "active_calls": len(call_states),
         "connected_clients": len(connected_clients),
         "online_voice_clients": len(online_voice_clients),
+        "registered_device_users": len(voip_device_registrations),
+        "fcm_delivery_ready": bool(fcm_legacy_ready or fcm_v1_ready),
+        "fcm_v1_ready": fcm_v1_ready,
+        "fcm_project_id": project_id or None,
+        "network_test_matrix": {
+            "required_combinations": [
+                "wifi_wifi",
+                "wifi_lte",
+                "lte_lte",
+            ],
+            "min_runs_per_combination": 2,
+            "client_audit_field": "metadata.client_network",
+            "wifi_only_insufficient": True,
+            "guidance_ko": (
+                "WiFi만으로는 LTE/5G NAT·전환·지연 버그를 놓칩니다. "
+                "단말 A/B에서 셀룰러 데이터를 켠 뒤 WiFi↔LTE 매트릭스로 VoIP initiate audit를 수집하세요."
+            ),
+        },
         "app_call_participants": sum(
             len(participants) for participants in call_participants.values()
         ),
