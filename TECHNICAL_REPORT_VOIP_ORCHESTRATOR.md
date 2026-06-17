@@ -403,6 +403,8 @@ $env:WORLDLINGO_TEST_TOKEN='<jwt>'
 
 **APK:** NetInfo 네이티브 모듈 추가 → **dev client / EAS rebuild 필수**
 
+**베타 UX 원칙:** 테스터에게 “미완성 베타” 인상을 주지 않음 — 연결 배너 **안심 톤** · OTP **발송 완료** 문구 · QA/LTE 힌트는 디버그 모드(`__DEV__` / `EXPO_PUBLIC_AUTH_DEBUG_MARKER=1`)에서만 표시 · SMTP/Twilio 설정 시 실제 발송.
+
 ---
 
 ## 1. 개발 환경 구성
