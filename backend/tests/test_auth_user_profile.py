@@ -13,6 +13,9 @@ from backend.marketplace import models
 
 
 def _build_client() -> tuple[TestClient, FastAPI, sessionmaker[Session]]:
+    import os
+
+    os.environ["ALLOW_UNVERIFIED_SIGNUP"] = "1"
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},

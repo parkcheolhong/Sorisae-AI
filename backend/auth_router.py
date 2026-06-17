@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Optional
+import re
 from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy.orm import Session
 from webauthn import (
@@ -70,6 +71,7 @@ class UserCreate(BaseModel):
     representative_name: Optional[str] = None
     preferred_language: Optional[str] = None
     country_code: Optional[str] = None
+    phone_number: Optional[str] = None
 
 
 class UserProfileUpdate(BaseModel):
@@ -91,6 +93,7 @@ class UserResponse(BaseModel):
     representative_name: Optional[str] = None
     preferred_language: Optional[str] = None
     country_code: Optional[str] = None
+    phone_number: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -259,6 +262,37 @@ class PasswordRecoveryResetResponse(BaseModel):
     must_relogin: bool = True
 
 
+class SignupRequestCode(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+    member_type: str = "individual"
+    business_name: Optional[str] = None
+    business_registration_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+    phone_number: Optional[str] = None
+    verificationChannel: str = "email"
+
+
+class SignupConfirmRequest(BaseModel):
+    signupSessionToken: str
+    verificationCode: str
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+    full_name: Optional[str] = None
+
+
+class SignupRequestCodeResponse(BaseModel):
+    signupSessionToken: str
+    verificationChannel: str
+    maskedTarget: str
+    expiresAt: str
+    devOtpHint: Optional[str] = None
+
+
 _password_recovery_store: dict[str, dict[str, object]] = {}
 _PASSWORD_RECOVERY_MAX_VERIFY_ATTEMPTS = 5
 
@@ -303,9 +337,22 @@ def _validate_profile_fields(
     return normalized_language, normalized_country
 
 
-# ---------- 엔드포인트 ----------
-@router.post("/signup", response_model=UserResponse, status_code=201)
-def signup(payload: UserCreate, db: Session = Depends(get_db)):
+def _normalize_signup_phone(phone: Optional[str]) -> Optional[str]:
+    cleaned = str(phone or "").strip()
+    if not cleaned:
+        return None
+    if not cleaned.startswith("+"):
+        raise HTTPException(
+            status_code=400,
+            detail="전화번호는 +국가번호 형식(E.164)으로 입력하세요",
+        )
+    digits = re.sub(r"\D", "", cleaned)
+    if len(digits) < 10 or len(digits) > 15:
+        raise HTTPException(status_code=400, detail="유효하지 않은 전화번호입니다")
+    return cleaned
+
+
+def _create_user_from_signup_payload(payload: UserCreate, db: Session) -> User:
     if len(payload.password or "") < 8:
         raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
 
@@ -327,6 +374,10 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 사용자명입니다")
 
+    normalized_phone = _normalize_signup_phone(payload.phone_number)
+    if normalized_phone and db.query(User).filter(User.phone_number == normalized_phone).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 전화번호입니다")
+
     preferred_language, country_code = _validate_profile_fields(
         payload.preferred_language,
         payload.country_code,
@@ -343,11 +394,130 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
         hashed_password=get_password_hash(payload.password),
         preferred_language=preferred_language,
         country_code=country_code,
+        phone_number=normalized_phone,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+
+
+# ---------- 엔드포인트 ----------
+@router.post("/signup/request-code", response_model=SignupRequestCodeResponse)
+def signup_request_verification_code(payload: SignupRequestCode, db: Session = Depends(get_db)):
+    from backend.services.contact_verification import start_verification_session
+
+    normalized_phone = _normalize_signup_phone(payload.phone_number)
+    verification_channel = str(payload.verificationChannel or "email").strip().lower()
+    if verification_channel not in {"email", "phone"}:
+        raise HTTPException(status_code=400, detail="verificationChannel 은 email 또는 phone 이어야 합니다")
+    if verification_channel == "phone" and not normalized_phone:
+        raise HTTPException(status_code=400, detail="전화 인증을 선택한 경우 연락처를 입력하세요")
+
+    signup_payload = UserCreate(
+        username=payload.username,
+        email=payload.email,
+        password=payload.password,
+        full_name=payload.full_name,
+        member_type=payload.member_type,
+        business_name=payload.business_name,
+        business_registration_number=payload.business_registration_number,
+        representative_name=payload.representative_name,
+        preferred_language=payload.preferred_language,
+        country_code=payload.country_code,
+        phone_number=normalized_phone,
+    )
+    if db.query(User).filter(User.email == signup_payload.email).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다")
+    if db.query(User).filter(User.username == signup_payload.username).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 사용자명입니다")
+    if len(signup_payload.password or "") < 8:
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
+    _validate_profile_fields(
+        signup_payload.preferred_language,
+        signup_payload.country_code,
+        require_both=True,
+    )
+
+    try:
+        session = start_verification_session(
+            purpose="signup",
+            channel=verification_channel,
+            target_email=str(signup_payload.email),
+            target_phone=normalized_phone if verification_channel == "phone" else None,
+            payload=signup_payload.model_dump(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return SignupRequestCodeResponse(
+        signupSessionToken=session["sessionToken"],
+        verificationChannel=session["verificationChannel"],
+        maskedTarget=session["maskedTarget"],
+        expiresAt=session["expiresAt"],
+        devOtpHint=session.get("devOtpHint"),
+    )
+
+
+@router.post("/signup/confirm", response_model=UserResponse, status_code=201)
+def signup_confirm_verification(payload: SignupConfirmRequest, db: Session = Depends(get_db)):
+    from backend.services.contact_verification import verify_session_code
+
+    try:
+        verified_payload = verify_session_code(
+            payload.signupSessionToken,
+            payload.verificationCode,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=410, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    if payload.full_name is not None:
+        verified_payload["full_name"] = str(payload.full_name).strip() or None
+    profile_language = (
+        payload.preferred_language
+        if payload.preferred_language is not None
+        else verified_payload.get("preferred_language")
+    )
+    profile_country = (
+        payload.country_code
+        if payload.country_code is not None
+        else verified_payload.get("country_code")
+    )
+    normalized_language, normalized_country = _validate_profile_fields(
+        profile_language,
+        profile_country,
+        require_both=True,
+    )
+    verified_payload["preferred_language"] = normalized_language
+    verified_payload["country_code"] = normalized_country
+
+    verification_meta = verified_payload.pop("_verification", None)
+    if isinstance(verification_meta, dict):
+        if verification_meta.get("channel") == "phone" and verification_meta.get("phone"):
+            verified_payload["phone_number"] = verification_meta["phone"]
+
+    signup_payload = UserCreate(**verified_payload)
+    return _create_user_from_signup_payload(signup_payload, db)
+
+
+@router.post("/signup", response_model=UserResponse, status_code=201)
+def signup(payload: UserCreate, db: Session = Depends(get_db)):
+    from backend.services.contact_verification import allow_unverified_signup
+
+    if not allow_unverified_signup():
+        raise HTTPException(
+            status_code=428,
+            detail="회원가입은 이메일 OTP 인증이 필요합니다. /api/auth/signup/request-code → /confirm 경로를 사용하세요.",
+        )
+    return _create_user_from_signup_payload(payload, db)
 
 
 @router.post("/login", response_model=Token)

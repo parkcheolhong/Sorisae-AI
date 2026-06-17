@@ -26,6 +26,19 @@ MAP_DISCOVERY_USERS: dict[int, dict] = {}
 class FriendCreateRequest(BaseModel):
     targetEmail: EmailStr
     phoneNumber: Optional[str] = None
+    displayName: Optional[str] = None
+
+
+class FriendInviteRequestCode(BaseModel):
+    targetEmail: EmailStr
+    phoneNumber: Optional[str] = None
+    displayName: Optional[str] = None
+    verificationChannel: str = "email"
+
+
+class FriendInviteConfirmRequest(BaseModel):
+    inviteSessionToken: str
+    verificationCode: str
 
 
 class DiscoveryLocationUpsertRequest(BaseModel):
@@ -382,6 +395,26 @@ def _normalize_phone(phone: Optional[str]) -> Optional[str]:
     return cleaned or None
 
 
+def _normalize_display_name(display_name: Optional[str]) -> Optional[str]:
+    if display_name is None:
+        return None
+    cleaned = display_name.strip()
+    if len(cleaned) > 120:
+        cleaned = cleaned[:120]
+    return cleaned or None
+
+
+def _resolve_friend_username(
+    *,
+    target_user: Optional[models.User],
+    target_email: str,
+    display_name: Optional[str],
+) -> str:
+    if target_user is not None:
+        return str(target_user.username or display_name or target_email.split("@")[0])
+    return str(display_name or target_email.split("@")[0])
+
+
 @router.get("/users/{user_id}/friends")
 def list_friends(
     user_id: int,
@@ -410,14 +443,126 @@ def list_friends(
     }
 
 
+@router.post("/friends/invites/request-code")
+def request_friend_invite_verification_code(
+    request: FriendInviteRequestCode,
+    current_user=Depends(get_current_user),
+) -> dict:
+    from backend.marketplace.friend_invite_service import request_friend_invite_code
+
+    try:
+        return request_friend_invite_code(
+            sender_user=current_user,
+            target_email=str(request.targetEmail),
+            phone_number=_normalize_phone(request.phoneNumber),
+            display_name=_normalize_display_name(request.displayName),
+            verification_channel=request.verificationChannel,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/friends/invites/confirm")
+def confirm_friend_invite_verification(
+    request: FriendInviteConfirmRequest,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    from backend.marketplace.friend_invite_service import consume_verified_friend_invite
+
+    try:
+        verified = consume_verified_friend_invite(
+            request.inviteSessionToken,
+            request.verificationCode,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+
+    if int(verified.get("senderUserId") or 0) != int(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="인증 세션 사용자가 일치하지 않습니다",
+        )
+
+    target_email = str(verified.get("targetEmail") or "").strip().lower()
+    phone_number = _normalize_phone(verified.get("phoneNumber"))
+    display_name = _normalize_display_name(verified.get("displayName"))
+    target_user = (
+        db.query(models.User).filter(models.User.email == target_email).first()
+    )
+    if target_user is None and not phone_number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="앱 미가입 연락처는 전화번호와 함께 인증해야 저장할 수 있습니다",
+        )
+
+    if (
+        existing := (
+            db.query(models.Friend)
+            .filter(
+                models.Friend.user_id == current_user.id,
+                models.Friend.friend_email == target_email,
+            )
+            .first()
+        )
+    ):
+        existing.friend_user_id = target_user.id if target_user else existing.friend_user_id
+        existing.friend_username = _resolve_friend_username(
+            target_user=target_user,
+            target_email=target_email,
+            display_name=display_name or existing.friend_username,
+        )
+        existing.friend_phone = phone_number or existing.friend_phone
+        db.commit()
+        db.refresh(existing)
+        return _friend_payload(existing, db)
+
+    friend = models.Friend(
+        user_id=current_user.id,
+        friend_user_id=target_user.id if target_user else None,
+        friend_email=target_email,
+        friend_username=_resolve_friend_username(
+            target_user=target_user,
+            target_email=target_email,
+            display_name=display_name,
+        ),
+        friend_phone=phone_number,
+    )
+    db.add(friend)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 등록된 친구입니다",
+        )
+    db.refresh(friend)
+    return _friend_payload(friend, db)
+
+
 @router.post("/friends")
 def add_friend(
     request: FriendCreateRequest,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    from backend.services.contact_verification import allow_unverified_friend_add
+
+    if not allow_unverified_friend_add():
+        raise HTTPException(
+            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+            detail="친구 추가는 이메일/전화 OTP 인증이 필요합니다. /api/friends/invites/request-code → /confirm 경로를 사용하세요.",
+        )
     target_email = str(request.targetEmail).strip().lower()
     phone_number = _normalize_phone(request.phoneNumber)
+    display_name = _normalize_display_name(request.displayName)
     current_email = str(getattr(current_user, "email", "") or "")
     current_email = current_email.strip().lower()
 
@@ -451,8 +596,10 @@ def add_friend(
         existing.friend_user_id = (
             target_user.id if target_user else existing.friend_user_id
         )
-        existing.friend_username = (
-            target_user.username if target_user else existing.friend_username
+        existing.friend_username = _resolve_friend_username(
+            target_user=target_user,
+            target_email=target_email,
+            display_name=display_name or existing.friend_username,
         )
         existing.friend_phone = phone_number or existing.friend_phone
         db.commit()
@@ -463,8 +610,10 @@ def add_friend(
         user_id=current_user.id,
         friend_user_id=target_user.id if target_user else None,
         friend_email=target_email,
-        friend_username=(
-            target_user.username if target_user else target_email.split("@")[0]
+        friend_username=_resolve_friend_username(
+            target_user=target_user,
+            target_email=target_email,
+            display_name=display_name,
         ),
         friend_phone=phone_number,
     )
