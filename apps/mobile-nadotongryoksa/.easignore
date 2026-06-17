@@ -28,6 +28,13 @@ node_modules/
 dist/
 web-build/
 build-artifacts/
+.gradle-tmp/
+**/.gradle-tmp/
+**/.gradle-tmp/**
+**/metro-cache/
+**/.metro-cache/
+**/coverage/
+**/__tests__/
 *.apk
 *.aab
 *.tar.gz
