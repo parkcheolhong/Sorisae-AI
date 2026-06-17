@@ -3,12 +3,33 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from .stage_definitions import (
     COLLABORATION_STAGE_INDEX_MIN,
     STAGE_DEFINITIONS,
     STAGE_NUMBER_BY_INDEX,
+)
+
+DEFAULT_STAGE_COMMAND_MODES: List[str] = [
+    "/run",
+    "/pass",
+    "/fix",
+    "/fail",
+    "/verify",
+    "/search",
+    "/news",
+    "/ask",
+    "/revise",
+    "/resume",
+]
+
+_SLASH_DISCUSS_PREFIXES = (
+    "/ask",
+    "/search",
+    "/news",
+    "/revise",
+    "/resume",
 )
 
 _DESIGN_ONLY = re.compile(r"설계\s*해", re.IGNORECASE)
@@ -72,12 +93,88 @@ def format_stage_execute_hint(stage_index: int) -> str:
     return f"'{number:g}단계 진행해줘' 또는 '진행해'라고 입력하면 해당 단계 코드 생성을 시작합니다."
 
 
+def format_discuss_locked_hint() -> str:
+    return "4단계부터 협업 Q&A·기술 제안이 가능합니다. 지금은 「설계해줘」·「N단계 진행해줘」를 사용하세요."
+
+
+def build_stage_command_rules(
+    *,
+    stage_command: Optional[str] = None,
+    stage_index: Optional[int] = None,
+    stage_command_hint: Optional[str] = None,
+    requires_approval: bool = False,
+    command_modes: Optional[List[str]] = None,
+) -> List[str]:
+    """`format_stage_progress_hint` 등 백엔드 힌트를 stage 카드 commandRules와 mirror."""
+    modes = command_modes or DEFAULT_STAGE_COMMAND_MODES
+    rules: List[str] = [
+        "일반 질문/명령은 지시 입력창에 적고 Enter로 전송합니다.",
+        f"슬래시 명령: {', '.join(modes)}",
+    ]
+    if requires_approval:
+        rules.append("승인 대기 중 — 「승인」·「진행해」로 코드 생성을 시작하거나 수정 요청을 입력하세요.")
+    if stage_command == "design" and stage_index is not None:
+        rules.append(format_stage_execute_hint(stage_index))
+    elif stage_command == "discuss" and stage_command_hint:
+        rules.append(stage_command_hint)
+    elif stage_command == "execute" and stage_index is not None:
+        rules.append(format_stage_progress_hint(stage_index))
+    elif stage_command_hint:
+        rules.append(stage_command_hint)
+    elif stage_index is not None:
+        rules.append(format_stage_progress_hint(stage_index))
+    return rules
+
+
+def collaboration_discuss_locked_message(message: str, session: Optional[Any] = None) -> Optional[str]:
+    """4단계 미만 discuss/slash 협업 시도 → 고정 안내."""
+    if session is None:
+        return None
+    text = message.strip()
+    if not text:
+        return None
+    current_index = int(getattr(session, "current_stage_index", 0) or 0)
+    if current_index >= COLLABORATION_STAGE_INDEX_MIN:
+        return None
+    lowered = text.lower()
+    if lowered.startswith(_SLASH_DISCUSS_PREFIXES):
+        return format_discuss_locked_hint()
+    if bool(_DISCUSS_MARKERS.search(text)) and not bool(_EXECUTE_VERBS.search(text)):
+        return format_discuss_locked_hint()
+    return None
+
+
+def _parse_slash_discuss_command(message: str, session: Optional[Any] = None) -> Optional["StageCommand"]:
+    if session is None:
+        return None
+    text = message.strip()
+    lowered = text.lower()
+    matched_prefix = next((prefix for prefix in _SLASH_DISCUSS_PREFIXES if lowered.startswith(prefix)), None)
+    if not matched_prefix:
+        return None
+    current_index = int(getattr(session, "current_stage_index", 0) or 0)
+    if not is_collaboration_stage_index(current_index):
+        return None
+    stage = STAGE_DEFINITIONS[current_index]
+    return StageCommand(
+        action="discuss",
+        stage_index=current_index,
+        stage_id=stage["id"],
+        stage_label=stage["label"],
+        stage_number=stage_number_for_index(current_index),
+    )
+
+
 def is_collaboration_stage_index(stage_index: int) -> bool:
     return stage_index >= COLLABORATION_STAGE_INDEX_MIN
 
 
 def parse_stage_command(message: str, session: Optional[Any] = None) -> Optional[StageCommand]:
     """자연어 → 단계 명령. 예: 설계해줘 / 2단계 진행해줘 / 4단계에서 Redis 캐시 아이디어?"""
+    slash_cmd = _parse_slash_discuss_command(message, session)
+    if slash_cmd:
+        return slash_cmd
+
     text = message.strip()
     if not text:
         return None

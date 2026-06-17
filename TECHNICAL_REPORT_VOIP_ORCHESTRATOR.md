@@ -381,11 +381,11 @@ node tests/orchestrator-speech.test.mjs
 | **회원가입 이메일 OTP** | `POST /api/auth/signup/request-code` → `/confirm` · legacy `/signup` → **428** (`ALLOW_UNVERIFIED_SIGNUP=1` dev 우회) |
 | **회원가입 전화 OTP** | `verificationChannel=phone` + `phone_number` (E.164) · `backend/services/sms_dispatch.py` (Twilio `TWILIO_*` 또는 dev-log) · `User.phone_number` |
 | **프로필 필수** | `preferred_language` + `country_code` (국기) — OTP verify 단계에서도 UI 유지 · confirm 시 최종값 merge |
-| **친구 수기 OTP** | `POST /api/friends/invites/request-code` → `/confirm` · 이메일/전화 채널 |
+| **친구 추가 OTP** | `POST /api/friends/invites/request-code` → `/confirm` · 이메일/전화 채널 · **연락처 | 직접 입력 | 근처 찾기** 허브 (`FriendFolderScreen` + `expo-contacts`) |
 | **LTE/5G 진단** | `@react-native-community/netinfo` · `NetworkTestBanner` · `VOIP_NETWORK_SNAPSHOT` / `NETWORK_TRANSPORT_CHANGED` probe |
 | **Audit** | `call_initiated.metadata.client_network` — transport · cellular_generation · carrier |
 | **Health** | `GET /api/v1/voip/health` → `network_test_matrix` (wifi_lte · lte_lte · min 2 runs) |
-| **스크립트** | `scripts/worldlinco_lte_matrix_verify.ps1` — health + audit `client_network` 조회 |
+| **스크립트** | `scripts/worldlinco_lte_matrix_verify.ps1` — `-InitTemplate` · `-AppendEvidence` · health + audit `client_network` |
 | **테스트** | `test_signup_email_otp.py` (email+phone) · `test_sms_dispatch.py` · `test_voip_backend_consistency` matrix |
 
 **실기기 LTE 매트릭스 (D-0-5 미완 — 증적 필요):**
@@ -396,14 +396,41 @@ node tests/orchestrator-speech.test.mjs
 4. `WiFi↔WiFi` · `WiFi↔LTE` · `LTE↔LTE` 각 **2회+**
 
 ```powershell
+.\scripts\worldlinco_lte_matrix_verify.ps1 -InitTemplate
 .\scripts\worldlinco_lte_matrix_verify.ps1 -HealthOnly
 $env:WORLDLINGO_TEST_TOKEN='<jwt>'
 .\scripts\worldlinco_lte_matrix_verify.ps1 -CallId call-xxxxxxxxxxxx
+.\scripts\worldlinco_lte_matrix_verify.ps1 -AppendEvidence -CallId call-xxx -MatrixScenario wifi_lte -DeviceRole caller
 ```
 
 **APK:** NetInfo 네이티브 모듈 추가 → **dev client / EAS rebuild 필수**
 
 **베타 UX 원칙:** 테스터에게 “미완성 베타” 인상을 주지 않음 — 연결 배너 **안심 톤** · OTP **발송 완료** 문구 · QA/LTE 힌트는 디버그 모드(`__DEV__` / `EXPO_PUBLIC_AUTH_DEBUG_MARKER=1`)에서만 표시 · SMTP/Twilio 설정 시 실제 발송.
+
+### 0.14 관리자·일반 사용자 비밀번호 복구 · 지문 인증 (2026-06-17)
+
+| 항목 | 내용 |
+|------|------|
+| **관리자 복구 (웹)** | `https://xn--114-2p7l635dz3bh5j.com/admin/recovery` — 이메일/전화 OTP → `reset_token` → 비밀번호 재설정 **또는** 패스키 등록 (`intent=passkey`) |
+| **관리자 API** | `POST /api/auth/recovery/start` (`scope=admin`) · `/verify-identity` · `/reset-password` · 패스키 등록 시 `recovery_reset_token` 또는 현재 비밀번호 |
+| **일반 사용자 복구 (모바일)** | 동일 API · `scope=user` · `purpose=user_recovery` · 앱 **비밀번호 찾기** 모달 |
+| **로그인 중 변경** | `POST /api/auth/password/change` — JWT + `current_password` + `new_password` (8자+) |
+| **지문/생체 (모바일)** | `expo-local-authentication` + `expo-secure-store` (`requireAuthentication`) — 변경·재설정 전 본인 확인 · 선택적 **지문 빠른 로그인** |
+| **모바일 UI** | `PasswordSecurityModal` · 로그인 **비밀번호 찾기** · 내 정보 **비밀번호 변경** · **지문 로그인** |
+| **관리자 WebAuthn** | `recovery/page.tsx` — `user.id` base64url → `Uint8Array` 디코딩 (패스키 등록 오류 수정) |
+| **DB 마이그레이션** | `ensure_user_role_columns()` — `phone_number` · `preferred_language` · `country_code` · `is_staff` |
+| **nginx** | xn--114 admin 도메인 `/_next/` 정적 자산 · `Host $host` · admin shell cookie 라우팅 |
+| **환경** | `PASSKEY_RP_ID` · `PASSKEY_EXPECTED_ORIGIN` = xn--114 admin 도메인 |
+| **테스트** | `test_admin_recovery_otp.py` · `test_user_password_recovery.py` |
+| **ADB 보조** | `scripts/worldlinco_clear_for_login.ps1` · `worldlinco_repair_device_input.ps1` · `worldlinco_device_d0_smoke.ps1` |
+
+**흐름 (모바일 일반 사용자):**
+
+1. 로그인 화면 → **비밀번호 찾기** → 이메일 OTP → 지문 인증 → 새 비밀번호  
+2. 내 정보 → **비밀번호 변경** → 지문 인증 → 현재/새 비밀번호 → 재로그인  
+3. (선택) **지문 빠른 로그인 설정** → SecureStore 암호화 저장 → 다음 로그인 **👆 지문 로그인**
+
+**운영 메모:** SMTP 미설정 시 dev OTP 힌트(`dev_otp_hint`) 표시. 관리자 웹과 WorldLinco APK는 **별도 세션** — 동일 `users` 테이블·비밀번호 공유.
 
 ---
 

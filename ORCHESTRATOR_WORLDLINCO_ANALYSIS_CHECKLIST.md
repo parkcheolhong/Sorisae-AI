@@ -157,6 +157,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - **GPU 서버 live (2026-06-16 최종):** vLLM **32B AWQ** · `profile_aligned_32b_awq=true` · `overall_passed=true` · reasoner/planner `success` · reviewer `needs_revision` · Admin JWT `http_api` 포함 · `scripts/verify_autonomous_llm_gpu.py` · 증거 `A32_GPU_VERIFY_20260615-220314.json`.
 - **vLLM 기동:** `gpu-llm-server/docker-compose.vllm-32b.yml` · `scripts/start_vllm_rtx5090_32b.ps1`.
 - **Admin ops:** `scripts/reset_fixed_admin_password.py` (host DB) · 전역 설정 패널 「관리자 계정 비밀번호 변경」UI.
+- **Admin recovery (2026-06-17):** `/admin/recovery` 이메일 OTP · 패스키 등록(`intent=passkey`) · `test_admin_recovery_otp.py` · nginx xn--114 `/_next/` · `PASSKEY_RP_ID`/`PASSKEY_EXPECTED_ORIGIN`.
+- **Mobile password (2026-06-17):** 일반 사용자 `scope=user` 복구 · `POST /api/auth/password/change` · `PasswordSecurityModal` · 지문 빠른 로그인 · `test_user_password_recovery.py` · **APK rebuild 필수** (`expo-local-authentication`).
 
 ---
 
@@ -324,7 +326,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **D-0-2) 회원가입 전화 OTP** — `verificationChannel=phone` + `phone_number` · Twilio(`TWILIO_*`) 또는 dev-log · `User.phone_number` 저장.
 - [x] **D-0-3) 친구 수기 등록 OTP** — `/api/friends/invites/request-code` → `/confirm`.
 - [x] **D-0-4) VoIP 네트워크 진단 배너** — `@react-native-community/netinfo` · `NetworkTestBanner` · `metadata.client_network` audit.
-- [ ] **D-0-5) LTE/5G 매트릭스 실기기 증적** — `WiFi↔WiFi` · `WiFi↔LTE` · `LTE↔LTE` 각 2회+ · `scripts/worldlinco_lte_matrix_verify.ps1`.
+- [x] **D-0-6) 친구 추가 3옵션 허브** — `FriendFolderScreen` **연락처 | 직접 입력 | 근처 찾기** · `expo-contacts` → OTP invite · `onOpenMapDiscovery` → `FriendMapDiscoveryScreen`.
+- [ ] **D-0-5) LTE/5G 매트릭스 실기기 증적** — `WiFi↔WiFi` · `WiFi↔LTE` · `LTE↔LTE` 각 2회+ · `scripts/worldlinco_lte_matrix_verify.ps1 -InitTemplate` · `-AppendEvidence`.
 
 > **⚠️ 0순위 전제 (통신 테스트의 첫 버그):** WiFi만으로 VoIP/OTP/친구·GPS 검증을 하면 **이동통신(NAT·전환·지연·TURN) 버그를 놓칩니다.** 한국은 통신 인프라가 강해도, **LTE/5G(셀룰러) 데이터를 켠 상태**에서 `WiFi↔LTE` 매트릭스로 테스트해야 실전 품질을 판단할 수 있습니다. 앱 VoIP 레일 **「네트워크 테스트 상태」** 배너와 `call_initiated` audit `metadata.client_network` 로 경로를 기록합니다.
 
@@ -386,6 +389,9 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 | 항목 | 근거 | 상태 |
 |------|------|------|
 | 가입·로그인 | `App.tsx` auth | [x] |
+| **비밀번호 찾기 (일반)** | `PasswordSecurityModal` · `scope=user` OTP | [x] **2026-06-17** |
+| **비밀번호 변경 + 지문** | `POST /api/auth/password/change` · `biometricGate.ts` | [x] **2026-06-17** |
+| **지문 빠른 로그인** | `expo-local-authentication` + SecureStore | [x] **2026-06-17** |
 | 친구·연락 | `FriendFolderScreen`, friends API | [x] |
 | 통역 통화 (발신) | VoIP + Voice Relay | [x] build66 E-3-1 5/5 · build73 E-3-8 ko↔ja strict PASS |
 | voice-translate (≈2.8s) | `POST /api/llm/voice-translate` | [x] |

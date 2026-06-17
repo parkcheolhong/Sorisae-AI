@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CapabilityPanel from '@/components/ui/CapabilityPanel';
@@ -10,7 +10,6 @@ import AdminExternalSearchPanel, {
     type AdminExternalSearchResponse,
 } from '@/components/ui/AdminExternalSearchPanel';
 import AdminGeneratorDetailModal from '@/components/admin/admin-generator-detail-modal';
-import AutonomousOrchestratorPanel from '@/components/ui/AutonomousOrchestratorPanel';
 import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
 import { speakOrchestratorReplySync } from '@/lib/orchestrator-speech';
 import { resolveApiBaseUrl } from '@/lib/api';
@@ -105,6 +104,17 @@ import {
     getSelfRunDirectiveTemplateOption,
 } from '@/lib/admin-self-run-presets';
 import OrchestratorStageCardPanel, { type SharedOrchestratorStageRun } from '@shared/orchestrator-stage-card-panel';
+import OrchestratorLiveFlowRail from '@shared/orchestrator-live-flow-rail';
+import OrchestratorDecisionPanel from '@shared/orchestrator-decision-card';
+import {
+    buildApprovalProceedMessage,
+    buildApprovalRejectMessage,
+    buildApprovalReviseMessage,
+    buildDecisionApplyMessage,
+    buildDecisionItems,
+    buildDecisionReviseMessage,
+    buildDecisionSaveMessage,
+} from '@/lib/orchestrator-live-flow';
 import { fetchWithAdminBootstrapRetry } from '@/lib/admin-bootstrap-fetch';
 import { hasSpeechSynthesisActivation } from '@/lib/admin-alert-speech';
 import {
@@ -353,6 +363,19 @@ interface OrchestratorCapabilityDetailResponse {
     }>;
     validation_findings: OrchestratorCapabilityValidationFinding[];
     improvement_code_examples: OrchestratorCapabilityCodeExample[];
+    expansion_experiment?: {
+        work_document_title?: string;
+        work_document?: string;
+        focus_path?: string;
+        recommended_self_run?: {
+            mode?: string;
+            execution_mode?: string;
+            directive_template?: string;
+            directive_scope?: string;
+            directive_request?: string;
+            endpoint?: string;
+        };
+    } | null;
 }
 
 type ProductReadinessGateStage = {
@@ -1197,7 +1220,7 @@ interface AdminWorkspaceSelfRunResponse {
 type ImportTarget = 'task' | 'chat';
 type ImportMode = 'append' | 'replace';
 type SelfPrepareMode = 'self-diagnosis' | 'self-improvement' | 'self-expansion';
-type SelfRunDirectiveTemplate = '' | 'debug_remediation_loop' | 'video_ad_clarity' | 'video_ad_conversion' | 'video_ad_speed_optimization' | 'video_ad_storytelling' | 'video_ad_quality_upgrade' | 'video_ad_new_tech' | 'admin_ops_efficiency' | 'marketplace_conversion' | 'llm_cost_latency';
+type SelfRunDirectiveTemplate = '' | 'debug_remediation_loop' | 'video_ad_clarity' | 'video_ad_conversion' | 'video_ad_speed_optimization' | 'video_ad_storytelling' | 'video_ad_quality_upgrade' | 'video_ad_new_tech' | 'admin_ops_efficiency' | 'marketplace_conversion' | 'llm_cost_latency' | 'tower_crane_expansion';
 type SelfRunDirectiveScope = 'preset_default' | 'diagnosis_only' | 'targeted_implementation' | 'feature_expansion' | 'modernization';
 type CapabilitySyncPhase = 'live' | 'confirming' | 'stale' | 'retrying';
 
@@ -2240,12 +2263,11 @@ export default function AdminLLMPage() {
         newTechnologyCandidates,
         technologyRecommendations,
         targetPatchHints,
+        liveFlowSnapshot,
         conversationAssistExpanded,
         suggestedSelfRunPreview,
-        recognitionRef,
         setConversation,
         setChatInput,
-        setVoiceListening,
         setChatAgentKey,
         setVoiceAgentKey,
         setTextFeatureAgents,
@@ -2281,7 +2303,7 @@ export default function AdminLLMPage() {
         speakText,
     });
     const adminTerminalFocusedView = true;
-    const miniConsoleLayout = true;
+    const miniConsoleLayout = process.env.NEXT_PUBLIC_ORCHESTRATOR_MINI_CONSOLE !== '0';
     const [adminCoreMode, setAdminCoreMode] = useState<AdminTerminalCoreMode>('implementation');
 
     useEffect(() => {
@@ -3794,6 +3816,16 @@ export default function AdminLLMPage() {
         ideaPresets: DEFAULT_STAGE_IDEA_PRESETS,
         applyStageIdeaPresetValue,
     });
+    const adminDecisionItems = useMemo(
+        () => buildDecisionItems({
+            proposalItems,
+            technologyRecommendations,
+            nextActionSuggestions,
+            newTechnologyCandidates,
+            stageNumber: liveFlowSnapshot.stageNumber,
+        }),
+        [liveFlowSnapshot.stageNumber, newTechnologyCandidates, nextActionSuggestions, proposalItems, technologyRecommendations],
+    );
     const resultSummarySectionData = buildAdminResultSummarySectionData({
         effectiveProductReadinessHardGate,
         hasCompletionGateResult,
@@ -3921,12 +3953,6 @@ export default function AdminLLMPage() {
                                 </span>
                             </div>
                         ))}
-                    </div>
-                )}
-
-                {!miniConsoleLayout && (
-                    <div className="mb-6">
-                        <AutonomousOrchestratorPanel apiBaseUrl={api} getAccessToken={token} />
                     </div>
                 )}
 
@@ -4119,7 +4145,21 @@ export default function AdminLLMPage() {
                     </div>
                 )}
 
-                <div className="mb-4 rounded-xl border border-[#30363d] bg-[#161b22] p-5">
+                <section
+                    data-testid="orchestrator-workbench"
+                    className="mb-4 rounded-xl border border-[#30363d] bg-[#161b22] p-5"
+                >
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#79c0ff]">
+                                오케스트레이터 워크bench
+                            </p>
+                            <p className="mt-1 text-[11px] text-[#8b949e]">
+                                Live Flow Rail · Decision Panel · Chat — ① autonomous SSOT 표면
+                                {miniConsoleLayout ? ' (Generator·고급 패널은 아래 접기)' : ''}
+                            </p>
+                        </div>
+                    </div>
                     {!miniConsoleLayout && <div className="mb-3 rounded-lg border border-[#30363d] bg-[#0d1117] p-4">
                         <label htmlFor="admin-work-output-dir" className="mb-2 block text-xs text-[#8b949e]">현재 작업 폴더</label>
                         <input
@@ -4145,6 +4185,27 @@ export default function AdminLLMPage() {
                             </div>
                         </div>
                     </div>}
+                    <OrchestratorLiveFlowRail
+                        tone="admin"
+                        snapshot={liveFlowSnapshot}
+                        className="mb-4"
+                    />
+                    <OrchestratorDecisionPanel
+                        tone="admin"
+                        items={adminDecisionItems}
+                        approvalGate={liveFlowSnapshot.requiresApproval ? {
+                            stageNumber: liveFlowSnapshot.stageNumber,
+                            hint: liveFlowSnapshot.stageCommandHint,
+                        } : null}
+                        disabled={chatLoading}
+                        className="mb-4"
+                        onApplyAndProceed={(item) => { void sendChatMessage(buildDecisionApplyMessage(item)); }}
+                        onSaveIdeaOnly={(item) => { void sendChatMessage(buildDecisionSaveMessage(item)); }}
+                        onRequestRevision={(item) => { void sendChatMessage(buildDecisionReviseMessage(item)); }}
+                        onApprovalProceed={() => { void sendChatMessage(buildApprovalProceedMessage(liveFlowSnapshot.stageNumber)); }}
+                        onApprovalRevise={() => { void sendChatMessage(buildApprovalReviseMessage()); }}
+                        onApprovalReject={() => { void sendChatMessage(buildApprovalRejectMessage()); }}
+                    />
                     <div className="mb-3">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
                             <span className="text-[11px] font-semibold tracking-[0.28em] text-[#79c0ff]">CODE GENERATOR</span>
@@ -4387,7 +4448,7 @@ export default function AdminLLMPage() {
                             <p className="text-xs text-[#8b949e]">크롬에서 마이크 권한을 허용하면 음성 지시 → ① 코어 → 답변 낭독까지 이어집니다.</p>
                         </div>
                     </div>
-                </div>
+                </section>
 
                 {error && <div className="mb-4 rounded-lg border border-[#f78166] bg-[#2d1f1f] p-3 text-[#f78166]">{error}</div>}
 

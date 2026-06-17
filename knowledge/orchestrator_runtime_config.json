@@ -25,8 +25,10 @@
   "force_complete": true,
   "allow_synthetic_fallback": false,
   "code_generation_strategy": "auto_generator",
-  "min_files": 27,
-  "min_dirs": 2,
+  "min_files": 9,
+  "min_dirs": 3,
+  "stage11_min_files": 32,
+  "stage11_min_dirs": 11,
   "selected_profile": "rtx5090_32gb",
   "model_tuning_level": 0,
   "token_tuning_level": 0,
@@ -242,7 +244,7 @@
         "max_force_retries": 60,
         "force_complete": false,
         "allow_synthetic_fallback": false,
-        "min_files": 27,
+        "min_files": 9,
         "min_dirs": 5
       }
     },
@@ -343,7 +345,7 @@
         "max_force_retries": 99,
         "force_complete": false,
         "allow_synthetic_fallback": false,
-        "min_files": 27,
+        "min_files": 9,
         "min_dirs": 5
       }
     }

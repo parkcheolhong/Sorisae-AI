@@ -7,7 +7,7 @@ import { useAdminPageActions } from '@/app/admin/hooks/useAdminPageActions';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { resolveApiBaseUrl } from '@/lib/api';
+import { resolveApiBaseUrl, resolveBackendDocsUrl } from '@/lib/api';
 import AdminAdPreviewModal from '@/components/admin/admin-ad-preview-modal';
 import AdminLlmControlSummary from '@/components/admin/admin-llm-control-summary';
 import AdminManagementSection from '@/components/admin/admin-management-section';
@@ -251,24 +251,12 @@ const initialOverview: OverviewStats = { projects: 0, users: 0, purchases: 0, re
 const initialRevenue: RevenueStats = { total_revenue: 0, total_purchases: 0, average_purchase_amount: 0 };
 const adminPassKmcKcbDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md';
 const adminCommercialTermsDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-terms-checklist.md';
+const adminCommercialValuesInputHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-values-input-checklist.md';
 
 export default function AdminDashboardPage() {
     const router = useRouter();
     const apiBaseUrl = resolveApiBaseUrl();
-    const adminApiDocsHref = useMemo(() => {
-        if (typeof window === 'undefined') {
-            return `${apiBaseUrl}/docs`;
-        }
-
-        const { hostname, protocol, port } = window.location;
-        const isLocalFrontendPort = (hostname === 'localhost' || hostname === '127.0.0.1') && (port === '3000' || port === '3005') && protocol === 'http:';
-
-        if (isLocalFrontendPort) {
-            return `${protocol}//${hostname}:8000/docs`;
-        }
-
-        return `${apiBaseUrl}/docs`;
-    }, [apiBaseUrl]);
+    const adminApiDocsHref = useMemo(() => resolveBackendDocsUrl(apiBaseUrl), [apiBaseUrl]);
     const marketplaceHomeHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace'), []);
     const marketplaceOrchestratorHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace/orchestrator'), []);
     const adminCategoriesBootstrappedRef = useRef(false);
@@ -605,6 +593,7 @@ export default function AdminDashboardPage() {
         systemSettingsOpen,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -645,6 +634,7 @@ export default function AdminDashboardPage() {
         setCategorySortBy,
         categoryMessage,
         loadSystemSettings,
+        fillMissingSystemSettings,
         changeAdminPassword,
         updatePostgresRuntimePassword,
         updateSystemSettingValue,
@@ -1872,6 +1862,7 @@ export default function AdminDashboardPage() {
         systemSettingsDisconnected,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -1894,6 +1885,7 @@ export default function AdminDashboardPage() {
         onApplyGlobalAutomaticMode: applyGlobalAutomaticMode,
         onLoadSystemSettings: loadSystemSettings,
         onSaveSystemSettings: saveSystemSettings,
+        onFillMissingSystemSettings: () => { void fillMissingSystemSettings(); },
         onApplyGeneratorModelOverride: applyGeneratorModelOverride,
         onToggleSystemSettingsSection: toggleSystemSettingsSection,
         onUpdateSystemSettingValue: updateSystemSettingValue,
@@ -2812,6 +2804,9 @@ export default function AdminDashboardPage() {
                         </Link>
                         <Link href={adminCommercialTermsDocsHref} data-testid="admin-topnav-commercial-terms" aria-label="상용화 계약 약관 기준 열기" className="workspace-topbar-chip">
                             계약 기준
+                        </Link>
+                        <Link href={adminCommercialValuesInputHref} data-testid="admin-topnav-commercial-values-input" aria-label="PASS KMC KCB 상용값 입력 체크리스트 열기" className="workspace-topbar-chip">
+                            상용값 입력
                         </Link>
                         <a href={adminApiDocsHref} target="_blank" rel="noreferrer" data-testid="admin-topnav-api-docs" aria-label="API 문서 열기" className="workspace-topbar-chip">
                             API Docs

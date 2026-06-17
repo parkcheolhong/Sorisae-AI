@@ -28,6 +28,39 @@ def resolve_autonomous_mode(*, mode: str = "", manual_mode: bool = True) -> str:
     return "semi_auto"
 
 
+def should_route_orchestrator_chat_to_autonomous(
+    request: Any,
+    request_context: Any,
+) -> bool:
+    """Admin/Market `orchestrate/chat` → ① TurnController 분기 (G-1-1).
+
+    Legacy ② fallback: lightweight · reverse_question · tone-selection 흐름.
+    """
+    from backend.orchestrator.chat.chat_service import is_lightweight_chat_request
+
+    if is_lightweight_chat_request(request, request_context):
+        return False
+
+    conversation_mode = str(getattr(request, "conversation_mode", None) or "auto").strip().lower()
+    if conversation_mode in {"reverse_question", "reciprocal", "interview"}:
+        return False
+
+    mode = str(getattr(request, "mode", None) or "").strip().lower()
+    manual_mode = bool(getattr(request, "manual_mode", True))
+    if manual_mode or mode.startswith("manual_") or mode in {
+        "semi_auto",
+        "full_auto",
+        "full",
+        "advisory",
+        "advise",
+        "analysis",
+        "research_only",
+    }:
+        return True
+
+    return False
+
+
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -114,10 +147,13 @@ def _map_autonomous_to_chat_response(
 ) -> OrchestratorChatResponse:
     speakers = _SURFACE_SPEAKERS.get(surface, _SURFACE_SPEAKERS["admin"])
     timestamp = _utc_now_iso()
+    tags = [str(item).strip() for item in (context_tags or []) if str(item).strip()]
+    voice_entry = "voice-entry" in tags or "voice-stt" in tags
+    user_speaker = speakers["user_voice"] if voice_entry else speakers["user"]
     user_message = ConversationMessage(
         role="user",
         content=request_message,
-        speaker=speakers["user"],
+        speaker=user_speaker,
         timestamp=timestamp,
     )
     assistant_message = ConversationMessage(
@@ -158,8 +194,70 @@ def _map_autonomous_to_chat_response(
         "stage_command": autonomous_payload.get("stage_command"),
         "stage_number": autonomous_payload.get("stage_number"),
         "stage_command_hint": autonomous_payload.get("stage_command_hint"),
-        "context_tags": list(context_tags or []),
+        "requires_approval": requires_approval,
+        "execution_state": autonomous_payload.get("execution_state"),
+        "approval_state": autonomous_payload.get("approval_state"),
+        "current_stage": autonomous_payload.get("current_stage"),
+        "context_tags": tags,
+        "command_rules": autonomous_payload.get("command_rules") or [],
+        "command_modes": autonomous_payload.get("command_modes") or [],
+        "discuss_locked": bool(autonomous_payload.get("discuss_locked")),
     }
+    if voice_entry:
+        diagnostics["voice_entry"] = True
+        diagnostics["voice_speaker"] = speakers["user_voice"]
+        diagnostics["voice_context_tags"] = [tag for tag in tags if tag.startswith("voice-")]
+
+    proposal_items = autonomous_payload.get("proposal_items") or []
+    technology_recommendations = autonomous_payload.get("technology_recommendations") or []
+    new_technology_candidates = autonomous_payload.get("new_technology_candidates") or []
+    clarification_questions = autonomous_payload.get("clarification_questions") or []
+    evidence_highlights = autonomous_payload.get("evidence_highlights") or []
+    web_results = autonomous_payload.get("web_results") or []
+    web_grounding_used = bool(autonomous_payload.get("web_grounding_used"))
+
+    from backend.orchestrator.chat.models import (
+        AdvisoryEvidenceItem,
+        AdvisoryQuestion,
+        ProposalItem,
+        TechnologyRecommendation,
+        WebGroundingItem,
+    )
+
+    def _proposal_items():
+        items = []
+        for raw in proposal_items:
+            if isinstance(raw, dict):
+                items.append(ProposalItem(**raw))
+        return items
+
+    def _technology_recommendations():
+        items = []
+        for raw in technology_recommendations:
+            if isinstance(raw, dict):
+                items.append(TechnologyRecommendation(**raw))
+        return items
+
+    def _clarification_questions():
+        items = []
+        for raw in clarification_questions:
+            if isinstance(raw, dict):
+                items.append(AdvisoryQuestion(**raw))
+        return items
+
+    def _evidence_highlights():
+        items = []
+        for raw in evidence_highlights:
+            if isinstance(raw, dict):
+                items.append(AdvisoryEvidenceItem(**raw))
+        return items
+
+    def _web_results():
+        items = []
+        for raw in web_results:
+            if isinstance(raw, dict):
+                items.append(WebGroundingItem(**raw))
+        return items
 
     return OrchestratorChatResponse(
         reply=assistant_message,
@@ -167,8 +265,12 @@ def _map_autonomous_to_chat_response(
         output_dir=autonomous_payload.get("output_dir"),
         run_id=run_id,
         session_id=str(autonomous_payload.get("session_id") or ""),
-        grounding_mode="internal",
-        grounding_note="멀티 에이전트 자율 오케스트레이터(①) 코어",
+        grounding_mode="web" if web_grounding_used else "internal",
+        grounding_note=(
+            "웹 검색 근거를 포함한 ① discuss advisory"
+            if web_grounding_used
+            else "멀티 에이전트 자율 오케스트레이터(①) 코어"
+        ),
         conversation_stage=conversation_stage,
         next_action_suggestions=_build_next_actions(
             requires_approval,
@@ -179,6 +281,12 @@ def _map_autonomous_to_chat_response(
         inferred_goal=inferred_goal,
         multi_turn_enabled=True,
         diagnostics=diagnostics,
+        proposal_items=_proposal_items(),
+        technology_recommendations=_technology_recommendations(),
+        new_technology_candidates=[str(item) for item in new_technology_candidates if str(item).strip()],
+        clarification_questions=_clarification_questions(),
+        evidence_highlights=_evidence_highlights(),
+        web_results=_web_results(),
     )
 
 
@@ -244,8 +352,27 @@ async def run_autonomous_surface_chat(
         logger.warning("Autonomous surface adapter LLM setup failed: %s", exc)
         session.extra["llm_connected"] = False
 
+    session.extra["surface"] = surface
+    if effective_stage_run_id:
+        session.extra["stage_run_id"] = effective_stage_run_id
+    if effective_run_id:
+        session.extra["progress_run_id"] = effective_run_id
+    elif effective_session_id:
+        session.extra["progress_run_id"] = effective_session_id
+    else:
+        session.extra["progress_run_id"] = session.session_id
+
     controller = TurnController(llm_call=llm_call)
     autonomous_payload = await controller.process_turn(trimmed_message, session)
+
+    from .progress_tracker import persist_autonomous_progress
+
+    persist_autonomous_progress(
+        session,
+        run_id=effective_run_id,
+        stage_run_id=effective_stage_run_id,
+        event_message=f"chat · {autonomous_payload.get('intent') or 'turn'}",
+    )
 
     if session.output_dir:
         autonomous_payload["output_dir"] = session.output_dir
@@ -272,6 +399,21 @@ async def run_autonomous_surface_chat(
             "synced_stage_run": synced_stage_run,
             "stage_run_id": effective_stage_run_id,
         }
+
+    if int(autonomous_payload.get("stages_completed") or 0) > 0 and session.output_dir:
+        from .runnable_proof import evaluate_runnable_proof
+
+        runnable_proof = evaluate_runnable_proof(
+            output_dir=session.output_dir,
+            written_files=_collect_written_files(session),
+            validation_profile=str(session.validation_profile or validation_profile),
+            agent_results=session.agent_results,
+        )
+        response.diagnostics = {
+            **dict(response.diagnostics or {}),
+            "runnable_proof": runnable_proof,
+            "product_ready_hint": bool(runnable_proof.get("ok")),
+        }
     return response
 
 
@@ -297,6 +439,64 @@ def _collect_written_files(session: Any) -> List[str]:
     return written
 
 
+def _build_completion_judge(
+    *,
+    session: Any,
+    turn_payload: Dict[str, Any],
+    written_files: List[str],
+) -> Dict[str, Any]:
+    from .runnable_proof import evaluate_runnable_proof
+    from .run_experience import append_autonomous_run_snapshot
+
+    execution_state = str(getattr(session, "execution_state", "") or "idle")
+    failed = execution_state == "failed"
+    completed = execution_state == "completed"
+    stages_completed = int(turn_payload.get("stages_completed") or 0)
+    validation_profile = str(getattr(session, "validation_profile", "") or "python_fastapi")
+
+    runnable_proof = evaluate_runnable_proof(
+        output_dir=getattr(session, "output_dir", None),
+        written_files=written_files,
+        validation_profile=validation_profile,
+        agent_results=getattr(session, "agent_results", None),
+    )
+    structural_ready = completed and not failed and bool(getattr(session, "output_dir", None))
+    product_ready = bool(structural_ready and runnable_proof.get("ok"))
+
+    if structural_ready and stages_completed > 0:
+        append_autonomous_run_snapshot(
+            session_id=str(getattr(session, "session_id", "") or ""),
+            surface=str((getattr(session, "extra", None) or {}).get("surface") or "autonomous"),
+            execution_state=execution_state,
+            stages_completed=stages_completed,
+            runnable_proof=runnable_proof,
+            task=str(getattr(session, "task", "") or turn_payload.get("content") or ""),
+        )
+
+    final_output = str(turn_payload.get("content") or "").strip()
+    if product_ready:
+        final_hint = runnable_proof.get("detail") or "runnable proof OK"
+        final_output = final_output or f"멀티 자율 코어 코드 생성 완료 — {final_hint}"
+    elif structural_ready:
+        final_output = final_output or (
+            f"구조는 완료됐으나 runnable proof 미충족: {runnable_proof.get('detail') or '검증 필요'}"
+        )
+    else:
+        final_output = final_output or "멀티 자율 코어 코드 생성 결과"
+
+    return {
+        "product_ready": product_ready,
+        "structural_ready": structural_ready,
+        "failed_reasons": [] if product_ready else [final_output[:240] or execution_state],
+        "orchestrator_core": "autonomous_turn_controller",
+        "stages_completed": stages_completed,
+        "stages_total": int(turn_payload.get("stages_total") or 0),
+        "llm_connected": bool(turn_payload.get("llm_connected")),
+        "runnable_proof": runnable_proof,
+        "completion_model": "structural_plus_runnable_proof",
+    }
+
+
 def _map_session_to_orchestration_payload(
     *,
     session: Any,
@@ -310,9 +510,16 @@ def _map_session_to_orchestration_payload(
     execution_state = str(getattr(session, "execution_state", "") or "idle")
     failed = execution_state == "failed"
     completed = execution_state == "completed"
-    product_ready = completed and not failed and bool(session.output_dir)
+    completion_judge = _build_completion_judge(
+        session=session,
+        turn_payload=turn_payload,
+        written_files=written_files,
+    )
+    product_ready = bool(completion_judge.get("product_ready"))
     final_output = str(turn_payload.get("content") or "").strip() or (
-        "멀티 자율 코어 코드 생성이 완료되었습니다." if product_ready else "멀티 자율 코어 코드 생성 결과"
+        str(completion_judge.get("failed_reasons") or ["멀티 자율 코어 코드 생성 결과"])[0]
+        if isinstance(completion_judge.get("failed_reasons"), list) and completion_judge.get("failed_reasons")
+        else "멀티 자율 코어 코드 생성 결과"
     )
     stages_completed = int(turn_payload.get("stages_completed") or 0)
     stages_total = int(turn_payload.get("stages_total") or 0)
@@ -340,21 +547,16 @@ def _map_session_to_orchestration_payload(
         "postcheck_ok": completed and not failed,
         "completion_gate_ok": product_ready,
         "completion_summary": final_output if product_ready else None,
-        "failure_summary": final_output if failed else None,
-        "completion_judge": {
-            "product_ready": product_ready,
-            "failed_reasons": [] if product_ready else [final_output[:240] or execution_state],
-            "orchestrator_core": "autonomous_turn_controller",
-            "stages_completed": stages_completed,
-            "stages_total": stages_total,
-            "llm_connected": bool(turn_payload.get("llm_connected")),
-        },
+        "failure_summary": final_output if failed or (completed and not product_ready) else None,
+        "completion_judge": completion_judge,
         "integration_test_plan": {
-            "required_tests": ["autonomous_coder_validator_pipeline"],
+            "required_tests": ["autonomous_coder_validator_pipeline", "runnable_proof"],
+            "runnable_proof": completion_judge.get("runnable_proof"),
         },
         "packaging_audit": {
             "packaging_ready": product_ready,
             "shipping_readme_path": None,
+            "runnable_proof_ok": bool((completion_judge.get("runnable_proof") or {}).get("ok")),
         },
         "diagnostics": {
             "orchestrator_core": "autonomous_turn_controller",
@@ -413,6 +615,8 @@ async def run_autonomous_surface_execution(
     except Exception as exc:
         logger.warning("Autonomous surface execution LLM setup failed: %s", exc)
         session.extra["llm_connected"] = False
+
+    session.extra["surface"] = "execution"
 
     if progress_callback:
         progress_callback("① 멀티 자율 코어 full_auto 생성 시작", "info")

@@ -177,3 +177,12 @@ PASS/KMC와 동일 의미 필드를 유지하되 KCB 요구 포맷에 맞게 전
 
 - 상용 계약이 어려운 경우가 많음
 - 테스트/개발은 가능하나 운영 전환은 제한될 수 있음
+
+---
+
+## 관련 문서
+
+- **상용값(env) 입력 체크리스트**: `docs/identity-provider-commercial-values-input-checklist.md`
+- 상용화 계약·약관 기준: `docs/identity-provider-commercial-terms-checklist.md`
+- 운영 전환 패키지: `docs/identity-provider-operations-transition-package.md`
+- 사업자 유형 가이드: `docs/identity-provider-business-type-guide.md`

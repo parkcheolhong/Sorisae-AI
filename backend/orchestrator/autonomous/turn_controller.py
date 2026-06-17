@@ -21,6 +21,9 @@ from .agents.validator import ValidatorAgent
 from .session import AutonomousSession, StageState
 from .stage_commands import (
     StageCommand,
+    build_stage_command_rules,
+    collaboration_discuss_locked_message,
+    DEFAULT_STAGE_COMMAND_MODES,
     format_stage_execute_hint,
     format_stage_progress_hint,
     parse_stage_command,
@@ -386,16 +389,24 @@ class TurnController:
             )
 
         if command.action == "discuss":
+            from .advisory import build_discuss_advisory_payload, fetch_discuss_web_context
+
             context = self._build_context(session, message)
             context.stage_id = command.stage_id
             context.stage_label = command.stage_label
             context.extra["collaboration_mode"] = True
+            web_ctx = fetch_discuss_web_context(message)
+            session.extra["web_results"] = list(web_ctx.get("web_results") or [])
+            context.extra["web_grounding_used"] = bool(web_ctx.get("web_grounding_used"))
             enriched = (
                 f"{message}\n\n"
                 f"[협업 모드 · {command.stage_label}]\n"
                 "프로젝트 맥락을 유지한 채 질문에 답하고, 아이디어·신기술·개선안을 제안하세요. "
                 "구현이 필요하면 어떤 파일/모듈을 바꿀지 구체적으로 적어 주세요."
             )
+            grounding_block = str(web_ctx.get("web_grounding_block") or "").strip()
+            if grounding_block:
+                enriched = f"{enriched}\n\n{grounding_block}"
             results: List[AgentResult] = []
             for agent_id in ("reasoner", "planner"):
                 context.previous_results = list(session.agent_results)
@@ -412,6 +423,14 @@ class TurnController:
                 f"추가 질문은 그대로 대화하시면 됩니다."
             )
             combined = self._combine_results(results, session)
+
+            session.extra["advisory"] = build_discuss_advisory_payload(
+                message,
+                combined,
+                stage_number=command.stage_number,
+                web_results=session.extra.get("web_results") or [],
+            )
+            session.extra.pop("discuss_locked", None)
             session.save()
             return self._build_response(
                 session,
@@ -490,6 +509,14 @@ class TurnController:
         stage_command = parse_stage_command(message, session)
         if stage_command:
             return await self._handle_stage_command(stage_command, message, session)
+
+        locked_reply = collaboration_discuss_locked_message(message, session)
+        if locked_reply:
+            session.extra["stage_command_hint"] = locked_reply
+            session.extra["discuss_locked"] = True
+            session.add_system_message(locked_reply)
+            session.save()
+            return self._build_response(session, locked_reply, intent="stage_discuss_locked")
 
         intent = self.classify_intent(message, session)
         if intent == "status" and self._resolve_approval_intent(message, session):
@@ -858,6 +885,8 @@ class TurnController:
 
         verification_only = stage_id == "STAGE-10"
 
+        from .progress_tracker import persist_autonomous_progress
+
         if not verification_only:
             for agent_id in [a for a in agent_ids if a == "reviewer"]:
                 result = await self._run_agent_with_bus(agent_id, context, session, session.task)
@@ -865,6 +894,10 @@ class TurnController:
                 session.agent_results.append(result)
                 session.add_agent_message(agent_id, result.output, result.artifacts)
                 context.previous_results = list(session.agent_results)
+                persist_autonomous_progress(
+                    session,
+                    event_message=f"{stage_id} · {agent_id} → {result.status}",
+                )
                 if result.status == "error":
                     session.add_system_message(
                         "리뷰어 호출 오류 — 코더/검증 단계로 계속 진행합니다."
@@ -890,6 +923,10 @@ class TurnController:
         results.append(coder_result)
         session.agent_results.append(coder_result)
         session.add_agent_message("coder", coder_result.output, coder_result.artifacts)
+        persist_autonomous_progress(
+            session,
+            event_message=f"{stage_id} · coder → {coder_result.status}",
+        )
 
         if coder_result.status != "success":
             session.execution_state = "failed"
@@ -900,6 +937,10 @@ class TurnController:
         results.append(val_result)
         session.agent_results.append(val_result)
         session.add_agent_message("validator", val_result.output, val_result.artifacts)
+        persist_autonomous_progress(
+            session,
+            event_message=f"{stage_id} · validator → {val_result.status}",
+        )
 
         if val_result.status == "needs_revision" and val_result.errors:
             coder = self.agents["coder"]
@@ -1030,7 +1071,21 @@ class TurnController:
         intent: str = "",
         agent_results: Optional[List[AgentResult]] = None,
     ) -> Dict[str, Any]:
-        return {
+        stage_index = int(getattr(session, "current_stage_index", 0) or 0)
+        command_rules = build_stage_command_rules(
+            stage_command=session.extra.get("active_stage_command"),
+            stage_index=stage_index,
+            stage_command_hint=session.extra.get("stage_command_hint"),
+            requires_approval=session.approval_state == "pending",
+            command_modes=DEFAULT_STAGE_COMMAND_MODES,
+        )
+        from .progress_tracker import persist_autonomous_progress
+
+        session.extra["last_intent"] = intent
+        advisory = dict(session.extra.get("advisory") or {})
+        web_results = list(advisory.get("web_results") or session.extra.get("web_results") or [])
+        evidence_highlights = list(advisory.get("evidence_highlights") or [])
+        payload: Dict[str, Any] = {
             "session_id": session.session_id,
             "mode": session.mode,
             "intent": intent,
@@ -1051,4 +1106,19 @@ class TurnController:
             "stage_command": session.extra.get("active_stage_command"),
             "stage_number": session.extra.get("active_stage_number"),
             "stage_command_hint": session.extra.get("stage_command_hint"),
+            "command_rules": command_rules,
+            "command_modes": list(DEFAULT_STAGE_COMMAND_MODES),
+            "discuss_locked": bool(session.extra.get("discuss_locked")),
+            "proposal_items": advisory.get("proposal_items") or [],
+            "technology_recommendations": advisory.get("technology_recommendations") or [],
+            "new_technology_candidates": advisory.get("new_technology_candidates") or [],
+            "clarification_questions": advisory.get("clarification_questions") or [],
+            "evidence_highlights": evidence_highlights,
+            "web_results": web_results,
+            "web_grounding_used": bool(web_results),
         }
+        persist_autonomous_progress(
+            session,
+            event_message=f"{intent or 'turn'} · {session.execution_state}" if intent else None,
+        )
+        return payload

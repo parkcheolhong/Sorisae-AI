@@ -33,7 +33,9 @@ function Sync-AndroidVersionFromAppJson {
 
 if (-not $SkipBuild) {
     Sync-AndroidVersionFromAppJson
-    $env:GRADLE_USER_HOME = if ($env:GRADLE_USER_HOME) { $env:GRADLE_USER_HOME } else { "C:\gradle-cache" }
+    $env:GRADLE_USER_HOME = "C:\gradle-cache"
+    $env:NODE_ENV = "production"
+    $env:GRADLE_OPTS = "-Dorg.gradle.caching=true"
     $bundleDirs = @(
         "android\app\build\generated\assets\react\release",
         "android\app\build\generated\res\react\release",

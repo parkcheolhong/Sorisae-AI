@@ -92,6 +92,47 @@ async def test_run_autonomous_surface_chat_code_generation_requires_approval(tmp
 
 
 @pytest.mark.asyncio
+async def test_run_autonomous_surface_chat_discuss_includes_advisory_fields(tmp_path, monkeypatch):
+    session_dir = tmp_path / "autonomous_sessions"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("TMP", str(tmp_path))
+    monkeypatch.setenv("AUTONOMOUS_MAX_STAGES_PER_TURN", "1")
+    monkeypatch.setattr(
+        "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+        str(session_dir),
+    )
+    monkeypatch.setattr(
+        autonomous_router_module,
+        "_build_llm_call",
+        lambda: (None, {}),
+    )
+
+    session = None
+    from backend.orchestrator.autonomous.session import AutonomousSession
+
+    session = AutonomousSession.create(owner_id="user-7", mode="semi_auto", project_name="probe")
+    session.task = "FastAPI 헬스체크 API"
+    session.save()
+
+    response = await run_autonomous_surface_chat(
+        message="4단계 Redis 캐시 아이디어 제안해줘",
+        owner_id="user-7",
+        surface="marketplace",
+        session_id=session.session_id,
+        task="FastAPI 헬스체크 API",
+        project_name="probe",
+        mode="manual_10step",
+        manual_mode=True,
+    )
+
+    assert response.diagnostics["autonomous_intent"] == "stage_discuss"
+    assert response.diagnostics.get("command_rules")
+    assert len(response.proposal_items) > 0
+    assert len(response.technology_recommendations) > 0
+    assert len(response.clarification_questions) >= 0
+
+
+@pytest.mark.asyncio
 async def test_run_autonomous_surface_execution_full_auto(tmp_path, monkeypatch):
     session_dir = tmp_path / "autonomous_sessions"
     session_dir.mkdir(parents=True, exist_ok=True)

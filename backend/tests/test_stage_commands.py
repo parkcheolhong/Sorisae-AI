@@ -63,3 +63,38 @@ def test_collaboration_discuss_without_stage_number():
 
 def test_stage_index_from_number_supports_half_step():
     assert stage_index_from_number(4.5) == 4
+
+
+def test_build_stage_command_rules_mirrors_progress_hint():
+    from backend.orchestrator.autonomous.stage_commands import (
+        build_stage_command_rules,
+        format_stage_progress_hint,
+    )
+
+    rules = build_stage_command_rules(
+        stage_command="execute",
+        stage_index=3,
+        requires_approval=False,
+    )
+    assert any(format_stage_progress_hint(3) in rule for rule in rules)
+    assert any("/ask" in rule for rule in rules)
+
+
+def test_slash_ask_maps_to_discuss_at_stage_four():
+    session = AutonomousSession.create(owner_id="u1", mode="semi_auto")
+    session.current_stage_index = 3
+
+    cmd = parse_stage_command("/ask Redis 캐시 패턴이 맞나요?", session)
+    assert cmd is not None
+    assert cmd.action == "discuss"
+    assert cmd.stage_number == 4
+
+
+def test_collaboration_discuss_locked_before_stage_four():
+    from backend.orchestrator.autonomous.stage_commands import collaboration_discuss_locked_message
+
+    session = AutonomousSession.create(owner_id="u1", mode="semi_auto")
+    session.current_stage_index = 1
+    locked = collaboration_discuss_locked_message("Redis 아이디어 제안해줘", session)
+    assert locked is not None
+    assert "4단계" in locked

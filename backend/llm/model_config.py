@@ -424,20 +424,40 @@ def get_recommended_runtime_profiles(available_models: List[str] | None = None) 
 
 def get_available_ollama_models() -> List[str]:
     cached = _read_cached_value("available_ollama_models", ttl_sec=OLLAMA_TAGS_CACHE_TTL_SEC)
-    if isinstance(cached, list):
+    if isinstance(cached, list) and cached:
         return list(cached)
-    ollama_base = os.getenv("OLLAMA_BASE", "http://host.docker.internal:8008/v1")
-    try:
-        with urlopen(f"{ollama_base}/models", timeout=10) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (URLError, TimeoutError, ValueError, OSError):
-        return []
-    models = payload.get("data") if isinstance(payload, dict) else []
-    if not isinstance(models, list):
-        return []
-    available = [str(item.get("id", "")).strip() for item in models if isinstance(item, dict) and str(item.get("id", "")).strip()]
-    result = sorted(set(available))
-    return list(_write_cached_value("available_ollama_models", result))
+
+    base_candidates: List[str] = []
+    for raw in (
+        os.getenv("OLLAMA_BASE", "").strip(),
+        "http://127.0.0.1:8008/v1",
+        "http://host.docker.internal:8008/v1",
+    ):
+        normalized = str(raw or "").strip().rstrip("/")
+        if normalized and normalized not in base_candidates:
+            base_candidates.append(normalized)
+
+    for ollama_base in base_candidates:
+        try:
+            with urlopen(f"{ollama_base}/models", timeout=10) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except (URLError, TimeoutError, ValueError, OSError):
+            continue
+        models = payload.get("data") if isinstance(payload, dict) else []
+        if not isinstance(models, list):
+            continue
+        available = [
+            str(item.get("id", "")).strip()
+            for item in models
+            if isinstance(item, dict) and str(item.get("id", "")).strip()
+        ]
+        if available:
+            result = sorted(set(available))
+            return list(_write_cached_value("available_ollama_models", result))
+
+    configured = get_configured_model_routes()
+    fallback = sorted({str(name).strip() for name in configured.values() if str(name).strip()})
+    return list(_write_cached_value("available_ollama_models", fallback))
 
 
 def get_gpu_runtime_info() -> Dict[str, Any]:

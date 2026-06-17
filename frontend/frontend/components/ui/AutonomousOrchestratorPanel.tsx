@@ -118,8 +118,8 @@ export default function AutonomousOrchestratorPanel({
                 <div>
                     <h2 className="text-lg font-semibold text-[#58a6ff]">멀티 에이전트 자율 오케스트레이터 (①)</h2>
                     <p className="mt-1 text-xs text-[#8b949e]">
-                        API: POST /api/llm/autonomous/chat · GET /api/llm/autonomous/session/&#123;id&#125;
-                        · 대화형 오케스트레이터(②)와 별도 경로입니다.
+                        SSOT: POST /api/llm/orchestrate/chat (surface adapter) ·
+                        raw session probe: GET /api/llm/autonomous/session/&#123;id&#125;
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

@@ -48,6 +48,15 @@ import { useVoipAutoController } from './src/features/voip-auto/useVoipAutoContr
 import { usePermissionCheck } from './src/hooks/usePermissionCheck';
 import { useNetworkDiagnostics } from './src/hooks/useNetworkDiagnostics';
 import { PhoneDialer } from './src/components/PhoneDialer';
+import { PasswordSecurityModal } from './src/components/PasswordSecurityModal';
+import {
+    authenticateWithBiometric,
+    isBiometricAvailable,
+    isBiometricLoginEnabled,
+    loadBiometricCredentials,
+    saveBiometricCredentials,
+    setBiometricLoginEnabled,
+} from './src/auth/biometricGate';
 import { VoipCallErrorBoundary } from './src/components/VoipCallErrorBoundary';
 import { VoIPCallScreen } from './src/screens/VoIPCallScreen';
 import { useVoipIncomingCalls } from './src/features/voip-auto/useVoipIncomingCalls';
@@ -2266,6 +2275,11 @@ export default function App() {
     const [authDebugSubmitPressed, setAuthDebugSubmitPressed] = useState(false);
     const [authDebugFocusField, setAuthDebugFocusField] = useState<'NONE' | 'EMAIL' | 'PASSWORD'>('NONE');
     const [authDebugLastInputEvent, setAuthDebugLastInputEvent] = useState('APP_BOOT');
+    const [showPasswordSecurity, setShowPasswordSecurity] = useState(false);
+    const [passwordSecurityMode, setPasswordSecurityMode] = useState<'recover' | 'change'>('recover');
+    const [biometricLoginReady, setBiometricLoginReady] = useState(false);
+    const [biometricLoginEnabled, setBiometricLoginEnabledState] = useState(false);
+    const [biometricLoginBusy, setBiometricLoginBusy] = useState(false);
     const [showMyInfo, setShowMyInfo] = useState(false);
     const [profilePreferredLanguage, setProfilePreferredLanguage] = useState<LangCode>('ko');
     const [profileCountryCode, setProfileCountryCode] = useState<SignupCountryCode>('KR');
@@ -2520,6 +2534,66 @@ export default function App() {
         setLoginError('');
         setShowLogin(true);
     }, [logUiPressProbe]);
+
+    const openPasswordRecovery = useCallback(() => {
+        setPasswordSecurityMode('recover');
+        setShowPasswordSecurity(true);
+        setShowLogin(false);
+    }, []);
+
+    const openPasswordChange = useCallback(() => {
+        setPasswordSecurityMode('change');
+        setShowPasswordSecurity(true);
+    }, []);
+
+    const handleBiometricLogin = useCallback(async () => {
+        setBiometricLoginBusy(true);
+        setLoginError('');
+        try {
+            const credentials = await loadBiometricCredentials();
+            if (!credentials) {
+                setLoginError('저장된 지문 로그인 정보가 없습니다. 이메일/비밀번호로 로그인 후 설정해 주세요.');
+                return;
+            }
+            const tk = await callLoginApi(credentials.email, credentials.password);
+            const me = await callMeApi(tk);
+            applyAuthenticatedSession(tk, me);
+        } catch (e: any) {
+            setLoginError(e?.message || '지문 로그인에 실패했습니다.');
+        } finally {
+            setBiometricLoginBusy(false);
+        }
+    }, [applyAuthenticatedSession]);
+
+    const handleToggleBiometricLogin = useCallback(async () => {
+        if (biometricLoginEnabled) {
+            await setBiometricLoginEnabled(false);
+            setBiometricLoginEnabledState(false);
+            setProfileMessage('지문 빠른 로그인을 해제했습니다.');
+            return;
+        }
+        if (!loginEmail.trim() && !userInfo?.email) {
+            Alert.alert('지문 로그인', '먼저 이메일/비밀번호로 로그인한 뒤 설정할 수 있습니다.');
+            return;
+        }
+        const email = userInfo?.email || loginEmail.trim();
+        const password = loginPw.trim();
+        if (!password) {
+            Alert.alert('지문 로그인', '비밀번호를 입력한 상태에서 다시 시도해 주세요.');
+            return;
+        }
+        const ok = await authenticateWithBiometric('지문 빠른 로그인을 설정합니다');
+        if (!ok) {
+            return;
+        }
+        try {
+            await saveBiometricCredentials({ email, password });
+            setBiometricLoginEnabledState(true);
+            setProfileMessage('지문으로 빠른 로그인을 사용할 수 있습니다.');
+        } catch (e: any) {
+            Alert.alert('지문 로그인', e?.message || '저장에 실패했습니다.');
+        }
+    }, [biometricLoginEnabled, loginEmail, loginPw, userInfo?.email]);
 
     const toggleAuthModalMode = useCallback(() => {
         setAuthModalMode((prev) => {
@@ -3630,6 +3704,13 @@ export default function App() {
             console.log('[AuthStorage] clear failed', error);
         });
     }, [authHydrated, token, userInfo]);
+
+    useEffect(() => {
+        void (async () => {
+            setBiometricLoginReady(await isBiometricAvailable());
+            setBiometricLoginEnabledState(await isBiometricLoginEnabled());
+        })();
+    }, [authHydrated, userInfo?.id]);
 
     useEffect(() => {
         if (!authHydrated) {
@@ -4872,6 +4953,17 @@ export default function App() {
         });
     }, [logUiPressProbe, userInfo]);
 
+    const handleOpenFriendMapFromFolder = useCallback(() => {
+        if (!userInfo) {
+            Alert.alert('로그인 필요', '근처 친구 찾기를 사용하려면 먼저 로그인해 주세요.');
+            return;
+        }
+        setActiveRailSection('chat');
+        setShowFriendFolder(false);
+        setShowFriendMapDiscovery(true);
+        logUiPressProbe('FRIEND_ADD_MAP_DISCOVERY', { source: 'friend_folder_hub' });
+    }, [logUiPressProbe, userInfo]);
+
     const handleOpenChatRoom = useCallback((room: ChatRoomSummary) => {
         setSelectedChatRoom(room);
         setActiveRailSection('chat');
@@ -5059,6 +5151,19 @@ export default function App() {
             console.log('[AuthStorage] clear failed', error);
         });
     }, []);
+
+    const handlePasswordSecurityCompleted = useCallback(async (payload: { email: string; newPassword?: string; mustRelogin?: boolean }) => {
+        if (!payload.mustRelogin || !payload.newPassword) {
+            return;
+        }
+        handleLogout();
+        setLoginEmail(payload.email);
+        setLoginPw(payload.newPassword);
+        setAuthModalMode('login');
+        setShowLogin(true);
+        setLoginError('');
+        Alert.alert('비밀번호 변경 완료', '새 비밀번호로 다시 로그인해 주세요.');
+    }, [handleLogout]);
 
     useEffect(() => {
         if (!token || !userInfo) {
@@ -7978,6 +8083,18 @@ export default function App() {
                                 </>
                             ) : null}
                             {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
+                            {authModalMode === 'login' ? (
+                                <View style={styles.inlineAuthUtilityRow}>
+                                    <Pressable onPress={openPasswordRecovery} testID="worldlinco-auth-forgot-password-inline">
+                                        <Text style={styles.authUtilityLinkText}>비밀번호 찾기</Text>
+                                    </Pressable>
+                                    {biometricLoginReady && biometricLoginEnabled ? (
+                                        <Pressable onPress={() => { void handleBiometricLogin(); }} disabled={biometricLoginBusy} testID="worldlinco-auth-biometric-login-inline">
+                                            <Text style={styles.authUtilityLinkText}>{biometricLoginBusy ? '지문 확인 중...' : '👆 지문 로그인'}</Text>
+                                        </Pressable>
+                                    ) : null}
+                                </View>
+                            ) : null}
                             {demoSessionMessage ? <Text style={styles.inlineAuthStatus}>{demoSessionMessage}</Text> : null}
                             <View style={styles.inlineAuthActionRow}>
                                 <Pressable
@@ -8057,6 +8174,16 @@ export default function App() {
                             {profileMessage ? (
                                 <Text style={styles.myInfoText}>{profileMessage}</Text>
                             ) : null}
+                            <View style={styles.myInfoActionRow}>
+                                <Pressable style={styles.inlineGhostBtn} onPress={openPasswordChange} testID="worldlinco-password-change-open">
+                                    <Text style={styles.inlineGhostBtnText}>🔒 비밀번호 변경</Text>
+                                </Pressable>
+                                {biometricLoginReady ? (
+                                    <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleToggleBiometricLogin(); }} testID="worldlinco-biometric-login-toggle">
+                                        <Text style={styles.inlineGhostBtnText}>{biometricLoginEnabled ? '👆 지문 로그인 해제' : '👆 지문 빠른 로그인 설정'}</Text>
+                                    </Pressable>
+                                ) : null}
+                            </View>
                             <Pressable style={styles.inlineActionBtn} onPress={handleShowPurchases}>
                                 <Text style={styles.inlineActionBtnText}>{myPurchasesLoading ? '⏳ 불러오는 중...' : myPurchases !== null ? '📋 내역 닫기' : '📋 구매/예약 내역'}</Text>
                             </Pressable>
@@ -8288,6 +8415,7 @@ export default function App() {
                                     visible={showFriendFolder}
                                     autoCallVoiceId={voipAutoCallVoiceId}
                                     onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
+                                    onOpenMapDiscovery={handleOpenFriendMapFromFolder}
                                     onFriendSelected={(friend) => {
                                         setVoipAutoCallVoiceId(null);
                                         logUiPressProbe('VOIP_FRIEND_SELECTED', {
@@ -8556,6 +8684,7 @@ export default function App() {
                                                     embeddedInScrollView
                                                     autoCallVoiceId={null}
                                                     onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
+                                                    onOpenMapDiscovery={handleOpenFriendMapFromFolder}
                                                     onFriendSelected={(friend) => {
                                                         setVoipAutoCallVoiceId(null);
                                                         logUiPressProbe('VOIP_FRIEND_SELECTED', {
@@ -9784,6 +9913,18 @@ export default function App() {
                             </>
                         ) : null}
                         {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
+                        {authModalMode === 'login' ? (
+                            <View style={styles.inlineAuthUtilityRow}>
+                                <Pressable onPress={openPasswordRecovery} testID="worldlinco-auth-forgot-password-modal">
+                                    <Text style={styles.authUtilityLinkText}>비밀번호 찾기</Text>
+                                </Pressable>
+                                {biometricLoginReady && biometricLoginEnabled ? (
+                                    <Pressable onPress={() => { void handleBiometricLogin(); }} disabled={biometricLoginBusy} testID="worldlinco-auth-biometric-login-modal">
+                                        <Text style={styles.authUtilityLinkText}>{biometricLoginBusy ? '지문 확인 중...' : '👆 지문 로그인'}</Text>
+                                    </Pressable>
+                                ) : null}
+                            </View>
+                        ) : null}
                         <Pressable
                             style={styles.authModeToggleBtn}
                             onPress={toggleAuthModalMode}
@@ -9906,6 +10047,16 @@ export default function App() {
                     </View>
                 </View>
             </Modal>
+
+            <PasswordSecurityModal
+                visible={showPasswordSecurity}
+                mode={passwordSecurityMode}
+                apiBase={API_BASE}
+                authToken={token || undefined}
+                defaultEmail={userInfo?.email || loginEmail}
+                onClose={() => setShowPasswordSecurity(false)}
+                onCompleted={(payload) => { void handlePasswordSecurityCompleted(payload); }}
+            />
         </SafeAreaView>
     );
 }
@@ -10101,6 +10252,24 @@ const styles = StyleSheet.create({
         gap: 8,
         flexWrap: 'wrap',
         alignItems: 'center',
+    },
+    inlineAuthUtilityRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 2,
+    },
+    authUtilityLinkText: {
+        color: '#8fd5ff',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    myInfoActionRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 8,
     },
     inlineAuthSubmitBtn: {
         flex: 1,

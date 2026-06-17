@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
+import { isDiscussIntent } from '@/lib/orchestrator-live-flow';
+import OrchestratorDiscussBanner from '@/shared/orchestrator-discuss-banner';
 
 export type SharedOrchestratorSubstep = {
     id: string;
@@ -87,6 +89,9 @@ interface OrchestratorStageCardPanelProps {
     onSubmitChat?: () => void;
     voiceListening?: boolean;
     onVoiceToggle?: () => void;
+    autonomousIntent?: string | null;
+    highlightStageId?: string | null;
+    discussStageNumber?: number | null;
 }
 
 const toneClasses = {
@@ -121,6 +126,37 @@ const substepStateClassName = (status: SharedOrchestratorSubstep['status'], tone
     return 'border-slate-800 bg-slate-950 text-slate-300';
 };
 
+const discussOverlayClassName = (tone: 'customer' | 'admin') => (
+    tone === 'admin'
+        ? 'border-[#d29922] bg-[rgba(210,153,34,0.12)] ring-2 ring-[#d29922]/50'
+        : 'border-amber-500 bg-amber-950/30 ring-2 ring-amber-400/60'
+);
+
+const stageGridDiscussClassName = (tone: 'customer' | 'admin') => (
+    tone === 'admin'
+        ? 'ring-2 ring-[#d29922]/60 border-[#d29922] bg-[rgba(210,153,34,0.12)]'
+        : 'ring-2 ring-amber-400/60 border-amber-500 bg-amber-950/30'
+);
+
+function stageGridBaseClassName(
+    stage: SharedOrchestratorStageBox,
+    tone: 'customer' | 'admin',
+    discussHighlight: boolean,
+): string {
+    if (discussHighlight) {
+        return stageGridDiscussClassName(tone);
+    }
+    if (stage.status === 'passed') return 'border-emerald-700 bg-emerald-950/20';
+    if (stage.status === 'failed') return 'border-red-700 bg-red-950/20';
+    if (stage.status === 'manual_correction') return 'border-amber-600 bg-amber-950/20';
+    if (stage.status === 'running') return 'border-cyan-700 bg-cyan-950/20';
+    return 'border-slate-800 bg-slate-900/60';
+}
+
+function isArch004DiscussStage(stageId: string, discussMode: boolean): boolean {
+    return discussMode && String(stageId || '').toUpperCase() === 'ARCH-004';
+}
+
 export default function OrchestratorStageCardPanel({
     tone,
     title,
@@ -149,8 +185,15 @@ export default function OrchestratorStageCardPanel({
     onSubmitChat,
     voiceListening = false,
     onVoiceToggle,
+    autonomousIntent = null,
+    highlightStageId = null,
+    discussStageNumber = null,
 }: OrchestratorStageCardPanelProps) {
     const palette = toneClasses[tone];
+    const discussMode = isDiscussIntent(autonomousIntent);
+    const normalizedHighlightId = String(
+        highlightStageId || (discussMode ? stageRun?.current_stage_id : '') || '',
+    ).trim().toUpperCase();
     const fieldIdPrefix = React.useId().replace(/:/g, '');
     const textareaToneClassName = tone === 'admin'
         ? 'border-slate-700 !bg-slate-900 !text-slate-100 caret-slate-100 placeholder:!text-slate-400'
@@ -218,9 +261,18 @@ export default function OrchestratorStageCardPanel({
                 </div>
                 {stageRun?.final_completed && <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">완료</span>}
             </div>
+            {discussMode && (
+                <OrchestratorDiscussBanner
+                    tone={tone}
+                    stageNumber={discussStageNumber}
+                />
+            )}
             {activeStage && (
                 <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                    <div className={`rounded-xl border p-4 space-y-3 ${palette.subPanel}`}>
+                    <div
+                        data-testid={discussMode && activeStage.id === normalizedHighlightId ? 'orchestrator-stage-discuss-overlay' : undefined}
+                        className={`rounded-xl border p-4 space-y-3 ${palette.subPanel} ${discussMode && activeStage.id === normalizedHighlightId ? discussOverlayClassName(tone) : ''}`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className={`text-xs ${palette.accent}`}>현재 진행 카드</p>
@@ -232,7 +284,17 @@ export default function OrchestratorStageCardPanel({
                                     <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-slate-200">최종 상태 {activeStage.status}</span>
                                 </div>
                             </div>
-                            <span className="rounded-full border border-cyan-700/60 bg-cyan-950/40 px-3 py-1 text-[11px] text-cyan-200">{activeStage.check_label}</span>
+                            <div className="flex flex-col items-end gap-2">
+                                {isArch004DiscussStage(activeStage.id, discussMode) && (
+                                    <span
+                                        data-testid="orchestrator-discuss-arch004-badge"
+                                        className={`rounded-full border px-3 py-1 text-[11px] ${tone === 'admin' ? 'border-[#8957e5] bg-[#1f1630] text-[#e9d5ff]' : 'border-amber-500/50 bg-amber-950/40 text-amber-100'}`}
+                                    >
+                                        아이디어·기술 제안 대화 중
+                                    </span>
+                                )}
+                                <span className="rounded-full border border-cyan-700/60 bg-cyan-950/40 px-3 py-1 text-[11px] text-cyan-200">{activeStage.check_label}</span>
+                            </div>
                         </div>
                         {activeSubsteps.length > 0 && (
                             <div className="grid gap-2 md:grid-cols-2">
@@ -459,11 +521,24 @@ export default function OrchestratorStageCardPanel({
             {activeStage && (
                 <>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {(stageRun?.stages || []).map((stage) => (
-                            <div key={stage.id} className={`rounded-xl border px-4 py-4 text-sm ${stage.status === 'passed' ? 'border-emerald-700 bg-emerald-950/20' : stage.status === 'failed' ? 'border-red-700 bg-red-950/20' : stage.status === 'manual_correction' ? 'border-amber-600 bg-amber-950/20' : stage.status === 'running' ? 'border-cyan-700 bg-cyan-950/20' : 'border-slate-800 bg-slate-900/60'}`}>
+                        {(stageRun?.stages || []).map((stage) => {
+                            const discussHighlight = discussMode && stage.id === normalizedHighlightId;
+                            return (
+                            <div
+                                key={stage.id}
+                                data-stage-id={stage.id}
+                                data-stage-status={stage.status}
+                                data-testid={discussHighlight ? 'orchestrator-stage-grid-discuss-highlight' : undefined}
+                                className={`rounded-xl border px-4 py-4 text-sm ${stageGridBaseClassName(stage, tone, discussHighlight)}`}
+                            >
                                 <div className="flex items-center justify-between gap-3">
                                     <span className={`text-xs font-semibold ${palette.accent}`}>{stage.label}</span>
-                                    <span className="text-[11px] text-slate-300">{stage.check_label}</span>
+                                    <div className="flex flex-col items-end gap-1">
+                                        {isArch004DiscussStage(stage.id, discussMode) && (
+                                            <span className="text-[10px] text-amber-200">아이디어·기술 제안 대화 중</span>
+                                        )}
+                                        <span className="text-[11px] text-slate-300">{stage.check_label}</span>
+                                    </div>
                                 </div>
                                 <p className="mt-2 font-semibold text-white">{stage.title}</p>
                                 <p className="mt-2 text-xs text-slate-400">{stage.summary}</p>
@@ -471,7 +546,8 @@ export default function OrchestratorStageCardPanel({
                                 <p className="mt-1 text-[11px] text-slate-300">체크 마크 {(stage.substeps || []).filter((item) => Boolean(substepChecks[item.id] ?? item.checked)).length}/{(stage.substeps || []).length}</p>
                                 {(stage.note || stage.manual_correction) && <p className="mt-2 text-xs text-slate-300 whitespace-pre-wrap">{stage.manual_correction || stage.note}</p>}
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     <label htmlFor={stageNoteFieldId} className="sr-only">현재 카드 메모</label>
                     <textarea id={stageNoteFieldId} name="stageNoteDraft" value={stageNoteDraft} onChange={(e) => onStageNoteDraftChange(e.target.value)} rows={3} placeholder="현재 카드에 대한 방향 지시, 수정 지시, 실패 이유, 보정 메모를 적으세요. Enter 입력창 명령과 함께 stage note로 기록됩니다." className={`w-full rounded-xl px-4 py-3 text-sm ${textareaToneClassName}`} style={textareaToneStyle} />

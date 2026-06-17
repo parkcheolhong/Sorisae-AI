@@ -17,6 +17,7 @@ export interface AdminSystemSettingsPanelProps {
     systemSettingsDisconnected: boolean;
     systemSettingsLoading: boolean;
     systemSettingsSaving: boolean;
+    systemSettingsFillingMissing: boolean;
     systemAutomaticApplying: boolean;
     systemSettingsMessage: string;
     identityProviderSettings: AdminIdentityProviderSettings | null;
@@ -39,6 +40,7 @@ export interface AdminSystemSettingsPanelProps {
     onApplyGlobalAutomaticMode: () => void;
     onLoadSystemSettings: () => void;
     onSaveSystemSettings: () => void;
+    onFillMissingSystemSettings: () => void;
     onApplyGeneratorModelOverride: (profileId: string, modelName: string) => void;
     onToggleSystemSettingsSection: (sectionId: string) => void;
     onUpdateSystemSettingValue: (key: string, value: string) => void;
@@ -56,6 +58,7 @@ export default function AdminSystemSettingsPanel({
     systemSettingsDisconnected,
     systemSettingsLoading,
     systemSettingsSaving,
+    systemSettingsFillingMissing,
     systemAutomaticApplying,
     systemSettingsMessage,
     identityProviderSettings,
@@ -78,6 +81,7 @@ export default function AdminSystemSettingsPanel({
     onApplyGlobalAutomaticMode,
     onLoadSystemSettings,
     onSaveSystemSettings,
+    onFillMissingSystemSettings,
     onApplyGeneratorModelOverride,
     onToggleSystemSettingsSection,
     onUpdateSystemSettingValue,
@@ -115,20 +119,28 @@ export default function AdminSystemSettingsPanel({
                         프로그램 전반 운영값을 관리자 대시보드에서 직접 읽고 저장합니다. 각 섹션은 접이식이며, 사용 용도를 함께 표시합니다.
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
                         onClick={onApplyGlobalAutomaticMode}
                         className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:bg-blue-300"
-                        disabled={systemSettingsLoading || systemSettingsSaving || systemAutomaticApplying}
+                        disabled={systemSettingsLoading || systemSettingsSaving || systemSettingsFillingMissing || systemAutomaticApplying}
                     >
                         {systemAutomaticApplying ? '전환 중...' : '전역 자동 전환'}
                     </button>
                     <button
                         type="button"
+                        onClick={onFillMissingSystemSettings}
+                        className="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+                        disabled={systemSettingsLoading || systemSettingsSaving || systemSettingsFillingMissing || systemAutomaticApplying || !systemSettings}
+                    >
+                        {systemSettingsFillingMissing ? '보강 중...' : '빈 값 보강'}
+                    </button>
+                    <button
+                        type="button"
                         onClick={onLoadSystemSettings}
                         className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-100"
-                        disabled={systemSettingsLoading || systemSettingsSaving || systemAutomaticApplying}
+                        disabled={systemSettingsLoading || systemSettingsSaving || systemSettingsFillingMissing || systemAutomaticApplying}
                     >
                         {systemSettingsLoading ? '조회 중...' : '설정 새로고침'}
                     </button>
@@ -136,7 +148,7 @@ export default function AdminSystemSettingsPanel({
                         type="button"
                         onClick={onSaveSystemSettings}
                         className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:bg-emerald-300"
-                        disabled={systemSettingsLoading || systemSettingsSaving || systemAutomaticApplying || !systemSettings}
+                        disabled={systemSettingsLoading || systemSettingsSaving || systemSettingsFillingMissing || systemAutomaticApplying || !systemSettings}
                     >
                         {systemSettingsSaving ? '저장 중...' : '.env 저장'}
                     </button>
@@ -152,6 +164,19 @@ export default function AdminSystemSettingsPanel({
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                         <p className="text-xs text-gray-500">API 기준 주소</p>
                         <p className="mt-1 break-all text-sm font-semibold text-gray-900">{systemSettings.summary.local_api_base_url || '-'}</p>
+                        {systemSettings.summary.local_api_base_url_warning ? (
+                            <p className="mt-1 text-[11px] font-medium text-amber-700">{systemSettings.summary.local_api_base_url_warning}</p>
+                        ) : null}
+                        {systemSettings.summary.api_docs_url ? (
+                            <a
+                                href={systemSettings.summary.api_docs_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 inline-block text-[11px] font-semibold text-blue-700 hover:underline"
+                            >
+                                Swagger UI 열기
+                            </a>
+                        ) : null}
                     </div>
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                         <p className="text-xs text-gray-500">저장 루트</p>
@@ -161,6 +186,47 @@ export default function AdminSystemSettingsPanel({
                         <p className="text-xs text-gray-500">현재 LLM 프로필</p>
                         <p className="mt-1 break-all text-sm font-semibold text-gray-900">{systemSettings.summary.selected_profile || '-'}</p>
                     </div>
+                </div>
+            )}
+
+            {systemSettings?.integration_checks && (
+                <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-900">연동 정밀 검사</h3>
+                            <p className="mt-1 text-xs text-gray-500">
+                                API · Swagger · LLM · runtime · 문서 · 저장소 · DB env 정렬 상태를 백엔드에서 직접 확인합니다.
+                            </p>
+                        </div>
+                        <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${systemSettings.integration_checks.all_connected ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                            {systemSettings.integration_checks.connected_count}/{systemSettings.integration_checks.total_count} 연결
+                        </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        {systemSettings.integration_checks.items.map((item) => (
+                            <div key={item.id} className={`rounded-lg border px-3 py-2 text-xs ${item.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="font-semibold">{item.label}</p>
+                                    <span>{item.ok ? '●' : '○'}</span>
+                                </div>
+                                <p className="mt-1 break-all opacity-80">{item.detail}</p>
+                                {item.url?.startsWith('http') ? (
+                                    <a href={item.url} target="_blank" rel="noreferrer" className="mt-1 inline-block font-semibold underline">
+                                        열기
+                                    </a>
+                                ) : item.url?.startsWith('/admin/') ? (
+                                    <a href={item.url} className="mt-1 inline-block font-semibold underline">
+                                        문서 보기
+                                    </a>
+                                ) : null}
+                            </div>
+                        ))}
+                    </div>
+                    {(systemSettings.empty_field_count || 0) > 0 ? (
+                        <p className="mt-3 text-xs text-amber-700">
+                            빈 .env 필드 {systemSettings.empty_field_count}개 — `빈 값 보강`으로 runtime 기준 자동 채우기 가능
+                        </p>
+                    ) : null}
                 </div>
             )}
 
@@ -256,7 +322,14 @@ export default function AdminSystemSettingsPanel({
                     <p>ENV 경로: {systemSettings.env_path}</p>
                     <p>런타임 모델 경로: {systemSettings.runtime_config_path}</p>
                     <p>실시간 역할별 LLM 제어와 세부 runtime 조정은 이 관리자 대시보드 하단 내장 패널에서 계속 관리합니다.</p>
-                    <p>기본 최적화 기준: selected_profile={systemSettings.summary.selected_profile || 'rtx5090_32gb'} · code_generation_strategy={systemSettings.summary.code_generation_strategy || 'auto_generator'} · min_files=27 · min_dirs=3</p>
+                    <p>
+                        기본 최적화 기준: selected_profile={systemSettings.summary.selected_profile || 'rtx5090_32gb'}
+                        {' · '}code_generation_strategy={systemSettings.summary.code_generation_strategy || 'auto_generator'}
+                        {' · '}min_files={systemSettings.summary.min_files ?? 9}
+                        {' · '}min_dirs={systemSettings.summary.min_dirs ?? 3}
+                        {' · '}stage11_min_files={systemSettings.summary.stage11_min_files ?? 32}
+                        {' · '}stage11_min_dirs={systemSettings.summary.stage11_min_dirs ?? 11}
+                    </p>
                 </div>
             )}
 
@@ -275,7 +348,7 @@ export default function AdminSystemSettingsPanel({
                         <h3 className="text-sm font-semibold text-violet-900">🔑 관리자 계정 비밀번호 변경</h3>
                         <p className="mt-1 text-xs text-violet-800">
                             Admin 로그인에 쓰는 계정 비밀번호입니다. PostgreSQL DB 비밀번호와는 별개입니다.
-                            현재 비밀번호를 모르면 로그인 화면의 복구 페이지 또는 `scripts/reset_fixed_admin_password.py`를 사용하세요.
+                            현재 비밀번호를 모르면 로그인 화면의 복구 페이지(이메일/문자 인증) 또는 패스키 등록 흐름을 사용하세요.
                         </p>
                     </div>
                 </div>
@@ -465,11 +538,17 @@ export default function AdminSystemSettingsPanel({
                                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                             {section.fields.map((field) => (
                                                 <label key={field.key} className="block">
-                                                    <span className="mb-2 block text-xs font-semibold text-gray-500">{field.label}</span>
+                                                    <span className="mb-2 block text-xs font-semibold text-gray-500">
+                                                        {field.label}
+                                                        {field.needs_attention ? (
+                                                            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">미설정</span>
+                                                        ) : null}
+                                                    </span>
                                                     {field.multiline ? (
                                                         <textarea
                                                             rows={3}
                                                             value={systemSettingsDraft[field.key] ?? ''}
+                                                            placeholder={field.effective_value ? `권장: ${field.effective_value}` : undefined}
                                                             onChange={(event) => onUpdateSystemSettingValue(field.key, event.target.value)}
                                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                                                             spellCheck={false}
@@ -478,6 +557,7 @@ export default function AdminSystemSettingsPanel({
                                                         <input
                                                             type={field.sensitive ? 'password' : 'text'}
                                                             value={systemSettingsDraft[field.key] ?? ''}
+                                                            placeholder={field.effective_value ? `권장: ${field.effective_value}` : undefined}
                                                             onChange={(event) => onUpdateSystemSettingValue(field.key, event.target.value)}
                                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                                                             spellCheck={false}
@@ -512,6 +592,9 @@ export default function AdminSystemSettingsPanel({
                         <a href="/privacy" target="_blank" rel="noreferrer" className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-800 hover:bg-violet-100">
                             개인정보처리방침 공개 페이지
                         </a>
+                        <a href="/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-values-input-checklist.md" className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-800 hover:bg-violet-100">
+                            상용값 입력 체크리스트
+                        </a>
                     </div>
                 </div>
                 {identityProviderSettings ? (
@@ -531,7 +614,7 @@ export default function AdminSystemSettingsPanel({
                                         <p className="break-all"><span className="font-semibold">callback:</span> {status.callback_url || '-'}</p>
                                         <p><span className="font-semibold">request mapping:</span> {status.request_mapping_ready ? 'ready' : 'pending'}</p>
                                         <p><span className="font-semibold">complete mapping:</span> {status.complete_mapping_ready ? 'ready' : 'pending'}</p>
-                                        <p><span className="font-semibold">환경 키:</span> {Object.values(identityProviderSettings.env_keys).join(', ')}</p>
+                                        <p><span className="font-semibold">환경 키:</span> {(status.env_keys || Object.values(identityProviderSettings.env_keys)).join(', ')}</p>
                                     </div>
                                 </div>
                             );

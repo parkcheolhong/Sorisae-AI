@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   type LayoutChangeEvent,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -38,6 +39,8 @@ function buildTranslationContract(friend: Friend): string {
     : '상대 지정 언어 미설정 · 가입 국가 fallback 대기';
 }
 
+type FriendAddMode = 'contacts' | 'manual';
+
 interface Props {
   userId: number;
   token: string;
@@ -47,13 +50,14 @@ interface Props {
   autoCallVoiceId?: string | null;
   onAutoCallConsumed?: () => void;
   onFriendSelected?: (friend: Friend) => void;
+  onOpenMapDiscovery?: () => void;
 }
 
 function logFriendFolderDiag(event: string, payload: Record<string, unknown>) {
   console.log('[FRIEND_FOLDER_DIAG]', JSON.stringify({ event, ...payload }));
 }
 
-export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected }: Props) {
+export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected, onOpenMapDiscovery }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const isNarrowWidth = windowWidth < 380;
   const normalizedToken = token?.trim() ?? '';
@@ -71,6 +75,9 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
   const [maskedTarget, setMaskedTarget] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [addMode, setAddMode] = useState<FriendAddMode>('contacts');
+  const [contactPickLoading, setContactPickLoading] = useState(false);
+  const [selectedContactLabel, setSelectedContactLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const lastLayoutLogRef = useRef<Record<string, string>>({});
   const autoCallAttemptedRef = useRef<string | null>(null);
@@ -209,7 +216,67 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
     setEmail('');
     setPhone('');
     setVerificationChannel('email');
+    setAddMode('contacts');
+    setSelectedContactLabel('');
+    setContactPickLoading(false);
   }, []);
+
+  const handlePickContactFromDevice = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('연락처', '웹에서는 연락처를 불러올 수 없습니다. 직접 입력을 사용해 주세요.');
+      setAddMode('manual');
+      return;
+    }
+
+    setContactPickLoading(true);
+    setError(null);
+    try {
+      const Contacts = await import('expo-contacts');
+      const permission = await Contacts.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        setError('연락처 권한이 필요합니다. 설정에서 허용하거나 직접 입력을 사용해 주세요.');
+        return;
+      }
+
+      const pickedContact = await Contacts.presentContactPickerAsync();
+      if (!pickedContact) {
+        return;
+      }
+
+      const name = pickedContact.name?.trim() || '이름 없음';
+      const emailEntry = pickedContact.emails?.find((entry) => Boolean(entry.email?.trim()));
+      const phoneEntry = pickedContact.phoneNumbers?.find((entry) => Boolean(entry.number?.trim()));
+      const pickedEmail = emailEntry?.email?.trim().toLowerCase() ?? '';
+      const pickedPhone = phoneEntry?.number?.trim() ?? '';
+
+      setDisplayName(name);
+      setEmail(pickedEmail);
+      setPhone(pickedPhone);
+      setSelectedContactLabel(
+        [name, pickedPhone || null, pickedEmail || null].filter(Boolean).join(' · '),
+      );
+
+      if (pickedEmail) {
+        setVerificationChannel('email');
+      } else if (pickedPhone) {
+        setVerificationChannel('phone');
+        setError('선택한 연락처에 이메일이 없습니다. 앱 가입 이메일을 직접 입력해 주세요.');
+      } else {
+        setError('선택한 연락처에 이메일 또는 전화번호가 없습니다. 직접 입력을 사용해 주세요.');
+        setAddMode('manual');
+      }
+
+      logFriendFolderDiag('contact_picked_for_invite', {
+        user_id: userId,
+        has_email: Boolean(pickedEmail),
+        has_phone: Boolean(pickedPhone),
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '연락처를 불러오지 못했습니다.');
+    } finally {
+      setContactPickLoading(false);
+    }
+  }, [userId]);
 
   const handleRequestInviteCode = useCallback(async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -421,13 +488,61 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
       </View>
 
       <View style={styles.manualSection}>
-        <Text style={styles.manualTitle}>✏️ 수기 등록 (OTP 인증 필수)</Text>
+        <Text style={styles.manualTitle}>친구 추가</Text>
         <Text style={styles.manualHint}>
-          베타·실전 모두 이메일 또는 전화 OTP 확인 후 친구가 등록됩니다.
-          앱 가입 계정은 이메일 인증만으로 연결됩니다.
+          연락처에서 선택하거나 직접 입력·근처 찾기로 친구를 등록할 수 있습니다.
+          등록 전 이메일 또는 전화로 본인 확인을 진행합니다.
         </Text>
         {inviteStep === 'form' ? (
           <>
+            <View style={styles.addModeRow}>
+              <Pressable
+                style={[styles.addModeBtn, addMode === 'contacts' && styles.addModeBtnActive]}
+                onPress={() => setAddMode('contacts')}
+                testID="friend-add-mode-contacts"
+              >
+                <Text style={styles.addModeBtnText}>연락처</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.addModeBtn, addMode === 'manual' && styles.addModeBtnActive]}
+                onPress={() => setAddMode('manual')}
+                testID="friend-add-mode-manual"
+              >
+                <Text style={styles.addModeBtnText}>직접 입력</Text>
+              </Pressable>
+              {onOpenMapDiscovery ? (
+                <Pressable
+                  style={styles.addModeBtn}
+                  onPress={onOpenMapDiscovery}
+                  testID="friend-add-mode-nearby"
+                >
+                  <Text style={styles.addModeBtnText}>근처 찾기</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {addMode === 'contacts' ? (
+              <>
+                <Pressable
+                  style={[styles.pickContactBtn, (contactPickLoading || addLoading) && styles.addBtnDisabled]}
+                  onPress={() => { void handlePickContactFromDevice(); }}
+                  disabled={contactPickLoading || addLoading}
+                  testID="friend-pick-contact"
+                >
+                  <Text style={styles.pickContactBtnText}>
+                    {contactPickLoading ? '연락처 불러오는 중...' : '📇 연락처에서 선택'}
+                  </Text>
+                </Pressable>
+                {selectedContactLabel ? (
+                  <Text style={styles.selectedContactLabel}>선택: {selectedContactLabel}</Text>
+                ) : (
+                  <Text style={styles.contactPickHint}>
+                    단말 연락처를 선택하면 이름·이메일·전화가 자동으로 채워집니다.
+                  </Text>
+                )}
+              </>
+            ) : null}
+
             <View style={styles.channelRow}>
               <Pressable
                 style={[styles.channelBtn, verificationChannel === 'email' && styles.channelBtnActive]}
@@ -531,7 +646,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
             onLayout={handleMeasuredLayout('embedded_list_layout', { row_count: friends.length })}
           >
             {renderHeaderContent()}
-            {friends.length === 0 ? <Text style={styles.emptyText}>친구가 없습니다. 위 수기 등록으로 베타 상대를 추가해 보세요.</Text> : friends.map(renderFriendRow)}
+            {friends.length === 0 ? <Text style={styles.emptyText}>친구가 없습니다. 위에서 친구를 추가해 보세요.</Text> : friends.map(renderFriendRow)}
           </View>
         ) : (
           <FlatList
@@ -549,7 +664,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
               });
             }}
             ListHeaderComponent={renderHeaderContent()}
-            ListEmptyComponent={<Text style={styles.emptyText}>친구가 없습니다. 위 수기 등록으로 베타 상대를 추가해 보세요.</Text>}
+            ListEmptyComponent={<Text style={styles.emptyText}>친구가 없습니다. 위에서 친구를 추가해 보세요.</Text>}
             renderItem={({ item }) => renderFriendRow(item)}
             contentContainerStyle={styles.list}
           />
@@ -605,6 +720,51 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 12,
     lineHeight: 18,
+  },
+  addModeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  addModeBtn: {
+    flex: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#1e2533',
+  },
+  addModeBtnActive: {
+    borderColor: '#60a5fa',
+    backgroundColor: '#172554',
+  },
+  addModeBtnText: {
+    color: '#e2e8f0',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pickContactBtn: {
+    backgroundColor: '#1e3a5f',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  pickContactBtnText: {
+    color: '#bfdbfe',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectedContactLabel: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  contactPickHint: {
+    color: '#64748b',
+    fontSize: 12,
+    lineHeight: 17,
   },
   inputFull: {
     backgroundColor: '#1e2533',

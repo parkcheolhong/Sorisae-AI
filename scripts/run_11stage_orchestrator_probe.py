@@ -9,6 +9,8 @@ Usage:
   python scripts/run_11stage_orchestrator_probe.py --mode live
 
   # Docker backend — Admin UI /admin/llm (API: /api/llm/orchestrate/chat)
+  # 백엔드 SSOT 포트: 8000 (devanalysis114-backend). 대체 포트(8001 등) 사용하지 않음.
+  docker restart devanalysis114-backend
   python scripts/run_11stage_orchestrator_probe.py --mode http --admin
 
   # Docker backend — Marketplace /marketplace/orchestrator
@@ -51,17 +53,6 @@ def _utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
-def _stage_status_snapshot(session: Any) -> List[Dict[str, Any]]:
-    return [
-        {
-            "id": s.stage_id,
-            "label": s.stage_label,
-            "status": s.status,
-        }
-        for s in (getattr(session, "stages", None) or [])
-    ]
-
-
 def _build_command_sequence() -> List[Dict[str, str]]:
     """단계별 자연어 명령 시퀀스 — init은 task만 등록, 설계는 design-1."""
     commands: List[Dict[str, str]] = [
@@ -87,6 +78,190 @@ def _build_command_sequence() -> List[Dict[str, str]]:
     return commands
 
 
+def _stage_status_snapshot(session: Any) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": s.stage_id,
+            "label": s.stage_label,
+            "status": s.status,
+        }
+        for s in (getattr(session, "stages", None) or [])
+    ]
+
+
+def _arch_stage_status(synced: Optional[Dict[str, Any]], arch_id: str) -> Optional[str]:
+    if not synced:
+        return None
+    for stage in synced.get("stages") or []:
+        if str(stage.get("id") or "").upper() == arch_id.upper():
+            return str(stage.get("status") or "")
+    return None
+
+
+def _validate_discuss4_stub_turn(
+    turn_record: Dict[str, Any],
+    session: Any,
+    errors: List[str],
+) -> Dict[str, Any]:
+    """G-4-3: discuss-4 턴에서 autonomous intent·active_stage_number=4 고정."""
+    extra = getattr(session, "extra", None) or {}
+    assertion: Dict[str, Any] = {
+        "step": "discuss-4",
+        "mode": "stub",
+        "intent": turn_record.get("intent"),
+        "stage_number": turn_record.get("stage_number"),
+        "active_stage_command": extra.get("active_stage_command"),
+        "active_stage_number": extra.get("active_stage_number"),
+        "current_stage_index": getattr(session, "current_stage_index", None),
+        "ok": True,
+        "issues": [],
+    }
+    if turn_record.get("intent") != "stage_discuss":
+        msg = f"discuss-4: expected intent=stage_discuss got {turn_record.get('intent')!r}"
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    if extra.get("active_stage_command") != "discuss":
+        msg = f"discuss-4: expected active_stage_command=discuss got {extra.get('active_stage_command')!r}"
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    active_number = extra.get("active_stage_number")
+    if active_number != 4 and active_number != 4.0:
+        msg = f"discuss-4: expected active_stage_number=4 got {active_number!r}"
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    stage_number = turn_record.get("stage_number")
+    if stage_number not in (4, 4.0):
+        msg = f"discuss-4: expected stage_number=4 got {stage_number!r}"
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    assertion["ok"] = not assertion["issues"]
+    return assertion
+
+
+def _validate_discuss4_http_turn(
+    turn_record: Dict[str, Any],
+    synced: Optional[Dict[str, Any]],
+    errors: List[str],
+) -> Dict[str, Any]:
+    """G-4-3: discuss-4 턴에서 stage_run이 ARCH-004 고정 · ARCH-005 pending 유지."""
+    current = turn_record.get("stage_run_current") or (synced or {}).get("current_stage_id")
+    arch5_status = _arch_stage_status(synced, "ARCH-005")
+    assertion: Dict[str, Any] = {
+        "step": "discuss-4",
+        "mode": "http",
+        "autonomous_intent": turn_record.get("autonomous_intent"),
+        "stage_run_current": current,
+        "arch005_status": arch5_status,
+        "ok": True,
+        "issues": [],
+    }
+    if turn_record.get("autonomous_intent") != "stage_discuss":
+        msg = (
+            "discuss-4: expected autonomous_intent=stage_discuss "
+            f"got {turn_record.get('autonomous_intent')!r}"
+        )
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    if synced is None:
+        assertion["skipped"] = "no stage_run (admin surface)"
+        assertion["ok"] = not assertion["issues"]
+        return assertion
+    if str(current or "").upper() != "ARCH-004":
+        msg = f"discuss-4: expected stage_run_current=ARCH-004 got {current!r}"
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    if arch5_status != "pending":
+        msg = f"discuss-4: expected ARCH-005 status=pending got {arch5_status!r}"
+        assertion["issues"].append(msg)
+        errors.append(msg)
+    assertion["ok"] = not assertion["issues"]
+    return assertion
+
+
+def _validate_orchestrator_core_http_turns(
+    turns: List[Dict[str, Any]],
+    errors: List[str],
+) -> Dict[str, Any]:
+    """DoD-1: manual orchestrator HTTP turns must expose autonomous_turn_controller."""
+    assertion: Dict[str, Any] = {
+        "step": "orchestrator-core-http",
+        "ok": True,
+        "issues": [],
+        "checked_turns": 0,
+    }
+    for turn in turns:
+        if turn.get("http_status") != 200:
+            continue
+        step = str(turn.get("step") or "")
+        if step in {"register-task"}:
+            continue
+        core = turn.get("orchestrator_core")
+        assertion["checked_turns"] += 1
+        if core != "autonomous_turn_controller":
+            msg = f"{step}: expected orchestrator_core=autonomous_turn_controller got {core!r}"
+            assertion["issues"].append(msg)
+            errors.append(msg)
+    assertion["ok"] = not assertion["issues"]
+    return assertion
+
+
+def _verify_discuss4_stage_run_sync_inline() -> Dict[str, Any]:
+    """G-4-3: stage_run_sync discuss 턴 단위 self-test (pytest와 동일 계약)."""
+    from backend.orchestration_stage_service import initialize_stage_run
+    from backend.orchestrator.autonomous.agents.base import AgentResult
+    from backend.orchestrator.autonomous.session import AutonomousSession, StageState
+    from backend.orchestrator.autonomous.stage_run_sync import sync_stage_run_from_autonomous_session
+    from backend.orchestrator.autonomous.turn_controller import STAGE_DEFINITIONS
+
+    issues: List[str] = []
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        stage_run_dir = Path(tmp_dir) / "stage_runs"
+        stage_run_dir.mkdir(parents=True, exist_ok=True)
+        import backend.orchestration_stage_service as stage_service
+
+        original_root = stage_service._STAGE_RUN_ROOT
+        stage_service._STAGE_RUN_ROOT = stage_run_dir
+        try:
+            stage_run = initialize_stage_run(
+                scope="marketplace",
+                project_name="discuss4-probe",
+                mode="full",
+                requested_by={"id": "probe"},
+            )
+            run_id = stage_run["run_id"]
+
+            session = AutonomousSession.create(owner_id="probe", mode="semi_auto")
+            session.execution_state = "executing"
+            session.approval_state = "none"
+            session.extra = {"active_stage_command": "discuss", "active_stage_number": 4}
+            session.stages = [
+                StageState(stage_id=s["id"], stage_label=s["label"], status="pending")
+                for s in STAGE_DEFINITIONS
+            ]
+            session.stages[3].status = "in_progress"
+            session.current_stage_index = 3
+            session.agent_results = [
+                AgentResult(agent="reasoner", status="success", output="redis idea"),
+                AgentResult(agent="planner", status="success", output="plan"),
+            ]
+
+            synced = sync_stage_run_from_autonomous_session(stage_run_id=run_id, session=session)
+            if synced is None:
+                issues.append("discuss-4-sync: sync_stage_run_from_autonomous_session returned None")
+            else:
+                if synced.get("current_stage_id") != "ARCH-004":
+                    issues.append(
+                        f"discuss-4-sync: expected ARCH-004 got {synced.get('current_stage_id')!r}"
+                    )
+                arch5 = _arch_stage_status(synced, "ARCH-005")
+                if arch5 != "pending":
+                    issues.append(f"discuss-4-sync: expected ARCH-005 pending got {arch5!r}")
+        finally:
+            stage_service._STAGE_RUN_ROOT = original_root
+
+    return {"step": "discuss-4-sync-inline", "ok": not issues, "issues": issues}
+
+
 async def _run_stub_probe(task: str, out_dir: Path) -> Dict[str, Any]:
     from backend.orchestrator.autonomous.session import AutonomousSession
     from backend.orchestrator.autonomous.turn_controller import TurnController
@@ -106,6 +281,7 @@ async def _run_stub_probe(task: str, out_dir: Path) -> Dict[str, Any]:
 
     turns: List[Dict[str, Any]] = []
     errors: List[str] = []
+    discuss4_assertions: List[Dict[str, Any]] = []
 
     for item in _build_command_sequence():
         step = item["step"]
@@ -138,6 +314,10 @@ async def _run_stub_probe(task: str, out_dir: Path) -> Dict[str, Any]:
             if payload.get("intent") == "stage_execute" and "이전 단계" in str(payload.get("content")):
                 turn_record["blocked"] = True
                 errors.append(f"{step}: blocked — {payload.get('content', '')[:120]}")
+            if step == "discuss-4" and not turn_record.get("error"):
+                discuss4_assertions.append(
+                    _validate_discuss4_stub_turn(turn_record, session, errors),
+                )
         except Exception as exc:
             turn_record["error"] = str(exc)
             turn_record["traceback"] = traceback.format_exc()
@@ -153,6 +333,7 @@ async def _run_stub_probe(task: str, out_dir: Path) -> Dict[str, Any]:
         "stages_completed": completed,
         "execution_state": session.execution_state,
         "errors": errors,
+        "discuss4_assertions": discuss4_assertions,
         "turns": turns,
     }
 
@@ -309,6 +490,7 @@ async def _run_http_probe(
     session_id: Optional[str] = None
     stage_run_id: Optional[str] = None
     sync_checks: List[Dict[str, Any]] = []
+    discuss4_assertions: List[Dict[str, Any]] = []
     stages_completed = 0
 
     chat_path = (
@@ -378,6 +560,7 @@ async def _run_http_probe(
                             )[:600],
                             "stage_run_synced": synced is not None,
                             "stage_run_current": (synced or {}).get("current_stage_id"),
+                            "synced_stages": (synced or {}).get("stages"),
                         }
                     )
                     if diag.get("stages_completed") is not None:
@@ -394,10 +577,23 @@ async def _run_http_probe(
                                 ],
                             }
                         )
+                    if step == "discuss-4" and response.status_code == 200:
+                        assertion = _validate_discuss4_http_turn(turn_record, synced, errors)
+                        discuss4_assertions.append(assertion)
+                        sync_checks.append(
+                            {
+                                "step": step,
+                                "current_stage_id": synced.get("current_stage_id") if synced else None,
+                                "arch005_status": assertion.get("arch005_status"),
+                                "ok": assertion.get("ok"),
+                            }
+                        )
             except Exception as exc:
                 turn_record["error"] = str(exc)
                 errors.append(f"{step}: {exc}")
             turns.append(turn_record)
+
+    core_assertion = _validate_orchestrator_core_http_turns(turns, errors)
 
     return {
         "mode": "http",
@@ -410,6 +606,8 @@ async def _run_http_probe(
         "stages_completed": stages_completed,
         "stages_total": len(STAGE_DEFINITIONS),
         "sync_checks": sync_checks,
+        "discuss4_assertions": discuss4_assertions,
+        "orchestrator_core_assertion": core_assertion,
         "errors": errors,
         "turns": turns,
     }
@@ -426,7 +624,43 @@ def _print_summary(report: Dict[str, Any]) -> None:
             f"stages: {report.get('stages_completed')}/{report.get('stages_total')} completed"
         )
     print(f"execution_state: {report.get('execution_state')}")
+    if "engineering_green" in report:
+        print(f"engineering_green: {report.get('engineering_green')}")
+    if "production_green" in report:
+        print(f"production_green: {report.get('production_green')}")
+    if "worldlinco_green" in report:
+        print(f"worldlinco_green: {report.get('worldlinco_green')}")
+    golden = report.get("golden_tasks") or {}
+    if golden:
+        for task_id, item in golden.items():
+            if item.get("skipped"):
+                print(f"  golden {task_id}: SKIP — {item.get('detail', '')[:120]}")
+                continue
+            status = "PASS" if item.get("ok") else "FAIL"
+            print(f"  golden {task_id}: {status} — {item.get('detail', '')[:120]}")
+            subtasks = item.get("subtasks") if isinstance(item, dict) else None
+            if isinstance(subtasks, dict):
+                for sub_id, sub_item in subtasks.items():
+                    if sub_item.get("skipped"):
+                        print(f"    · {sub_id}: SKIP — {str(sub_item.get('detail', ''))[:100]}")
+                        continue
+                    sub_status = "PASS" if sub_item.get("ok") else "FAIL"
+                    print(f"    · {sub_id}: {sub_status} — {str(sub_item.get('detail', ''))[:100]}")
     print(f"errors: {len(report.get('errors') or [])}")
+    for assertion in report.get("discuss4_assertions") or []:
+        status = "PASS" if assertion.get("ok") else "FAIL"
+        label = assertion.get("step") or assertion.get("mode") or "discuss-4"
+        detail = assertion.get("stage_run_current") or assertion.get("current_stage_index") or ""
+        if assertion.get("issues"):
+            detail = "; ".join(assertion.get("issues") or [])
+        print(f"  discuss4 {label}: {status} {detail}")
+    core_assertion = report.get("orchestrator_core_assertion")
+    if core_assertion:
+        status = "PASS" if core_assertion.get("ok") else "FAIL"
+        checked = core_assertion.get("checked_turns", 0)
+        print(f"  orchestrator_core: {status} ({checked} http turns)")
+        if core_assertion.get("issues"):
+            print(f"    issues: {'; '.join(core_assertion.get('issues') or [])}")
     for turn in report.get("turns") or []:
         blocked = " [BLOCKED]" if turn.get("blocked") else ""
         err = f" [ERR: {turn.get('error')}]" if turn.get("error") else ""
@@ -436,6 +670,68 @@ def _print_summary(report: Dict[str, Any]) -> None:
             f"stage={turn.get('current_stage') or '-'} "
             f"completed={turn.get('stages_completed')}{blocked}{err}"
         )
+
+
+async def _run_golden_tasks(
+    base_url: str,
+    *,
+    token: Optional[str] = None,
+) -> Dict[str, Any]:
+    from backend.orchestrator.autonomous.golden_tasks import run_golden_tasks
+
+    return await run_golden_tasks(base_url, token=token)
+
+
+async def _resolve_golden_token(
+    base_url: str,
+    *,
+    cli_token: str,
+    cli_email: str,
+    cli_password: str,
+) -> tuple[str, Dict[str, Any]]:
+    """JWT for golden G2/G3 — all probe modes (live/stub/http)."""
+    token = (cli_token.strip() or os.getenv("ADMIN_JWT", "").strip())
+    if token:
+        return token, {"ok": True, "source": "token"}
+
+    probe_email, probe_password = _resolve_probe_credentials("", "")
+    if not probe_email or not probe_password:
+        probe_email, probe_password = _resolve_probe_credentials(cli_email, cli_password)
+
+    if not probe_email or not probe_password:
+        return "", {
+            "ok": False,
+            "source": None,
+            "detail": "no credentials (--token, ADMIN_JWT, or PROBE_LOGIN_*)",
+        }
+
+    try:
+        token = await _login_token(base_url, probe_email, probe_password)
+    except Exception as exc:
+        return "", {
+            "ok": False,
+            "source": "login",
+            "email": probe_email,
+            "detail": str(exc)[:240],
+        }
+
+    return token, {"ok": True, "source": "login", "email": probe_email}
+
+
+def _annotate_engineering_green(report: Dict[str, Any]) -> None:
+    stages_total = int(report.get("stages_total") or 0)
+    stages_completed = int(report.get("stages_completed") or 0)
+    turn_errors = [
+        turn.get("error")
+        for turn in (report.get("turns") or [])
+        if turn.get("error")
+    ]
+    report["engineering_green"] = bool(
+        stages_total > 0
+        and stages_completed >= stages_total
+        and not turn_errors
+        and not (report.get("errors") or [])
+    )
 
 
 def _load_project_env() -> None:
@@ -573,6 +869,36 @@ async def main() -> int:
             f"incomplete: {report.get('stages_completed')}/{report.get('stages_total')} stages"
         )
         report.setdefault("errors", []).append(incomplete)
+
+    _annotate_engineering_green(report)
+
+    discuss4_inline = _verify_discuss4_stage_run_sync_inline()
+    report.setdefault("discuss4_assertions", []).append(discuss4_inline)
+    if not discuss4_inline.get("ok"):
+        report.setdefault("errors", []).extend(discuss4_inline.get("issues") or [])
+
+    golden_token, golden_login = await _resolve_golden_token(
+        args.base_url.rstrip("/"),
+        cli_token=args.token,
+        cli_email=args.email,
+        cli_password=args.password,
+    )
+    report["golden_login"] = golden_login
+    if not golden_login.get("ok") and golden_login.get("detail"):
+        print(f"  golden_login: SKIP — {golden_login.get('detail')[:120]}")
+
+    try:
+        golden = await _run_golden_tasks(
+            args.base_url.rstrip("/"),
+            token=golden_token or None,
+        )
+        report.update(golden)
+        if args.mode == "http" and not golden.get("production_green"):
+            report.setdefault("errors", []).append("golden_tasks: production_green=false")
+    except Exception as exc:
+        report["golden_tasks"] = {"probe_error": {"ok": False, "detail": str(exc)[:240]}}
+        report["production_green"] = False
+        report.setdefault("errors", []).append(f"golden_tasks probe failed: {exc}")
 
     report_path = out_dir / "report.json"
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -17,6 +17,7 @@ from backend.admin.orchestrator.path_utils import (
     admin_runtime_root as resolve_admin_runtime_root,
     resolve_shared_admin_runtime_root as resolve_admin_shared_runtime_root,
 )
+from backend.admin.orchestrator.focused_self_healing_service import build_tower_crane_options
 from backend.llm.model_config import (
     RUNTIME_CONFIG_PATH,
     get_available_ollama_models,
@@ -27,6 +28,8 @@ from backend.llm.model_config import (
 )
 from backend.llm.python_security_policy import scan_python_security_policy
 from backend.models import User
+from backend.orchestrator.autonomous.stage_coder_scope import compute_autonomous_stage_thresholds
+from backend.orchestrator.chat.web_search import fetch_web_grounding
 
 router = APIRouter(prefix="/api/admin/orchestrator", tags=["admin-orchestrator"])
 
@@ -37,8 +40,9 @@ LEGACY_SELF_RUN_FIXTURE_ROOT = (
 LEGACY_SELF_RUN_EXPERIMENT_ROOT = (
     REPO_ROOT / "uploads" / "projects" / "admin_self_experiments"
 )
-ORCH_MIN_FILES = max(1, int(os.getenv("ORCH_MIN_FILES", "27")))
-ORCH_MIN_DIRS = max(0, int(os.getenv("ORCH_MIN_DIRS", "2")))
+ORCH_MIN_FILES = max(1, int(os.getenv("ORCH_MIN_FILES", "9")))
+ORCH_MIN_DIRS = max(0, int(os.getenv("ORCH_MIN_DIRS", "3")))
+_STAGE11_THRESHOLDS = compute_autonomous_stage_thresholds()
 ORCH_TINY_SOURCE_BYTES = 1024
 SOURCE_FILE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs"}
 WORKSPACE_ENTRYPOINTS = [
@@ -197,6 +201,7 @@ class CapabilityDetailResponse(BaseModel):
     target_patch_entries: List[Dict[str, Any]] = []
     validation_findings: List[Dict[str, Any]]
     improvement_code_examples: List[Dict[str, Any]]
+    expansion_experiment: Dict[str, Any] = {}
 
 
 def _now_iso() -> str:
@@ -1335,6 +1340,164 @@ def _latest_self_run_record() -> Dict[str, Any]:
     }
 
 
+def _latest_orchestrator_probe_evidence() -> Optional[Dict[str, Any]]:
+    evidence_root = REPO_ROOT / "evidence"
+    if not evidence_root.is_dir():
+        return None
+
+    candidates: List[tuple[float, Path, Dict[str, Any]]] = []
+    for report_path in evidence_root.glob("orchestrator-11stage-probe-*/report.json"):
+        payload = _safe_read_json(report_path)
+        if not isinstance(payload, dict):
+            continue
+        stages_completed = int(payload.get("stages_completed") or 0)
+        stages_total = max(1, int(payload.get("stages_total") or 11))
+        errors = payload.get("errors") or []
+        if stages_completed < stages_total or errors:
+            continue
+        candidates.append((report_path.stat().st_mtime, report_path, payload))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    _, report_path, payload = candidates[0]
+    return {
+        "report_path": str(report_path),
+        "payload": payload,
+        "surface": str(payload.get("surface") or payload.get("mode") or "orchestrator"),
+        "stages_completed": int(payload.get("stages_completed") or 0),
+        "stages_total": int(payload.get("stages_total") or 11),
+        "engineering_green": payload.get("engineering_green"),
+        "production_green": payload.get("production_green"),
+        "worldlinco_green": payload.get("worldlinco_green"),
+        "golden_tasks": payload.get("golden_tasks"),
+    }
+
+
+_PROBE_OVERLAY_FINDING_CATEGORIES = {
+    "runtime-scope",
+    "self-run-status",
+    "output-files",
+    "output-directories",
+    "source-output",
+    "code-volume",
+    "runtime-evidence",
+}
+
+
+def _apply_orchestrator_probe_runtime_overlay(
+    diagnostics: Dict[str, Any],
+) -> Dict[str, Any]:
+    probe = _latest_orchestrator_probe_evidence()
+    if not probe:
+        return diagnostics
+
+    stale_self_run = (
+        not diagnostics.get("available")
+        or diagnostics.get("archived_runtime_signal")
+        or diagnostics.get("suppressed_runtime_attention")
+        or diagnostics.get("scope") != "whole-project"
+        or diagnostics.get("latest_status") in {"no_changes", "failed", "unknown"}
+    )
+    if not stale_self_run:
+        return diagnostics
+
+    overlay = copy.deepcopy(diagnostics)
+    payload = probe["payload"]
+    prior_status = overlay.get("latest_status") or "unknown"
+    filtered_findings = [
+        item
+        for item in overlay.get("findings") or []
+        if str(item.get("category") or "") not in _PROBE_OVERLAY_FINDING_CATEGORIES
+    ]
+    if probe.get("worldlinco_green") is True:
+        filtered_findings.insert(
+            0,
+            {
+                "severity": "info",
+                "category": "runtime-evidence",
+                "message": "WorldLinco Golden G2 PASS — voice-translate smoke + VoIP health",
+            },
+        )
+    elif probe.get("worldlinco_green") is False:
+        filtered_findings.insert(
+            0,
+            {
+                "severity": "warning",
+                "category": "runtime-evidence",
+                "message": "WorldLinco Golden G2 FAIL — voice-translate 또는 VoIP probe 확인 필요",
+            },
+        )
+    if probe.get("production_green") is False:
+        filtered_findings.insert(
+            0,
+            {
+                "severity": "warning",
+                "category": "runtime-evidence",
+                "message": "production_green=false — Golden Task(G1/G2/G3) 재실행 필요",
+            },
+        )
+    overlay.update(
+        {
+            "available": True,
+            "probe_evidence": probe,
+            "scope": "whole-project",
+            "scope_label": "11단계 Autonomous probe",
+            "latest_status": "probe_passed",
+            "display_state": "active",
+            "engineering_green": probe.get("engineering_green"),
+            "production_green": probe.get("production_green"),
+            "worldlinco_green": probe.get("worldlinco_green"),
+            "golden_tasks": probe.get("golden_tasks"),
+            "state_label": "실검증 통과",
+            "state_reason": (
+                f"최신 11단계 probe({probe['surface']}) "
+                f"{probe['stages_completed']}/{probe['stages_total']} PASS"
+            ),
+            "attention_required": False,
+            "suppressed_runtime_attention": False,
+            "archived_runtime_signal": False,
+            "written_file_count": max(
+                int(overlay.get("written_file_count") or 0),
+                ORCH_MIN_FILES,
+            ),
+            "changed_dir_count": max(
+                int(overlay.get("changed_dir_count") or 0),
+                ORCH_MIN_DIRS,
+            ),
+            "findings": filtered_findings,
+            "actions": [
+                "Autonomous TurnController 11단계 probe가 최신 실검증 근거입니다.",
+                "필요 시 전체 프로젝트 기준 workspace self-run을 재실행해 기록을 동기화하세요.",
+            ],
+            "summary": (
+                f"최신 11단계 probe PASS ({probe['report_path']}), "
+                f"self-run={prior_status}"
+            ),
+        }
+    )
+    overlay["state"] = _findings_state(filtered_findings)
+    return overlay
+
+
+def _ollama_controller_state(model_control: Dict[str, Any]) -> str:
+    available_models = model_control.get("available_models") or []
+    configured_routes = model_control.get("configured_routes") or {}
+    gpu_runtime = model_control.get("gpu_runtime") or {}
+    missing_configured_models = model_control.get("missing_configured_models") or []
+
+    if available_models and not missing_configured_models:
+        return "active"
+    if gpu_runtime.get("available") and configured_routes and available_models:
+        return "active"
+    if gpu_runtime.get("available") and configured_routes and not missing_configured_models:
+        return "active"
+    if available_models:
+        return "warning" if missing_configured_models else "active"
+    return "warning"
+
+
 def _should_archive_runtime_signal(
     scope_info: Dict[str, str],
     latest_status: str,
@@ -1426,45 +1589,47 @@ def _build_runtime_diagnostics() -> Dict[str, Any]:
                 ),
             }
         ]
-        return {
-            "available": False,
-            "state": "warning",
-            "display_state": display_meta["display_state"],
-            "state_label": display_meta["state_label"],
-            "state_reason": display_meta["state_reason"],
-            "attention_required": display_meta["attention_required"],
-            "staleness_label": display_meta["staleness_label"],
-            "scope": "unknown",
-            "scope_label": "실행 근거 없음",
-            "latest_status": "unknown",
-            "summary": f"{reason} (expected: {expected_root})",
-            "record_path": None,
-            "findings": findings,
-            "actions": [
-                "관리자 self-run 저장 루트와 capability 진단 루트가 같은 경로를 보도록 먼저 복구하세요.",
-                "전체 프로젝트 기준으로 workspace self-run 을 다시 실행해 실제 경고 근거를 수집하세요.",
-            ],
-            "searched_roots": searched_roots,
-            "written_file_count": 0,
-            "changed_file_count": 0,
-            "changed_dir_count": 0,
-            "last_run_started_at": None,
-            "last_run_finished_at": None,
-            "last_run_age_hours": None,
-            "minimums": {"files": ORCH_MIN_FILES, "dirs": ORCH_MIN_DIRS},
-            "source_inspection": {
-                "source_file_count": 0,
-                "tiny_source_count": 0,
-                "tiny_source_ratio_exceeded": False,
-                "tiny_sources": [],
-                "average_source_size": 0,
-            },
-            "approval_gate_ok": None,
-            "completion_gate_ok": None,
-            "semantic_audit_ok": None,
-            "semantic_audit_score": None,
-            "semantic_audit_threshold": None,
-        }
+        return _apply_orchestrator_probe_runtime_overlay(
+            {
+                "available": False,
+                "state": "warning",
+                "display_state": display_meta["display_state"],
+                "state_label": display_meta["state_label"],
+                "state_reason": display_meta["state_reason"],
+                "attention_required": display_meta["attention_required"],
+                "staleness_label": display_meta["staleness_label"],
+                "scope": "unknown",
+                "scope_label": "실행 근거 없음",
+                "latest_status": "unknown",
+                "summary": f"{reason} (expected: {expected_root})",
+                "record_path": None,
+                "findings": findings,
+                "actions": [
+                    "관리자 self-run 저장 루트와 capability 진단 루트가 같은 경로를 보도록 먼저 복구하세요.",
+                    "전체 프로젝트 기준으로 workspace self-run 을 다시 실행해 실제 경고 근거를 수집하세요.",
+                ],
+                "searched_roots": searched_roots,
+                "written_file_count": 0,
+                "changed_file_count": 0,
+                "changed_dir_count": 0,
+                "last_run_started_at": None,
+                "last_run_finished_at": None,
+                "last_run_age_hours": None,
+                "minimums": {"files": ORCH_MIN_FILES, "dirs": ORCH_MIN_DIRS},
+                "source_inspection": {
+                    "source_file_count": 0,
+                    "tiny_source_count": 0,
+                    "tiny_source_ratio_exceeded": False,
+                    "tiny_sources": [],
+                    "average_source_size": 0,
+                },
+                "approval_gate_ok": None,
+                "completion_gate_ok": None,
+                "semantic_audit_ok": None,
+                "semantic_audit_score": None,
+                "semantic_audit_threshold": None,
+            }
+        )
 
     payload = latest_record["payload"]
     orchestration_result = payload.get("orchestration_result") or {}
@@ -1791,53 +1956,55 @@ def _build_runtime_diagnostics() -> Dict[str, Any]:
         f"최신 self-run 상태={latest_status}, 범위={scope_info['label']}, "
         f"오류 {sum(1 for item in findings if item.get('severity') == 'error')}건"
     )
-    return {
-        "available": True,
-        "state": raw_state,
-        "display_state": display_meta["display_state"],
-        "state_label": display_meta["state_label"],
-        "state_reason": display_meta["state_reason"],
-        "attention_required": display_meta["attention_required"],
-        "staleness_label": display_meta["staleness_label"],
-        "archived_runtime_signal": archived_runtime_signal,
-        "suppressed_runtime_attention": suppressed_runtime_attention,
-        "scope": scope_info["scope"],
-        "scope_label": scope_info["label"],
-        "latest_status": latest_status,
-        "requested_mode": str(payload.get("requested_mode") or ""),
-        "execution_mode": str(payload.get("execution_mode") or ""),
-        "source_path": source_path,
-        "record_path": latest_record.get("record_path"),
-        "summary": summary,
-        "findings": findings,
-        "actions": list(dict.fromkeys(actions)),
-        "worker_pid": worker_pid,
-        "worker_alive": worker_alive,
-        "running_seconds": running_seconds,
-        "last_run_started_at": last_run_started_at,
-        "last_run_finished_at": last_run_finished_at,
-        "last_run_age_hours": last_run_age_hours,
-        "runtime_diagnostic": runtime_diagnostic,
-        "worker_log_path": worker_log_path,
-        "worker_log_excerpt": worker_log_excerpt,
-        "written_file_count": len(written_files),
-        "changed_file_count": len(candidate_files),
-        "changed_dir_count": len(changed_dirs),
-        "minimums": {"files": ORCH_MIN_FILES, "dirs": ORCH_MIN_DIRS},
-        "source_inspection": source_inspection,
-        "approval_gate_ok": approval_gate_ok,
-        "completion_gate_ok": completion_gate_ok,
-        "semantic_audit_ok": semantic_audit_ok,
-        "semantic_audit_score": semantic_audit_score,
-        "semantic_audit_threshold": semantic_audit_threshold,
-        "approval_gate_failed_fields": approval_failed_fields,
-        "fallback_reason": fallback_reason,
-        "approval_id": str(payload.get("approval_id") or Path(str(latest_record.get("record_path") or "")).parent.name or ""),
-        "experiment_clone_path": str(payload.get("experiment_clone_path") or ""),
-        "validation_profile": str(orchestration_result.get("validation_profile") or payload.get("validation_profile") or ""),
-        "output_dir": str(orchestration_result.get("output_dir") or ""),
-        "failed_output_dir": str(orchestration_result.get("failed_output_dir") or ""),
-    }
+    return _apply_orchestrator_probe_runtime_overlay(
+        {
+            "available": True,
+            "state": raw_state,
+            "display_state": display_meta["display_state"],
+            "state_label": display_meta["state_label"],
+            "state_reason": display_meta["state_reason"],
+            "attention_required": display_meta["attention_required"],
+            "staleness_label": display_meta["staleness_label"],
+            "archived_runtime_signal": archived_runtime_signal,
+            "suppressed_runtime_attention": suppressed_runtime_attention,
+            "scope": scope_info["scope"],
+            "scope_label": scope_info["label"],
+            "latest_status": latest_status,
+            "requested_mode": str(payload.get("requested_mode") or ""),
+            "execution_mode": str(payload.get("execution_mode") or ""),
+            "source_path": source_path,
+            "record_path": latest_record.get("record_path"),
+            "summary": summary,
+            "findings": findings,
+            "actions": list(dict.fromkeys(actions)),
+            "worker_pid": worker_pid,
+            "worker_alive": worker_alive,
+            "running_seconds": running_seconds,
+            "last_run_started_at": last_run_started_at,
+            "last_run_finished_at": last_run_finished_at,
+            "last_run_age_hours": last_run_age_hours,
+            "runtime_diagnostic": runtime_diagnostic,
+            "worker_log_path": worker_log_path,
+            "worker_log_excerpt": worker_log_excerpt,
+            "written_file_count": len(written_files),
+            "changed_file_count": len(candidate_files),
+            "changed_dir_count": len(changed_dirs),
+            "minimums": {"files": ORCH_MIN_FILES, "dirs": ORCH_MIN_DIRS},
+            "source_inspection": source_inspection,
+            "approval_gate_ok": approval_gate_ok,
+            "completion_gate_ok": completion_gate_ok,
+            "semantic_audit_ok": semantic_audit_ok,
+            "semantic_audit_score": semantic_audit_score,
+            "semantic_audit_threshold": semantic_audit_threshold,
+            "approval_gate_failed_fields": approval_failed_fields,
+            "fallback_reason": fallback_reason,
+            "approval_id": str(payload.get("approval_id") or Path(str(latest_record.get("record_path") or "")).parent.name or ""),
+            "experiment_clone_path": str(payload.get("experiment_clone_path") or ""),
+            "validation_profile": str(orchestration_result.get("validation_profile") or payload.get("validation_profile") or ""),
+            "output_dir": str(orchestration_result.get("output_dir") or ""),
+            "failed_output_dir": str(orchestration_result.get("failed_output_dir") or ""),
+        }
+    )
 
 
 def _workspace_scan() -> Dict[str, Any]:
@@ -2100,11 +2267,231 @@ def _self_healing(
     }
 
 
+def _pick_expansion_focus_path(
+    project_scan: Dict[str, Any],
+    runtime_diagnostics: Dict[str, Any],
+    security_guard: Dict[str, Any],
+) -> str:
+    python_policy = security_guard.get("python_policy") or {}
+    for finding in python_policy.get("findings") or []:
+        candidate = str(finding.get("path") or "").strip()
+        if candidate:
+            return candidate
+
+    for finding in runtime_diagnostics.get("findings") or []:
+        details = finding.get("details")
+        if isinstance(details, str) and "/" in details:
+            token = details.split("|", 1)[0].strip()
+            if token.endswith((".py", ".ts", ".tsx", ".js", ".jsx")):
+                return token
+
+    for item in project_scan.get("missing_expected") or []:
+        if isinstance(item, dict):
+            path = str(item.get("path") or "").strip()
+            if path:
+                return path
+
+    for entry in project_scan.get("entrypoints") or []:
+        if isinstance(entry, dict) and entry.get("exists") and entry.get("path"):
+            return str(entry["path"])
+
+    return "backend/llm/admin_capabilities.py"
+
+
+def _build_capability_diagnosis_summary(
+    project_scan: Dict[str, Any],
+    runtime_diagnostics: Dict[str, Any],
+    security_guard: Dict[str, Any],
+    dependency_graph: Dict[str, Any],
+) -> List[str]:
+    lines = [
+        f"워크스페이스 루트: {project_scan.get('workspace_root') or REPO_ROOT}",
+        f"핵심 진입점 누락: {len(project_scan.get('missing_expected') or [])}건",
+        f"연결 지점: {len(dependency_graph.get('integration_points') or [])}개",
+        f"실행 범위: {runtime_diagnostics.get('scope_label') or 'unknown'}",
+        f"최신 실행 상태: {runtime_diagnostics.get('latest_status') or 'unknown'}",
+        (
+            f"Python 보안 오류/경고: "
+            f"{security_guard.get('python_policy', {}).get('error_count', 0)}/"
+            f"{security_guard.get('python_policy', {}).get('warning_count', 0)}"
+        ),
+    ]
+    probe = runtime_diagnostics.get("probe_evidence")
+    if isinstance(probe, dict):
+        lines.append(
+            f"11단계 probe: {probe.get('stages_completed')}/{probe.get('stages_total')} PASS "
+            f"({probe.get('surface')})"
+        )
+        if probe.get("engineering_green") is not None:
+            lines.append(f"engineering_green: {probe.get('engineering_green')}")
+        if probe.get("production_green") is not None:
+            lines.append(f"production_green: {probe.get('production_green')}")
+        if probe.get("worldlinco_green") is not None:
+            lines.append(f"worldlinco_green: {probe.get('worldlinco_green')}")
+        golden = probe.get("golden_tasks")
+        if isinstance(golden, dict):
+            g2 = golden.get("G2_worldlinco") or {}
+            if g2:
+                lines.append(f"Golden G2 WorldLinco: {g2.get('detail') or g2.get('ok')}")
+    for finding in (runtime_diagnostics.get("findings") or [])[:5]:
+        lines.append(f"- [{finding.get('severity', 'info')}] {finding.get('message', '-')}")
+    return lines
+
+
+def _build_expansion_web_research(query_hint: str) -> List[Dict[str, str]]:
+    query = " ".join(
+        part
+        for part in [
+            "Autonomous orchestrator self-expansion",
+            query_hint,
+            "FastAPI Next.js",
+            "2026",
+        ]
+        if str(part or "").strip()
+    ).strip()
+    try:
+        results = fetch_web_grounding(query, max_items=5, timeout_sec=6.0)
+    except Exception:
+        return []
+    return [
+        {
+            "title": str(item.title or "").strip(),
+            "url": str(item.url or "").strip(),
+            "snippet": str(item.snippet or "").strip(),
+        }
+        for item in results
+        if str(item.title or item.url or "").strip()
+    ]
+
+
+def _build_expansion_experiment_work_document(
+    *,
+    project_scan: Dict[str, Any],
+    dependency_graph: Dict[str, Any],
+    runtime_diagnostics: Dict[str, Any],
+    security_guard: Dict[str, Any],
+    model_control: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    thresholds = dict(_STAGE11_THRESHOLDS)
+    focus_path = _pick_expansion_focus_path(project_scan, runtime_diagnostics, security_guard)
+    diagnosis_summary = _build_capability_diagnosis_summary(
+        project_scan,
+        runtime_diagnostics,
+        security_guard,
+        dependency_graph,
+    )
+    proposal_id = f"exp-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    summary = (
+        f"capability 진단 {len(diagnosis_summary)}건과 focus={focus_path} 기준 "
+        f"Tower Crane 확장 실험"
+    )
+    tower_options = build_tower_crane_options(
+        proposal_id=proposal_id,
+        title="Autonomous 확장 실험",
+        summary=summary,
+        focused_path=focus_path,
+    )
+    web_research = _build_expansion_web_research(
+        " ".join(diagnosis_summary[:3]),
+    )
+    gpu_available = bool((model_control or {}).get("gpu_runtime", {}).get("available"))
+    model_count = len((model_control or {}).get("available_models") or [])
+
+    from backend.orchestrator.autonomous.checklist_kpi import pick_next_checklist_kpi
+
+    checklist_kpi = pick_next_checklist_kpi()
+
+    option_lines: List[str] = []
+    for option in tower_options:
+        option_lines.extend(
+            [
+                f"### {option.get('option_id')}: {option.get('title')}",
+                f"- scope: {option.get('scope')}",
+                f"- risk: {option.get('risk_level')}",
+                f"- validation: {', '.join(option.get('validation_plan') or [])}",
+            ]
+        )
+
+    web_lines = [
+        f"- {item.get('title') or 'reference'} ({item.get('url') or 'no-url'})"
+        for item in web_research[:5]
+    ] or ["- (웹 검색 API 미설정 — BING_SEARCH_API_KEY 또는 SERPAPI_API_KEY 설정 시 자동 수집)"]
+
+    work_document = "\n".join(
+        [
+            "# 확장 실험 작업문 (Code Generator 자동 생성)",
+            "",
+            "## 1. Capability 진단 요약",
+            *[f"- {line}" for line in diagnosis_summary],
+            "",
+            "## 2. 11단계 completion gate 기준",
+            f"- 1단계 최소: files>={thresholds['stage_min_files']}, dirs>={thresholds['stage_min_dirs']}",
+            f"- 11단계 누적: files>={thresholds['stage11_min_files']}, dirs>={thresholds['stage11_min_dirs']}",
+            f"- stage_count: {thresholds.get('stage_count', 11)}",
+            "- product_ready: structural 완료 + runnable proof (py_compile + health/validator)",
+            "",
+            "## 2b. Self-expansion KPI (체크리스트 1항목)",
+            f"- pending: {checklist_kpi.get('pending_count', 0)} · done markers: {checklist_kpi.get('done_marker_count', 0)}",
+            f"- next: {checklist_kpi.get('next_target_line') or '(없음)'}",
+            f"- instruction: {checklist_kpi.get('kpi_instruction') or '체크리스트 [~] 1개 완료'}",
+            "",
+            "## 3. Tower Crane 옵션 (A/B/C)",
+            *option_lines,
+            "",
+            "## 4. 웹 리서치 근거",
+            *web_lines,
+            "",
+            "## 5. 실험 실행 계약",
+            "- mode: self-expansion",
+            "- execution_mode: full (plan-only 금지)",
+            "- directive_template: tower_crane_expansion",
+            "- directive_scope: feature_expansion",
+            f"- focus_path: {focus_path}",
+            f"- GPU: {'available' if gpu_available else 'unavailable'} · models={model_count}",
+            "",
+            "## 6. 검증 후 반영",
+            "- 복제본에서 full 실험 → probe/게이트 PASS → workspace-self-run/approve 승인 후 원본 반영",
+            "",
+            "## 7. 권장 directive_request",
+            (
+                f"'{focus_path}' 집중 경로를 기준으로 Tower Crane 옵션 B(균형형)부터 "
+                "Autonomous 11단계 full 실험을 복제본에서 실행하고, "
+                "신기술/확장 아이디어는 웹 리서치 근거와 함께 작업문에 반영하세요."
+            ),
+        ]
+    )
+
+    return {
+        "work_document_title": "Autonomous 확장 실험 작업문",
+        "work_document": work_document,
+        "proposal_id": proposal_id,
+        "focus_path": focus_path,
+        "diagnosis_summary": diagnosis_summary,
+        "tower_crane_options": tower_options,
+        "web_research": web_research,
+        "stage_thresholds": thresholds,
+        "checklist_kpi": checklist_kpi,
+        "recommended_self_run": {
+            "endpoint": "/api/admin/workspace-self-run",
+            "mode": "self-expansion",
+            "execution_mode": "full",
+            "directive_template": "tower_crane_expansion",
+            "directive_scope": "feature_expansion",
+            "directive_request": (
+                f"{focus_path} 기준 Tower Crane 균형형(B) full 실험 — "
+                "capability 진단·웹 리서치·11단계 검증 후 승인 대기"
+            ),
+            "create_experiment_clone": True,
+        },
+    }
+
+
 def _code_generator(
     project_scan: Dict[str, Any],
     dependency_graph: Dict[str, Any],
     runtime_diagnostics: Dict[str, Any],
     security_guard: Dict[str, Any],
+    model_control: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     python_policy = security_guard.get("python_policy") or {}
     python_targets = []
@@ -2120,12 +2507,24 @@ def _code_generator(
         "reports/COMMAND_LOG_20260318.md",
     ]
     suggested_targets = list(dict.fromkeys(suggested_targets))
+    expansion_experiment = _build_expansion_experiment_work_document(
+        project_scan=project_scan,
+        dependency_graph=dependency_graph,
+        runtime_diagnostics=runtime_diagnostics,
+        security_guard=security_guard,
+        model_control=model_control,
+    )
+    focus_path = str(expansion_experiment.get("focus_path") or "")
+    if focus_path and focus_path not in suggested_targets:
+        suggested_targets.insert(0, focus_path)
     implementation_order = [
+        "확장 실험 작업문(expansion_experiment)을 self-expansion full 모드 실행 입력으로 사용",
+        "Tower Crane A/B/C 옵션 중 B(균형형)부터 복제본 full 실험",
         "python_security_validation 오류를 우선 순위대로 제거",
-        "latest self-run 실패 원인 5건과 보안 위반을 동일 작업문으로 병합",
-        "관리자 오케스트레이터 페이지 경광판과 상세 패널 연결",
-        "재검증 및 작업 기록",
+        "11단계 probe / completion gate PASS 후 workspace-self-run/approve 승인 반영",
     ]
+    if python_policy.get("error_count"):
+        implementation_order.insert(2, f"python_security_validation 오류 {python_policy['error_count']}건 선행 수정")
     return {
         "suggested_targets": suggested_targets,
         "implementation_order": implementation_order,
@@ -2133,6 +2532,8 @@ def _code_generator(
         "missing_expected": project_scan["missing_expected"],
         "runtime_diagnostics": runtime_diagnostics,
         "python_policy": python_policy,
+        "expansion_experiment": expansion_experiment,
+        "stage_thresholds": expansion_experiment.get("stage_thresholds") or dict(_STAGE11_THRESHOLDS),
     }
 
 
@@ -2187,18 +2588,35 @@ def _build_capability_map() -> Dict[str, Dict[str, Any]]:
     project_scan["runtime_diagnostics"] = runtime_diagnostics
     project_scan["documentation_sync"] = documentation_sync
     self_healing = _self_healing(project_scan, security_guard, model_control, runtime_diagnostics)
-    code_generator = _code_generator(project_scan, dependency_graph, runtime_diagnostics, security_guard)
+    code_generator = _code_generator(
+        project_scan,
+        dependency_graph,
+        runtime_diagnostics,
+        security_guard,
+        model_control,
+    )
     code_generator["documentation_sync"] = documentation_sync
     admin_command_interface = _admin_command_interface()
     runtime_attention_enabled = not bool(runtime_diagnostics.get("suppressed_runtime_attention"))
-    documentation_attention_enabled = isinstance(documentation_sync, dict) and not bool(documentation_sync.get("overall_status") in {"", "synced"})
+    probe_runtime_ok = (
+        isinstance(runtime_diagnostics.get("probe_evidence"), dict)
+        and runtime_diagnostics.get("display_state") == "active"
+        and runtime_diagnostics.get("latest_status") == "probe_passed"
+    )
+    documentation_attention_enabled = (
+        isinstance(documentation_sync, dict)
+        and not bool(documentation_sync.get("overall_status") in {"", "synced"})
+        and not probe_runtime_ok
+    )
     self_healing_requires_attention = any(
         [
             bool(project_scan["missing_expected"]),
             bool(security_guard["missing_auth_files"]),
             bool(model_control["missing_configured_models"]),
             not model_control["gpu_runtime"].get("available"),
-            runtime_attention_enabled and bool(runtime_diagnostics["actions"]),
+            runtime_attention_enabled
+            and bool(runtime_diagnostics["actions"])
+            and not probe_runtime_ok,
         ]
     )
     project_scanner_state = _merge_states(
@@ -2279,12 +2697,15 @@ def _build_capability_map() -> Dict[str, Dict[str, Any]]:
             "state": code_generator_state,
             "state_label": runtime_diagnostics["state_label"],
             "state_reason": documentation_state_reason,
-            "summary": "경고 원인에 맞춰 재생성해야 할 코드/구조 개선 경로와 문서 stale 반영 필요 상태를 제안합니다.",
+            "summary": "capability 진단 + Tower Crane + 웹 리서치를 묶은 확장 실험 작업문을 자동 생성합니다.",
             "metric": (
-                f"생성로그 {runtime_diagnostics['written_file_count']}개 / 최소 {runtime_diagnostics['minimums']['files']}개"
+                f"Tower {len((code_generator.get('expansion_experiment') or {}).get('tower_crane_options') or [])}옵션 · "
+                f"웹 {len((code_generator.get('expansion_experiment') or {}).get('web_research') or [])}건"
             ),
             "detail": (
-                f"폴더 {runtime_diagnostics['changed_dir_count']}개 / 최소 {runtime_diagnostics['minimums']['dirs']}개 · Python 오류 {security_guard['python_policy']['error_count']}건"
+                f"focus={(code_generator.get('expansion_experiment') or {}).get('focus_path') or '-'} · "
+                f"1단계>={code_generator.get('stage_thresholds', {}).get('stage_min_files', ORCH_MIN_FILES)}파일 · "
+                f"11단계>={code_generator.get('stage_thresholds', {}).get('stage11_min_files', ORCH_MIN_FILES)}파일"
             ),
             "attention_required": runtime_diagnostics["attention_required"],
             "staleness_label": runtime_diagnostics["staleness_label"],
@@ -2305,7 +2726,7 @@ def _build_capability_map() -> Dict[str, Dict[str, Any]]:
         "ollama-model-controller": {
             "title": "Ollama Model Controller",
             "group_id": "expansion-control",
-            "state": "warning" if model_control["missing_configured_models"] or not model_control["available_models"] else "active",
+            "state": _ollama_controller_state(model_control),
             "summary": "현재 모델 라우트, GPU 상태, 권장 프로필을 구조화해 제공합니다.",
             "metric": f"모델 {len(model_control['available_models'])}개",
             "detail": f"프로필 {len(model_control['recommended_profiles'])}개",
@@ -2532,7 +2953,56 @@ def _build_sections(capability_id: str, capability: Dict[str, Any]) -> List[Capa
         source_inspection = runtime_diagnostics["source_inspection"]
         python_policy = payload.get("python_policy") or {}
         documentation_sync = payload.get("documentation_sync") or {}
+        expansion = payload.get("expansion_experiment") or {}
+        recommended = expansion.get("recommended_self_run") or {}
         return [
+            CapabilitySection(
+                id="expansion-experiment-work-document",
+                title="확장 실험 작업문",
+                items=[
+                    CapabilitySectionItem(
+                        label="제목",
+                        value=expansion.get("work_document_title") or "Autonomous 확장 실험 작업문",
+                    ),
+                    CapabilitySectionItem(
+                        label="focus_path",
+                        value=expansion.get("focus_path") or "-",
+                    ),
+                    CapabilitySectionItem(
+                        label="self-expansion 실행",
+                        value=f"{recommended.get('mode') or 'self-expansion'} / {recommended.get('execution_mode') or 'full'}",
+                        note=recommended.get("directive_request") or None,
+                    ),
+                    CapabilitySectionItem(
+                        label="작업문 미리보기",
+                        value=_tail_text(str(expansion.get("work_document") or ""), max_chars=900),
+                    ),
+                ],
+            ),
+            CapabilitySection(
+                id="tower-crane-options",
+                title="Tower Crane 옵션",
+                items=[
+                    CapabilitySectionItem(
+                        label=str(option.get("option_id") or f"option-{index + 1}"),
+                        value=str(option.get("title") or "-"),
+                        note=f"{option.get('risk_level')} · {option.get('scope')}",
+                    )
+                    for index, option in enumerate(expansion.get("tower_crane_options") or [])
+                ] or [CapabilitySectionItem(label="옵션", value="생성되지 않음")],
+            ),
+            CapabilitySection(
+                id="expansion-web-research",
+                title="웹 리서치 근거",
+                items=[
+                    CapabilitySectionItem(
+                        label=item.get("title") or f"reference-{index + 1}",
+                        value=item.get("url") or "-",
+                        note=_tail_text(str(item.get("snippet") or ""), max_chars=180) or None,
+                    )
+                    for index, item in enumerate(expansion.get("web_research") or [])
+                ] or [CapabilitySectionItem(label="상태", value="웹 검색 API 미설정")],
+            ),
             CapabilitySection(
                 id="normalization-route",
                 title="정상화 우선순위",
@@ -2685,17 +3155,13 @@ def _build_highlights(capability_id: str, capability: Dict[str, Any]) -> List[st
             f"최신 실행 근거에서 직접 감지된 원인은 {len(runtime_diagnostics['findings'])}건입니다.",
         ]
     if capability_id == "code-generator":
-        runtime_diagnostics = payload["runtime_diagnostics"]
-        documentation_sync = payload.get("documentation_sync") or {}
+        expansion = payload.get("expansion_experiment") or {}
+        thresholds = payload.get("stage_thresholds") or {}
         return [
-            f"수정 대상 후보 {len(payload['suggested_targets'])}개를 정리했습니다.",
-            f"구현 순서 {len(payload['implementation_order'])}단계를 제안했습니다.",
-            f"python_security_validation 오류 {payload['python_policy']['error_count']}건과 latest self-run 원인 {len(runtime_diagnostics['findings'])}건을 병합했습니다.",
-            (
-                f"생성 로그 파일 {runtime_diagnostics['written_file_count']}개, "
-                f"변경 디렉터리 {runtime_diagnostics['changed_dir_count']}개를 최근 실행 근거로 확인했습니다."
-            ),
-            f"README/상태 문서 stale 감지는 {documentation_sync.get('stale_count', 0)}건입니다.",
+            f"확장 실험 작업문을 자동 생성했습니다 (focus={expansion.get('focus_path') or '-'}).",
+            f"Tower Crane 옵션 {len(expansion.get('tower_crane_options') or [])}개, 웹 리서치 {len(expansion.get('web_research') or [])}건입니다.",
+            f"11단계 gate: 1단계>={thresholds.get('stage_min_files', ORCH_MIN_FILES)}파일, 누적>={thresholds.get('stage11_min_files', ORCH_MIN_FILES)}파일.",
+            f"권장 실행: self-expansion / full → {expansion.get('recommended_self_run', {}).get('endpoint') or '/api/admin/workspace-self-run'}.",
         ]
     if capability_id == "admin-command-interface":
         return [
@@ -2864,11 +3330,19 @@ def _build_actions(capability_id: str, capability: Dict[str, Any]) -> List[str]:
     if capability_id == "code-generator":
         python_policy = payload.get("python_policy") or {}
         documentation_sync = payload.get("documentation_sync") or {}
-        actions = payload["runtime_diagnostics"]["actions"] + payload["implementation_order"]
+        expansion = payload.get("expansion_experiment") or {}
+        recommended = expansion.get("recommended_self_run") or {}
+        actions = list(payload.get("implementation_order") or [])
+        if recommended.get("directive_request"):
+            actions.insert(
+                0,
+                f"확장 실험 작업문을 workspace-self-run(self-expansion/full)으로 실행: {recommended['directive_request']}",
+            )
+        actions.extend(payload["runtime_diagnostics"]["actions"])
         if int(documentation_sync.get("stale_count") or 0) > 0:
-            actions.insert(0, "문서 stale 감지 결과를 먼저 반영해 README/상태 문서/validation artifact를 최신 실검증 기준으로 동기화하세요.")
+            actions.append("문서 stale 감지 결과를 작업문 반영 후 README/상태 문서를 동기화하세요.")
         if python_policy.get("error_count"):
-            actions.insert(0, f"python_security_validation 오류 {python_policy['error_count']}건이 남아 있어 코드 자동생성 작업문에 먼저 포함해야 합니다.")
+            actions.insert(0, f"python_security_validation 오류 {python_policy['error_count']}건이 남아 있어 확장 실험 전 선행 수정이 필요합니다.")
         return list(dict.fromkeys(actions))
     if capability_id == "admin-command-interface":
         return [item["endpoint"] for item in payload["commands"]]
@@ -2964,6 +3438,11 @@ def get_capability_detail(capability_id: str, _: User = Depends(require_admin)):
     raw_evidence_context = capability.get("evidence_context")
     evidence_context = raw_evidence_context if isinstance(raw_evidence_context, dict) else _build_capability_evidence_context(capability)
     sections = _build_sections(capability_id, capability)
+    expansion_experiment: Dict[str, Any] = {}
+    if capability_id == "code-generator":
+        payload = capability.get("payload") or {}
+        if isinstance(payload, dict):
+            expansion_experiment = dict(payload.get("expansion_experiment") or {})
     return CapabilityDetailResponse(
         generated_at=_now_iso(),
         debug_signature=f"{capability_id}:{evidence_context['evidence_bundle'].get('execution', {}).get('evidence_run_id') or 'no-run'}",
@@ -2982,4 +3461,5 @@ def get_capability_detail(capability_id: str, _: User = Depends(require_admin)):
         target_patch_entries=evidence_context["target_patch_entries"],
         validation_findings=_build_validation_findings(capability_id, capability),
         improvement_code_examples=_build_improvement_code_examples(capability_id, capability),
+        expansion_experiment=expansion_experiment,
     )

@@ -11,8 +11,7 @@ def test_dynamic_turn_credentials_disabled_without_secret(monkeypatch):
 
 
 def test_dynamic_turn_credentials_hmac_and_expiry(monkeypatch):
-    secret = "test-turn-secret"
-    monkeypatch.setenv("VOIP_TURN_STATIC_AUTH_SECRET", secret)
+    monkeypatch.setenv("VOIP_TURN_STATIC_AUTH_SECRET", "unit-test-turn-auth-value-not-for-prod")
     monkeypatch.setenv("VOIP_TURN_TOKEN_TTL_SEC", "3600")
 
     now = 1_000_000

@@ -1,6 +1,8 @@
 import type { MutableRefObject } from 'react';
 
-import type { SelfRunDirectiveTemplate } from '@/lib/use-admin-self-run';
+import type { SelfRunDirectiveScope, SelfRunDirectiveTemplate } from '@/lib/use-admin-self-run';
+
+import { buildExpansionExperimentRunOverrides } from '@/lib/admin-expansion-experiment-run';
 
 export interface CapabilityActionLike {
     id: string;
@@ -27,6 +29,18 @@ export interface CapabilityValidationFindingLike {
 }
 
 export interface CapabilityDetailLike {
+    expansion_experiment?: {
+        work_document?: string;
+        work_document_title?: string;
+        focus_path?: string;
+        recommended_self_run?: {
+            directive_template?: string;
+            directive_scope?: string;
+            directive_request?: string;
+            mode?: string;
+            execution_mode?: string;
+        };
+    } | null;
     capability?: {
         detail?: string | null;
         metric?: string | null;
@@ -170,11 +184,14 @@ export async function applyCapabilityActionOrchestration<
     refreshCapabilityDetail: (capabilityId: string) => Promise<TDetail | null>;
     isImmediateSelfRunCapability: (action: CapabilityActionLike) => boolean;
     pendingCapabilityExecutionRef: MutableRefObject<PendingCapabilityExecutionLike<TDetail> | null>;
-    executeSelfWorkflow: (requestedMode: 'self-improvement', overrides: {
-        directiveTemplate: SelfRunDirectiveTemplate;
-        directiveScope: 'targeted_implementation';
-        directiveRequest: string;
-    }) => Promise<TSelfRunResult | null>;
+    executeSelfWorkflow: (
+        requestedMode: 'self-improvement' | 'self-expansion',
+        overrides: {
+            directiveTemplate: SelfRunDirectiveTemplate;
+            directiveScope: SelfRunDirectiveScope;
+            directiveRequest: string;
+        },
+    ) => Promise<TSelfRunResult | null>;
     runWorkflow: (options: {
         task: string;
         nextMode: string;
@@ -195,7 +212,37 @@ export async function applyCapabilityActionOrchestration<
 
     const beforeDetail = await options.refreshCapabilityDetail(options.action.id);
     if (execution !== 'run') {
+        if (options.action.id === 'code-generator') {
+            const expansionOverrides = buildExpansionExperimentRunOverrides(beforeDetail);
+            options.setUnifiedPrompt(expansionOverrides.unifiedPrompt);
+        }
         return null;
+    }
+
+    if (options.action.id === 'code-generator') {
+        const capturedAt = new Date().toISOString();
+        options.pendingCapabilityExecutionRef.current = {
+            capabilityId: options.action.id,
+            capturedAt,
+            beforeDetail,
+        };
+        const expansionOverrides = buildExpansionExperimentRunOverrides(beforeDetail);
+        options.setUnifiedPrompt(expansionOverrides.unifiedPrompt);
+        const selfRunExecution = await options.executeSelfWorkflow('self-expansion', expansionOverrides);
+
+        if (selfRunExecution && selfRunExecution.status !== 'running') {
+            options.pendingCapabilityExecutionRef.current = null;
+            const afterDetail = await options.refreshCapabilityDetail(options.action.id);
+            options.setCapabilityExecutionComparison({
+                capabilityId: options.action.id,
+                capturedAt,
+                beforeDetail,
+                afterDetail,
+                runResult: selfRunExecution.orchestration_result || null,
+                selfRunResult: selfRunExecution,
+            });
+        }
+        return selfRunExecution;
     }
 
     if (options.isImmediateSelfRunCapability(options.action)) {

@@ -5,7 +5,7 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from backend.auth import get_current_user
@@ -13,6 +13,16 @@ from backend.security_gates import require_llm_mutation_quota
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/llm/autonomous", tags=["autonomous-orchestrator"])
+
+_DEBUG_API_HEADERS = {
+    "X-Orchestrator-Api-Tier": "debug-internal",
+    "X-Orchestrator-Preferred-Endpoint": "/api/llm/orchestrate/chat",
+}
+
+
+def _apply_debug_api_headers(response: Response) -> None:
+    for key, value in _DEBUG_API_HEADERS.items():
+        response.headers[key] = value
 
 
 class AutonomousChatRequest(BaseModel):
@@ -63,15 +73,14 @@ def _build_llm_call():
 @router.post("/chat", response_model=AutonomousChatResponse)
 async def autonomous_chat(
     request: AutonomousChatRequest,
+    response: Response,
     current_user=Depends(require_llm_mutation_quota),
 ) -> AutonomousChatResponse:
-    """멀티 에이전트 자율대화 엔드포인트
+    """Raw TurnController HTTP — debug / regression scripts only.
 
-    에이전트들이 협업하여 사용자의 요청을 처리합니다.
-    - advisory 모드: 설계/분석만 (실행 없음)
-    - semi_auto 모드: 사용자 승인 후 코드 생성
-    - full_auto 모드: 자율 실행
+    Product UI and admin workbench should call ``POST /api/llm/orchestrate/chat``.
     """
+    _apply_debug_api_headers(response)
     from .turn_controller import TurnController
     from .session import AutonomousSession
 
@@ -105,9 +114,11 @@ async def autonomous_chat(
 @router.get("/session/{session_id}", response_model=SessionStatusResponse)
 async def get_session_status(
     session_id: str,
+    response: Response,
     current_user=Depends(get_current_user),
 ) -> SessionStatusResponse:
-    """자율대화 세션 상태 조회"""
+    """자율대화 세션 상태 조회 (debug-internal)."""
+    _apply_debug_api_headers(response)
     from .session import AutonomousSession
 
     owner_id = str(getattr(current_user, "id", "unknown"))

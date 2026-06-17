@@ -3,7 +3,7 @@
     "name": "WorldLinco",
     "slug": "nadotongryoksa",
     "scheme": "worldlingo",
-    "version": "1.0.45",
+    "version": "1.0.46",
     "runtimeVersion": "1.0.32",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -30,7 +30,7 @@
     },
     "android": {
       "package": "com.parkcheolhong.worldlinco",
-            "versionCode": 74,
+            "versionCode": 76,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0f16"
@@ -56,6 +56,12 @@
       }
     },
     "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "비밀번호 변경 및 빠른 로그인을 위해 Face ID를 사용합니다."
+        }
+      ],
       [
         "expo-audio",
         {

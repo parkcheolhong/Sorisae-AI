@@ -80,6 +80,30 @@ BACKEND_PROXY_TARGET=http://localhost:8000 LOCAL_API_BASE_URL=http://localhost:8
 
 For admin on a separate port: use `--port 3005`.
 
+### Backend port SSOT (8000)
+
+로컬·프로브·프론트 프록시는 **항상 `:8000`** 을 사용합니다. Windows에서 `8001` 등 대체 포트 uvicorn은 바인드 거부(`WinError 10013`)가 날 수 있으므로 사용하지 않습니다.
+
+**Docker Compose 환경 (권장):**
+
+```powershell
+docker restart devanalysis114-backend
+# health 확인
+Invoke-WebRequest http://127.0.0.1:8000/api/health -UseBasicParsing
+```
+
+프론트 `.env.local` / Playwright / probe 기본값: `BACKEND_PROXY_TARGET` · `LOCAL_API_BASE_URL` → `http://127.0.0.1:8000`
+
+**DoD-2 HTTP probe:**
+
+```powershell
+docker restart devanalysis114-backend
+$env:PROBE_LOGIN_EMAIL="119cash@naver.com"
+$env:PROBE_LOGIN_PASSWORD="changeme-probe-local"
+python scripts/run_11stage_orchestrator_probe.py --mode http --admin --base-url http://127.0.0.1:8000
+python scripts/run_11stage_orchestrator_probe.py --mode http --marketplace --base-url http://127.0.0.1:8000
+```
+
 ### Running tests
 
 ```bash
@@ -102,7 +126,7 @@ make check
 - Redis is exposed on host port **6380** (not 6379) to avoid conflicts.
 - Some backend tests (`test_orchestrator_compat_manifest_write`, `test_runtime_config_persistence`) have pre-existing failures unrelated to environment setup.
 - The `test_orchestrator_operational_evidence_targets.py` test file has an import error (missing function) and must be excluded.
-- Async backend tests (those marked `@pytest.mark.asyncio`, e.g. `test_autonomous_orchestrator.py`, `test_orchestrator_dialogue_mode.py`) require the `pytest-asyncio` plugin, which is not in `requirements.txt`. The update script installs it; run with `python -m pytest <file> -p asyncio --asyncio-mode=auto`. Without it, async tests are reported as failures (`PytestUnknownMarkWarning`), not skipped.
+- Async backend tests (those marked `@pytest.mark.asyncio`, e.g. `test_autonomous_orchestrator.py`, `test_orchestrator_dialogue_mode.py`) use **`pytest-asyncio`** (`requirements.txt`). Run with `python -m pytest <file> --asyncio-mode=auto` (default when `pyproject.toml` `[tool.pytest.ini_options] asyncio_mode = "auto"` is present).
 - The autonomous multi-agent orchestrator (`/api/llm/autonomous/chat`) runs the A-brain agents (reasoner/planner/reviewer) via Ollama; without an LLM server those agents return `error`/stub, but the B-brain `coder` (template generator) + `validator` (`py_compile`) work without GPU/LLM, so the approval→code-generation path is testable in cloud agent sessions.
 - Frontend `npm run test` has a pre-existing failure in `tests/rail-labels.test.mjs` (asserts the marketplace page still contains the legacy label `5가지 AI 엔진 상품`, which the current code no longer uses). The other two checks (`smoke`, `nadotongryoksa-contracts`) pass. There is no `lint` script defined for the frontend.
 - There is no root `/` route; the app renders at `/marketplace` and `/admin` (a bare `/` returns 404, and `/login` redirects to `/admin/login`). The marketplace login/signup form is embedded in the right sidebar of `/marketplace`, not on a separate page.

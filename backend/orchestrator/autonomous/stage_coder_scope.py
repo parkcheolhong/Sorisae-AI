@@ -122,6 +122,40 @@ def build_stage_patch_task_suffix(stage_id: str, files: List[str]) -> str:
     )
 
 
+def compute_autonomous_stage_thresholds(
+    validation_profile: str = "python_fastapi",
+) -> Dict[str, int]:
+    """11단계 Autonomous 패치 SSOT 기준 completion gate 하한."""
+    profile_map = (
+        PYTHON_FASTAPI_STAGE_PATCH
+        if validation_profile == "python_fastapi"
+        else GENERIC_STAGE_PATCH
+    )
+    stage1_files = list(profile_map.get("STAGE-01") or [])
+    all_files = sorted({path for files in profile_map.values() for path in files})
+    stage1_dirs = sorted(
+        {
+            str(Path(path).parent).replace("\\", "/")
+            for path in stage1_files
+            if str(Path(path).parent) not in {"", "."}
+        }
+    )
+    all_dirs = sorted(
+        {
+            str(Path(path).parent).replace("\\", "/")
+            for path in all_files
+            if str(Path(path).parent) not in {"", "."}
+        }
+    )
+    return {
+        "stage_min_files": max(1, len(stage1_files)),
+        "stage_min_dirs": max(0, len(stage1_dirs)),
+        "stage11_min_files": len(all_files),
+        "stage11_min_dirs": len(all_dirs),
+        "stage_count": len([key for key in profile_map if str(key).startswith("STAGE")]),
+    }
+
+
 def is_incremental_stage_patch(stage_id: Optional[str], output_dir: Optional[str]) -> bool:
     if not stage_id:
         return False

@@ -1,7 +1,7 @@
 # 오케스트레이터 API 명명 · SSOT (A-4-4 · A-6)
 
-> **갱신:** 2026-06-16  
-> SSOT: `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` PART A-0
+> **갱신:** 2026-06-17  
+> SSOT: `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` PART A-0 · Gap: `docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md`
 
 ## 제품 SSOT (확정)
 
@@ -23,14 +23,16 @@
 
 ---
 
-## 목표 코어 vs 레거시 (통합 중)
+## 목표 코어 vs 레거시 (G-1 완료 후)
 
-| | **SSOT 코어 (목표)** | **레거시 ② (흡수 대상)** |
-|---|----------------------|---------------------------|
-| **모듈** | `backend/orchestrator/autonomous/` | `backend/orchestrator/chat/` · `backend/llm/orchestrator.py` |
-| **API** | `POST /api/llm/autonomous/chat` | `POST /api/llm/orchestrate/chat` |
-| **마켓 today** | *(미연결)* | `POST /api/marketplace/customer-orchestrate/chat` → ② |
-| **관리자 today** | 패널 숨김 · A-3-2 검증 | `/admin/llm` 기본 UI → ② + `voice/orchestrate` |
+| | **SSOT 코어 (①)** | **레거시 ② (fallback)** |
+|---|-------------------|---------------------------|
+| **모듈** | `backend/orchestrator/autonomous/` | `backend/orchestrator/chat/` |
+| **Admin HTTP** | `POST /api/llm/orchestrate/chat` → `run_autonomous_surface_chat(surface=admin)` when `manual_*` | lightweight · reverse_question → ② |
+| **Marketplace HTTP** | `POST /api/marketplace/customer-orchestrate/chat` → `run_autonomous_surface_chat(surface=marketplace)` | legacy discuss fields via ② mapper (G-2) |
+| **UI 표면** | Live Flow Rail + Decision Panel (`orchestrator-live-flow-rail.tsx`) | structured-response 중복 (G-5 축소 예정) |
+| **내부 디버그** | `POST /api/llm/autonomous/chat` (raw TurnController · `X-Orchestrator-Api-Tier: debug-internal`) | Admin 숨김 패널 · HTTP regression |
+| **프론트 SSOT** | `postAdminOrchestratorChat` → `/api/llm/orchestrate/chat` · `postCustomerOrchestratorChat` → customer path | `lib/orchestrator-chat-endpoints.ts` |
 
 ---
 
@@ -55,6 +57,14 @@
 ---
 
 ## 코어 API 예 (SSOT)
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"message":"FastAPI 블로그 API 만들어줘","mode":"manual_9step","manual_mode":true}' \
+  https://metanova1004.com/api/llm/orchestrate/chat
+```
+
+Raw TurnController (debug/regression only):
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \

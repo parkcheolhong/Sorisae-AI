@@ -52,6 +52,8 @@ def test_chat_greeting_creates_session(tmp_path, monkeypatch):
         json={"message": "안녕하세요", "mode": "semi_auto"},
     )
     assert response.status_code == 200, response.text
+    assert response.headers.get("X-Orchestrator-Api-Tier") == "debug-internal"
+    assert response.headers.get("X-Orchestrator-Preferred-Endpoint") == "/api/llm/orchestrate/chat"
     payload = response.json()
     assert payload["intent"] == "greeting"
     assert payload["session_id"]

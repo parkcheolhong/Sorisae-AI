@@ -31,6 +31,9 @@ export default function AdminQuickLinksSection({ apiBaseUrl }: AdminQuickLinksSe
                 <Link href="/admin/docs-viewer?path=docs%2Fidentity-provider-business-type-guide.md" data-testid="admin-quicklink-business-type-guide" className="rounded-lg border border-violet-300 px-4 py-2 text-sm text-violet-900 hover:bg-violet-100">
                     🏢 사업자 유형 가이드
                 </Link>
+                <Link href="/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-values-input-checklist.md" data-testid="admin-quicklink-commercial-values-input" className="rounded-lg border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100">
+                    ✅ PASS/KMC/KCB 상용값 입력
+                </Link>
                 <Link href="/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-terms-checklist.md" data-testid="admin-quicklink-commercial-terms" className="rounded-lg border border-emerald-300 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-100">
                     📑 상용화 계약·약관 기준
                 </Link>
