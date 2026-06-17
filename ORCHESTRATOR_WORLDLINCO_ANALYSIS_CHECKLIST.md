@@ -1,8 +1,8 @@
 # 오케스트레이터 자율형 대화 & 월드링코(WorldLinco) 통번역 — 분석 및 방향 체크리스트
 
-> **최종 갱신:** 2026-06-17 · 브랜치 `gpu-llm-server-awq-20260427`  
+> **최종 갱신:** 2026-06-17 · 브랜치 `feat/worldlinco-build90-92`  
 > 본 문서는 **① 오케스트레이터 멀티 자율형 대화**, **② 월드링코 통번역/VoIP** 진단과 다음 방향을 정리합니다.  
-> **마스터 기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` · **Voice Relay:** `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` · **검증:** `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md`  
+> **마스터 기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` · **build 90–92:** [`docs/checklists/worldlinco-build90-92-checklist.md`](docs/checklists/worldlinco-build90-92-checklist.md)  
 > **SSOT·시각 흐름 Gap (PART G):** [`docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md`](docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md)  
 > **1차 출시 (개인 APK):** **PART E** · **베타 안내:** [`docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`](docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md) · **V2 미래 버전:** **PART F** + [`docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md`](docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md) *(계획 고정 · v1.0 범위 아님)*  
 > 표시: `[ ]` 미착수 · `[~]` 부분 구현/검증중 · `[x]` 완료.
@@ -219,7 +219,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 - [x] **(B-2-5) APK 빌드·배포** ✅ — `publish_worldlinco_apk.ps1`, marketplace APK, versionCode **65**.
 
-- [~] **(B-2-6) 실기기 WebRTC·Relay** — B26 시그널 PASS; connected×2·자동 E2E flaky; Voice Relay SENT는 **수동 발화** 필요.
+- [~] **(B-2-6) 실기기 WebRTC·Relay** — B26 시그널 PASS; E-3-1 WiFi 5/5; **LTE↔LTE** `call-897f88102b80` 수동 수락·양방향 relay PASS (2026-06-17); 자동 E2E flaky on LTE.
 
 - [x] **(B-2-7) nginx WS 프록시** ✅ — presence/signal Upgrade.
 
@@ -327,22 +327,34 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **D-0-3) 친구 수기 등록 OTP** — `/api/friends/invites/request-code` → `/confirm`.
 - [x] **D-0-4) VoIP 네트워크 진단 배너** — `@react-native-community/netinfo` · `NetworkTestBanner` · `metadata.client_network` audit.
 - [x] **D-0-6) 친구 추가 3옵션 허브** — `FriendFolderScreen` **연락처 | 직접 입력 | 근처 찾기** · `expo-contacts` → OTP invite · `onOpenMapDiscovery` → `FriendMapDiscoveryScreen`.
-- [ ] **D-0-5) LTE/5G 매트릭스 실기기 증적** — `WiFi↔WiFi` · `WiFi↔LTE` · `LTE↔LTE` 각 2회+ · `scripts/worldlinco_lte_matrix_verify.ps1 -InitTemplate` · `-AppendEvidence`.
+- [~] **D-0-5) LTE/5G 매트릭스 실기기 증적** — `scripts/worldlinco_lte_matrix_verify.ps1` · `evidence/lte-matrix/lte_matrix_runs.csv`
+  - `wifi_lte` **1/2** — `call-ef1952c3714a` (Tab WiFi → S10 WiFi, voice relay PASS) · `wifi_lte_20260617-170757`
+  - `lte_lte` **1/2** — `call-897f88102b80` (Tab KT LTE ↔ S908N SKTelecom LTE, **manual_accept**, 양방향 relay 5+ rounds PASS) · `evidence/lte-matrix/manual_call_check_20260617/`
+  - `wifi_wifi` **0/2** — E-3-1 WiFi 2대 자동화는 별도 증적(E-3-1); 매트릭스 CSV 미기록
+  - 실패 참고: `call-71f376399558` — LTE↔LTE 자동 deeplink 수락 타임아웃 (`VOIP_PENDING_CALL_DISMISSED_MISSED`)
+  - 테스트 단말: USB Tab `R83W70QY11H` · USB S908N `R3CT209943N` (build **77**) — S10 `172.30.1.19` 제외(미등록·LTE 없음)
 
 > **⚠️ 0순위 전제 (통신 테스트의 첫 버그):** WiFi만으로 VoIP/OTP/친구·GPS 검증을 하면 **이동통신(NAT·전환·지연·TURN) 버그를 놓칩니다.** 한국은 통신 인프라가 강해도, **LTE/5G(셀룰러) 데이터를 켠 상태**에서 `WiFi↔LTE` 매트릭스로 테스트해야 실전 품질을 판단할 수 있습니다. 앱 VoIP 레일 **「네트워크 테스트 상태」** 배너와 `call_initiated` audit `metadata.client_network` 로 경로를 기록합니다.
 
 ### D-1. 1순위: VoIP 실기기/음성 검증
 
-- [ ] **D-1-1) 실기기 2대 WebRTC 완전 연결 검증**
-  - Android 2대 기준으로 `WiFi ↔ LTE`, `WiFi ↔ WiFi`, `LTE ↔ LTE` 조합을 각각 2회 이상 검증한다.
+- [~] **D-1-1) 실기기 2대 WebRTC 완전 연결 검증**
+  - `WiFi ↔ WiFi`: E-3-1 build66 **5/5** 자동 connected ✅
+  - `WiFi ↔ LTE`: `call-ef1952c3714a` connected + relay PASS (1회, 2회+ 필요)
+  - `LTE ↔ LTE`: `call-897f88102b80` Tab·S908N 셀룰러 only · Offer/Answer/ICE/Connected 확인 · **수동 수락** 필요 (1회, 2회+ 필요)
   - 확인 로그: `Offer`, `Answer`, `ICE Candidate`, `Connected`, `Audio Stream`, `Disconnect`.
   - 관련 근거: `B-2-6`, `B-2-7`, `V-8`.
-- [ ] **D-1-2) Voice Relay 실제 음성 검증**
-  - `한국어 → STT → 번역 → TTS → 상대방 재생` 전체 경로. 짧은/긴/빠른 대화 포함.
+- [~] **D-1-2) Voice Relay 실제 음성 검증**
+  - WiFi 2대: E-3-1 · E-3-8 strict PASS (기존)
+  - LTE 매트릭스: `call-897f88102b80` — 양방향 `VOIP_VOICE_RELAY_SEGMENT_*` 5+ rounds · `device_speech` TTS 재생 확인
+  - `한국어 → STT → 번역 → TTS → 상대방 재생` 전체 경로. 짧은/긴/빠른 대화 포함 — **LTE 조합 2회+·장시간 대화** 잔여.
   - 관련: `B-7 V-13`, `B-3-voice`, `scripts/voip_boundary_cap_defer_test.ps1`.
 - [~] **D-1-3) Firebase + devices/register**
   - Backend FCM v1 + `devices/register` ✅ — `GET /api/v1/voip/health` → `fcm_delivery_ready=true` (`evidence/fcm-d1-3-20260617/`).
-  - Mobile: adapter wired · **native APK rebuild** 후 FCM 토큰·착신 push 실기기 검증 — **미완**.
+  - Mobile **build 78+**: `index.js` background FCM handler · 알림 탭 복귀 · `POST_NOTIFICATIONS` · `PreserveCalleeSession` 테스트 스크립트.
+  - **앱 백그라운드/종료 착신**: FCM notification + stored payload → 앱 복귀 시 벨소리/수락 UI (**build 78 APK 재배포 필요**).
+  - **앱 강제종료(`am force-stop`)**: Android 정책상 FCM 차단 — 실사용(홈/다른앱)과 구분.
+  - **일반전화(PSTN) 착신 통역**: 미연동 (§10.2).
 - [ ] **D-1-4) repetition guard (build 65)**
   - Tab TTS 피드백 루프 재현 시 logcat `repetition_hallucination` skip 확인 (B-7 V-12).
 
@@ -395,7 +407,10 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 | 친구·연락 | `FriendFolderScreen`, friends API | [x] |
 | 통역 통화 (발신) | VoIP + Voice Relay | [x] build66 E-3-1 5/5 · build73 E-3-8 ko↔ja strict PASS |
 | voice-translate (≈2.8s) | `POST /api/llm/voice-translate` | [x] |
-| APK 배포 | build **74** (`1.0.45`), marketplace + manifest API | [x] |
+| APK 배포 | build **92** (`1.0.62`), marketplace + manifest API · 대면 통역 bilingual | [x] **2026-06-17** |
+| 50개국 VoIP STT/TTS | `voip_language_locales.py` · audit 50/50 | [x] build **91** |
+| 지정 언어 (VoIP/채팅) | `designated_language.py` | [x] build **90** |
+| 여행 대면 통역 ON/OFF | `bilingual_mode` API · `App.tsx` | [x] build **92** · 실기기 smoke [ ] |
 | repetition guard | build 65+ 코드 · E-3-2 echo | [x] `e3-2_echo_20260615-232900` |
 | 50개국어 API | mobile LANGS ↔ backend | [x] E-3-6 `50lang_audit_20260615-235805` |
 | WiFi 2대 통화 | D-1-1 (WiFi↔WiFi만) | [x] E-3-1 |
@@ -430,6 +445,16 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
   - UI: `frontend/.../marketplace/nadotongryoksa/page.tsx` · 전문: `docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`.
 - [~] **E-3-4)** 실사용 **10명** — **재개** (2026-06-16) · 전제: build **74** APK + backend tag **`v1.0.46`** (signup `preferred_language`/`country_code` 저장) · 기록: `E3-4_beta_users.csv` · `worldlinco_e3_beta_user_record.ps1`
 - [x] **E-3-5)** git tag — **`v1.0.45`** @ build **74** APK (2026-06-16) · **`v1.0.46`** @ profile API (2026-06-16, `88adda287`)
+
+### E-3-9. build 90–92 후속 DoD (2026-06-17)
+
+> SSOT: [`docs/checklists/worldlinco-build90-92-checklist.md`](docs/checklists/worldlinco-build90-92-checklist.md) · 기술서 §0.16
+
+- [x] **E-3-9-1)** build **90** — 친구 UI · designated language (VoIP/채팅)
+- [x] **E-3-9-2)** build **91** — 50개국 STT/TTS audit OK
+- [x] **E-3-9-3)** build **92** — 여행 대면 통역 bilingual API + 앱 ON/OFF
+- [ ] **E-3-9-4)** build **92** 실기기 — 대면 통역 ko↔ja 3턴 이상 smoke
+- [x] **E-3-9-5)** backend container redeploy · pytest designated+locale+bilingual
 
 #### E-3 검증 명령 (실기기)
 

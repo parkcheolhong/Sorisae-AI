@@ -19,6 +19,12 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from backend.voip_language_locales import (
+    resolve_edge_tts_voice,
+    resolve_whisper_initial_prompt,
+    resolve_whisper_language_hint,
+)
+
 from backend.llm.model_config import (
     build_ollama_options,
     get_chat_model,
@@ -127,29 +133,12 @@ def _run_whisper_cpp(audio_bytes: bytes) -> str:
 
 
 def _normalize_whisper_language_hint(language: Optional[str]) -> Optional[str]:
-    """앱 LangCode → ISO 639-1 정규화 (zh-tw → zh, auto/빈값 → 자동 감지)."""
-    lang_hint = str(language or "").strip().lower().split("-")[0]
-    if not lang_hint or lang_hint == "auto":
-        return None
-    valid_langs = {
-        "ko", "en", "zh", "ja", "es", "fr", "de", "pt", "ru", "ar",
-        "hi", "it", "tr", "th", "vi", "id", "ms", "nl", "pl",
-    }
-    return lang_hint if lang_hint in valid_langs else None
+    """앱 LangCode → faster-whisper ISO 639-1 (50개국 SSOT)."""
+    return resolve_whisper_language_hint(language)
 
 
 def _resolve_whisper_initial_prompt(language: Optional[str]) -> str:
-    lang = _normalize_whisper_language_hint(language)
-    # Avoid greeting words — they become silence hallucinations on tiny Whisper models.
-    prompts = {
-        "ko": "회의 통역 문장입니다.",
-        "en": "Conversation translation sentence.",
-        "ja": "会議の通訳文です。",
-        "zh": "会议翻译句子。",
-        "vi": "Câu dịch thuật hội thoại.",
-        "th": "ประโยคแปลบทสนทนา",
-    }
-    return prompts.get(lang or "", "")
+    return resolve_whisper_initial_prompt(language)
 
 
 def _pcm16_mono_rms_db(audio_bytes: bytes, sample_rate: int = VOICE_RELAY_PCM_SAMPLE_RATE) -> float:
@@ -400,10 +389,10 @@ def _edge_tts_enabled() -> bool:
     return flag not in {"0", "false", "no", "off"}
 
 
-def _synthesize_edge_tts(text: str) -> tuple[bytes, str]:
+def _synthesize_edge_tts(text: str, target_lang: Optional[str] = None) -> tuple[bytes, str]:
     import edge_tts
 
-    voice = os.getenv("VOICE_EDGE_TTS_VOICE", "ko-KR-SunHiNeural").strip()
+    voice = resolve_edge_tts_voice(target_lang)
     rate = os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%"
 
     async def _run() -> bytes:
@@ -420,14 +409,17 @@ def _synthesize_edge_tts(text: str) -> tuple[bytes, str]:
     return audio_bytes, "audio/mpeg"
 
 
-def _synthesize_tts(text: str) -> tuple[Optional[str], Optional[str]]:
+def _synthesize_tts(
+    text: str,
+    target_lang: Optional[str] = None,
+) -> tuple[Optional[str], Optional[str]]:
     trimmed = str(text or "").strip()
     if not trimmed:
         return None, None
 
     if _edge_tts_enabled():
         try:
-            audio_bytes, audio_format = _synthesize_edge_tts(trimmed)
+            audio_bytes, audio_format = _synthesize_edge_tts(trimmed, target_lang)
             return base64.b64encode(audio_bytes).decode("ascii"), audio_format
         except ImportError:
             logger.debug("edge-tts not installed; falling back to VOICE_TTS_COMMAND")

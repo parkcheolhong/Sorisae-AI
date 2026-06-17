@@ -24,6 +24,7 @@ import * as Speech from 'expo-speech';
 import Constants from 'expo-constants';
 import { VoIPCallClient, CallInitResponse, VoIPChatMessage, VoIPVoiceTranslationMessage } from '../services/voipCallClient';
 import { getVoIPToneService } from '../services/voipToneService';
+import { resolveVoipTtsLocale } from '../constants/voipLanguageLocales';
 import { translateText, voiceTranslate } from '../api/translate';
 import { resolveVoipSignalingServerUrl } from '../utils/voipSignalingUrl';
 import {
@@ -53,14 +54,17 @@ import {
     estimateVoiceRelayPlaybackMs,
     isVoiceRelayListenActive,
     markRemotePlaybackFinished,
-    resolveVoiceRelayLanguagePair,
-    normalizeLangCode,
     shouldDeferVoiceRelayFlush,
     shouldPlayRemoteVoiceRelay,
     shouldSendVoiceRelaySegment,
     shouldStartVoiceRelayCapture,
     type VoiceRelayTurnSnapshot,
 } from '../features/voip-voice-relay/voiceRelayTurnController';
+import {
+    DESIGNATED_LANGUAGE_MISMATCH_MESSAGE,
+    detectedLanguageMatchesDesignated,
+    textMatchesDesignatedLanguage,
+} from '../features/translation/designatedLanguage';
 import {
     estimateRecordingRmsDb,
     mapFileRmsToPseudoMeterDb,
@@ -168,27 +172,6 @@ const buildVoiceRelayRecordingOptions = (): Audio.RecordingOptions => ({
     },
     web: Audio.RecordingOptionsPresets.HIGH_QUALITY.web,
 });
-const TTS_LANGUAGE_MAP: Record<string, string> = {
-    ar: 'ar-SA',
-    de: 'de-DE',
-    en: 'en-US',
-    es: 'es-ES',
-    fr: 'fr-FR',
-    hi: 'hi-IN',
-    id: 'id-ID',
-    it: 'it-IT',
-    ja: 'ja-JP',
-    ko: 'ko-KR',
-    pt: 'pt-PT',
-    ru: 'ru-RU',
-    th: 'th-TH',
-    tr: 'tr-TR',
-    vi: 'vi-VN',
-    zh: 'zh-CN',
-    'zh-cn': 'zh-CN',
-    'zh-tw': 'zh-TW',
-};
-
 interface VoIPCallScreenProps {
     callInitResponse: CallInitResponse;
     calleePhone: string;
@@ -610,8 +593,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     }, [apiBaseUrl]);
 
     const resolveTtsLanguage = useCallback((langCode: string) => {
-        const normalized = langCode.trim().toLowerCase();
-        return TTS_LANGUAGE_MAP[normalized] || langCode || 'ko-KR';
+        return resolveVoipTtsLocale(langCode);
     }, []);
 
     const clearVoiceRelayTimers = useCallback(() => {
@@ -728,10 +710,17 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }));
     }, [callInitResponse.call_id]);
 
+    const releaseRemoteAudioSuppressionIfAllowed = useCallback(() => {
+        if (voiceRelayServerReady && voiceRelayEnabledRef.current) {
+            return;
+        }
+        setRemoteAudioSuppressed(false);
+    }, [setRemoteAudioSuppressed, voiceRelayServerReady]);
+
     const finishRemoteVoiceRelayPlayback = useCallback(() => {
         voiceRelayTurnRef.current = markRemotePlaybackFinished(voiceRelayTurnRef.current);
-        setRemoteAudioSuppressed(false);
-    }, [setRemoteAudioSuppressed]);
+        releaseRemoteAudioSuppressionIfAllowed();
+    }, [releaseRemoteAudioSuppressionIfAllowed]);
 
     const resolvePlaybackExtension = useCallback((audioFormat?: string) => {
         const normalized = String(audioFormat || '').toLowerCase();
@@ -1030,37 +1019,24 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             const transcript = collapseRepeatedRelayPhrases(rawTranscript);
             let translatedText = collapseRepeatedRelayPhrases(rawTranslatedText);
             const detectedLang = String(result.detected_language || result.from || localSourceLang).trim();
-            const relayLangs = resolveVoiceRelayLanguagePair(localSourceLang, localTargetLang, detectedLang);
-            const relaySourceLang = String(relayLangs.sourceLang || result.from || localSourceLang).trim();
-            const relayTargetLang = String(relayLangs.targetLang || result.to || localTargetLang).trim();
-            const initialTargetLang = normalizeLangCode(result.to || localTargetLang);
             if (
-                relayTargetLang !== initialTargetLang
-                && transcript
-                && relaySourceLang !== relayTargetLang
+                !detectedLanguageMatchesDesignated(detectedLang, localSourceLang)
+                || !textMatchesDesignatedLanguage(transcript, localSourceLang)
             ) {
-                try {
-                    const retarget = await translateText(
-                        transcript,
-                        relaySourceLang,
-                        relayTargetLang,
-                        8000,
-                        { regionHint },
-                    );
-                    const retargetedText = collapseRepeatedRelayPhrases(String(retarget.translated || '').trim());
-                    if (retargetedText) {
-                        translatedText = retargetedText;
-                    }
-                } catch (retargetError: any) {
-                    console.warn('[VoIPScreen] Voice relay retarget translate failed', {
-                        callId: callInitResponse.call_id,
-                        relaySourceLang,
-                        relayTargetLang,
-                        initialTargetLang,
-                        error: retargetError?.message || 'unknown',
-                    });
-                }
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_VOICE_RELAY_SKIP',
+                    call_id: callInitResponse.call_id,
+                    reason: 'designated_language_mismatch',
+                    designated_lang: localSourceLang,
+                    detected_lang: detectedLang,
+                    transcript,
+                    timestamp: new Date().toISOString(),
+                }));
+                setVoiceRelayError(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
+                return;
             }
+            const relaySourceLang = localSourceLang;
+            const relayTargetLang = localTargetLang;
             const chunkMeta = voiceRelayChunkMetaRef.current ?? {
                 utteranceId: voiceRelayUtteranceIdRef.current,
                 chunkIndex: voiceRelaySegmentStateRef.current.chunkIndex,
@@ -1365,7 +1341,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             if (voiceRelayRecordingRemoteSuppressedRef.current) {
                 voiceRelayRecordingRemoteSuppressedRef.current = false;
                 if (!voiceRelayPlaybackRef.current) {
-                    setRemoteAudioSuppressed(false);
+                    releaseRemoteAudioSuppressionIfAllowed();
                 }
             }
             if (uri && processSegment) {
@@ -1379,7 +1355,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             if (voiceRelayRecordingRemoteSuppressedRef.current) {
                 voiceRelayRecordingRemoteSuppressedRef.current = false;
                 if (!voiceRelayPlaybackRef.current) {
-                    setRemoteAudioSuppressed(false);
+                    releaseRemoteAudioSuppressionIfAllowed();
                 }
             }
             try {
@@ -1388,7 +1364,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 console.warn('[VoIPScreen] Failed to restore WebRTC mic after voice relay segment', restoreErr);
             }
         }
-    }, [clearVoiceRelayTimers, processVoiceRelaySegment, restoreWebRtcMicIfVoiceRelayInactive, setRemoteAudioSuppressed, stopVoiceRelaySileroMonitor]);
+    }, [clearVoiceRelayTimers, processVoiceRelaySegment, releaseRemoteAudioSuppressionIfAllowed, restoreWebRtcMicIfVoiceRelayInactive, stopVoiceRelaySileroMonitor]);
 
     const flushVoiceRelaySegment = useCallback(async (reason: string, isFinal: boolean) => {
         if (voiceRelayFlushInProgressRef.current || !voiceRelayRecordingRef.current) {
@@ -1988,6 +1964,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
                 });
 
+                boundClient.onChatMessageRejected((detail: string) => {
+                    setChatError(detail);
+                });
+
                 boundClient.onChatMessage((message: VoIPChatMessage) => {
                     const handlers = voipCallInitHandlersRef.current;
                     if (!handlers) {
@@ -2307,6 +2287,12 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     ]);
 
     useEffect(() => {
+        if (voiceRelayServerReady && voiceRelayEnabled && connectionState === 'connected') {
+            setRemoteAudioSuppressed(true);
+        }
+    }, [connectionState, setRemoteAudioSuppressed, voiceRelayEnabled, voiceRelayServerReady]);
+
+    useEffect(() => {
         isSpeakerOnRef.current = isSpeakerOn;
     }, [isSpeakerOn]);
 
@@ -2622,6 +2608,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const handleSendChat = useCallback(() => {
         const text = chatDraft.trim();
         if (!text) {
+            return;
+        }
+        if (!textMatchesDesignatedLanguage(text, localSourceLang)) {
+            setChatError(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
             return;
         }
 

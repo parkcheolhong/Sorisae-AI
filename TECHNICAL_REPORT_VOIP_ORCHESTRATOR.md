@@ -1,8 +1,8 @@
 # 기술서 — WorldLinco VoIP · Voice Relay Orchestrator · 오케스트레이터
 
 > **최종 갱신:** 2026-06-17  
-> **대상 브랜치/커밋:** `gpu-llm-server-awq-20260427` · tag **`v1.0.45`** @ build **74**  
-> **현재 운영 APK:** `1.0.45` / **versionCode 74** (`com.parkcheolhong.worldlinco`)  
+> **대상 브랜치/커밋:** `feat/worldlinco-build90-92` · **운영 APK build 92**  
+> **현재 운영 APK:** `1.0.62` / **versionCode 92** (`com.parkcheolhong.worldlinco`)  
 > **관련 문서:**  
 > - `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` — Voice Relay 파이프라인·파라미터·구조도  
 > - `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md` — 실기기 검증·증적 인덱스  
@@ -388,7 +388,21 @@ node tests/orchestrator-speech.test.mjs
 | **스크립트** | `scripts/worldlinco_lte_matrix_verify.ps1` — `-InitTemplate` · `-AppendEvidence` · health + audit `client_network` |
 | **테스트** | `test_signup_email_otp.py` (email+phone) · `test_sms_dispatch.py` · `test_voip_backend_consistency` matrix |
 
-**실기기 LTE 매트릭스 (D-0-5 미완 — 증적 필요):**
+**실기기 LTE 매트릭스 (D-0-5 진행 중 — 2026-06-17):**
+
+| 시나리오 | 성공 runs | call_id | 비고 |
+|----------|-----------|---------|------|
+| `wifi_lte` | 1/2 | `call-ef1952c3714a` | Tab WiFi → S10 WiFi · 자동 deeplink 수락 · relay PASS |
+| `lte_lte` | 1/2 | `call-897f88102b80` | Tab KT LTE ↔ S908N SKTelecom LTE · **수동 수락** · 양방향 relay 5+ rounds PASS |
+| `wifi_wifi` | 0/2 (매트릭스 CSV) | — | E-3-1 WiFi 5/5는 별도 증적 |
+
+**실패 참고:** `call-71f376399558` — LTE↔LTE 자동 deeplink 수락 타임아웃 (`VOIP_PENDING_CALL_DISMISSED_MISSED`).
+
+**증적:** `evidence/lte-matrix/lte_matrix_runs.csv` · `evidence/lte-matrix/manual_call_check_20260617/`
+
+**일반전화(PSTN) 통역 착신 — 이번 세션 미검증:** 위 통화는 `resolved_mode=voip_full_auto`(앱 WebRTC)입니다. UI 레일 `pstn_assist`는 메뉴명이며 PSTN 발신/착신이 아닙니다. 일반전화 착신·`phone_dialer_required`·FCM 백그라운드 push는 §10.2·D-1-3 후속.
+
+필드 테스트 절차 (잔여 runs):
 
 1. A단말: WiFi OFF · LTE/5G ON → 배너 **셀룰러** 확인  
 2. B단말: WiFi ON (또는 반대 조합)  
@@ -431,6 +445,107 @@ $env:WORLDLINGO_TEST_TOKEN='<jwt>'
 3. (선택) **지문 빠른 로그인 설정** → SecureStore 암호화 저장 → 다음 로그인 **👆 지문 로그인**
 
 **운영 메모:** SMTP 미설정 시 dev OTP 힌트(`dev_otp_hint`) 표시. 관리자 웹과 WorldLinco APK는 **별도 세션** — 동일 `users` 테이블·비밀번호 공유.
+
+### 0.15 LTE↔LTE 실기기 VoIP · Voice Relay 증적 (2026-06-17)
+
+| 항목 | 내용 |
+|------|------|
+| **call_id** | `call-897f88102b80` |
+| **APK** | v1.0.47 / versionCode **77** |
+| **발신 (caller)** | Tab `R83W70QY11H` · `nado-000226` · KT LTE (WiFi off) |
+| **착신 (callee)** | S908N `R3CT209943N` · `nado-000001` · SKTelecom 4G LTE (WiFi off) |
+| **통화 모드** | `requested_mode` / `resolved_mode`: **`voip_full_auto`** (앱 WebRTC) |
+| **착신 경로** | `presence_socket` → `pending_call_poll` → `VOIP_INCOMING_ALERT_*` → **`manual_accept`** → `VOIP_INCOMING_ACCEPT_API_OK` |
+| **WebRTC** | Tab connected ~351ms · S908N Answer/ICE after accept ~1s |
+| **Voice Relay** | 양방향 `VOIP_VOICE_RELAY_SEGMENT_STARTED` / `FLUSH` **5+ rounds** · `device_speech` TTS |
+| **로그** | `evidence/lte-matrix/manual_call_check_20260617/tab_call-897f88102b80.log` · `s908n_call-897f88102b80.log` |
+| **CSV** | `evidence/lte-matrix/lte_matrix_runs.csv` — `lte_lte` row appended |
+
+**착신 상태 정리 (혼동 방지):**
+
+| 착신 유형 | 2026-06-17 검증 |
+|-----------|-----------------|
+| **앱 보이스톡 착신** (친구 발신, 앱 온라인) | ✅ `call-897f88102b80` — 벨소리·진동·수락·connected·relay |
+| **FCM 백그라운드 착신 push** | ❌ 미검증 (D-1-3) |
+| **일반전화(PSTN) 통역 착신** | ❌ 미검증 — `VOIP_ENABLE_PSTN=false` · SIP/게이트웨이 §10.2 |
+
+**자동 수락 한계:** 동일 세션 `call-71f376399558` — LTE에서 deeplink auto-accept 타임아웃. LTE↔LTE는 **수동 수락**이 안정 경로.
+
+### 0.16 build 90–92 — 지정 언어 · 50개국 VoIP · 여행 대면 통역 (2026-06-17)
+
+> **체크리스트:** [`docs/checklists/worldlinco-build90-92-checklist.md`](docs/checklists/worldlinco-build90-92-checklist.md)
+
+| Build | APK | 핵심 변경 |
+|-------|-----|-----------|
+| **90** | `1.0.60` / **90** | 친구 목록 아코디언·스크롤 UX · VoIP/채팅 **지정 언어(`preferred_language`) 강제** |
+| **91** | `1.0.61` / **91** | **50개국** STT whisper hint + Edge TTS + expo-speech locale SSOT |
+| **92** | `1.0.62` / **92** | 여행 대면 통역 **대화 ON/OFF** · 프로필↔GPS 양방향 자동 통역 |
+
+#### 0.16.1 지정 언어 정합성 (VoIP · 채팅)
+
+| 계층 | 파일 | 동작 |
+|------|------|------|
+| SSOT | `backend/designated_language.py` | 텍스트·STT detected ↔ `preferred_language` 검증 |
+| VoIP STT | `backend/llm/router.py` | `detected ≠ from_lang` → **422** (VoIP relay 전용) |
+| VoIP WS | `backend/marketplace/nadotongryoksa_voip_router.py` | relay 전 designated gate · `chat_message_rejected` |
+| 채팅 REST | `backend/marketplace/nadotongryoksa_chat_router.py` | POST body 언어 불일치 → **422** |
+| 모바일 | `VoIPCallScreen.tsx` · `ChatRoomScreen.tsx` | 클라이언트 선행 검증 |
+
+**원칙:** VoIP·채팅은 **프로필 지정 언어만** 송수신. 설정에서 언어 변경 가능.
+
+#### 0.16.2 50개국 VoIP STT/TTS SSOT (build 91)
+
+| 자산 | SSOT | 소비처 |
+|------|------|--------|
+| Whisper hint · initial prompt | `backend/voip_language_locales.py` | `voice_gateway.py` |
+| Edge neural voice | 동일 | `_synthesize_tts(target_lang)` |
+| expo-speech locale | `apps/.../voipLanguageLocales.ts` | `VoIPCallScreen` · TTS playback |
+| 감사 | `scripts/audit_voip_language_coverage.py` | 50/50 parity gate |
+
+```powershell
+python scripts/audit_voip_language_coverage.py
+pytest backend/tests/test_voip_language_locales.py backend/tests/test_designated_language.py
+```
+
+#### 0.16.3 여행 대면 통역 — bilingual face mode (build 92)
+
+**UX:** 여행 홈(`activeRailSection=null`) · **대화 통역 ON/OFF** · 수동 마이크 버튼 없음.
+
+| 역할 | 소스 | 비고 |
+|------|------|------|
+| **A (내 언어)** | 프로필 `preferred_language` | 읽기 전용 칩 |
+| **B (상대 언어)** | GPS 국가 → `resolveLangFromCountry` · 수동 override | 칩 탭으로 변경 |
+| **감지** | Whisper bilingual STT | `lang_a` / `lang_b` 힌트 순차 시도 |
+| **라우팅** | `_resolve_bilingual_route` | A 감지 → B 번역·TTS · B 감지 → A |
+
+**API (`bilingual_mode=true`):** VoIP designated-language 422 **미적용** — A/B 쌍 기준 양방향.
+
+```mermaid
+flowchart LR
+  Profile["A: 프로필 언어"]
+  GPS["B: GPS/수동"]
+  MIC["공용 마이크"]
+  STT["bilingual STT"]
+  TR["NadoTranslator"]
+  TTS["TTS"]
+
+  MIC --> STT
+  Profile --- STT
+  GPS --- STT
+  STT -->|"detected=A"| TR
+  STT -->|"detected=B"| TR
+  TR --> TTS
+```
+
+**배포:**
+
+```powershell
+docker compose build backend
+docker compose up -d backend
+pwsh -File scripts\publish_worldlinco_apk.ps1
+```
+
+**APK:** `uploads/marketplace_local/apk/nadotongryoksa-v1.apk` → `/api/marketplace/apk/nadotongryoksa-v1.apk`
 
 ---
 
@@ -570,8 +685,9 @@ python -m pytest backend/tests/test_autonomous_orchestrator.py backend/tests/tes
 
 ### 4.4 FCM / PSTN (부분 구현)
 
-- FCM: `_send_incoming_call_push_invite`, service account / legacy key 경로
-- PSTN: `_is_pstn_gateway_configured()`, `phone_dialer_required` 폴백
+- FCM: `_send_incoming_call_push_invite`, service account / legacy key 경로 · backend v1 ready · **native token + 백그라운드 착신 push 실기기 미완** (D-1-3)
+- PSTN: `_is_pstn_gateway_configured()`, `phone_dialer_required` 폴백 — **일반전화 발신/착신 통역 미연동** (`VOIP_ENABLE_PSTN=false`)
+- **2026-06-17 구분:** 앱 보이스톡 착신(`voip_full_auto`, presence/poll)은 `call-897f88102b80`에서 PASS. UI `pstn_assist` 레일명 ≠ PSTN 회선 착신.
 - **테스트:** `test_voip_presence_push.py`, `test_voip_pstn.py`, `test_voip_turn_tokens.py`
 
 ### 4.5 voice_translation WS 릴레이 (서버)
@@ -779,16 +895,22 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 
 | 항목 | 값 |
 |------|-----|
-| versionName | **1.0.45** |
-| versionCode | **74** |
+| versionName | **1.0.47** |
+| versionCode | **77** |
 | package | `com.parkcheolhong.worldlinco` |
 | canonical | `uploads/marketplace_local/apk/nadotongryoksa-v1.apk` |
-| versioned | `uploads/marketplace_local/apk/nadotongryoksa-v1.0.45-build74-current.apk` |
+| versioned | `uploads/marketplace_local/apk/nadotongryoksa-v1.0.47-build77-current.apk` |
 | manifest | `uploads/marketplace_local/apk/nadotongryoksa-v1.manifest.json` |
-| 빌드 스크립트 | `scripts/publish_worldlinco_apk.ps1` |
+| 빌드 스크립트 | `scripts/publish_worldlinco_apk.ps1` (로컬 Gradle arm64-only ~64MB) · `scripts/fetch_eas_release_apk.ps1` (EAS fat APK) |
 | 다운로드 (공개 latest) | `GET /api/marketplace/latest.apk` |
 | manifest API | `GET /api/marketplace/apk/worldlinco/manifest` |
 | 다운로드 (구매/토큰) | `GET /api/marketplace/apk/nadotongryoksa-v1.apk?test_token=...` |
+
+**2026-06-17 배포 확인 (build 77):**
+- APK size: **~64.2 MB** (arm64-v8a only, local Gradle)
+- 기능: 비밀번호 찾기/변경 · 지문 인증 · NetInfo LTE 배너
+- LTE 매트릭스 실기기: Tab `R83W70QY11H` · S908N `R3CT209943N` — versionCode **77** · `call-897f88102b80` PASS
+- EAS build `80d4d4b0` (189MB, 4 ABIs) — marketplace에는 **로컬 arm64 빌드** 우선 배포
 
 **2026-06-16 배포 확인 (build 74):**
 - APK size: **~67.0 MB**
@@ -904,12 +1026,12 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 - [x] **E-3-8 strict** ja→ko · `target_lang=ko` · Tab 한국어 TTS (build **73**)
 - [~] **E-3-4** 지인·커뮤니티 실사용 **10명** — **보류**
 - [x] **E-3-5** git tag **`v1.0.45`** @ build 74 · **`v1.0.46`** profile API (2026-06-16)
-- [~] **LTE 베타 QA 매트릭스** — 앱 배너·audit·health·script ✅ · **실기기 6+ runs 증적** 미완 (D-0-5)
+- [~] **LTE 베타 QA 매트릭스** — 앱 배너·audit·health·script ✅ · **실기기 2/6+ runs** (`wifi_lte` 1 · `lte_lte` 1) · D-0-5 잔여: 각 시나리오 2회+
 - [ ] `voip_boundary_cap_defer_test.ps1` cap phase **summary.json PASS** 안정화
 
 ### 10.2 P3 (체크리스트·설계 잔여)
-- FCM 착신 push 완전 연동 (Firebase 앱 초기화)
-- PSTN 다이얼아웃 (통신사/SIP)
+- FCM 착신 push 완전 연동 (Firebase 앱 초기화) — **앱 폴링 착신은 2026-06-17 PASS, FCM 백그라운드는 미완**
+- **일반전화(PSTN) 통역 착신/발신** (통신사/SIP) — `VOIP_ENABLE_PSTN=false` · `phone_dialer_required` 폴백만 구현
 - TURN HMAC 단기 토큰 (`test_voip_turn_tokens.py` 기반)
 
 ### 10.3 Voice Relay Phase 2~3

@@ -135,6 +135,7 @@ export class VoIPCallClient {
     private onStateChangeCallback: ((state: string) => void) | null = null;
     private onRemoteStreamCallback: ((stream: any) => void) | null = null;
     private onChatMessageCallback: ((message: VoIPChatMessage) => void) | null = null;
+    private onChatMessageRejectedCallback: ((detail: string) => void) | null = null;
     private onVoiceTranslationCallback: ((message: VoIPVoiceTranslationMessage) => void) | null = null;
 
     constructor(config: VoIPCallConfig) {
@@ -154,6 +155,10 @@ export class VoIPCallClient {
 
     onChatMessage(callback: (message: VoIPChatMessage) => void): void {
         this.onChatMessageCallback = callback;
+    }
+
+    onChatMessageRejected(callback: (detail: string) => void): void {
+        this.onChatMessageRejectedCallback = callback;
     }
 
     onVoiceTranslation(callback: (message: VoIPVoiceTranslationMessage) => void): void {
@@ -766,6 +771,13 @@ export class VoIPCallClient {
                     break;
                 case 'candidate':
                     await this.handleICECandidate(message);
+                    break;
+                case 'chat_message_rejected':
+                    this.onChatMessageRejectedCallback?.(
+                        typeof message.detail === 'string' && message.detail.trim()
+                            ? message.detail.trim()
+                            : '지정 언어와 다른 메시지는 전송할 수 없습니다.',
+                    );
                     break;
                 case 'chat_message':
                     if (typeof message.text === 'string' && message.text.trim()) {

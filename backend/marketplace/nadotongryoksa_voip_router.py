@@ -31,6 +31,10 @@ from jose import JWTError, jwt
 
 from backend.database import SessionLocal, get_db
 from backend.auth import get_current_user, SECRET_KEY, ALGORITHM
+from backend.designated_language import (
+    DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+    text_matches_designated_language,
+)
 from backend.marketplace import models
 from backend.marketplace.call_mode_schema import (
     CallModeAuditEventCreate,
@@ -49,6 +53,10 @@ from backend.marketplace.services.call_mode_audit_service import (
     _deserialize_metadata,
     list_call_mode_events,
     record_call_mode_event,
+)
+from backend.marketplace.fcm_push import (
+    device_registrations as voip_device_registrations,
+    register_device_token,
 )
 
 try:
@@ -380,7 +388,6 @@ call_states: Dict[str, CallState] = {}
 connected_clients: Dict[str, WebSocket] = {}
 call_participants: Dict[str, Dict[str, WebSocket]] = {}
 online_voice_clients: Dict[str, WebSocket] = {}
-voip_device_registrations: Dict[int, List[Dict[str, str]]] = {}
 pending_signal_messages: Dict[str, Dict[str, List[dict]]] = {}
 signal_queue_alert_last_len: Dict[str, Dict[str, int]] = {}
 webrtc_peers: Dict[str, Any] = {}
@@ -838,7 +845,9 @@ async def _send_incoming_call_invite(
 
 
 async def _send_incoming_call_push_invite(
-    callee_voice_id: str, payload: dict
+    callee_voice_id: str,
+    payload: dict,
+    callee_user_id: Optional[int] = None,
 ) -> bool:
     server_key = os.getenv("FCM_SERVER_KEY", "").strip()
     service_account_info = _load_fcm_service_account_info()
@@ -847,7 +856,7 @@ async def _send_incoming_call_push_invite(
         os.getenv("FCM_PROJECT_ID", "").strip()
         or str((service_account_info or {}).get("project_id") or "").strip()
     )
-    if not topic:
+    if not topic and not callee_user_id:
         return False
 
     caller_label = (
@@ -856,61 +865,136 @@ async def _send_incoming_call_push_invite(
         or payload.get("caller_voice_id")
         or "월드링코 보이스톡"
     )
-    legacy_payload = {
-        "to": f"/topics/{topic}",
-        "priority": "high",
-        "data": {
-            key: _stringify_push_value(value)
-            for key, value in payload.items()
-            if value is not None
-        },
-        "notification": {
-            "title": "(월드링코)WorldLingo 보이스톡",
-            "body": f"{caller_label} 님이 보이스톡을 걸고 있습니다.",
-        },
+    data_payload = {
+        key: _stringify_push_value(value)
+        for key, value in payload.items()
+        if value is not None
     }
-    v1_payload = {
-        "message": {
-            "topic": topic,
-            "data": legacy_payload["data"],
-            "notification": legacy_payload["notification"],
-            "android": {"priority": "HIGH"},
+    data_payload.setdefault("type", "incoming_call")
+    data_payload.setdefault("caller_label", caller_label)
+    notification_body = {
+        "title": "(월드링코)WorldLingo 보이스톡",
+        "body": f"{caller_label} 님이 보이스톡을 걸고 있습니다.",
+    }
+    android_notification = {
+        "channel_id": "worldlinco_incoming_voip_v2",
+        "sound": "default",
+        "notification_priority": "PRIORITY_MAX",
+        "visibility": "PUBLIC",
+        "default_vibrate_timings": True,
+    }
+
+    def _build_v1_message(target: dict) -> dict:
+        return {
+            "message": {
+                **target,
+                "data": data_payload,
+                "notification": notification_body,
+                "android": {
+                    "priority": "HIGH",
+                    "notification": android_notification,
+                },
+            }
         }
-    }
+
+    token_targets: list[str] = []
+    if callee_user_id is not None:
+        for row in voip_device_registrations.get(int(callee_user_id), []):
+            token = str(row.get("fcm_token") or "").strip()
+            if token and token not in token_targets:
+                token_targets.append(token)
+
+    any_success = False
+    errors: list[str] = []
 
     try:
         if server_key:
-            status_code, response_body = await asyncio.to_thread(
-                _post_fcm_legacy,
-                server_key,
-                legacy_payload,
-            )
-            success = 200 <= status_code < 300 and (
-                '"message_id"' in response_body
-                or '"success":1' in response_body
-                or '"success": 1' in response_body
-            )
+            if topic:
+                legacy_payload = {
+                    "to": f"/topics/{topic}",
+                    "priority": "high",
+                    "data": data_payload,
+                    "notification": notification_body,
+                }
+                status_code, response_body = await asyncio.to_thread(
+                    _post_fcm_legacy,
+                    server_key,
+                    legacy_payload,
+                )
+                topic_ok = 200 <= status_code < 300 and (
+                    '"message_id"' in response_body
+                    or '"success":1' in response_body
+                    or '"success": 1' in response_body
+                )
+                any_success = any_success or topic_ok
+                if not topic_ok:
+                    errors.append(f"topic:{status_code}:{response_body[:200]}")
+            for token in token_targets:
+                legacy_payload = {
+                    "to": token,
+                    "priority": "high",
+                    "data": data_payload,
+                    "notification": notification_body,
+                }
+                status_code, response_body = await asyncio.to_thread(
+                    _post_fcm_legacy,
+                    server_key,
+                    legacy_payload,
+                )
+                token_ok = 200 <= status_code < 300 and (
+                    '"message_id"' in response_body
+                    or '"success":1' in response_body
+                    or '"success": 1' in response_body
+                )
+                any_success = any_success or token_ok
+                if not token_ok:
+                    errors.append(f"token:{status_code}:{response_body[:120]}")
         elif service_account_info and project_id:
-            status_code, response_body = await asyncio.to_thread(
-                _post_fcm_v1,
-                service_account_info,
-                project_id,
-                v1_payload,
-            )
-            success = 200 <= status_code < 300 and '"name"' in response_body
+            if topic:
+                status_code, response_body = await asyncio.to_thread(
+                    _post_fcm_v1,
+                    service_account_info,
+                    project_id,
+                    _build_v1_message({"topic": topic}),
+                )
+                topic_ok = 200 <= status_code < 300 and '"name"' in response_body
+                any_success = any_success or topic_ok
+                if not topic_ok:
+                    errors.append(f"topic:{status_code}:{response_body[:200]}")
+            for token in token_targets:
+                status_code, response_body = await asyncio.to_thread(
+                    _post_fcm_v1,
+                    service_account_info,
+                    project_id,
+                    _build_v1_message({"token": token}),
+                )
+                token_ok = 200 <= status_code < 300 and '"name"' in response_body
+                any_success = any_success or token_ok
+                if not token_ok:
+                    errors.append(f"token:{status_code}:{response_body[:120]}")
         else:
             return False
-        if not success:
+
+        if not any_success:
             logger.warning(
                 (
-                    "[VoIP] FCM push invite failed | voice_id=%s | "
-                    "status=%s | body=%s"
+                    "[VoIP] FCM push invite failed | voice_id=%s | user_id=%s | "
+                    "tokens=%s | errors=%s"
                 ),
                 callee_voice_id,
-                status_code,
-                response_body,
+                callee_user_id,
+                len(token_targets),
+                "; ".join(errors) or "no_targets",
             )
-        return success
+        else:
+            logger.info(
+                "[VoIP] FCM push invite sent | voice_id=%s | user_id=%s | topic=%s | tokens=%s",
+                callee_voice_id,
+                callee_user_id,
+                bool(topic),
+                len(token_targets),
+            )
+        return any_success
     except urllib.error.URLError as exc:
         logger.warning(
             "[VoIP] FCM push invite network error | voice_id=%s | error=%s",
@@ -1060,32 +1144,20 @@ async def register_voip_device(
         raise HTTPException(status_code=400, detail="fcm_token이 필요합니다.")
 
     platform = str(payload.platform or "android").strip().lower() or "android"
-    rows = voip_device_registrations.setdefault(user_id, [])
-    rows[:] = [
-        row
-        for row in rows
-        if str(row.get("fcm_token") or "") != token
-    ]
-    rows.append(
-        {
-            "fcm_token": token,
-            "platform": platform,
-            "registered_at": datetime.now(timezone.utc).isoformat(),
-        }
-    )
+    registered_tokens = register_device_token(user_id, token, platform)
     voice_id = _build_voice_id(current_user)
     logger.info(
         "[VoIP] Device registered | user_id=%s | voice_id=%s | platform=%s | tokens=%s",
         user_id,
         voice_id,
         platform,
-        len(rows),
+        registered_tokens,
     )
     return {
         "ok": True,
         "user_id": user_id,
         "voice_id": voice_id,
-        "registered_tokens": len(rows),
+        "registered_tokens": registered_tokens,
     }
 
 
@@ -1282,6 +1354,7 @@ async def initiate_voip_call(
         push_sent = await _send_incoming_call_push_invite(
             callee_voice_id or "",
             incoming_payload,
+            callee_user_id=int(app_callee.id) if app_callee is not None else None,
         )
         if not invite_sent and not push_sent:
             call_state.set_status("callee_offline")
@@ -2037,6 +2110,24 @@ def _persist_voip_chat_message(
 
     db = SessionLocal()
     try:
+        sender_user = (
+            db.query(models.User)
+            .filter(models.User.id == sender_user_id)
+            .first()
+        )
+        designated_language = _resolve_user_language(sender_user)
+        if (
+            designated_language
+            and not text_matches_designated_language(text, designated_language)
+        ):
+            logger.info(
+                "[VoIP] Chat designated-language mismatch | call_id=%s | sender_role=%s | designated=%s",
+                call_state.call_id,
+                sender_role,
+                designated_language,
+            )
+            return None
+
         room = _get_or_create_voip_direct_room(
             db,
             caller_user_id=call_state.caller_user_id,
@@ -2256,6 +2347,33 @@ async def websocket_signaling(
                     text = str(message.get("text") or "").strip()
                     if not text:
                         continue
+                    sender_user_id = (
+                        call_state.caller_user_id
+                        if normalized_role == "caller"
+                        else call_state.callee_user_id
+                    )
+                    if sender_user_id is not None:
+                        validation_db = SessionLocal()
+                        try:
+                            sender_user = (
+                                validation_db.query(models.User)
+                                .filter(models.User.id == sender_user_id)
+                                .first()
+                            )
+                            designated_language = _resolve_user_language(sender_user)
+                            if (
+                                designated_language
+                                and not text_matches_designated_language(text, designated_language)
+                            ):
+                                await websocket.send_json({
+                                    "type": "chat_message_rejected",
+                                    "reason": "designated_language_mismatch",
+                                    "detail": DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+                                    "sent_at": datetime.utcnow().isoformat(),
+                                })
+                                continue
+                        finally:
+                            validation_db.close()
                     client_sent_at = (
                         message.get("sent_at")
                         or datetime.utcnow().isoformat()

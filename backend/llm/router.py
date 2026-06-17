@@ -33,6 +33,9 @@ class _MobileVoiceTranslateRequest(BaseModel):
     to_lang: str = "en"
     region_hint: str | None = None
     language: str | None = None
+    bilingual_mode: bool = False
+    lang_a: str | None = None
+    lang_b: str | None = None
 
 
 def _decode_mobile_voice_audio(audio_base64: str) -> bytes:
@@ -98,6 +101,119 @@ def _transcribe_mobile_voice_audio(
     if last_error is not None:
         raise RuntimeError(str(last_error)) from last_error
     raise RuntimeError("음성이 감지되지 않았습니다. 다시 말씀해 주세요.")
+
+
+def _normalize_voice_lang_code(value: str | None) -> str | None:
+    normalized = str(value or "").strip().lower().replace("_", "-")
+    if not normalized:
+        return None
+    from backend.services.nadotongryoksa.translator import SUPPORTED_LANGUAGES
+
+    if normalized in SUPPORTED_LANGUAGES:
+        return normalized
+    base = normalized.split("-")[0]
+    return base if base in SUPPORTED_LANGUAGES else None
+
+
+def _voice_lang_codes_equivalent(left: str | None, right: str | None) -> bool:
+    normalized_left = _normalize_voice_lang_code(left)
+    normalized_right = _normalize_voice_lang_code(right)
+    if not normalized_left or not normalized_right:
+        return False
+    if normalized_left == normalized_right:
+        return True
+    return normalized_left.split("-")[0] == normalized_right.split("-")[0]
+
+
+def _transcribe_bilingual_voice_audio(
+    audio_bytes: bytes,
+    lang_a: str,
+    lang_b: str,
+) -> tuple[str, str | None, dict[str, object]]:
+    from backend.llm.voice_gateway import (
+        _normalize_voice_audio_bytes,
+        _normalize_whisper_language_hint,
+        classify_voice_relay_stt_trust,
+        _run_faster_whisper,
+    )
+
+    normalized_audio = _normalize_voice_audio_bytes(audio_bytes)
+    attempts: list[str | None] = []
+    for lang in (lang_a, lang_b):
+        hint = _normalize_whisper_language_hint(lang)
+        if hint and hint not in attempts:
+            attempts.append(hint)
+    if None not in attempts:
+        attempts.append(None)
+
+    last_error: Exception | None = None
+    best_payload: dict[str, object] | None = None
+    best_score = -999.0
+    for attempt_language in attempts:
+        try:
+            payload = _run_faster_whisper(
+                normalized_audio,
+                attempt_language,
+                "",
+            )
+            transcript = str(payload.get("transcript") or "").strip()
+            if not transcript:
+                continue
+            trust = str(payload.get("stt_trust") or classify_voice_relay_stt_trust(
+                transcript,
+                float(payload.get("avg_logprob", -5.0)),
+                float(payload.get("max_no_speech_prob", 1.0)),
+            ))
+            if trust == "low":
+                continue
+            detected = _normalize_voice_lang_code(
+                str(payload.get("detected_language") or "").strip() or None,
+            )
+            match_bonus = 0.0
+            if _voice_lang_codes_equivalent(detected, lang_a) or _voice_lang_codes_equivalent(
+                detected,
+                lang_b,
+            ):
+                match_bonus = 0.75
+            score = float(payload.get("avg_logprob", -5.0)) + match_bonus
+            if score > best_score:
+                best_score = score
+                best_payload = payload
+        except Exception as exc:
+            last_error = exc
+
+    if best_payload is not None:
+        transcript = str(best_payload.get("transcript") or "").strip()
+        detected = str(best_payload.get("detected_language") or "").strip() or None
+        return transcript, detected, best_payload
+
+    if last_error is not None:
+        raise RuntimeError(str(last_error)) from last_error
+    raise RuntimeError("음성이 감지되지 않았습니다. 다시 말씀해 주세요.")
+
+
+def _resolve_bilingual_route(
+    *,
+    detected_language: str | None,
+    transcript: str,
+    lang_a: str,
+    lang_b: str,
+) -> tuple[str, str] | None:
+    from backend.designated_language import text_matches_designated_language
+
+    detected = _normalize_voice_lang_code(detected_language)
+    if _voice_lang_codes_equivalent(detected, lang_a):
+        return lang_a, lang_b
+    if _voice_lang_codes_equivalent(detected, lang_b):
+        return lang_b, lang_a
+
+    a_matches = text_matches_designated_language(transcript, lang_a, min_match_ratio=0.55)
+    b_matches = text_matches_designated_language(transcript, lang_b, min_match_ratio=0.55)
+    if a_matches and not b_matches:
+        return lang_a, lang_b
+    if b_matches and not a_matches:
+        return lang_b, lang_a
+    return None
 
 
 def _is_likely_silence_hallucination(transcript: str, source_lang: str) -> bool:
@@ -297,6 +413,12 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
 
     from_lang = payload.from_lang.lower().strip()
     to_lang = payload.to_lang.lower().strip()
+    bilingual_mode = bool(payload.bilingual_mode)
+    lang_a = _normalize_voice_lang_code(payload.lang_a or from_lang) or from_lang
+    lang_b = _normalize_voice_lang_code(payload.lang_b or to_lang) or to_lang
+    if bilingual_mode:
+        from_lang = lang_a
+        to_lang = lang_b
 
     if from_lang not in SUPPORTED_LANGUAGES:
         raise HTTPException(
@@ -308,15 +430,20 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
             status_code=400,
             detail=f"지원하지 않는 도착 언어: {to_lang}",
         )
+    if bilingual_mode:
+        if lang_a == lang_b:
+            raise HTTPException(
+                status_code=400,
+                detail="대면 통역에는 서로 다른 두 언어가 필요합니다.",
+            )
+        if lang_a not in SUPPORTED_LANGUAGES or lang_b not in SUPPORTED_LANGUAGES:
+            raise HTTPException(
+                status_code=400,
+                detail="대면 통역 언어 쌍이 지원 범위를 벗어났습니다.",
+            )
 
     def normalize_voice_lang(value: str | None) -> str | None:
-        normalized = str(value or "").strip().lower().replace("_", "-")
-        if not normalized:
-            return None
-        if normalized in SUPPORTED_LANGUAGES:
-            return normalized
-        base = normalized.split("-")[0]
-        return base if base in SUPPORTED_LANGUAGES else None
+        return _normalize_voice_lang_code(value)
 
     transcript = (payload.transcript or "").strip()
     detected_language = normalize_voice_lang(
@@ -332,15 +459,23 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         try:
-            language_hint = payload.language
-            if language_hint is None or not str(language_hint).strip() or str(language_hint).strip().lower() == "auto":
-                language_hint = from_lang
-            transcript, detected_language, stt_meta = await asyncio.to_thread(
-                _transcribe_mobile_voice_audio,
-                audio_bytes,
-                language_hint,
-                from_lang,
-            )
+            if bilingual_mode:
+                transcript, detected_language, stt_meta = await asyncio.to_thread(
+                    _transcribe_bilingual_voice_audio,
+                    audio_bytes,
+                    lang_a,
+                    lang_b,
+                )
+            else:
+                language_hint = payload.language
+                if language_hint is None or not str(language_hint).strip() or str(language_hint).strip().lower() == "auto":
+                    language_hint = from_lang
+                transcript, detected_language, stt_meta = await asyncio.to_thread(
+                    _transcribe_mobile_voice_audio,
+                    audio_bytes,
+                    language_hint,
+                    from_lang,
+                )
         except Exception as exc:
             message = str(exc)
             status_code = 422 if (
@@ -353,28 +488,42 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
             ) from exc
 
     detected_from_lang = normalize_voice_lang(detected_language)
-    effective_from_lang = detected_from_lang or from_lang
+    if not detected_from_lang:
+        detected_from_lang = normalize_voice_lang(from_lang)
 
-    def _resolve_voice_relay_target(
-        client_from: str,
-        client_to: str,
-        detected: str | None,
-    ) -> str:
-        if not detected or detected == client_from:
-            return client_to
-        if detected == client_to:
-            return client_from
-        return client_to
-
-    effective_to_lang = _resolve_voice_relay_target(from_lang, to_lang, detected_from_lang)
-    if detected_from_lang and detected_from_lang != from_lang:
-        logger.warning(
-            "[voice-translate] stt language mismatch client_from=%s detected=%s — relay %s→%s",
-            from_lang,
-            detected_from_lang,
-            effective_from_lang,
-            effective_to_lang,
+    if bilingual_mode:
+        routed = _resolve_bilingual_route(
+            detected_language=detected_from_lang,
+            transcript=transcript,
+            lang_a=lang_a,
+            lang_b=lang_b,
         )
+        if routed is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"{lang_a}/{lang_b} 중 하나로 말씀해 주세요. "
+                    "감지된 언어가 대면 통역 언어 쌍과 일치하지 않습니다."
+                ),
+            )
+        effective_from_lang, effective_to_lang = routed
+    else:
+        if detected_from_lang and not _voice_lang_codes_equivalent(detected_from_lang, from_lang):
+            logger.warning(
+                "[voice-translate] designated language mismatch client_from=%s detected=%s",
+                from_lang,
+                detected_from_lang,
+            )
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "지정 언어와 다른 언어가 감지되었습니다. "
+                    "프로필에서 설정한 언어로만 말씀해 주세요. "
+                    "필요하면 설정에서 언어를 변경할 수 있습니다."
+                ),
+            )
+        effective_from_lang = from_lang
+        effective_to_lang = to_lang
 
     # Silence hallucination filtering is applied on mobile for meter-dead / fixed-interval
     # captures only. Backend accepts short natural utterances from real speech segments.
@@ -448,6 +597,7 @@ async def mobile_voice_translate(payload: _MobileVoiceTranslateRequest):
             ) = await asyncio.to_thread(
                 _synthesize_tts,
                 translated,
+                effective_to_lang,
             )
             if synthesized_audio_base64 and str(
                 synthesized_audio_format or ""
