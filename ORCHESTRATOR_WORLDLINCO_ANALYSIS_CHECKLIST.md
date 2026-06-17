@@ -318,6 +318,8 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 ### D-0. 인증·통신 기반 (실전 필수)
 
+> **베타 UX 원칙:** 테스터에게 “미완성 베타” 인상을 주지 않습니다. OTP·연결 상태·가입 문구는 **완성된 서비스 톤**으로 표시하고, QA/필드 테스트 힌트는 **디버그 모드에서만** 노출합니다.
+
 - [x] **D-0-1) 회원가입 이메일 OTP** — `POST /api/auth/signup/request-code` → `/confirm` · legacy `/signup` → 428.
 - [x] **D-0-2) 회원가입 전화 OTP** — `verificationChannel=phone` + `phone_number` · Twilio(`TWILIO_*`) 또는 dev-log · `User.phone_number` 저장.
 - [x] **D-0-3) 친구 수기 등록 OTP** — `/api/friends/invites/request-code` → `/confirm`.

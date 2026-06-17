@@ -52,12 +52,20 @@ def _normalize_phone(phone: Optional[str]) -> Optional[str]:
 
 
 def _dispatch_email_otp(email: str, code: str, purpose: str) -> None:
-    logger.info(
-        "[CONTACT_OTP] channel=email purpose=%s target=%s code=%s",
-        purpose,
-        email,
-        code,
-    )
+    from backend.services.email_dispatch import dispatch_email_otp
+
+    try:
+        dispatch_email_otp(email=email, code=code, purpose=purpose)
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "[CONTACT_OTP] channel=email purpose=%s target=%s dispatch_error=%s",
+            purpose,
+            email,
+            exc,
+        )
+        raise RuntimeError("이메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.") from exc
 
 
 def _dispatch_phone_otp(phone: str, code: str, purpose: str) -> None:
@@ -123,9 +131,17 @@ def start_verification_session(
     }
 
     if normalized_channel == "email" and email:
-        _dispatch_email_otp(email, code, purpose)
+        try:
+            _dispatch_email_otp(email, code, purpose)
+        except RuntimeError as exc:
+            _SESSIONS.pop(session_token, None)
+            raise exc
     if normalized_channel == "phone" and phone:
-        _dispatch_phone_otp(phone, code, purpose)
+        try:
+            _dispatch_phone_otp(phone, code, purpose)
+        except RuntimeError as exc:
+            _SESSIONS.pop(session_token, None)
+            raise exc
 
     response: Dict[str, Any] = {
         "sessionToken": session_token,

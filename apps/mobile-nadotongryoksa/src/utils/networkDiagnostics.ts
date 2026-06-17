@@ -11,6 +11,11 @@ export type NetworkDiagnosticsSnapshot = {
     ssid: string | null;
     label: string;
     isAccurateVoipTestReady: boolean;
+    /** 사용자-facing 연결 안내 (베타에서도 안심 톤) */
+    statusMessage: string;
+    /** QA/필드 테스트용 힌트 — UI 기본 숨김 */
+    fieldTestHint: string | null;
+    /** 실제 문제(오프라인 등)만 경고 */
     warningMessage: string | null;
 };
 
@@ -92,10 +97,22 @@ export function buildNetworkDiagnosticsSnapshot(state: NetInfoLikeState | null):
     const label = formatNetworkTransportLabel({ transport, cellularGeneration });
 
     let warningMessage: string | null = null;
+    let statusMessage: string;
+    let fieldTestHint: string | null = null;
+
     if (!isConnected || isInternetReachable === false) {
-        warningMessage = '인터넷 연결이 없습니다. WiFi 또는 LTE/5G 데이터를 켜고 다시 시도하세요.';
+        warningMessage = '인터넷 연결이 없습니다. WiFi 또는 모바일 데이터를 켠 뒤 다시 시도해 주세요.';
+        statusMessage = '연결 없음';
+    } else if (transport === 'cellular') {
+        statusMessage = 'LTE/5G(셀룰러) 연결됨 — VoIP·채팅 이용 가능';
+        fieldTestHint = '실전 통신 QA: WiFi↔LTE 조합도 함께 확인하면 NAT·전환 이슈를 잡을 수 있습니다.';
     } else if (transport === 'wifi') {
-        warningMessage = 'WiFi만으로는 이동통신(NAT·전환·지연) 버그를 놓칠 수 있습니다. 정확한 실전 테스트를 위해 LTE/5G(셀룰러) 데이터를 켜고 WiFi↔LTE 매트릭스로 검증하세요.';
+        statusMessage = 'WiFi 연결됨 — VoIP·채팅 이용 가능';
+        fieldTestHint = '실전 통신 QA: LTE/5G 데이터 경로도 함께 확인해 주세요.';
+    } else if (transport === 'ethernet') {
+        statusMessage = '유선 네트워크 연결됨 — VoIP·채팅 이용 가능';
+    } else {
+        statusMessage = '네트워크 연결됨 — VoIP·채팅 이용 가능';
     }
 
     return {
@@ -107,6 +124,8 @@ export function buildNetworkDiagnosticsSnapshot(state: NetInfoLikeState | null):
         ssid,
         label,
         isAccurateVoipTestReady: isConnected && transport === 'cellular',
+        statusMessage,
+        fieldTestHint,
         warningMessage,
     };
 }

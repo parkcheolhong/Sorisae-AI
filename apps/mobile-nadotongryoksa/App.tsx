@@ -4518,11 +4518,13 @@ export default function App() {
                 setSignupOtpCode(response.devOtpHint);
             }
             setSignupStep('verify');
+            setLoginError('');
             logUiPressProbe('SIGNUP_REQUEST_CODE_SUCCESS', {
                 masked_target: response.maskedTarget,
+                verification_channel: response.verificationChannel,
             });
         } catch (e: any) {
-            setLoginError(e?.message || '이메일 인증 요청 실패');
+            setLoginError(e?.message || '인증 코드 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
             logUiPressProbe('SIGNUP_REQUEST_CODE_FAIL', {
                 error: e?.message || '이메일 인증 요청 실패',
             });
@@ -7936,13 +7938,13 @@ export default function App() {
                                     <Text style={styles.inlineAuthModeChipText}>{authModalMode === 'login' ? '회원가입 전환' : '로그인 전환'}</Text>
                                 </Pressable>
                             </View>
-                            <Text style={styles.inlineAuthHint}>
-                                {authModalMode === 'signup'
-                                    ? signupStep === 'verify'
-                                        ? '이메일 OTP 확인 전에도 프로필 언어·국가(국기) 선택은 유지됩니다. VoIP 연결 시 상대 ID에 이 값이 사용됩니다.'
-                                        : '가입 전 등록 이메일 OTP 인증이 필요합니다. 프로필 언어·국가(국기) 선택은 필수입니다.'
-                                    : '여행 통번역과 레일 서비스 사용을 위해 여기서 바로 로그인합니다.'}
-                            </Text>
+                        <Text style={styles.inlineAuthHint}>
+                            {authModalMode === 'signup'
+                                ? signupStep === 'verify'
+                                    ? `${signupMaskedTarget || loginEmail.trim()}으로 인증 코드를 보냈습니다. 프로필 언어·국가를 확인한 뒤 코드를 입력해 주세요.`
+                                    : '이메일 또는 전화로 본인 확인 후 가입이 완료됩니다. 프로필 언어·국가(국기)는 VoIP 통역 기준으로 저장됩니다.'
+                                : '여행 통번역과 레일 서비스 사용을 위해 여기서 바로 로그인합니다.'}
+                        </Text>
                             {authModalMode === 'signup' ? renderSignupAuthFields() : null}
                             {authModalMode !== 'signup' || signupStep === 'form' ? (
                                 <>
@@ -8665,7 +8667,7 @@ export default function App() {
                         <Text style={styles.sectionTitle}>💬 채팅 중심 통역 허브</Text>
                         <Text style={styles.sectionSub}>기본 사용은 채팅/번역채팅으로 두고, 실시간 VoIP 통역 통화는 프리미엄 구독으로 분리합니다.</Text>
                         <CallModePolicyBanner />
-                        <NetworkTestBanner snapshot={networkDiagnostics} />
+                        <NetworkTestBanner snapshot={networkDiagnostics} showFieldTestHints={AUTH_DEBUG_MARKER_ENABLED} />
                         <Text style={styles.songModeMetaText}>현재 통화 모드: {callModeLabel}</Text>
                         <View style={styles.voipQuickMetaRow}>
                             <Text style={styles.voipQuickMetaText}>현재 버전: {APP_VERSION_LABEL}</Text>
@@ -9727,8 +9729,8 @@ export default function App() {
                             {authModalMode === 'login'
                                 ? '기존 계정으로 바로 로그인합니다.'
                                 : signupStep === 'verify'
-                                    ? 'OTP 확인 전에도 프로필 언어·국가(국기) 선택 UI는 그대로 유지됩니다. VoIP는 상대 사용 언어 기준으로 연결됩니다.'
-                                    : `가입 전 이메일 OTP 인증이 필요합니다. 프로필 언어 ${getLangLabelText(signupPreferredLanguage)} / 국가 ${resolveCountryFlag(signupCountryCode)} ${signupCountryCode} 는 VoIP·채팅 통역 기준으로 저장됩니다.`}
+                                    ? `${signupMaskedTarget || loginEmail.trim()}으로 인증 코드를 보냈습니다. 6자리 코드 입력 후 가입이 완료됩니다.`
+                                    : `이메일 또는 전화로 본인 확인 후 가입합니다. 프로필 ${getLangLabelText(signupPreferredLanguage)} / ${resolveCountryFlag(signupCountryCode)} ${signupCountryCode} 는 VoIP·채팅 통역 기준으로 저장됩니다.`}
                         </Text>
                         {showAuthDebugFloating ? (
                             <View style={styles.authDebugPanel} accessibilityLabel={`AUTH_DEBUG_STATE:${authDebugState}`} testID="auth-debug-modal-panel">

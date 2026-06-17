@@ -4,33 +4,31 @@ import type { NetworkDiagnosticsSnapshot } from '../utils/networkDiagnostics';
 
 interface Props {
     snapshot: NetworkDiagnosticsSnapshot;
+    /** QA/필드 테스트 힌트 — 기본 false (베타 사용자에게 불편한 경고 숨김) */
+    showFieldTestHints?: boolean;
 }
 
-export function NetworkTestBanner({ snapshot }: Props) {
-    const statusTone = snapshot.isAccurateVoipTestReady
-        ? styles.readyBanner
-        : snapshot.isConnected
-            ? styles.warningBanner
-            : styles.errorBanner;
+export function NetworkTestBanner({ snapshot, showFieldTestHints = false }: Props) {
+    const statusTone = snapshot.warningMessage
+        ? styles.errorBanner
+        : snapshot.transport === 'cellular'
+            ? styles.readyBanner
+            : styles.infoBanner;
 
     return (
         <View style={[styles.banner, statusTone]}>
-            <Text style={styles.title}>📶 네트워크 테스트 상태</Text>
+            <Text style={styles.title}>📶 연결 상태</Text>
             <Text style={styles.line}>
-                현재 경로: <Text style={styles.emphasis}>{snapshot.label}</Text>
+                {snapshot.statusMessage}
                 {snapshot.carrier ? ` · ${snapshot.carrier}` : null}
                 {snapshot.ssid ? ` · ${snapshot.ssid}` : null}
             </Text>
-            {snapshot.isAccurateVoipTestReady ? (
-                <Text style={styles.readyText}>
-                    셀룰러 데이터 연결됨 — LTE/5G 기준 실전 통신 테스트가 가능합니다.
-                </Text>
-            ) : snapshot.warningMessage ? (
+            {snapshot.warningMessage ? (
                 <Text style={styles.warningText}>{snapshot.warningMessage}</Text>
             ) : null}
-            <Text style={styles.matrixHint}>
-                권장 매트릭스: WiFi↔WiFi · WiFi↔LTE · LTE↔LTE (각 2회 이상)
-            </Text>
+            {showFieldTestHints && snapshot.fieldTestHint ? (
+                <Text style={styles.matrixHint}>{snapshot.fieldTestHint}</Text>
+            ) : null}
         </View>
     );
 }
@@ -47,9 +45,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#14261a',
         borderColor: '#2f6b45',
     },
-    warningBanner: {
-        backgroundColor: '#241f14',
-        borderColor: '#6b552f',
+    infoBanner: {
+        backgroundColor: '#151c28',
+        borderColor: '#2e3f58',
     },
     errorBanner: {
         backgroundColor: '#241418',
@@ -65,18 +63,9 @@ const styles = StyleSheet.create({
         color: '#b8c4dc',
         lineHeight: 18,
     },
-    emphasis: {
-        color: '#ffffff',
-        fontWeight: '700',
-    },
-    readyText: {
-        fontSize: 12,
-        color: '#8fd6a8',
-        lineHeight: 18,
-    },
     warningText: {
         fontSize: 12,
-        color: '#e0b56a',
+        color: '#f0a0a8',
         lineHeight: 18,
     },
     matrixHint: {

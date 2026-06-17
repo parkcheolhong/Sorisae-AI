@@ -5,7 +5,7 @@ import {
 } from '../utils/networkDiagnostics';
 
 describe('networkDiagnostics', () => {
-    it('labels WiFi-only paths as not accurate for VoIP field testing', () => {
+    it('shows friendly WiFi status for beta users without scary warnings', () => {
         const snapshot = buildNetworkDiagnosticsSnapshot({
             type: 'wifi',
             isConnected: true,
@@ -14,12 +14,14 @@ describe('networkDiagnostics', () => {
         });
 
         expect(snapshot.label).toBe('WiFi');
+        expect(snapshot.statusMessage).toMatch(/WiFi 연결됨/);
+        expect(snapshot.warningMessage).toBeNull();
+        expect(snapshot.fieldTestHint).toMatch(/LTE\/5G/);
         expect(snapshot.isAccurateVoipTestReady).toBe(false);
-        expect(snapshot.warningMessage).toMatch(/LTE\/5G/);
         expect(toClientNetworkContext(snapshot).transport).toBe('wifi');
     });
 
-    it('labels LTE/5G cellular as accurate for VoIP field testing', () => {
+    it('labels LTE/5G cellular as ready for VoIP field testing', () => {
         const snapshot = buildNetworkDiagnosticsSnapshot({
             type: 'cellular',
             isConnected: true,
@@ -31,12 +33,13 @@ describe('networkDiagnostics', () => {
         });
 
         expect(formatNetworkTransportLabel(snapshot)).toBe('LTE/5G (셀룰러)');
+        expect(snapshot.statusMessage).toMatch(/LTE\/5G/);
         expect(snapshot.isAccurateVoipTestReady).toBe(true);
         expect(snapshot.warningMessage).toBeNull();
         expect(toClientNetworkContext(snapshot).carrier).toBe('SKT');
     });
 
-    it('warns when offline', () => {
+    it('warns only when offline', () => {
         const snapshot = buildNetworkDiagnosticsSnapshot({
             type: 'none',
             isConnected: false,
