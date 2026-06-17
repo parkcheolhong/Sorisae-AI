@@ -1,13 +1,13 @@
 # 기술서 — WorldLinco VoIP · Voice Relay Orchestrator · 오케스트레이터
 
-> **최종 갱신:** 2026-06-16  
+> **최종 갱신:** 2026-06-17  
 > **대상 브랜치/커밋:** `gpu-llm-server-awq-20260427` · tag **`v1.0.45`** @ build **74**  
 > **현재 운영 APK:** `1.0.45` / **versionCode 74** (`com.parkcheolhong.worldlinco`)  
 > **관련 문서:**  
 > - `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` — Voice Relay 파이프라인·파라미터·구조도  
 > - `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md` — 실기기 검증·증적 인덱스  
 > - `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` — 초기 VoIP 설계안  
-> - `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` — 오케스트레이터/월드링코 분석  
+> - `docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md` — PART G Gap 클로저 · DoD-1~6  
 > - `docs/ORCHESTRATOR_API_NAMING.md` — ① autonomous vs ② orchestrate/chat 명명  
 > - `evidence/worldlinco-v1-launch/E3-8_KO_JA_VOIP_REPORT.md` — E-3-8 strict PASS  
 > - `evidence/worldlinco-v1-launch/BUILD73_LAUNCH_STATUS.md` — build 73 SSOT  
@@ -191,13 +191,217 @@ Backend [VoIP] Call accepted     call_id=call-0f44540d27f6 display_language=ko
 **재현:**
 
 ```powershell
+.\scripts\restart_backend_8000.ps1
 python scripts/run_11stage_orchestrator_probe.py --mode stub
 $env:OLLAMA_BASE="http://127.0.0.1:8008/v1"; python scripts/run_11stage_orchestrator_probe.py --mode live
-python scripts/run_11stage_orchestrator_probe.py --mode http --marketplace
-python scripts/run_11stage_orchestrator_probe.py --mode http --admin
+python scripts/run_11stage_orchestrator_probe.py --mode http --marketplace --base-url http://127.0.0.1:8000
+python scripts/run_11stage_orchestrator_probe.py --mode http --admin --base-url http://127.0.0.1:8000
 ```
 
 **배포:** `docker compose build backend && docker compose up -d backend` (`devanalysis114-backend` · `./backend` 볼륨 마운트)
+
+### 0.11 Live Flow Rail · Decision Panel · Playwright 계약 (2026-06-17)
+
+| 항목 | 내용 |
+|------|------|
+| **Live Flow Rail** | `frontend/frontend/shared/orchestrator-live-flow-rail.tsx` — 11 STAGE 레일 · intent/cmd 배지 · 에이전트 타임라인 · `data-testid=orchestrator-live-flow-rail` |
+| **Snapshot 빌더** | `frontend/frontend/lib/orchestrator-live-flow.ts` — `diagnostics` + `stage_run` → `OrchestratorLiveFlowSnapshot` |
+| **Decision Panel** | `frontend/frontend/shared/orchestrator-decision-card.tsx` — 제안 카드 · 승인 게이트 · `orchestrator-decision-*` / `orchestrator-approval-*` testids |
+| **마운트** | Admin `/admin/llm` · Marketplace `/marketplace/orchestrator` — `use-orchestrator-chat.ts` `liveFlowSnapshot` |
+| **HTTP SSOT** | Admin `POST /api/llm/orchestrate/chat` · Marketplace `customer-orchestrate/chat` → `run_autonomous_surface_chat` (G-1) |
+| **Playwright** | `tests/orchestrator-live-flow-rail.playwright.spec.ts` — **5/5 passed** · 전용 dev **3025** · mock auth |
+| **Discuss UI (G-4-2)** | `OrchestratorDiscussBanner` · StageCardPanel discuss 오버레이 · `resolveDiscussArchId` rail↔ARCH sync · `orchestrator-discuss-*` testids |
+| **Discuss 검증 (G-4-3)** | probe `discuss4_assertions` (stub/http + sync-inline) · Playwright `e2e:orchestrator-discuss4` (ARCH-004 running · ARCH-005 pending) |
+| **실행** | 루트 `npm run e2e:orchestrator-live-flow-rail` · `npm run e2e:orchestrator-discuss4` · 포트 충돌 시 `:fresh` |
+
+**Gap 체크리스트:** `docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md` (PART G-0~G-5 · DoD-1~6)
+
+### 0.12 PART G Gap 클로저 · DoD-1~6 · Edge TTS · :8000 SSOT (2026-06-17)
+
+> **마스터 Gap 체크리스트:** `docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md`  
+> **증적:** `evidence/orchestrator-visual-flow-20260617/` · `evidence/orchestrator-11stage-probe-20260617-*/`
+
+#### 0.12.1 아키텍처 요약
+
+| 계층 | SSOT | 비고 |
+|------|------|------|
+| **① 코어** | `TurnController` (`backend/orchestrator/autonomous/`) | design · execute · discuss · approval |
+| **표면 어댑터** | `surface_adapter.run_autonomous_surface_chat` | Admin `surface=admin` · Market `surface=marketplace` |
+| **HTTP 진입** | `POST /api/llm/orchestrate/chat` · `POST /api/marketplace/customer-orchestrate/chat` | `manual_*` → ① · lightweight/reverse_question → ② fallback |
+| **stage_run 동기화** | `stage_run_sync.py` | discuss 턴 `current_stage_id` 전진 금지 (ARCH-004 고정) |
+| **프론트 SSOT** | `use-orchestrator-chat.ts` · `orchestrator-live-flow.ts` | diagnostics → Live Flow Rail · Decision Panel |
+| **음성** | `orchestrator-voice-entry.ts` · `useOrchestratorVoiceStt` | STT → 동일 `message` · `voice-stt`/`voice-entry` tags |
+| **TTS** | `orchestrator-speech.ts` → `/api/llm/voice/synthesize` | Edge neural 우선 · browser `speechSynthesis` fallback |
+| **백엔드 포트** | **`:8000` SSOT** | `devanalysis114-backend` · `scripts/restart_backend_8000.ps1` |
+
+#### 0.12.2 PART G 구현 완료 항목
+
+| Part | 내용 | 핵심 파일 |
+|------|------|-----------|
+| **G-0** | Live Flow Rail · Decision Panel · discuss 배너 · progress substeps | `shared/orchestrator-live-flow-rail.tsx` · `orchestrator-decision-card.tsx` |
+| **G-1** | HTTP 채팅 → ① TurnController | `backend/llm/orchestrator.py` · `customer_orchestrate_router.py` |
+| **G-2** | discuss intent · `/ask`/`/search` · technology_recommendations mapper | `turn_controller.py` · `autonomous/advisory.py` |
+| **G-3** | 음성 STT SSOT · voice badge · Edge TTS | `orchestrator-voice-entry.ts` · `voice_gateway.py` · `orchestrator-speech.ts` |
+| **G-4** | discuss-4 ↔ stage_run ARCH-004 고정 | `stage_run_sync.py` · probe · Playwright discuss4 |
+| **G-5** | Admin workbench · miniConsoleLayout · API URL 단일화 | `admin/llm/page.tsx` · `orchestrator-chat-endpoints.ts` |
+
+**G-5-3 API 표면 축소:**
+
+| 클라이언트 | 엔드포인트 | 파일 |
+|------------|-----------|------|
+| Admin | `POST /api/llm/orchestrate/chat` | `postAdminOrchestratorChat` |
+| Marketplace | `POST /api/marketplace/customer-orchestrate/chat` | `postCustomerOrchestratorChat` |
+| 디버그 | `/api/llm/autonomous/chat` | 내부·디버그 전용 (응답 헤더 `X-Orchestrator-Core`) |
+
+#### 0.12.3 Definition of Done (PART G-6)
+
+| DoD | 상태 | 검증 |
+|-----|------|------|
+| **DoD-1** | ✅ | Admin·Market `diagnostics.orchestrator_core=autonomous_turn_controller` · `test_orchestrator_dialogue_mode_autonomous.py` |
+| **DoD-2** | ✅ | stub **11/11** · **live 11/11** (`064143`) · http admin/market **`orchestrator_core` 13/13** (`063700`/`063618`) |
+| **DoD-3** | ✅ | discuss-4 ARCH-004 고정 · probe stub/sync-inline · `e2e:orchestrator-discuss4` |
+| **DoD-4** | ✅ | Redis discuss → DecisionCard → execute → live rail passed · `e2e:orchestrator-dod4` |
+| **DoD-5** | ✅ | Admin+Market 음성 시나리오 · `e2e:orchestrator-dod5` **3/3** |
+| **DoD-6** | ✅ | `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md` PART G 링크 · A-6 gap 정리 |
+
+**DoD-2 HTTP probe (2026-06-17, `:8000` after `docker restart devanalysis114-backend`):**
+
+| Probe | orchestrator_core | stages | 증적 |
+|-------|-------------------|--------|------|
+| stub | 11/11 | 11/11 | `evidence/orchestrator-11stage-probe-20260617-062243/` |
+| **live** (vLLM :8008) | **11/11** | 11/11 | `...064143/` · `llm_connected=true` · ~91s |
+| http --admin | **13/13 PASS** | 11/11 | `...063700/` (discuss-4 stage_run skip) |
+| http --marketplace | **13/13 PASS** | 11/11 | `...063618/` (discuss-4 **ARCH-004** ✅) |
+
+#### 0.12.4 Edge Neural TTS (로봇 읽기 → 자연스러운 안내)
+
+**문제:** 브라우저 `speechSynthesis`만 사용 시 Windows SAPI 기계음.
+
+**해결:**
+
+| 구성요소 | 내용 |
+|----------|------|
+| **백엔드** | `POST /api/llm/voice/synthesize` · `_synthesize_edge_tts()` · voice `ko-KR-SunHiNeural` · rate `-6%` |
+| **의존성** | `edge-tts>=7.0.0` (`requirements.txt`) · Docker: `pip install edge-tts` |
+| **프록시** | `frontend/app/api/llm/voice/synthesize/route.ts` → `BACKEND_PROXY_TARGET` (:8000) |
+| **프론트** | `speakOrchestratorReply` — server MP3 우선 → `speechSynthesis` fallback |
+| **humanize** | `humanizeOrchestratorSpeech()` — 이모지·마크다운 제거 · `4단계`→`사 단계` · `Redis`→`레디스` |
+| **확인** | `tts_delivery=server_audio` · `audio_format=audio/mpeg` |
+
+**보조 스크립트:** `scripts/edge_tts_speak.py` (`VOICE_TTS_COMMAND`용)
+
+**환경 변수:**
+
+| 변수 | 기본 | 설명 |
+|------|------|------|
+| `VOICE_EDGE_TTS_ENABLED` | `1` | `0`/`false` 시 Edge TTS 비활성 |
+| `VOICE_EDGE_TTS_VOICE` | `ko-KR-SunHiNeural` | Edge neural voice |
+| `VOICE_EDGE_TTS_RATE` | `-6%` | 발화 속도 |
+
+#### 0.12.5 시각 흐름 증적 (G-0-4-5 · G-3-3)
+
+`npm run e2e:orchestrator-visual-evidence` → `evidence/orchestrator-visual-flow-20260617/`:
+
+| 파일 | Surface | 설명 |
+|------|---------|------|
+| `01-admin-workbench-live-flow.png` | Admin `/admin/llm` | Workbench + Live Flow Rail |
+| `02-marketplace-three-track-discuss.png` | Marketplace | 3-track + discuss DecisionCard |
+| `03-admin-voice-live-rail.png` | Admin | 음성 STT → voice badge (G-3-3-2) |
+| `04-marketplace-voice-live-rail.png` | Marketplace | 음성 STT → DecisionCard (G-3-3-3) |
+
+#### 0.12.7 discuss-4 stage_run 버그 수정 (2026-06-17)
+
+**증상:** execute-4 완료 후 `current_stage_id=ARCH-0045` 상태에서 discuss-4 → `ARCH-0045` 유지 (기대: **ARCH-004**).
+
+**원인:** `_sync_discuss_substeps`가 ARCH-004가 이미 `passed`이면 `current_stage_id` 갱신을 건너뜀.
+
+**수정:** `backend/orchestrator/autonomous/stage_run_sync.py` — discuss 턴은 passed ARCH에도 Q&A 오버레이 + `current_stage_id` **항상** 고정.
+
+**검증:** `test_sync_discuss_turn_pins_arch004_after_stage_passed` · http marketplace probe `063618` discuss4 **PASS** · `e2e:orchestrator-discuss4` 2/2.
+
+#### 0.12.6 백엔드 포트 SSOT (:8000)
+
+로컬·프론트 프록시·HTTP probe는 **항상 `:8000`**. Windows `8001` uvicorn은 `WinError 10013` 바인드 거부 가능 → **사용하지 않음**.
+
+| 설정 | 값 |
+|------|-----|
+| Docker | `devanalysis114-backend` · `127.0.0.1:8000:8000` |
+| `.env` | `LOCAL_API_BASE_URL=http://127.0.0.1:8000` |
+| `frontend/frontend/.env.local` | `BACKEND_PROXY_TARGET` · `LOCAL_API_BASE_URL` → `:8000` |
+| Playwright | `playwright.config.ts` webServer env 동일 |
+| 재기동 | `.\scripts\restart_backend_8000.ps1` |
+
+**재현 (AGENTS.md § Backend port SSOT):**
+
+```powershell
+.\scripts\restart_backend_8000.ps1
+python scripts/run_11stage_orchestrator_probe.py --mode stub
+$env:PROBE_LOGIN_EMAIL="119cash@naver.com"
+$env:PROBE_LOGIN_PASSWORD='your-password'   # PowerShell: # 등 특수문자 → 작은따옴표
+python scripts/run_11stage_orchestrator_probe.py --mode live
+```
+
+#### 0.12.8 Golden probe JWT · pytest-asyncio (2026-06-17)
+
+| 항목 | 내용 |
+|------|------|
+| **Golden G2/G3 JWT** | `run_11stage_orchestrator_probe.py` — live/stub에서도 `PROBE_LOGIN_*` / `.runtime/secrets` 로그인 · 실패 시 `golden_login` JSON 기록 |
+| **pytest-asyncio** | `requirements.txt` + `pyproject.toml` `asyncio_mode=auto` — async orchestrator 테스트 42 passed |
+
+**검증:** stub probe `065043` — `voip_initiate=PASS` · `G3_admin_settings=PASS` · `golden_login.source=login`
+
+#### 0.12.9 G-0-3-3 네이티브 SSE / WebSocket (2026-06-17)
+
+| 항목 | Admin | Marketplace |
+|------|-------|-------------|
+| **SSE** | `GET /api/llm/orchestrate/stream/{run_id}?token=` | `GET /api/marketplace/customer-orchestrate/progress/stream/{run_id}?token=` |
+| **WebSocket** | `WS /api/llm/orchestrate/progress/ws/{run_id}?token=` | `WS /api/marketplace/customer-orchestrate/progress/ws/{run_id}?token=` |
+| **Poll 폴백** | `GET /api/llm/orchestrate/progress/{run_id}` | `GET .../customer-orchestrate/progress/{run_id}` |
+
+- **백엔드:** `backend/orchestrator/autonomous/progress_stream.py` — `progress` · `heartbeat` · `done` SSE frames
+- **프론트:** `use-orchestrator-live-progress.ts` — SSE 우선 · 실패 시 poll · `OrchestratorFlowSection` SSE/WS/Poll 배지
+- **인증:** `get_current_user_flexible` — Bearer 또는 `?token=` (EventSource 호환)
+
+**테스트:** `backend/tests/test_autonomous_progress_stream.py` · `node tests/orchestrator-live-progress-stream.test.mjs`
+
+```powershell
+python scripts/run_11stage_orchestrator_probe.py --mode http --admin --base-url http://127.0.0.1:8000
+python scripts/run_11stage_orchestrator_probe.py --mode http --marketplace --base-url http://127.0.0.1:8000
+cd frontend/frontend
+npm run e2e:orchestrator-dod4
+npm run e2e:orchestrator-dod5
+npm run e2e:orchestrator-visual-evidence
+node tests/orchestrator-speech.test.mjs
+```
+
+### 0.13 회원가입·친구 OTP + LTE/5G 통신 진단 (2026-06-17)
+
+| 항목 | 내용 |
+|------|------|
+| **회원가입 이메일 OTP** | `POST /api/auth/signup/request-code` → `/confirm` · legacy `/signup` → **428** (`ALLOW_UNVERIFIED_SIGNUP=1` dev 우회) |
+| **회원가입 전화 OTP** | `verificationChannel=phone` + `phone_number` (E.164) · `backend/services/sms_dispatch.py` (Twilio `TWILIO_*` 또는 dev-log) · `User.phone_number` |
+| **프로필 필수** | `preferred_language` + `country_code` (국기) — OTP verify 단계에서도 UI 유지 · confirm 시 최종값 merge |
+| **친구 수기 OTP** | `POST /api/friends/invites/request-code` → `/confirm` · 이메일/전화 채널 |
+| **LTE/5G 진단** | `@react-native-community/netinfo` · `NetworkTestBanner` · `VOIP_NETWORK_SNAPSHOT` / `NETWORK_TRANSPORT_CHANGED` probe |
+| **Audit** | `call_initiated.metadata.client_network` — transport · cellular_generation · carrier |
+| **Health** | `GET /api/v1/voip/health` → `network_test_matrix` (wifi_lte · lte_lte · min 2 runs) |
+| **스크립트** | `scripts/worldlinco_lte_matrix_verify.ps1` — health + audit `client_network` 조회 |
+| **테스트** | `test_signup_email_otp.py` (email+phone) · `test_sms_dispatch.py` · `test_voip_backend_consistency` matrix |
+
+**실기기 LTE 매트릭스 (D-0-5 미완 — 증적 필요):**
+
+1. A단말: WiFi OFF · LTE/5G ON → 배너 **셀룰러** 확인  
+2. B단말: WiFi ON (또는 반대 조합)  
+3. 보이스톡 initiate → `GET /api/v1/voip/calls/{id}/audit` → `metadata.client_network.transport=cellular`  
+4. `WiFi↔WiFi` · `WiFi↔LTE` · `LTE↔LTE` 각 **2회+**
+
+```powershell
+.\scripts\worldlinco_lte_matrix_verify.ps1 -HealthOnly
+$env:WORLDLINGO_TEST_TOKEN='<jwt>'
+.\scripts\worldlinco_lte_matrix_verify.ps1 -CallId call-xxxxxxxxxxxx
+```
+
+**APK:** NetInfo 네이티브 모듈 추가 → **dev client / EAS rebuild 필수**
 
 ---
 
@@ -671,7 +875,7 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 - [x] **E-3-8 strict** ja→ko · `target_lang=ko` · Tab 한국어 TTS (build **73**)
 - [~] **E-3-4** 지인·커뮤니티 실사용 **10명** — **보류**
 - [x] **E-3-5** git tag **`v1.0.45`** @ build 74 · **`v1.0.46`** profile API (2026-06-16)
-- [ ] LTE 베타 QA 매트릭스 (보안 전제: TLS + token APK)
+- [~] **LTE 베타 QA 매트릭스** — 앱 배너·audit·health·script ✅ · **실기기 6+ runs 증적** 미완 (D-0-5)
 - [ ] `voip_boundary_cap_defer_test.ps1` cap phase **summary.json PASS** 안정화
 
 ### 10.2 P3 (체크리스트·설계 잔여)
@@ -682,7 +886,7 @@ adb -s R83W70QY11H logcat -v time -s ReactNativeJS:* |
 ### 10.3 Voice Relay Phase 2~3
 - [ ] streaming partial STT
 - [ ] full-duplex / barge-in
-- [ ] 서버측 TTS audio relay (현재 device Speech only)
+- [x] **오케스트레이터 웹 TTS** — Edge neural `/api/llm/voice/synthesize` (§0.12.4) · VoIP relay는 여전히 device Speech 위주
 
 ### 10.4 문서·운영
 - [ ] APK Git LFS (65MB+ GitHub warning)

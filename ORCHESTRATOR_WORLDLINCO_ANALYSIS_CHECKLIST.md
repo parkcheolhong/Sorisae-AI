@@ -1,8 +1,9 @@
 # 오케스트레이터 자율형 대화 & 월드링코(WorldLinco) 통번역 — 분석 및 방향 체크리스트
 
-> **최종 갱신:** 2026-06-16 · 브랜치 `gpu-llm-server-awq-20260427` · **APK build 74** (`1.0.45`) · backend tag **`v1.0.46`**  
+> **최종 갱신:** 2026-06-17 · 브랜치 `gpu-llm-server-awq-20260427`  
 > 본 문서는 **① 오케스트레이터 멀티 자율형 대화**, **② 월드링코 통번역/VoIP** 진단과 다음 방향을 정리합니다.  
 > **마스터 기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` · **Voice Relay:** `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` · **검증:** `evidence/voip-voice-relay-orchestrator/VERIFICATION_REPORT.md`  
+> **SSOT·시각 흐름 Gap (PART G):** [`docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md`](docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md)  
 > **1차 출시 (개인 APK):** **PART E** · **베타 안내:** [`docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`](docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md) · **V2 미래 버전:** **PART F** + [`docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md`](docs/worldlinco-v2/WORLDLINCO_V2_ROADMAP.md) *(계획 고정 · v1.0 범위 아님)*  
 > 표시: `[ ]` 미착수 · `[~]` 부분 구현/검증중 · `[x]` 완료.
 
@@ -16,6 +17,19 @@
 > - **B-3-1** `VoiceResponse.detected_language` 필드.
 > - 회귀: `test_autonomous_orchestrator.py`, `test_voice_gateway_schema.py`.
 > - 비고: async 테스트는 `pytest-asyncio` 필요(`-p asyncio --asyncio-mode=auto`).
+
+> ### ✅ 2026-06-17 PART G Gap 클로저 · DoD-1~6 · Edge TTS · :8000 SSOT
+> - **기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` **§0.12**
+> - **Gap:** `docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md` — **PART G DoD-1~6 완료** · DoD-2 4-probe (stub/live/http) ✅
+> - **TTS:** Edge neural `ko-KR-SunHiNeural` · `/api/llm/voice/synthesize` · `orchestrator-speech.ts`
+> - **증적:** `evidence/orchestrator-visual-flow-20260617/` (4 PNG) · probe `20260617-062427`/`062507`
+> - **재기동:** `scripts/restart_backend_8000.ps1` · 프론트 `.env.local` → `BACKEND_PROXY_TARGET=http://127.0.0.1:8000`
+
+> ### ✅ 2026-06-17 Live Flow Rail · Decision Panel · Playwright (PART G-0)
+> - **UI:** `orchestrator-live-flow-rail.tsx` · `orchestrator-decision-card.tsx` — Admin `/admin/llm` · Marketplace `/marketplace/orchestrator`
+> - **HTTP SSOT (G-1):** `orchestrate/chat` · `customer-orchestrate/chat` → `run_autonomous_surface_chat` when `manual_*`
+> - **Playwright:** `npm run e2e:orchestrator-live-flow-rail` — **5/5 passed** (3025 mock · `orchestrator-live-flow-rail.playwright.spec.ts`)
+> - **기술서:** `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` §0.11 · Gap: `docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md`
 
 > ### ✅ 2026-06-16 Autonomous TurnController 11단계 SSOT · 4-probe 실행 완료
 > - **단일 코어:** Admin `orchestrate/chat` · Marketplace `customer-orchestrate/chat` → `surface_adapter` → `TurnController`.
@@ -68,11 +82,13 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 | 항목 | 목표 SSOT 코어 | 현재 마켓 (직원) | 현재 관리자 |
 |------|----------------|------------------|-------------|
-| 엔진 | `backend/orchestrator/autonomous/` (`TurnController`) | `customer-orchestrate/*` → **②** `orchestrate/chat` · `llm/orchestrator.py` | 기본 UI **②** · ① 패널 **숨김** (`miniConsoleLayout`) |
-| 음성 지시 | 코어 진입 전 STT → 동일 `message` | **미연동** (capability 설명만) | **②** `useOrchestratorChat` · `/api/llm/voice/orchestrate` |
+| 엔진 | `backend/orchestrator/autonomous/` (`TurnController`) | G-1: `customer-orchestrate/chat` → **①** when `manual_*` · Live Flow Rail UI | G-1: `orchestrate/chat` → **①** · Live Flow Rail + Decision Panel |
+| 음성 지시 | 코어 진입 전 STT → 동일 `message` | G-3: `useOrchestratorVoiceStt` · DoD-5 Playwright | G-3: `useOrchestratorVoiceStt` · `orchestrate/chat` |
 | GPU 검증 (A-3-2) | ① 3-probe 통과 | — | Admin http_api 포함 |
 
-**레거시 ② (통합 대상, not SSOT):** `backend/orchestrator/chat/` · `POST /api/llm/orchestrate/chat` — 마켓·관리자가 **아직** 많이 의존. **→ ① 코어 어댑터로 흡수**가 SSOT 정렬 방향.
+**레거시 ② (통합 대상, not SSOT):** `backend/orchestrator/chat/` — `lightweight` · `reverse_question` 등 **의도적 fallback**. manual_* 오케스트레이터 채팅은 **① surface_adapter** SSOT.
+
+**Definition of Done (PART G-6):** [`docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md`](docs/checklists/orchestrator-ssot-visual-flow-gap-checklist.md) — **DoD-1~6 ✅** · 4-probe stub/live/http 11/11 · **기술서 §0.12**
 
 **이름 혼선 (테스트·스크립트):**
 - `test_orchestrator_dialogue_mode.py` · `verify_autonomous_chat.py` → **②** 검증 (파일명 misleading).
@@ -86,12 +102,11 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [x] **(A-6-1) 단일 코어** — Admin `POST /api/llm/orchestrate/chat` · Marketplace `customer-orchestrate/chat` → `surface_adapter.run_autonomous_surface_chat` → **동일 TurnController**.
 - [x] **(A-6-5) 11단계 자연어 명령** — `설계해줘` · `N단계 진행해줘` · 4단계+ 협업 Q&A (`stage_commands.py`).
 - [x] **(A-6-6) 단계 패치 SSOT** — `stage_coder_scope.py` · 단계당 bounded files · validator 구조검증(기존 entry point 인정).
-- [x] **(A-6-7) 4-probe 검증** — stub **11/11** · live(vLLM) **11/11** · http marketplace **11/11** · http admin **11/11** (`131740`).
-- [~] **(A-6-2) 음성 진입 공통** — STT → `message` → 코어 (마켓·관리자 동일); admin `voice/orchestrate` 존재 · **마켓 미연동**.
-- [~] **(A-6-3) UI 음성 우선** — admin STT hook · 마켓 orchestrator STT **부분**.
-- [x] **(A-6-4) stage_run 동기화** — marketplace `stage_run_sync.py` · http probe sync_checks PASS.
-
-### A-0b (legacy). SSOT 정렬 · 음성 — 미착수 체크
+- [x] **(A-6-7) 4-probe + Golden Task 검증** — stub **11/11** · live(vLLM) **11/11** (`161823`, 32B AWQ) · http marketplace **11/11** (`161204`) · http admin **11/11** (`161354`); **G2** voice-translate smoke + VoIP initiate · `production_green`/`worldlinco_green`.
+- [x] **(A-6-2) 음성 진입 공통** — STT → `message` → TurnController SSOT; admin·마켓 모두 `voice-stt`/`voice-entry` context_tags.
+- [x] **(A-6-3) UI 음성 우선** — admin·마켓 `useOrchestratorVoiceStt` · voice badge · DoD-5 Playwright (`e2e:orchestrator-dod5`).
+- [x] **(A-6-4) stage_run 동기화** — marketplace `stage_run_sync.py` · discuss-4 ARCH-004 고정 · DoD-3/4 Playwright.
+- [x] **(A-6-8) 실시간 시각 흐름 UI** — Live Flow Rail · Decision Panel · Playwright 5/5 (`orchestrator-live-flow-rail.playwright.spec.ts`).
 
 ### A-0 (legacy note) — 레거시 이원 구조 설명
 
@@ -166,7 +181,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 ### B-2. 🔴 P0 — VoIP 실시간 통역 통화 (2026-06-14 현황)
 
-> ~~백엔드·APK 비어 있음~~ → **구현·배포 완료(build 65).** 잔여: **실기기 E2E 안정화**, **FCM 네이티브**, **devices/register 운영 정합**, **repetition guard 재검**.
+> 잔여: **실기기 E2E 안정화**, **FCM 네이티브**, **repetition guard 재검**.
 
 #### B-2-0. ⚠️ VoIP 이중 스택 (운영 vs 테스트)
 
@@ -190,8 +205,9 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [~] **(B-2-3 / P3-A) FCM + presence**
   - ✅ marketplace: initiate push, `WS /presence`, FCM v1/legacy.
   - ✅ 모바일: `voipPresence.ts`, accept 연동.
-  - ❌ **`POST /devices/register` 운영 gap** — 모바일 호출 O, marketplace router **엔드포인트 없음** (`backend/voip`에만 존재).
-  - ❌ Firebase `No Firebase App '[DEFAULT]'` — `VoipMessagingAdapter` 미주입.
+  - ✅ **`POST /devices/register` 운영** — `nadotongryoksa_voip_router` (2026-06-16).
+  - ✅ **Backend FCM v1** — Docker `fcm_delivery_ready=true` · `evidence/fcm-d1-3-20260617/`.
+  - [~] **Mobile native FCM** — `useVoipIncomingCalls` + `google-services.json` + Expo plugin; **APK rebuild** 후 `push_token_present` 검증.
 
 - [x] **(B-2 accept) 착신 REST** ✅ — `POST /calls/{call_id}/accept`. B26 `VOIP_INCOMING_ACCEPT_API_OK`.
 
@@ -207,7 +223,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 
 - [x] **(B-2-8) Call mode 감사** ✅ — `call_mode_schema`, `call_mode_audit_service`.
 
-- [ ] **(B-2-9) devices/register 운영 정합** — marketplace router에 이식 또는 모바일 presence-only 정렬.
+- [x] **(B-2-9) devices/register 운영 정합** ✅ — `POST /api/v1/voip/devices/register` on `nadotongryoksa_voip_router` · `test_golden_tasks.py`.
 
 > 📐 `NADOTONGRYOKSA_VOIP_BACKEND_DESIGN.md` · 상세 `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` §4.
 
@@ -256,7 +272,7 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 | V-10 | **14s safety cap** | `safetyCapMs:14000` | [x] logcat ~13848ms |
 | V-11 | **Turn controller** | `voiceRelayTurnController.ts` | [x] |
 | V-12 | **repetition guard** | `isLikelyRepetitionHallucination` (build 65) | [x] 코드 · [ ] 실기기 재검 |
-| V-13 | 실기기 relay E2E | `scripts/voip_boundary_cap_defer_test.ps1` | [~] defer OK, cap/E2E flaky |
+| V-13 | 실기기 relay E2E | `scripts/voip_boundary_cap_defer_test.ps1` | [~] defer OK; 2026-06-17 retest **call setup blocked** (`V13_RETEST_20260617.md`) |
 | V-14 | streaming STT (Phase 2) | — | [ ] |
 | V-15 | full-duplex (Phase 3) | — | [ ] |
 
@@ -300,6 +316,16 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 > 아래 항목은 현재 문서에 흩어진 내용을 사용자가 지정한 우선순위대로 다시 모은 실행용 체크리스트다. 각 항목은 실제 실기기/운영 검증 근거가 채워질 때만 `[x]`로 전환한다.  
 > **v1.0 출시:** D-1 중 **WiFi·수동 통역·repetition** → PART E. **D-2·D-3·D-4** → v1.0 **이후** (PART F).
 
+### D-0. 인증·통신 기반 (실전 필수)
+
+- [x] **D-0-1) 회원가입 이메일 OTP** — `POST /api/auth/signup/request-code` → `/confirm` · legacy `/signup` → 428.
+- [x] **D-0-2) 회원가입 전화 OTP** — `verificationChannel=phone` + `phone_number` · Twilio(`TWILIO_*`) 또는 dev-log · `User.phone_number` 저장.
+- [x] **D-0-3) 친구 수기 등록 OTP** — `/api/friends/invites/request-code` → `/confirm`.
+- [x] **D-0-4) VoIP 네트워크 진단 배너** — `@react-native-community/netinfo` · `NetworkTestBanner` · `metadata.client_network` audit.
+- [ ] **D-0-5) LTE/5G 매트릭스 실기기 증적** — `WiFi↔WiFi` · `WiFi↔LTE` · `LTE↔LTE` 각 2회+ · `scripts/worldlinco_lte_matrix_verify.ps1`.
+
+> **⚠️ 0순위 전제 (통신 테스트의 첫 버그):** WiFi만으로 VoIP/OTP/친구·GPS 검증을 하면 **이동통신(NAT·전환·지연·TURN) 버그를 놓칩니다.** 한국은 통신 인프라가 강해도, **LTE/5G(셀룰러) 데이터를 켠 상태**에서 `WiFi↔LTE` 매트릭스로 테스트해야 실전 품질을 판단할 수 있습니다. 앱 VoIP 레일 **「네트워크 테스트 상태」** 배너와 `call_initiated` audit `metadata.client_network` 로 경로를 기록합니다.
+
 ### D-1. 1순위: VoIP 실기기/음성 검증
 
 - [ ] **D-1-1) 실기기 2대 WebRTC 완전 연결 검증**
@@ -309,9 +335,9 @@ API: `POST /api/llm/autonomous/chat`, `GET /api/llm/autonomous/session/{id}` (`b
 - [ ] **D-1-2) Voice Relay 실제 음성 검증**
   - `한국어 → STT → 번역 → TTS → 상대방 재생` 전체 경로. 짧은/긴/빠른 대화 포함.
   - 관련: `B-7 V-13`, `B-3-voice`, `scripts/voip_boundary_cap_defer_test.ps1`.
-- [ ] **D-1-3) Firebase + devices/register**
-  - `No Firebase App` 제거, FCM 토큰·푸시 수신.
-  - **`POST /api/v1/voip/devices/register` marketplace router 정합** (B-2-9).
+- [~] **D-1-3) Firebase + devices/register**
+  - Backend FCM v1 + `devices/register` ✅ — `GET /api/v1/voip/health` → `fcm_delivery_ready=true` (`evidence/fcm-d1-3-20260617/`).
+  - Mobile: adapter wired · **native APK rebuild** 후 FCM 토큰·착신 push 실기기 검증 — **미완**.
 - [ ] **D-1-4) repetition guard (build 65)**
   - Tab TTS 피드백 루프 재현 시 logcat `repetition_hallucination` skip 확인 (B-7 V-12).
 
