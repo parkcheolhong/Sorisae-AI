@@ -16,7 +16,11 @@ from fastapi import (
 from pydantic import BaseModel
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta, timezone
+
+from backend.time_utils import utcnow
 import base64
+import hashlib
+import hmac
 import importlib
 import uuid
 import json
@@ -36,6 +40,8 @@ from backend.designated_language import (
     text_matches_designated_language,
 )
 from backend.marketplace import models
+from backend.communication.session import integration as session_integration
+from backend.communication.orchestrator import integration as orchestrator_integration
 from backend.marketplace.call_mode_schema import (
     CallModeAuditEventCreate,
     CallModeAuditEventRead,
@@ -161,12 +167,55 @@ class PendingIncomingCallResponse(CallInitiateResponse):
     caller_label: Optional[str] = None
 
 
-def _default_turn_servers() -> List[TURNServer]:
+def _stun_servers_from_env() -> List[TURNServer]:
+    raw = os.getenv("STUN_URLS", "").strip()
+    if raw:
+        return [TURNServer(urls=[u.strip()]) for u in raw.split(",") if u.strip()]
     return [
         TURNServer(urls=["stun:stun.l.google.com:19302"]),
         TURNServer(urls=["stun:stun1.l.google.com:19302"]),
         TURNServer(urls=["stun:stun.cloudflare.com:3478"]),
     ]
+
+
+def _build_turn_server_from_env() -> Optional[TURNServer]:
+    """env 기반 TURN 릴레이 서버.
+
+    LTE/5G(통신사 CGNAT·대칭 NAT)에서는 STUN만으로 직접 P2P가 불가하므로
+    TURN 릴레이가 필수다. 두 가지 자격증명 모드를 지원한다.
+      1) 시간제한(coturn `use-auth-secret`): TURN_SECRET 설정 시 매 통화마다
+         username=`<expiry>:<tag>`, credential=base64(HMAC-SHA1(secret, username)) 생성.
+      2) 장기 자격증명: TURN_USERNAME/TURN_CREDENTIAL 사용.
+    TURN_URLS(또는 TURN_URL) 미설정 시 None(=STUN만, 기존 동작 유지).
+    """
+    raw_urls = os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")
+    urls = [u.strip() for u in raw_urls.split(",") if u.strip()]
+    if not urls:
+        return None
+
+    secret = os.getenv("TURN_SECRET", "").strip()
+    if secret:
+        try:
+            ttl = int(os.getenv("TURN_TTL", "86400"))
+        except (TypeError, ValueError):
+            ttl = 86400
+        user_tag = (os.getenv("TURN_USER_TAG", "worldlinco").strip() or "worldlinco")
+        username = f"{int(time.time()) + ttl}:{user_tag}"
+        digest = hmac.new(secret.encode("utf-8"), username.encode("utf-8"), hashlib.sha1).digest()
+        return TURNServer(urls=urls, username=username, credential=base64.b64encode(digest).decode("ascii"))
+
+    username = os.getenv("TURN_USERNAME", "").strip() or None
+    credential = os.getenv("TURN_CREDENTIAL", "").strip() or None
+    return TURNServer(urls=urls, username=username, credential=credential)
+
+
+def _default_turn_servers() -> List[TURNServer]:
+    """앱에 내려줄 ICE 서버 목록(SSOT). STUN + (설정 시) TURN 릴레이."""
+    servers = _stun_servers_from_env()
+    turn = _build_turn_server_from_env()
+    if turn is not None:
+        servers.append(turn)
+    return servers
 
 
 class CallEndRequest(BaseModel):
@@ -872,27 +921,26 @@ async def _send_incoming_call_push_invite(
     }
     data_payload.setdefault("type", "incoming_call")
     data_payload.setdefault("caller_label", caller_label)
-    notification_body = {
-        "title": "(월드링코)WorldLingo 보이스톡",
-        "body": f"{caller_label} 님이 보이스톡을 걸고 있습니다.",
-    }
-    android_notification = {
-        "channel_id": "worldlinco_incoming_voip_v2",
-        "sound": "default",
-        "notification_priority": "PRIORITY_MAX",
-        "visibility": "PUBLIC",
-        "default_vibrate_timings": True,
-    }
+    # 백그라운드/종료 상태에서도 커스텀 신호음(루프 벨 + 풀스크린)을 울리려면
+    # 반드시 data-only 메시지여야 한다. `notification` 블록이 포함되면 Android
+    # 시스템 트레이가 가로채 JS setBackgroundMessageHandler 가 실행되지 않는다.
+    # 알림에 필요한 caller_label/title 정보는 data_payload 안에 담아 네이티브가
+    # VoipIncomingAlertController 로 직접 풀스크린 알림을 만든다.
+    data_payload.setdefault(
+        "notification_title", "(월드링코)WorldLingo 보이스톡"
+    )
+    data_payload.setdefault(
+        "notification_body",
+        f"{caller_label} 님이 보이스톡을 걸고 있습니다.",
+    )
 
     def _build_v1_message(target: dict) -> dict:
         return {
             "message": {
                 **target,
                 "data": data_payload,
-                "notification": notification_body,
                 "android": {
                     "priority": "HIGH",
-                    "notification": android_notification,
                 },
             }
         }
@@ -914,7 +962,6 @@ async def _send_incoming_call_push_invite(
                     "to": f"/topics/{topic}",
                     "priority": "high",
                     "data": data_payload,
-                    "notification": notification_body,
                 }
                 status_code, response_body = await asyncio.to_thread(
                     _post_fcm_legacy,
@@ -934,7 +981,6 @@ async def _send_incoming_call_push_invite(
                     "to": token,
                     "priority": "high",
                     "data": data_payload,
-                    "notification": notification_body,
                 }
                 status_code, response_body = await asyncio.to_thread(
                     _post_fcm_legacy,
@@ -1282,6 +1328,34 @@ async def initiate_voip_call(
     )
     call_states[call_id] = call_state
 
+    # [V2 Session Core] 언어쌍·참가자 기억(best-effort, COMM_V2_SESSION_CORE off면 no-op,
+    # 예외는 내부에서 흡수 — hot path 무영향).
+    # 세션 키는 명시 session_id 우선, 없으면 call_id(클라이언트 voice-translate가 call_id 를
+    # 세션 키로 보냄 → 동일 키로 정렬되어 맥락이 누적된다).
+    session_integration.record_call_init(
+        request.session_id or call_id,
+        call_id=call_id,
+        source_lang=request.caller_preferred_language,
+        target_lang=request.callee_preferred_language,
+        participants=[
+            (request.caller_id, request.caller_preferred_language),
+            (
+                str(app_callee.id) if app_callee is not None else (callee_voice_id or ""),
+                request.callee_preferred_language,
+            ),
+        ],
+    )
+
+    # [V2 Call Orchestrator] 라이프사이클 시작 기록(best-effort, COMM_V2_CALL_ORCHESTRATOR
+    # off면 no-op, 예외 내부 흡수 — hot path 무영향). admission은 관찰 모드 기본(allow).
+    orchestrator_integration.on_call_init(
+        call_id,
+        session_id=request.session_id or call_id,
+        route=call_state.call_route,
+        initial_status=call_state.status,
+        admission=orchestrator_integration.evaluate_admission(),
+    )
+
     logger.info(
         "[VoIP] Call initiated | call_id=%s | callee=%s | caller=%s",
         call_id,
@@ -1317,11 +1391,7 @@ async def initiate_voip_call(
                 or getattr(current_user, "email", "caller")
             ),
             "signaling_server": _with_signal_role(signaling_server, "callee"),
-            "turn_servers": [
-                {"urls": ["stun:stun.l.google.com:19302"]},
-                {"urls": ["stun:stun1.l.google.com:19302"]},
-                {"urls": ["stun:stun.cloudflare.com:3478"]},
-            ],
+            "turn_servers": [s.model_dump(exclude_none=True) for s in _default_turn_servers()],
             "call_route": "app_webrtc",
             "requested_mode": requested_mode,
             "resolved_mode": resolved_mode,
@@ -1390,11 +1460,7 @@ async def initiate_voip_call(
         response_payload = CallInitiateResponse(
             call_id=call_id,
             signaling_server=_with_signal_role(signaling_server, "caller"),
-            turn_servers=[
-                TURNServer(urls=["stun:stun.l.google.com:19302"]),
-                TURNServer(urls=["stun:stun1.l.google.com:19302"]),
-                TURNServer(urls=["stun:stun.cloudflare.com:3478"]),
-            ],
+            turn_servers=_default_turn_servers(),
             call_route="app_webrtc",
             pstn_gateway_configured=False,
             phone_dialer_required=False,
@@ -1497,11 +1563,7 @@ async def initiate_voip_call(
     return CallInitiateResponse(
         call_id=call_id,
         signaling_server=_with_signal_role(signaling_server, "caller"),
-        turn_servers=[
-            TURNServer(urls=["stun:stun.l.google.com:19302"]),
-            TURNServer(urls=["stun:stun1.l.google.com:19302"]),
-            TURNServer(urls=["stun:stun.cloudflare.com:3478"]),
-        ],
+        turn_servers=_default_turn_servers(),
         call_route=(
             "native_phone_dialer"
             if phone_dialer_required
@@ -1719,6 +1781,11 @@ async def end_voip_call(
     call_state.set_status("ended")
     call_state.duration_sec = request.duration_sec
     _cleanup_call_runtime_state(call_id)
+
+    # [V2 Call Orchestrator] 라이프사이클 종료 기록(best-effort, flag off면 no-op).
+    orchestrator_integration.on_call_end(
+        call_id, status="ended", reason=f"prev={previous_status}"
+    )
 
     logger.info(
         f"[VoIP] Call ended | call_id={call_id} | "
@@ -2063,7 +2130,7 @@ def _get_or_create_voip_direct_room(
     if caller_user is None or callee_user is None:
         return None
 
-    now = datetime.utcnow()
+    now = utcnow()
     room = models.ChatRoom(
         room_uuid=str(uuid.uuid4()),
         room_type="direct",
@@ -2230,7 +2297,7 @@ def _build_voice_translation_relay_payload(message: Dict[str, Any]) -> Dict[str,
         "audio_format": (
             str(message.get("audio_format") or "").strip()[:128] or None
         ),
-        "sent_at": message.get("sent_at") or datetime.utcnow().isoformat(),
+        "sent_at": message.get("sent_at") or utcnow().isoformat(),
     }
     seq_id = message.get("seq_id")
     if isinstance(seq_id, (int, float)) and not isinstance(seq_id, bool):
@@ -2369,14 +2436,14 @@ async def websocket_signaling(
                                     "type": "chat_message_rejected",
                                     "reason": "designated_language_mismatch",
                                     "detail": DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
-                                    "sent_at": datetime.utcnow().isoformat(),
+                                    "sent_at": utcnow().isoformat(),
                                 })
                                 continue
                         finally:
                             validation_db.close()
                     client_sent_at = (
                         message.get("sent_at")
-                        or datetime.utcnow().isoformat()
+                        or utcnow().isoformat()
                     )
                     persisted_message = _persist_voip_chat_message(
                         call_state,
@@ -2530,13 +2597,15 @@ async def websocket_signaling(
                 assert RTCIceServer is not None
                 assert RTCPeerConnection is not None
 
-                rtc_config = RTCConfiguration(
-                    iceServers=[
-                        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
-                        RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
-                        RTCIceServer(urls=["stun:stun.cloudflare.com:3478"]),
-                    ]
-                )
+                _rtc_ice_servers = []
+                for _s in _default_turn_servers():
+                    if _s.username and _s.credential:
+                        _rtc_ice_servers.append(
+                            RTCIceServer(urls=_s.urls, username=_s.username, credential=_s.credential)
+                        )
+                    else:
+                        _rtc_ice_servers.append(RTCIceServer(urls=_s.urls))
+                rtc_config = RTCConfiguration(iceServers=_rtc_ice_servers)
                 peer = RTCPeerConnection(configuration=rtc_config)
                 current_peer = peer
                 webrtc_peers[call_id] = current_peer

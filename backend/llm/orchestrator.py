@@ -30,6 +30,8 @@ from datetime import datetime
 from uuid import uuid4
 from urllib.parse import urlparse
 
+from backend.time_utils import utcnow
+
 from backend.llm.model_config import (
     CURRENT_GPU_PROFILE_KEY,
     MODEL_ROUTE_KEYS,
@@ -2933,7 +2935,7 @@ def _build_evidence_bundle(
         },
         "execution": {
             "evidence_run_id": run_id,
-            "evidence_generated_at": datetime.utcnow().isoformat() + "Z",
+            "evidence_generated_at": utcnow().isoformat() + "Z",
             "self_run_status": "not_applicable",
             "completion_gate_ok": completion_gate_ok,
             "completion_gate_error": completion_gate_error,
@@ -12850,7 +12852,7 @@ async def _run_orchestration_core(
         },
         "execution": {
             "evidence_run_id": request.run_id or task,
-            "evidence_generated_at": datetime.utcnow().isoformat() + "Z",
+            "evidence_generated_at": utcnow().isoformat() + "Z",
         },
         "readiness": {
             "artifact_paths": dict(artifact_paths_seed),
@@ -13143,12 +13145,12 @@ async def orchestrate_accepted(
         "project_name": accepted_request.project_name,
         "output_dir": accepted_request.output_dir,
         "status": "accepted",
-        "accepted_at": datetime.utcnow().isoformat() + "Z",
+        "accepted_at": utcnow().isoformat() + "Z",
         "poll_url": _build_progress_poll_url(run_id),
         "stream_url": _build_progress_stream_url(run_id),
         "events": [
             {
-                "at": datetime.utcnow().isoformat() + "Z",
+                "at": utcnow().isoformat() + "Z",
                 "level": "info",
                 "message": "오케스트레이션 요청을 수락했고 백그라운드 작업을 시작합니다.",
             }

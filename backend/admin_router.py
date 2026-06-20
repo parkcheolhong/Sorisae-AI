@@ -24,6 +24,8 @@ import tempfile
 import time
 import threading
 from datetime import datetime, timedelta
+
+from backend.time_utils import utcnow
 from urllib.error import URLError
 from urllib.parse import quote
 from urllib.request import urlopen
@@ -894,7 +896,7 @@ def _build_admin_subscription_monitor_summary_payload(
     period_days: int = 30,
     status_filter: Optional[str] = None,
 ) -> Dict[str, Any]:
-    now = datetime.utcnow()
+    now = utcnow()
     period_days = max(1, min(int(period_days), 90))
     period_since = now - timedelta(days=period_days)
     normalized_status_filter = str(status_filter or "").strip() or None
@@ -3714,3 +3716,30 @@ async def apply_focused_self_healing_plan(payload: FocusedSelfHealingApplyReques
         'execution': executed,
         'message': 'focused self-healing 이 실제 workspace self-run 재실행까지 연결되었습니다.',
     }
+
+
+from backend.marketplace.worldlinco_tuning import WorldlincoTuningUpdate
+
+
+@router.get("/worldlinco/tuning")
+async def admin_get_worldlinco_tuning(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import load_worldlinco_tuning
+
+    _ = admin
+    return load_worldlinco_tuning()
+
+
+@router.put("/worldlinco/tuning")
+async def admin_update_worldlinco_tuning(
+    update: WorldlincoTuningUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import (
+        WorldlincoTuningUpdate,
+        apply_worldlinco_tuning_update,
+    )
+
+    _ = admin
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    return apply_worldlinco_tuning_update(update, updated_by=updated_by)
+

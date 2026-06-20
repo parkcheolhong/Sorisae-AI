@@ -6,6 +6,8 @@ from typing import Any, Callable, Dict, List, Optional
 from pydantic import BaseModel
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+
+from backend.time_utils import utcnow
 import asyncio
 import logging
 import os
@@ -551,6 +553,41 @@ def get_worldlinco_apk_manifest() -> Any:
     payload = _read_worldlinco_apk_manifest()
     return JSONResponse(
         content=payload,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/latest-apk-metadata")
+def get_latest_apk_metadata() -> Any:
+    """모바일 앱 자동 업데이트 확인용 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content={
+            "version_name": payload.get("versionName"),
+            "build_number": payload.get("versionCode"),
+            "package": payload.get("package"),
+            "download_path": payload.get("downloadPath"),
+            "published_at": payload.get("publishedAt"),
+            "size_bytes": payload.get("sizeBytes"),
+            "apk_filename": payload.get("apkFilename"),
+        },
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/worldlinco/tuning")
+def get_worldlinco_tuning_public() -> Any:
+    """WorldLinco 모바일 VoIP/대면 통역 튜닝값 (로그인 불필요)."""
+    from backend.marketplace.worldlinco_tuning import worldlinco_tuning_public_payload
+
+    return JSONResponse(
+        content=worldlinco_tuning_public_payload(),
         headers={
             "Cache-Control": "no-store, no-cache, must-revalidate",
             "Pragma": "no-cache",
@@ -1666,7 +1703,7 @@ def _append_customer_follow_up_history(*, history_id: str, score: int, limit: in
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]

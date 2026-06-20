@@ -94,7 +94,7 @@ def test_cpu_and_gpu_snapshots_expose_only_safe_error_codes(monkeypatch):
     def _raise_loadavg_error():
         raise OSError("cannot read /proc/loadavg")
 
-    monkeypatch.setattr(os, "getloadavg", _raise_loadavg_error)
+    monkeypatch.setattr(os, "getloadavg", _raise_loadavg_error, raising=False)
 
     cpu_payload = namespace["_cpu_snapshot"]()
     gpu_payload = namespace["_gpu_snapshot"]()

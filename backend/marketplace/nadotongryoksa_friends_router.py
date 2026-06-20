@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+
+from backend.time_utils import utcnow
 from math import asin, cos, radians, sin, sqrt
 from typing import Optional
 from uuid import uuid4
@@ -56,7 +58,7 @@ class FriendRequestCreateRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    return utcnow()
 
 
 def _normalize_country_code(country_code: Optional[str]) -> str:

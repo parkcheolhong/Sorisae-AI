@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+
+from backend.time_utils import utcnow
 import logging
 from typing import Any, Optional
 from uuid import uuid4
@@ -150,7 +152,7 @@ class ReadUpdateRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    return utcnow()
 
 
 def _normalize_text(

@@ -58,9 +58,9 @@ def test_device_register_stores_token_and_marks_online(client):
     assert resp.json()["ok"] is True
 
     p = get_presence()
-    devices = asyncio.get_event_loop().run_until_complete(p.get_devices(3002))
+    devices = asyncio.run(p.get_devices(3002))
     assert "tok-bob-1" in devices
-    online = asyncio.get_event_loop().run_until_complete(p.is_online(3002))
+    online = asyncio.run(p.is_online(3002))
     assert online is True
 
 
@@ -139,10 +139,25 @@ def test_accept_unknown_call_returns_404(client):
     assert resp.status_code == 404
 
 
+def test_calls_initiate_enforces_rate_limit(client, monkeypatch):
+    """[V2 보안 STRIDE-D] 통화 개시 쿼터 초과 시 429 + Retry-After 반환."""
+    monkeypatch.setenv("VOIP_CALL_QUOTA_MAX_REQUESTS", "1")
+    monkeypatch.setenv("VOIP_CALL_QUOTA_WINDOW_SEC", "60")
+
+    first = client.post("/api/v1/voip/calls/initiate",
+                        json={"callee_user_id": 3002}, headers={"X-Test-User": "alice"})
+    assert first.status_code == 200, first.text
+
+    second = client.post("/api/v1/voip/calls/initiate",
+                         json={"callee_user_id": 3002}, headers={"X-Test-User": "alice"})
+    assert second.status_code == 429
+    assert "Retry-After" in second.headers
+
+
 def test_push_adapter_skips_when_not_configured(monkeypatch):
     import asyncio
     monkeypatch.delenv("FCM_ENABLED", raising=False)
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.run(
         push.send_incoming_call_push(["tok"], call_id="c_1", caller_label="alice")
     )
     assert result["skipped"] is True

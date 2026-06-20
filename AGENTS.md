@@ -130,3 +130,8 @@ make check
 - The autonomous multi-agent orchestrator (`/api/llm/autonomous/chat`) runs the A-brain agents (reasoner/planner/reviewer) via Ollama; without an LLM server those agents return `error`/stub, but the B-brain `coder` (template generator) + `validator` (`py_compile`) work without GPU/LLM, so the approval→code-generation path is testable in cloud agent sessions.
 - Frontend `npm run test` has a pre-existing failure in `tests/rail-labels.test.mjs` (asserts the marketplace page still contains the legacy label `5가지 AI 엔진 상품`, which the current code no longer uses). The other two checks (`smoke`, `nadotongryoksa-contracts`) pass. There is no `lint` script defined for the frontend.
 - There is no root `/` route; the app renders at `/marketplace` and `/admin` (a bare `/` returns 404, and `/login` redirects to `/admin/login`). The marketplace login/signup form is embedded in the right sidebar of `/marketplace`, not on a separate page.
+
+### Coding conventions
+
+- **UTC time (Py 3.12+):** `datetime.utcnow()` is deprecated. Use the SSOT helper `from backend.time_utils import utcnow` — it returns a **naive** UTC `datetime` (drop-in: preserves DB-naive comparisons and `isoformat() + "Z"` output). Do **not** edit the `datetime.utcnow()` strings inside `backend/llm/orchestrator.py` code-generation templates or the generated reference app `app/`; they are kept in lockstep for golden-task consistency.
+- **Rate limiting:** Reuse `backend/security_gates.py` (`_InMemoryQuotaGate` + `require_*_quota` deps) for per-user/client quotas; it returns `429` + `Retry-After`. Tests reset global quota state via `backend/tests/conftest.py` autouse fixture (`reset_for_test()`).

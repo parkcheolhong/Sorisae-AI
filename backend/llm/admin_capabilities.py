@@ -6,6 +6,8 @@ import tempfile
 import threading
 import time
 from datetime import datetime
+
+from backend.time_utils import utcnow
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -205,7 +207,7 @@ class CapabilityDetailResponse(BaseModel):
 
 
 def _now_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    return utcnow().isoformat() + "Z"
 
 
 def _relative_path(path: Path) -> str:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+
+from backend.time_utils import utcnow
 from secrets import token_urlsafe
 from typing import Any, Dict, Mapping
 from urllib.parse import urlencode
@@ -191,7 +193,7 @@ class CarrierIdentityProviderBase:
             return response.json()
 
     def start_verification(self, scope: str, purpose: str, user_hint: str) -> IdentityVerificationStartResult:
-        expires_at = datetime.utcnow() + timedelta(minutes=10)
+        expires_at = utcnow() + timedelta(minutes=10)
         session_token = f"identity_{token_urlsafe(24)}"
         request_payload = self._build_request_payload(scope, purpose, user_hint, session_token)
         redirect_url = self._build_redirect_url(request_payload)

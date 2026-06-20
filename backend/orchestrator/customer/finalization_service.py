@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
+
+from backend.time_utils import utcnow
 from pathlib import Path
 import time
 from typing import Any, Callable, Dict, List, Optional
@@ -268,7 +270,7 @@ def finalize_customer_validation_bundle(
         validation_profile=validation_profile,
     )
     evidence_run_id = str(request_run_id or task).strip() or task
-    evidence_generated_at = datetime.utcnow().isoformat() + "Z"
+    evidence_generated_at = utcnow().isoformat() + "Z"
     evidence_bundle = _run_stage(
         "build_evidence_bundle",
         lambda: build_evidence_bundle_func(

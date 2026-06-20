@@ -17,6 +17,8 @@ import re
 import tempfile
 import threading
 from datetime import datetime, timezone
+
+from backend.time_utils import utcnow
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -650,7 +652,7 @@ def _append_customer_follow_up_history(
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]
