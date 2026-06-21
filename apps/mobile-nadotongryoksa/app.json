@@ -3,8 +3,8 @@
     "name": "WorldLinco",
     "slug": "nadotongryoksa",
     "scheme": "worldlingo",
-    "version": "1.0.62",
-    "runtimeVersion": "1.0.32",
+    "version": "1.0.107",
+    "runtimeVersion": "1.0.76",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "platforms": [
@@ -30,7 +30,7 @@
     },
     "android": {
       "package": "com.parkcheolhong.worldlinco",
-            "versionCode": 92,
+      "versionCode": 159,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0f16"
@@ -42,7 +42,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.READ_CONTACTS"
+        "android.permission.READ_CONTACTS",
+        "android.permission.REQUEST_INSTALL_PACKAGES"
       ]
     },
     "web": {
