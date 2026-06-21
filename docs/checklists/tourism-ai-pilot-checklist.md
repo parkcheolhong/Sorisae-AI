@@ -68,9 +68,9 @@
 
 | ID | 항목 | 상태 |
 |----|------|------|
-| GIT-1 | 어제 미푸시 커밋(build 159) push | [ ] |
-| GIT-2 | 오늘 관광 AI 작업 커밋 | [ ] |
-| GIT-3 | origin push | [ ] |
+| GIT-1 | 어제 미푸시 커밋(build 159) push | [x] `f7b10835a` |
+| GIT-2 | 오늘 관광 AI 작업 커밋 | [x] `f487c4aef` (53 files) |
+| GIT-3 | origin push | [x] `64af6e1bb..f487c4aef` → 동기화 |
 
 ---
 
