@@ -74,6 +74,56 @@
 
 ---
 
+## 9. 운영 서버 CLIP 백필 런북 (②, RTX 5090 서버에서 실행)
+
+> CLIP 임베딩은 fastembed ONNX/CPU라 **GPU 불필요**. 최초 1회 모델 다운로드 ~350MB(서버 인터넷 필요).
+> 전제: `requirements.txt`에 `fastembed>=0.8.0`·`Pillow>=12.2` 추가됨 → **백엔드 이미지 재빌드 필요**.
+
+**A. Docker Compose 환경(권장)**
+
+```bash
+# 1) 최신 코드 동기화
+cd /workspace            # 서버의 리포 루트
+git fetch origin && git checkout feat/worldlinco-build90-92 && git pull --ff-only
+
+# 2) fastembed/Pillow 설치 위해 백엔드 이미지 재빌드 + 재기동
+docker compose build backend
+docker compose up -d backend
+
+# 3) 백필 실행(컨테이너 내부, Qdrant는 compose 네트워크로 'qdrant' 호스트 해석)
+docker compose exec -e TOURISM_CLIP_ENABLED=1 backend \
+  python scripts/index_tourism_clip.py --progress
+#   옵션: --limit 500 (일부만)  --batch 32 (업서트 배치)
+
+# 4) 질의시점 멀티모달 융합 ON: 백엔드 환경에 TOURISM_CLIP_ENABLED=1 추가 후 재기동
+#    (docker-compose.yml backend.environment 또는 .env 에 TOURISM_CLIP_ENABLED=1)
+docker compose up -d backend
+
+# 5) 검증 — clip 컬렉션 적재 수 + 텍스트→이미지 검색
+docker compose exec backend python - <<'PY'
+from backend.services.tourism_kb import get_tourism_store
+s = get_tourism_store()
+print("clip points:", s.client.count("tourism_places_clip").count)
+PY
+curl -s "http://127.0.0.1:8000/api/health"
+```
+
+**B. 네이티브 venv 환경**
+
+```bash
+source /workspace/.venv/bin/activate
+pip install -r requirements.txt          # fastembed/Pillow 반영
+export QDRANT_URL="http://127.0.0.1:6333" TOURISM_CLIP_ENABLED=1
+python scripts/index_tourism_clip.py --progress
+# 질의 ON: 백엔드 프로세스 env 에 TOURISM_CLIP_ENABLED=1 두고 재기동
+```
+
+**기대 결과:** 백필 종료시 `{"ok": true, "report": {...}}`(scanned/embedded/upserted/skipped). 게이트 통과(CC0/CC-BY 출처표기) 이미지가 있는 POI만 대상이라 일부 skip 정상. 적재 후 검색은 본 컬렉션(dense+sparse)과 `tourism_places_clip`을 **클라이언트측 RRF**로 융합.
+
+**롤백:** `TOURISM_CLIP_ENABLED` 제거 후 재기동 → 본 컬렉션만 사용(무영향). `tourism_places_clip` 컬렉션은 비파괴이므로 삭제만으로 원복.
+
+---
+
 ## 8. 재검(배포 후 실검) 로그 — 2026-06-22 배포본
 
 - [x] SSE `/answer/stream` preview→final 라이브 — cold 16.8s(모델로드)→**warm preview 241ms<1s**, final 2985ms, done. PASS
