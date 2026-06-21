@@ -161,6 +161,31 @@ python scripts/index_tourism_clip.py --progress
 
 → 적재→백필→교차모달 검색까지 **embedded>0·의미 정합 일치 확인**. 운영은 §9 런북으로 동일 절차 실행(도시 재적재 후 백필).
 
+### 9.3 27개 도시 일괄 갱신 — 단일 명령 (`tourism_kb_clip_refresh.py`)
+
+전 도시 재적재(이미지 참조 보존) → CLIP 백필 1회를 한 프로세스로 수행. 백필은 컬렉션 전체를 스캔하므로 **마지막 1회면 모든 도시 커버**.
+
+```bash
+# Docker Compose(운영) — 이미지에 fastembed/scripts 반영 후
+docker compose build backend && docker compose up -d backend
+docker compose exec -e TOURISM_CLIP_ENABLED=1 backend \
+  python scripts/tourism_kb_clip_refresh.py --all --progress
+# 질의시점 융합 ON
+#   backend env 에 TOURISM_CLIP_ENABLED=1 추가 후
+docker compose up -d backend
+```
+
+```bash
+# venv
+source /workspace/.venv/bin/activate && pip install -r requirements.txt
+QDRANT_URL=http://127.0.0.1:6333 TOURISM_CLIP_ENABLED=1 \
+  python scripts/tourism_kb_clip_refresh.py --all --progress
+```
+
+옵션: `--cities paris,kyoto`(일부) · `--country KR,JP`(국가) · `--skip-ingest`(백필만) · `--skip-backfill`(적재만) · `--no-wikidata`(WDQS 제한 회피, 단 이미지 참조 대부분이 Wikidata P18 기반이므로 비권장) · `--limit 700`.
+
+> 소요(공용 Overpass/WDQS): 도시당 ~50s 적재 × 27 ≈ 20–25분 + 백필(이미지 수에 비례, 수분). 공용 API 예의를 위해 도시간 `--sleep 2`(기본). cron/스케줄러 주1회 권장(§9 기존 `tourism_kb_refresh.cmd`는 OSM-only 갱신용).
+
 ---
 
 ## 8. 재검(배포 후 실검) 로그 — 2026-06-22 배포본
