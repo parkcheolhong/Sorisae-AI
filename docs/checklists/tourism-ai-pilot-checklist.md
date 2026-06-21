@@ -62,7 +62,8 @@
 | CLIP-1 | CLIP text↔image 정렬 | [x] | cat 0.296(1위) |
 | CLIP-2 | clip 컬렉션 적재+검색(live) | [x] | "a cute cat"→Cat·"blue square"→Block |
 | CLIP-3 | 백필 CLI | [x] | `scripts/index_tourism_clip.py` |
-| CLIP-4 | 운영 이미지 백필 적재(서버) | [ ] | GA 잔여 |
+| CLIP-4 | 이미지 백필 적재 + 텍스트→이미지 검색(로컬 E2E) | [x] | ingest(wikidata 보존)→embedded 162→"Eiffel Tower"→에펠탑 #1 (§9.2) |
+| CLIP-5 | 운영 서버 백필 적재 | [ ] | GA 잔여(런북 §9) |
 
 ## 7. Git
 
@@ -138,6 +139,27 @@ python scripts/index_tourism_clip.py --progress
 2. **POI payload에 이미지 참조(`wikidata`/`wikimedia_commons`)가 있어야 임베딩됨.** 현재 적재 데이터(256건 샘플)는 `source,name,lat,lon,category,address,country,license` 위주로 **media 참조 0건** → `with_media=0`, `embedded=0`. 즉 명령은 정상이나 *임베딩할 이미지가 없음*. 멀티모달을 실제로 켜려면 적재 단계에서 OSM `wikidata`/`wikimedia_commons` 태그를 payload에 보존(또는 enrich)해야 함. (저작권 게이트는 CC0/CC-BY 출처표기만 통과)
 
 > 참고: `--limit`은 스크롤 페이지(256) 단위로 적용됨(정확히 N개 컷 아님). 전체 백필은 `--limit 0`(기본) 사용.
+
+### 9.2 적재 보강 + 백필 E2E 검증 (2026-06-22)
+
+§9.1의 전제2(이미지 참조 부재)를 해소: `scripts/ingest_tourism_city.py` 보강 —
+- `fetch_osm`: OSM 태그 `wikidata`/`wikimedia_commons`를 payload에 보존
+- `fetch_wikidata`: QID 자체를 `wikidata`로 저장(place_media 가 P18 로 대표 이미지 조회)
+- (스토어 `upsert_places`는 이미 두 키를 "있을 때만 저장"하므로 적재부만 보강하면 충분)
+
+로컬 E2E(컨테이너 `devanalysis114-backend`):
+
+```text
+1) ingest --city paris --limit 200 → 384건 적재(OSM 229 + Wikidata 156)
+2) index_tourism_clip --progress  → {"scanned":17984,"with_media":196,"embedded":162,"indexed":162}
+3) tourism_places_clip count=162, 텍스트→이미지 검색:
+   "Eiffel Tower"            → 에펠탑(Q243) 0.32  #1
+   "a gothic cathedral"      → 노트르담 대성당(Q2981) 등
+   "famous art museum building" → Palais de la Découverte/Galliera(박물관)
+   "a river bridge in the city" → 퐁뇌프(Q335277)
+```
+
+→ 적재→백필→교차모달 검색까지 **embedded>0·의미 정합 일치 확인**. 운영은 §9 런북으로 동일 절차 실행(도시 재적재 후 백필).
 
 ---
 

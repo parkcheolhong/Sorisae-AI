@@ -178,6 +178,10 @@ def fetch_osm(bbox: Tuple[float, float, float, float], limit: int, country: str)
             "phone": tags.get("phone") or tags.get("contact:phone"),
             "hours": tags.get("opening_hours"),
             "website": tags.get("website") or tags.get("contact:website"),
+            # 이미지 참조(있을 때만) — 멀티모달 CLIP 백필용. OSM 태그를 그대로 보존.
+            # wikidata=Q..., wikimedia_commons='File:...' 또는 'Category:...'(게이트가 Category 제외).
+            "wikidata": tags.get("wikidata"),
+            "wikimedia_commons": tags.get("wikimedia_commons"),
         })
     print(f"[osm] 수집 {len(out)}건")
     return out
@@ -231,6 +235,8 @@ SELECT ?item ?itemLabel ?coord ?typeLabel WHERE {{
                 "address": "",
                 "country": country,
                 "license": "CC0 (Wikidata)",
+                # QID 자체가 이미지 참조 — place_media 가 P18 로 대표 이미지를 조회(멀티모달 백필).
+                "wikidata": qid,
             })
         except Exception:
             continue
