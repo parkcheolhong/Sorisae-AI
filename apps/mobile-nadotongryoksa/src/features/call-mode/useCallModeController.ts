@@ -54,7 +54,7 @@ export type CallModeController = {
     showVoipTester: boolean;
     setShowVoipTester: (value: boolean) => void;
     showFriendFolder: boolean;
-    setShowFriendFolder: (value: boolean) => void;
+    setShowFriendFolder: Dispatch<SetStateAction<boolean>>;
     interCallActive: boolean;
     setInterCallActive: (value: boolean) => void;
     interCallTurn: InterCallTurn;

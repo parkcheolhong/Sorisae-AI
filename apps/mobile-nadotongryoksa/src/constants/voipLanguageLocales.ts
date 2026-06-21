@@ -1,3 +1,5 @@
+import { detectDominantScriptLang } from '../utils/scriptLangResolver';
+
 /** WorldLinco VoIP TTS locales — synced with backend/voip_language_locales.py (50 codes). */
 export const VOIP_TTS_LOCALE_MAP: Record<string, string> = {
   ko: 'ko-KR',
@@ -52,8 +54,17 @@ export const VOIP_TTS_LOCALE_MAP: Record<string, string> = {
   am: 'am-ET',
 };
 
-export function resolveVoipTtsLocale(languageCode?: string | null): string {
+export function resolveVoipTtsLocale(languageCode?: string | null, text?: string | null): string {
   const normalized = String(languageCode || '').trim().toLowerCase();
+  // (G5) 스크립트 누수 교정 — 발화 텍스트의 우세 스크립트가 지정 언어와 다르면 실제
+  // 스크립트 로케일로 교정한다(단일 SSOT detectDominantScriptLang). text 미지정 시 기존 동작 유지.
+  if (text) {
+    const scriptLang = detectDominantScriptLang(text);
+    const baseLang = normalized.split('-')[0] || normalized;
+    if (scriptLang && scriptLang !== baseLang && VOIP_TTS_LOCALE_MAP[scriptLang]) {
+      return VOIP_TTS_LOCALE_MAP[scriptLang];
+    }
+  }
   if (!normalized) {
     return VOIP_TTS_LOCALE_MAP.ko;
   }

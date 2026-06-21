@@ -50,6 +50,31 @@ def _coerce_to_optional_int(value: object) -> int | None:
             return None
 
 
+def _coerce_lang_default(value: object, default: str) -> str:
+    """언어 코드 코어션 — 핫 오디오 경로 보호. 클라이언트가 null/빈값/비문자열을 보내도
+    422로 죽지 않고 기본값으로 보정한다(언어 상태가 잠깐 비는 순간의 세그먼트 손실 방지)."""
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text or default
+
+
+def _coerce_bool_default(value: object, default: bool) -> bool:
+    """불리언 코어션 — null/문자열/숫자를 관대하게 받아 기본값으로 보정(422 방지)."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
 class _MobileVoiceTranslateRequest(BaseModel):
     audio_base64: str | None = None
     transcript: str | None = None
@@ -81,6 +106,22 @@ class _MobileVoiceTranslateRequest(BaseModel):
     def _coerce_optional_int(cls, value: object) -> int | None:
         return _coerce_to_optional_int(value)
 
+    @field_validator("from_lang", mode="before")
+    @classmethod
+    def _coerce_from_lang(cls, value: object) -> str:
+        return _coerce_lang_default(value, "ko")
+
+    @field_validator("to_lang", mode="before")
+    @classmethod
+    def _coerce_to_lang(cls, value: object) -> str:
+        return _coerce_lang_default(value, "en")
+
+    @field_validator("bilingual_mode", "device_tts", mode="before")
+    @classmethod
+    def _coerce_mobile_bools(cls, value: object) -> bool:
+        # bilingual_mode 기본 False, device_tts 기본 False — 둘 다 null이면 기존 기본값 보존.
+        return _coerce_bool_default(value, False)
+
 
 # ── 채널별 100% 분리(V.2 격리) ──────────────────────────────────────────────
 # 사용자는 기능을 동시 사용하지 않으므로 VoIP와 대면(face)을 완전 분리한다.
@@ -109,6 +150,21 @@ class _VoipVoiceTranslateRequest(BaseModel):
     @classmethod
     def _coerce_optional_int(cls, value: object) -> int | None:
         return _coerce_to_optional_int(value)
+
+    @field_validator("from_lang", mode="before")
+    @classmethod
+    def _coerce_from_lang(cls, value: object) -> str:
+        return _coerce_lang_default(value, "ko")
+
+    @field_validator("to_lang", mode="before")
+    @classmethod
+    def _coerce_to_lang(cls, value: object) -> str:
+        return _coerce_lang_default(value, "en")
+
+    @field_validator("device_tts", mode="before")
+    @classmethod
+    def _coerce_voip_bool(cls, value: object) -> bool:
+        return _coerce_bool_default(value, False)
 
     def to_core(self) -> "_MobileVoiceTranslateRequest":
         return _MobileVoiceTranslateRequest(
@@ -150,6 +206,21 @@ class _FaceVoiceTranslateRequest(BaseModel):
     device_tts: bool = True
     correlation_id: str | None = None
     feature_id: str | None = None
+
+    @field_validator("from_lang", mode="before")
+    @classmethod
+    def _coerce_from_lang(cls, value: object) -> str:
+        return _coerce_lang_default(value, "ko")
+
+    @field_validator("to_lang", mode="before")
+    @classmethod
+    def _coerce_to_lang(cls, value: object) -> str:
+        return _coerce_lang_default(value, "en")
+
+    @field_validator("bilingual_mode", "device_tts", mode="before")
+    @classmethod
+    def _coerce_face_bools(cls, value: object) -> bool:
+        return _coerce_bool_default(value, True)
 
     def to_core(self) -> "_MobileVoiceTranslateRequest":
         return _MobileVoiceTranslateRequest(
@@ -478,6 +549,8 @@ _WHISPER_HALLUCINATION_SIGNATURES = (
     # 한국어 STT 근접무음 환각: 실통화에서 "통역 문장"(메타 단어)·자막 크레딧이 반복 생성돼
     # 상대에게 같은 문구가 중복 발화되던 문제(전화/대면 대화엔 등장하지 않는 메타 문구만 차단).
     re.compile(r"^\s*통역\s*문장\s*[.!?]*$", re.U),
+    # "통역 문장 1, 통역 문장 2, …" 반복 환각(무음 구간에서 메타 문구가 번호와 함께 반복 생성).
+    re.compile(r"(?:통역\s*문장\s*\d*\s*[,，、.]?\s*){3,}", re.U),
     re.compile(r"자막\s*(?:제공|by|바이)", re.I | re.U),
     re.compile(r"자막을?\s*(?:사용|제공)(?:하였|했|합)", re.U),
     # 영어 유튜브 아웃트로 계열
@@ -487,10 +560,52 @@ _WHISPER_HALLUCINATION_SIGNATURES = (
     re.compile(r"subscribe to (?:my|the|our) channel", re.I),
     re.compile(r"see you (?:in the )?next (?:video|time)", re.I),
     re.compile(r"don'?t forget to subscribe", re.I),
+    # 자막/전사 크레딧 환각(무음·잡음 구간에서 매우 흔함). 대면/통화 대화엔 등장하지 않는 메타 문구.
+    re.compile(r"casting\s*words", re.I),
+    re.compile(r"transcription\s+by", re.I),
+    re.compile(r"transcribed\s+by", re.I),
+    re.compile(r"subtitles?\s+by", re.I),
+    re.compile(r"amara\.org", re.I),
     # 중국어 유튜브 아웃트로 계열
     re.compile(r"感谢(?:大家的)?观看", re.U),
     re.compile(r"谢谢(?:大家的?)?观看", re.U),
     re.compile(r"请(?:点赞)?(?:订阅|关注)", re.U),
+    # 스칸디나비아 유튜브 아웃트로 계열(무음 구간 Whisper가 no/sv/da로 강제 디코딩하며 흔히 생성).
+    # 예: "Takk for att du så med." → 통역 경로에서 영어로 번역·발화되던 환각.
+    re.compile(r"takk\s+for\s+at", re.I | re.U),  # no: "takk for at(t) du så / takk for ating med" 변형 전부
+    re.compile(r"tack\s+f[\u00f6o]r\s+att\s+du\s+tittade", re.I | re.U),
+    re.compile(r"tak\s+fordi\s+du\s+s[\u00e5a]\s+med", re.I | re.U),
+    # 독·불·서 유튜브 아웃트로/자막 크레딧 계열
+    re.compile(r"vielen\s+dank\s+f[\u00fcu]rs\s+zuschauen", re.I | re.U),
+    re.compile(r"danke\s+f[\u00fcu]rs\s+zuschauen", re.I | re.U),
+    re.compile(r"merci\s+d'avoir\s+regard[\u00e9e]", re.I | re.U),
+    re.compile(r"gracias\s+por\s+ver", re.I | re.U),
+    # 자막/번역 크레딧 환각(무음 구간에서 이름과 함께 생성). 예: "Teksting av Nicolai Winther".
+    # 통역/소리새 AI 경로 모두에서 발화로 누수되던 핵심 케이스. 대화엔 등장하지 않는 메타 문구만 차단.
+    re.compile(r"\bteksting\s+av\b", re.I | re.U),  # no: subtitling by
+    re.compile(r"\bundertekst(?:er|et|ing)?\b", re.I | re.U),  # no/da: subtitles
+    re.compile(r"\btekstet\s+av\b", re.I | re.U),  # no
+    re.compile(r"\boversatt\s+av\b", re.I | re.U),  # no: translated by
+    re.compile(r"\bundertextning\b", re.I | re.U),  # sv
+    re.compile(r"\bunterti?tel", re.I | re.U),  # de
+    re.compile(r"\bsous-?titr", re.I | re.U),  # fr
+    re.compile(r"\bsottotitoli\b", re.I | re.U),  # it
+    re.compile(r"\bsubt[\u00edi]tulos?\b", re.I | re.U),  # es
+    re.compile(r"\blegendas?\b", re.I | re.U),  # pt
+    re.compile(r"\bsubtitles?\s+by\b", re.I | re.U),
+    re.compile(r"\bsubtitled\s+by\b", re.I | re.U),
+    re.compile(r"\bcaptions?\s+by\b", re.I | re.U),
+    re.compile(r"\u5b57\u5e55", re.U),  # ja/zh: 字幕
+    # 유튜브 인트로/채널 환각(무음 구간). 통역/여행 대화엔 등장하지 않는 고유 토큰만.
+    # 예: "Hello everyone, welcome back to my channel, today I will show you ..."
+    re.compile(r"\b(?:my|the|our)\s+channel\b", re.I | re.U),
+    re.compile(r"\bwelcome back to\b", re.I | re.U),
+    re.compile(r"\bthis video\b", re.I | re.U),
+    re.compile(r"\bin (?:today'?s|this) video\b", re.I | re.U),
+    re.compile(r"\blike and subscribe\b", re.I | re.U),
+    re.compile(r"\bhit the (?:like|bell)\b", re.I | re.U),
+    re.compile(r"\btoday i(?:'|\u2019)?(?:ll| will| am going to| am gonna)?\s+show you\b", re.I | re.U),
+    re.compile(r"\bin this tutorial\b", re.I | re.U),
 )
 
 

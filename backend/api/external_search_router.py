@@ -211,8 +211,36 @@ def _serpapi_call(engine: str, query: str, limit: int, timeout_sec: float, **ext
 
     query_string = urllib.parse.urlencode(params)
     url = f"https://serpapi.com/search.json?{query_string}"
+
+    def _do() -> Dict[str, Any]:
+        try:
+            return _http_json(url, {"Accept": "application/json"}, timeout_sec)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401:
+                raise PermissionError("UPSTREAM_AUTH_FAILED") from exc
+            if exc.code == 403:
+                raise PermissionError("UPSTREAM_FORBIDDEN") from exc
+            if exc.code == 404:
+                raise FileNotFoundError("UPSTREAM_NOT_FOUND") from exc
+            if exc.code == 429:
+                raise RuntimeError("RATE_LIMITED") from exc
+            raise RuntimeError("UPSTREAM_ERROR") from exc
+        except urllib.error.URLError as exc:
+            raise TimeoutError("UPSTREAM_TIMEOUT") from exc
+
+    # 캐시 namespace: Google 지도=maps(약관 30일 상한), 뉴스=news, 그 외 serp. api_key 는 키에서 제외.
+    # cached_fetch 는 Redis 미가용 시 _do() 로 폴백하며, _do() 의 업스트림 에러는 그대로 전파(캐시 안 함).
+    namespace = "maps" if engine.startswith("google_maps") else ("news" if engine == "google_news" else "serp")
+    extra_key = ",".join(f"{k}={extra[k]}" for k in sorted(extra))
+    from backend.services.realtime_cache import cached_fetch
+
+    return cached_fetch(namespace, (engine, query, limit, extra_key), _do)
+
+
+def _bing_http(url: str, headers: Dict[str, str], timeout_sec: float) -> Dict[str, Any]:
+    """Bing GET + 공통 에러 매핑."""
     try:
-        return _http_json(url, {"Accept": "application/json"}, timeout_sec)
+        return _http_json(url, headers, timeout_sec)
     except urllib.error.HTTPError as exc:
         if exc.code == 401:
             raise PermissionError("UPSTREAM_AUTH_FAILED") from exc
@@ -225,6 +253,13 @@ def _serpapi_call(engine: str, query: str, limit: int, timeout_sec: float, **ext
         raise RuntimeError("UPSTREAM_ERROR") from exc
     except urllib.error.URLError as exc:
         raise TimeoutError("UPSTREAM_TIMEOUT") from exc
+
+
+def _cached_bing(namespace: str, key_parts: tuple, fetch_fn) -> Dict[str, Any]:
+    """Bing 호출 캐시 래퍼. Redis 미가용 시 fetch_fn() 폴백, 업스트림 에러는 전파(캐시 안 함)."""
+    from backend.services.realtime_cache import cached_fetch
+
+    return cached_fetch(namespace, ("bing", *key_parts), fetch_fn)
 
 
 def _bing_news_call(query: str, limit: int, timeout_sec: float) -> Dict[str, Any]:
@@ -232,22 +267,11 @@ def _bing_news_call(query: str, limit: int, timeout_sec: float) -> Dict[str, Any
     if not api_key:
         raise ValueError("MISSING_API_KEY")
     endpoint = str(os.getenv("BING_NEWS_ENDPOINT", "https://api.bing.microsoft.com/v7.0/news/search")).strip()
-    params = urllib.parse.urlencode({"q": query, "count": max(1, min(limit, 20)), "mkt": "ko-KR"})
+    count = max(1, min(limit, 20))
+    params = urllib.parse.urlencode({"q": query, "count": count, "mkt": "ko-KR"})
     url = f"{endpoint}?{params}"
-    try:
-        return _http_json(url, {"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"}, timeout_sec)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            raise PermissionError("UPSTREAM_AUTH_FAILED") from exc
-        if exc.code == 403:
-            raise PermissionError("UPSTREAM_FORBIDDEN") from exc
-        if exc.code == 404:
-            raise FileNotFoundError("UPSTREAM_NOT_FOUND") from exc
-        if exc.code == 429:
-            raise RuntimeError("RATE_LIMITED") from exc
-        raise RuntimeError("UPSTREAM_ERROR") from exc
-    except urllib.error.URLError as exc:
-        raise TimeoutError("UPSTREAM_TIMEOUT") from exc
+    headers = {"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"}
+    return _cached_bing("news", (query, count), lambda: _bing_http(url, headers, timeout_sec))
 
 
 def _bing_image_call(query: str, limit: int, timeout_sec: float) -> Dict[str, Any]:
@@ -255,22 +279,11 @@ def _bing_image_call(query: str, limit: int, timeout_sec: float) -> Dict[str, An
     if not api_key:
         raise ValueError("MISSING_API_KEY")
     endpoint = str(os.getenv("BING_IMAGE_ENDPOINT", "https://api.bing.microsoft.com/v7.0/images/search")).strip()
-    params = urllib.parse.urlencode({"q": query, "count": max(1, min(limit, 20)), "mkt": "ko-KR"})
+    count = max(1, min(limit, 20))
+    params = urllib.parse.urlencode({"q": query, "count": count, "mkt": "ko-KR"})
     url = f"{endpoint}?{params}"
-    try:
-        return _http_json(url, {"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"}, timeout_sec)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            raise PermissionError("UPSTREAM_AUTH_FAILED") from exc
-        if exc.code == 403:
-            raise PermissionError("UPSTREAM_FORBIDDEN") from exc
-        if exc.code == 404:
-            raise FileNotFoundError("UPSTREAM_NOT_FOUND") from exc
-        if exc.code == 429:
-            raise RuntimeError("RATE_LIMITED") from exc
-        raise RuntimeError("UPSTREAM_ERROR") from exc
-    except urllib.error.URLError as exc:
-        raise TimeoutError("UPSTREAM_TIMEOUT") from exc
+    headers = {"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"}
+    return _cached_bing("serp", ("image", query, count), lambda: _bing_http(url, headers, timeout_sec))
 
 
 def _bing_video_call(query: str, limit: int, timeout_sec: float) -> Dict[str, Any]:
@@ -278,22 +291,11 @@ def _bing_video_call(query: str, limit: int, timeout_sec: float) -> Dict[str, An
     if not api_key:
         raise ValueError("MISSING_API_KEY")
     endpoint = str(os.getenv("BING_VIDEO_ENDPOINT", "https://api.bing.microsoft.com/v7.0/videos/search")).strip()
-    params = urllib.parse.urlencode({"q": query, "count": max(1, min(limit, 20)), "mkt": "ko-KR"})
+    count = max(1, min(limit, 20))
+    params = urllib.parse.urlencode({"q": query, "count": count, "mkt": "ko-KR"})
     url = f"{endpoint}?{params}"
-    try:
-        return _http_json(url, {"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"}, timeout_sec)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            raise PermissionError("UPSTREAM_AUTH_FAILED") from exc
-        if exc.code == 403:
-            raise PermissionError("UPSTREAM_FORBIDDEN") from exc
-        if exc.code == 404:
-            raise FileNotFoundError("UPSTREAM_NOT_FOUND") from exc
-        if exc.code == 429:
-            raise RuntimeError("RATE_LIMITED") from exc
-        raise RuntimeError("UPSTREAM_ERROR") from exc
-    except urllib.error.URLError as exc:
-        raise TimeoutError("UPSTREAM_TIMEOUT") from exc
+    headers = {"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"}
+    return _cached_bing("serp", ("video", query, count), lambda: _bing_http(url, headers, timeout_sec))
 
 
 def _parse_news(payload: Dict[str, Any], *, provider: str, limit: int) -> List[ExternalSearchItem]:

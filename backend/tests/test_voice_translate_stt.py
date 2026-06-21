@@ -169,6 +169,44 @@ def test_golden_voice_translate_bilingual_smoke():
     assert payload.get("translated") == "こんにちは"
 
 
+def test_voice_translate_device_tts_skips_server_synthesis():
+    from unittest.mock import patch
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from backend.llm.router import router as llm_router
+
+    class _FakeTranslator:
+        def translate(self, text: str, *, from_lang: str, to_lang: str, region_hint=None) -> str:
+            return "hello"
+
+    app = FastAPI()
+    app.include_router(llm_router)
+    client = TestClient(app)
+
+    with patch(
+        "backend.services.nadotongryoksa.translator.NadoTranslator.get_instance",
+        return_value=_FakeTranslator(),
+    ), patch(
+        "backend.llm.router._synthesize_tts",
+        side_effect=AssertionError("server TTS should be skipped"),
+    ):
+        response = client.post(
+            "/api/llm/voice-translate",
+            json={
+                "transcript": "안녕",
+                "from_lang": "ko",
+                "to_lang": "en",
+                "device_tts": True,
+            },
+        )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload.get("tts_delivery") == "device_speech"
+    assert payload.get("audio_base64") is None
+
+
 def test_transcribe_mobile_voice_audio_prefers_source_lang_hint(monkeypatch):
     from backend.llm import router as llm_router
 

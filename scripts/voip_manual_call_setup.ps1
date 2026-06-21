@@ -12,6 +12,7 @@ param(
     [int]$MonitorSec = 45,
     [switch]$HangupOnly,
     [switch]$SetupOnly,
+    [switch]$PreserveCalleeSession,
     [string]$SetPreferredLanguage = "",
     [string]$ProfileEmail = "",
     [string]$CallerPreferredLanguage = "",
@@ -471,9 +472,12 @@ if ($HangupOnly) {
     exit 0
 }
 Write-Step "Grant mic + force-stop apps (reset deeplink consume)"
-foreach ($dev in @($CallerDevice, $CalleeDevice)) {
-    Invoke-Adb $dev @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
-    Invoke-Adb $dev @("shell", "am", "force-stop", $PackageName) | Out-Null
+Invoke-Adb $CallerDevice @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
+Invoke-Adb $CallerDevice @("shell", "am", "force-stop", $PackageName) | Out-Null
+if (-not $PreserveCalleeSession) {
+    Invoke-Adb $CalleeDevice @("shell", "am", "force-stop", $PackageName) | Out-Null
+} else {
+    Write-Step "PreserveCalleeSession: callee app left running for FCM/presence incoming path"
 }
 Start-Sleep -Seconds 2
 Invoke-Adb $CallerDevice @("shell", "pm", "grant", $PackageName, "android.permission.RECORD_AUDIO") | Out-Null
@@ -484,7 +488,14 @@ Start-Sleep -Seconds 8
 
 Write-Step "Waiting auth..."
 if (-not (Wait-ForAuthReady $CallerDevice)) { throw "Tab auth timeout" }
-if (-not (Wait-ForAuthReady $CalleeDevice)) { throw "S10 auth timeout" }
+if (-not (Wait-ForAuthReady $CalleeDevice)) { throw "Callee auth timeout" }
+
+if ($PreserveCalleeSession) {
+    Write-Step "Waiting callee VOIP_PRESENCE_CONNECTED before placing call..."
+    if (-not (Wait-ForLogPattern $CalleeDevice "VOIP_PRESENCE_CONNECTED" 120)) {
+        throw "Callee presence not connected — FCM/background incoming will fail"
+    }
+}
 
 if ($CallerPreferredLanguage) {
     Set-DeviceVoipLanguageViaDeeplink -Device $CallerDevice -Language $CallerPreferredLanguage

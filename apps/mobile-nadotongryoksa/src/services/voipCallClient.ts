@@ -118,6 +118,7 @@ export interface VoIPVoiceTranslationMessage {
     is_final?: boolean;
     detected_lang?: string;
     capture_trust?: string;
+    correlation_id?: string;
 }
 
 export class VoIPCallClient {
@@ -125,6 +126,9 @@ export class VoIPCallClient {
     private localStream: any = null;
     private localAudioSuspendedForRelay = false;
     private remoteStream: any = null;
+    // 통역(풀오토) 통화에서 원음 WebRTC 트랙을 영구히 음소거하기 위한 상태.
+    // ontrack 으로 트랙이 늦게 도착해도 이 값이 true 면 즉시 enabled=false 를 재적용한다.
+    private remoteAudioSuppressed = false;
     private signalingSocket: WebSocket | null = null;
     private signalingKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
     private readonly config: VoIPCallConfig;
@@ -309,6 +313,7 @@ export class VoIPCallClient {
         this.peerConnection.onaddstream = (event: any) => {
             this.remoteStream = event.stream;
             console.log('[VoIP] Remote stream received (onaddstream)', event.stream);
+            this.applyRemoteAudioSuppression('onaddstream');
             if (this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(event.stream);
             }
@@ -336,6 +341,11 @@ export class VoIPCallClient {
                     }
                 }
             }
+
+            // 트랙이 늦게 도착해도(예: 연결 후 수 초 뒤 ontrack) 통역 모드면 즉시 원음을 음소거한다.
+            // 과거에는 setRemoteAudioEnabled(false) 가 트랙 도착 전에 호출돼 무효화되고,
+            // 이후 도착한 원격 오디오 트랙이 enabled=true 상태로 그대로 재생되는 버그가 있었다.
+            this.applyRemoteAudioSuppression('ontrack');
 
             if (this.remoteStream && this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(this.remoteStream);
@@ -592,6 +602,7 @@ export class VoIPCallClient {
         isFinal?: boolean;
         detectedLang?: string;
         captureTrust?: string;
+        correlationId?: string;
     }): boolean {
         const transcript = payload.transcript.trim();
         const translatedText = payload.translatedText.trim();
@@ -634,6 +645,10 @@ export class VoIPCallClient {
         }
         if (typeof payload.captureTrust === 'string' && payload.captureTrust.trim()) {
             message.capture_trust = payload.captureTrust.trim().slice(0, 16);
+        }
+        if (typeof payload.correlationId === 'string' && payload.correlationId.trim()) {
+            // V.2 ID 백본 — 전송(딜리버리) 채널로 상관 ID 전파(수신측 음성 발화가 동일 ID에 붙음).
+            message.correlation_id = payload.correlationId.trim().slice(0, 128);
         }
         this.sendSignalingMessage(message);
         return true;
@@ -819,6 +834,7 @@ export class VoIPCallClient {
                             is_final: typeof message.is_final === 'boolean' ? message.is_final : undefined,
                             detected_lang: typeof message.detected_lang === 'string' ? message.detected_lang.trim() : undefined,
                             capture_trust: typeof message.capture_trust === 'string' ? message.capture_trust.trim() : undefined,
+                            correlation_id: typeof message.correlation_id === 'string' ? message.correlation_id.trim() : undefined,
                         });
                     }
                     break;
@@ -1040,16 +1056,57 @@ export class VoIPCallClient {
     }
 
     setRemoteAudioEnabled(enabled: boolean): void {
-        if (this.remoteStream) {
-            this.remoteStream.getAudioTracks().forEach((track: any) => {
+        // 원하는 억제 상태를 영구 저장한다. 트랙이 아직 없더라도 상태를 기억했다가
+        // ontrack/onaddstream 에서 applyRemoteAudioSuppression() 으로 재적용한다.
+        this.remoteAudioSuppressed = !enabled;
+        const tracks = this.remoteStream?.getAudioTracks?.() ?? [];
+        tracks.forEach((track: any) => {
+            track.enabled = enabled;
+        });
+        console.log('[VoIP][Diag] setRemoteAudioEnabled', {
+            callId: this.config.callId,
+            enabled,
+            suppressed: this.remoteAudioSuppressed,
+            trackCount: tracks.length,
+            hadStream: !!this.remoteStream,
+        });
+    }
+
+    /**
+     * 현재 저장된 억제 상태(remoteAudioSuppressed)를 원격 오디오 트랙에 (재)적용한다.
+     * 트랙이 늦게 도착하는 react-native-webrtc 의 ontrack 타이밍 문제를 보정하기 위해
+     * onaddstream/ontrack 콜백에서 매번 호출한다.
+     */
+    private applyRemoteAudioSuppression(reason: string): void {
+        if (!this.remoteStream) {
+            return;
+        }
+        const tracks = this.remoteStream.getAudioTracks?.() ?? [];
+        if (tracks.length === 0) {
+            return;
+        }
+        const enabled = !this.remoteAudioSuppressed;
+        let changed = false;
+        tracks.forEach((track: any) => {
+            if (track.enabled !== enabled) {
                 track.enabled = enabled;
-            });
-            console.log('[VoIP][Diag] setRemoteAudioEnabled', {
+                changed = true;
+            }
+        });
+        if (this.remoteAudioSuppressed || changed) {
+            console.log('[VoIP][Diag] applyRemoteAudioSuppression', {
                 callId: this.config.callId,
+                reason,
+                suppressed: this.remoteAudioSuppressed,
                 enabled,
-                trackCount: this.remoteStream.getAudioTracks().length,
+                trackCount: tracks.length,
+                changed,
             });
         }
+    }
+
+    isRemoteAudioSuppressed(): boolean {
+        return this.remoteAudioSuppressed;
     }
 
     getSignalingStateSnapshot(): { hasSocket: boolean; socketState: string; connectionState: string; hasRemoteAudio: boolean } {

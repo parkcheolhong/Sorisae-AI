@@ -136,6 +136,9 @@ function toPermissionResponse(response: { granted: boolean; status: string }) {
 class Sound {
     private readonly player: AudioPlayer;
     private playbackListener: { remove: () => void } | null = null;
+    // expo-audio 비동기 로드 회귀 가드: 한 번이라도 로드된 뒤에만 isLoaded:false 를 '종료'로 본다.
+    hasLoaded = false;
+    shouldPlayRequested = false;
 
     private constructor(player: AudioPlayer) {
         this.player = player;
@@ -144,6 +147,13 @@ class Sound {
     static async createAsync(
         source: { uri?: string } | string | number,
         initialStatus?: { shouldPlay?: boolean; isLooping?: boolean; volume?: number },
+        onPlaybackStatusUpdate?: (status: {
+            isLoaded: boolean;
+            isPlaying?: boolean;
+            didJustFinish?: boolean;
+            positionMillis?: number;
+            durationMillis?: number;
+        }) => void,
     ): Promise<{ sound: Sound }> {
         const normalizedSource = typeof source === 'object' && source !== null && 'uri' in source
             ? source.uri ?? null
@@ -156,7 +166,39 @@ class Sound {
         if (initialStatus?.isLooping) {
             player.loop = true;
         }
-        if (initialStatus?.shouldPlay) {
+        const shouldPlay = initialStatus?.shouldPlay ?? false;
+        sound.shouldPlayRequested = shouldPlay;
+        if (onPlaybackStatusUpdate) {
+            sound.playbackListener = player.addListener('playbackStatusUpdate', (status) => {
+                // expo-av → expo-audio 마이그레이션 회귀 방지:
+                // expo-audio 는 소스를 비동기 로드하므로 재생 시작 *전* 에 isLoaded:false 이벤트를
+                // 먼저 흘린다. 호출부는 expo-av 관례대로 isLoaded===false 를 '재생 종료'로 보고
+                // 즉시 promise 를 resolve→ 곧장 sound 를 stop/unload 하여 소리가 나기도 전에 끊었다.
+                // → 한 번이라도 로드된 뒤(혹은 didJustFinish)에만 종료성 상태를 전달한다.
+                if (status.isLoaded) {
+                    sound.hasLoaded = true;
+                    // 로드 완료 시점에 재생을 한 번 더 보장(생성 직후 play() 가 로딩 전이라 무시된 경우 대비).
+                    if (shouldPlay && !status.playing && !status.didJustFinish) {
+                        try { player.play(); } catch { /* no-op */ }
+                    }
+                } else if (!sound.hasLoaded && !status.didJustFinish) {
+                    // 아직 로드 전의 isLoaded:false 는 '종료'가 아니라 '로딩 중'이므로 무시.
+                    return;
+                }
+                onPlaybackStatusUpdate({
+                    isLoaded: status.isLoaded,
+                    isPlaying: status.playing,
+                    didJustFinish: status.didJustFinish,
+                    positionMillis: typeof status.currentTime === 'number'
+                        ? Math.round(status.currentTime * 1000)
+                        : undefined,
+                    durationMillis: typeof status.duration === 'number'
+                        ? Math.round(status.duration * 1000)
+                        : undefined,
+                });
+            });
+        }
+        if (shouldPlay) {
             player.play();
         }
         return { sound };
@@ -194,6 +236,18 @@ class Sound {
     ): void {
         this.playbackListener?.remove();
         this.playbackListener = this.player.addListener('playbackStatusUpdate', (status) => {
+            // expo-av → expo-audio 회귀 가드(소리가 나기도 전에 끊기는 문제):
+            // 소스가 비동기 로드되므로 재생 시작 전 isLoaded:false 가 먼저 흐른다. 호출부는
+            // isLoaded===false 를 '재생 종료'로 보고 즉시 정리하므로, 로드 전 false 는 무시한다.
+            if (status.isLoaded) {
+                this.hasLoaded = true;
+                // 생성 직후 play() 가 로딩 전이라 무시됐을 수 있어, 로드 완료 시 재생을 한 번 더 보장.
+                if (this.shouldPlayRequested && !status.playing && !status.didJustFinish) {
+                    try { this.player.play(); } catch { /* no-op */ }
+                }
+            } else if (!this.hasLoaded && !status.didJustFinish) {
+                return; // 아직 로딩 중인 isLoaded:false → 종료 아님, 무시
+            }
             callback({
                 isLoaded: status.isLoaded,
                 didJustFinish: status.didJustFinish,
@@ -294,3 +348,6 @@ export const Audio = {
 };
 
 export type RecordingOptions = LegacyRecordingOptions;
+// expo-av 호환 타입: 값(const Audio)은 namespace 병합이 불가하므로 클래스 타입을 직접 노출한다.
+export type AudioSound = Sound;
+export type AudioRecording = Recording;

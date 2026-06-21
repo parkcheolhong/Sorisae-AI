@@ -475,7 +475,7 @@ export default function WorldLincoPage() {
     const selectedHotel = nearbyPlaces.find((item) => item.id === selectedHotelId) ?? null;
     const apkVersionLabel = apkManifest?.versionName && apkManifest?.versionCode != null
         ? `v${apkManifest.versionName} · build ${apkManifest.versionCode}`
-        : 'v1.0.45 · build 74';
+        : 'v1.0.67 · build 97';
     const apkPublishedLabel = apkManifest?.publishedAt
         ? new Date(apkManifest.publishedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
         : null;

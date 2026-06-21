@@ -80,7 +80,7 @@ python scripts/audit_voip_language_coverage.py
 | DEP-2 | designated language tests | [x] | `pytest backend/tests/test_designated_language.py` |
 | DEP-3 | voip locale tests | [x] | `pytest backend/tests/test_voip_language_locales.py` |
 | DEP-4 | voice-translate STT/bilingual tests | [x] | `pytest backend/tests/test_voice_translate_stt.py` |
-| DEP-5 | health check | [ ] | `GET /api/v1/voip/health` |
+| DEP-5 | health check | [x] | `GET /api/v1/voip/health` → `status: ok` |
 
 ---
 
@@ -89,7 +89,7 @@ python scripts/audit_voip_language_coverage.py
 | ID | 항목 | 상태 |
 |----|------|------|
 | GIT-1 | feature branch push | [x] |
-| GIT-2 | PR → `main` | [ ] |
+| GIT-2 | PR → `main` | [x] [#90](https://github.com/parkcheolhong/Sorisae-AI/pull/90) |
 | GIT-3 | 기술서 §0.16 갱신 | [x] |
 
 ---

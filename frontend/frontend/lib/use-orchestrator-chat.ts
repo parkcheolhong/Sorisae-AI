@@ -382,12 +382,13 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     const progressPollingEnabled = chatLoading
         || (typeof liveFlowDiagnostics?.execution_state === 'string' && liveFlowDiagnostics.execution_state === 'executing')
         || liveFlowDiagnostics?.progress_status === 'running';
+    const adminAccessToken = typeof window !== 'undefined' ? (options.getAdminToken() || null) : null;
     const liveProgressSnapshot = useOrchestratorLiveProgress({
-        enabled: Boolean(progressPollingEnabled && progressUrl),
+        enabled: Boolean(progressPollingEnabled && progressUrl && adminAccessToken),
         progressUrl,
-        accessToken: options.getAdminToken() || null,
-        authHeaders: options.getAdminToken()
-            ? { Authorization: `Bearer ${options.getAdminToken()}` }
+        accessToken: adminAccessToken,
+        authHeaders: adminAccessToken
+            ? { Authorization: `Bearer ${adminAccessToken}` }
             : undefined,
         preferStream: true,
     }).snapshot;
