@@ -206,6 +206,16 @@ docker compose run --rm -e TOURISM_REFRESH_RUN_ON_START=true tourism-worker \
 
 > 검증(로컬): `py_compile` OK · `--dry-run` 실행계획 정상(`--all`/`--cities`) · `docker compose config` 앵커(`*video-env`)·env 해석 정상. 질의 경로(RAG/answer/SSE/CLIP-text)는 backend 유지(저지연·캐시 공유) → 워커는 적재/백필만 담당.
 
+**라이브 1회 사이클 검증(2026-06-22, `RUN_ON_START=true`, cities=seoul,busan):**
+
+```json
+{"ok": true, "elapsed_sec": 396.1,
+ "ingest": [{"seoul": 227}, {"busan": 180}],
+ "backfill": {"scanned": 18047, "with_media": 279, "embedded": 197, "indexed": 197}}
+```
+
+워커 컨테이너 기동 → ingest(2도시) → CLIP 백필(embedded 197>0) → `rc=0` → `다음 갱신까지 대기`(스케줄 루프 전환)까지 **E2E 정상**. 검증 후 테스트 컨테이너 제거. 운영은 기본값(`--all`·`RUN_ON_START=false`·주1회)으로 `docker compose up -d tourism-worker`.
+
 ---
 
 ## 8. 재검(배포 후 실검) 로그 — 2026-06-22 배포본
