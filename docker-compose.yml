@@ -160,6 +160,13 @@ services:
       FASTER_WHISPER_MODEL: ${FASTER_WHISPER_MODEL:-small}
       FASTER_WHISPER_DEVICE: ${FASTER_WHISPER_DEVICE:-cuda}
       FASTER_WHISPER_COMPUTE_TYPE: ${FASTER_WHISPER_COMPUTE_TYPE:-float16}
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      TURN_TTL: ${TURN_TTL:-86400}
+      STUN_URLS: ${STUN_URLS:-}
+      # VoIP 시그널링 스토어/릴레이를 Redis(멀티워커 pub/sub)로 승격(#4). 미설정 시 인메모리(P1) 폴백.
+      # 마켓플레이스 캐시(/0)와 분리하기 위해 DB 인덱스 1 사용.
+      VOIP_REDIS_URL: ${VOIP_REDIS_URL:-redis://redis:6379/1}
       AUTONOMOUS_SESSION_DIR: /app/data/autonomous_sessions
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: ${MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT:-true}
@@ -312,6 +319,42 @@ services:
               count: 1
               capabilities: [ gpu ]
     command: python scripts/start_video_render_worker.py
+    networks:
+      - devanalysis114-network
+
+  # ── 관광 KB 멀티모달 갱신 워커 (API 트래픽 비수신, GPU 불필요) ──
+  # ingest + CLIP 백필을 backend(API)에서 분리해 자원 경합/지연 제거. CLIP 은 ONNX/CPU.
+  tourism-worker:
+    image: devanalysis114-backend
+    container_name: devanalysis114-tourism-worker
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      <<: *video-env
+      QDRANT_URL: http://qdrant:6333
+      TOURISM_CLIP_ENABLED: ${TOURISM_CLIP_ENABLED:-1}
+      TOURISM_REFRESH_INTERVAL_HOURS: ${TOURISM_REFRESH_INTERVAL_HOURS:-168}
+      TOURISM_REFRESH_RUN_ON_START: ${TOURISM_REFRESH_RUN_ON_START:-false}
+      TOURISM_REFRESH_CITIES: ${TOURISM_REFRESH_CITIES:-all}
+      TOURISM_REFRESH_LIMIT: ${TOURISM_REFRESH_LIMIT:-700}
+      TOURISM_REFRESH_NO_WIKIDATA: ${TOURISM_REFRESH_NO_WIKIDATA:-false}
+    volumes:
+      - ./backend:/app/backend
+      - ./docs:/app/docs
+      - ./knowledge:/app/knowledge
+      - ./scripts:/app/scripts
+      - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
+    cpus: ${TOURISM_WORKER_CPU_LIMIT_CORES:-4.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+    command: python scripts/tourism_worker_loop.py
     networks:
       - devanalysis114-network
 

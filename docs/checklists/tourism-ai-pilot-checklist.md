@@ -186,6 +186,26 @@ QDRANT_URL=http://127.0.0.1:6333 TOURISM_CLIP_ENABLED=1 \
 
 > 소요(공용 Overpass/WDQS): 도시당 ~50s 적재 × 27 ≈ 20–25분 + 백필(이미지 수에 비례, 수분). 공용 API 예의를 위해 도시간 `--sleep 2`(기본). cron/스케줄러 주1회 권장(§9 기존 `tourism_kb_refresh.cmd`는 OSM-only 갱신용).
 
+### 9.4 배치 분리 — `tourism-worker` 컨테이너 (1단계 분리, 권장)
+
+무거운 배치(ingest + CLIP 백필)를 API(`backend`)에서 떼어내 **API 트래픽 비수신·GPU 불필요** 전용 워커로 실행. `video-worker` 패턴 동일(같은 이미지, 포트 없음, `./scripts` 마운트).
+
+- 서비스: `docker-compose.yml` `tourism-worker`(`devanalysis114-tourism-worker`)
+- 루프: `scripts/tourism_worker_loop.py` → 내부적으로 `tourism_kb_clip_refresh.py` subprocess 주기 실행(실패해도 워커 미종료, SIGTERM 즉시 종료)
+- 환경변수(기본): `TOURISM_REFRESH_INTERVAL_HOURS=168`(주1회) · `TOURISM_REFRESH_RUN_ON_START=false`(기동 시 공용 API 부하 회피) · `TOURISM_REFRESH_CITIES=all` · `TOURISM_REFRESH_LIMIT=700` · `TOURISM_CLIP_ENABLED=1`
+
+```bash
+# 워커만 기동(주기 갱신 시작)
+docker compose up -d tourism-worker
+docker compose logs -f tourism-worker
+# 즉시 1회 갱신까지: 환경에 TOURISM_REFRESH_RUN_ON_START=true 후 재기동
+# 수동 1회(워커와 별개, 일시 실행):
+docker compose run --rm -e TOURISM_REFRESH_RUN_ON_START=true tourism-worker \
+  python scripts/tourism_kb_clip_refresh.py --all --progress
+```
+
+> 검증(로컬): `py_compile` OK · `--dry-run` 실행계획 정상(`--all`/`--cities`) · `docker compose config` 앵커(`*video-env`)·env 해석 정상. 질의 경로(RAG/answer/SSE/CLIP-text)는 backend 유지(저지연·캐시 공유) → 워커는 적재/백필만 담당.
+
 ---
 
 ## 8. 재검(배포 후 실검) 로그 — 2026-06-22 배포본
