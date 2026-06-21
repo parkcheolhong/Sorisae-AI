@@ -31,6 +31,7 @@ import {
 } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { translateImage, translateText, synthesizeSpeech, type TranslateOptions } from './src/api/translate';
+import { isTravelItineraryIntent } from './src/api/tourismAnswer';
 import { FEATURE_IDS, newCorrelationId } from './src/features/correlation/correlationId';
 import {
     fetchLatestApkMetadata,
@@ -45,6 +46,7 @@ import { ChatRoomListScreen } from './src/features/chat/screens/ChatRoomListScre
 import { ChatRoomScreen } from './src/features/chat/screens/ChatRoomScreen';
 import { createDirectChatRoom, ensureSelfChatRoom, getChatRoomDetail, listChatRooms, sendChatRoomMessage } from './src/features/chat/api';
 import type { ChatRoomSummary } from './src/features/chat/types';
+import TravelItineraryPanel from './src/features/travel-itinerary/TravelItineraryPanel';
 import { FriendFolderScreen } from './src/features/friends/FriendFolderScreen';
 import { FriendMapDiscoveryScreen } from './src/features/friends/FriendMapDiscoveryScreen';
 import { useAutoNearbyFriendDiscovery } from './src/features/friends/useAutoNearbyFriendDiscovery';
@@ -55,6 +57,7 @@ import { usePermissionCheck } from './src/hooks/usePermissionCheck';
 import { useNetworkDiagnostics } from './src/hooks/useNetworkDiagnostics';
 import { PhoneDialer } from './src/components/PhoneDialer';
 import { PasswordSecurityModal } from './src/components/PasswordSecurityModal';
+import { DataSourcesModal } from './src/components/DataSourcesModal';
 import {
     authenticateWithBiometric,
     isBiometricAvailable,
@@ -99,6 +102,15 @@ import {
 import { toClientNetworkContext } from './src/utils/networkDiagnostics';
 import { createFaceConversationVadController } from './src/features/face-conversation/faceConversationVadController';
 import { shouldSkipSilentVoiceRelayStt } from './src/features/voip-voice-relay/voiceRelayAudioMetrics';
+import {
+    beginVoiceRelaySileroCapture,
+    endVoiceRelaySileroCapture,
+    isVoiceRelaySileroCaptureAvailable,
+    probeVoiceRelaySileroVadSupport,
+    startVoiceRelaySileroVadMonitor,
+    stopVoiceRelaySileroVadMonitor,
+    subscribeVoiceRelaySileroVadEvents,
+} from './src/native/voiceRelaySileroVad';
 import {
     isLikelyVoiceRelayEcho,
     isLikelyRepetitionHallucination,
@@ -896,11 +908,14 @@ function buildNearbyMapHtml(params: {
         const selectedPlaceId = ${JSON.stringify(params.selectedPlaceId)};
         const map = L.map('map', {
             zoomControl: false,
-            attributionControl: false,
+            attributionControl: true,
         }).setView(center, places.length ? 12 : 11);
+        // ODbL/OSM 타일 정책상 출처표기 필수. Leaflet 프리픽스는 숨기고 OSM 크레딧만 노출.
+        map.attributionControl.setPrefix('');
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
+            attribution: '© OpenStreetMap contributors (ODbL)',
         }).addTo(map);
 
         const bounds = [];
@@ -2244,7 +2259,13 @@ async function playFaceTranslationOutput(options: {
                 });
             });
             await stopFaceVoicePlayback(options.playbackSoundRef);
-            FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => { /* no-op */ });
+            // 즉시 삭제 금지: ExoPlayer(media3)가 unload 직후에도 백그라운드로 소스 파일을 읽어
+            // FileNotFoundException(ENOENT)을 던지며 발화가 중간에 끊기던 문제가 있었다.
+            // 핸들이 완전히 해제되도록 충분히 지연 후 정리한다.
+            const ttsFileToCleanup = fileUri;
+            setTimeout(() => {
+                FileSystem.deleteAsync(ttsFileToCleanup, { idempotent: true }).catch(() => { /* no-op */ });
+            }, 5000);
             playedServerAudio = true;
             console.log('[FACE_TTS]', JSON.stringify({ event: 'played', delivery: 'server_audio', target: options.targetLang }));
         } catch (err) {
@@ -2652,6 +2673,7 @@ export default function App() {
     } | null>(null);
     const [voipPhone, setVoipPhone] = useState(VOIP_DEFAULT_PHONE_PREFIX);
     const [showPhoneDialerModal, setShowPhoneDialerModal] = useState(false);
+    const [showDataSources, setShowDataSources] = useState(false);
     const [voipInitLoading, setVoipInitLoading] = useState(false);
     const [voipInitError, setVoipInitError] = useState('');
     const [voipStatusMessage, setVoipStatusMessage] = useState('');
@@ -3073,6 +3095,15 @@ export default function App() {
     const scheduleFaceConversationRestartRef = useRef<(afterPlayback?: Promise<void> | null) => void>(() => { /* no-op */ });
     const stopVoiceInputRef = useRef<((options?: { suppressAutoRestart?: boolean }) => Promise<void>) | null>(null);
     const faceVadControllerRef = useRef(createFaceConversationVadController());
+    // [Silero 근본 무음 게이트] 단말 진폭 미터가 죽은 기기(meter_unavailable)에서 file-growth VAD는
+    // 무음과 발화를 구분하지 못해 Whisper 환각이 발화로 누수된다. VoIP 경로처럼 Silero 네이티브 VAD를
+    // 대면/소리새 AI capture에 병행 가동해, 실제 음성(speech_start) 발생 + 네이티브 PCM 실제 RMS로
+    // 무음 세그먼트를 전송 전에 차단한다. 네이티브 모듈 미가용/실패 시 기존 expo 경로로 폴백한다.
+    const faceSileroSupportedRef = useRef<boolean>(false);
+    const faceSileroActiveRef = useRef<boolean>(false);
+    const faceSileroCaptureActiveRef = useRef<boolean>(false);
+    const faceSileroCaptureUriRef = useRef<string | null>(null);
+    const faceSileroFirstSpeechAtMsRef = useRef<number | null>(null);
     const mainLastAutoVoiceRelayRef = useRef<{ key: string; sentAt: number } | null>(null);
     /** 최근 기기가 발화한 통역문/원문 이력. 마이크로 되돌아온 TTS(지연 도착 포함)를 재번역하는 핑퐁 에코를 차단한다. */
     const faceSpokenHistoryRef = useRef<Array<{ transcript: string; translated: string; toLang: LangCode; spokenAtMs: number }>>([]);
@@ -3087,6 +3118,18 @@ export default function App() {
     const faceVoipAudioEnabledRef = useRef(false);
     /** 직전에 발화(TTS)한 통역문. 동일 출력이 가드창 안에서 반복 발화되는 것을 차단한다. */
     const lastFaceSpokenOutputRef = useRef<{ text: string; at: number } | null>(null);
+    /**
+     * 대면 화면 사용 용도: 'translate'(통역 — 상대 언어로 번역) | 'gpt'(친구 모드 — 자연스러운 AI 친구 대화).
+     * 기본은 통역. 친구 모드는 음성을 전용 친구 채팅 경로(/voice/friend-chat)로 보내
+     * 따뜻하고 자연스러운 답변을 받아 화면 표시 + 음성(TTS)으로 읽어준다(번역/에코 로직을 타지 않음).
+     */
+    const [faceAiMode, setFaceAiMode] = useState<'translate' | 'gpt'>('translate');
+    const faceAiModeRef = useRef<'translate' | 'gpt'>('translate');
+    /** 친구 모드 멀티턴 메모리 — 최근 대화(role/content)를 누적해 자연스러운 맥락 유지. */
+    const faceGptConversationRef = useRef<Array<{ role: string; content: string }>>([]);
+    /** 소리새 AI 음성 인식 결과 → AI 여행 일정 패널 입력 자동 연결(seed). nonce 로 동일 발화 재주입도 트리거. */
+    const [itinerarySeedQuery, setItinerarySeedQuery] = useState('');
+    const [itinerarySeedNonce, setItinerarySeedNonce] = useState(0);
     const [songModeEnabled, setSongModeEnabled] = useState(false);
     const [songModeStatus, setSongModeStatus] = useState('');
     const [songSubtitles, setSongSubtitles] = useState<SongSubtitleEntry[]>([]);
@@ -7927,6 +7970,33 @@ export default function App() {
                             && voiceInputTargetRef.current === 'main'
                             && Boolean(recordingRef.current),
                     });
+                    // [Silero 근본 무음 게이트] expo 녹음과 병행으로 Silero 네이티브 VAD+PCM 캡처를 가동.
+                    // 무음 세그먼트(speech_start 미발생/실제 RMS 낮음)는 stopVoiceInput에서 전송 차단된다.
+                    // 미지원/실패 시 조용히 폴백(기존 expo m4a + file-growth VAD 그대로).
+                    faceSileroActiveRef.current = false;
+                    faceSileroCaptureActiveRef.current = false;
+                    faceSileroCaptureUriRef.current = null;
+                    faceSileroFirstSpeechAtMsRef.current = null;
+                    if (faceSileroSupportedRef.current) {
+                        try {
+                            const monitorStarted = await startVoiceRelaySileroVadMonitor();
+                            if (monitorStarted) {
+                                faceSileroActiveRef.current = true;
+                                if (isVoiceRelaySileroCaptureAvailable()) {
+                                    const captureStarted = await beginVoiceRelaySileroCapture();
+                                    if (captureStarted) {
+                                        const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
+                                        faceSileroCaptureUriRef.current = `${baseDir}face_silero_${Date.now()}.wav`;
+                                        faceSileroCaptureActiveRef.current = true;
+                                    }
+                                }
+                            }
+                        } catch {
+                            faceSileroActiveRef.current = false;
+                            faceSileroCaptureActiveRef.current = false;
+                            faceSileroCaptureUriRef.current = null;
+                        }
+                    }
                 } else {
                     setGpsStatus(formatStatusText(getUiText(fromLang).autoVoiceSegmentStatus, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
                 }
@@ -7974,6 +8044,12 @@ export default function App() {
     }, [autoVoiceModeEnabled]);
 
     useEffect(() => {
+        faceAiModeRef.current = faceAiMode;
+        // 모드 전환 시 친구 모드 멀티턴 메모리를 초기화해 매번 깨끗한 대화로 시작한다.
+        faceGptConversationRef.current = [];
+    }, [faceAiMode]);
+
+    useEffect(() => {
         scheduleFaceConversationRestartRef.current = (afterPlayback) => {
             if (!autoVoiceModeEnabledRef.current || recordingRef.current) {
                 return;
@@ -8006,6 +8082,39 @@ export default function App() {
             armRestart();
         };
     }, [clearAutoVoiceTimers, startVoiceInput]);
+
+    // [Silero 근본 무음 게이트] 지원 여부 1회 프로브 + 음성 시작/끝 이벤트 구독.
+    // speech_start: 이 세그먼트에 실제 음성이 있었음을 기록(무음 차단의 핵심 신호).
+    // speech_end: 말이 끝나면 즉시 flush(자연스러운 문장 경계 컷, file-growth max_duration 대기 불필요).
+    useEffect(() => {
+        let cancelled = false;
+        void probeVoiceRelaySileroVadSupport().then((supported) => {
+            if (!cancelled) {
+                faceSileroSupportedRef.current = supported;
+                console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'silero_probe', supported }));
+            }
+        });
+        const unsubscribe = subscribeVoiceRelaySileroVadEvents((evt) => {
+            if (!faceSileroActiveRef.current || voiceInputTargetRef.current !== 'main') {
+                return;
+            }
+            if (evt.event === 'speech_start') {
+                if (faceSileroFirstSpeechAtMsRef.current == null) {
+                    faceSileroFirstSpeechAtMsRef.current = Date.now();
+                }
+            } else if (evt.event === 'speech_end') {
+                // 실제 음성이 한 번이라도 잡힌 뒤의 말 끝에서만 자연 종료 flush.
+                if (faceSileroFirstSpeechAtMsRef.current != null && recordingRef.current) {
+                    console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'vad_end', reason: 'silero_speech_end' }));
+                    void stopVoiceInputRef.current?.();
+                }
+            }
+        });
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
+    }, []);
 
     const stopVoiceInput = useCallback(async (options: { suppressAutoRestart?: boolean } = {}) => {
         if (Platform.OS === 'web') {
@@ -8043,6 +8152,18 @@ export default function App() {
         if (faceVadSnapshot) {
             await faceVadControllerRef.current.stop();
         }
+        // [Silero 근본 무음 게이트] 현재 세그먼트의 Silero 상태를 고정(stop 이후 ref가 초기화될 수 있으므로).
+        const faceSileroActiveSnapshot = faceSileroActiveRef.current;
+        const faceSileroCaptureActiveSnapshot = faceSileroCaptureActiveRef.current;
+        const faceSileroCaptureUriSnapshot = faceSileroCaptureUriRef.current;
+        const faceSileroHadSpeechSnapshot = faceSileroFirstSpeechAtMsRef.current != null;
+        if (faceSileroActiveSnapshot) {
+            await stopVoiceRelaySileroVadMonitor();
+        }
+        faceSileroActiveRef.current = false;
+        faceSileroCaptureActiveRef.current = false;
+        faceSileroCaptureUriRef.current = null;
+        faceSileroFirstSpeechAtMsRef.current = null;
         setIsVoiceRecording(false);
         const activeVoiceInputTarget = voiceInputTargetRef.current;
         const shouldAutoRestart = !options.suppressAutoRestart && (
@@ -8067,12 +8188,47 @@ export default function App() {
                 scheduleFaceConversationRestartRef.current(null);
                 return;
             }
+            // [Silero 근본 무음 게이트] 네이티브 PCM 캡처가 있으면 실제 RMS로 무음을 전송 전에 차단하고,
+            // 무음이 아니면 expo m4a(미터 죽은 기기에선 무음 환각 유발) 대신 네이티브 WAV(정확한 신호)를 업로드한다.
+            let uploadUri = uri;
+            if (faceSileroCaptureActiveSnapshot && faceSileroCaptureUriSnapshot
+                && activeVoiceInputTarget === 'main') {
+                try {
+                    const nativePath = faceSileroCaptureUriSnapshot.replace(/^file:\/\//, '');
+                    const capture = await endVoiceRelaySileroCapture(nativePath);
+                    if (capture && capture.byteCount > 0) {
+                        // 핵심 신호 = Silero VAD가 이 세그먼트에서 실제 음성(speech_start)을 한 번이라도
+                        // 감지했는지. 미감지면 무음/잡음 → Whisper 환각 유발이므로 전송 전에 차단한다.
+                        // (RMS 바닥 조건은 약한 실제 발화를 오차단할 수 있어 게이트에 쓰지 않고 로깅만 한다.)
+                        if (!faceSileroHadSpeechSnapshot) {
+                            console.log('[FACE_CONVERSATION]', JSON.stringify({
+                                event: 'segment_skip_silence_silero',
+                                had_speech: faceSileroHadSpeechSnapshot,
+                                rms_db: Math.round(capture.rmsDb),
+                                peak_db: Math.round(capture.peakDb),
+                            }));
+                            await FileSystem.deleteAsync(faceSileroCaptureUriSnapshot, { idempotent: true }).catch(() => { /* no-op */ });
+                            setGpsStatus(getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                            return;
+                        }
+                        uploadUri = faceSileroCaptureUriSnapshot;
+                        console.log('[FACE_CONVERSATION]', JSON.stringify({
+                            event: 'silero_native_capture',
+                            rms_db: Math.round(capture.rmsDb),
+                            peak_db: Math.round(capture.peakDb),
+                            duration_ms: Math.round(capture.durationMs),
+                        }));
+                    }
+                } catch {
+                    // 네이티브 캡처 실패 → expo m4a 로 폴백.
+                }
+            }
             setVoiceSttLoading(true);
             if (autoVoiceModeEnabledRef.current && activeVoiceInputTarget === 'main') {
                 setGpsStatus(getUiText(fromLang).faceListenProcessing ?? '🔄 번역·음성 출력 중...');
             }
             try {
-                const audioBase64 = await FileSystem.readAsStringAsync(uri, {
+                const audioBase64 = await FileSystem.readAsStringAsync(uploadUri, {
                     encoding: FileSystem.EncodingType.Base64,
                 });
                 if (faceVadSnapshot) {
@@ -8094,16 +8250,40 @@ export default function App() {
                 }
                 const profileLangRaw = String(userInfo?.preferred_language || fromLang).trim().toLowerCase();
                 const profileLang: LangCode = isSupportedLangCode(profileLangRaw) ? profileLangRaw as LangCode : fromLang;
-                // 채널 분리(V.2) — 대면 통역 화면은 전용 라우트(/api/llm/face/voice-translate)를 사용한다.
-                // VoIP 통역과 백엔드 요청 계약을 격리해, 한쪽 회귀가 다른쪽을 깨뜨리지 못하게 한다(코어 로직은 서버 공유).
+                // 대면 화면 '친구 모드': 음성을 전용 친구 채팅 경로로 보내 자연스러운 '답변'을 받는다(번역 아님).
+                // 노래 모드/통화중계(inter_call)와는 독립이며, main 타깃에서만 적용한다.
+                const isFaceGptMode = !songModeEnabled
+                    && activeVoiceInputTarget === 'main'
+                    && faceAiModeRef.current === 'gpt';
+                // 채널 분리(V.2) — 통역=face/voice-translate, 친구 모드=voice/friend-chat(경량·독립),
+                // 노래 모드=voice/orchestrate. 한쪽 회귀가 다른쪽을 깨뜨리지 못하게 라우트를 격리한다.
                 const voiceEndpoint = songModeEnabled
                     ? `${API_BASE}/api/llm/voice/orchestrate`
+                    : isFaceGptMode
+                    ? `${API_BASE}/api/llm/voice/friend-chat`
                     : `${API_BASE}/api/llm/face/voice-translate`;
                 // V.2 ID 백본 — 대면 통역 캡처의 고유 상관 ID를 1회 발급해
                 // 기능 ID 자동 매핑→셀프 서빙→전송(딜리버리)→음성 발화 전 구간을 묶는다.
                 const faceCorrelationId = newCorrelationId(FEATURE_IDS.faceInterpret);
                 const voicePayload = songModeEnabled
                     ? { audio_base64: audioBase64, agent_key: 'reasoner', tts: false }
+                    : isFaceGptMode
+                    ? {
+                        // 친구 모드: STT→친구 페르소나 LLM 답변. 발음은 서버 Edge neural TTS로 답변 언어의
+                        // 현지 보이스(ko-KR/ja-JP/zh-CN/en-US 등)로 합성받아 50개국 자연 발음을 보장한다(tts:true).
+                        // conversation 으로 멀티턴 맥락을 유지해 자연스러운 친구 대화를 만든다.
+                        // 전 세계 여행 안내/찾기 특화 — 현재 GPS 위치를 보내 '여기/근처' 질의를 현지 기준으로 처리.
+                        audio_base64: audioBase64,
+                        tts: true,
+                        language: profileLang,
+                        conversation: faceGptConversationRef.current,
+                        region_hint: gpsRegionHint || undefined,
+                        country_code: gpsCountryCode || undefined,
+                        latitude: Number.isFinite(Number(lat)) ? Number(lat) : undefined,
+                        longitude: Number.isFinite(Number(lon)) ? Number(lon) : undefined,
+                        correlation_id: faceCorrelationId,
+                        feature_id: FEATURE_IDS.faceInterpret,
+                    }
                     : autoVoiceModeEnabled
                         ? {
                             // 여행 대면 통역 채널(bilingual): 자동 언어 감지 + GPS 힌트
@@ -8165,7 +8345,64 @@ export default function App() {
                         return;
                     }
                     if (transcript) {
-                        if (songModeEnabled) {
+                        if (isFaceGptMode) {
+                            // 친구 모드: 번역/에코 로직을 타지 않고 LLM 답변을 그대로 표시 + 음성 출력.
+                            const answer = String(data.response_text ?? '').trim();
+                            setInputText(transcript);
+                            // 소리새 AI 발화 중 '여행 일정/장소 찾기' 의도일 때만 패널 입력으로 자동 연결(생성은 사용자 탭).
+                            // 일상 잡담·일반 질문은 패널을 건드리지 않는다.
+                            if (isTravelItineraryIntent(transcript)) {
+                                setItinerarySeedQuery(transcript);
+                                setItinerarySeedNonce((n) => n + 1);
+                            }
+                            if (answer) {
+                                setResultText(answer);
+                                setOffline(false);
+                                setEngine('worldlinco-sorisae-ai');
+                                // 멀티턴 메모리 갱신: 서버가 누적·정리한 conversation 을 우선 사용,
+                                // 없으면 로컬에서 이번 턴을 직접 누적(최근 20개 메시지 유지).
+                                const serverConv = Array.isArray(data.conversation) ? data.conversation : null;
+                                if (serverConv && serverConv.length) {
+                                    faceGptConversationRef.current = serverConv
+                                        .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && m.content)
+                                        .map((m: any) => ({ role: String(m.role), content: String(m.content) }))
+                                        .slice(-20);
+                                } else {
+                                    faceGptConversationRef.current = [
+                                        ...faceGptConversationRef.current,
+                                        { role: 'user', content: transcript },
+                                        { role: 'assistant', content: answer },
+                                    ].slice(-20);
+                                }
+                                const speakText = normalizeSpeakText(answer);
+                                if (speakText) {
+                                    // 답변 언어를 추정해(스크립트 기반) 그 나라의 현지 뉴럴 보이스로 발화한다.
+                                    // 서버가 보낸 neural 오디오(data.audio_base64)를 우선 재생하고,
+                                    // 없으면 답변 언어로 재합성, 그래도 실패하면 단말 TTS로 폴백(playFaceTranslationOutput).
+                                    const replyLangCode = inferSpeechLangCode(speakText, profileLang);
+                                    // 반이중: 친구 답변 발화 중에는 듣기를 멈춘다(자기 음성 재캡처 방지).
+                                    faceSpeakingRef.current = true;
+                                    setGpsStatus('🐦 소리새 AI 답변 음성 출력 중 · 듣기 멈춤');
+                                    facePlaybackPromise = playFaceTranslationOutput({
+                                        translatedText: answer,
+                                        targetLang: replyLangCode,
+                                        audioBase64: typeof data.audio_base64 === 'string' ? data.audio_base64 : null,
+                                        audioFormat: typeof data.audio_format === 'string' ? data.audio_format : null,
+                                        apiBaseUrl: API_BASE,
+                                        playbackSoundRef: faceVoicePlaybackSoundRef,
+                                        correlationId: typeof data.correlation_id === 'string' ? data.correlation_id : faceCorrelationId,
+                                    }).finally(() => {
+                                        setTimeout(() => {
+                                            faceSpeakingRef.current = false;
+                                        }, FACE_CONVERSATION_PLAYBACK_DRAIN_MS);
+                                    });
+                                } else {
+                                    setGpsStatus('🐦 소리새 AI 답변 완료');
+                                }
+                            } else {
+                                setGpsStatus('🐦 소리새 AI 응답이 비어 있습니다 · 다시 말씀해 주세요');
+                            }
+                        } else if (songModeEnabled) {
                             const filteredLyric = normalizeLyricLine(transcript);
                             if (!isLikelyLyricLine(filteredLyric)) {
                                 setSongModeStatus('🎵 가사 구간이 아니거나 배경 노이즈가 커서 이번 구간은 건너뛰었습니다.');
@@ -8394,6 +8631,9 @@ export default function App() {
             } finally {
                 setVoiceSttLoading(false);
                 FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => { /* no-op */ });
+                if (uploadUri !== uri) {
+                    FileSystem.deleteAsync(uploadUri, { idempotent: true }).catch(() => { /* no-op */ });
+                }
                 if (shouldAutoRestart) {
                     if (activeVoiceInputTarget === 'inter_call' && interCallActiveRef.current && interCallVoiceAssistEnabled) {
                         autoVoiceRestartTimerRef.current = setTimeout(() => {
@@ -8436,6 +8676,14 @@ export default function App() {
             mainLastAutoVoiceRelayRef.current = null;
             faceSpeakingRef.current = false;
             lastFaceSpokenOutputRef.current = null;
+            // [Silero] 자동음성 종료 시 네이티브 VAD 모니터도 정리(마이크 점유 해제).
+            if (faceSileroActiveRef.current) {
+                faceSileroActiveRef.current = false;
+                faceSileroCaptureActiveRef.current = false;
+                faceSileroCaptureUriRef.current = null;
+                faceSileroFirstSpeechAtMsRef.current = null;
+                void stopVoiceRelaySileroVadMonitor();
+            }
             // [2-5 AEC/NS] 대면 통역이 직접 켠 경우에만 통신 모드를 해제한다.
             // (VoIP 통화 화면이 설정한 통화 오디오 모드를 가로채 끊지 않도록 ref로 가드)
             if (faceVoipAudioEnabledRef.current) {
@@ -9408,6 +9656,35 @@ export default function App() {
 
                         <View style={styles.translationHub}>
                             {Platform.OS !== 'web' ? (
+                                <View style={styles.faceAiModeRow}>
+                                    <Pressable
+                                        style={[styles.faceAiModeBtn, faceAiMode === 'translate' && styles.faceAiModeBtnActive]}
+                                        onPress={() => setFaceAiMode('translate')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="worldlinco-face-mode-translate"
+                                        testID="worldlinco-face-mode-translate"
+                                    >
+                                        <Text style={[styles.faceAiModeText, faceAiMode === 'translate' && styles.faceAiModeTextActive]}>🌐 통역</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[styles.faceAiModeBtn, faceAiMode === 'gpt' && styles.faceAiModeBtnActive]}
+                                        onPress={() => setFaceAiMode('gpt')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="worldlinco-face-mode-gpt"
+                                        testID="worldlinco-face-mode-gpt"
+                                    >
+                                        <Text style={[styles.faceAiModeText, faceAiMode === 'gpt' && styles.faceAiModeTextActive]}>🐦 소리새 AI</Text>
+                                    </Pressable>
+                                </View>
+                            ) : null}
+
+                            {Platform.OS !== 'web' && faceAiMode === 'gpt' ? (
+                                <Text style={styles.faceVadHintText}>
+                                    🐦 소리새 AI — 말한 내용을 번역하지 않고 소리새 AI가 자연스럽게 답해줍니다(음성+화면).
+                                </Text>
+                            ) : null}
+
+                            {Platform.OS !== 'web' ? (
                                 <Pressable
                                     style={[styles.faceConversationToggleBtn, autoVoiceModeEnabled && styles.faceConversationToggleBtnActive]}
                                     onPress={() => { void handleToggleFaceConversation(); }}
@@ -9417,8 +9694,8 @@ export default function App() {
                                 >
                                     <Text style={[styles.faceConversationToggleText, autoVoiceModeEnabled && styles.faceConversationToggleTextActive]}>
                                         {autoVoiceModeEnabled
-                                            ? getUiText(fromLang).faceConversationOn ?? '🎙️ 대화 통역 ON'
-                                            : getUiText(fromLang).faceConversationOff ?? '대화 통역 OFF'}
+                                            ? (faceAiMode === 'gpt' ? '🎙️ 소리새 AI 대화 ON' : getUiText(fromLang).faceConversationOn ?? '🎙️ 대화 통역 ON')
+                                            : (faceAiMode === 'gpt' ? '🎙️ 소리새 AI 대화 OFF' : getUiText(fromLang).faceConversationOff ?? '대화 통역 OFF')}
                                     </Text>
                                 </Pressable>
                             ) : null}
@@ -10272,6 +10549,17 @@ export default function App() {
                                     {nearbyLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.translateBtnText}>주변 장소 찾기</Text>}
                                 </Pressable>
 
+                                <TravelItineraryPanel
+                                    latitude={Number.parseFloat(lat)}
+                                    longitude={Number.parseFloat(lon)}
+                                    language={toLang}
+                                    regionHint={gpsRegionHint || resolveActiveRegionHint(fromLang)}
+                                    countryCode={gpsCountryCode}
+                                    apiBase={API_BASE}
+                                    seedQuery={itinerarySeedQuery}
+                                    seedNonce={itinerarySeedNonce}
+                                />
+
                                 {nearbyError ? <Text style={styles.errorText}>{nearbyError}</Text> : null}
 
                                 {selectedBookingPlace ? (
@@ -10680,6 +10968,14 @@ export default function App() {
                             <Text style={styles.footerText}>
                                 {getUiText(fromLang).footer.replace('\\n', '\n')}
                             </Text>
+                            <Pressable
+                                onPress={() => setShowDataSources(true)}
+                                accessibilityLabel="worldlinco-open-data-sources"
+                                testID="worldlinco-open-data-sources"
+                                style={styles.dataSourcesLink}
+                            >
+                                <Text style={styles.dataSourcesLinkText}>데이터 출처 · 라이선스</Text>
+                            </Pressable>
                         </View>
 
                     </>
@@ -11044,6 +11340,8 @@ export default function App() {
                 onClose={() => setShowPasswordSecurity(false)}
                 onCompleted={(payload) => { void handlePasswordSecurityCompleted(payload); }}
             />
+
+            <DataSourcesModal visible={showDataSources} onClose={() => setShowDataSources(false)} />
         </SafeAreaView>
     );
 }
@@ -12193,6 +12491,19 @@ const styles = StyleSheet.create({
     faceConversationToggleText: { color: '#79c0ff', fontWeight: '800', fontSize: 15 },
     faceConversationToggleTextActive: { color: '#9be8b3' },
     faceVadHintText: { marginTop: 8, marginBottom: 4, color: '#8b949e', fontSize: 12, lineHeight: 18 },
+    faceAiModeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+    faceAiModeBtn: {
+        flex: 1,
+        backgroundColor: '#0f1623',
+        borderWidth: 1,
+        borderColor: '#35506c',
+        borderRadius: 10,
+        paddingVertical: 10,
+        alignItems: 'center',
+    },
+    faceAiModeBtnActive: { borderColor: '#58c9ff', backgroundColor: '#102233' },
+    faceAiModeText: { color: '#8b949e', fontWeight: '800', fontSize: 14 },
+    faceAiModeTextActive: { color: '#9ad8ff' },
     interPanel: {
         marginTop: 10,
         backgroundColor: '#0f1623',
@@ -12428,6 +12739,8 @@ const styles = StyleSheet.create({
     voipModalSub: { color: C.sub, fontSize: 13, lineHeight: 18, marginBottom: 12 },
     footer: { marginTop: 30, alignItems: 'center' },
     footerText: { color: C.sub, fontSize: 11, textAlign: 'center', lineHeight: 18 },
+    dataSourcesLink: { marginTop: 8, paddingVertical: 4, paddingHorizontal: 8 },
+    dataSourcesLinkText: { color: '#79c0ff', fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' },
     modalCloseRow: { flexDirection: 'row', justifyContent: 'flex-end', padding: 10 },
     friendModalCloseBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1e2533', borderRadius: 8 },
     friendModalCloseBtnText: { color: '#94a3b8', fontSize: 13 },

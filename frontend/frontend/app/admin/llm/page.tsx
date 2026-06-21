@@ -125,6 +125,7 @@ import {
     getAdminToken,
     getAdminTokenExpiryMs,
     getRemainingSessionMinutes,
+    resolveAdminAccessToken,
     setAdminToken,
 } from '@/lib/admin-session';
 
@@ -2161,7 +2162,7 @@ export default function AdminLLMPage() {
         router.replace('/admin/login');
     };
 
-    const token = () => getAdminToken() || localStorage.getItem('token') || '';
+    const token = () => resolveAdminAccessToken();
 
     const logBootstrapMetric = useCallback((metric: {
         name: string;

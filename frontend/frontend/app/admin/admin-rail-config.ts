@@ -37,6 +37,7 @@ export const ADMIN_RIGHT_SHORT_LABEL_OVERRIDES: Record<string, string> = {
     'ops-extras-health': '익스',
     'ops-extras-catalog': '카탈',
     'ops-system-settings': '운영',
+    'worldlinco-tuning': '링코',
 };
 
 export function extractAdminRailIconAndLabel(label: string): { emoji: string; plainLabel: string } {
