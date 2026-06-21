@@ -122,6 +122,23 @@ python scripts/index_tourism_clip.py --progress
 
 **롤백:** `TOURISM_CLIP_ENABLED` 제거 후 재기동 → 본 컬렉션만 사용(무영향). `tourism_places_clip` 컬렉션은 비파괴이므로 삭제만으로 원복.
 
+### 9.1 로컬 1회 검증 결과 (2026-06-22, `--limit 5`)
+
+컨테이너(`devanalysis114-backend`, fastembed 0.8.0·PIL 12.2.0) 내부에서 그대로 실행 → **무오류 종료(exit 0)**, CLIP 모델 자동 다운로드 정상.
+
+```json
+{"ok": true, "report": {"scanned": 256, "with_media": 0, "embedded": 0, "indexed": 0}}
+```
+
+검증으로 확인된 운영 적용 시 **전제 2가지**:
+
+1. **컨테이너에 `scripts/`가 있어야 함.** 로컬 compose는 `backend/`만 마운트하고 `scripts/`는 미포함이라 `docker compose exec ... python scripts/...`가 바로 실패할 수 있음.
+   - 운영: `docker compose build backend`로 이미지를 재빌드하면 리포 전체가 COPY되어 `scripts/` 포함(런북 A-2단계가 이를 보장).
+   - 마운트만 쓰고 재빌드를 안 하는 환경이면 폴백: `docker cp scripts/index_tourism_clip.py <backend>:/app/scripts/ && docker exec -e TOURISM_CLIP_ENABLED=1 <backend> python /app/scripts/index_tourism_clip.py --progress`
+2. **POI payload에 이미지 참조(`wikidata`/`wikimedia_commons`)가 있어야 임베딩됨.** 현재 적재 데이터(256건 샘플)는 `source,name,lat,lon,category,address,country,license` 위주로 **media 참조 0건** → `with_media=0`, `embedded=0`. 즉 명령은 정상이나 *임베딩할 이미지가 없음*. 멀티모달을 실제로 켜려면 적재 단계에서 OSM `wikidata`/`wikimedia_commons` 태그를 payload에 보존(또는 enrich)해야 함. (저작권 게이트는 CC0/CC-BY 출처표기만 통과)
+
+> 참고: `--limit`은 스크롤 페이지(256) 단위로 적용됨(정확히 N개 컷 아님). 전체 백필은 `--limit 0`(기본) 사용.
+
 ---
 
 ## 8. 재검(배포 후 실검) 로그 — 2026-06-22 배포본
