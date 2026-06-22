@@ -13,7 +13,7 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta, timezone
 
@@ -97,6 +97,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/voip", tags=["voip"])
 
+
+def _force_relay_enabled() -> bool:
+    """VOIP_FORCE_RELAY=1 → 모든 통화가 TURN 릴레이만 사용(iceTransportPolicy=relay).
+
+    같은 와이파이/같은 방에서 테스트해도 셀룰러 장거리와 **동일한 미디어 경로**(릴레이)를
+    타게 만들어, '지정된 폰(같은 LAN)만 되고 원거리는 먹통'인 거짓 통과를 제거한다.
+    → 지역과 무관하게 항상 같은 결과를 측정하기 위한 스위치(장거리 기준 고정)."""
+    return os.getenv("VOIP_FORCE_RELAY", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ice_transport_policy_default() -> Optional[str]:
+    return "relay" if _force_relay_enabled() else None
+
 # ============================================================================
 # Data Models
 # ============================================================================
@@ -141,6 +154,8 @@ class CallInitiateResponse(BaseModel):
     call_id: str
     signaling_server: str
     turn_servers: List[TURNServer]
+    # 장거리 기준 고정: VOIP_FORCE_RELAY=1 이면 "relay" → 단말이 릴레이 경로만 사용.
+    ice_transport_policy: Optional[str] = Field(default_factory=_ice_transport_policy_default)
     call_route: str = "app_webrtc"
     pstn_gateway_configured: bool = False
     phone_dialer_required: bool = False
@@ -178,6 +193,36 @@ def _stun_servers_from_env() -> List[TURNServer]:
     ]
 
 
+def _turn_relay_domain() -> str:
+    """TURN 릴레이 공개 도메인(URL 자동 유도용). 운영 기본값은 서비스 도메인."""
+    return (
+        os.getenv("TURN_DOMAIN", "")
+        or os.getenv("TURN_REALM", "")
+        or "metanova1004.com"
+    ).strip()
+
+
+def _resolved_turn_urls() -> List[str]:
+    """클라이언트에 내려줄 TURN URL 목록(SSOT).
+
+    한-노브(one-knob) 정책: TURN_URLS 를 직접 지정하지 않아도 **TURN_SECRET 만 설정하면**
+    공개 도메인(TURN_DOMAIN/TURN_REALM)에서 udp+tcp URL 을 자동 유도한다. 운영자가
+    설정해야 할 값을 'coturn 배포 + 비밀키 1개'로 줄여 지역 무관 장거리 통화를 기본화한다.
+    """
+    raw_urls = os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")
+    urls = [u.strip() for u in raw_urls.split(",") if u.strip()]
+    if urls:
+        return urls
+    if os.getenv("TURN_SECRET", "").strip():
+        port = os.getenv("TURN_PORT", "3478").strip() or "3478"
+        domain = _turn_relay_domain()
+        return [
+            f"turn:{domain}:{port}?transport=udp",
+            f"turn:{domain}:{port}?transport=tcp",
+        ]
+    return []
+
+
 def _build_turn_server_from_env() -> Optional[TURNServer]:
     """env 기반 TURN 릴레이 서버.
 
@@ -186,10 +231,10 @@ def _build_turn_server_from_env() -> Optional[TURNServer]:
       1) 시간제한(coturn `use-auth-secret`): TURN_SECRET 설정 시 매 통화마다
          username=`<expiry>:<tag>`, credential=base64(HMAC-SHA1(secret, username)) 생성.
       2) 장기 자격증명: TURN_USERNAME/TURN_CREDENTIAL 사용.
-    TURN_URLS(또는 TURN_URL) 미설정 시 None(=STUN만, 기존 동작 유지).
+    URL 은 TURN_URLS(또는 TURN_URL) 명시값, 없으면 TURN_SECRET+도메인에서 자동 유도.
+    둘 다 없으면 None(=STUN만).
     """
-    raw_urls = os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")
-    urls = [u.strip() for u in raw_urls.split(",") if u.strip()]
+    urls = _resolved_turn_urls()
     if not urls:
         return None
 
@@ -214,7 +259,7 @@ def turn_relay_configured() -> bool:
 
     LTE/5G·타 네트워크(대칭 NAT)에서 음성 미디어가 흐르려면 TURN 릴레이가 필수다.
     미설정이면 STUN-only → **LAN/같은 네트워크에서만** 통화가 되고 원거리는 먹통이 된다."""
-    return bool((os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")).strip())
+    return bool(_resolved_turn_urls())
 
 
 _TURN_MISCONFIG_WARNED = False
@@ -228,15 +273,29 @@ def _default_turn_servers() -> List[TURNServer]:
     일관성이 깨진 채로 방치된다(coturn 미배포/미연동 신호)."""
     servers = _stun_servers_from_env()
     turn = _build_turn_server_from_env()
+    global _TURN_MISCONFIG_WARNED
     if turn is not None:
         servers.append(turn)
-    else:
-        global _TURN_MISCONFIG_WARNED
         if not _TURN_MISCONFIG_WARNED:
+            logger.info(
+                "[voip][TURN] 릴레이 활성: %s (force_relay=%s) — 지역 무관 장거리 통화 가능.",
+                ",".join(turn.urls),
+                _force_relay_enabled(),
+            )
+            _TURN_MISCONFIG_WARNED = True
+    else:
+        if _force_relay_enabled():
+            # 릴레이 강제인데 릴레이가 없음 → 모든 통화가 실패한다. 조용히 넘기면 '원거리 먹통'이
+            # 원인 불명으로 반복되므로, 매 호출 큰 소리로 알린다.
+            logger.error(
+                "[voip][TURN] VOIP_FORCE_RELAY=1 인데 TURN 릴레이 미설정 → 모든 통화 실패. "
+                "coturn 배포 + TURN_SECRET 설정 필요(coturn/README.md · scripts/verify_turn_relay.py)."
+            )
+        elif not _TURN_MISCONFIG_WARNED:
             logger.warning(
-                "[voip][TURN] TURN_URLS/TURN_SECRET 미설정 → STUN-only. "
+                "[voip][TURN] TURN_SECRET/TURN_URLS 미설정 → STUN-only. "
                 "LTE/5G·타 네트워크(대칭 NAT) 원거리 통화는 음성 미디어가 막힙니다. "
-                "지역 무관 일관 통화를 위해 coturn 배포 후 TURN_URLS/TURN_SECRET 를 설정하세요"
+                "지역 무관 일관 통화를 위해 coturn 배포 후 TURN_SECRET 를 설정하세요"
                 "(coturn/README.md · scripts/verify_turn_relay.py 로 검증)."
             )
             _TURN_MISCONFIG_WARNED = True

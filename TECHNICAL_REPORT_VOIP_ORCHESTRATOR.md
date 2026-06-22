@@ -935,10 +935,13 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 
 > 체크리스트 §11. 증상: 같은 네트워크 폰만 정상, LTE/5G·타 네트워크 원거리 통화는 "신호만·음성 먹통". 원인: **TURN 릴레이 미연동**(CGNAT/대칭 NAT 는 STUN-only 로 P2P 직결 불가 → TURN 필수).
 
-- **fail-loud(코드):** `nadotongryoksa_voip_router.py::_default_turn_servers` — TURN 미설정 시 **조용한 STUN-only 강등 대신 경고 1회**. `turn_relay_configured()` 헬퍼로 상태를 명시. (지금까지 표시 없이 'LAN만 됨'이 방치되던 것을 가시화.)
-- **배포 설정 커밋:** `coturn/`(compose·`.env.example`·README) 저장소 추적 추가(이전엔 미커밋). `coturn/.env`(시크릿)은 gitignore 유지.
-- **일관성 검증 도구:** `scripts/verify_turn_relay.py`(stdlib, 의존성 없음) — *실행한 네트워크* 기준 백엔드 도달성 + TURN 포트 도달성을 PASS/FAIL 로 측정. LAN 과 LTE 핫스팟에서 각각 실행해 동일 PASS 면 지역 무관.
-- **경계(정직):** 실제 원거리 통화 성립은 **coturn 공개 배포 + 백엔드 `TURN_URLS`/`TURN_SECRET` 설정·재시작**(서버 작업, §11.1)이 전제. 현 LAN 점검상 coturn 은 TCP 도달 OK 이나 백엔드 `TURN_URLS` 미설정 시 앱은 STUN-only → 누락 고리(§11 TURN-5).
+- **fail-loud(코드):** `nadotongryoksa_voip_router.py::_default_turn_servers` — TURN 미설정 시 **조용한 STUN-only 강등 대신 경고 1회**, 활성 시 릴레이 URL·force-relay 상태를 info 로 남김. `turn_relay_configured()` 헬퍼로 상태를 명시.
+- **한-노브(코드):** `_resolved_turn_urls()` — `TURN_URLS` 미지정이라도 `TURN_SECRET` 만 있으면 `TURN_DOMAIN`/`TURN_REALM`:`TURN_PORT` 에서 udp+tcp URL 자동 유도. 운영자 설정을 '시크릿 1개 + 공인 IP'로 축소.
+- **장거리 기준 고정(코드):** `VOIP_FORCE_RELAY=1` → 콜-init 응답 `ice_transport_policy="relay"`. 모바일 `voipCallClient.ts` 가 이를 받아 `RTCPeerConnection({iceTransportPolicy:'relay'})` 로 **릴레이 경로만** 사용 → 같은 LAN 테스트도 셀룰러와 동일 경로 = 지역 의존 불일치('지정 폰만 됨') 제거.
+- **compose 통합:** `docker-compose.yml` 에 coturn 서비스(`profiles:[turn]`, host 네트워킹) + 백엔드 `TURN_DOMAIN`/`TURN_PORT`/`VOIP_FORCE_RELAY` env 배선. `docker compose --profile turn up -d coturn backend` 로 릴레이 포함 기동.
+- **미디어 평면 실측:** `scripts/verify_turn_relay.py --allocate` — 실제 TURN Allocate(use-auth-secret HMAC)로 릴레이 주소 발급까지 확인. TCP 도달만으로는 못 잡던 "신호만·음성 먹통"의 진짜 게이트.
+- **측정 결과(2026-06-22, 서버):** backend_health 200 / turn_relay 211.218.172.124:3478 TCP OK / **turn_allocate 성공 → 릴레이 211.218.172.124:49170**. 공개 DNS `metanova1004.com→211.218.172.124`(프록시 아님). 백엔드 컨테이너 env 에 `TURN_URLS`/`TURN_SECRET`/`VOIP_FORCE_RELAY=1` 적재 확인. → **서버측 릴레이 동작 입증 완료.**
+- **경계(정직):** "어디서나 같은 결과"는 ① force-relay(전 통화 동일 경로) ② 미디어 UDP 레인지(49160-49200) 외부 개방 ③ 신규 빌드 배포(기존 APK 는 `ice_transport_policy` 미지원·단 TURN 후보는 받아 폴백)로 완성. ①은 적용 완료, ②는 원격 LTE 에서 `--allocate` PASS 재현으로 확인, ③은 빌드/배포 영역.
 
 ---
 

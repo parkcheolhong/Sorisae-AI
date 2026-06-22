@@ -2599,6 +2599,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     callId: callInitResponse.call_id,
                     signalingServerUrl,
                     turnServers: callInitResponse.turn_servers,
+                    iceTransportPolicy:
+                        callInitResponse.ice_transport_policy === 'relay' ? 'relay' : 'all',
                     mediaConstraints: {
                         audio: {
                             echoCancellation: true,

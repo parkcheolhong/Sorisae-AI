@@ -160,9 +160,17 @@ services:
       FASTER_WHISPER_MODEL: ${FASTER_WHISPER_MODEL:-small}
       FASTER_WHISPER_DEVICE: ${FASTER_WHISPER_DEVICE:-cuda}
       FASTER_WHISPER_COMPUTE_TYPE: ${FASTER_WHISPER_COMPUTE_TYPE:-float16}
+      # 장거리(LTE/5G·타 네트워크) 통화 일관성: TURN 릴레이 한-노브 설정.
+      # 운영자는 .env 에 TURN_SECRET 과 TURN_EXTERNAL_IP(공인 IP)만 넣고
+      # `docker compose --profile turn up -d` 하면 coturn 기동 + 백엔드가 자동으로
+      # turn:${TURN_DOMAIN}:${TURN_PORT} (udp/tcp) URL 을 클라이언트에 내려준다.
       TURN_URLS: ${TURN_URLS:-}
       TURN_SECRET: ${TURN_SECRET:-}
       TURN_TTL: ${TURN_TTL:-86400}
+      TURN_DOMAIN: ${TURN_DOMAIN:-metanova1004.com}
+      TURN_PORT: ${TURN_PORT:-3478}
+      # VOIP_FORCE_RELAY=1 → 모든 통화가 릴레이 경로만 사용(같은 LAN 테스트도 셀룰러와 동일 경로).
+      VOIP_FORCE_RELAY: ${VOIP_FORCE_RELAY:-0}
       STUN_URLS: ${STUN_URLS:-}
       # VoIP 시그널링 스토어/릴레이를 Redis(멀티워커 pub/sub)로 승격(#4). 미설정 시 인메모리(P1) 폴백.
       # 마켓플레이스 캐시(/0)와 분리하기 위해 DB 인덱스 1 사용.
@@ -580,6 +588,46 @@ services:
       devanalysis114-network:
         aliases:
           - sorisae-shopping-mall
+
+  # TURN 릴레이(coturn) — LTE/5G 장거리 통화 미디어 릴레이.
+  # 왜: 통신사 CGNAT/대칭 NAT에서는 STUN만으론 P2P가 막혀 '같은 와이파이만 통화'가 된다.
+  #     릴레이를 거쳐야 음성 미디어가 지역과 무관하게 흐른다.
+  # 기본 `docker compose up` 에는 포함되지 않는다(호스트 포트 점유). 운영 서버에서:
+  #   1) .env 에 TURN_SECRET, TURN_EXTERNAL_IP(이 서버 공인 IP) 설정
+  #   2) 방화벽에서 3478/udp,tcp 와 미디어 레인지(기본 49160-49200/udp) 외부 공개
+  #   3) `docker compose --profile turn up -d coturn backend`
+  coturn:
+    image: coturn/coturn:4.6
+    container_name: devanalysis114-coturn
+    profiles: ["turn"]
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=${TURN_PORT:-3478}
+      - --min-port=${TURN_MIN_PORT:-49160}
+      - --max-port=${TURN_MAX_PORT:-49200}
+      - --fingerprint
+      # TURN_SECRET / TURN_EXTERNAL_IP 는 .env 에 반드시 설정(미설정 시 coturn 기동 실패 = 의도된 loud-fail).
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET:-}
+      - --realm=${TURN_DOMAIN:-metanova1004.com}
+      - --external-ip=${TURN_EXTERNAL_IP:-}
+      - --server-name=devanalysis114-coturn
+      - --no-multicast-peers
+      - --no-cli
+      - --stale-nonce=600
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --total-quota=${TURN_TOTAL_QUOTA:-1200}
+    healthcheck:
+      test: ["CMD-SHELL", "(ss -lun 2>/dev/null || netstat -lun 2>/dev/null) | grep -q ':${TURN_PORT:-3478}' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres-data:

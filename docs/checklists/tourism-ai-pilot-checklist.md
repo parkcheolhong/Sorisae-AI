@@ -354,8 +354,11 @@ chronyc tracking   # offset 확인
 | TURN-1 | 백엔드 fail-loud(조용한 STUN-only 강등 차단) | [x] | `nadotongryoksa_voip_router.py::_default_turn_servers` — TURN 미설정 시 경고 1회. `turn_relay_configured()` 헬퍼 추가 |
 | TURN-2 | coturn 배포 설정 저장소 커밋 | [x] | `coturn/`(compose·`.env.example`·README) 추적 추가. `coturn/.env`(시크릿)은 gitignore 유지 |
 | TURN-3 | 지역 무관 일관성 검증 도구 | [x] | `scripts/verify_turn_relay.py` — 백엔드 도달성 + TURN 포트 도달성을 *실행 네트워크* 기준 PASS/FAIL. 의존성 없음(stdlib) |
-| TURN-4 | (운영) coturn 공개 배포 + 방화벽 | [ ] | 서버 작업 — 공인 IP·포트(3478/udp·tcp, relay UDP 레인지) 공개 |
-| TURN-5 | (운영) 백엔드 TURN_URLS/TURN_SECRET 설정·재시작 | [ ] | **현재 누락 의심 고리** — coturn 은 떠 있어도 백엔드가 STUN-only 면 앱이 TURN 을 못 받음 |
+| TURN-4 | (운영) coturn 공개 배포 + 방화벽 | [x] | `worldlinco-coturn` 가동 2일+, 공인 IP `211.218.172.124`, 3478/udp·tcp + relay 레인지 49160-49200/udp 게시 확인 |
+| TURN-5 | (운영) 백엔드 TURN_URLS/TURN_SECRET 설정·재시작 | [x] | 백엔드 컨테이너 env 에 `TURN_URLS`/`TURN_SECRET` 적재 확인 — **앱에 TURN 정상 하달됨** |
+| TURN-6 | TURN Allocate 실측(미디어 평면) | [x] | `verify_turn_relay.py --allocate` → Allocate 성공, 릴레이 `211.218.172.124:49170` 발급. 서버측 릴레이 동작 입증 |
+| TURN-7 | 장거리 기준 고정(force-relay) | [x] | `VOIP_FORCE_RELAY=1` → 백엔드가 `ice_transport_policy=relay` 하달, 단말은 릴레이 경로만 사용. 같은 LAN 테스트도 셀룰러와 동일 경로 = 지역 무관 동일 결과 |
+| TURN-8 | TURN 한-노브 설정 | [x] | `TURN_SECRET` 만 있으면 `TURN_DOMAIN`/`TURN_PORT` 로 URL 자동 유도. compose 에 coturn 서비스(`--profile turn`) 통합 |
 
 ### 11.1 활성화 절차 (운영자 — 코드 아님, 이걸로 지역 무관 일관성 고정)
 
@@ -376,4 +379,22 @@ python scripts/verify_turn_relay.py --base-url https://metanova1004.com
 # [PASS] backend_health / [PASS] turn_relay <ip>:3478  ← 두 네트워크에서 모두 PASS 여야 지역 무관
 ```
 
-> **경계(정직):** 코드 측은 ① 조용한 강등 차단(경고) ② 배포 설정 커밋 ③ 검증 도구로 고정 완료. 단, **실제 LTE/5G 원거리 통화 성립은 coturn 공개 배포 + 백엔드 TURN_URLS/TURN_SECRET 설정(TURN-4·5)** 이 있어야 하며 이는 서버/네트워크 작업이다. 검증 도구로 두 네트워크에서 동일 PASS 가 나오면 일관성 확보.
+### 11.3 장거리 기준 고정 — 측정 결과(2026-06-22)
+
+서버에서 측정한 실측 증거(모두 PASS):
+
+```text
+[PASS] backend_health: HTTP 200
+[PASS] turn_relay 211.218.172.124:3478: TCP connect OK
+[PASS] turn_allocate 211.218.172.124:3478: Allocate 성공 — 릴레이 211.218.172.124:49170 (미디어 평면 OK)
+```
+
+- DNS(공개 8.8.8.8/1.1.1.1): `metanova1004.com → 211.218.172.124` (프록시 아님, TURN 직결 가능).
+- 백엔드 컨테이너 env: `TURN_URLS`/`TURN_SECRET`/`VOIP_FORCE_RELAY=1`/`TURN_DOMAIN` 적재 확인, health 200.
+- 코드: `VOIP_FORCE_RELAY=1` → 콜-init 응답에 `ice_transport_policy="relay"` → 단말(신빌드)이 릴레이 경로만 사용.
+
+**완전 일관성을 위한 잔여(서버/단말 영역, 코드 아님):**
+1. 원격 LTE 단말에서 `python scripts/verify_turn_relay.py --base-url https://metanova1004.com --turn turn:211.218.172.124:3478 --allocate` 가 **서버와 동일하게 PASS** 인지(엣지 라우터/ISP 가 미디어 UDP 레인지 49160-49200 를 외부에 열어주는지).
+2. **신규 빌드 배포** — 기존 APK 는 `ice_transport_policy` 미지원이라 force-relay 강제가 클라에 완전 바인딩되려면 신빌드가 필요(단, 기존 빌드도 TURN 후보는 받으므로 직결 실패 시 릴레이로 폴백됨).
+
+> **경계(정직):** 서버측 릴레이는 Allocate 실측으로 **동작 입증 완료**. "어디서나 같은 결과"는 force-relay(모든 통화 동일 경로) + 미디어 UDP 레인지 외부 개방(위 1) + 신빌드(위 2)로 고정된다. 코드/구성/서버 env 는 이 커밋으로 정합됐고, 남은 건 원격 네트워크 PASS 재현과 신빌드 배포다.

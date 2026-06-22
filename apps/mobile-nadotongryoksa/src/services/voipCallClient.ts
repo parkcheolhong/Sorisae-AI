@@ -43,6 +43,8 @@ export interface VoIPCallConfig {
     callId: string;
     signalingServerUrl: string;
     turnServers: TURNServer[];
+    // 장거리 기준 고정: 백엔드가 'relay' 를 내려주면 릴레이 경로만 사용(VOIP_FORCE_RELAY).
+    iceTransportPolicy?: 'all' | 'relay';
     mediaConstraints?: {
         audio: {
             echoCancellation: boolean;
@@ -63,6 +65,7 @@ export interface CallInitResponse {
     call_id: string;
     signaling_server: string;
     turn_servers: TURNServer[];
+    ice_transport_policy?: 'all' | 'relay' | null;
     session_id?: string;
     call_route?: string;
     phone_dialer_required?: boolean;
@@ -299,11 +302,20 @@ export class VoIPCallClient {
             return server;
         });
 
-        const peerConnectionConfig = {
+        const peerConnectionConfig: {
+            iceServers: typeof iceServers;
+            bundlePolicy: string;
+            rtcpMuxPolicy: string;
+            iceTransportPolicy?: 'all' | 'relay';
+        } = {
             iceServers,
             bundlePolicy: 'max-bundle',
             rtcpMuxPolicy: 'require',
         };
+        // 장거리 기준 고정: 백엔드가 'relay' 를 지정하면 릴레이만 사용(같은 LAN 테스트도 동일 경로).
+        if (this.config.iceTransportPolicy === 'relay') {
+            peerConnectionConfig.iceTransportPolicy = 'relay';
+        }
 
         this.peerConnection = new RTCPeerConnection(peerConnectionConfig);
 
