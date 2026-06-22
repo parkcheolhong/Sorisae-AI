@@ -107,6 +107,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    # 서버 미디어 브리지(MCU, §13): 서버 aiortc 가 TURN 클라이언트로 coturn 에 릴레이를 할당해야
+    # NAT 뒤에서도 폰↔서버 미디어가 연결된다. 컨테이너 안에서 TURN_DOMAIN(metanova1004.com)이
+    # 127.0.0.1 로 잡히면 자기 자신을 가리키므로, 호스트 게이트웨이로 매핑해 coturn(호스트 3478)에 도달.
+    # 폰은 공인 DNS 로 해석하므로 영향 없음.
+    extra_hosts:
+      - "metanova1004.com:host-gateway"
     environment:
       <<: *video-env
       SECRET_KEY: ${JWT_SECRET_KEY:-}
@@ -171,6 +177,12 @@ services:
       TURN_PORT: ${TURN_PORT:-3478}
       # VOIP_FORCE_RELAY=1 → 모든 통화가 릴레이 경로만 사용(같은 LAN 테스트도 셀룰러와 동일 경로).
       VOIP_FORCE_RELAY: ${VOIP_FORCE_RELAY:-0}
+      # 서버 미디어 브리지(MCU, 체크리스트 §13): 1 이면 폰↔서버↔폰 연속 라이브 음성 +
+      # 서버측 STT/번역/TTS(무전기 제거). 0(기본)이면 기존 P2P 경로 그대로(회귀 안전).
+      # 서버 aiortc 는 TURN 릴레이 후보로 미디어를 수신하므로 NAT 뒤에서도 동작(coturn 필요).
+      VOIP_SERVER_MEDIA_BRIDGE: ${VOIP_SERVER_MEDIA_BRIDGE:-0}
+      # 번역 음성(TTS) 트랙 주입(원음+번역 멀티트랙). 자막만 원하면 0.
+      VOIP_BRIDGE_TTS: ${VOIP_BRIDGE_TTS:-1}
       STUN_URLS: ${STUN_URLS:-}
       # VoIP 시그널링 스토어/릴레이를 Redis(멀티워커 pub/sub)로 승격(#4). 미설정 시 인메모리(P1) 폴백.
       # 마켓플레이스 캐시(/0)와 분리하기 위해 DB 인덱스 1 사용.

@@ -29,6 +29,11 @@ requests>=2.34.2
 webauthn>=2.7.1
 faster-whisper>=1.2.1
 edge-tts>=7.0.0
+# 서버 미디어 브리지(MCU): 2-레그 WebRTC 종단 + MediaRelay 포워딩 + AI 탭(STT/번역/TTS).
+# 체크리스트 §13. lazy import 가드(미설치 시 P2P 경로로 폴백)로 보호되나 운영 배포엔 필수.
+aiortc>=1.9.0
+av>=12.0.0
+numpy>=1.24.0
 mpmath>=1.1,<1.4
 setuptools>=75,<83
 slowapi>=0.1.9

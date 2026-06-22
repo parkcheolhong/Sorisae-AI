@@ -98,6 +98,8 @@ import {
 import {
     getWorldlincoTuning,
     resolveSileroBoundaryFromTuning,
+    isLiveDuplexActive,
+    isVoipServerBridgeActive,
 } from '../services/worldlincoTuningConfig';
 import type { VoiceRelayChunkMeta, VoiceRelayPlaybackItem } from '../features/voip-voice-relay/types';
 import { VoiceRelayPlaybackQueue } from '../features/voip-voice-relay/voiceRelayPlaybackQueue';
@@ -514,7 +516,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         // 늦게 도착한 트랙이 mute 되지 못하는 누수가 있다. 여기서 client mute 를 직접·강제
         // 재적용해 원음 누수를 막는다. 통역 모드는 원음을 끝까지 차단하므로(release 무시)
         // 멱등 재적용이며 정상 통화엔 무해하다. (대면 경로 무접촉 · VOIP 수신 억제 국한)
-        if (detected && voiceRelayEnabledRef.current) {
+        if (detected && voiceRelayEnabledRef.current && !isLiveDuplexActive()) {
             remoteAudioSuppressedRef.current = true;
             activeClient?.setRemoteAudioEnabled?.(false);
             if (!remoteTrackForceSuppressedRef.current) {
@@ -837,6 +839,15 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
     const setRemoteAudioSuppressed = useCallback((suppressed: boolean) => {
         const client = voipClientRef.current;
+        // 라이브 듀플렉스(§12): 원음을 끊지 않는다 → suppress 요청은 무시하고 항상 활성 유지.
+        // 통역은 자막/TTS 오버레이로만 제공(라이브 다운링크는 WebRTC AEC 가 마이크에서 상쇄).
+        if (suppressed && isLiveDuplexActive()) {
+            if (remoteAudioSuppressedRef.current) {
+                remoteAudioSuppressedRef.current = false;
+                client?.setRemoteAudioEnabled(true);
+            }
+            return;
+        }
         if (remoteAudioSuppressedRef.current === suppressed) {
             return;
         }
@@ -1295,6 +1306,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
             const sendDecision = shouldSendVoiceRelaySegment({
                 participantRole,
+                liveDuplex: isLiveDuplexActive(),
                 turn: voiceRelayTurnRef.current,
                 meterUnavailable,
                 flushHadSpeech,
@@ -1915,6 +1927,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
         const deferDecision = shouldDeferVoiceRelayFlush({
             participantRole,
+            liveDuplex: isLiveDuplexActive(),
             turn: voiceRelayTurnRef.current,
             reason,
             meterUnavailable: voiceRelayMeterUnavailableRef.current,
@@ -2134,6 +2147,11 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     }, [flushVoiceRelaySegment]);
 
     const startVoiceRelaySegment = useCallback(async () => {
+        // 서버 미디어 브리지(§13/MB-5): 통역 STT 를 서버가 수행하므로 클라는 로컬 캡처를
+        // 절대 시작하지 않는다(마이크는 WebRTC 라이브 업링크 전용 → 무전기·마이크 점유 충돌 제거).
+        if (isVoipServerBridgeActive()) {
+            return;
+        }
         if (Platform.OS === 'web') {
             setVoiceRelayError('웹에서는 통화 중 실시간 음성 통역 녹음을 지원하지 않습니다.');
             setVoiceRelayEnabled(false);
@@ -2197,6 +2215,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             participantRole,
             turn: voiceRelayTurnRef.current,
             fairnessBargeInMs: getWorldlincoTuning().voip.fairness_barge_in_ms,
+            liveDuplex: isLiveDuplexActive(),
         });
         if (!captureDecision.allowed) {
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
@@ -2599,6 +2618,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     callId: callInitResponse.call_id,
                     signalingServerUrl,
                     turnServers: callInitResponse.turn_servers,
+                    participantRole,
                     iceTransportPolicy:
                         callInitResponse.ice_transport_policy === 'relay' ? 'relay' : 'all',
                     mediaConstraints: {

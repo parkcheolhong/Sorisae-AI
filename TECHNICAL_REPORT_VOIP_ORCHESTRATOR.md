@@ -943,6 +943,13 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 - **측정 결과(2026-06-22, 서버):** backend_health 200 / turn_relay 211.218.172.124:3478 TCP OK / **turn_allocate 성공 → 릴레이 211.218.172.124:49170**. 공개 DNS `metanova1004.com→211.218.172.124`(프록시 아님). 백엔드 컨테이너 env 에 `TURN_URLS`/`TURN_SECRET`/`VOIP_FORCE_RELAY=1` 적재 확인. → **서버측 릴레이 동작 입증 완료.**
 - **경계(정직):** "어디서나 같은 결과"는 ① force-relay(전 통화 동일 경로) ② 미디어 UDP 레인지(49160-49200) 외부 개방 ③ 신규 빌드 배포(기존 APK 는 `ice_transport_policy` 미지원·단 TURN 후보는 받아 폴백)로 완성. ①은 적용 완료, ②는 원격 LTE 에서 `--allocate` PASS 재현으로 확인, ③은 빌드/배포 영역.
 
+#### 0.23.1 2폰 실측 결과 + ICE 자동 재연결 (build 171, 2026-06-22)
+
+- **relay-only 교차 통신사 실측:** 콜-init `ice_transport_policy:"relay"`, `auto_relay_applied:true` 로 SK↔KT 셀룰러 통화가 **연결 성공**(KT `connection_state:connected`, SK `trackCount:1`, coturn `allocation count 1→8`). relay-only 인데 붙었다 = **미디어가 서버 릴레이를 실제 통과** = 공유기 UDP 3478 + 49160-49200 포워딩 정상 입증. **릴레이는 두 폰의 거리와 무관**(둘 다 같은 서버 릴레이에 붙음) → 교차 통신사에서 붙으면 장거리도 지연만 더해질 뿐 동일 연결.
+- **"엉뚱한 말" 근본 원인 = 언어 오설정:** 단말 지정 언어가 `ja`(일본어)라 한국어를 일본어로 강제 STT. ko 로 지정하니 `detected=ko transcript='지금 현재 음성 테스트 중입니다'` → 영어 번역 정상. 네트워크/통역 엔진 문제가 아님. (참고: SK 계정 `119cash` 백엔드 프로필 `preferred_language=ja/JP` 박혀 있어 프로필 교정 권장 — 미교정 시 단말 로컬 오버라이드 필요.)
+- **코드 결함→수정 (`voipCallClient.ts`):** `oniceconnectionstatechange` 가 `disconnected/failed` 시 복구 없이 통화를 종료시켰음("받으면 끊김"). → **ICE 자동 재연결** 도입: `disconnected` 2.5s 유예→미복구 시 재시작, `failed` 즉시 재시작; `restartIce()`+`createOffer({iceRestart:true})` 재협상(offerer='caller'만, 글레어 방지); 최대 4회 백오프(2/4/6/8s); **재연결 중 'connecting' 유지로 통화 비종료**, 예산 소진 시에만 terminal. `VoIPCallConfig.participantRole` 추가·주입, `hangup()` 정리.
+- **발행:** v1.0.119 / versionCode **171** (`scripts/publish_worldlinco_apk.ps1`, BUILD SUCCESSFUL, 인앱 매니페스트 반영). 원거리 실측 전 두 폰 업데이트 + **단말별 본인 언어 지정** 필수.
+
 ---
 
 ## 1. 개발 환경 구성

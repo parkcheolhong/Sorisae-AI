@@ -524,6 +524,8 @@ online_voice_clients: Dict[str, WebSocket] = {}
 pending_signal_messages: Dict[str, Dict[str, List[dict]]] = {}
 signal_queue_alert_last_len: Dict[str, Dict[str, int]] = {}
 webrtc_peers: Dict[str, Any] = {}
+# 서버 미디어 브리지(MCU) 인스턴스 — 플래그 VOIP_SERVER_MEDIA_BRIDGE 시에만 사용(체크리스트 §13).
+call_media_bridges: Dict[str, Any] = {}
 
 
 def _maybe_prune_stale_resumable_call(call_state: CallState, db: Session) -> bool:
@@ -2071,6 +2073,74 @@ async def websocket_presence(
             online_voice_clients.pop(voice_id, None)
 
 
+def _server_bridge_active() -> bool:
+    """서버 미디어 브리지 모드 활성 여부(플래그 + aiortc/av/numpy 가용)."""
+    try:
+        from backend.voip import media_bridge
+        return media_bridge.server_bridge_enabled()
+    except Exception:
+        return False
+
+
+async def _bridge_emit_subtitle(call_id: str, target_role: str, payload: dict) -> None:
+    """AI 탭이 생성한 통역 자막을 상대 레그(폰)로 전달."""
+    await _send_app_signal_to_role(
+        call_id, target_role, payload, queue_if_missing=True
+    )
+
+
+def _resolve_leg_languages(call_state: "CallState") -> Dict[str, str]:
+    """caller/callee 화자 지정 언어(없으면 비움 → STT auto)."""
+    langs: Dict[str, str] = {}
+    db = SessionLocal()
+    try:
+        for role, user_id in (
+            ("caller", call_state.caller_user_id),
+            ("callee", call_state.callee_user_id),
+        ):
+            if user_id is None:
+                continue
+            user = (
+                db.query(models.User)
+                .filter(models.User.id == user_id)
+                .first()
+            )
+            lang = _resolve_user_language(user) if user is not None else None
+            if lang:
+                langs[role] = lang
+    except Exception:
+        pass
+    finally:
+        db.close()
+    return langs
+
+
+def _get_or_create_bridge(call_id: str, call_state: "CallState"):
+    """call_id 의 서버 미디어 브리지 인스턴스를 반환(없으면 생성)."""
+    bridge = call_media_bridges.get(call_id)
+    if bridge is not None:
+        return bridge
+    from backend.voip.media_bridge import CallMediaBridge
+    bridge = CallMediaBridge(
+        call_id,
+        _bridge_emit_subtitle,
+        ice_servers=_default_turn_servers(),
+        leg_languages=_resolve_leg_languages(call_state),
+    )
+    call_media_bridges[call_id] = bridge
+    logger.info("[VoIP] Server media bridge created | call_id=%s", call_id)
+    return bridge
+
+
+async def _close_bridge(call_id: str) -> None:
+    bridge = call_media_bridges.pop(call_id, None)
+    if bridge is not None:
+        try:
+            await bridge.close()
+        except Exception:
+            logger.debug("[VoIP] bridge close error | call_id=%s", call_id, exc_info=True)
+
+
 async def _relay_app_signal(
     call_id: str, sender_role: str, message: dict
 ) -> None:
@@ -2468,6 +2538,32 @@ async def websocket_signaling(
             normalized_role,
         )
         await _flush_pending_signals(call_id, normalized_role, websocket)
+
+        # 서버 미디어 브리지(§13/MB-3): MCU 는 두 폰이 모두 서버와 연결돼야 한다.
+        # caller 는 자기 offer 를 보내 서버가 answer 한다(아래 'offer' 핸들러). 그러나 callee 는
+        # P2P 습관상 offer 를 기다리기만 하므로, 서버가 callee 에게 offer 를 만들어 보낸다.
+        # (from_role='server_bridge' 마커로 클라가 브리지 모드 진입.)
+        if _server_bridge_active() and normalized_role == "callee":
+            try:
+                bridge = _get_or_create_bridge(call_id, call_state)
+                offer_sdp = await bridge.create_offer_for("callee")
+                await websocket.send_json(
+                    {
+                        "type": "offer",
+                        "call_id": call_id,
+                        "sdp": offer_sdp,
+                        "from_role": "server_bridge",
+                    }
+                )
+                logger.info(
+                    "[VoIP] Bridge offer sent to callee | call_id=%s", call_id
+                )
+            except Exception as exc:
+                logger.error(
+                    "[VoIP] Bridge callee offer failed | call_id=%s | error=%s",
+                    call_id,
+                    exc,
+                )
         try:
             while True:
                 data = await websocket.receive_text()
@@ -2487,13 +2583,65 @@ async def websocket_signaling(
                     )
                 if message_type == "offer":
                     call_state.local_sdp = message.get("sdp")
-                    await _relay_app_signal(call_id, normalized_role, message)
+                    if _server_bridge_active():
+                        # 서버 미디어 브리지 모드(§13): 폰이 서버에 offer → 서버가 answer.
+                        # 각 폰이 서버와 sendrecv 로 연결되고, 서버가 양 레그를 포워딩 + AI 탭.
+                        try:
+                            bridge = _get_or_create_bridge(call_id, call_state)
+                            answer_sdp = await bridge.handle_offer(
+                                normalized_role, message.get("sdp", "")
+                            )
+                            await websocket.send_json(
+                                {
+                                    "type": "answer",
+                                    "call_id": call_id,
+                                    "sdp": answer_sdp,
+                                    "from_role": "server_bridge",
+                                }
+                            )
+                            call_state.set_status("active")
+                            logger.info(
+                                "[VoIP] Bridge answer sent | call_id=%s | role=%s",
+                                call_id,
+                                normalized_role,
+                            )
+                        except Exception as exc:
+                            logger.error(
+                                "[VoIP] Bridge offer failed, fallback to P2P relay "
+                                "| call_id=%s | error=%s",
+                                call_id,
+                                exc,
+                            )
+                            await _relay_app_signal(call_id, normalized_role, message)
+                    else:
+                        await _relay_app_signal(call_id, normalized_role, message)
                 elif message_type == "answer":
                     call_state.remote_sdp = message.get("sdp")
                     call_state.set_status("active")
-                    await _relay_app_signal(call_id, normalized_role, message)
+                    if _server_bridge_active():
+                        # 브리지 모드: 서버가 callee 에 보낸 offer 에 대한 응답 → 브리지에 적용.
+                        # (caller 는 서버가 answer 하는 쪽이라 여기로 오지 않는다.)
+                        if call_id in call_media_bridges:
+                            await call_media_bridges[call_id].handle_answer(
+                                normalized_role, message.get("sdp", "")
+                            )
+                            logger.info(
+                                "[VoIP] Bridge answer applied | call_id=%s | role=%s",
+                                call_id,
+                                normalized_role,
+                            )
+                    else:
+                        await _relay_app_signal(call_id, normalized_role, message)
                 elif message_type == "candidate":
-                    await _relay_app_signal(call_id, normalized_role, message)
+                    if _server_bridge_active() and call_id in call_media_bridges:
+                        await call_media_bridges[call_id].add_ice_candidate(
+                            normalized_role,
+                            message.get("candidate"),
+                            message.get("sdpMid"),
+                            message.get("sdpMLineIndex"),
+                        )
+                    else:
+                        await _relay_app_signal(call_id, normalized_role, message)
                 elif message_type == "chat_message":
                     text = str(message.get("text") or "").strip()
                     if not text:
@@ -2584,6 +2732,10 @@ async def websocket_signaling(
                             },
                         )
                 elif message_type == "voice_translation":
+                    # 브리지 모드에선 서버 AI 탭이 통역 자막을 생성하므로
+                    # 클라이언트발 voice_translation 은 무시(중복 자막 방지).
+                    if _server_bridge_active():
+                        continue
                     relay_payload = _build_voice_translation_relay_payload(message)
                     if (
                         not relay_payload.get("transcript")
@@ -2598,6 +2750,7 @@ async def websocket_signaling(
                 elif message_type == "hangup":
                     call_state.set_status("ended")
                     _cleanup_call_runtime_state(call_id)
+                    await _close_bridge(call_id)
                     await _relay_app_signal(call_id, normalized_role, message)
                     break
                 elif message_type == "ping":
@@ -2644,6 +2797,9 @@ async def websocket_signaling(
             if participants.get(normalized_role) is websocket:
                 participants.pop(normalized_role, None)
             connected_clients.pop(f"{call_id}:{normalized_role}", None)
+            # 양 레그가 모두 떠났으면 서버 미디어 브리지 종료(리소스 회수).
+            if not call_participants.get(call_id):
+                await _close_bridge(call_id)
         return
 
     connected_clients[call_id] = websocket

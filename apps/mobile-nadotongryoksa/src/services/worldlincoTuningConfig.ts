@@ -18,6 +18,10 @@ export type WorldlincoVoipTuning = {
     speech_meter_min_db: number;
     file_speech_rms_db: number;
     meter_unavailable_fixed_flush_ms: number;
+    // 실시간 라이브 듀플렉스(1=ON): 원격 원음을 끊지 않고(라이브 통화) 통역을 자막/TTS 오버레이로.
+    // 턴 잠금(listen-hold) 캡처 차단을 해제해 무전기 느낌 제거. 0 이면 기존 반이중(무전기) 동작.
+    // 백엔드 SSOT(/api/marketplace/worldlinco/tuning)에서 0 으로 내리면 빌드 없이 즉시 회귀 가능.
+    live_duplex_mode: number;
 };
 
 export type WorldlincoFaceTuning = {
@@ -60,6 +64,9 @@ export const WORLDLINGCO_TUNING_DEFAULTS: WorldlincoTuningSnapshot = {
         speech_meter_min_db: -52,
         file_speech_rms_db: -52,
         meter_unavailable_fixed_flush_ms: 4000,
+        // 0=휴면(기존 동작 유지). 서버측 STT(P-server) 가 들어와 클라가 마이크를 점유하지 않게 된 뒤
+        // 1 로 올린다. 클라 단독으로 1 로 두면 마이크 점유 충돌로 라이브 음성이 흐르지 못한다(R7).
+        live_duplex_mode: 0,
     },
     face_conversation: {
         silence_flush_ms: 1600,
@@ -88,7 +95,7 @@ function mergeSection<T extends Record<string, number>>(
     for (const key of Object.keys(defaults) as (keyof T)[]) {
         const value = remote[key];
         if (typeof value === 'number' && Number.isFinite(value)) {
-            merged[key] = value;
+            merged[key] = value as T[keyof T];
         }
     }
     return merged;
@@ -105,6 +112,28 @@ function mergeTuningPayload(payload: Partial<WorldlincoTuningSnapshot> | null | 
 
 export function getWorldlincoTuning(): WorldlincoTuningSnapshot {
     return cachedSnapshot;
+}
+
+// ── 서버 미디어 브리지(MCU) 런타임 플래그 (체크리스트 §13 / MB-5) ──────────────
+// 서버가 통화 미디어를 종단·중계하고 STT/번역/TTS 를 처리하는 모드.
+// 통화 중 서버 answer(from_role='server_bridge') 수신 시 켜진다(통화 단위 런타임).
+// 켜지면: (1) 라이브 듀플렉스 동작(원음 연속, 무전기 제거)이 강제 활성,
+//        (2) 클라 로컬 STT 캡처/마이크 잠금/voice_translation 송신을 전면 중단(서버가 대신 수행).
+let serverBridgeActive = false;
+
+export function setVoipServerBridgeActive(active: boolean): void {
+    serverBridgeActive = active;
+}
+
+export function isVoipServerBridgeActive(): boolean {
+    return serverBridgeActive;
+}
+
+// 라이브 연속 음성(무전기 제거) 활성 여부:
+//  - 서버 브리지 모드면 무조건 활성(서버가 STT 하므로 마이크 점유 충돌 없음 → R7 해소),
+//  - 아니면 기존 P1 플래그(live_duplex_mode===1).
+export function isLiveDuplexActive(): boolean {
+    return serverBridgeActive || cachedSnapshot.voip.live_duplex_mode === 1;
 }
 
 export async function hydrateWorldlincoTuningFromStorage(): Promise<WorldlincoTuningSnapshot> {

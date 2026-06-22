@@ -2647,10 +2647,25 @@ export default function App() {
         return () => { cancelled = true; };
     }, []);
     const handleSelectVoipLocalLang = useCallback((code: LangCode) => {
+        // 1) 즉시 로컬 반영(오프라인/지연에도 통화 언어가 곧바로 바뀌도록).
         setVoipLocalLangOverride(code);
         setVoipLangModalVisible(false);
         void AsyncStorage.setItem(VOIP_LOCAL_LANG_STORAGE_KEY, code).catch(() => { });
-    }, []);
+        // 2) 백엔드 실시간 저장: 통역 지정 언어를 프로필 preferred_language 로 즉시 PATCH →
+        //    상대 단말이 읽는 언어까지 한 번에 일관 적용(별도 "프로필 저장" 단계 불필요).
+        if (token && userInfo) {
+            void (async () => {
+                try {
+                    const updated = await callUpdateMeApi(token, { preferred_language: code });
+                    setUserInfo(updated);
+                    await saveStoredAuthState(token, updated);
+                    console.log('[VoIP][lang] preferred_language synced to backend', code);
+                } catch (error: any) {
+                    console.warn('[VoIP][lang] backend sync failed (local override still active)', error?.message || error);
+                }
+            })();
+        }
+    }, [token, userInfo]);
     const handleClearVoipLocalLang = useCallback(() => {
         setVoipLocalLangOverride(null);
         setVoipLangModalVisible(false);
