@@ -13,6 +13,7 @@
 > - `evidence/worldlinco-v1-launch/BUILD73_LAUNCH_STATUS.md` — build 73 SSOT  
 > - `docs/worldlinco-v2/IN_APP_AUTO_UPDATE_AND_AUDIO_FIX.md` — 인앱 자동 업데이트 · TTS 발화 회귀 수정 (build 142–145)  
 > - `docs/worldlinco-v2/TOURISM_AI_KNOWLEDGE_RAG_DESIGN.md` — 소리새 AI 관광 지식·RAG·사람검수·NPS·CLIP (§0.21)  
+> - `docs/checklists/tourism-ai-pilot-checklist.md` — 관광 AI 파일럿 + 관측성 정밀화(OTel) 체크리스트 (§0.22 / 체크리스트 §10)  
 > - `AGENTS.md` — 로컬/클라우드 운영 가이드  
 
 ---
@@ -862,6 +863,53 @@ VOIP에서 마이크 미터가 죽으면(`meterUnavailable`, peak −160dB) RMS 
 #### 0.21.6 배포·의존성
 - 의존성(`requirements.txt`): `fastembed>=0.8.0`, `cryptography>=42`, `Pillow>=12.2`, `google-auth>=2.30`.
 - 배포: Docker Compose `docker restart devanalysis114-backend` → health 200, `tourism review/feedback/carbon router loaded` 확인.
+
+### 0.22 관측성 정밀화 — OpenTelemetry 분산 트레이싱(opt-in·fail-open) (2026-06-22)
+
+> 체크리스트: [`docs/checklists/tourism-ai-pilot-checklist.md`](docs/checklists/tourism-ai-pilot-checklist.md) §10. 동기: 레퍼런스 아키텍처 적합성 평가(캔버스 `tourism-voip-architecture-fit`)에서 스펙 헤드라인인 **정밀 ns 타임스탬프 + 분산 트레이싱**이 유일한 "명확한 갭"으로 확인됨 → 그 해소 1단계.
+
+설계 불변식(`backend/voip/metrics.py`·`carbon_meter.py` 동일): **opt-in · 의존성 가드 · fail-open**. 미설치/비활성/초기화 실패 어느 경우에도 앱 기동·요청 처리·**대면 통역(§0.20.3 동결)에 무영향**.
+
+#### 0.22.1 추가 구성요소
+- `backend/observability/tracing.py` — `init_tracing(app)`: `OTEL_TRACING_ENABLED`(기본 OFF) 게이트. 활성 시 `TracerProvider`+OTLP(gRPC) exporter 구성 후 **FastAPI 자동 계측**(요청 span·`http.server.duration`) + **httpx 자동 계측**(아웃바운드 STT/번역/TTS·외부 API). `get_tracer()`는 미설치/비활성 시 **no-op tracer**(nullcontext) 반환 → 수동 span 코드도 안전.
+- `backend/main.py`: prometheus 메트릭 블록 직후 `try: init_tracing(app) except: logger.warning(...)`(fail-open). 기존 `/metrics`(Prometheus)와 공존.
+- `requirements-observability.txt`(신규, **옵션**): `opentelemetry-sdk`·`opentelemetry-exporter-otlp`·`opentelemetry-instrumentation-fastapi`·`opentelemetry-instrumentation-httpx`. **메인 `requirements.txt`·운영 이미지는 불변** — 활성화할 때만 설치(무위험).
+
+#### 0.22.2 활성화·NTP 런북
+```bash
+pip install -r requirements-observability.txt
+export OTEL_TRACING_ENABLED=1
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317      # 또는 jaeger OTLP
+export OTEL_SERVICE_NAME=devanalysis114-backend
+sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임스탬프 전제, OS 레벨)
+```
+
+#### 0.22.3 보류(계획) 항목 — 위험/타당성 사유 (트레이서빌리티)
+- **오토튜너 `search_space` 확장**(코덱·지터버퍼·GPU클럭·번역batch·RAG top-k): `eval/worldlinco/`는 사람승인 게이트라 배포 위험은 없으나, **런타임 SSOT(`worldlinco_tuning_config.json`) 미연결 노브는 무의미한 제안**을 만든다 → 각 노브 런타임 적용 경로 선연결 후 추가. **현 단계 미구현.**
+- **RTP 레벨 지연 메트릭**: P2P 적합 방식(클라이언트 getStats→백엔드 보고)으로 **설계+구현 완료**(§0.22.5). **모바일은 opt-in(기본 비활성)**.
+- **SFU / K8s 멀티-AZ**: 다자 통화·서버 녹음/믹싱·수평확장 요구 시 도입. 현 1:1 P2P·단일 호스트 Compose 로 MVP 충족. **로드맵.**
+
+#### 0.22.4 검증
+- `py_compile backend/observability/tracing.py backend/main.py` OK(OTel 미설치 환경) — 의존성 부재 시 no-op 폴백 확인.
+
+### 0.22.5 RTP 지연 측정 — 클라이언트 getStats → 백엔드 보고 (P2P 적합) (2026-06-22)
+
+> 체크리스트: §10.3(RTP-1~6). 미디어가 **P2P WebRTC + coturn(TURN)** 이라 서버측 RTP 중계 지점이 없으므로, 각 단말이 `RTCPeerConnection.getStats()` QoS를 주기 표본화해 백엔드로 보고하고 백엔드는 off-path Prometheus 로 집계한다. 원칙: **off-path · opt-in · fail-open**(통화/오디오 경로 무영향, §0.20.3 동결 무관).
+
+#### 0.22.5.1 백엔드
+- `backend/voip/metrics.py`(+): `voip_client_rtt_seconds`·`voip_client_jitter_seconds`·`voip_client_packet_loss_ratio`·`voip_client_outgoing_bitrate_bps`(Histogram, label `role`) + `record_client_webrtc_stats(...)`(예외 흡수, no-op 가드). 기존 `/metrics`에 함께 노출.
+- `backend/marketplace/nadotongryoksa_voip_router.py`(+): `POST /api/v1/voip/webrtc-stats` — `WebRTCStatsReport`(call_id/role/rtt_ms/jitter_ms/packet_loss_ratio/outgoing_bitrate_bps, 전부 옵션·수치) 수신 → 메트릭 기록 후 `{ok:true}`. `get_current_user` 인증, 기존 통화 로직과 **격리**(정적 경로, route 충돌 없음). **PII 미수집**(식별자는 메트릭 라벨 비포함, 데이터 최소화).
+
+#### 0.22.5.2 모바일
+- `apps/mobile-nadotongryoksa/src/features/voip-voice-relay/webrtcStatsReporter.ts`(신규):
+  - `extractWebRTCStatsSample(report, prev)` — **순수함수**. candidate-pair(`currentRoundTripTime`·`availableOutgoingBitrate`)·inbound-rtp(`jitter`·`packetsLost`·`packetsReceived`)·remote-inbound-rtp(`roundTripTime`) 파싱. 손실률은 **누적 카운터 델타**(prev→now)로 산출(0..1).
+  - `WebRTCStatsReporter` — 주기(기본 5s) `getStats()`→파싱→`POST /webrtc-stats`. `voipPresence.ts`와 동일한 fetch fail-open(예외 흡수, 통화 무영향).
+- `apps/mobile-nadotongryoksa/src/services/voipCallClient.ts`(+): `startStatsReporter({apiBaseUrl, authToken, role, intervalMs?})`(opt-in) + `hangup()`에서 자동 정지. **자동 호출 지점 없음 → 기본 런타임/통화 동작 무변경**(화면/훅이 명시 호출할 때만 활성).
+
+#### 0.22.5.3 검증
+- `py_compile backend/voip/metrics.py backend/marketplace/nadotongryoksa_voip_router.py` OK.
+- 모바일 파서 유닛 테스트 `src/__tests__/webrtcStatsReporter.test.ts` + 변경 파일 typecheck.
+- KPI: Grafana `histogram_quantile(0.95, voip_client_rtt_seconds_bucket)`→스펙 `<30ms`, `voip_client_packet_loss_ratio`→`<2%`.
 
 ---
 

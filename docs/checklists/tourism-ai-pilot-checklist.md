@@ -224,3 +224,65 @@ docker compose run --rm -e TOURISM_REFRESH_RUN_ON_START=true tourism-worker \
 - [x] `/api/tourism-feedback` POST→stats 라이브 — A:up/nps10 → overall NPS=100, 테스트행 정리 완료
 - [x] `/api/tourism-review/stats` 라이브 — available=true (라벨 0, 클린 상태)
 - [ ] (서버) `TOURISM_CLIP_ENABLED=1` 백필 후 멀티모달 검색 — GA 잔여(운영 서버)
+
+---
+
+## 10. 관측성 정밀화 — OTel 분산 트레이싱 · 갭 클로저 로드맵 (§0.22)
+
+> 배경: 레퍼런스 아키텍처 적합성 평가(캔버스 `tourism-voip-architecture-fit`) 결과, 스펙 헤드라인인
+> **정밀 ns 타임스탬프 + 분산 트레이싱**이 유일한 "명확한 갭"으로 확인됨. 본 절은 그 해소 작업.
+> 원칙: 기존 패턴(`backend/voip/metrics.py`·`carbon_meter.py`)과 동일하게 **opt-in · 의존성 가드 · fail-open** —
+> 미설치/비활성/실패 어느 경우에도 앱 기동·요청 처리·대면 통역(§0.20.3 동결)에 **무영향**.
+
+| ID | 항목 | 상태 | 검증 / 비고 |
+|----|------|------|------|
+| OBS-1 | OTel 트레이싱 모듈(opt-in·fail-open) | [x] | `backend/observability/tracing.py` — `OTEL_TRACING_ENABLED` 게이트(기본 OFF) |
+| OBS-2 | `main.py` 와이어업 | [x] | prometheus 블록 직후 `init_tracing(app)`(try/except, fail-open) |
+| OBS-3 | 옵션 의존성 선언 | [x] | `requirements-observability.txt`(메인 이미지 불변, opt-in 설치) |
+| OBS-4 | FastAPI/httpx 자동 계측 | [x] | 요청 span + 아웃바운드 httpx(STT/번역/TTS·외부 API) → 발화 단위 trace 연결 |
+| OBS-5 | `py_compile`(OTel 미설치 안전) | [x] | 의존성 부재 시 no-op tracer 폴백, import 안전 |
+| OBS-6 | NTP(±1ms) 동기화 런북 | [x] (문서) | 노드 `chrony` 설정 — OS/인프라 영역(코드 아님), 아래 런북 |
+
+### 10.1 활성화 런북 (운영, opt-in)
+
+```bash
+# 1) 옵션 의존성 설치(메인 이미지에는 미포함 — 활성화 시에만)
+pip install -r requirements-observability.txt
+# 2) 수집기(Jaeger/Tempo, OTLP gRPC 4317) 기동 후 env 설정
+export OTEL_TRACING_ENABLED=1
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317   # 또는 jaeger OTLP
+export OTEL_SERVICE_NAME=devanalysis114-backend
+# 3) 노드 시계 ±1ms 동기화 (정밀 타임스탬프 전제 — OS 레벨)
+sudo apt-get install -y chrony && sudo systemctl enable --now chrony
+chronyc tracking   # offset 확인
+# 4) 백엔드 재기동 → 발화(STT→번역→TTS) 단위 trace 가 수집기에 표시
+```
+
+> 비활성(기본): `OTEL_TRACING_ENABLED` 미설정 시 `init_tracing`은 즉시 `False` 반환(no-op). 의존성 미설치 시에도 동일.
+
+### 10.2 보류(계획) 항목 — 위험/타당성 사유
+
+| 항목 | 상태 | 보류 사유 (어떤 경우에도 파악 가능하도록 명시) |
+|------|------|------|
+| 오토튜너 `search_space` 확장(코덱·지터버퍼·GPU클럭·번역batch·RAG top-k) | [ ] 계획 | `eval/worldlinco/`는 사람승인 게이트라 배포 위험은 없으나, **런타임 SSOT(`worldlinco_tuning_config.json`)에 미연결된 노브는 무의미한 제안**을 생성. 각 노브의 런타임 적용 경로 선(先)연결 후 추가해야 함. |
+| RTP 레벨 지연 메트릭(RTT/jitter/loss) | [~] 설계+백엔드 구현 · 모바일 opt-in | **P2P 적합 방식**으로 진행 — 클라이언트 `getStats()`→백엔드 보고(§10.3). 백엔드 메트릭·엔드포인트·모바일 리포터 구현, **기본 비활성(opt-in)**. |
+| SFU 미디어 서버 / K8s 멀티-AZ | [ ] 로드맵 | 다자 통화·서버 녹음/믹싱 또는 수평확장·다중 AZ가 제품 요구가 될 때 도입(현 1:1 P2P·단일 호스트 Compose 로 MVP 충족). |
+
+### 10.3 RTP 지연 측정 — 클라이언트 getStats → 백엔드 보고 (P2P 적합 설계)
+
+> 서버측 RTP 중계 지점이 없는 **P2P + TURN** 구조에서 실측하는 정공법: 각 단말이
+> `RTCPeerConnection.getStats()`로 RTT/jitter/loss/bitrate를 주기 표본화해 백엔드로 보고 →
+> 백엔드는 off-path Prometheus 히스토그램으로 집계. **off-path · opt-in · fail-open**(통화 경로 무영향).
+
+| ID | 항목 | 상태 | 검증 / 비고 |
+|----|------|------|------|
+| RTP-1 | 백엔드 QoS 메트릭(role 라벨) | [x] | `voip_client_rtt_seconds`·`_jitter_seconds`·`_packet_loss_ratio`·`_outgoing_bitrate_bps` (`backend/voip/metrics.py`, fail-open) |
+| RTP-2 | 보고 엔드포인트 | [x] | `POST /api/v1/voip/webrtc-stats`(인증·격리·fail-open, PII 미수집) `nadotongryoksa_voip_router.py` |
+| RTP-3 | 모바일 표본 파서(순수함수) | [x] | `webrtcStatsReporter.ts` `extractWebRTCStatsSample()` — candidate-pair/inbound-rtp/remote-inbound 파싱, 손실은 누적 카운터 델타 |
+| RTP-4 | 모바일 리포터(주기 표본·보고) | [x] | `WebRTCStatsReporter`(기본 5s, fetch fail-open) |
+| RTP-5 | 통화 클라이언트 opt-in 연결 | [x] | `VoIPCallClient.startStatsReporter(opts)` + `hangup()`에서 정지. **자동 호출 없음 → 기본 런타임 무변경** |
+| RTP-6 | 유닛 테스트 | [x] | `__tests__/webrtcStatsReporter.test.ts`(파서 순수함수) |
+
+- **수집 항목(수치 QoS만, PII 없음):** `rtt_ms`·`jitter_ms`·`packet_loss_ratio(0..1)`·`outgoing_bitrate_bps`·`role(caller/callee)`. 통화/방 식별자 등은 메트릭 라벨에 넣지 않음(데이터 최소화).
+- **KPI 매핑:** Grafana `histogram_quantile(0.95, voip_client_rtt_seconds_bucket)` → 스펙 `<30ms RTT`, `voip_client_packet_loss_ratio` → `<2% 손실` 게이지화.
+- **활성화(opt-in):** 통화 화면/훅이 연결 성공 후 `client.startStatsReporter({ apiBaseUrl, authToken, role })` 호출 시에만 보고 시작. 미호출 시 완전 비활성.

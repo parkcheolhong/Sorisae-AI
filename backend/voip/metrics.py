@@ -16,6 +16,10 @@
 - ``voip_signaling_errors_total{reason}``       : 시그널링 거절/오류(auth/room/loop)
 - ``voip_turn_credentials_issued_total{kind}``  : TURN 자격 발급(dynamic/static/none)
 - ``voip_call_join_latency_seconds``            : 룸 생성→콜리 WS 합류 지연(셋업 프록시)
+- ``voip_client_rtt_seconds{role}``             : 클라이언트 getStats RTT(P2P, 기술서 §0.22.5)
+- ``voip_client_jitter_seconds{role}``          : 클라이언트 inbound-rtp jitter
+- ``voip_client_packet_loss_ratio{role}``       : 클라이언트 수신 손실률(0..1, 누적 델타)
+- ``voip_client_outgoing_bitrate_bps{role}``    : 클라이언트 availableOutgoingBitrate(bps)
 """
 
 from __future__ import annotations
@@ -56,9 +60,35 @@ if _PROM:
         "Latency from room creation to callee WS join (setup proxy)",
         buckets=(0.5, 1, 2, 3, 5, 8, 13, 21, 34, 60),
     )
+    # ── 클라이언트 getStats QoS (P2P 실측, 기술서 §0.22.5) ──
+    CLIENT_RTT = Histogram(
+        "voip_client_rtt_seconds",
+        "Client-reported WebRTC RTT (candidate-pair/remote-inbound)",
+        ["role"],
+        buckets=(0.01, 0.02, 0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55, 1.0, 2.0),
+    )
+    CLIENT_JITTER = Histogram(
+        "voip_client_jitter_seconds",
+        "Client-reported inbound RTP jitter",
+        ["role"],
+        buckets=(0.001, 0.005, 0.01, 0.02, 0.03, 0.05, 0.08, 0.13, 0.21),
+    )
+    CLIENT_PACKET_LOSS = Histogram(
+        "voip_client_packet_loss_ratio",
+        "Client-reported received packet loss ratio (0..1)",
+        ["role"],
+        buckets=(0.0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0),
+    )
+    CLIENT_OUT_BITRATE = Histogram(
+        "voip_client_outgoing_bitrate_bps",
+        "Client-reported available outgoing bitrate (bps)",
+        ["role"],
+        buckets=(8000, 16000, 32000, 48000, 64000, 96000, 128000, 256000, 512000),
+    )
 else:  # pragma: no cover
     CALLS_INITIATED = ACTIVE_WS = WS_CONNECTIONS = None
     SIGNALING_MESSAGES = SIGNALING_ERRORS = TURN_ISSUED = CALL_JOIN_LATENCY = None
+    CLIENT_RTT = CLIENT_JITTER = CLIENT_PACKET_LOSS = CLIENT_OUT_BITRATE = None
 
 
 def record_call_initiated(route: str, mode: str) -> None:
@@ -118,3 +148,31 @@ def observe_call_join_latency(seconds: float) -> None:
             CALL_JOIN_LATENCY.observe(float(seconds))
     except Exception:  # pragma: no cover
         logger.debug("[voip-metrics] observe_call_join_latency skipped", exc_info=True)
+
+
+def record_client_webrtc_stats(
+    role: str,
+    *,
+    rtt_seconds: float | None = None,
+    jitter_seconds: float | None = None,
+    packet_loss_ratio: float | None = None,
+    outgoing_bitrate_bps: float | None = None,
+) -> None:
+    """클라이언트 getStats QoS 표본 기록(off-path, fail-open, 기술서 §0.22.5).
+
+    role: 'caller' | 'callee' | 'unknown'. 음수/범위 밖 값은 무시한다.
+    """
+    try:
+        if not _PROM:
+            return
+        label = role or "unknown"
+        if rtt_seconds is not None and rtt_seconds >= 0:
+            CLIENT_RTT.labels(role=label).observe(float(rtt_seconds))
+        if jitter_seconds is not None and jitter_seconds >= 0:
+            CLIENT_JITTER.labels(role=label).observe(float(jitter_seconds))
+        if packet_loss_ratio is not None and 0.0 <= packet_loss_ratio <= 1.0:
+            CLIENT_PACKET_LOSS.labels(role=label).observe(float(packet_loss_ratio))
+        if outgoing_bitrate_bps is not None and outgoing_bitrate_bps >= 0:
+            CLIENT_OUT_BITRATE.labels(role=label).observe(float(outgoing_bitrate_bps))
+    except Exception:  # pragma: no cover
+        logger.debug("[voip-metrics] record_client_webrtc_stats skipped", exc_info=True)

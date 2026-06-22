@@ -1327,6 +1327,15 @@ app.add_middleware(
 )
 logger.info("[OK] cors origins loaded: %s", cors_origins)
 
+# ── OpenTelemetry 분산 트레이싱 (opt-in · 의존성 가드 · fail-open, 기술서 §0.22) ──
+# OTEL_TRACING_ENABLED 미설정/미설치/실패 시 no-op — 기동·요청 처리에 무영향.
+try:
+    from backend.observability.tracing import init_tracing
+    init_tracing(app)
+except Exception as _otel_err:
+    logger.warning("[WARN] otel tracing skipped: %s", _otel_err)
+
+
 # ── Prometheus Metrics ──
 try:
     from backend.marketplace.prometheus_metrics import PrometheusMiddleware, get_metrics

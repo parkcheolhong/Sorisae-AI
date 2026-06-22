@@ -6,6 +6,8 @@
 
 import { Platform } from 'react-native';
 
+import { WebRTCStatsReporter } from '../features/voip-voice-relay/webrtcStatsReporter';
+
 // Declare navigator for TypeScript
 declare const navigator: any;
 
@@ -131,6 +133,8 @@ export class VoIPCallClient {
     private remoteAudioSuppressed = false;
     private signalingSocket: WebSocket | null = null;
     private signalingKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
+    // opt-in: WebRTC QoS(RTT/jitter/loss) 표본 리포터. startStatsReporter() 호출 시에만 활성.
+    private statsReporter: WebRTCStatsReporter | null = null;
     private readonly config: VoIPCallConfig;
     private readonly iceCandidateQueue: any[] = [];
     private isConnected = false;
@@ -1119,10 +1123,54 @@ export class VoIPCallClient {
     }
 
     /**
+     * opt-in: WebRTC QoS(RTT/jitter/loss/bitrate) 표본을 백엔드로 주기 보고(off-path, fail-open).
+     * 화면/훅이 연결 성공 후 명시적으로 호출할 때만 활성화된다(미호출 시 완전 비활성 → 통화 동작 무변경).
+     * 기술서 §0.22.5 / 체크리스트 §10.3.
+     */
+    startStatsReporter(opts: {
+        apiBaseUrl: string;
+        authToken: string;
+        role: 'caller' | 'callee' | string;
+        intervalMs?: number;
+    }): void {
+        try {
+            if (this.statsReporter || !this.peerConnection) {
+                return;
+            }
+            const pc = this.peerConnection;
+            if (typeof pc.getStats !== 'function') {
+                return;
+            }
+            this.statsReporter = new WebRTCStatsReporter({
+                apiBaseUrl: opts.apiBaseUrl,
+                authToken: opts.authToken,
+                callId: this.config.callId,
+                role: opts.role,
+                intervalMs: opts.intervalMs,
+                getStats: () => pc.getStats(),
+            });
+            this.statsReporter.start();
+            console.log('[VoIP] stats reporter started', { callId: this.config.callId, role: opts.role });
+        } catch (err) {
+            console.warn('[VoIP] startStatsReporter skipped', err);
+        }
+    }
+
+    private stopStatsReporter(): void {
+        try {
+            this.statsReporter?.stop();
+        } catch {
+            // off-path — 무시
+        }
+        this.statsReporter = null;
+    }
+
+    /**
      * Graceful hangup
      */
     async hangup(): Promise<void> {
         console.log('[VoIP] Hanging up');
+        this.stopStatsReporter();
         this.remoteDescriptionApplied = false;
 
         // Stop local tracks

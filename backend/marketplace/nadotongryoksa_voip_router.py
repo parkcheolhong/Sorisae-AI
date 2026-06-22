@@ -2801,3 +2801,48 @@ async def get_call_details(
         "created_at": call_state.created_at.isoformat(),
         "duration_sec": call_state.duration_sec,
     }
+
+
+# ============================================================================
+# WebRTC QoS 표본 보고 (P2P RTP 지연 측정, 기술서 §0.22.5 / 체크리스트 §10.3)
+# ----------------------------------------------------------------------------
+# P2P+TURN 구조는 서버측 RTP 중계 지점이 없으므로, 단말이 getStats QoS를 주기 보고한다.
+# off-path · fail-open · PII 미수집(수치 QoS만, 식별자는 메트릭 라벨 비포함).
+# ============================================================================
+
+
+class WebRTCStatsReport(BaseModel):
+    """클라이언트 RTCPeerConnection.getStats 표본(전부 옵션·수치)."""
+
+    call_id: Optional[str] = None
+    role: Optional[str] = None  # 'caller' | 'callee'
+    rtt_ms: Optional[float] = None
+    jitter_ms: Optional[float] = None
+    packet_loss_ratio: Optional[float] = None  # 0..1
+    outgoing_bitrate_bps: Optional[float] = None
+
+
+@router.post("/webrtc-stats")
+async def report_webrtc_stats(
+    payload: WebRTCStatsReport,
+    current_user=Depends(get_current_user),
+) -> Dict[str, Any]:
+    """클라이언트 WebRTC QoS 표본 → off-path Prometheus 기록(RTT/jitter/loss/bitrate).
+
+    fail-open: 메트릭 실패가 200 응답을 막지 않는다. 기존 통화 로직과 격리.
+    """
+    try:
+        from backend.voip import metrics as voip_metrics
+
+        role = (payload.role or "").strip().lower()
+        role = role if role in ("caller", "callee") else "unknown"
+        voip_metrics.record_client_webrtc_stats(
+            role,
+            rtt_seconds=(payload.rtt_ms / 1000.0) if payload.rtt_ms is not None else None,
+            jitter_seconds=(payload.jitter_ms / 1000.0) if payload.jitter_ms is not None else None,
+            packet_loss_ratio=payload.packet_loss_ratio,
+            outgoing_bitrate_bps=payload.outgoing_bitrate_bps,
+        )
+    except Exception:  # pragma: no cover - off-path, 절대 throw 금지
+        logger.debug("[voip] webrtc-stats record skipped", exc_info=True)
+    return {"ok": True}

@@ -2641,6 +2641,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             connectedAtRef.current = Date.now();
                         }
                         handlers?.syncRemoteAudioState();
+                        // opt-in QoS 보고(off-path·fail-open·멱등) — 연결 성공 시 표본 보고 시작.
+                        // 실패해도 통화에 무영향(리포터 내부 try/catch). hangup() 에서 자동 정지.
+                        boundClient.startStatsReporter({
+                            apiBaseUrl: apiBaseUrlRef.current,
+                            authToken: authTokenRef.current,
+                            role: participantRole,
+                        });
                     } else if (state === 'failed' || state === 'disconnected') {
                         connectedAtRef.current = null;
                     }
