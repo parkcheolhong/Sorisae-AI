@@ -209,12 +209,37 @@ def _build_turn_server_from_env() -> Optional[TURNServer]:
     return TURNServer(urls=urls, username=username, credential=credential)
 
 
+def turn_relay_configured() -> bool:
+    """TURN 릴레이가 환경에 설정돼 있는지(지역 무관 통화의 전제 조건).
+
+    LTE/5G·타 네트워크(대칭 NAT)에서 음성 미디어가 흐르려면 TURN 릴레이가 필수다.
+    미설정이면 STUN-only → **LAN/같은 네트워크에서만** 통화가 되고 원거리는 먹통이 된다."""
+    return bool((os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")).strip())
+
+
+_TURN_MISCONFIG_WARNED = False
+
+
 def _default_turn_servers() -> List[TURNServer]:
-    """앱에 내려줄 ICE 서버 목록(SSOT). STUN + (설정 시) TURN 릴레이."""
+    """앱에 내려줄 ICE 서버 목록(SSOT). STUN + (설정 시) TURN 릴레이.
+
+    TURN 미설정 시 **조용히 STUN-only 로 강등하지 않고 경고를 남긴다** — 그렇지 않으면
+    '같은 네트워크에선 통화되는데 원거리는 먹통'인 상태가 표시 없이 지속되어, 지역 간
+    일관성이 깨진 채로 방치된다(coturn 미배포/미연동 신호)."""
     servers = _stun_servers_from_env()
     turn = _build_turn_server_from_env()
     if turn is not None:
         servers.append(turn)
+    else:
+        global _TURN_MISCONFIG_WARNED
+        if not _TURN_MISCONFIG_WARNED:
+            logger.warning(
+                "[voip][TURN] TURN_URLS/TURN_SECRET 미설정 → STUN-only. "
+                "LTE/5G·타 네트워크(대칭 NAT) 원거리 통화는 음성 미디어가 막힙니다. "
+                "지역 무관 일관 통화를 위해 coturn 배포 후 TURN_URLS/TURN_SECRET 를 설정하세요"
+                "(coturn/README.md · scripts/verify_turn_relay.py 로 검증)."
+            )
+            _TURN_MISCONFIG_WARNED = True
     return servers
 
 

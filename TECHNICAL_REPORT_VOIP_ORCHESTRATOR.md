@@ -931,6 +931,15 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 - `py_compile backend/services/tourism_kb/service.py backend/services/tourism_kb/__init__.py scripts/eval_tourism_retrieval.py` OK.
 - `tests/test_tourism_rag_topk.py`(knob 파싱·클램프·`select_best_k` 순위·정직성, Qdrant/임베딩 불필요) — **8 pass**.
 
+### 0.23 지역 무관 통화 일관성 — TURN 릴레이 연동/검증 (2026-06-22)
+
+> 체크리스트 §11. 증상: 같은 네트워크 폰만 정상, LTE/5G·타 네트워크 원거리 통화는 "신호만·음성 먹통". 원인: **TURN 릴레이 미연동**(CGNAT/대칭 NAT 는 STUN-only 로 P2P 직결 불가 → TURN 필수).
+
+- **fail-loud(코드):** `nadotongryoksa_voip_router.py::_default_turn_servers` — TURN 미설정 시 **조용한 STUN-only 강등 대신 경고 1회**. `turn_relay_configured()` 헬퍼로 상태를 명시. (지금까지 표시 없이 'LAN만 됨'이 방치되던 것을 가시화.)
+- **배포 설정 커밋:** `coturn/`(compose·`.env.example`·README) 저장소 추적 추가(이전엔 미커밋). `coturn/.env`(시크릿)은 gitignore 유지.
+- **일관성 검증 도구:** `scripts/verify_turn_relay.py`(stdlib, 의존성 없음) — *실행한 네트워크* 기준 백엔드 도달성 + TURN 포트 도달성을 PASS/FAIL 로 측정. LAN 과 LTE 핫스팟에서 각각 실행해 동일 PASS 면 지역 무관.
+- **경계(정직):** 실제 원거리 통화 성립은 **coturn 공개 배포 + 백엔드 `TURN_URLS`/`TURN_SECRET` 설정·재시작**(서버 작업, §11.1)이 전제. 현 LAN 점검상 coturn 은 TCP 도달 OK 이나 백엔드 `TURN_URLS` 미설정 시 앱은 STUN-only → 누락 고리(§11 TURN-5).
+
 ---
 
 ## 1. 개발 환경 구성

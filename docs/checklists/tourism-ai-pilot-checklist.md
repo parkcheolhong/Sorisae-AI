@@ -342,3 +342,38 @@ chronyc tracking   # offset 확인
 - **절차:** 필요 시 운영자가 서버에서 모니터링 하 신중히(코드 작업 아님).
 
 > **결론:** 오토튜너 in-repo 안전 확장은 RAG top-k(§10.4)로 1건 완료. §10.5 의 4개는 서버 인프라(번역batch·GPU)·동결 미디어 경로(지터버퍼·코덱)라, 해당 환경/트리거가 충족될 때 위 절차로 착수한다.
+
+---
+
+## 11. 지역 무관 통화 일관성 — TURN 릴레이 연동/검증 (원거리 먹통 해소)
+
+> 증상: 같은 네트워크(LAN/무선ADB) 폰만 정상, LTE/5G·타 네트워크 원거리 통화는 "신호만 받고 음성 먹통". 원인은 **TURN 릴레이 미연동** — LTE/5G CGNAT(대칭 NAT)는 STUN-only 로 P2P 직결이 막혀 TURN 경유가 필수다.
+
+| ID | 항목 | 상태 | 비고 |
+|----|------|------|------|
+| TURN-1 | 백엔드 fail-loud(조용한 STUN-only 강등 차단) | [x] | `nadotongryoksa_voip_router.py::_default_turn_servers` — TURN 미설정 시 경고 1회. `turn_relay_configured()` 헬퍼 추가 |
+| TURN-2 | coturn 배포 설정 저장소 커밋 | [x] | `coturn/`(compose·`.env.example`·README) 추적 추가. `coturn/.env`(시크릿)은 gitignore 유지 |
+| TURN-3 | 지역 무관 일관성 검증 도구 | [x] | `scripts/verify_turn_relay.py` — 백엔드 도달성 + TURN 포트 도달성을 *실행 네트워크* 기준 PASS/FAIL. 의존성 없음(stdlib) |
+| TURN-4 | (운영) coturn 공개 배포 + 방화벽 | [ ] | 서버 작업 — 공인 IP·포트(3478/udp·tcp, relay UDP 레인지) 공개 |
+| TURN-5 | (운영) 백엔드 TURN_URLS/TURN_SECRET 설정·재시작 | [ ] | **현재 누락 의심 고리** — coturn 은 떠 있어도 백엔드가 STUN-only 면 앱이 TURN 을 못 받음 |
+
+### 11.1 활성화 절차 (운영자 — 코드 아님, 이걸로 지역 무관 일관성 고정)
+
+```bash
+# 1) coturn 노드 기동(공인 IP 노드)
+cd coturn && cp .env.example .env   # TURN_SECRET(랜덤)·TURN_EXTERNAL_IP(공인IP) 설정
+docker compose -f docker-compose.coturn.yml up -d
+# 2) 방화벽/공유기 공개: 3478/udp·tcp + relay UDP 레인지(49160-49200/udp)
+# 3) 백엔드 .env 에 동일 시크릿/주소 설정 후 재시작(누락 고리)
+#    TURN_URLS=turn:<공인IP>:3478   TURN_SECRET=<coturn 과 동일>
+docker restart devanalysis114-backend
+```
+
+### 11.2 일관성 측정(같은 명령을 LAN·LTE 핫스팟에서 각각 실행 → 결과 동일해야 함)
+
+```bash
+python scripts/verify_turn_relay.py --base-url https://metanova1004.com
+# [PASS] backend_health / [PASS] turn_relay <ip>:3478  ← 두 네트워크에서 모두 PASS 여야 지역 무관
+```
+
+> **경계(정직):** 코드 측은 ① 조용한 강등 차단(경고) ② 배포 설정 커밋 ③ 검증 도구로 고정 완료. 단, **실제 LTE/5G 원거리 통화 성립은 coturn 공개 배포 + 백엔드 TURN_URLS/TURN_SECRET 설정(TURN-4·5)** 이 있어야 하며 이는 서버/네트워크 작업이다. 검증 도구로 두 네트워크에서 동일 PASS 가 나오면 일관성 확보.
