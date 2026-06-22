@@ -264,7 +264,8 @@ chronyc tracking   # offset 확인
 
 | 항목 | 상태 | 보류 사유 (어떤 경우에도 파악 가능하도록 명시) |
 |------|------|------|
-| 오토튜너 `search_space` 확장(코덱·지터버퍼·GPU클럭·번역batch·RAG top-k) | [ ] 계획 | `eval/worldlinco/`는 사람승인 게이트라 배포 위험은 없으나, **런타임 SSOT(`worldlinco_tuning_config.json`)에 미연결된 노브는 무의미한 제안**을 생성. 각 노브의 런타임 적용 경로 선(先)연결 후 추가해야 함. |
+| 오토튜너 `search_space` 확장 — **RAG top-k** | [x] 런타임 연결+제안기 | **§10.4** — `TOURISM_RAG_TOP_K` 런타임 SSOT 연결 + `eval_tourism_retrieval.py --sweep` 제안기(관광 검색 목적함수). worldlinco VoIP 스터디와 **분리**(목적함수 상이). |
+| 오토튜너 `search_space` 확장 — 코덱·지터버퍼·GPU클럭·번역batch | [ ] 계획 | `eval/worldlinco/`는 사람승인 게이트라 배포 위험은 없으나, **런타임 SSOT에 미연결된 노브는 무의미한 제안**을 생성. 각 노브의 런타임 적용 경로 선(先)연결 후 추가해야 함(RAG top-k 가 선례 — §10.4). |
 | RTP 레벨 지연 메트릭(RTT/jitter/loss) | [~] 설계+백엔드 구현 · 모바일 opt-in | **P2P 적합 방식**으로 진행 — 클라이언트 `getStats()`→백엔드 보고(§10.3). 백엔드 메트릭·엔드포인트·모바일 리포터 구현, **기본 비활성(opt-in)**. |
 | SFU 미디어 서버 / K8s 멀티-AZ | [ ] 로드맵 | 다자 통화·서버 녹음/믹싱 또는 수평확장·다중 AZ가 제품 요구가 될 때 도입(현 1:1 P2P·단일 호스트 Compose 로 MVP 충족). |
 
@@ -286,3 +287,58 @@ chronyc tracking   # offset 확인
 - **수집 항목(수치 QoS만, PII 없음):** `rtt_ms`·`jitter_ms`·`packet_loss_ratio(0..1)`·`outgoing_bitrate_bps`·`role(caller/callee)`. 통화/방 식별자 등은 메트릭 라벨에 넣지 않음(데이터 최소화).
 - **KPI 매핑:** Grafana `histogram_quantile(0.95, voip_client_rtt_seconds_bucket)` → 스펙 `<30ms RTT`, `voip_client_packet_loss_ratio` → `<2% 손실` 게이지화.
 - **활성화(opt-in):** 통화 화면/훅이 연결 성공 후 `client.startStatsReporter({ apiBaseUrl, authToken, role })` 호출 시에만 보고 시작. 미호출 시 완전 비활성.
+
+### 10.4 RAG top-k — 런타임 SSOT 연결 + 자동 튜닝 제안기 (오토튜너 확장 1단계)
+
+> **설계 결정:** RAG top-k 는 VoIP voice-relay 자동 튜너(`eval/worldlinco/`, VAD/턴테이킹 QoE
+> 목적함수)와 **목적함수가 다르므로** worldlinco `SEARCH_SPACE` 에 섞지 않는다. 대신 이미 존재하는
+> **관광 검색 정확도 목적함수**(`eval_tourism_retrieval.py`, 골든 질의셋·`category_hit@k`)에 연결한다.
+> 이로써 §10.2 가 경고한 "런타임 미연결 노브 = 무의미한 제안" 안티패턴을 피한다.
+
+| ID | 항목 | 상태 | 검증 / 비고 |
+|----|------|------|------|
+| RAG-1 | 런타임 SSOT 접근자 | [x] | `tourism_rag_top_k()` — env `TOURISM_RAG_TOP_K`(기본 5, [1..20] 클램프), 매 호출 env 재평가 → **재기동 없이 라이브 조정** (`backend/services/tourism_kb/service.py`) |
+| RAG-2 | 검색 경로 연결(비파괴) | [x] | `search_tourism_places(limit=None)` 이 SSOT 사용. **명시 limit 호출자(친구챗·일정·eval)는 영향 없음** → 기본 동작 불변 |
+| RAG-3 | 자동 튜닝 제안기 | [x] | `eval_tourism_retrieval.py --sweep 3,5,8,12` → k별 정확도/정밀도/지연 평가 후 최적 k 제안. **제안 전용·사람 승인 게이트**(`PROPOSAL_ONLY_REQUIRES_HUMAN_APPROVAL`) |
+| RAG-4 | 제안 산출물 | [x] | `reports/tourism_rag_topk_proposal.json`(current/proposed top-k·`current_in_sweep`·`improves_over_current`·후보표·`apply_hint`) |
+| RAG-5 | 유닛 테스트 | [x] | `tests/test_tourism_rag_topk.py`(knob 파싱·클램프·`select_best_k` 순위·정직성, Qdrant 불필요) — 8 pass |
+
+- **선택 기준(사전식):** `accuracy_category_hit ↑` → `mean_precision_at_k ↑` → `run_time_sec ↓` → `k ↓`(프롬프트 절약). 동률은 더 작은 k 선호.
+- **정직성 가드:** 현재 운영 k 가 스윕 후보에 없으면 그 정확도를 측정하지 않은 것이므로 `improves_over_current=null`(+`current_in_sweep=false`) — 검증 없이 "개선"으로 단정하지 않음(헌법 규칙). 현재 k 를 `--sweep` 에 포함해야 개선 여부 확정.
+- **채택(사람 승인 후):** `export TOURISM_RAG_TOP_K=<k>` — 백엔드 재기동 불필요(매 호출 env 재평가). 회귀 시 즉시 원복.
+- **기본 동작 불변 보장:** env 미설정 시 `tourism_rag_top_k()`=5(기존 `search()` 기본값과 동일), 운영 친구챗/일정 경로는 자체 명시 limit 사용으로 무영향.
+
+### 10.5 오토튜너 잔여 노브 — 노브별 상세 설계 (필요조건·위험·절차)
+
+> **핵심 판단:** RAG top-k(§10.4)가 오프라인에서 안전하게 끝까지 연결 가능했던 유일한 노브다. 세 전제가 모두 충족됐기 때문 — ① in-repo 런타임 config 지점, ② in-repo 목적함수(골든셋 하니스), ③ 동결 오디오 경로(§0.20.3)와 무관. 아래 4개는 모두 **서버 인프라** 또는 **동결 미디어 경로**라 위 전제를 충족하지 못한다 → "지금 코드로 RAG top-k처럼" 처리하면 검증 불가/위험. 코드 변경 없이 *설계만* 기록(착수는 트리거·환경 충족 시).
+
+#### 10.5.1 번역 batch (vLLM 서빙 배치) — 서버 인프라
+
+- **실제 위치:** vLLM 기동 인자 `--max-num-seqs`(동시 시퀀스)·`--max-num-batched-tokens`(배치 토큰). `scripts/vllm-rtx5090-32b.env`·`gpu-llm-server/docker-compose.vllm-32b.yml`·`scripts/start_vllm_rtx5090_32b.ps1`. **앱 코드 아님** — 번역은 `backend/services/nadotongryoksa/translator.py::_llm_translate` 가 vLLM(Qwen 32B)에 **발화당 1요청**, 배치는 서빙엔진 continuous batching 이 자동 처리.
+- **선연결 필요:** 현재 env 에 배치 노브 없음 → `VLLM_MAX_NUM_SEQS` 등 노출 + compose/스크립트가 `--max-num-seqs ${VLLM_MAX_NUM_SEQS}` 전달하도록 추가.
+- **목적함수:** 동시 통화 부하에서 번역 **p95 지연 vs 처리량(tokens/s)**. 하니스: `scripts/worldlinco_loadtest.py`(동시 통화 시뮬). **GPU 서버 필요**(오프라인 측정 불가).
+- **위험:** 배치↑ → 처리량↑·VRAM↑·**개별 지연↑**(실시간 통역은 지연이 더 중요). `VLLM_MAX_MODEL_LEN=8192`·`GPU_MEMORY_UTILIZATION=0.92` 와 상호작용 → OOM 위험.
+- **절차:** (1) env 노브 노출 (2) 서버 부하 스윕 `seqs ∈ {…}` (3) **p95 지연 게이트 하** 최대 처리량 설정 선택 (4) 승인 후 env 반영·vLLM 재기동.
+
+#### 10.5.2 지터버퍼 — 동결 오디오 경로(§0.20.3)
+
+- **실제 위치:** WebRTC 수신측. 표준 노출 `RTCRtpReceiver.jitterBufferTarget`(ms) 또는 `playoutDelayHint`. **현재 `voipCallClient.ts` 에 튜닝 코드 없음**(평범한 createOffer/Answer) → 동결 경로에 **신규 추가** 필요. react-native-webrtc 의 해당 API 지원 여부 **선확인**(미지원이면 노브 부재 → 보류).
+- **목적함수:** 언더런(끊김)/손실 vs 입↔귀 지연. 측정은 이미 가능 — `voip_client_jitter_seconds`·`voip_client_packet_loss_ratio`(§10.3) + 사용자 실통화 A/B.
+- **위험:** 동결 오디오 경로. 버퍼↓ → 지연↓·**언더런↑**. 사용자 실통화 회귀 위험(과거 VAD/에코 튜닝 회귀 사례 참조).
+- **절차:** (1) RN-webrtc API 지원 확인 (2) **opt-in** 노브로만 (3) `voip_client_*` + 실통화 A/B (4) 승인.
+
+#### 10.5.3 코덱 (Opus 파라미터) — 동결 미디어 경로
+
+- **실제 위치:** SDP 협상 — Opus `maxaveragebitrate`·`useinbandfec`·`usedtx`·ptime. SDP munging(`voipCallClient.ts` offer/answer) 또는 `RTCRtpSender.setParameters`. 현재 미사용.
+- **목적함수:** 명료도(MOS) vs 대역폭/손실복원(FEC). 측정: `voip_client_outgoing_bitrate_bps` + 손실 + 주관 품질.
+- **위험:** **가장 위험** — 동결 미디어 경로, 협상 실패 시 통화 자체 실패. SDP munging 은 단말/네트워크 호환성 광범위 테스트 필수.
+- **절차:** (1) 안전 파라미터만(FEC on·DTX 등) (2) 단말·네트워크 호환성 광범위 테스트 (3) 단계적 롤아웃.
+
+#### 10.5.4 GPU 클럭 — 서버 하드웨어 (보류 권장)
+
+- **실제 위치:** 서버 OS `nvidia-smi -lgc <min,max>`·`-pl <watts>`. **repo·앱 무관**.
+- **목적함수:** 추론 지연 vs 전력/발열/안정성. 측정: 로드테스트 + 전력/온도 모니터.
+- **위험:** 하드웨어 안정성·수명·전력. **효용(지연 소폭↓) 대비 위험 커 보류 권장.**
+- **절차:** 필요 시 운영자가 서버에서 모니터링 하 신중히(코드 작업 아님).
+
+> **결론:** 오토튜너 in-repo 안전 확장은 RAG top-k(§10.4)로 1건 완료. §10.5 의 4개는 서버 인프라(번역batch·GPU)·동결 미디어 경로(지터버퍼·코덱)라, 해당 환경/트리거가 충족될 때 위 절차로 착수한다.

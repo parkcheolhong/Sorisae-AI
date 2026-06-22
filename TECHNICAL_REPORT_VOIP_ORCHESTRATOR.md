@@ -885,7 +885,8 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 ```
 
 #### 0.22.3 보류(계획) 항목 — 위험/타당성 사유 (트레이서빌리티)
-- **오토튜너 `search_space` 확장**(코덱·지터버퍼·GPU클럭·번역batch·RAG top-k): `eval/worldlinco/`는 사람승인 게이트라 배포 위험은 없으나, **런타임 SSOT(`worldlinco_tuning_config.json`) 미연결 노브는 무의미한 제안**을 만든다 → 각 노브 런타임 적용 경로 선연결 후 추가. **현 단계 미구현.**
+- **오토튜너 `search_space` 확장 — RAG top-k**: **구현 완료**(§0.22.6) — VoIP 스터디와 분리된 관광 검색 목적함수에 연결.
+- **오토튜너 `search_space` 확장**(번역batch·지터버퍼·코덱·GPU클럭): 4개 모두 **서버 인프라**(번역batch=vLLM `--max-num-seqs`·GPU클럭=`nvidia-smi`) 또는 **동결 미디어 경로**(지터버퍼·코덱, §0.20.3)라 RAG top-k 식 오프라인 연결 불가. 노브별 필요조건·위험·절차는 **체크리스트 §10.5** 에 상세 기록(코드 변경 없이 설계만). 해당 환경/트리거 충족 시 착수. **현 단계 미구현.**
 - **RTP 레벨 지연 메트릭**: P2P 적합 방식(클라이언트 getStats→백엔드 보고)으로 **설계+구현 완료**(§0.22.5). **모바일은 opt-in(기본 비활성)**.
 - **SFU / K8s 멀티-AZ**: 다자 통화·서버 녹음/믹싱·수평확장 요구 시 도입. 현 1:1 P2P·단일 호스트 Compose 로 MVP 충족. **로드맵.**
 
@@ -910,6 +911,25 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 - `py_compile backend/voip/metrics.py backend/marketplace/nadotongryoksa_voip_router.py` OK.
 - 모바일 파서 유닛 테스트 `src/__tests__/webrtcStatsReporter.test.ts` + 변경 파일 typecheck.
 - KPI: Grafana `histogram_quantile(0.95, voip_client_rtt_seconds_bucket)`→스펙 `<30ms`, `voip_client_packet_loss_ratio`→`<2%`.
+
+### 0.22.6 RAG top-k — 런타임 SSOT 연결 + 자동 튜닝 제안기 (오토튜너 확장 1단계) (2026-06-22)
+
+> 체크리스트: §10.4(RAG-1~5). **설계 결정**: RAG top-k 노브는 VoIP voice-relay 자동 튜너(`eval/worldlinco/`, VAD/턴테이킹 QoE 목적함수)와 **목적함수가 달라** worldlinco `SEARCH_SPACE` 에 섞지 않는다. 이미 존재하는 **관광 검색 정확도 목적함수**(`scripts/eval_tourism_retrieval.py`, 골든 질의셋·`category_hit@k`)에 연결해 "런타임 미연결 노브 = 무의미한 제안"(§0.22.3) 안티패턴을 회피한다.
+
+#### 0.22.6.1 런타임 SSOT (비파괴)
+- `backend/services/tourism_kb/service.py`(+): `tourism_rag_top_k()` — env `TOURISM_RAG_TOP_K`(기본 5, [1..20] 클램프). 매 호출 env 재평가 → **재기동 없이 라이브 조정**(worldlinco 파일-SSOT 철학과 동일).
+- `search_tourism_places(limit=None)` 이 SSOT 를 기본값으로 사용. **명시 `limit` 호출자(친구챗 grounding `VOICE_FRIEND_WEB_MAX_ITEMS`·일정 후보 `max_places`·eval)는 영향 없음** → env 미설정 시 기본 동작 완전 불변(기존 기본값 5와 동일).
+- `backend/services/tourism_kb/__init__.py`: `tourism_rag_top_k` 재노출.
+
+#### 0.22.6.2 자동 튜닝 제안기 (사람 승인 게이트)
+- `scripts/eval_tourism_retrieval.py`(+): `--sweep 3,5,8,12` → k 후보별 정확도/정밀도/지연 평가 후 `select_best_k()` 가 최적 k 를 **제안**(`PROPOSAL_ONLY_REQUIRES_HUMAN_APPROVAL`). 선택 기준(사전식): `accuracy ↑ → meanP ↑ → latency ↓ → k ↓`.
+- **정직성 가드:** 현재 운영 k 가 스윕에 없으면 미측정이므로 `improves_over_current=null`(+`current_in_sweep=false`) — 검증 없이 개선으로 단정 금지(헌법 규칙).
+- 산출물 `reports/tourism_rag_topk_proposal.json`(current/proposed top-k·`current_in_sweep`·`improves_over_current`·후보표·`apply_hint`). 채택 시 운영자가 `export TOURISM_RAG_TOP_K=<k>`(재기동 불필요).
+- 기본(`--k`/`--sweep` 미지정) 평가는 `tourism_rag_top_k()` 로 **실제 배포 k** 를 측정.
+
+#### 0.22.6.3 검증
+- `py_compile backend/services/tourism_kb/service.py backend/services/tourism_kb/__init__.py scripts/eval_tourism_retrieval.py` OK.
+- `tests/test_tourism_rag_topk.py`(knob 파싱·클램프·`select_best_k` 순위·정직성, Qdrant/임베딩 불필요) — **8 pass**.
 
 ---
 

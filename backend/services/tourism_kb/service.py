@@ -35,6 +35,29 @@ _SPARSE = "sparse"  # named sparse 벡터 이름
 # 별도 컬렉션('tourism_places_clip', 512d 단일벡터, 동일 point id)에 보관하고 검색은 RRF 로 병합.
 TOURISM_CLIP_COLLECTION = os.getenv("TOURISM_CLIP_COLLECTION", f"{TOURISM_COLLECTION}_clip")
 
+# RAG top-k 런타임 SSOT(자가-진화 튜닝 대상, 설계 §3.3). 매 호출 시 env 재평가 →
+# 재기동 없이 라이브 조정(worldlinco 파일-SSOT 철학과 동일). 제안→사람승인 게이트는
+# `scripts/eval_tourism_retrieval.py --sweep` 가 담당(VoIP voip 스터디와 분리된 목적함수).
+TOURISM_RAG_TOP_K_DEFAULT = 5
+TOURISM_RAG_TOP_K_MIN = 1
+TOURISM_RAG_TOP_K_MAX = 20
+
+
+def tourism_rag_top_k() -> int:
+    """관광 RAG 검색 top-k 런타임 값(env `TOURISM_RAG_TOP_K`, 기본 5, [1..20] 클램프).
+
+    `search_tourism_places(limit=None)` 의 기본값으로 흘러간다. 명시 limit 을 넘기는
+    호출자(친구챗 grounding·일정 후보·eval)는 영향받지 않으므로 기본 동작은 불변이며,
+    env 미설정 시 기존 기본값(5)과 동일하다."""
+    raw = os.getenv("TOURISM_RAG_TOP_K")
+    if raw is None or str(raw).strip() == "":
+        return TOURISM_RAG_TOP_K_DEFAULT
+    try:
+        v = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return TOURISM_RAG_TOP_K_DEFAULT
+    return max(TOURISM_RAG_TOP_K_MIN, min(TOURISM_RAG_TOP_K_MAX, v))
+
 
 class TourismEmbedder:
     """다국어 문장 임베딩. 기본 백엔드는 fastembed(ONNX, torch 불필요)로,
@@ -745,16 +768,20 @@ def get_tourism_store() -> TourismVectorStore:
 def search_tourism_places(
     query: str,
     *,
-    limit: int = 5,
+    limit: Optional[int] = None,
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
-    """friend-chat 그라운딩용 편의 함수. 미가동 시 빈 리스트(상위에서 OSM/웹 폴백)."""
+    """friend-chat 그라운딩용 편의 함수. 미가동 시 빈 리스트(상위에서 OSM/웹 폴백).
+
+    limit=None 이면 런타임 SSOT(`tourism_rag_top_k()`)를 사용한다 — 재기동 없이
+    top-k 를 라이브 조정할 수 있는 단일 출처. 명시 limit 은 그대로 우선한다."""
+    top_k = tourism_rag_top_k() if limit is None else max(1, int(limit))
     try:
         store = get_tourism_store()
         if not store.available:
             return []
-        return store.search(query, limit=limit, latitude=latitude, longitude=longitude)
+        return store.search(query, limit=top_k, latitude=latitude, longitude=longitude)
     except Exception as exc:
         logger.warning("[tourism_kb] search_tourism_places 실패(폴백): %s", exc)
         return []
