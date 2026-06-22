@@ -403,19 +403,20 @@ python scripts/verify_turn_relay.py --base-url https://metanova1004.com
 
 > 전제: "신호만 받음"은 시그널링(WebSocket/HTTPS 443)은 되는데 **미디어(UDP)** 가 안 흐른다는 뜻. 따라서 검증의 핵심은 **외부 망에서 미디어 UDP 도달 여부** 하나다. 아래 A는 사람 1명·단말 1대로 그걸 직접 판정한다.
 
-**A. 미디어 평면 도달성 (가장 결정적, 폰 1대 + 노트북)**
-1. 폰의 **모바일 데이터(LTE/5G)** 로 노트북을 테더링(핫스팟). ※ 서버 업링크와 **다른 회선**이어야 '원거리'가 됨. 같은 회선뿐이면 다른 통신사 USIM/핫스팟 사용.
-2. 노트북에서:
-   ```bash
-   python scripts/verify_turn_relay.py --base-url https://metanova1004.com --turn turn:211.218.172.124:3478 --allocate
-   ```
-   (`TURN_SECRET` 환경변수 설정 시 `--allocate` 가 실제 릴레이 발급까지 검증)
-3. 판정: **3줄 모두 PASS** → 그 셀룰러 망에서 미디어까지 도달 = 장거리 통화 가능. `turn_allocate` 만 FAIL → 미디어 UDP 레인지(49160-49200)가 라우터/ISP에서 막힘(아래 C).
+> 구조 사실: 서버측 aiortc 피어는 `recvonly`(상행 수신만)라 **양방향 통화 브리지가 아니다**. 실제 두 단말 음성은 **phone↔phone P2P(시그널링 서버는 SDP 중계만)**. 따라서 **2폰 실측이 진실의 기준**이고, 폰 1대로는 완결 판정 불가(A는 그 사전 게이트).
 
-**B. 실제 양방향 음성 (폰 2대, 서로 다른 망)**
-- 폰A = 연구소 와이파이, 폰B = 폰B 자체 모바일 데이터(다른 망)로 앱 로그인 후 통화.
-- `VOIP_FORCE_RELAY=1` 이라 두 단말 모두 **릴레이 경로**만 사용 → 같은 방/같은 와이파이 테스트와 **동일 경로**. 양방향 음성이 들리면 지역 무관 동일 결과 보장.
-- 폰이 1대뿐이면: 통화는 서버가 WebRTC 피어(동시통역 중계)이므로, 폰1대(LTE)↔서버 미디어가 흐르는지로 1차 판정 가능(A가 이 경로의 사전 게이트).
+**A. 미디어 평면 도달성 사전 게이트 (노트북 1대, 폰 테더링)**
+1. 폰 **모바일 데이터(LTE/5G)** 로 노트북 테더링. ※ 서버 업링크와 **다른 통신사/회선**이어야 '원거리'.
+2. 노트북에서 (PowerShell, 한 줄 — 시크릿은 `coturn/.env` 의 `TURN_SECRET` 값):
+   ```powershell
+   $env:TURN_SECRET="<coturn/.env 의 TURN_SECRET>"; python scripts/verify_turn_relay.py --base-url https://metanova1004.com --turn turn:211.218.172.124:3478 --allocate
+   ```
+3. 판정: **3줄 PASS**(backend_health / turn_relay / turn_allocate) → 그 망에서 미디어까지 도달. `turn_allocate`만 FAIL → 미디어 UDP 레인지(49160-49200)가 라우터/ISP에서 막힘(아래 C).
+
+**B. 실제 양방향 음성 — 진짜 원거리 (폰 2대, 서로 다른 통신사) ★기준**
+- 폰A = **SK 모바일데이터**, 폰B = **KT 모바일데이터**(서로 다른 통신사 = 진짜 원거리). 또는 한쪽 wifi.
+- 두 폰에 **build 170(v1.0.118) 이상** 설치(인앱 업데이트). `VOIP_FORCE_RELAY=1` 이라 양쪽 모두 **릴레이 경로만** 사용 → 같은 방 테스트와 **동일 경로**. 양방향 음성이 들리면 지역 무관 동일 결과 확정.
+- 기존 빌드로도 1차 가능(직결 실패 시 릴레이 폴백). build 170 은 그 경로를 **강제**해 "지정 폰만 됨" 거짓통과를 원천 차단.
 
 **C. A/B 가 FAIL 일 때 — 단 하나의 조치 (서버 작업, 코드 아님)**
 - 공인 IP 직결이면 불필요. 라우터/방화벽 뒤면 아래 UDP를 외부 공개(포워딩):
@@ -423,6 +424,7 @@ python scripts/verify_turn_relay.py --base-url https://metanova1004.com
   - `49160-49200/udp` (미디어 릴레이 레인지)
 - 적용 후 A를 재실행 → 모두 PASS 면 베타/데모 구동 가능 상태.
 
-**D. force-relay 강제를 클라까지 100% 바인딩하려면**
-- 신규 빌드 1회 필요: `cd apps/mobile-nadotongryoksa && npm run eas:android:production-apk`.
-- 단, 기존 APK 도 TURN 후보를 받아 직결 실패 시 릴레이로 폴백하므로, A/C가 통과하면 기존 빌드로도 장거리 통화는 성립한다.
+**D. 신규 빌드(force-relay 클라 바인딩) — build 170 발행 완료 (2026-06-22)**
+- 실제 배포 경로는 **로컬 Gradle + 인앱 업데이터**(EAS 클라우드 아님): `pwsh scripts/publish_worldlinco_apk.ps1` → `uploads/marketplace_local/apk/` 에 APK·매니페스트 발행 → 폰이 인앱 업데이트.
+- 발행됨: **v1.0.118 / versionCode 170** (`/api/marketplace/apk/worldlinco/manifest` 가 170 반환 확인). 두 테스트 폰에서 인앱 업데이트로 받으면 됨.
+- 다음 빌드 시: `app.json` 의 `version`/`android.versionCode` 만 올리고 위 스크립트 재실행.
