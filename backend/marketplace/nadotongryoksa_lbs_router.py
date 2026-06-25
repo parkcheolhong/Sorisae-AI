@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+import json as _json
+import logging
 import math
-from typing import Any, Dict, List, Literal
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
+from typing import Any, Dict, List, Literal, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from backend.security_gates import require_lbs_search_quota
 from backend.services.nadotongryoksa.translator import NadoTranslator
+
+logger = logging.getLogger(__name__)
 
 PlaceCategory = Literal["hotel", "airport", "restaurant", "attraction"]
 SearchCategory = Literal["all", "hotel", "airport", "restaurant", "attraction"]
@@ -191,6 +200,236 @@ def _filter_places(*, lat: float, lon: float, category: SearchCategory, radius_m
     return [_to_nearby_response(place, target_lang=target_lang, distance_m=distance) for distance, place in candidates[:limit]]
 
 
+# ---------------------------------------------------------------------------
+# 거리·지역 무관 실시간 장소 검색(전세계)
+# 정적 카탈로그(_POI_CATALOG)는 서울 8곳뿐이라 지방·해외는 0건이 되는 한계가 있다.
+# 따라서 외부 제공자 캐스케이드로 전세계 POI 를 채운다.
+#   1순위: SerpApi google_maps(이름·주소·전화·평점, 키 설정 시) — Redis 캐시로 레이트리밋/비용 완화
+#   2순위: OpenStreetMap Overpass(무료·전세계, 공개 미러 순회) — SerpApi 실패/빈결과 폴백
+#   최종 폴백: 정적 카탈로그(항상 포함)
+# 모든 단계는 graceful degradation: 외부 호출이 실패해도 엔드포인트는 정적 결과로 응답한다.
+# ---------------------------------------------------------------------------
+_LIVE_HTTP_UA = "worldlinco-lbs/1.0 (+https://worldlinco.app)"
+_OVERPASS_MIRRORS = (
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+)
+_LIVE_SERP_QUERY: Dict[str, str] = {
+    "hotel": "hotels",
+    "restaurant": "restaurants",
+    "attraction": "tourist attractions",
+    "airport": "airport",
+}
+# category="all" 일 때 대표 카테고리 다중 질의(맛집·숙소·명소). 공항은 통상 1~2곳뿐이라 제외.
+_LIVE_ALL_CATEGORIES = ("attraction", "restaurant", "hotel")
+# 단일 카테고리 검색용 셀렉터(상세). category="all" 은 _OVERPASS_SELECTORS_ALL(경량) 사용.
+_OVERPASS_SELECTORS: Dict[str, tuple] = {
+    "hotel": ('["tourism"="hotel"]', '["tourism"="guest_house"]', '["tourism"="hostel"]', '["tourism"="motel"]'),
+    "restaurant": ('["amenity"="restaurant"]', '["amenity"="cafe"]', '["amenity"="fast_food"]'),
+    "attraction": ('["tourism"="attraction"]', '["tourism"="museum"]', '["tourism"="viewpoint"]', '["historic"="monument"]'),
+    "airport": ('["aeroway"="aerodrome"]',),
+}
+# category="all" 은 합집합 쿼리가 무거워 Overpass 가 타임아웃하므로 카테고리당 대표 셀렉터 1개로 경량화.
+_OVERPASS_SELECTORS_ALL: Dict[str, tuple] = {
+    "hotel": ('["tourism"="hotel"]',),
+    "restaurant": ('["amenity"="restaurant"]',),
+    "attraction": ('["tourism"="attraction"]',),
+}
+
+
+def _live_provider_enabled() -> bool:
+    """라이브 외부 제공자 사용 여부. 테스트(pytest)에서는 기본 비활성(결정적·오프라인)."""
+    flag = os.getenv("NADO_LBS_LIVE_PROVIDER", "").strip().lower()
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return flag in {"1", "true", "on", "yes"}
+    return flag not in {"0", "false", "off", "no"}
+
+
+def _zoom_for_radius(radius_m: int) -> int:
+    """반경(m) → google_maps ll 줌 레벨(넓을수록 낮은 줌)."""
+    table = ((1500, 15), (3000, 14), (6000, 13), (12000, 12), (25000, 11),
+             (60000, 10), (120000, 9), (250000, 8), (600000, 7))
+    for limit_m, zoom in table:
+        if radius_m <= limit_m:
+            return zoom
+    return 6
+
+
+def _norm_name(name: str) -> str:
+    return "".join(ch for ch in str(name).lower() if ch.isalnum())
+
+
+def _classify_osm_category(tags: Dict[str, Any]) -> str:
+    tourism = str(tags.get("tourism", ""))
+    if tourism in {"hotel", "guest_house", "hostel", "motel", "apartment"}:
+        return "hotel"
+    if str(tags.get("amenity", "")) in {"restaurant", "cafe", "fast_food", "bar", "pub"}:
+        return "restaurant"
+    if str(tags.get("aeroway", "")) == "aerodrome":
+        return "airport"
+    if tourism in {"attraction", "museum", "viewpoint", "gallery", "theme_park", "zoo"} or tags.get("historic"):
+        return "attraction"
+    return ""
+
+
+def _osm_address(tags: Dict[str, Any]) -> str:
+    if tags.get("addr:full"):
+        return str(tags["addr:full"])
+    street = " ".join(p for p in (str(tags.get("addr:housenumber", "")), str(tags.get("addr:street", ""))) if p.strip())
+    parts = [street, str(tags.get("addr:city", "")), str(tags.get("addr:country", ""))]
+    return ", ".join(p for p in parts if p.strip())
+
+
+def _live_place_from_serp(item: Any, category: str) -> Optional[Dict[str, Any]]:
+    if not isinstance(item, dict):
+        return None
+    gps = item.get("gps_coordinates") or {}
+    lat = gps.get("latitude")
+    lon = gps.get("longitude")
+    name = str(item.get("title") or "").strip()
+    if lat is None or lon is None or not name:
+        return None
+    place_id = str(item.get("place_id") or item.get("data_id") or "").strip()
+    address = str(item.get("address") or item.get("type") or "").strip()
+    phone = str(item.get("phone") or "").strip()
+    rating = item.get("rating")
+    price = str(item.get("price") or "").strip()
+    summary_text = str(item.get("description") or item.get("type") or address or name)
+    return {
+        "id": f"serp-{place_id or abs(hash(name)) % (10 ** 12)}",
+        "category": category,
+        "name": name,
+        "lat": float(lat),
+        "lon": float(lon),
+        "address": address or name,
+        "rating": float(rating) if isinstance(rating, (int, float)) else 0.0,
+        "price_tier": price or "-",
+        "booking_supported": False,  # 외부 장소는 in-app 구조화 예약(카탈로그 전용) 대신 전화예약 경로 사용
+        "phone": phone,
+        "summary": {"en": summary_text},
+        "amenities": [],
+        "review_query": name,
+    }
+
+
+def _fetch_serpapi_places(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+    try:
+        from backend.api.external_search_router import _serpapi_call
+    except Exception:  # noqa: BLE001
+        return []
+    if not str(os.getenv("SERPAPI_API_KEY", "")).strip():
+        return []
+    cats = _LIVE_ALL_CATEGORIES if category == "all" else (category,)
+    zoom = _zoom_for_radius(radius_m)
+    ll = f"@{lat:.6f},{lon:.6f},{zoom}z"
+    out: List[Dict[str, Any]] = []
+    for cat in cats:
+        query = _LIVE_SERP_QUERY.get(cat)
+        if not query:
+            continue
+        try:
+            payload = _serpapi_call("google_maps", query, max(limit, 10), 12.0, ll=ll, type="search", hl=_normalize_lang(target_lang))
+        except Exception as exc:  # noqa: BLE001
+            logger.info("[lbs] serpapi(%s) 실패: %s", cat, exc)
+            continue
+        for item in (payload.get("local_results") or [])[: max(limit, 10)]:
+            place = _live_place_from_serp(item, cat)
+            if place:
+                out.append(place)
+    return out
+
+
+def _overpass_request(query: str) -> Dict[str, Any]:
+    data = ("data=" + query).encode("utf-8")
+    last_err: Optional[Exception] = None
+    for mirror in _OVERPASS_MIRRORS:
+        try:
+            req = urllib.request.Request(mirror, data=data, headers={"User-Agent": _LIVE_HTTP_UA})
+            with urllib.request.urlopen(req, timeout=22) as resp:
+                return _json.loads(resp.read().decode("utf-8", "replace"))
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            continue
+    if last_err is not None:
+        logger.info("[lbs] overpass 전 미러 실패: %s", last_err)
+    return {}
+
+
+def _fetch_overpass_places(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+    if category == "all":
+        cats = _LIVE_ALL_CATEGORIES
+        selector_map = _OVERPASS_SELECTORS_ALL
+    else:
+        cats = (category,)
+        selector_map = _OVERPASS_SELECTORS
+    selectors: List[str] = []
+    for cat in cats:
+        selectors.extend(selector_map.get(cat, ()))
+    if not selectors:
+        return []
+    around = f"(around:{radius_m},{lat:.6f},{lon:.6f})"
+    # nwr = node/way/relation 단축구문(쿼리 경량화). out center 로 way/relation 중심좌표 포함.
+    body = "".join(f"nwr{sel}{around};" for sel in selectors)
+    out_count = min(max(limit * 4, 20), 80)
+    query = f"[out:json][timeout:25];({body});out center {out_count};"
+    payload = _overpass_request(query)
+    elements = payload.get("elements") or []
+    out: List[Dict[str, Any]] = []
+    for el in elements:
+        if not isinstance(el, dict):
+            continue
+        tags = el.get("tags") or {}
+        name = str(tags.get("name") or tags.get("name:en") or "").strip()
+        if not name:
+            continue
+        cat = _classify_osm_category(tags)
+        if not cat:
+            continue
+        if el.get("type") == "node":
+            plat, plon = el.get("lat"), el.get("lon")
+        else:
+            center = el.get("center") or {}
+            plat, plon = center.get("lat"), center.get("lon")
+        if plat is None or plon is None:
+            continue
+        phone = str(tags.get("contact:phone") or tags.get("phone") or "").strip()
+        address = _osm_address(tags)
+        out.append({
+            "id": f"osm-{str(el.get('type', 'n'))[:1]}{el.get('id', '')}",
+            "category": cat,
+            "name": name,
+            "lat": float(plat),
+            "lon": float(plon),
+            "address": address or name,
+            "rating": 0.0,
+            "price_tier": "-",
+            "booking_supported": False,
+            "phone": phone,
+            "summary": {"en": address or name},
+            "amenities": [],
+            "review_query": name,
+        })
+    return out
+
+
+def _fetch_live_place_dicts(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+    """캐스케이드(SerpApi→Overpass) + Redis 캐시. 원시 dict 리스트 반환(직렬화 가능)."""
+    def _do() -> List[Dict[str, Any]]:
+        places = _fetch_serpapi_places(lat, lon, category, radius_m, limit, target_lang)
+        if places:
+            return places
+        return _fetch_overpass_places(lat, lon, category, radius_m, limit, target_lang)
+
+    # 좌표를 ~1km 격자로 버킷팅해 인접 검색이 캐시를 공유하도록 한다.
+    key = (round(lat, 2), round(lon, 2), category, radius_m, _normalize_lang(target_lang))
+    try:
+        from backend.services.realtime_cache import cached_fetch
+        return cached_fetch("osm", key, _do)
+    except Exception:  # noqa: BLE001
+        return _do()
+
+
 def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
     router = APIRouter(prefix="/nadotongryoksa/lbs", tags=["marketplace-nadotongryoksa-lbs"])
 
@@ -199,13 +438,46 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
         lat: float = Query(..., ge=-90, le=90),
         lon: float = Query(..., ge=-180, le=180),
         category: SearchCategory = Query("all"),
-        radius_m: int = Query(5000, ge=300, le=50000),
+        radius_m: int = Query(5000, ge=300, le=500000),
         limit: int = Query(8, ge=1, le=20),
         target_lang: str = Query("ko"),
+        # [보안 보강] 무인증 경로지만 live 시 SerpApi(유료)/Overpass 팬아웃을 유발하므로 IP 단위
+        # 레이트리밋으로 비용 증폭/업스트림 남용을 1차 차단(기본 40/분, 초과 시 429+Retry-After).
+        _lbs_quota: None = Depends(require_lbs_search_quota),
     ) -> NearbySearchResponse:
         normalized_lang = _normalize_lang(target_lang)
-        filtered = _filter_places(lat=lat, lon=lon, category=category, radius_m=radius_m, limit=limit, target_lang=normalized_lang)
-        return NearbySearchResponse(target_lang=normalized_lang, requested_category=category, radius_m=radius_m, total=len(filtered), places=filtered)
+        # 1) 정적 카탈로그(항상 포함, 서울권 보장 + 오프라인/테스트 결정성)
+        results: List[NearbyPlaceResponse] = list(
+            _filter_places(lat=lat, lon=lon, category=category, radius_m=radius_m, limit=limit, target_lang=normalized_lang)
+        )
+        # 2) 실시간 외부 제공자(전세계·거리무관) 병합 — 실패해도 정적 결과로 응답
+        if _live_provider_enabled():
+            try:
+                live = _fetch_live_place_dicts(lat, lon, category, radius_m, limit, normalized_lang)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[lbs] live provider 오류: %s", exc)
+                live = []
+            seen = {_norm_name(r.name) for r in results}
+            for place in live or []:
+                name_key = _norm_name(str(place.get("name", "")))
+                if not name_key or name_key in seen:
+                    continue
+                if category != "all" and place.get("category") != category:
+                    continue
+                try:
+                    distance_m = _haversine_distance_m(lat, lon, float(place["lat"]), float(place["lon"]))
+                except Exception:  # noqa: BLE001
+                    continue
+                if distance_m > radius_m:
+                    continue
+                try:
+                    results.append(_to_nearby_response(place, target_lang=normalized_lang, distance_m=distance_m))
+                except Exception:  # noqa: BLE001
+                    continue
+                seen.add(name_key)
+        results.sort(key=lambda r: r.distance_m)
+        results = results[:limit]
+        return NearbySearchResponse(target_lang=normalized_lang, requested_category=category, radius_m=radius_m, total=len(results), places=results)
 
     @router.post("/bookings", response_model=BookingResponse)
     def create_booking(payload: BookingRequest, current_user=Depends(contract.get_current_user)) -> BookingResponse:

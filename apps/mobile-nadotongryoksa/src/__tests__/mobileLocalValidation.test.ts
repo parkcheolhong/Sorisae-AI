@@ -126,12 +126,12 @@ describe('Local mobile validation guards', () => {
 
         // 미지정 시 session_id 미포함(하위호환).
         await voiceTranslate('aud', 'ko', 'ja');
-        let body = (global.fetch as jest.Mock).mock.calls.at(-1)?.[1]?.body as string;
+        let body = ((global.fetch as jest.Mock).mock.calls.at(-1)?.[1] as { body?: string } | undefined)?.body as string;
         expect(body).not.toContain('session_id');
 
         // 지정 시 session_id 포함.
         await voiceTranslate('aud', 'ko', 'ja', undefined, 'auto', { sessionId: 'call-abc123' });
-        body = (global.fetch as jest.Mock).mock.calls.at(-1)?.[1]?.body as string;
+        body = ((global.fetch as jest.Mock).mock.calls.at(-1)?.[1] as { body?: string } | undefined)?.body as string;
         expect(body).toContain('"session_id":"call-abc123"');
     });
 

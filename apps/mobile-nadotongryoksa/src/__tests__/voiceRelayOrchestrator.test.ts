@@ -15,6 +15,8 @@ import {
     updateVoiceRelaySegmentSpeechStateFromFileRms,
     VOICE_RELAY_VAD_DEFAULTS,
     resolveVoiceRelayFixedFlushDelayMs,
+    normalizeRelayText,
+    formatAutoRelayDelayLabel,
 } from '../features/voip-voice-relay/voiceRelayOrchestrator';
 import { VoiceRelayPlaybackQueue } from '../features/voip-voice-relay/voiceRelayPlaybackQueue';
 
@@ -273,6 +275,25 @@ describe('voiceRelayOrchestrator', () => {
 
         expect(nextState.chunkIndex).toBe(2);
         expect(nextState.hasSpeech).toBe(false);
+    });
+
+    // [Phase5.1a] App.tsx 로컬 중복 정의에서 통합된 공용 relay 텍스트/지연 라벨 헬퍼 회귀 가드.
+    it('normalizeRelayText trims, collapses whitespace and lowercases (App.tsx 중복 통합)', () => {
+        expect(normalizeRelayText('  Hello   World  ')).toBe('hello world');
+        expect(normalizeRelayText('AnNyeong\t\nHaseyo')).toBe('annyeong haseyo');
+        expect(normalizeRelayText('')).toBe('');
+        // 메서드 순서가 달랐던 이전 App.tsx 구현과 결과 동일성(교환 법칙) 보장.
+        const sample = '  ABC   def\tGHI  ';
+        expect(normalizeRelayText(sample)).toBe(
+            sample.trim().toLowerCase().replace(/\s+/g, ' '),
+        );
+    });
+
+    it('formatAutoRelayDelayLabel renders integer vs decimal seconds (App.tsx 중복 통합)', () => {
+        expect(formatAutoRelayDelayLabel(2000)).toBe('2초');
+        expect(formatAutoRelayDelayLabel(3000)).toBe('3초');
+        expect(formatAutoRelayDelayLabel(2500)).toBe('2.5초');
+        expect(formatAutoRelayDelayLabel(2300)).toBe('2.3초');
     });
 });
 

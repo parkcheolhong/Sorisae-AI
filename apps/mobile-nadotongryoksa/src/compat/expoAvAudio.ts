@@ -110,7 +110,7 @@ function mapRecordingOptions(options: LegacyRecordingOptions): ExpoRecordingOpti
             linearPCMIsBigEndian: ios.linearPCMIsBigEndian,
             linearPCMIsFloat: ios.linearPCMIsFloat,
         },
-        web: options.web,
+        web: options.web ?? { mimeType: 'audio/webm', bitsPerSecond: 128_000 },
     };
 }
 

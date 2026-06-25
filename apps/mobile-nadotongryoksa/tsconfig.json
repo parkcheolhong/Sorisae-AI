@@ -3,10 +3,12 @@
     "strict": true,
     "jsx": "react-native",
     "lib": ["ESNext"],
+    "module": "esnext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true
   },
-  "extends": "expo/tsconfig.base"
+  "extends": "expo/tsconfig.base",
+  "exclude": ["node_modules", "**/dist/**", "**/*.test.js"]
 }

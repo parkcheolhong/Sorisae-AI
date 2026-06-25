@@ -26,10 +26,10 @@ export function CallModePolicyBanner() {
 
 const styles = StyleSheet.create({
     banner: {
-        backgroundColor: '#18182a',
+        backgroundColor: '#ffffff',
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#2e2e44',
+        borderColor: '#dce6f2',
         padding: 10,
         gap: 6,
         marginVertical: 4,
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     pstnText: {
         flex: 1,
         fontSize: 12,
-        color: '#c08040',
+        color: '#b45309',
         lineHeight: 18,
     },
     voipRow: {
@@ -65,10 +65,10 @@ const styles = StyleSheet.create({
     },
     voipText: {
         fontSize: 12,
-        color: '#8090b0',
+        color: '#5f6b80',
     },
     voipBadge: {
-        backgroundColor: '#2a3060',
+        backgroundColor: '#e3f0ff',
         borderRadius: 5,
         paddingHorizontal: 5,
         paddingVertical: 1,
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     },
     voipBadgeText: {
         fontSize: 11,
-        color: '#80a8ff',
+        color: '#1e6fe0',
         fontWeight: '600',
     },
 });

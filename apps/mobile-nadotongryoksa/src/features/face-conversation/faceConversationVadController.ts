@@ -1,4 +1,4 @@
-import type { Audio } from '../../compat/expoAvAudio';
+import type { AudioRecording } from '../../compat/expoAvAudio';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import {
@@ -37,7 +37,7 @@ export type FaceConversationVadSnapshot = {
 
 export type FaceConversationVadController = {
     start: (params: {
-        recording: Audio.Recording;
+        recording: AudioRecording;
         onFlush: (reason: string) => void;
         isStillActive: () => boolean;
     }) => Promise<void>;
@@ -46,7 +46,7 @@ export type FaceConversationVadController = {
 };
 
 export function createFaceConversationVadController(): FaceConversationVadController {
-    let recording: Audio.Recording | null = null;
+    let recording: AudioRecording | null = null;
     let onFlush: ((reason: string) => void) | null = null;
     let isStillActive: (() => boolean) | null = null;
     let segmentState: VoiceRelaySegmentState = createInitialVoiceRelaySegmentState(Date.now());
@@ -177,7 +177,7 @@ export function createFaceConversationVadController(): FaceConversationVadContro
                                     try {
                                         // 메트릭이 죽은 기기: AAC 바이트 RMS는 음량과 무관해 쓸 수 없으므로
                                         // 녹음 파일의 증가율(bytes/sec)로 발화/무음을 추정한다.
-                                        const info = await FileSystem.getInfoAsync(recordingUri, { size: true });
+                                        const info = await FileSystem.getInfoAsync(recordingUri);
                                         const size = info.exists && typeof info.size === 'number' ? info.size : 0;
                                         const nowMs = Date.now();
                                         if (prevFilePollMs > 0 && size > 0) {
@@ -240,20 +240,21 @@ export function createFaceConversationVadController(): FaceConversationVadContro
                     }
 
                     meterPollMisses = 0;
-                    if (typeof status.metering === 'number' && status.metering > peakMeterDb) {
-                        peakMeterDb = status.metering;
+                    const meterDb = typeof status.metering === 'number' ? status.metering : -160;
+                    if (meterDb > peakMeterDb) {
+                        peakMeterDb = meterDb;
                     }
                     const now = Date.now();
                     segmentState = updateVoiceRelaySegmentSpeechState(
                         segmentState,
-                        status.metering,
+                        meterDb,
                         now,
                         faceVadConfig.speechMeterMinDb,
                     );
                     const decision = evaluateVoiceRelaySegmentDecision(
                         segmentState,
                         now,
-                        status.metering,
+                        meterDb,
                         faceVadConfig,
                     );
                     if (decision.action === 'flush') {

@@ -274,19 +274,19 @@ export function FriendMapDiscoveryScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0f16',
+    backgroundColor: 'transparent',
     padding: 20,
   },
   containerCompact: {
     padding: 16,
   },
   title: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontSize: 18,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#94a3b8',
+    color: '#5f6b80',
     fontSize: 12,
     marginTop: 6,
     marginBottom: 12,
@@ -297,17 +297,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   autoDetectBadge: {
-    color: '#79c0ff',
+    color: '#1e6fe0',
     fontSize: 12,
     fontWeight: '700',
   },
   autoDetectHint: {
-    color: '#64748b',
+    color: '#8a93a3',
     fontSize: 11,
     lineHeight: 16,
   },
   statusText: {
-    color: '#79c0ff',
+    color: '#1e6fe0',
     fontSize: 12,
     marginBottom: 12,
   },
@@ -319,41 +319,41 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontSize: 15,
     fontWeight: '700',
   },
   emptyText: {
-    color: '#64748b',
+    color: '#8a93a3',
     fontSize: 12,
   },
   requestCard: {
-    backgroundColor: '#1e2533',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 12,
   },
   requestName: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontSize: 14,
     fontWeight: '700',
   },
   requestMeta: {
-    color: '#94a3b8',
+    color: '#5f6b80',
     fontSize: 12,
     marginTop: 4,
   },
   userCard: {
-    backgroundColor: '#1e2533',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 12,
   },
   userName: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontSize: 14,
     fontWeight: '700',
   },
   userMeta: {
-    color: '#94a3b8',
+    color: '#5f6b80',
     fontSize: 12,
     marginTop: 4,
   },
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   requestBtnDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: '#c3cdda',
   },
   requestBtnText: {
     color: '#0b0f16',

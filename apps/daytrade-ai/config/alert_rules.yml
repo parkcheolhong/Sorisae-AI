@@ -1,0 +1,85 @@
+# daytrade-ai — Prometheus 알림 규칙(설계서 §10-5 Alertmanager).
+# daytrade.monitoring.alerts.default_rules() 와 동일 임계를 운영 Prometheus 로 옮긴 템플릿.
+# 메트릭 출처: daytrade.monitoring.exporter.registry_from_run().render() → /metrics 스크레이프.
+groups:
+  - name: daytrade-trading
+    rules:
+      - alert: CircuitBreakerHalted
+        expr: daytrade_circuit_breaker_halted > 0
+        for: 0s
+        labels: { severity: critical }
+        annotations:
+          summary: "서킷브레이커 발동({{ $labels.symbol }})"
+          description: "레이턴시/일일손실 한도 초과로 신규 진입 중단."
+
+      - alert: DrawdownExceeded
+        expr: daytrade_max_drawdown_pct >= 2.0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "최대낙폭 한도 초과({{ $labels.symbol }})"
+          description: "MDD {{ $value }}% ≥ 2.0%."
+
+      - alert: LatencyP99High
+        expr: daytrade_latency_ms_p99 > 5.0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "처리 레이턴시 p99 초과({{ $labels.symbol }})"
+          description: "p99 {{ $value }}ms > 5ms 예산(§1 레이턴시 표)."
+
+      - alert: OrderRejectRateHigh
+        expr: rate(daytrade_rejects_total[5m]) / clamp_min(rate(daytrade_orders_total[5m]), 1e-9) > 0.5
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "주문 거절률 급증({{ $labels.symbol }})"
+          description: "최근 5분 거절률 50% 초과 — 거래소/유동성/세션 점검."
+
+      - alert: FeedStale
+        # 스크레이프 기준 마지막 갱신 후 정체(연결 끊김 의심). up/heartbeat 메트릭과 결합 권장.
+        expr: time() - daytrade_last_tick_unixtime > 5
+        for: 30s
+        labels: { severity: critical }
+        annotations:
+          summary: "피드 정체/끊김({{ $labels.symbol }})"
+          description: "마지막 틱 후 5초 경과 — 피드 재연결 필요."
+
+  # M7-K: MLOps(재학습·튜닝·핫스왑) 알림. 출처: LiveMetrics(model_*) + kpi_regression.py --metrics-out(kpi_*).
+  - name: daytrade-mlops
+    rules:
+      - alert: KpiRegression
+        # 자동 튜닝 회귀 — 게이트 verdict 가 PASS(1) 아님. kpi_regression.py 가 textfile/pushgateway 로 노출.
+        expr: daytrade_kpi_passed == 0
+        for: 0s
+        labels: { severity: critical }
+        annotations:
+          summary: "KPI 회귀 게이트 실패(metric={{ $labels.metric }})"
+          description: "tuned 가 baseline 대비 개선되지 않음 — 모델 승격 보류/롤백 검토."
+
+      - alert: ModelReloadStorm
+        # 핫스왑 급증 — 짧은 시간에 모델이 반복 교체(불안정한 재학습/플래핑 의심).
+        expr: increase(daytrade_model_reloads_total[15m]) >= 3
+        for: 0s
+        labels: { severity: warning }
+        annotations:
+          summary: "모델 핫스왑 급증({{ $labels.symbol }})"
+          description: "최근 15분 모델 리로드 {{ $value }}회 ≥ 3 — 재학습 트리거/게이트 임계 점검."
+
+      - alert: RetrainStalled
+        # 재학습 정체 — 모델 버전이 장시간 그대로(스케줄러/오케스트레이터 중단 의심).
+        expr: changes(daytrade_model_version[26h]) == 0
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "재학습 정체({{ $labels.symbol }})"
+          description: "26시간 내 모델 버전 변경 없음 — 스케줄러(일일 재학습)/트리거 상태 점검."
+
+      - alert: ModelServingUninitialized
+        # 운영 모델 미초기화 — current.json 미적용(버전 0). 시동 직후 외 지속되면 결선 오류.
+        expr: max(daytrade_model_version) == 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "운영 모델 미초기화"
+          description: "model_version=0 이 10분 지속 — --model-dir/current.json 결선 확인."

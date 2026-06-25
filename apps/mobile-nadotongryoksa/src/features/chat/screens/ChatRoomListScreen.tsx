@@ -21,6 +21,27 @@ function formatPreferredLanguage(language?: string | null): string {
   return normalized ? normalized.toUpperCase() : '미설정';
 }
 
+// 서버 last_message_at(naive UTC, 'Z')을 로컬 기준으로 표시.
+// 타임존 표기가 없으면 UTC 로 간주(레거시/캐시 방어) → KST ~9h 오프셋/Invalid Date 방지.
+// 오늘이면 '오전/오후 h:mm', 그 외엔 'M/D' 로 축약 표시한다.
+function formatRoomTime(iso?: string | null): string {
+  const raw = (iso ?? '').trim();
+  if (!raw) return '';
+  const normalized = /[zZ]$/.test(raw) || /[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw}Z`;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  if (sameDay) {
+    const h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const ampm = h < 12 ? '오전' : '오후';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${ampm} ${h12}:${m}`;
+  }
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 function buildTranslationHint(language?: string | null, countryCode?: string | null): string {
   const normalizedLanguage = language?.trim();
   if (normalizedLanguage) {
@@ -68,6 +89,7 @@ interface Props {
   autoCallVoiceId?: string | null;
   onAutoCallConsumed?: () => void;
   onStartFriendVoiceCall?: (friend: Friend) => void | Promise<void>;
+  openGroupSignal?: number;
 }
 
 export function ChatRoomListScreen({
@@ -80,6 +102,7 @@ export function ChatRoomListScreen({
   autoCallVoiceId = null,
   onAutoCallConsumed,
   onStartFriendVoiceCall,
+  openGroupSignal = 0,
 }: Props) {
   const [rooms, setRooms] = useState<ChatRoomSummary[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -92,6 +115,7 @@ export function ChatRoomListScreen({
   const [selectedGroupMemberIds, setSelectedGroupMemberIds] = useState<number[]>([]);
   const [allowMemberInvites, setAllowMemberInvites] = useState(false);
   const autoCallKeyRef = useRef<string | null>(null);
+  const openGroupSignalRef = useRef<number>(openGroupSignal);
   const unreadRoomCount = rooms.filter((room) => room.unread_count > 0).length;
   const unreadMessageCount = rooms.reduce((sum, room) => sum + room.unread_count, 0);
   const latestRoom = rooms.find((room) => !!room.last_message_at) ?? rooms[0] ?? null;
@@ -126,6 +150,15 @@ export function ChatRoomListScreen({
     onAutoCallConsumed?.();
     void Promise.resolve(onStartFriendVoiceCall(matchedFriend));
   }, [autoCallVoiceId, friends, loading, onAutoCallConsumed, onStartFriendVoiceCall, visible]);
+
+  // [단체채팅 1탭] 채팅 허브의 "단체채팅" 액션 타일에서 보낸 신호로 그룹방 작성기를 펼친다.
+  useEffect(() => {
+    if (openGroupSignal && openGroupSignal !== openGroupSignalRef.current) {
+      openGroupSignalRef.current = openGroupSignal;
+      setShowGroupComposer(true);
+      setError('');
+    }
+  }, [openGroupSignal]);
   const latestRoomAlert = latestRoom ? getRoomAlertLabel(latestRoom) : null;
   const maxSelectableMembers = Math.max(groupMemberLimit - 1, 0);
 
@@ -255,7 +288,7 @@ export function ChatRoomListScreen({
               ) : null}
             </View>
             <Text style={styles.summaryPreview}>{latestRoom.last_message_preview || '최근 메시지 미리보기가 없습니다.'}</Text>
-            <Text style={styles.summaryMeta}>{latestRoom.last_message_at || '최근 수신 시각 없음'}</Text>
+            <Text style={styles.summaryMeta}>{formatRoomTime(latestRoom.last_message_at) || '최근 수신 시각 없음'}</Text>
           </>
         ) : (
           <Text style={styles.summaryPreview}>아직 채팅 알림 정보가 없습니다. 번역 보관함이나 친구 채팅을 열면 최근 대화와 미확인 수가 여기에 쌓입니다.</Text>
@@ -273,7 +306,7 @@ export function ChatRoomListScreen({
         </Pressable>
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      {loading ? <ActivityIndicator color="#79c0ff" style={styles.loader} /> : null}
+      {loading ? <ActivityIndicator color="#1e6fe0" style={styles.loader} /> : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {showGroupComposer ? (
@@ -283,7 +316,7 @@ export function ChatRoomListScreen({
             <TextInput
               style={styles.groupInput}
               placeholder="예: 일본 여행 통역방"
-              placeholderTextColor="#6e7681"
+              placeholderTextColor="#8a93a3"
               value={groupTitle}
               onChangeText={setGroupTitle}
             />
@@ -423,7 +456,7 @@ export function ChatRoomListScreen({
                     <Text style={styles.roomHint}>{buildTranslationHint(room.counterpart?.preferred_language, null)}</Text>
                   ) : null}
                   <Text style={styles.roomPreview}>{room.last_message_preview || '메시지가 아직 없습니다.'}</Text>
-                  <Text style={styles.roomTime}>{room.last_message_at || ''}</Text>
+                  <Text style={styles.roomTime}>{formatRoomTime(room.last_message_at)}</Text>
                 </Pressable>
               );
             })
@@ -436,13 +469,13 @@ export function ChatRoomListScreen({
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  title: { color: '#f0f6fc', fontSize: 24, fontWeight: '800' },
-  subtitle: { color: '#8b949e', fontSize: 14, lineHeight: 20 },
+  title: { color: '#1a1f36', fontSize: 24, fontWeight: '800' },
+  subtitle: { color: '#5f6b80', fontSize: 14, lineHeight: 20 },
   summaryCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#243042',
-    backgroundColor: '#0f172a',
+    borderColor: '#dce6f2',
+    backgroundColor: '#ffffff',
     padding: 16,
     gap: 6,
   },
@@ -452,21 +485,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  summaryTitle: { color: '#f8fafc', fontSize: 15, fontWeight: '800' },
-  summaryMetric: { color: '#79c0ff', fontSize: 12, fontWeight: '700' },
+  summaryTitle: { color: '#1a1f36', fontSize: 15, fontWeight: '800' },
+  summaryMetric: { color: '#1e6fe0', fontSize: 12, fontWeight: '700' },
   summaryRoomHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  summaryRoomTitle: { color: '#e6edf3', fontSize: 14, fontWeight: '700' },
-  summaryPreview: { color: '#c9d1d9', fontSize: 13, lineHeight: 18 },
-  summaryMeta: { color: '#8b949e', fontSize: 12 },
+  summaryRoomTitle: { color: '#1a1f36', fontSize: 14, fontWeight: '700' },
+  summaryPreview: { color: '#3a4356', fontSize: 13, lineHeight: 18 },
+  summaryMeta: { color: '#5f6b80', fontSize: 12 },
   alertPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#35506c',
-    backgroundColor: '#10253d',
+    borderColor: '#bcd3f0',
+    backgroundColor: '#e8f1ff',
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  alertPillText: { color: '#79c0ff', fontSize: 11, fontWeight: '800' },
+  alertPillText: { color: '#1e6fe0', fontSize: 11, fontWeight: '800' },
   quickRow: { flexDirection: 'row', gap: 10 },
   primaryButton: {
     flex: 1,
@@ -476,53 +509,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: 'center',
   },
-  primaryButtonText: { color: '#f0f6fc', fontWeight: '700' },
+  primaryButtonText: { color: '#ffffff', fontWeight: '700' },
   secondaryButton: {
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#2f3b4b',
-    backgroundColor: '#111827',
+    borderColor: '#dce6f2',
+    backgroundColor: '#ffffff',
   },
-  secondaryButtonText: { color: '#c9d1d9', fontWeight: '700' },
+  secondaryButtonText: { color: '#3a4356', fontWeight: '700' },
   disabledButton: { opacity: 0.7 },
-  errorText: { color: '#ff7b72', fontSize: 13 },
+  errorText: { color: '#e5484d', fontSize: 13 },
   loader: { marginTop: 4 },
   scrollContent: { gap: 12, paddingBottom: 12 },
   sectionCard: {
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#1f2a37',
+    borderColor: '#dce6f2',
     padding: 14,
     gap: 10,
   },
-  sectionTitle: { color: '#f0f6fc', fontSize: 16, fontWeight: '800' },
-  emptyText: { color: '#8b949e', fontSize: 13, lineHeight: 19 },
+  sectionTitle: { color: '#1a1f36', fontSize: 16, fontWeight: '800' },
+  emptyText: { color: '#5f6b80', fontSize: 13, lineHeight: 19 },
   groupInput: {
-    color: '#f0f6fc',
-    backgroundColor: '#0f1723',
+    color: '#1a1f36',
+    backgroundColor: '#f4f9ff',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#243244',
+    borderColor: '#dce6f2',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   limitSection: { gap: 8 },
-  capacityMeta: { color: '#8b949e', fontSize: 12, lineHeight: 18 },
+  capacityMeta: { color: '#5f6b80', fontSize: 12, lineHeight: 18 },
   limitOptionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   limitOptionChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#243244',
-    backgroundColor: '#0f1723',
+    borderColor: '#dce6f2',
+    backgroundColor: '#f4f9ff',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  limitOptionChipActive: { backgroundColor: '#17324d', borderColor: '#79c0ff' },
-  limitOptionText: { color: '#c9d1d9', fontSize: 12, fontWeight: '700' },
-  limitOptionTextActive: { color: '#79c0ff' },
+  limitOptionChipActive: { backgroundColor: '#e3f0ff', borderColor: '#1e6fe0' },
+  limitOptionText: { color: '#3a4356', fontSize: 12, fontWeight: '700' },
+  limitOptionTextActive: { color: '#1e6fe0' },
   memberPickWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   policyRow: {
     flexDirection: 'row',
@@ -530,8 +563,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#243244',
-    backgroundColor: '#0f1723',
+    borderColor: '#dce6f2',
+    backgroundColor: '#f4f9ff',
     padding: 12,
   },
   policyCheck: {
@@ -539,33 +572,33 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#38506d',
-    backgroundColor: '#111827',
+    borderColor: '#bcd3f0',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  policyCheckActive: { backgroundColor: '#1f6feb', borderColor: '#79c0ff' },
+  policyCheckActive: { backgroundColor: '#1f6feb', borderColor: '#1e6fe0' },
   policyCheckText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   policyTextWrap: { flex: 1, gap: 3 },
-  policyTitle: { color: '#f0f6fc', fontSize: 13, fontWeight: '700' },
-  policyMeta: { color: '#8b949e', fontSize: 12, lineHeight: 18 },
+  policyTitle: { color: '#1a1f36', fontSize: 13, fontWeight: '700' },
+  policyMeta: { color: '#5f6b80', fontSize: 12, lineHeight: 18 },
   memberChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#243244',
-    backgroundColor: '#0f1723',
+    borderColor: '#dce6f2',
+    backgroundColor: '#f4f9ff',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  memberChipActive: { backgroundColor: '#17324d', borderColor: '#79c0ff' },
-  memberChipText: { color: '#c9d1d9', fontSize: 12, fontWeight: '700' },
-  memberChipTextActive: { color: '#79c0ff' },
+  memberChipActive: { backgroundColor: '#e3f0ff', borderColor: '#1e6fe0' },
+  memberChipText: { color: '#3a4356', fontSize: 12, fontWeight: '700' },
+  memberChipTextActive: { color: '#1e6fe0' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   friendTextWrap: { flex: 1, gap: 2 },
-  friendTitle: { color: '#f0f6fc', fontSize: 14, fontWeight: '700' },
-  friendMeta: { color: '#8b949e', fontSize: 12 },
-  friendHint: { color: '#7dd3fc', fontSize: 11, lineHeight: 16 },
+  friendTitle: { color: '#1a1f36', fontSize: 14, fontWeight: '700' },
+  friendMeta: { color: '#5f6b80', fontSize: 12 },
+  friendHint: { color: '#1e6fe0', fontSize: 11, lineHeight: 16 },
   friendActionColumn: { gap: 8, alignItems: 'stretch' },
   friendVoiceButton: {
     borderRadius: 12,
@@ -578,20 +611,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#17324d',
+    backgroundColor: '#e3f0ff',
   },
-  friendChatButtonText: { color: '#79c0ff', fontWeight: '700' },
+  friendChatButtonText: { color: '#1e6fe0', fontWeight: '700' },
   roomCard: {
     gap: 5,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#0f1723',
+    backgroundColor: '#f4f9ff',
     borderWidth: 1,
-    borderColor: '#243244',
+    borderColor: '#dce6f2',
   },
   roomHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   roomTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  roomTitle: { color: '#f0f6fc', fontSize: 15, fontWeight: '800', flex: 1 },
+  roomTitle: { color: '#1a1f36', fontSize: 15, fontWeight: '800', flex: 1 },
   unreadBadge: {
     minWidth: 24,
     height: 24,
@@ -602,8 +635,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unreadBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  roomMeta: { color: '#8b949e', fontSize: 12 },
-  roomHint: { color: '#7dd3fc', fontSize: 11 },
-  roomPreview: { color: '#d1d7de', fontSize: 13, lineHeight: 18 },
-  roomTime: { color: '#6e7681', fontSize: 11 },
+  roomMeta: { color: '#5f6b80', fontSize: 12 },
+  roomHint: { color: '#1e6fe0', fontSize: 11 },
+  roomPreview: { color: '#3a4356', fontSize: 13, lineHeight: 18 },
+  roomTime: { color: '#8a93a3', fontSize: 11 },
 });
