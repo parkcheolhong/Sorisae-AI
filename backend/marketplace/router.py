@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Response
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, func
 from typing import Any, Callable, Dict, List, Optional
 from pydantic import BaseModel
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+
+from backend.time_utils import utcnow
 import asyncio
 import logging
 import os
@@ -518,6 +520,81 @@ def _resolve_latest_marketplace_apk_path() -> Path:
     return apk_candidates[0]
 
 
+def _read_worldlinco_apk_manifest() -> dict[str, Any]:
+    apk_dir = _resolve_marketplace_apk_dir()
+    manifest_path = apk_dir / "nadotongryoksa-v1.manifest.json"
+    if manifest_path.is_file():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except json.JSONDecodeError:
+            pass
+
+    target = apk_dir / "nadotongryoksa-v1.apk"
+    if not target.is_file():
+        target = _resolve_latest_marketplace_apk_path()
+    stat = target.stat()
+    return {
+        "package": "com.parkcheolhong.worldlinco",
+        "versionName": None,
+        "versionCode": None,
+        "apkFilename": target.name,
+        "downloadPath": f"/api/marketplace/apk/{target.name}",
+        "publishedAt": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        "sizeBytes": stat.st_size,
+        "manifestMissing": True,
+    }
+
+
+@router.get("/apk/worldlinco/manifest")
+def get_worldlinco_apk_manifest() -> Any:
+    """Marketplace UI용 WorldLinco APK 버전 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/latest-apk-metadata")
+def get_latest_apk_metadata() -> Any:
+    """모바일 앱 자동 업데이트 확인용 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content={
+            "version_name": payload.get("versionName"),
+            "build_number": payload.get("versionCode"),
+            "package": payload.get("package"),
+            "download_path": payload.get("downloadPath"),
+            "published_at": payload.get("publishedAt"),
+            "size_bytes": payload.get("sizeBytes"),
+            "apk_filename": payload.get("apkFilename"),
+        },
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/worldlinco/tuning")
+def get_worldlinco_tuning_public() -> Any:
+    """WorldLinco 모바일 VoIP/대면 통역 튜닝값 (로그인 불필요)."""
+    from backend.marketplace.worldlinco_tuning import worldlinco_tuning_public_payload
+
+    return JSONResponse(
+        content=worldlinco_tuning_public_payload(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
 @router.get("/latest.apk")
 def download_latest_marketplace_apk() -> Any:
     """모바일 자동업데이트용 고정 APK URL 엔드포인트."""
@@ -571,7 +648,7 @@ def download_marketplace_apk(
     test_token: Optional[str] = None,
     current_user: Any = None,
 ) -> Any:
-    """모바일 APK 직접 다운로드 엔드포인트 — 신세계소리새 나도통역사 등
+    """모바일 APK 직접 다운로드 엔드포인트 — WorldLinco(월드링코) 등
     
     인증 필수: 구매자 또는 유효한 다운로드 토큰 보유
     토큰은 query parameter로 전달: /apk/file.apk?token=abc123
@@ -758,11 +835,12 @@ def create_marketplace_purchase(
     if not project:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
     
+    server_price = float(project.price or 0)
     purchase = payment_service.create_purchase(
         db=db,
         project_id=request.project_id,
         buyer_id=current_user.id,
-        amount=request.amount or float(project.price or 0),
+        amount=server_price,
         payment_method=request.payment_method,
     )
     
@@ -885,7 +963,7 @@ def create_marketplace_download_token(
     purchases = db.query(models.Purchase).filter(
         models.Purchase.project_id == request.project_id,
         models.Purchase.buyer_id == current_user.id,
-        models.Purchase.status.in_(["completed", "pending"]),
+        models.Purchase.status == "completed",
     ).all()
     
     if not purchases:
@@ -1094,9 +1172,23 @@ def _ensure_video_service_user_schema() -> None:
         return
 
     with engine.begin() as conn:
-        conn.execute(text(
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_balance INTEGER"
-        ))
+        conn_inspector = inspect(conn)
+        existing_columns = {
+            column["name"]
+            for column in conn_inspector.get_columns("users")
+        }
+        if "credit_balance" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
+            ))
+        if "preferred_language" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(16)"
+            ))
+        if "country_code" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN country_code VARCHAR(8)"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
@@ -1144,6 +1236,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     task: str = ""
     conversation: List[Dict[str, Any]] = []
     run_id: Optional[str] = None
+    session_id: Optional[str] = None
     stage_id: Optional[str] = None
     project_name: Optional[str] = None
     output_dir: Optional[str] = None
@@ -1153,6 +1246,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     companion_mode: str = "hybrid"
     response_style: str = "balanced"
     tone_preset: str = "auto"
+    reverse_question_mode: Optional[str] = None
     max_tokens: int = 768
 
 
@@ -1199,6 +1293,30 @@ def _get_customer_stage_execution_metadata(stage_run_payload: Dict[str, Any]) ->
     return dict(metadata.get("orchestration_execution") or {})
 
 
+def _customer_stage_run_owner_id(stage_run_payload: Dict[str, Any]) -> str:
+    requested_by = stage_run_payload.get("requested_by") if isinstance(stage_run_payload, dict) else {}
+    if not isinstance(requested_by, dict):
+        return ""
+    return str(requested_by.get("id") or "").strip()
+
+
+def _current_customer_user_id(current_user: models.User) -> str:
+    return str(getattr(current_user, "id", "") or "").strip()
+
+
+def _customer_stage_run_owned_by_current_user(stage_run_payload: Dict[str, Any], current_user: models.User) -> bool:
+    owner_id = _customer_stage_run_owner_id(stage_run_payload)
+    current_user_id = _current_customer_user_id(current_user)
+    return bool(owner_id and current_user_id and owner_id == current_user_id)
+
+
+def _load_customer_stage_run_for_user(run_id: str, current_user: models.User) -> Dict[str, Any]:
+    payload = load_stage_run(run_id)
+    if not payload or not _customer_stage_run_owned_by_current_user(payload, current_user):
+        raise HTTPException(status_code=404, detail="고객 stage run을 찾을 수 없습니다.")
+    return payload
+
+
 def _update_customer_stage_execution_metadata(run_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
     payload = load_stage_run(run_id)
     if not payload:
@@ -1230,10 +1348,13 @@ def _ensure_customer_stage_run_payload(
     return stage_run_payload
 
 
-async def _run_customer_orchestration_request(orchestration_request):
-    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+async def _run_customer_orchestration_request(orchestration_request, owner_id: str | None = None):
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_execution
 
-    return await execute_orchestration_handler(orchestration_request)
+    return await run_autonomous_surface_execution(
+        orchestration_request,
+        owner_id=str(owner_id or getattr(orchestration_request, "run_id", "") or "marketplace-customer"),
+    )
 
 
 def _build_customer_orchestrate_result_payload(
@@ -1404,7 +1525,7 @@ def _resolve_stage_run_for_request(
     current_user: models.User,
 ) -> Optional[Dict[str, Any]]:
     if request.stage_run_id:
-        return load_stage_run(request.stage_run_id)
+        return _load_customer_stage_run_for_user(request.stage_run_id, current_user)
     project_name = (request.project_name or "customer-product").strip() or "customer-product"
     return initialize_stage_run(
         scope="marketplace",
@@ -1582,7 +1703,7 @@ def _append_customer_follow_up_history(*, history_id: str, score: int, limit: in
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]
@@ -1655,6 +1776,7 @@ def _build_customer_orchestrate_request(
             request.manual_correction,
         ),
         mode=safe_mode,
+        run_id=str(request.stage_run_id or "").strip() or None,
         project_name=request.project_name,
         output_base_dir=user_dir,
         output_dir=validated_output_dir,

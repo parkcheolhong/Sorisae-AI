@@ -19,10 +19,10 @@ class _FakeDb:
         self.rolled_back = True
 
 
-def _build_test_client(fake_db: _FakeDb) -> TestClient:
+def _build_test_client(fake_db: _FakeDb, *, user_id: int = 7, email: str = "customer@example.com") -> TestClient:
     app = FastAPI()
     app.include_router(marketplace_router_module.router, prefix="/api/marketplace")
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=7, email="customer@example.com")
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user_id, email=email)
     app.dependency_overrides[marketplace_router_module.get_db] = lambda: fake_db
     return TestClient(app)
 
@@ -79,6 +79,7 @@ def test_customer_orchestrate_stage_run_get_returns_saved_payload(monkeypatch):
             "run_id": "run-001",
             "current_stage_id": "ARCH-001",
             "status": "pending",
+            "requested_by": {"id": 7, "email": "customer@example.com"},
             "stages": [],
         },
     )
@@ -89,6 +90,27 @@ def test_customer_orchestrate_stage_run_get_returns_saved_payload(monkeypatch):
     payload = response.json()
     assert payload["run_id"] == "run-001"
     assert payload["status"] == "pending"
+
+
+def test_customer_orchestrate_stage_run_get_rejects_foreign_payload(monkeypatch):
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "run-foreign",
+            "current_stage_id": "ARCH-001",
+            "status": "pending",
+            "requested_by": {"id": 8, "email": "other@example.com"},
+            "stages": [],
+        },
+    )
+
+    response = client.get("/api/marketplace/customer-orchestrate/stage-runs/run-foreign")
+
+    assert response.status_code == 404
 
 
 def test_customer_orchestrate_accepted_returns_stage_run_payload(monkeypatch):
@@ -169,6 +191,18 @@ def test_customer_orchestrate_stage_run_update_returns_updated_payload(monkeypat
 
     captured: dict[str, object] = {}
 
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "run-001",
+            "current_stage_id": "ARCH-001",
+            "status": "pending",
+            "requested_by": {"id": 7, "email": "customer@example.com"},
+            "stages": [],
+        },
+    )
+
     def _fake_update_stage_run(**kwargs):
         captured.update(kwargs)
         return {
@@ -211,3 +245,172 @@ def test_customer_orchestrate_stage_run_update_returns_updated_payload(monkeypat
         "substep_checks": {"sub-1": True},
         "revision_note": "promoted",
     }
+
+
+def test_customer_orchestrate_stage_run_update_rejects_foreign_payload(monkeypatch):
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "run-foreign",
+            "current_stage_id": "ARCH-001",
+            "status": "pending",
+            "requested_by": {"id": 8, "email": "other@example.com"},
+            "stages": [],
+        },
+    )
+
+    def _unexpected_update_stage_run(**kwargs):
+        raise AssertionError("foreign stage run must not be updated")
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "update_stage_run",
+        _unexpected_update_stage_run,
+    )
+
+    response = client.post(
+        "/api/marketplace/customer-orchestrate/stage-runs/update",
+        json={
+            "run_id": "run-foreign",
+            "stage_id": "ARCH-002",
+            "status": "passed",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_customer_orchestrate_accepted_rejects_foreign_stage_run(monkeypatch):
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "run-foreign",
+            "current_stage_id": "ARCH-001",
+            "status": "pending",
+            "requested_by": {"id": 8, "email": "other@example.com"},
+            "stages": [],
+        },
+    )
+
+    response = client.post(
+        "/api/marketplace/customer-orchestrate/accepted",
+        json={
+            "task": "고객 주문 생성",
+            "mode": "full",
+            "project_name": "contract-check",
+            "stage_run_id": "run-foreign",
+            "stage_id": "ARCH-001",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_customer_orchestrate_chat_rejects_foreign_stage_run(monkeypatch):
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "run-foreign",
+            "current_stage_id": "ARCH-001",
+            "status": "pending",
+            "requested_by": {"id": 8, "email": "other@example.com"},
+            "stages": [],
+        },
+    )
+
+    response = client.post(
+        "/api/marketplace/customer-orchestrate/chat",
+        json={
+            "message": "이 stage run 기준으로 이어서 설명해줘",
+            "run_id": "run-foreign",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_customer_orchestrate_stream_close_releases_lock_and_marks_failed(monkeypatch):
+    fake_db = _FakeDb()
+    user = SimpleNamespace(id=7, email="customer@example.com")
+    updates: list[tuple[str, dict[str, object]]] = []
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "run-cancel",
+            "current_stage_id": "ARCH-001",
+            "status": "pending",
+            "requested_by": {"id": 7, "email": "customer@example.com"},
+            "metadata": {},
+            "stages": [],
+        },
+    )
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "_build_customer_orchestrate_request",
+        lambda request, user_id: SimpleNamespace(stage_run_id=request.stage_run_id),
+    )
+
+    async def _slow_orchestration(_request, owner_id=None):
+        await marketplace_router_module.asyncio.sleep(5)
+        return {"completion_judge": {"product_ready": True}}
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "_run_customer_orchestration_request",
+        _slow_orchestration,
+    )
+
+    def _capture_execution_metadata(run_id, **fields):
+        updates.append((run_id, fields))
+        return {"run_id": run_id, "metadata": {"orchestration_execution": fields}}
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "_update_customer_stage_execution_metadata",
+        _capture_execution_metadata,
+    )
+
+    stream_endpoint = next(
+        route.endpoint
+        for route in marketplace_router_module.router.routes
+        if getattr(route, "path", "") == "/customer-orchestrate/stream"
+    )
+    request_model = marketplace_router_module.CustomerOrchestrateRequest(
+        task="고객 주문 생성",
+        mode="full",
+        project_name="contract-check",
+        stage_run_id="run-cancel",
+        stage_id="ARCH-001",
+    )
+
+    async def _consume_and_close_stream():
+        response = await stream_endpoint(request_model, fake_db, user)
+        iterator = response.body_iterator
+        first_event = await iterator.__anext__()
+        await iterator.aclose()
+        return first_event
+
+    first_event = marketplace_router_module.asyncio.run(_consume_and_close_stream())
+
+    assert "accepted" in first_event
+    assert updates[0][0] == "run-cancel"
+    assert updates[0][1]["status"] == "running"
+    assert updates[-1][0] == "run-cancel"
+    assert updates[-1][1]["status"] == "failed"
+    assert "완료 전에 종료" in str(updates[-1][1]["error_message"])
+    assert fake_db.rolled_back is True
+    assert marketplace_router_module._get_customer_orchestrate_run_lock("run-cancel").locked() is False

@@ -1,0 +1,1036 @@
+{
+  "mode": "stub",
+  "session_id": "064cf9f886464b72",
+  "task": "FastAPI 헬스체크 API 만들어줘",
+  "stages_total": 11,
+  "stages_completed": 11,
+  "execution_state": "completed",
+  "errors": [],
+  "turns": [
+    {
+      "step": "register-task",
+      "message": "FastAPI 헬스체크 API 만들어줘",
+      "started_at": "2026-06-16T12:55:07.084171+00:00",
+      "elapsed_sec": 0.001,
+      "intent": "task_registered",
+      "requires_approval": false,
+      "execution_state": "idle",
+      "approval_state": "none",
+      "current_stage": "1단계: 구조 설계",
+      "stages_completed": 0,
+      "stage_command": null,
+      "stage_number": null,
+      "content_preview": "프로젝트 목표를 저장했습니다.\n\n**요청**: FastAPI 헬스체크 API 만들어줘\n\n1단계 구조 설계를 시작하려면 **`설계해줘`**를 입력하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 0
+    },
+    {
+      "step": "design-1",
+      "message": "설계해줘",
+      "started_at": "2026-06-16T12:55:07.084781+00:00",
+      "elapsed_sec": 0.001,
+      "intent": "stage_design",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "1단계: 구조 설계",
+      "stages_completed": 0,
+      "stage_command": "design",
+      "stage_number": 1,
+      "content_preview": "### 🧠 추론자 ⚡\n[reasoner] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. (프롬프트 미리보기: 당신은 소프트웨어 아키텍처 추론 전문가(A뇌 추론자)입니다.\n사용자의 요구사항을 분석하고, 프로젝트의 구조를 설계합니다.\n\n반드시 아래 형식으로...)\n\n### 📋 설계자 ⚡\n[planner] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. (프롬프트 미리보기: 당신은 프로젝트 구현 설계자(A뇌 설계자)입니다.\n추론자의 분석 결과를 바탕으로 구체적인 파일 구조와 구현 계획을 수립합니다.\n\n반드시 아래 형...)\n\n\n---\n⏳ **승인 대기 중** (1단계: 구조 설계): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '1단계 진행해줘",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-1",
+      "message": "진행해",
+      "started_at": "2026-06-16T12:55:07.085913+00:00",
+      "elapsed_sec": 31.572,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "2단계: 폴더 및 기초 구현",
+      "stages_completed": 1,
+      "stage_command": "execute",
+      "stage_number": 1,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 9개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 9개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (2단계: 폴더 및 기초 구현): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '2단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-2",
+      "message": "2단계 진행해줘",
+      "started_at": "2026-06-16T12:55:38.657615+00:00",
+      "elapsed_sec": 0.322,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "3단계: 설계 반영 골조 구현",
+      "stages_completed": 2,
+      "stage_command": "execute",
+      "stage_number": 2,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 5개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 5개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (3단계: 설계 반영 골조 구현): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '3단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-3",
+      "message": "3단계 진행해줘",
+      "started_at": "2026-06-16T12:55:38.979137+00:00",
+      "elapsed_sec": 0.318,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "4단계: 핵심 엔진 구성",
+      "stages_completed": 3,
+      "stage_command": "execute",
+      "stage_number": 3,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 5개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 5개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (4단계: 핵심 엔진 구성): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '4단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-4",
+      "message": "4단계 진행해줘",
+      "started_at": "2026-06-16T12:55:39.296919+00:00",
+      "elapsed_sec": 0.192,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "4.5단계: Refiner/Fixer",
+      "stages_completed": 4,
+      "stage_command": "execute",
+      "stage_number": 4,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 3개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 3개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (4.5단계: Refiner/Fixer): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '4.5단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "discuss-4",
+      "message": "4단계 Redis 캐시 아이디어 제안해줘",
+      "started_at": "2026-06-16T12:55:39.489343+00:00",
+      "elapsed_sec": 0.001,
+      "intent": "stage_discuss",
+      "requires_approval": false,
+      "execution_state": "executing",
+      "approval_state": "none",
+      "current_stage": "4.5단계: Refiner/Fixer",
+      "stages_completed": 4,
+      "stage_command": "discuss",
+      "stage_number": 4,
+      "content_preview": "### 🧠 추론자 ⚡\n[reasoner] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. (프롬프트 미리보기: 당신은 소프트웨어 아키텍처 추론 전문가(A뇌 추론자)입니다.\n사용자의 요구사항을 분석하고, 프로젝트의 구조를 설계합니다.\n\n반드시 아래 형식으로...)\n\n### 📋 설계자 ⚡\n[planner] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. (프롬프트 미리보기: 당신은 프로젝트 구현 설계자(A뇌 설계자)입니다.\n추론자의 분석 결과를 바탕으로 구체적인 파일 구조와 구현 계획을 수립합니다.\n\n반드시 아래 형...)\n\n\n---\n💡 구현까지 진행하려면 '4단계 진행해줘'라고 입력하세요. 추가 질문은 그대로 대화하시면 됩니다.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-4.5",
+      "message": "4.5단계 진행해줘",
+      "started_at": "2026-06-16T12:55:39.490190+00:00",
+      "elapsed_sec": 0.393,
+      "intent": "stage_execute",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "5단계: 로직 (ID 식별)",
+      "stages_completed": 5,
+      "stage_command": "execute",
+      "stage_number": 4.5,
+      "content_preview": "### 🔍 리뷰어 ⚡\n[reviewer] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. (프롬프트 미리보기: 당신은 시니어 코드 리뷰어(A뇌 리뷰어)입니다.\n이전 에이전트들의 결과를 검토하고 품질을 평가합니다.\n\n반드시 아래 형식으로 답변하세요:\n## ...)\n\n### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 6개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 6개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (5단계: 로직 (ID 식별)): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '5단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 3
+    },
+    {
+      "step": "execute-5",
+      "message": "5단계 진행해줘",
+      "started_at": "2026-06-16T12:55:39.883149+00:00",
+      "elapsed_sec": 0.149,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "6단계: 데이터",
+      "stages_completed": 6,
+      "stage_command": "execute",
+      "stage_number": 5,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 2개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 2개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (6단계: 데이터): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '6단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-6",
+      "message": "6단계 진행해줘",
+      "started_at": "2026-06-16T12:55:40.031983+00:00",
+      "elapsed_sec": 0.191,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "7단계: 서비스",
+      "stages_completed": 7,
+      "stage_command": "execute",
+      "stage_number": 6,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 3개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 3개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (7단계: 서비스): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '7단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-7",
+      "message": "7단계 진행해줘",
+      "started_at": "2026-06-16T12:55:40.222904+00:00",
+      "elapsed_sec": 0.201,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "8단계: API",
+      "stages_completed": 8,
+      "stage_command": "execute",
+      "stage_number": 7,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 3개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 3개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (8단계: API): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '8단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "pending"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-8",
+      "message": "8단계 진행해줘",
+      "started_at": "2026-06-16T12:55:40.423685+00:00",
+      "elapsed_sec": 0.223,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "9단계: 프론트",
+      "stages_completed": 9,
+      "stage_command": "execute",
+      "stage_number": 8,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 3개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 3개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (9단계: 프론트): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '9단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "in_progress"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "pending"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-9",
+      "message": "9단계 진행해줘",
+      "started_at": "2026-06-16T12:55:40.646532+00:00",
+      "elapsed_sec": 0.005,
+      "intent": "approval",
+      "requires_approval": true,
+      "execution_state": "awaiting_approval",
+      "approval_state": "pending",
+      "current_stage": "10단계: 운영 검증",
+      "stages_completed": 10,
+      "stage_command": "execute",
+      "stage_number": 9,
+      "content_preview": "### ⚡ 코더 ✅\nB뇌 코드 생성 완료: 2개 파일 작성\n\n### ✅ 검증 ✅\n검증 통과 (100점): 2개 파일 확인 완료\n\n\n---\n⏳ **승인 대기 중** (10단계: 운영 검증): '승인' 또는 '진행해'라고 말씀하시면 코드 생성을 시작합니다.\n\n💡 '10단계 진행해줘'로 다음 단계를 실행하세요.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "in_progress"
+        }
+      ],
+      "agent_count": 2
+    },
+    {
+      "step": "execute-10",
+      "message": "10단계 진행해줘",
+      "started_at": "2026-06-16T12:55:40.651658+00:00",
+      "elapsed_sec": 0.002,
+      "intent": "approval",
+      "requires_approval": false,
+      "execution_state": "completed",
+      "approval_state": "approved",
+      "current_stage": null,
+      "stages_completed": 11,
+      "stage_command": "execute",
+      "stage_number": 10,
+      "content_preview": "### ✅ 검증 ✅\n검증 통과 (100점): 2개 파일 확인 완료\n\n### 🔍 리뷰어 ⚡\n[reviewer] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. (프롬프트 미리보기: 당신은 시니어 코드 리뷰어(A뇌 리뷰어)입니다.\n이전 에이전트들의 결과를 검토하고 품질을 평가합니다.\n\n반드시 아래 형식으로 답변하세요:\n## ...)\n\n\n---\n💡 11단계 파이프라인이 모두 완료되었습니다.",
+      "stage_snapshot": [
+        {
+          "id": "STAGE-01",
+          "label": "1단계: 구조 설계",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-02",
+          "label": "2단계: 폴더 및 기초 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-03",
+          "label": "3단계: 설계 반영 골조 구현",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-04",
+          "label": "4단계: 핵심 엔진 구성",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-045",
+          "label": "4.5단계: Refiner/Fixer",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-05",
+          "label": "5단계: 로직 (ID 식별)",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-06",
+          "label": "6단계: 데이터",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-07",
+          "label": "7단계: 서비스",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-08",
+          "label": "8단계: API",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-09",
+          "label": "9단계: 프론트",
+          "status": "completed"
+        },
+        {
+          "id": "STAGE-10",
+          "label": "10단계: 운영 검증",
+          "status": "completed"
+        }
+      ],
+      "agent_count": 2
+    }
+  ],
+  "finished_at": "2026-06-16T12:55:40.653418+00:00",
+  "total_elapsed_sec": 33.57,
+  "out_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\orchestrator-11stage-probe-20260616-125507"
+}

@@ -21,8 +21,12 @@ function decodeBase64Url(value: string): string {
     return Buffer.from(padded, 'base64').toString('utf-8');
 }
 
+function canUseBrowserStorage(): boolean {
+    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
 export function getAdminToken(): string {
-    if (typeof window === 'undefined') {
+    if (!canUseBrowserStorage()) {
         return '';
     }
 
@@ -33,8 +37,23 @@ export function getAdminToken(): string {
     }
 }
 
+export function resolveAdminAccessToken(): string {
+    const adminToken = getAdminToken();
+    if (adminToken) {
+        return adminToken;
+    }
+    if (!canUseBrowserStorage()) {
+        return '';
+    }
+    try {
+        return localStorage.getItem('token') || '';
+    } catch {
+        return '';
+    }
+}
+
 export function setAdminToken(token: string): void {
-    if (typeof window === 'undefined') {
+    if (!canUseBrowserStorage()) {
         return;
     }
 
@@ -45,7 +64,7 @@ export function setAdminToken(token: string): void {
 }
 
 export function clearAdminToken(): void {
-    if (typeof window === 'undefined') {
+    if (!canUseBrowserStorage()) {
         return;
     }
 

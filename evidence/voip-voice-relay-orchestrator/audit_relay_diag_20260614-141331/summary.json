@@ -1,0 +1,45 @@
+﻿{
+    "timestamp":  "2026-06-14T14:16:51.7659201+09:00",
+    "run_dir":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\voip-voice-relay-orchestrator\\audit_relay_diag_20260614-141331",
+    "accept_ok":  true,
+    "signaling_ok":  false,
+    "audit_logcat_loaded":  false,
+    "audit_ui":  {
+                     "has_audit_error_403":  false,
+                     "has_audit_fetch_failed":  false,
+                     "has_call_initiated":  false,
+                     "has_call_accepted":  false,
+                     "has_empty_audit":  false,
+                     "sample_texts":  "TURN, 세션 유지, 음성 통역 비용이 커서 Lite/Pro 월정액에서만 열어줍니다.\nVoIP Premium Lite\n월 9,900원\n월 60분 통역 통화 권장\n기준 원가식: (월 고정비 + 통역분당변동비 x 60분) / 60분\nLite 결제\nVoIP Premium Pro\n월 19,900원\n월 300분 통역 통화 권장\n기준 원가식: (월 고정비 + 통역분당변동비 x 300분) / 300분\nPro 결제\n정합성 테스트 열기"
+                 },
+    "callee_relay":  {
+                         "relay_sent":  false,
+                         "relay_sent_meta":  false,
+                         "translate_request":  false,
+                         "translate_result":  false,
+                         "relay_start_blocked":  false,
+                         "relay_error":  false,
+                         "audit_loaded":  false,
+                         "audit_failed":  false,
+                         "audit_fetch_403":  false,
+                         "incoming_suppressed":  false,
+                         "signaling_open":  false,
+                         "connected":  false,
+                         "accept_api_ok":  false
+                     },
+    "caller_relay":  {
+                         "relay_sent":  false,
+                         "relay_sent_meta":  false,
+                         "translate_request":  false,
+                         "translate_result":  false,
+                         "relay_start_blocked":  false,
+                         "relay_error":  false,
+                         "audit_loaded":  false,
+                         "audit_failed":  false,
+                         "audit_fetch_403":  false,
+                         "incoming_suppressed":  false,
+                         "signaling_open":  false,
+                         "connected":  false,
+                         "accept_api_ok":  false
+                     }
+}

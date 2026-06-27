@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
-        "test": "node -e \"const assert=require(\\\"node:assert/strict\\\"); assert.equal(2,2); console.log(\\\"frontend smoke tests passed\\\");\" && node tests/rail-labels.test.mjs",
+        "test": "node -e \"const assert=require(\\\"node:assert/strict\\\"); assert.equal(2,2); console.log(\\\"frontend smoke tests passed\\\");\" && node tests/rail-labels.test.mjs && node tests/nadotongryoksa-contracts.test.mjs && node tests/orchestrator-live-flow-discuss.test.mjs && node tests/orchestrator-chat-endpoints.test.mjs && node tests/orchestrator-speech.test.mjs && node tests/orchestrator-live-progress-stream.test.mjs",
         "start": "next start",
         "e2e": "playwright test -c playwright.config.ts",
         "e2e:headed": "playwright test -c playwright.config.ts --headed",
@@ -17,13 +17,20 @@
         "e2e:marketplace:shinsegye-safe": "playwright test -c playwright.config.ts tests/marketplace-shinsegye-safe-integration.playwright.spec.ts --project chromium --no-deps",
         "ci:marketplace:shinsegye-safe:2round": "npm run e2e:marketplace:shinsegye-safe && npm run e2e:marketplace:shinsegye-safe",
         "ci:admin-regression:smoke": "playwright test -c playwright.config.ts tests/admin-login.playwright.spec.ts tests/admin-dashboard-ops.playwright.spec.ts tests/admin-dashboard-capability-notice.playwright.spec.ts --project chromium",
-        "ci:admin-regression:full": "playwright test -c playwright.config.ts tests/admin-login.playwright.spec.ts tests/admin-dashboard-ops.playwright.spec.ts tests/admin-dashboard-capability-notice.playwright.spec.ts tests/admin-llm-render.playwright.spec.ts tests/admin-passkey-operational.playwright.spec.ts tests/admin-system-settings-operational.playwright.spec.ts tests/admin-storyboard-review.playwright.spec.ts tests/admin-swagger-popup.playwright.spec.ts tests/ui-pod-admin-users.playwright.spec.ts tests/orchestrator-ui-reverse-question-smoke.playwright.spec.ts --project chromium"
+        "ci:admin-regression:full": "playwright test -c playwright.config.ts tests/admin-login.playwright.spec.ts tests/admin-dashboard-ops.playwright.spec.ts tests/admin-dashboard-capability-notice.playwright.spec.ts tests/admin-llm-render.playwright.spec.ts tests/admin-passkey-operational.playwright.spec.ts tests/admin-system-settings-operational.playwright.spec.ts tests/admin-storyboard-review.playwright.spec.ts tests/admin-swagger-popup.playwright.spec.ts tests/ui-pod-admin-users.playwright.spec.ts tests/orchestrator-ui-reverse-question-smoke.playwright.spec.ts --project chromium",
+        "e2e:orchestrator-live-flow-rail": "playwright test -c playwright.config.ts tests/orchestrator-live-flow-rail.playwright.spec.ts --project chromium",
+        "e2e:orchestrator-live-flow-rail:fresh": "powershell -NoProfile -Command \"$p=(Get-NetTCPConnection -LocalPort 3025 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique); if ($p) { $p | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } }; exit 0\" && playwright test -c playwright.config.ts tests/orchestrator-live-flow-rail.playwright.spec.ts --project chromium",
+        "e2e:orchestrator-discuss4": "playwright test -c playwright.config.ts tests/orchestrator-discuss4-stage-run.playwright.spec.ts --project chromium",
+        "e2e:orchestrator-dod4": "playwright test -c playwright.config.ts tests/orchestrator-dod4-redis-decision.playwright.spec.ts --project chromium",
+        "e2e:orchestrator-dod5": "playwright test -c playwright.config.ts tests/orchestrator-dod5-voice.playwright.spec.ts --project chromium",
+        "e2e:orchestrator-visual-evidence": "playwright test -c playwright.config.ts tests/orchestrator-visual-flow-evidence.playwright.spec.ts --project chromium",
+        "e2e:marketplace-orchestrator-chat": "playwright test -c playwright.config.ts tests/marketplace-orchestrator-chat.playwright.spec.ts --project chromium"
     },
     "dependencies": {
-        "@types/node": "^20.14.12",
-        "@types/react": "^18.3.3",
-        "@types/react-dom": "^18.3.0",
-        "axios": "^1.7.2",
+        "@types/node": "^20.19.41",
+        "@types/react": "^18.3.29",
+        "@types/react-dom": "^18.3.7",
+        "axios": "^1.16.1",
         "clsx": "^2.1.1",
         "jszip": "^3.10.1",
         "lucide-react": "^0.408.0",
@@ -31,19 +38,19 @@
         "next": "^16.2.6",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
-        "tailwind-merge": "^2.4.0",
-        "typescript": "^6.0.0",
+        "tailwind-merge": "^2.6.1",
+        "typescript": "^6.0.3",
         "zustand": "^4.5.4"
     },
     "devDependencies": {
-        "@playwright/test": "^1.54.2",
+        "@playwright/test": "^1.60.0",
         "autoprefixer": "^10.4.19",
         "eslint": "^10.1.0",
-        "postcss": "^8.5.12",
+        "postcss": "^8.5.15",
         "tailwindcss": "^3.4.6"
     },
     "overrides": {
-        "postcss": "^8.5.12",
+        "postcss": "^8.5.15",
         "uuid": "^14.0.0"
     }
 }

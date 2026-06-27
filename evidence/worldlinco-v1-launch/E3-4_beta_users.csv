@@ -1,0 +1,6 @@
+user_id,display_name,locale,device,wifi,connected,relay_1turn,feedback,date,notes,build
+# E-3-4: 10 real users — 1+ successful WiFi call each (build 74+ · backend v1.0.46+)
+# STATUS: IN PROGRESS (2026-06-16) — signup must set preferred_language + country_code
+# Record: pwsh -File scripts/worldlinco_e3_beta_user_record.ps1 -DisplayName "홍길동" -Locale ko-KR -Device "Galaxy A" -Build 74 -Feedback "TTS OK"
+# Example row:
+# 1,홍길동,ko-KR,Galaxy S10,yes,yes,yes,"TTS 잘 들림",2026-06-16,friend nado-000001,74

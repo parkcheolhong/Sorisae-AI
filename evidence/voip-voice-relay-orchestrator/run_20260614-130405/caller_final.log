@@ -1,0 +1,329 @@
+﻿--------- beginning of main
+06-14 13:05:22.917 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_VOIP_OPEN","timestamp":"2026-06-14T04:05:22.917Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","action":"validation"}'
+06-14 13:05:22.918 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_VALIDATION_OPEN_PRESS","timestamp":"2026-06-14T04:05:22.918Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_entry_deep_link_validation_auto_call","auth_ready":true}'
+06-14 13:05:22.919 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_VALIDATION_AUTO_CALL_DEEPLINK","timestamp":"2026-06-14T04:05:22.918Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","callee_voice_id":"nado-000226","auth_ready":true}'
+06-14 13:05:22.919 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"SECTION_RAIL_OPEN","timestamp":"2026-06-14T04:05:22.919Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"front_translation_surface","section":"chat"}'
+06-14 13:05:22.920 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_active","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"has_pending_call":false,"has_active_call":false}'
+06-14 13:05:23.077 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":0,"friends_length":0,"friend_ids":[],"friend_user_ids":[],"friend_voice_ids":[],"friend_emails":[],"outgoing_total":0,"missed_total":0,"loading":false,"error":null}'
+06-14 13:05:23.084 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":0,"friends_length":0,"friend_ids":[],"friend_user_ids":[],"friend_voice_ids":[],"friend_emails":[],"outgoing_total":0,"missed_total":0,"loading":false,"error":null}'
+06-14 13:05:23.115 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":0,"friends_length":0,"friend_ids":[],"friend_user_ids":[],"friend_voice_ids":[],"friend_emails":[],"outgoing_total":0,"missed_total":0,"loading":true,"error":null}'
+06-14 13:05:23.115 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":0,"friends_length":0,"friend_ids":[],"friend_user_ids":[],"friend_voice_ids":[],"friend_emails":[],"outgoing_total":0,"missed_total":0,"loading":true,"error":null}'
+06-14 13:05:23.131 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_active","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"status":200,"ok":true}'
+06-14 13:05:23.138 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"container_layout","user_id":1,"visible":true,"narrow":false,"width":575.3990478515625,"height":852.5820922851562,"x":0.7511736750602722,"y":57.08919906616211}'
+06-14 13:05:23.139 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"container_layout","user_id":1,"visible":true,"narrow":false,"width":515.3051147460938,"height":365.0704345703125,"x":11.26760482788086,"y":66.10327911376953}'
+06-14 13:05:23.270 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":14,"friends_length":14,"friend_ids":[125,121,114,112,100,97,54,53,50,48,41,16,13,11],"friend_user_ids":[561,560,517,500,389,249,226,140,185,138,141,85,70,82],"friend_voice_ids":["nado-000561","nado-000560","nado-000517","nado-000500","nado-000389","nado-000249","nado-000226","nado-000140","nado-000185","nado-000138","nado-000141","nado-000085","nado-000070","nado-000082"],"friend_emails":["instant-mqc9xf1pql@instant-demo.worldlinco.dev","instant-mqc9tyasw7@instant-demo.worldlinco.dev","instant-mq88ycr85j@instant-demo.worldlinco.dev","instant-mq5799nnsf@instant-demo.worldlinco.dev","instant-mpvf8jkjf2@instant-demo.worldlinco.dev","instant-mpn7cj2yjl@instant-demo.worldlinco.dev","burumi69@gmail.com","callerplain-20260519173343@instant-demo.worldlinco.dev","r3ct.relogin.20260522@instant-demo.worldlinco.dev","calleeplain-20260519172238@instant-demo.worldlinco.dev","g973-20260519220310@instant-demo.worldlinco.dev","kkagdomi@naver.com","voip.verify.test@example.com","device1r13@gmail.com"],"outgoing_total":8,"missed_total":0,"loading":true,"error":null}'
+06-14 13:05:23.279 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":14,"friends_length":14,"friend_ids":[125,121,114,112,100,97,54,53,50,48,41,16,13,11],"friend_user_ids":[561,560,517,500,389,249,226,140,185,138,141,85,70,82],"friend_voice_ids":["nado-000561","nado-000560","nado-000517","nado-000500","nado-000389","nado-000249","nado-000226","nado-000140","nado-000185","nado-000138","nado-000141","nado-000085","nado-000070","nado-000082"],"friend_emails":["instant-mqc9xf1pql@instant-demo.worldlinco.dev","instant-mqc9tyasw7@instant-demo.worldlinco.dev","instant-mq88ycr85j@instant-demo.worldlinco.dev","instant-mq5799nnsf@instant-demo.worldlinco.dev","instant-mpvf8jkjf2@instant-demo.worldlinco.dev","instant-mpn7cj2yjl@instant-demo.worldlinco.dev","burumi69@gmail.com","callerplain-20260519173343@instant-demo.worldlinco.dev","r3ct.relogin.20260522@instant-demo.worldlinco.dev","calleeplain-20260519172238@instant-demo.worldlinco.dev","g973-20260519220310@instant-demo.worldlinco.dev","kkagdomi@naver.com","voip.verify.test@example.com","device1r13@gmail.com"],"outgoing_total":8,"missed_total":0,"loading":true,"error":null}'
+06-14 13:05:23.574 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"flatlist_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":531.0797729492188,"x":20.281688690185547,"y":301.22064208984375,"row_count":14}'
+06-14 13:05:23.575 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"flatlist_content_size","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":3110.610107421875,"row_count":14}'
+06-14 13:05:23.577 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.216064453125,"x":0,"y":0,"friend_id":125,"friend_user_id":561,"friend_email":"instant-mqc9xf1pql@instant-demo.worldlinco.dev","friend_voice_id":"nado-000561"}'
+06-14 13:05:23.577 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.178466796875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":125,"friend_user_id":561,"friend_email":"instant-mqc9xf1pql@instant-demo.worldlinco.dev","friend_voice_id":"nado-000561"}'
+06-14 13:05:23.578 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.2158203125,"x":0,"y":0,"friend_id":121,"friend_user_id":560,"friend_email":"instant-mqc9tyasw7@instant-demo.worldlinco.dev","friend_voice_id":"nado-000560"}'
+06-14 13:05:23.579 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.17822265625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":121,"friend_user_id":560,"friend_email":"instant-mqc9tyasw7@instant-demo.worldlinco.dev","friend_voice_id":"nado-000560"}'
+06-14 13:05:23.580 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.216064453125,"x":0,"y":0,"friend_id":114,"friend_user_id":517,"friend_email":"instant-mq88ycr85j@instant-demo.worldlinco.dev","friend_voice_id":"nado-000517"}'
+06-14 13:05:23.581 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.178466796875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":114,"friend_user_id":517,"friend_email":"instant-mq88ycr85j@instant-demo.worldlinco.dev","friend_voice_id":"nado-000517"}'
+06-14 13:05:23.582 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.216064453125,"x":0,"y":0,"friend_id":112,"friend_user_id":500,"friend_email":"instant-mq5799nnsf@instant-demo.worldlinco.dev","friend_voice_id":"nado-000500"}'
+06-14 13:05:23.582 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.178466796875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":112,"friend_user_id":500,"friend_email":"instant-mq5799nnsf@instant-demo.worldlinco.dev","friend_voice_id":"nado-000500"}'
+06-14 13:05:23.584 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.2158203125,"x":0,"y":0,"friend_id":100,"friend_user_id":389,"friend_email":"instant-mpvf8jkjf2@instant-demo.worldlinco.dev","friend_voice_id":"nado-000389"}'
+06-14 13:05:23.584 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.9296875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":100,"friend_user_id":389,"friend_email":"instant-mpvf8jkjf2@instant-demo.worldlinco.dev","friend_voice_id":"nado-000389"}'
+06-14 13:05:23.585 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.967041015625,"x":0,"y":0,"friend_id":97,"friend_user_id":249,"friend_email":"instant-mpn7cj2yjl@instant-demo.worldlinco.dev","friend_voice_id":"nado-000249"}'
+06-14 13:05:23.586 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.9296875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":97,"friend_user_id":249,"friend_email":"instant-mpn7cj2yjl@instant-demo.worldlinco.dev","friend_voice_id":"nado-000249"}'
+06-14 13:05:23.587 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":164.507080078125,"x":0,"y":0,"friend_id":54,"friend_user_id":226,"friend_email":"burumi69@gmail.com","friend_voice_id":"nado-000226"}'
+06-14 13:05:23.587 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":140.469482421875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":54,"friend_user_id":226,"friend_email":"burumi69@gmail.com","friend_voice_id":"nado-000226"}'
+06-14 13:05:23.588 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":155.492919921875,"x":0,"y":0,"friend_id":53,"friend_user_id":140,"friend_email":"callerplain-20260519173343@instant-demo.worldlinco.dev","friend_voice_id":"nado-000140"}'
+06-14 13:05:23.589 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":131.455322265625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":53,"friend_user_id":140,"friend_email":"callerplain-20260519173343@instant-demo.worldlinco.dev","friend_voice_id":"nado-000140"}'
+06-14 13:05:23.590 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":137.464599609375,"x":0,"y":0,"friend_id":50,"friend_user_id":185,"friend_email":"r3ct.relogin.20260522@instant-demo.worldlinco.dev","friend_voice_id":"nado-000185"}'
+06-14 13:05:23.591 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":113.427001953125,"x":12.018778800964355,"y":12.018778800964355,"friend_id":50,"friend_user_id":185,"friend_email":"r3ct.relogin.20260522@instant-demo.worldlinco.dev","friend_voice_id":"nado-000185"}'
+06-14 13:05:23.592 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":155.492919921875,"x":0,"y":0,"friend_id":48,"friend_user_id":138,"friend_email":"calleeplain-20260519172238@instant-demo.worldlinco.dev","friend_voice_id":"nado-000138"}'
+06-14 13:05:23.592 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":131.455322265625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":48,"friend_user_id":138,"friend_email":"calleeplain-20260519172238@instant-demo.worldlinco.dev","friend_voice_id":"nado-000138"}'
+06-14 13:05:23.594 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"auto_call_voice_id","user_id":1,"voice_id":"nado-000226","friend_id":54,"friend_voice_id":"nado-000226"}'
+06-14 13:05:23.595 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_FRIEND_SELECTED","timestamp":"2026-06-14T04:05:23.595Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","friend_id":54,"friend_name":"박","friend_phone":null,"friend_voice_id":"nado-000226"}'
+06-14 13:05:23.596 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":14,"friends_length":14,"friend_ids":[125,121,114,112,100,97,54,53,50,48,41,16,13,11],"friend_user_ids":[561,560,517,500,389,249,226,140,185,138,141,85,70,82],"friend_voice_ids":["nado-000561","nado-000560","nado-000517","nado-000500","nado-000389","nado-000249","nado-000226","nado-000140","nado-000185","nado-000138","nado-000141","nado-000085","nado-000070","nado-000082"],"friend_emails":["instant-mqc9xf1pql@instant-demo.worldlinco.dev","instant-mqc9tyasw7@instant-demo.worldlinco.dev","instant-mq88ycr85j@instant-demo.worldlinco.dev","instant-mq5799nnsf@instant-demo.worldlinco.dev","instant-mpvf8jkjf2@instant-demo.worldlinco.dev","instant-mpn7cj2yjl@instant-demo.worldlinco.dev","burumi69@gmail.com","callerplain-20260519173343@instant-demo.worldlinco.dev","r3ct.relogin.20260522@instant-demo.worldlinco.dev","calleeplain-20260519172238@instant-demo.worldlinco.dev","g973-20260519220310@instant-demo.worldlinco.dev","kkagdomi@naver.com","voip.verify.test@example.com","device1r13@gmail.com"],"outgoing_total":8,"missed_total":20,"loading":false,"error":null}'
+06-14 13:05:24.189 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_PREMIUM_GATE_VALIDATION_OVERRIDE","timestamp":"2026-06-14T04:05:24.188Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"handleStartFriendVoiceCall"}'
+06-14 13:05:24.191 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"container_layout","user_id":1,"visible":true,"narrow":false,"width":515.3051147460938,"height":4157.74609375,"x":11.26760482788086,"y":66.10327911376953}'
+06-14 13:05:24.192 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"embedded_list_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":3836.9951171875,"x":20.281688690185547,"y":301.22064208984375,"row_count":14}'
+06-14 13:05:24.193 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.49267578125,"x":0,"y":1570.7041015625,"friend_id":125,"friend_user_id":561,"friend_email":"instant-mqc9xf1pql@instant-demo.worldlinco.dev","friend_voice_id":"nado-000561"}'
+06-14 13:05:24.193 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.45556640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":125,"friend_user_id":561,"friend_email":"instant-mqc9xf1pql@instant-demo.worldlinco.dev","friend_voice_id":"nado-000561"}'
+06-14 13:05:24.194 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.49267578125,"x":0,"y":1734.4599609375,"friend_id":121,"friend_user_id":560,"friend_email":"instant-mqc9tyasw7@instant-demo.worldlinco.dev","friend_voice_id":"nado-000560"}'
+06-14 13:05:24.195 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.45556640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":121,"friend_user_id":560,"friend_email":"instant-mqc9tyasw7@instant-demo.worldlinco.dev","friend_voice_id":"nado-000560"}'
+06-14 13:05:24.196 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.49267578125,"x":0,"y":1898.2158203125,"friend_id":114,"friend_user_id":517,"friend_email":"instant-mq88ycr85j@instant-demo.worldlinco.dev","friend_voice_id":"nado-000517"}'
+06-14 13:05:24.196 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.45556640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":114,"friend_user_id":517,"friend_email":"instant-mq88ycr85j@instant-demo.worldlinco.dev","friend_voice_id":"nado-000517"}'
+06-14 13:05:24.197 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.49267578125,"x":0,"y":2061.9716796875,"friend_id":112,"friend_user_id":500,"friend_email":"instant-mq5799nnsf@instant-demo.worldlinco.dev","friend_voice_id":"nado-000500"}'
+06-14 13:05:24.198 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.45556640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":112,"friend_user_id":500,"friend_email":"instant-mq5799nnsf@instant-demo.worldlinco.dev","friend_voice_id":"nado-000500"}'
+06-14 13:05:24.198 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.49267578125,"x":0,"y":2225.7275390625,"friend_id":100,"friend_user_id":389,"friend_email":"instant-mpvf8jkjf2@instant-demo.worldlinco.dev","friend_voice_id":"nado-000389"}'
+06-14 13:05:24.199 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.45556640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":100,"friend_user_id":389,"friend_email":"instant-mpvf8jkjf2@instant-demo.worldlinco.dev","friend_voice_id":"nado-000389"}'
+06-14 13:05:24.200 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.49267578125,"x":0,"y":2389.4833984375,"friend_id":97,"friend_user_id":249,"friend_email":"instant-mpn7cj2yjl@instant-demo.worldlinco.dev","friend_voice_id":"nado-000249"}'
+06-14 13:05:24.201 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.45556640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":97,"friend_user_id":249,"friend_email":"instant-mpn7cj2yjl@instant-demo.worldlinco.dev","friend_voice_id":"nado-000249"}'
+06-14 13:05:24.201 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":164.50732421875,"x":0,"y":2553.2392578125,"friend_id":54,"friend_user_id":226,"friend_email":"burumi69@gmail.com","friend_voice_id":"nado-000226"}'
+06-14 13:05:24.202 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":140.46923828125,"x":12.018778800964355,"y":12.018778800964355,"friend_id":54,"friend_user_id":226,"friend_email":"burumi69@gmail.com","friend_voice_id":"nado-000226"}'
+06-14 13:05:24.203 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.4931640625,"x":0,"y":2725.258056640625,"friend_id":53,"friend_user_id":140,"friend_email":"callerplain-20260519173343@instant-demo.worldlinco.dev","friend_voice_id":"nado-000140"}'
+06-14 13:05:24.204 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.455078125,"x":12.018778800964355,"y":12.018778800964355,"friend_id":53,"friend_user_id":140,"friend_email":"callerplain-20260519173343@instant-demo.worldlinco.dev","friend_voice_id":"nado-000140"}'
+06-14 13:05:24.204 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":154.74169921875,"x":0,"y":2889.013916015625,"friend_id":50,"friend_user_id":185,"friend_email":"r3ct.relogin.20260522@instant-demo.worldlinco.dev","friend_voice_id":"nado-000185"}'
+06-14 13:05:24.205 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":130.7041015625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":50,"friend_user_id":185,"friend_email":"r3ct.relogin.20260522@instant-demo.worldlinco.dev","friend_voice_id":"nado-000185"}'
+06-14 13:05:24.206 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.4931640625,"x":0,"y":3052.0185546875,"friend_id":48,"friend_user_id":138,"friend_email":"calleeplain-20260519172238@instant-demo.worldlinco.dev","friend_voice_id":"nado-000138"}'
+06-14 13:05:24.207 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.455078125,"x":12.018778800964355,"y":12.018778800964355,"friend_id":48,"friend_user_id":138,"friend_email":"calleeplain-20260519172238@instant-demo.worldlinco.dev","friend_voice_id":"nado-000138"}'
+06-14 13:05:24.207 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":155.4931640625,"x":0,"y":3215.7744140625,"friend_id":41,"friend_user_id":141,"friend_email":"g973-20260519220310@instant-demo.worldlinco.dev","friend_voice_id":"nado-000141"}'
+06-14 13:05:24.208 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":131.455078125,"x":12.018778800964355,"y":12.018778800964355,"friend_id":41,"friend_user_id":141,"friend_email":"g973-20260519220310@instant-demo.worldlinco.dev","friend_voice_id":"nado-000141"}'
+06-14 13:05:24.209 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":140.4697265625,"x":0,"y":3379.5302734375,"friend_id":16,"friend_user_id":85,"friend_email":"kkagdomi@naver.com","friend_voice_id":"nado-000085"}'
+06-14 13:05:24.210 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":116.431640625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":16,"friend_user_id":85,"friend_email":"kkagdomi@naver.com","friend_voice_id":"nado-000085"}'
+06-14 13:05:24.210 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":138.2158203125,"x":0,"y":3528.2626953125,"friend_id":13,"friend_user_id":70,"friend_email":"voip.verify.test@example.com","friend_voice_id":"nado-000070"}'
+06-14 13:05:24.211 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":114.1787109375,"x":12.018778800964355,"y":12.018778800964355,"friend_id":13,"friend_user_id":70,"friend_email":"voip.verify.test@example.com","friend_voice_id":"nado-000070"}'
+06-14 13:05:24.211 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":474.74176025390625,"height":138.2158203125,"x":0,"y":3674.74169921875,"friend_id":11,"friend_user_id":82,"friend_email":"device1r13@gmail.com","friend_voice_id":"nado-000082"}'
+06-14 13:05:24.212 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":288.45068359375,"height":114.1787109375,"x":12.018778800964355,"y":12.018778800964355,"friend_id":11,"friend_user_id":82,"friend_email":"device1r13@gmail.com","friend_voice_id":"nado-000082"}'
+06-14 13:05:24.213 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"data_snapshot","user_id":1,"visible":true,"narrow":false,"window_width":600.9389348488247,"friend_total":14,"friends_length":14,"friend_ids":[125,121,114,112,100,97,54,53,50,48,41,16,13,11],"friend_user_ids":[561,560,517,500,389,249,226,140,185,138,141,85,70,82],"friend_voice_ids":["nado-000561","nado-000560","nado-000517","nado-000500","nado-000389","nado-000249","nado-000226","nado-000140","nado-000185","nado-000138","nado-000141","nado-000085","nado-000070","nado-000082"],"friend_emails":["instant-mqc9xf1pql@instant-demo.worldlinco.dev","instant-mqc9tyasw7@instant-demo.worldlinco.dev","instant-mq88ycr85j@instant-demo.worldlinco.dev","instant-mq5799nnsf@instant-demo.worldlinco.dev","instant-mpvf8jkjf2@instant-demo.worldlinco.dev","instant-mpn7cj2yjl@instant-demo.worldlinco.dev","burumi69@gmail.com","callerplain-20260519173343@instant-demo.worldlinco.dev","r3ct.relogin.20260522@instant-demo.worldlinco.dev","calleeplain-20260519172238@instant-demo.worldlinco.dev","g973-20260519220310@instant-demo.worldlinco.dev","kkagdomi@naver.com","voip.verify.test@example.com","device1r13@gmail.com"],"outgoing_total":8,"missed_total":20,"loading":false,"error":null}'
+06-14 13:05:24.356 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"has_pending_call":false,"has_active_call":false}'
+06-14 13:05:24.409 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"status":200,"ok":true}'
+06-14 13:05:25.013 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"flatlist_content_size","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":3698.779052734375,"row_count":14}'
+06-14 13:05:25.014 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.216064453125,"x":0,"y":0,"friend_id":41,"friend_user_id":141,"friend_email":"g973-20260519220310@instant-demo.worldlinco.dev","friend_voice_id":"nado-000141"}'
+06-14 13:05:25.015 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.178466796875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":41,"friend_user_id":141,"friend_email":"g973-20260519220310@instant-demo.worldlinco.dev","friend_voice_id":"nado-000141"}'
+06-14 13:05:25.016 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":140.469482421875,"x":0,"y":0,"friend_id":16,"friend_user_id":85,"friend_email":"kkagdomi@naver.com","friend_voice_id":"nado-000085"}'
+06-14 13:05:25.017 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":116.431884765625,"x":12.018778800964355,"y":12.018778800964355,"friend_id":16,"friend_user_id":85,"friend_email":"kkagdomi@naver.com","friend_voice_id":"nado-000085"}'
+06-14 13:05:25.018 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.967041015625,"x":0,"y":0,"friend_id":13,"friend_user_id":70,"friend_email":"voip.verify.test@example.com","friend_voice_id":"nado-000070"}'
+06-14 13:05:25.018 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.929443359375,"x":12.018778800964355,"y":12.018778800964355,"friend_id":13,"friend_user_id":70,"friend_email":"voip.verify.test@example.com","friend_voice_id":"nado-000070"}'
+06-14 13:05:25.020 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_row_layout","user_id":1,"visible":true,"narrow":false,"width":534.8356323242188,"height":138.96728515625,"x":0,"y":0,"friend_id":11,"friend_user_id":82,"friend_email":"device1r13@gmail.com","friend_voice_id":"nado-000082"}'
+06-14 13:05:25.020 I/ReactNativeJS(18031): '[FRIEND_FOLDER_DIAG]', '{"event":"friend_info_layout","user_id":1,"visible":true,"narrow":false,"width":348.5445556640625,"height":114.9296875,"x":12.018778800964355,"y":12.018778800964355,"friend_id":11,"friend_user_id":82,"friend_email":"device1r13@gmail.com","friend_voice_id":"nado-000082"}'
+06-14 13:05:25.562 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_active","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"has_pending_call":false,"has_active_call":false}'
+06-14 13:05:25.573 I/ReactNativeJS(18031): {"timestamp":"2026-06-14T04:05:25.573Z","tag":"[VOIP_INTENT_INITIATE_START]","message":"VoIP call initiate 시작","details":{"callee_phone":null,"callee_user_id":226,"callee_voice_id":"nado-000226","friend_id":54,"caller_id":"119cash@naver.com","session_id":"friend-voice-54","mode":"voip_full_auto","auto_relay":true}}
+06-14 13:05:25.573 I/ReactNativeJS(18031): {"timestamp":"2026-06-14T04:05:25.573Z","tag":"[VOIP_INTENT_INITIATE_REQUEST]","message":"API 요청 전송","details":{"url":"https://metanova1004.com/api/v1/voip/calls/initiate","payload":{"callee_phone":null,"callee_user_id":226,"callee_voice_id":"nado-000226","friend_id":54,"caller_id":"119cash@naver.com","session_id":"friend-voice-54","mode":"voip_full_auto","auto_relay":true}}}
+06-14 13:05:25.715 I/ReactNativeJS(18031): {"timestamp":"2026-06-14T04:05:25.715Z","tag":"[VOIP_INTENT_INITIATE_RESPONSE]","message":"API 응답 수신","details":{"status":200,"statusText":"OK"}}
+06-14 13:05:25.716 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_active","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"status":200,"ok":true}'
+06-14 13:05:25.718 I/ReactNativeJS(18031): {"timestamp":"2026-06-14T04:05:25.718Z","tag":"[VOIP_INTENT_INITIATE_SUCCESS]","message":"VoIP initiate 성공","details":{"call_id":"call-c78ce2c70905","signaling_server":"wss://metanova1004.com/api/v1/voip/signal?call_id=call-c78ce2c70905&role=caller"}}
+06-14 13:05:25.726 W/ReactNativeJS(18031): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:05:25.726 W/ReactNativeJS(18031): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+06-14 13:05:25.727 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_initial","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"has_pending_call":false,"has_active_call":false}'
+06-14 13:05:25.729 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-06-14T04:05:25.729Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","voice_id":"nado-000001","token_summary":"len:140:eyJhbG...Dtr2bY","reason":"effect_start","api_base":"https://metanova1004.com"}'
+06-14 13:05:25.730 W/ReactNativeJS(18031): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:05:25.731 I/ReactNativeJS(18031): '[VoIPFCM] firebase bootstrap failed', [Error: Missing or invalid FirebaseOptions property 'databaseURL'.]
+06-14 13:05:25.857 I/ReactNativeJS(18031): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_initial","token_summary":"len:140:eyJhbG...Dtr2bY","user_id":1,"status":200,"ok":true}'
+06-14 13:05:25.858 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECTED","timestamp":"2026-06-14T04:05:25.858Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","voice_id":"nado-000001","token_summary":"len:140:eyJhbG...Dtr2bY","reason":"effect_start"}'
+06-14 13:05:25.860 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_FRIEND_CALL_SUCCESS","timestamp":"2026-06-14T04:05:25.859Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","friend_id":54,"call_id":"call-c78ce2c70905","callee_voice_id":"nado-000226"}'
+06-14 13:05:25.861 I/ReactNativeJS(18031): '[VoIPScreen] Voice relay readiness:', { callId: 'call-c78ce2c70905',
+06-14 13:05:25.861 I/ReactNativeJS(18031):   requestedMode: 'voip_full_auto',
+06-14 13:05:25.861 I/ReactNativeJS(18031):   resolvedMode: 'voip_full_auto',
+06-14 13:05:25.861 I/ReactNativeJS(18031):   autoRelayRequested: true,
+06-14 13:05:25.861 I/ReactNativeJS(18031):   autoRelayApplied: true,
+06-14 13:05:25.861 I/ReactNativeJS(18031):   voiceRelayServerReady: true }
+06-14 13:05:25.881 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 ctor +0ms
+06-14 13:05:25.883 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-c78ce2c70905","state":"connecting","timestamp":"2026-06-14T04:05:25.883Z"}'
+06-14 13:05:25.883 I/ReactNativeJS(18031): [VoIPScreen] Playing ringback tone...
+06-14 13:05:25.884 I/ReactNativeJS(18031): [VoIP][DiagLine] connectSignaling:start callId=call-c78ce2c70905 state=null
+06-14 13:05:25.885 I/ReactNativeJS(18031): '[VoIP][Diag] connectSignaling:start', { callId: 'call-c78ce2c70905',
+06-14 13:05:25.885 I/ReactNativeJS(18031):   signalingServerUrl: 'wss://metanova1004.com/api/v1/voip/signal?call_id=call-c78ce2c70905&role=caller',
+06-14 13:05:25.885 I/ReactNativeJS(18031):   socketState: 'null' }
+06-14 13:05:25.925 I/ReactNativeJS(18031): [VoIP] Signaling connected
+06-14 13:05:25.925 I/ReactNativeJS(18031): [VoIP][DiagLine] connectSignaling:open callId=call-c78ce2c70905 state=OPEN queuedIce=0
+06-14 13:05:25.926 I/ReactNativeJS(18031): '[VoIP][Diag] connectSignaling:open', { callId: 'call-c78ce2c70905',
+06-14 13:05:25.926 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:25.926 I/ReactNativeJS(18031):   queuedIceCandidates: 0 }
+06-14 13:05:25.926 I/ReactNativeJS(18031): [VoIP] Flushing 0 queued ICE candidates
+06-14 13:05:25.926 I/ReactNativeJS(18031): '[VoIP] Getting local stream with constraints:', { audio: 
+06-14 13:05:25.926 I/ReactNativeJS(18031):    { echoCancellation: true,
+06-14 13:05:25.926 I/ReactNativeJS(18031):      noiseSuppression: true,
+06-14 13:05:25.926 I/ReactNativeJS(18031):      autoGainControl: true },
+06-14 13:05:25.926 I/ReactNativeJS(18031):   video: false }
+06-14 13:05:25.927 I/ReactNativeJS(18031): '[VoIP] mediaDevices available:', true
+06-14 13:05:25.927 I/ReactNativeJS(18031): [VoIP] Calling getUserMedia...
+06-14 13:05:25.965 I/ReactNativeJS(18031): '[VoIP] Local stream acquired successfully', { tracks: 
+06-14 13:05:25.965 I/ReactNativeJS(18031):    [ { label: '',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _constraints: 
+06-14 13:05:25.965 I/ReactNativeJS(18031):         { echoCancellation: true,
+06-14 13:05:25.965 I/ReactNativeJS(18031):           noiseSuppression: true,
+06-14 13:05:25.965 I/ReactNativeJS(18031):           autoGainControl: true },
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _enabled: true,
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _settings: { groupId: '', deviceId: 'audio-1' },
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _muted: false,
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _peerConnectionId: undefined,
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _readyState: 'live',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        id: 'a19e5d37-994a-4cd4-a527-359f16369725',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        kind: 'audio',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        remote: false } ],
+06-14 13:05:25.965 I/ReactNativeJS(18031):   audioTracks: 
+06-14 13:05:25.965 I/ReactNativeJS(18031):    [ { label: '',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _constraints: 
+06-14 13:05:25.965 I/ReactNativeJS(18031):         { echoCancellation: true,
+06-14 13:05:25.965 I/ReactNativeJS(18031):           noiseSuppression: true,
+06-14 13:05:25.965 I/ReactNativeJS(18031):           autoGainControl: true },
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _enabled: true,
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _settings: { groupId: '', deviceId: 'audio-1' },
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _muted: false,
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _peerConnectionId: undefined,
+06-14 13:05:25.965 I/ReactNativeJS(18031):        _readyState: 'live',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        id: 'a19e5d37-994a-4cd4-a527-359f16369725',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        kind: 'audio',
+06-14 13:05:25.965 I/ReactNativeJS(18031):        remote: false } ],
+06-14 13:05:25.965 I/ReactNativeJS(18031):   trackCount: 1 }
+06-14 13:05:25.965 I/ReactNativeJS(18031): [VoIP] Adding local tracks to peer connection...
+06-14 13:05:25.965 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 addTrack +85ms
+06-14 13:05:26.006 I/ReactNativeJS(18031): '[VoIP] Track added:', { kind: 'audio', enabled: true, sender: true }
+06-14 13:05:26.006 I/ReactNativeJS(18031): [VoIP] All tracks added to peer connection
+06-14 13:05:26.006 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 createOffer +41ms
+06-14 13:05:26.030 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 createOffer OK +24ms
+06-14 13:05:26.031 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 setLocalDescription +1ms
+06-14 13:05:26.087 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:26.087 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 setLocalDescription OK +56ms
+06-14 13:05:26.088 I/ReactNativeJS(18031): '[VoIP] Signaling message sent', { type: 'offer',
+06-14 13:05:26.088 I/ReactNativeJS(18031):   call_id: 'call-c78ce2c70905',
+06-14 13:05:26.088 I/ReactNativeJS(18031):   sdp: 'v=0\r\no=- 3166354426531926757 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS 54233324-7102-4266-8a37-a60cc153b159\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111 63 9 102 0 8 13 110 126\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:sX2e\r\na=ice-pwd:Chqt5qTYm1Hj0pHcce0lXpQ0\r\na=ice-options:trickle renomination\r\na=fingerprint:sha-256 EB:BB:45:8D:F1:5F:7E:6B:97:DC:0F:70:EC:9B:53:C1:9D:B7:93:76:80:47:85:5A:59:2B:44:51:A7:FB:98:A6\r\na=setup:actpass\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:4 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=sendrecv\r\na=msid:54233324-7102-4266-8a37-a60cc153b159 a19e5d37-994a-4cd4-a527-359f16369725\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=rtcp-fb:111 transport-cc\r\na=fmtp:111 minptime=10;useinbandfec=1\r\na=rtpmap:63 red/48000/2\r\na=fmtp:63 111/111\r\na=rtpmap:9 G722/8000\r\na=rtpmap:102 ILBC/8000\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=rtpmap:13 CN/8000\r\na=rtpmap:110 telephone-event/48000\r\na=rtpmap:126 telephone-event/8000\r\na=ssrc:2219723692 cname:3tVNkcL63rL20Rbh\r\na=ssrc:2219723692 msid:54233324-7102-4266-8a37-a60cc153b159 a19e5d37-994a-4cd4-a527-359f16369725\r\n' }
+06-14 13:05:26.089 I/ReactNativeJS(18031): '[VoIP][Diag] sendSignalingMessage:sent', { callId: 'call-c78ce2c70905',
+06-14 13:05:26.089 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:26.089 I/ReactNativeJS(18031):   summary: 
+06-14 13:05:26.089 I/ReactNativeJS(18031):    { type: 'offer',
+06-14 13:05:26.089 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:05:26.089 I/ReactNativeJS(18031):      from_role: null,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      has_sdp: true,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      sdp_length: 1322,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      has_candidate: false,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      candidate_length: 0,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      sdp_mid: null,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      sdp_Milne_index: null,
+06-14 13:05:26.089 I/ReactNativeJS(18031):      username_fragment: null } }
+06-14 13:05:26.090 I/ReactNativeJS(18031): '[VoIP] Offer sent', { type: 'offer',
+06-14 13:05:26.090 I/ReactNativeJS(18031):   sdp: 'v=0\r\no=- 3166354426531926757 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS 54233324-7102-4266-8a37-a60cc153b159\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111 63 9 102 0 8 13 110 126\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:sX2e\r\na=ice-pwd:Chqt5qTYm1Hj0pHcce0lXpQ0\r\na=ice-options:trickle renomination\r\na=fingerprint:sha-256 EB:BB:45:8D:F1:5F:7E:6B:97:DC:0F:70:EC:9B:53:C1:9D:B7:93:76:80:47:85:5A:59:2B:44:51:A7:FB:98:A6\r\na=setup:actpass\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:4 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=sendrecv\r\na=msid:54233324-7102-4266-8a37-a60cc153b159 a19e5d37-994a-4cd4-a527-359f16369725\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=rtcp-fb:111 transport-cc\r\na=fmtp:111 minptime=10;useinbandfec=1\r\na=rtpmap:63 red/48000/2\r\na=fmtp:63 111/111\r\na=rtpmap:9 G722/8000\r\na=rtpmap:102 ILBC/8000\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=rtpmap:13 CN/8000\r\na=rtpmap:110 telephone-event/48000\r\na=rtpmap:126 telephone-event/8000\r\na=ssrc:2219723692 cname:3tVNkcL63rL20Rbh\r\na=ssrc:2219723692 msid:54233324-7102-4266-8a37-a60cc153b159 a19e5d37-994a-4cd4-a527-359f16369725\r\n' }
+06-14 13:05:26.123 I/ReactNativeJS(18031): '[VoIP] Signaling message sent', { type: 'candidate',
+06-14 13:05:26.123 I/ReactNativeJS(18031):   call_id: 'call-c78ce2c70905',
+06-14 13:05:26.123 I/ReactNativeJS(18031):   candidate: 'candidate:1617937818 1 udp 2122260223 172.30.1.15 46438 typ host generation 0 ufrag sX2e network-id 4 network-cost 10',
+06-14 13:05:26.123 I/ReactNativeJS(18031):   sdpMLineIndex: 0,
+06-14 13:05:26.123 I/ReactNativeJS(18031):   sdpMid: '0' }
+06-14 13:05:26.124 I/ReactNativeJS(18031): '[VoIP][Diag] sendSignalingMessage:sent', { callId: 'call-c78ce2c70905',
+06-14 13:05:26.124 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:26.124 I/ReactNativeJS(18031):   summary: 
+06-14 13:05:26.124 I/ReactNativeJS(18031):    { type: 'candidate',
+06-14 13:05:26.124 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:05:26.124 I/ReactNativeJS(18031):      from_role: null,
+06-14 13:05:26.124 I/ReactNativeJS(18031):      has_sdp: false,
+06-14 13:05:26.124 I/ReactNativeJS(18031):      sdp_length: 0,
+06-14 13:05:26.124 I/ReactNativeJS(18031):      has_candidate: true,
+06-14 13:05:26.124 I/ReactNativeJS(18031):      candidate_length: 117,
+06-14 13:05:26.124 I/ReactNativeJS(18031):      sdp_mid: '0',
+06-14 13:05:26.124 I/ReactNativeJS(18031):      sdp_Milne_index: 0,
+06-14 13:05:26.124 I/ReactNativeJS(18031):      username_fragment: null } }
+06-14 13:05:26.125 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-c78ce2c70905","state":"connected","timestamp":"2026-06-14T04:05:26.125Z"}'
+06-14 13:05:26.126 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_CONNECTED","call_id":"call-c78ce2c70905","state":"connected","timestamp":"2026-06-14T04:05:26.126Z"}'
+06-14 13:05:26.126 I/ReactNativeJS(18031): [VoIPScreen] Stopping tone - call accepted/connected
+06-14 13:05:26.154 I/ReactNativeJS(18031): '[VoIP] Signaling message sent', { type: 'candidate',
+06-14 13:05:26.154 I/ReactNativeJS(18031):   call_id: 'call-c78ce2c70905',
+06-14 13:05:26.154 I/ReactNativeJS(18031):   candidate: 'candidate:3821258065 1 udp 1686052607 211.218.172.124 46438 typ srflx raddr 172.30.1.15 rport 46438 generation 0 ufrag sX2e network-id 4 network-cost 10',
+06-14 13:05:26.154 I/ReactNativeJS(18031):   sdpMLineIndex: 0,
+06-14 13:05:26.154 I/ReactNativeJS(18031):   sdpMid: '0' }
+06-14 13:05:26.155 I/ReactNativeJS(18031): '[VoIP][Diag] sendSignalingMessage:sent', { callId: 'call-c78ce2c70905',
+06-14 13:05:26.155 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:26.155 I/ReactNativeJS(18031):   summary: 
+06-14 13:05:26.155 I/ReactNativeJS(18031):    { type: 'candidate',
+06-14 13:05:26.155 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:05:26.155 I/ReactNativeJS(18031):      from_role: null,
+06-14 13:05:26.155 I/ReactNativeJS(18031):      has_sdp: false,
+06-14 13:05:26.155 I/ReactNativeJS(18031):      sdp_length: 0,
+06-14 13:05:26.155 I/ReactNativeJS(18031):      has_candidate: true,
+06-14 13:05:26.155 I/ReactNativeJS(18031):      candidate_length: 152,
+06-14 13:05:26.155 I/ReactNativeJS(18031):      sdp_mid: '0',
+06-14 13:05:26.155 I/ReactNativeJS(18031):      sdp_Milne_index: 0,
+06-14 13:05:26.155 I/ReactNativeJS(18031):      username_fragment: null } }
+06-14 13:05:26.688 I/ReactNativeJS(18031): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T04:05:26.687Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"pstn_assist","source":"app_state_active_restore","active_call_id":"call-c78ce2c70905","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 13:05:26.940 I/ReactNativeJS(18031): [VoIPScreen] Stopping tone - call accepted/connected
+06-14 13:05:36.629 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:36.629 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:36.665 I/ReactNativeJS(18031): [VoIP][DiagLine] connectSignaling:onmessage callId=call-c78ce2c70905 state=OPEN rawLength=1372
+06-14 13:05:36.666 I/ReactNativeJS(18031): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-c78ce2c70905',
+06-14 13:05:36.666 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:36.666 I/ReactNativeJS(18031):   rawLength: 1372,
+06-14 13:05:36.666 I/ReactNativeJS(18031):   rawPreview: '{"type":"answer","call_id":"call-c78ce2c70905","sdp":"v=0\\r\\no=- 7283403281231548688 2 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\na=group:BUNDLE 0\\r\\na=extmap-allow-mixed\\r\\na=msid-semantic: WMS 126a6701-bf23-41e5-9a4e-0357a850d7b1\\r\\nm=audio 9 UD' }
+06-14 13:05:36.666 I/ReactNativeJS(18031): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-c78ce2c70905',
+06-14 13:05:36.666 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:36.666 I/ReactNativeJS(18031):   summary: 
+06-14 13:05:36.666 I/ReactNativeJS(18031):    { type: 'answer',
+06-14 13:05:36.666 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:05:36.666 I/ReactNativeJS(18031):      from_role: 'callee',
+06-14 13:05:36.666 I/ReactNativeJS(18031):      has_sdp: true,
+06-14 13:05:36.666 I/ReactNativeJS(18031):      sdp_length: 1223,
+06-14 13:05:36.666 I/ReactNativeJS(18031):      has_candidate: false,
+06-14 13:05:36.666 I/ReactNativeJS(18031):      candidate_length: 0,
+06-14 13:05:36.666 I/ReactNativeJS(18031):      sdp_mid: null,
+06-14 13:05:36.666 I/ReactNativeJS(18031):      sdp_Milne_index: null,
+06-14 13:05:36.666 I/ReactNativeJS(18031):      username_fragment: null },
+06-14 13:05:36.666 I/ReactNativeJS(18031):   normalizedType: 'answer' }
+06-14 13:05:36.667 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 setRemoteDescription +11s
+06-14 13:05:36.715 I/ReactNativeJS(18031): [VoIP][DiagLine] connectSignaling:onmessage callId=call-c78ce2c70905 state=OPEN rawLength=233
+06-14 13:05:36.715 I/ReactNativeJS(18031): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-c78ce2c70905',
+06-14 13:05:36.715 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:36.715 I/ReactNativeJS(18031):   rawLength: 233,
+06-14 13:05:36.715 I/ReactNativeJS(18031):   rawPreview: '{"type":"candidate","call_id":"call-c78ce2c70905","candidate":"candidate:270994018 1 udp 2122260223 172.30.1.19 55163 typ host generation 0 ufrag Zr6N network-id 3 network-cost 10","sdpMLineIndex":0,"sdpMid":"0","from_role":"callee"}' }
+06-14 13:05:36.724 I/ReactNativeJS(18031): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-c78ce2c70905',
+06-14 13:05:36.724 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:36.724 I/ReactNativeJS(18031):   summary: 
+06-14 13:05:36.724 I/ReactNativeJS(18031):    { type: 'candidate',
+06-14 13:05:36.724 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:05:36.724 I/ReactNativeJS(18031):      from_role: 'callee',
+06-14 13:05:36.724 I/ReactNativeJS(18031):      has_sdp: false,
+06-14 13:05:36.724 I/ReactNativeJS(18031):      sdp_length: 0,
+06-14 13:05:36.724 I/ReactNativeJS(18031):      has_candidate: true,
+06-14 13:05:36.724 I/ReactNativeJS(18031):      candidate_length: 116,
+06-14 13:05:36.724 I/ReactNativeJS(18031):      sdp_mid: '0',
+06-14 13:05:36.724 I/ReactNativeJS(18031):      sdp_Milne_index: 0,
+06-14 13:05:36.724 I/ReactNativeJS(18031):      username_fragment: null },
+06-14 13:05:36.724 I/ReactNativeJS(18031):   normalizedType: 'candidate' }
+06-14 13:05:36.724 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 addIceCandidate +57ms
+06-14 13:05:37.162 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.163 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.164 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.165 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.173 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 ontrack +449ms
+06-14 13:05:37.202 I/ReactNativeJS(18031): '[VoIP] Track received (ontrack)', 'audio'
+06-14 13:05:37.202 I/ReactNativeJS(18031): '[VoIPScreen] Remote stream update:', { hasAudio: true,
+06-14 13:05:37.202 I/ReactNativeJS(18031):   hasStreamAudio: true,
+06-14 13:05:37.202 I/ReactNativeJS(18031):   hasReceiverAudio: true,
+06-14 13:05:37.202 I/ReactNativeJS(18031):   audioTrackCount: 1 }
+06-14 13:05:37.202 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.203 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.203 I/ReactNativeJS(18031): rn-webrtc:pc:DEBUG 0 setRemoteDescription OK +30ms
+06-14 13:05:37.204 I/ReactNativeJS(18031): '[VoIP] Answer applied', 'v=0\r\no=- 7283403281231548688 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS 126a6701-bf23-41e5-9a4e-0357a850d7b1\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111 63 9 102 0 8 13 110 126\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:Zr6N\r\na=ice-pwd:MWOmtjLdVRpDF++QqOvwR2cu\r\na=ice-options:trickle renomination\r\na=fingerprint:sha-256 66:3E:46:23:7F:CA:99:84:FA:E9:DF:DD:C2:DC:F3:C2:0D:9B:0D:9D:C4:76:39:3C:D6:BF:F3:F2:5A:DA:62:30\r\na=setup:active\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:4 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=sendrecv\r\na=msid:126a6701-bf23-41e5-9a4e-0357a850d7b1 52216cd2-3d58-445c-ab7c-3d62badd791d\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=rtcp-fb:111 transport-cc\r\na=fmtp:111 minptime=10;useinbandfec=1\r\na=rtpmap:63 red/48000/2\r\na=fmtp:63 111/111\r\na=rtpmap:9 G722/8000\r\na=rtpmap:102 ILBC/8000\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=rtpmap:13 CN/8000\r\na=rtpmap:110 telephone-event/48000\r\na=rtpmap:126 telephone-event/8000\r\na=ssrc:2707242131 cname:8KEjCthAMYLXWb5+\r\n'
+06-14 13:05:37.204 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.204 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.204 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.205 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.205 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.205 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.205 I/ReactNativeJS(18031): [VoIP] Connection state: connected
+06-14 13:05:37.205 I/ReactNativeJS(18031): '[VoIPScreen] State change callback:', 'connected'
+06-14 13:05:37.206 I/ReactNativeJS(18031): '[VoIP] ICE candidate added', { candidate: 'candidate:270994018 1 udp 2122260223 172.30.1.19 55163 typ host generation 0 ufrag Zr6N network-id 3 network-cost 10',
+06-14 13:05:37.206 I/ReactNativeJS(18031):   sdpMLineIndex: 0,
+06-14 13:05:37.206 I/ReactNativeJS(18031):   sdpMid: '0',
+06-14 13:05:37.206 I/ReactNativeJS(18031):   usernameFragment: 'Zr6N' }
+06-14 13:05:45.977 I/ReactNativeJS(18031): [VoIP][DiagLine] connectSignaling:onmessage callId=call-c78ce2c70905 state=OPEN rawLength=61
+06-14 13:05:45.978 I/ReactNativeJS(18031): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-c78ce2c70905',
+06-14 13:05:45.978 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:45.978 I/ReactNativeJS(18031):   rawLength: 61,
+06-14 13:05:45.978 I/ReactNativeJS(18031):   rawPreview: '{"type":"pong","call_id":"call-c78ce2c70905","role":"caller"}' }
+06-14 13:05:45.980 I/ReactNativeJS(18031): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-c78ce2c70905',
+06-14 13:05:45.980 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:05:45.980 I/ReactNativeJS(18031):   summary: 
+06-14 13:05:45.980 I/ReactNativeJS(18031):    { type: 'pong',
+06-14 13:05:45.980 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:05:45.980 I/ReactNativeJS(18031):      from_role: null,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      has_sdp: false,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      sdp_length: 0,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      has_candidate: false,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      candidate_length: 0,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      sdp_mid: null,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      sdp_Milne_index: null,
+06-14 13:05:45.980 I/ReactNativeJS(18031):      username_fragment: null },
+06-14 13:05:45.980 I/ReactNativeJS(18031):   normalizedType: 'pong' }
+06-14 13:05:45.980 I/ReactNativeJS(18031): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-c78ce2c70905', socketState: 'OPEN' }
+06-14 13:06:05.997 I/ReactNativeJS(18031): [VoIP][DiagLine] connectSignaling:onmessage callId=call-c78ce2c70905 state=OPEN rawLength=61
+06-14 13:06:05.998 I/ReactNativeJS(18031): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-c78ce2c70905',
+06-14 13:06:05.998 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:06:05.998 I/ReactNativeJS(18031):   rawLength: 61,
+06-14 13:06:05.998 I/ReactNativeJS(18031):   rawPreview: '{"type":"pong","call_id":"call-c78ce2c70905","role":"caller"}' }
+06-14 13:06:05.998 I/ReactNativeJS(18031): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-c78ce2c70905',
+06-14 13:06:05.998 I/ReactNativeJS(18031):   socketState: 'OPEN',
+06-14 13:06:05.998 I/ReactNativeJS(18031):   summary: 
+06-14 13:06:05.998 I/ReactNativeJS(18031):    { type: 'pong',
+06-14 13:06:05.998 I/ReactNativeJS(18031):      call_id: 'call-c78ce2c70905',
+06-14 13:06:05.998 I/ReactNativeJS(18031):      from_role: null,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      has_sdp: false,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      sdp_length: 0,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      has_candidate: false,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      candidate_length: 0,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      sdp_mid: null,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      sdp_Milne_index: null,
+06-14 13:06:05.998 I/ReactNativeJS(18031):      username_fragment: null },
+06-14 13:06:05.998 I/ReactNativeJS(18031):   normalizedType: 'pong' }
+06-14 13:06:05.999 I/ReactNativeJS(18031): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-c78ce2c70905', socketState: 'OPEN' }

@@ -1,0 +1,6 @@
+[21:38:09] Monitor-only run (call already connected): c:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\boundary_build63_monitor_20260614-213809
+[21:38:10] Monitoring 75s...
+[21:39:25] S10 end=1 flush_true=1 flush_false=0 defer=
+[21:39:25] S10 segment_ms=4437 speech_span_ms=8782 flush=segment_stop=1
+[21:39:25] S10 SENT=3 Tab PLAYBACK=3 fixed_interval=0
+[21:39:25] defer_working=False s10_to_tab=True

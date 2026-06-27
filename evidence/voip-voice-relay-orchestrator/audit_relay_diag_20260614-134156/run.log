@@ -1,0 +1,21 @@
+[13:41:56] Audit+Relay diag dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\audit_relay_diag_20260614-134156
+[13:41:56] Backend restarted with callee audit fix — starting dual-device call
+[13:42:01] Waiting auth on both devices...
+[13:42:04] Stale VoIP on R83W70QY11H — hangup attempt 1
+[13:42:11] Stale VoIP on R83W70QY11H — hangup attempt 2
+[13:42:17] Stale VoIP on R83W70QY11H — hangup attempt 3
+[13:42:23] Stale VoIP on R83W70QY11H — hangup attempt 4
+[13:42:28] Force-stop R83W70QY11H
+[13:42:41] Stale VoIP on 172.30.1.19:5555 — hangup attempt 1
+[13:42:46] Stale VoIP on 172.30.1.19:5555 — hangup attempt 2
+[13:42:52] Stale VoIP on 172.30.1.19:5555 — hangup attempt 3
+[13:42:57] Stale VoIP on 172.30.1.19:5555 — hangup attempt 4
+[13:43:02] Force-stop 172.30.1.19:5555
+[13:43:15] Starting auto-call from caller...
+[13:43:21] Waiting incoming on callee...
+[13:43:30] Tap '받기' at 188,1790 on 172.30.1.19:5555 (text='받기')
+[13:43:30] Waiting accept + signaling...
+[13:43:32] Accept=True Signaling=True
+[13:43:32] Connected hold 15s...
+[13:43:47] Scrolling callee UI to audit section + refresh
+[13:44:30] Audit UI: initiated=False accepted=False 403=False empty=False

@@ -12,3 +12,6 @@ test:
 check:
 	python -m compileall app backend tests ai
 	pytest -q -s tests/test_health.py tests/test_routes.py tests/test_runtime.py tests/test_security_runtime.py
+
+contrast:
+	python scripts/audit_color_contrast.py

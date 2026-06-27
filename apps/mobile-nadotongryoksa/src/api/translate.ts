@@ -1,5 +1,6 @@
-// 나도통역사 통번역 API 클라이언트
+// WorldLinco 통번역 API 클라이언트
 import Constants from 'expo-constants';
+import { FEATURE_IDS, ensureCorrelationId } from '../features/correlation/correlationId';
 
 const BASE_URL: string =
   (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
@@ -15,13 +16,42 @@ export interface TranslateResult {
 
 export interface VoiceTranslateResult extends TranslateResult {
   original_text: string;
+  detected_language?: string;
   audio_url?: string;
+  audio_base64?: string;
+  audio_format?: string;
+  tts_delivery?: 'server_audio' | 'device_speech';
+  stt_trust?: 'high' | 'low' | string;
+  stt_avg_logprob?: number | null;
+  // V.2 ID 백본 — 서버가 echo 한 상관 ID(기능 ID 자동 매핑→셀프 서빙→전송(딜리버리)→음성 발화 자동 연결).
+  correlation_id?: string;
+  // V.2 감정 E2 — 서버가 추정한 원문↔출력(TTS) 감정(arousal/valence 0..1). 클라가 VOIP_EMOTION_PROBE 로그캣 emit → 평가 하니스가 보존도 산출.
+  emotion?: EmotionProbe;
+}
+
+export interface EmotionProbe {
+  src_arousal: number;
+  src_valence: number;
+  src_label?: string;
+  src_confidence?: number;
+  out_arousal: number;
+  out_valence: number;
+  out_label?: string;
+  out_confidence?: number;
 }
 
 export type TranslateServiceMode = 'default' | 'lyrics';
 
 export interface TranslateOptions {
   serviceMode?: TranslateServiceMode;
+  regionHint?: string;
+}
+
+export interface ImageTranslateResult extends TranslateResult {
+  original_text: string;
+  file_name: string;
+  content_type: string;
+  line_count: number;
 }
 
 // 오프라인 폴력 사전 (24개 언어 주요 표현 포함)
@@ -124,11 +154,16 @@ async function requestTranslate(
   from: string,
   to: string,
   signal: AbortSignal,
+  regionHint?: string,
 ): Promise<{ translated: string; engine: string }> {
+  const body: Record<string, string> = { text, from_lang: from, to_lang: to };
+  if (regionHint) {
+    body.region_hint = regionHint;
+  }
   const res = await fetch(`${BASE_URL}/api/llm/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, from_lang: from, to_lang: to }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -155,11 +190,11 @@ export async function translateText(
     let translated: string;
     let engine: string;
     try {
-      const first = await requestTranslate(normalizedText, from, to, controller.signal);
+      const first = await requestTranslate(normalizedText, from, to, controller.signal, options.regionHint);
       translated = first.translated;
       engine = first.engine;
     } catch {
-      const second = await requestTranslate(normalizedText, from, to, controller.signal);
+      const second = await requestTranslate(normalizedText, from, to, controller.signal, options.regionHint);
       translated = second.translated;
       engine = second.engine;
     }
@@ -188,25 +223,198 @@ export async function translateText(
   }
 }
 
+export interface VoiceTranslateOptions {
+  regionHint?: string;
+  language?: string;
+}
+
 export async function voiceTranslate(
   audioBase64: string,
   from: string,
   to: string,
+  regionHint?: string,
+  language: string = 'auto',
+  options: {
+    deviceTts?: boolean;
+    mode?: 'designated' | 'bilingual';
+    langA?: string;
+    langB?: string;
+    // V.2 ID 백본 — 캡처 시점 고유 ID를 전 구간에 전파한다.
+    correlationId?: string;
+    featureId?: string;
+    utteranceId?: string;
+    seqId?: number;
+    chunkIndex?: number;
+    // V.2 Session Core(선택) — 통화/세션 단위 언어쌍·맥락 기억용. 서버는 미지정 시 no-op.
+    sessionId?: string;
+  } = {},
 ): Promise<VoiceTranslateResult> {
-  const res = await fetch(`${BASE_URL}/api/llm/voice-translate`, {
+  const featureId = options.featureId
+    ?? (options.mode === 'bilingual' ? FEATURE_IDS.faceInterpret : FEATURE_IDS.voipVoiceRelay);
+  const correlationId = ensureCorrelationId(options.correlationId, featureId);
+  const body: Record<string, string | boolean | number> = {
+    audio_base64: audioBase64,
+    from_lang: from,
+    to_lang: to,
+    language,
+    device_tts: options.deviceTts !== false,
+    // 채널 모드 명시(V.2 Delivery 채널 경계). 기본값은 지정 언어(designated).
+    mode: options.mode ?? 'designated',
+    correlation_id: correlationId,
+    feature_id: featureId,
+  };
+  if (options.utteranceId) {
+    body.utterance_id = options.utteranceId;
+  }
+  if (typeof options.seqId === 'number' && Number.isFinite(options.seqId)) {
+    body.seq_id = options.seqId;
+  }
+  if (typeof options.chunkIndex === 'number' && Number.isFinite(options.chunkIndex)) {
+    body.chunk_index = options.chunkIndex;
+  }
+  if (options.sessionId) {
+    body.session_id = options.sessionId;
+  }
+  // bilingual 모드는 언어 쌍(lang_a/lang_b)으로 서버가 화자 언어를 자동 감지·방향 결정한다.
+  if (options.langA) {
+    body.lang_a = options.langA;
+  }
+  if (options.langB) {
+    body.lang_b = options.langB;
+  }
+  if (regionHint) {
+    body.region_hint = regionHint;
+  }
+  // 채널 분리(V.2) — VoIP(designated)와 대면(bilingual)은 서로 다른 백엔드 라우트를 사용한다.
+  // 한 채널의 요청 계약/검증 변경이 다른 채널 요청을 깨뜨리지 못하도록 격리한다(코어 로직은 서버에서 공유).
+  const voiceEndpoint =
+    options.mode === 'bilingual'
+      ? `${BASE_URL}/api/llm/face/voice-translate`
+      : `${BASE_URL}/api/llm/voip/voice-translate`;
+  const res = await fetch(voiceEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_base64: audioBase64, from_lang: from, to_lang: to }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    const message = typeof payload.detail === 'string' ? payload.detail : `HTTP ${res.status}`;
+    throw new Error(message);
+  }
   const data = await res.json();
   return {
     original_text: data.original_text ?? '',
     translated: data.translated ?? '',
-    from,
-    to,
+    from: data.from ?? from,
+    to: data.to ?? to,
     engine: data.engine ?? 'nado-voice',
     offline: false,
+    detected_language: data.detected_language ?? data.from,
     audio_url: data.audio_url,
+    audio_base64: data.audio_base64,
+    audio_format: data.audio_format,
+    tts_delivery: data.tts_delivery,
+    stt_trust: data.stt_trust,
+    stt_avg_logprob: typeof data.stt_avg_logprob === 'number' ? data.stt_avg_logprob : null,
+    correlation_id: typeof data.correlation_id === 'string' ? data.correlation_id : correlationId,
+    emotion:
+      data.emotion &&
+      typeof data.emotion.src_arousal === 'number' &&
+      typeof data.emotion.out_arousal === 'number'
+        ? (data.emotion as EmotionProbe)
+        : undefined,
+  };
+}
+
+export interface SynthesizeResult {
+  audioBase64?: string;
+  audioFormat?: string;
+  ttsDelivery: 'server_audio' | 'device_speech';
+  correlationId?: string;
+}
+
+// 서버 뉴럴 TTS 합성(Edge neural). 통역 수신측이 번역문을 대상 언어 네이티브 보이스로
+// 받기 위해 호출한다 — 단말 음성팩 의존을 제거해 50개국 일관 발음·자연스러운 톤을 보장.
+// 실패/미지원 시 null 또는 device_speech 를 반환하여 호출측이 디바이스 TTS로 폴백한다.
+export async function synthesizeSpeech(
+  text: string,
+  targetLang?: string,
+  baseUrl: string = BASE_URL,
+  // 기본 12초 — 대면/VOIP 공통 SSOT. 6초에선 edge-tts 콜드스타트/네트워크 지연 시
+  // 단말 TTS(붙여 읽기)로 폴백되어 발화 품질이 떨어졌다(대면·VOIP 모두 동일하게 정합).
+  timeoutMs = 12000,
+  // V.2 ID 백본 — 발화 단계가 출처 상관 ID에 스스로 붙도록 전달/echo.
+  correlation?: { correlationId?: string; featureId?: string },
+): Promise<SynthesizeResult | null> {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return null;
+  const featureId = correlation?.featureId ?? FEATURE_IDS.voiceSynthesize;
+  const correlationId = ensureCorrelationId(correlation?.correlationId, featureId);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${baseUrl}/api/llm/voice/synthesize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: trimmed,
+        target_lang: targetLang,
+        correlation_id: correlationId,
+        feature_id: featureId,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const echoedId = typeof data.correlation_id === 'string' ? data.correlation_id : correlationId;
+    const fmt = typeof data.audio_format === 'string' ? data.audio_format : undefined;
+    const b64 = typeof data.audio_base64 === 'string' ? data.audio_base64 : undefined;
+    if (!b64 || !fmt || !fmt.startsWith('audio/')) {
+      return { ttsDelivery: 'device_speech', correlationId: echoedId };
+    }
+    return { audioBase64: b64, audioFormat: fmt, ttsDelivery: 'server_audio', correlationId: echoedId };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function translateImage(
+  asset: { uri: string; name?: string | null; mimeType?: string | null },
+  from: string,
+  to: string,
+  regionHint?: string,
+): Promise<ImageTranslateResult> {
+  const formData = new FormData();
+  const fileName = asset.name || `ocr-${Date.now()}.jpg`;
+  const mimeType = asset.mimeType || 'image/jpeg';
+  formData.append('file', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
+  formData.append('source_language', from);
+  formData.append('target_language', to);
+  if (regionHint) {
+    formData.append('region_hint', regionHint);
+  }
+
+  const res = await fetch(`${BASE_URL}/api/mobile/image-translation`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    const message = typeof payload.detail === 'string' ? payload.detail : `HTTP ${res.status}`;
+    throw new Error(message);
+  }
+  const data = await res.json();
+  return {
+    original_text: String(data.original_text ?? ''),
+    translated: String(data.translated ?? ''),
+    from: String(data.source_language ?? from),
+    to: String(data.target_language ?? to),
+    engine: String(data.engine ?? 'rapidocr+nado'),
+    offline: Boolean(data.offline),
+    file_name: String(data.file_name ?? fileName),
+    content_type: String(data.content_type ?? mimeType),
+    line_count: Number(data.line_count ?? 0),
   };
 }

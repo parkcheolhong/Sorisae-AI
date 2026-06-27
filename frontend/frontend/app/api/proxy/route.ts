@@ -5,6 +5,17 @@ import { fetchBackendWithFallback, isAbortLike, jsonNoStore } from '@/app/api/_s
 const ADMIN_PROXY_RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const ADMIN_PROXY_RETRY_ATTEMPTS = 3;
 const ADMIN_PROXY_RETRY_DELAY_MS = 700;
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1' && process.env.NODE_ENV !== 'production';
+const ADMIN_REGRESSION_MOCK_TOKEN = 'admin-regression-mock-token';
+const ADMIN_REGRESSION_MOCK_USER = {
+  username: 'ui.admin.round@devanalysis.local',
+  email: 'ui.admin.round@devanalysis.local',
+  is_active: true,
+  is_admin: true,
+  is_superuser: true,
+};
+const ADMIN_REGRESSION_WEBAUTHN_CHALLENGE = 'YWRtaW4tcmVncmVzc2lvbi1jaGFsbGVuZ2U';
+const ADMIN_REGRESSION_WEBAUTHN_USER_ID = 'YWRtaW4tcmVncmVzc2lvbi11c2Vy';
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,6 +37,47 @@ function parseJsonSafely(text: string) {
 
 function nowMs() {
   return Date.now();
+}
+
+function buildAdminRegressionPasskeyOptions(kind: 'register' | 'login') {
+  const common = {
+    challenge: ADMIN_REGRESSION_WEBAUTHN_CHALLENGE,
+    timeout: 60_000,
+    userVerification: 'required',
+  };
+  if (kind === 'register') {
+    return {
+      ...common,
+      rp: { name: 'Admin Regression' },
+      user: {
+        id: ADMIN_REGRESSION_WEBAUTHN_USER_ID,
+        name: ADMIN_REGRESSION_MOCK_USER.email,
+        displayName: 'Admin Regression',
+      },
+      pubKeyCredParams: [
+        { type: 'public-key', alg: -7 },
+        { type: 'public-key', alg: -257 },
+      ],
+      authenticatorSelection: {
+        residentKey: 'required',
+        requireResidentKey: true,
+        userVerification: 'required',
+      },
+      attestation: 'none',
+    };
+  }
+  return {
+    ...common,
+    allowCredentials: [],
+  };
+}
+
+function adminRegressionLoginPayload() {
+  return {
+    access_token: ADMIN_REGRESSION_MOCK_TOKEN,
+    token_type: 'bearer',
+    user: ADMIN_REGRESSION_MOCK_USER,
+  };
 }
 
 async function fetchWithRetry(pathOrUrl: string, init: RequestInit, expectJson = true) {
@@ -116,6 +168,10 @@ async function fetchWithRetry(pathOrUrl: string, init: RequestInit, expectJson =
 }
 
 export async function POST(req: NextRequest) {
+  if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    return jsonNoStore(adminRegressionLoginPayload(), 200);
+  }
+
   const body = await req.text();
   const requestStartedAt = nowMs();
   try {
@@ -215,6 +271,24 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const bodyText = await req.text();
   const action = req.nextUrl.searchParams.get('action') || '';
+  if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    if (action === 'passkey-register-start') {
+      return jsonNoStore({
+        registration_token: 'admin-regression-registration-token',
+        options: buildAdminRegressionPasskeyOptions('register'),
+      }, 200);
+    }
+    if (action === 'passkey-register-finish') {
+      return jsonNoStore({ registered: true }, 200);
+    }
+    if (action === 'passkey-login-start') {
+      return jsonNoStore({ options: buildAdminRegressionPasskeyOptions('login') }, 200);
+    }
+    if (action === 'passkey-login-finish') {
+      return jsonNoStore(adminRegressionLoginPayload(), 200);
+    }
+  }
+
   const path = action === 'passkey-register-start'
     ? '/api/auth/passkey/register/start'
     : action === 'passkey-register-finish'
@@ -257,6 +331,13 @@ export async function GET(req: NextRequest) {
   if (!auth.trim()) {
     return jsonNoStore({ detail: 'Authorization 헤더가 필요합니다.' }, 401);
   }
+  if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    if (auth.trim() !== `Bearer ${ADMIN_REGRESSION_MOCK_TOKEN}`) {
+      return jsonNoStore({ detail: '관리자 회귀(mock) 토큰이 올바르지 않습니다.' }, 401);
+    }
+    return jsonNoStore(ADMIN_REGRESSION_MOCK_USER, 200);
+  }
+
   try {
     const { target, response, bodyText, parsedBody, invalidHtml } = await fetchWithRetry('/api/auth/me', {
       headers: { Authorization: auth },
@@ -306,6 +387,16 @@ export async function PUT(req: NextRequest) {
   if (!auth.trim()) {
     return jsonNoStore({ detail: 'Authorization 헤더가 필요합니다.' }, 401);
   }
+  if (ADMIN_REGRESSION_MOCK_BACKEND) {
+    if (auth.trim() !== `Bearer ${ADMIN_REGRESSION_MOCK_TOKEN}`) {
+      return jsonNoStore({ detail: '관리자 회귀(mock) 토큰이 올바르지 않습니다.' }, 401);
+    }
+    return jsonNoStore({
+      access_token: ADMIN_REGRESSION_MOCK_TOKEN,
+      token_type: 'bearer',
+    }, 200);
+  }
+
   try {
     const { target, response, bodyText, parsedBody, invalidHtml } = await fetchWithRetry('/api/auth/extend', {
       method: "PUT",

@@ -3,10 +3,12 @@ import asyncio
 import ast
 import html
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi import WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict, Any, Callable
+from backend.auth import get_current_user, get_current_user_flexible
 import httpx
 import json
 import re
@@ -27,6 +29,8 @@ from pathlib import PurePosixPath
 from datetime import datetime
 from uuid import uuid4
 from urllib.parse import urlparse
+
+from backend.time_utils import utcnow
 
 from backend.llm.model_config import (
     CURRENT_GPU_PROFILE_KEY,
@@ -183,6 +187,9 @@ def _resolve_orchestration_output_child_path(output_dir: Path, relative_path: st
 
 
 def _trusted_orchestration_output_dir(output_dir: Path) -> Path:
+    resolved = output_dir.resolve()
+    if any(_is_relative_to(resolved, root) for root in ORCH_ALLOWED_OUTPUT_ROOTS):
+        return resolved
     safe_dir_name = re.sub(r"[^a-zA-Z0-9._-]+", "-", str(output_dir.name or "")).strip("-._")
     if not safe_dir_name:
         raise HTTPException(status_code=400, detail="출력 디렉터리 이름이 올바르지 않습니다.")
@@ -286,8 +293,25 @@ ORCH_TIMEOUT_TUNING_LEVEL = max(
     -1,
     min(1, int(os.getenv("ORCH_TIMEOUT_TUNING_LEVEL", "0"))),
 )
-ORCH_MIN_FILES = max(1, int(os.getenv("ORCH_MIN_FILES", "27")))
-ORCH_MIN_DIRS = max(0, int(os.getenv("ORCH_MIN_DIRS", "2")))
+from backend.orchestrator.autonomous.stage_coder_scope import compute_autonomous_stage_thresholds
+
+_STAGE_THRESHOLDS = compute_autonomous_stage_thresholds()
+ORCH_MIN_FILES = max(
+    1,
+    int(os.getenv("ORCH_MIN_FILES", str(_STAGE_THRESHOLDS["stage_min_files"]))),
+)
+ORCH_MIN_DIRS = max(
+    0,
+    int(os.getenv("ORCH_MIN_DIRS", str(_STAGE_THRESHOLDS["stage_min_dirs"]))),
+)
+ORCH_STAGE11_MIN_FILES = max(
+    ORCH_MIN_FILES,
+    int(os.getenv("ORCH_STAGE11_MIN_FILES", str(_STAGE_THRESHOLDS["stage11_min_files"]))),
+)
+ORCH_STAGE11_MIN_DIRS = max(
+    ORCH_MIN_DIRS,
+    int(os.getenv("ORCH_STAGE11_MIN_DIRS", str(_STAGE_THRESHOLDS["stage11_min_dirs"]))),
+)
 ORCH_MAX_FORCE_RETRIES = max(1, int(os.getenv("ORCH_MAX_FORCE_RETRIES", "3")))
 _required_files_raw = os.getenv("ORCH_REQUIRED_FILES", "")
 ORCH_REQUIRED_FILE_PATHS = [
@@ -2911,7 +2935,7 @@ def _build_evidence_bundle(
         },
         "execution": {
             "evidence_run_id": run_id,
-            "evidence_generated_at": datetime.utcnow().isoformat() + "Z",
+            "evidence_generated_at": utcnow().isoformat() + "Z",
             "self_run_status": "not_applicable",
             "completion_gate_ok": completion_gate_ok,
             "completion_gate_error": completion_gate_error,
@@ -3320,6 +3344,9 @@ def _runtime_config_base_payload() -> Dict[str, Any]:
         "code_generation_strategy": ORCH_CODE_GENERATION_STRATEGY,
         "min_files": ORCH_MIN_FILES,
         "min_dirs": ORCH_MIN_DIRS,
+        "stage11_min_files": ORCH_STAGE11_MIN_FILES,
+        "stage11_min_dirs": ORCH_STAGE11_MIN_DIRS,
+        "stage_thresholds": dict(_STAGE_THRESHOLDS),
         "selected_profile": ORCH_SELECTED_PROFILE,
         "model_tuning_level": ORCH_MODEL_TUNING_LEVEL,
         "token_tuning_level": ORCH_TOKEN_TUNING_LEVEL,
@@ -3838,16 +3865,44 @@ def _apply_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _normalize_legacy_stage_thresholds(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = dict(payload)
+    stage = compute_autonomous_stage_thresholds()
+    try:
+        min_files = int(normalized.get("min_files") or 0)
+    except (TypeError, ValueError):
+        min_files = 0
+    try:
+        min_dirs = int(normalized.get("min_dirs") or 0)
+    except (TypeError, ValueError):
+        min_dirs = 0
+    if min_files >= 27:
+        normalized["min_files"] = stage["stage_min_files"]
+    if min_dirs <= 2:
+        normalized["min_dirs"] = stage["stage_min_dirs"]
+    normalized.setdefault("stage11_min_files", stage["stage11_min_files"])
+    normalized.setdefault("stage11_min_dirs", stage["stage11_min_dirs"])
+    normalized.setdefault("stage_thresholds", stage)
+    return normalized
+
+
 def _load_runtime_config_from_disk() -> Dict[str, Any]:
     path = _runtime_config_file_path()
     if not path.exists():
-        return _runtime_config_payload()
+        payload = _runtime_config_payload()
+        _save_runtime_config_to_disk(payload)
+        return payload
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        return _runtime_config_payload()
+        payload = _runtime_config_payload()
+        _save_runtime_config_to_disk(payload)
+        return payload
     if not isinstance(payload, dict):
-        return _runtime_config_payload()
+        payload = _runtime_config_payload()
+        _save_runtime_config_to_disk(payload)
+        return payload
+    payload = _normalize_legacy_stage_thresholds(payload)
     return _apply_runtime_config(payload)
 
 
@@ -3886,6 +3941,16 @@ async def update_runtime_config(
 
 @router.websocket("/ws")
 async def orchestrator_ws(websocket: WebSocket):
+    token = websocket.query_params.get("token", "")
+    if token:
+        try:
+            from jose import jwt as _jwt
+            from backend.auth import SECRET_KEY, ALGORITHM
+            _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            await websocket.close(code=4001, reason="인증 실패")
+            return
+
     await ws_channel.connect(websocket)
     try:
         await websocket.send_json({
@@ -5048,6 +5113,17 @@ def _compat_write_manifest(output_dir: Path, manifest: List[Dict[str, str]]) -> 
         target_path = _resolve_orchestration_output_child_path(output_dir, safe_relative_path)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         rendered_content = _decorate_generated_file_with_ids(safe_relative_path, str(item.get("content") or ""))
+        if target_path.exists():
+            existing_content = target_path.read_text(encoding="utf-8")
+            existing_stripped = _strip_generated_id_headers(existing_content).strip()
+            new_stripped = _strip_generated_id_headers(rendered_content).strip()
+            if existing_stripped and new_stripped:
+                existing_defs = set(re.findall(r'\bdef\s+\w+|from\s+\S+\s+import\s+[^;\n]+|\bimport\s+\S+', existing_stripped))
+                new_defs = set(re.findall(r'\bdef\s+\w+|from\s+\S+\s+import\s+[^;\n]+|\bimport\s+\S+', new_stripped))
+                has_new_definitions = bool(new_defs - existing_defs)
+                if not has_new_definitions and len(new_stripped) <= len(existing_stripped):
+                    written_files.append(safe_relative_path)
+                    continue
         target_path.write_text(rendered_content, encoding="utf-8")
         written_files.append(safe_relative_path)
     return written_files
@@ -9115,6 +9191,35 @@ def _compat_write_auxiliary_outputs(
             "generated_at": datetime.now().isoformat(),
         },
     )
+
+    auto_link_map_path = output_dir / "docs" / "auto_link_map.json"
+    auto_link_map_payload = {
+        "auto_connect_policy": {
+            "self_link_enabled": True,
+            "cross_link_enabled": True,
+        },
+        "links": [
+            {
+                "path": path,
+                "file_id": f"FILE-{re.sub(r'[^A-Za-z0-9]+', '-', path.upper()).strip('-')}",
+                "section_id": f"SECTION-{re.sub(r'[^A-Za-z0-9]+', '-', path.upper()).strip('-')}-MAIN",
+            }
+            for path in written_files
+        ],
+        "anchor_path": anchor_path,
+    }
+    _compat_write_json(auto_link_map_path, auto_link_map_payload)
+
+    section_id_index_path = output_dir / "docs" / "section_id_index.txt"
+    section_lines = []
+    for path in written_files:
+        file_stub = re.sub(r'[^A-Za-z0-9]+', '-', path.upper()).strip('-')
+        section_lines.append(f"# FILE-ID: FILE-{file_stub}")
+        section_lines.append(f"# SECTION-ID: SECTION-{file_stub}-MAIN")
+        section_lines.append(f"  path: {path}")
+        section_lines.append("")
+    _compat_write_text(section_id_index_path, "\n".join(section_lines))
+
     return {
         "checklist_path": _compat_relative_path(checklist_path, output_dir),
         "manifest_path": _compat_relative_path(manifest_path, output_dir),
@@ -9123,6 +9228,8 @@ def _compat_write_auxiliary_outputs(
         "id_registry_schema_path": _compat_relative_path(id_registry_schema_path, output_dir),
         "id_registry_path": _compat_relative_path(id_registry_path, output_dir),
         "product_identity_path": _compat_relative_path(product_identity_path, output_dir),
+        "auto_link_map_path": _compat_relative_path(auto_link_map_path, output_dir),
+        "section_id_index_path": _compat_relative_path(section_id_index_path, output_dir),
     }
 
 
@@ -9330,7 +9437,12 @@ def _compat_manifest_for_request(
         "docs/deployment.md",
         "docs/testing.md",
     ]
-    for path in list(dict.fromkeys(required_files + compat_defaults + list(template_candidates.keys()))):
+    patch_only = bool(_extract_targeted_patch_paths(task))
+    if patch_only:
+        manifest_paths = list(dict.fromkeys(required_files))
+    else:
+        manifest_paths = list(dict.fromkeys(required_files + compat_defaults + list(template_candidates.keys())))
+    for path in manifest_paths:
         normalized_path = str(path or "").strip().replace('\\', '/')
         if not normalized_path:
             continue
@@ -11822,8 +11934,8 @@ def _build_completion_judge(
     output_dir: Path,
     written_files: List[str],
     domain_contract: Dict[str, Any],
-    min_files: int = 27,
-    min_dirs: int = 2,
+    min_files: int = 9,
+    min_dirs: int = 3,
 ) -> Dict[str, Any]:
     failed_reasons: List[str] = []
     quality_findings: List[str] = []
@@ -12740,7 +12852,7 @@ async def _run_orchestration_core(
         },
         "execution": {
             "evidence_run_id": request.run_id or task,
-            "evidence_generated_at": datetime.utcnow().isoformat() + "Z",
+            "evidence_generated_at": utcnow().isoformat() + "Z",
         },
         "readiness": {
             "artifact_paths": dict(artifact_paths_seed),
@@ -12949,13 +13061,20 @@ async def _run_orchestration_core(
 async def execute_orchestration(
     request: OrchestrationRequest,
     progress_callback: Optional[Callable[[str, str], None]] = None,
+    owner_id: Optional[str] = None,
 ) -> OrchestrationResponse:
-    return await execute_customer_orchestration_service(
+    from backend.orchestrator.autonomous.surface_adapter import (
+        orchestration_payload_to_response,
+        run_autonomous_surface_execution,
+    )
+
+    effective_owner = str(owner_id or request.run_id or "admin-orchestrate")
+    payload = await run_autonomous_surface_execution(
         request,
-        run_orchestration_func=run_orchestration,
-        emit_orchestration_progress_func=_emit_orchestration_progress,
+        owner_id=effective_owner,
         progress_callback=progress_callback,
-    ) # pyright: ignore[reportReturnType]
+    )
+    return orchestration_payload_to_response(payload)
 
 
 async def _call_orchestrator_chat_llm(
@@ -13003,7 +13122,8 @@ async def orchestrate(
     current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestrationResponse:
     _enforce_global_orchestration_gate(request)
-    return await execute_orchestration(request)
+    owner_id = str(getattr(current_user, "id", "admin-orchestrate"))
+    return await execute_orchestration(request, owner_id=owner_id)
 
 
 @router.post("/orchestrate/accepted", response_model=OrchestrationAcceptedResponse)
@@ -13019,17 +13139,18 @@ async def orchestrate_accepted(
         )
     run_id = str(request.run_id or uuid4().hex)
     accepted_request = request.model_copy(update={"run_id": run_id})
+    owner_id = str(getattr(current_user, "id", "admin-orchestrate"))
     initial_payload = {
         "run_id": run_id,
         "project_name": accepted_request.project_name,
         "output_dir": accepted_request.output_dir,
         "status": "accepted",
-        "accepted_at": datetime.utcnow().isoformat() + "Z",
+        "accepted_at": utcnow().isoformat() + "Z",
         "poll_url": _build_progress_poll_url(run_id),
         "stream_url": _build_progress_stream_url(run_id),
         "events": [
             {
-                "at": datetime.utcnow().isoformat() + "Z",
+                "at": utcnow().isoformat() + "Z",
                 "level": "info",
                 "message": "오케스트레이션 요청을 수락했고 백그라운드 작업을 시작합니다.",
             }
@@ -13045,7 +13166,13 @@ async def orchestrate_accepted(
 
     def _worker() -> None:
         try:
-            response = asyncio.run(execute_orchestration(accepted_request, progress_callback=_progress_callback))
+            response = asyncio.run(
+                execute_orchestration(
+                    accepted_request,
+                    progress_callback=_progress_callback,
+                    owner_id=owner_id,
+                )
+            )
             _mark_orchestration_progress_result(run_id, response)
         except Exception as exc:
             logger.exception("orchestrate accepted worker failed run_id=%s", run_id)
@@ -13069,11 +13196,55 @@ async def orchestrate_accepted(
 
 
 @router.get("/orchestrate/progress/{run_id}")
-async def get_orchestration_progress(run_id: str) -> Dict[str, Any]:
+async def get_orchestration_progress(
+    run_id: str,
+    current_user: Any = Depends(get_current_user),
+) -> Dict[str, Any]:
     payload = _load_orchestration_progress(run_id)
     if not payload:
         raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
     return payload
+
+
+@router.get("/orchestrate/stream/{run_id}")
+async def stream_orchestration_progress(
+    run_id: str,
+    current_user: Any = Depends(get_current_user_flexible),
+):
+    from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_sse
+
+    async def _event_stream():
+        async for frame in iter_orchestration_progress_sse(run_id):
+            yield frame
+
+    return StreamingResponse(_event_stream(), media_type="text/event-stream")
+
+
+@router.websocket("/orchestrate/progress/ws/{run_id}")
+async def websocket_orchestration_progress(websocket: WebSocket, run_id: str):
+    from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_ws
+
+    token = str(websocket.query_params.get("token") or "").strip()
+    if token:
+        try:
+            from jose import jwt as _jwt
+
+            from backend.auth import ALGORITHM, SECRET_KEY
+
+            _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            await websocket.close(code=4001, reason="인증 실패")
+            return
+
+    await websocket.accept()
+    try:
+        await websocket.send_json({"event": "connected", "run_id": run_id})
+        async for message in iter_orchestration_progress_ws(run_id):
+            await websocket.send_json(message)
+            if str(message.get("event") or "") in {"done", "error"}:
+                break
+    except WebSocketDisconnect:
+        pass
 
 
 @router.post("/orchestrate/chat", response_model=OrchestratorChatResponse)
@@ -13084,6 +13255,34 @@ async def answer_orchestrator_chat(
     agent_key: str = "chat",
     current_user=Depends(require_llm_mutation_quota),
 ) -> OrchestratorChatResponse:
+    from backend.orchestrator.autonomous.surface_adapter import (
+        run_autonomous_surface_chat,
+        should_route_orchestrator_chat_to_autonomous,
+    )
+
+    if should_route_orchestrator_chat_to_autonomous(request, request_context):
+        owner_id = str(getattr(current_user, "id", None) or "admin-orchestrate")
+        run_id = str(request.run_id or "").strip() or None
+        stage_run_id = run_id if run_id and run_id.startswith("stage_run_") else None
+        context_tags = list(request.context_tags or [])
+        if "admin-orchestrator" not in context_tags:
+            context_tags.append("admin-orchestrator")
+        return await run_autonomous_surface_chat(
+            message=str(request.message or ""),
+            owner_id=owner_id,
+            surface="admin",
+            session_id=str(request.session_id or "").strip() or None,
+            run_id=run_id,
+            stage_run_id=stage_run_id,
+            task=str(request.task or ""),
+            project_name=str(request.task or "").strip() or None,
+            mode=str(request.mode or "manual_9step"),
+            manual_mode=bool(request.manual_mode),
+            conversation=list(request.conversation or []),
+            context_tags=context_tags,
+            validation_profile="python_fastapi",
+        )
+
     return await answer_orchestrator_chat_service(
         request_context=request_context,
         request=request,
@@ -13098,4 +13297,5 @@ async def answer_orchestrator_chat(
         logger=logger,
         re_module=re,
         session_factory=SessionLocal,
+        current_user=current_user,
     )

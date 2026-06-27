@@ -1,0 +1,16 @@
+[21:59:31] Cap/defer test dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-215931
+[21:59:31] Expected build 1.0.39 code 64
+[21:59:33] Call already connected
+[21:59:33] === Phase A (40s): S10 짧은 burst (defer 유도) ===
+[21:59:33] Defer burst #1 (0.7s probe on S10 speaker -> mic bleed)
+[21:59:40] Defer burst #2 (0.7s probe on S10 speaker -> mic bleed)
+[21:59:47] Defer burst #3 (0.7s probe on S10 speaker -> mic bleed)
+[21:59:53] Defer burst #4 (0.7s probe on S10 speaker -> mic bleed)
+[22:00:00] Defer burst #5 (0.7s probe on S10 speaker -> mic bleed)
+[22:00:06] Defer burst #6 (0.7s probe on S10 speaker -> mic bleed)
+[22:00:13] Defer burst #7 (0.7s probe on S10 speaker -> mic bleed)
+[22:00:20] === Phase B (90s): S10 15초+ 연속 발화 (14s cap 확인) ===
+[22:00:20] Cap phase: play 22s continuous probe on S10
+[22:01:28] Defer phase: flush_false=0 defer= PASS=False
+[22:01:28] Cap phase: max_duration=0 elapsed_ms= PASS=False
+[22:01:28] Artifacts: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-215931

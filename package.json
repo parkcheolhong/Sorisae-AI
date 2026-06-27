@@ -27,6 +27,9 @@
         "e2e:marketplace-liveview:sheet": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_MARKETPLACE_BASE_URL=http://127.0.0.1:3000&& npm run e2e:marketplace-liveview:sheet\"",
         "e2e:marketplace-liveview:launcher": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3011&& npm run e2e:marketplace-liveview:launcher\"",
         "e2e:marketplace-liveview:all": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3011&& npm run e2e:marketplace-liveview:all\"",
+        "e2e:orchestrator-live-flow-rail": "npm --prefix frontend/frontend run e2e:orchestrator-live-flow-rail",
+        "e2e:orchestrator-live-flow-rail:fresh": "npm --prefix frontend/frontend run e2e:orchestrator-live-flow-rail:fresh",
+        "e2e:orchestrator-discuss4": "npm --prefix frontend/frontend run e2e:orchestrator-discuss4",
         "start:platform": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_all_in_one.ps1",
         "stop:platform": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_all_in_one.ps1",
         "start:backend": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_backend_stack.ps1",
@@ -39,14 +42,14 @@
         "health:ops": "npm run health:platform"
     },
     "dependencies": {
-        "eslint-config-next": "^16.2.1",
+        "eslint-config-next": "^16.2.6",
         "http-proxy": "^1.18.1",
         "next": "^16.2.6",
-        "react": "^19.2.4",
-        "react-dom": "^19.2.4"
+        "react": "^19.2.6",
+        "react-dom": "^19.2.6"
     },
     "devDependencies": {
-        "playwright": "^1.59.1"
+        "playwright": "^1.60.0"
     },
     "overrides": {
         "postcss": "^8.5.15",

@@ -15,6 +15,7 @@ type WorkspaceTextFileResponse = {
 };
 
 const DOC_LINKS = [
+    { path: 'docs/identity-provider-commercial-values-input-checklist.md', title: 'PASS/KMC/KCB 상용값 입력 체크리스트' },
     { path: 'docs/identity-provider-integration-contract.md', title: 'PASS/KMC/KCB 기술 연동 계약서' },
     { path: 'docs/identity-provider-operations-transition-package.md', title: '운영 전환 패키지' },
     { path: 'docs/identity-provider-business-type-guide.md', title: '개인사업자 / 법인사업자 가이드' },

@@ -6,6 +6,10 @@ android/app/build/
 android/app/.cxx/
 android/.kotlin/
 ios/build/
+# 로컬 머신 전용 파일은 EAS(Linux) 빌더에서 무효/충돌 → 반드시 제외.
+# local.properties 의 Windows sdk.dir 경로가 클라우드 gradle 빌드를 깨뜨린다.
+android/local.properties
+**/local.properties
 **/android/build/
 **/android/build/**
 **/.cxx/
@@ -28,6 +32,13 @@ node_modules/
 dist/
 web-build/
 build-artifacts/
+.gradle-tmp/
+**/.gradle-tmp/
+**/.gradle-tmp/**
+**/metro-cache/
+**/.metro-cache/
+**/coverage/
+**/__tests__/
 *.apk
 *.aab
 *.tar.gz

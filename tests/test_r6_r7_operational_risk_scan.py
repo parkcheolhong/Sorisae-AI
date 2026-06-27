@@ -66,7 +66,6 @@ def test_r7_long_timeout_markers_mitigated() -> None:
     assert 'location = /api/admin/system-settings {' in first_server_body
     assert 'proxy_read_timeout 120s;' in first_server_body
     assert 'proxy_send_timeout 120s;' in first_server_body
-
     assert 'location /api/ {' in first_server_body
     api_location_block = re.search(r'location /api/ \{([^}]*)\}', first_server_body)
     assert api_location_block is not None

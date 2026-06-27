@@ -17,6 +17,8 @@ import re
 import tempfile
 import threading
 from datetime import datetime, timezone
+
+from backend.time_utils import utcnow
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -154,6 +156,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     task: str = ""
     conversation: List[Dict[str, Any]] = []
     run_id: Optional[str] = None
+    session_id: Optional[str] = None
     stage_id: Optional[str] = None
     project_name: Optional[str] = None
     output_dir: Optional[str] = None
@@ -163,6 +166,7 @@ class CustomerOrchestratorChatRequest(BaseModel):
     companion_mode: str = "hybrid"
     response_style: str = "balanced"
     tone_preset: str = "auto"
+    reverse_question_mode: Optional[str] = None
     max_tokens: int = 768
 
 
@@ -260,6 +264,30 @@ def _get_customer_stage_execution_metadata(stage_run_payload: Dict[str, Any]) ->
     return dict(metadata.get("orchestration_execution") or {})
 
 
+def _customer_stage_run_owner_id(stage_run_payload: Dict[str, Any]) -> str:
+    requested_by = stage_run_payload.get("requested_by") if isinstance(stage_run_payload, dict) else {}
+    if not isinstance(requested_by, dict):
+        return ""
+    return str(requested_by.get("id") or "").strip()
+
+
+def _current_customer_user_id(current_user: models.User) -> str:
+    return str(getattr(current_user, "id", "") or "").strip()
+
+
+def _customer_stage_run_owned_by_current_user(stage_run_payload: Dict[str, Any], current_user: models.User) -> bool:
+    owner_id = _customer_stage_run_owner_id(stage_run_payload)
+    current_user_id = _current_customer_user_id(current_user)
+    return bool(owner_id and current_user_id and owner_id == current_user_id)
+
+
+def _load_customer_stage_run_for_user(run_id: str, current_user: models.User) -> Dict[str, Any]:
+    payload = load_stage_run(run_id)
+    if not payload or not _customer_stage_run_owned_by_current_user(payload, current_user):
+        raise HTTPException(status_code=404, detail="고객 stage run을 찾을 수 없습니다.")
+    return payload
+
+
 def _update_customer_stage_execution_metadata(run_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
     payload = load_stage_run(run_id)
     if not payload:
@@ -291,10 +319,16 @@ def _ensure_customer_stage_run_payload(
     return stage_run_payload
 
 
-async def _run_customer_orchestration_request(orchestration_request: Any) -> Any:
-    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+async def _run_customer_orchestration_request(
+    orchestration_request: Any,
+    owner_id: str | None = None,
+) -> Any:
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_execution
 
-    return await execute_orchestration_handler(orchestration_request)
+    return await run_autonomous_surface_execution(
+        orchestration_request,
+        owner_id=str(owner_id or getattr(orchestration_request, "run_id", "") or "marketplace-customer"),
+    )
 
 
 def _build_customer_orchestrate_result_payload(
@@ -473,7 +507,7 @@ def _resolve_stage_run_for_request(
     current_user: models.User,
 ) -> Optional[Dict[str, Any]]:
     if request.stage_run_id:
-        return load_stage_run(request.stage_run_id)
+        return _load_customer_stage_run_for_user(request.stage_run_id, current_user)
     project_name = (request.project_name or "customer-product").strip() or "customer-product"
     return initialize_stage_run(
         scope="marketplace",
@@ -555,17 +589,6 @@ def _sync_stage_run_after_result(
         note=note,
         manual_correction=combined_error if next_status != "passed" else "",
     )
-    if next_status == "passed":
-        synced["status"] = "completed"
-        synced["final_completed"] = True
-        synced["current_stage_id"] = normalized_stage_id
-        for stage in list(synced.get("stages") or []):
-            if str(stage.get("id") or "").upper() == normalized_stage_id:
-                continue
-            if str(stage.get("status") or "").lower() == "running":
-                stage["status"] = "pending"
-                stage["check_label"] = "대기"
-        synced = save_stage_run(synced)
     return synced
 
 
@@ -629,7 +652,7 @@ def _append_customer_follow_up_history(
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]

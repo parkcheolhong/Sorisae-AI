@@ -29,6 +29,9 @@ on:
           - build
           - build_and_submit
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   eas-build:
     runs-on: ubuntu-latest

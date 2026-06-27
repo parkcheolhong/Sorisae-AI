@@ -1,0 +1,102 @@
+{
+  "turn_controller": {
+    "timestamp_utc": "2026-06-15T22:03:00.681827+00:00",
+    "ollama_base": "http://127.0.0.1:8008/v1",
+    "live_model_id": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "preferred_model_id": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "profile_aligned_32b_awq": true,
+    "profile_note": null,
+    "model_routes": {
+      "default": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "reasoning": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "coding": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "voice_chat": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "coder": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "reviewer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "smart_planner": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "smart_executor": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+      "smart_designer": "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+    },
+    "llm_setup_ok": true,
+    "advisory": {
+      "llm_connected": true,
+      "intent": "code_generation",
+      "agent_results_summary": [
+        {
+          "agent": "reasoner",
+          "status": "success",
+          "elapsed_ms": 4111.5
+        }
+      ]
+    },
+    "abrain_agents": {
+      "reasoner": {
+        "status": "success",
+        "elapsed_ms": 4111.5,
+        "output_preview": "## 요구사항 분석 - 핵심 기능 목록   - 간단한 헬스체크 API 제공  ## 기술 스택 제안 - 사용할 기술/프레임워크   - Python: 주 언어   - FastAPI: 웹 프레임워크   - Uvicorn: ASGI 서버  ## 모델 설계 - 필요한 데이터 모델   - 현재 헬스체크 API는 별도의 데이터 모델이 필요하지 않음  ## API 엔드포인트 - 필요한 API 목록   - `/health`: GET 요청을 받",
+        "quality_checks": [
+          "structure_ok",
+          "length_ok"
+        ],
+        "llm_connected_artifact": true
+      },
+      "planner": {
+        "status": "success",
+        "elapsed_ms": 9937.5,
+        "output_preview": "## 디렉터리 구조 ``` gpu-a32-verify/ ├── app/ │   ├── main.py │   └── routers/ │       └── health.py ├── requirements.txt └── README.md ```  ## 파일별 구현 계획 - `main.py`: FastAPI 애플리케이션의 진입점으로, 라우터를 포함시키고 애플리케이션을 실행합니다.   - 핵심 함수/클래스: `app` FastAPI 인",
+        "quality_checks": [
+          "structure_ok",
+          "length_ok"
+        ],
+        "llm_connected_artifact": true
+      },
+      "reviewer": {
+        "status": "needs_revision",
+        "elapsed_ms": 4645.4,
+        "output_preview": "## 검토 결과 - approved: false  ## 품질 점수 - score: 85  ## 발견된 문제 - `routers/health.py` 파일에서 헬스체크 API 구현이 완료되지 않았습니다. 현재 설명만 제공되어 있고 실제 코드가 없습니다. - `README.md` 파일이 작성되지 않았습니다. 프로젝트에 대한 간단한 설명이나 사용법이 포함되어야 합니다. - `requirements.txt` 파일에 필요한 패키지들이 명",
+        "quality_checks": [
+          "structure_ok",
+          "length_ok"
+        ],
+        "llm_connected_artifact": true
+      }
+    },
+    "passed": true
+  },
+  "http_api": {
+    "skipped": false,
+    "http_status": 200,
+    "llm_connected": true,
+    "stub_agents": 0,
+    "success_agents": 1,
+    "agent_results": [
+      {
+        "agent": "reasoner",
+        "status": "success",
+        "elapsed_ms": 8114.0
+      }
+    ],
+    "content_preview": "### 🧠 추론자 ✅\n## 요구사항 분석\n- 핵심 기능 목록\n  - 간단한 헬스체크 API 제공\n\n## 기술 스택 제안\n- 사용할 기술/프레임워크\n  - Python\n  - FastAPI\n  - Uvicorn (ASGI 서버)\n\n## 모델 설계\n- 필요한 데이터 모델\n  - 이 프로젝트에서는 별도의 데이터 모델이 필요하지 않음\n\n## API 엔드포인트\n- ",
+    "passed": true,
+    "backend_contract_note": null
+  },
+  "http_testclient": {
+    "http_status": 200,
+    "llm_connected": true,
+    "stub_statuses": 0,
+    "llm_statuses": 1,
+    "agent_results": [
+      {
+        "agent": "reasoner",
+        "status": "success",
+        "elapsed_ms": 4983.3
+      }
+    ],
+    "content_preview": "### 🧠 추론자 ✅\n## 요구사항 분석\n- 핵심 기능 목록\n  - 간단한 헬스체크 API 제공\n\n## 기술 스택 제안\n- 사용할 기술/프레임워크\n  - FastAPI: 빠르고 효율적인 웹 프레임워크로, 비동기 프로그래밍을 지원하여 성능이 우수합니다.\n  - Uvicorn: ASGI 서버로 FastAPI 애플리케이션을 실행합니다.\n\n## 모델 설계\n- 필요",
+    "passed": true
+  },
+  "overall_passed": true
+}

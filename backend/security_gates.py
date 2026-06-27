@@ -66,6 +66,10 @@ class _InMemoryQuotaGate:
             window.count += 1
             return None
 
+    def reset(self) -> None:
+        with self._lock:
+            self._state.clear()
+
     def _prune(self, now_ts: float, window_seconds: float) -> None:
         stale_after = window_seconds * 4
         stale_keys = [
@@ -98,6 +102,16 @@ _ADMIN_MUTATION_QUOTA = _InMemoryQuotaGate(
     max_requests_env="ADMIN_MUTATION_QUOTA_MAX_REQUESTS",
     window_seconds_env="ADMIN_MUTATION_QUOTA_WINDOW_SEC",
     default_max_requests=120,
+    default_window_seconds=60.0,
+)
+
+# [V2 보안 STRIDE-D] 통화 개시는 방 생성 + 콜리 푸시를 유발하므로 남용 시 푸시 스팸/룸 고갈 위험.
+# 사용자/클라이언트 단위로 분당 개시 횟수를 제한한다(기본 20/분, 0 설정 시 비활성).
+_VOIP_CALL_QUOTA = _InMemoryQuotaGate(
+    scope="voip-call",
+    max_requests_env="VOIP_CALL_QUOTA_MAX_REQUESTS",
+    window_seconds_env="VOIP_CALL_QUOTA_WINDOW_SEC",
+    default_max_requests=20,
     default_window_seconds=60.0,
 )
 
@@ -169,3 +183,25 @@ def require_admin_mutation_quota(
         request=request,
         current_user=current_user,
     )
+
+
+def require_voip_call_quota(
+    request: Request,
+    current_user: Any = Depends(get_current_user),
+) -> Any:
+    return _enforce_quota(
+        quota_gate=_VOIP_CALL_QUOTA,
+        request=request,
+        current_user=current_user,
+    )
+
+
+def reset_for_test() -> None:
+    """테스트 격리용: 프로세스 전역 인메모리 쿼터 상태를 초기화한다."""
+    for gate in (
+        _LLM_MUTATION_QUOTA,
+        _IMAGE_MUTATION_QUOTA,
+        _ADMIN_MUTATION_QUOTA,
+        _VOIP_CALL_QUOTA,
+    ):
+        gate.reset()

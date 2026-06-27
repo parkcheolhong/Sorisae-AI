@@ -1,61 +1,352 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  type LayoutChangeEvent,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { getFriends, addFriend, removeFriend } from '../../api/friends';
-import type { Friend } from './types';
+import {
+  confirmFriendInvite,
+  getFriends,
+  getOutgoingFriendRequests,
+  getRecentMissedVoipCalls,
+  removeFriend,
+  requestFriendInviteCode,
+} from '../../api/friends';
+import type { Friend, MissedVoipCall, OutgoingFriendRequestItem } from './types';
+
+function formatPreferredLanguage(language?: string | null): string {
+  const normalized = language?.trim();
+  return normalized ? normalized.toUpperCase() : '미설정';
+}
+
+function buildTranslationContract(friend: Friend): string {
+  const normalizedLanguage = friend.friendPreferredLanguage?.trim();
+  if (normalizedLanguage) {
+    return `채팅/통화 시 상대 지정 언어 ${normalizedLanguage.toUpperCase()} 기준 자동 통번역`;
+  }
+
+  const normalizedCountry = friend.friendCountryCode?.trim().toUpperCase();
+  return normalizedCountry
+    ? `상대 지정 언어 미설정 · 가입 국가 ${normalizedCountry} fallback`
+    : '상대 지정 언어 미설정 · 가입 국가 fallback 대기';
+}
+
+type FriendAddMode = 'contacts' | 'manual';
 
 interface Props {
   userId: number;
   token: string;
+  currentUserEmail?: string;
+  visible?: boolean;
+  embeddedInScrollView?: boolean;
+  autoCallVoiceId?: string | null;
+  onAutoCallConsumed?: () => void;
+  onFriendSelected?: (friend: Friend) => void;
+  onOpenMapDiscovery?: () => void;
 }
 
-export function FriendFolderScreen({ userId, token }: Props) {
+function logFriendFolderDiag(event: string, payload: Record<string, unknown>) {
+  console.log('[FRIEND_FOLDER_DIAG]', JSON.stringify({ event, ...payload }));
+}
+
+export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected, onOpenMapDiscovery }: Props) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isNarrowWidth = windowWidth < 380;
+  const normalizedToken = token?.trim() ?? '';
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendTotal, setFriendTotal] = useState(0);
+  const [outgoingRequests, setOutgoingRequests] = useState<OutgoingFriendRequestItem[]>([]);
+  const [missedCalls, setMissedCalls] = useState<MissedVoipCall[]>([]);
   const [loading, setLoading] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [verificationChannel, setVerificationChannel] = useState<'email' | 'phone'>('email');
+  const [inviteStep, setInviteStep] = useState<'form' | 'verify'>('form');
+  const [inviteSessionToken, setInviteSessionToken] = useState('');
+  const [maskedTarget, setMaskedTarget] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [addMode, setAddMode] = useState<FriendAddMode>('contacts');
+  const [contactPickLoading, setContactPickLoading] = useState(false);
+  const [selectedContactLabel, setSelectedContactLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [accountPanelExpanded, setAccountPanelExpanded] = useState(false);
+  const [addFriendPanelExpanded, setAddFriendPanelExpanded] = useState(false);
+  const lastLayoutLogRef = useRef<Record<string, string>>({});
+  const autoCallAttemptedRef = useRef<string | null>(null);
+
+  const logLayoutMetric = useCallback((key: string, payload: Record<string, unknown>) => {
+    const serialized = JSON.stringify(payload);
+    if (lastLayoutLogRef.current[key] === serialized) {
+      return;
+    }
+    lastLayoutLogRef.current[key] = serialized;
+    logFriendFolderDiag(key, payload);
+  }, []);
+
+  const handleMeasuredLayout = useCallback((key: string, extra: Record<string, unknown> = {}) => {
+    return (event: LayoutChangeEvent) => {
+      const { width, height, x, y } = event.nativeEvent.layout;
+      logLayoutMetric(key, {
+        user_id: userId,
+        visible,
+        narrow: isNarrowWidth,
+        width,
+        height,
+        x,
+        y,
+        ...extra,
+      });
+    };
+  }, [isNarrowWidth, logLayoutMetric, userId, visible]);
 
   const load = useCallback(async () => {
+    if (!normalizedToken) {
+      setLoading(false);
+      setError(null);
+      setOutgoingRequests([]);
+      setMissedCalls([]);
+      logFriendFolderDiag('skip_load_missing_token', {
+        user_id: userId,
+        visible,
+      });
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const data = await getFriends(userId, token);
+      const [data, outgoing] = await Promise.all([
+        getFriends(userId, normalizedToken),
+        getOutgoingFriendRequests(normalizedToken),
+      ]);
       setFriends(data.friends);
+      setFriendTotal(data.total);
+      setOutgoingRequests(outgoing.requests);
+
+      try {
+        const missed = await getRecentMissedVoipCalls(normalizedToken);
+        setMissedCalls(missed);
+      } catch (e: unknown) {
+        setMissedCalls([]);
+        setError((previousError) => previousError ?? (e instanceof Error ? e.message : '부재중 통화를 불러올 수 없습니다.'));
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '친구 목록을 불러올 수 없습니다.');
     } finally {
       setLoading(false);
     }
-  }, [userId, token]);
+  }, [normalizedToken, userId, visible]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!visible) {
+      autoCallAttemptedRef.current = null;
+      setAccountPanelExpanded(false);
+      setAddFriendPanelExpanded(false);
+      return;
+    }
+    if (!normalizedToken) {
+      return;
+    }
+    void load();
+  }, [load, normalizedToken, visible]);
 
-  const handleAdd = useCallback(async () => {
-    const trimmed = email.trim();
-    if (!trimmed) return;
+  useEffect(() => {
+    const normalizedTarget = autoCallVoiceId?.trim().toLowerCase();
+    if (!visible || !normalizedTarget || loading || !onFriendSelected) {
+      return;
+    }
+    if (autoCallAttemptedRef.current === normalizedTarget) {
+      return;
+    }
+
+    const matchedFriend = friends.find((friend) => {
+      const voiceId = friend.friendVoiceId?.trim().toLowerCase();
+      return voiceId === normalizedTarget || voiceId?.includes(normalizedTarget) === true;
+    });
+    if (!matchedFriend) {
+      return;
+    }
+
+    autoCallAttemptedRef.current = normalizedTarget;
+    logFriendFolderDiag('auto_call_voice_id', {
+      user_id: userId,
+      voice_id: autoCallVoiceId,
+      friend_id: matchedFriend.id,
+      friend_voice_id: matchedFriend.friendVoiceId ?? null,
+    });
+    onAutoCallConsumed?.();
+    onFriendSelected(matchedFriend);
+  }, [autoCallVoiceId, friends, loading, onAutoCallConsumed, onFriendSelected, userId, visible]);
+
+  useEffect(() => {
+    if (inviteStep === 'verify') {
+      setAddFriendPanelExpanded(true);
+    }
+  }, [inviteStep]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    logFriendFolderDiag('data_snapshot', {
+      user_id: userId,
+      visible,
+      narrow: isNarrowWidth,
+      window_width: windowWidth,
+      friend_total: friendTotal,
+      friends_length: friends.length,
+      friend_ids: friends.map((friend) => friend.id),
+      friend_user_ids: friends.map((friend) => friend.friendUserId),
+      friend_voice_ids: friends.map((friend) => friend.friendVoiceId ?? null),
+      friend_emails: friends.map((friend) => friend.friendEmail),
+      outgoing_total: outgoingRequests.length,
+      missed_total: missedCalls.length,
+      loading,
+      error,
+    });
+  }, [error, friendTotal, friends, isNarrowWidth, loading, missedCalls.length, outgoingRequests.length, userId, visible, windowWidth]);
+
+  const resetInviteForm = useCallback(() => {
+    setInviteStep('form');
+    setInviteSessionToken('');
+    setMaskedTarget('');
+    setOtpCode('');
+    setDisplayName('');
+    setEmail('');
+    setPhone('');
+    setVerificationChannel('email');
+    setAddMode('contacts');
+    setSelectedContactLabel('');
+    setContactPickLoading(false);
+  }, []);
+
+  const handlePickContactFromDevice = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('연락처', '웹에서는 연락처를 불러올 수 없습니다. 직접 입력을 사용해 주세요.');
+      setAddMode('manual');
+      return;
+    }
+
+    setContactPickLoading(true);
+    setError(null);
+    try {
+      const Contacts = await import('expo-contacts');
+      const permission = await Contacts.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        setError('연락처 권한이 필요합니다. 설정에서 허용하거나 직접 입력을 사용해 주세요.');
+        return;
+      }
+
+      const pickedContact = await Contacts.presentContactPickerAsync();
+      if (!pickedContact) {
+        return;
+      }
+
+      const name = pickedContact.name?.trim() || '이름 없음';
+      const emailEntry = pickedContact.emails?.find((entry) => Boolean(entry.email?.trim()));
+      const phoneEntry = pickedContact.phoneNumbers?.find((entry) => Boolean(entry.number?.trim()));
+      const pickedEmail = emailEntry?.email?.trim().toLowerCase() ?? '';
+      const pickedPhone = phoneEntry?.number?.trim() ?? '';
+
+      setDisplayName(name);
+      setEmail(pickedEmail);
+      setPhone(pickedPhone);
+      setSelectedContactLabel(
+        [name, pickedPhone || null, pickedEmail || null].filter(Boolean).join(' · '),
+      );
+
+      if (pickedEmail) {
+        setVerificationChannel('email');
+      } else if (pickedPhone) {
+        setVerificationChannel('phone');
+        setError('선택한 연락처에 이메일이 없습니다. 앱 가입 이메일을 직접 입력해 주세요.');
+      } else {
+        setError('선택한 연락처에 이메일 또는 전화번호가 없습니다. 직접 입력을 사용해 주세요.');
+        setAddMode('manual');
+      }
+
+      logFriendFolderDiag('contact_picked_for_invite', {
+        user_id: userId,
+        has_email: Boolean(pickedEmail),
+        has_phone: Boolean(pickedPhone),
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '연락처를 불러오지 못했습니다.');
+    } finally {
+      setContactPickLoading(false);
+    }
+  }, [userId]);
+
+  const handleRequestInviteCode = useCallback(async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = displayName.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedEmail) {
+      setError('친구 이메일을 입력해 주세요.');
+      return;
+    }
+    if (!trimmedEmail.includes('@')) {
+      setError('올바른 이메일 형식을 입력해 주세요.');
+      return;
+    }
+    if (verificationChannel === 'phone' && !trimmedPhone) {
+      setError('전화 인증을 선택한 경우 연락처를 입력해 주세요.');
+      return;
+    }
     setAddLoading(true);
     setError(null);
     try {
-      await addFriend({ targetEmail: trimmed, phoneNumber: phone.trim() || undefined }, token);
-      setEmail('');
-      setPhone('');
-      await load();
+      const response = await requestFriendInviteCode({
+        targetEmail: trimmedEmail,
+        displayName: trimmedName || undefined,
+        phoneNumber: trimmedPhone || undefined,
+        verificationChannel,
+      }, token);
+      setInviteSessionToken(response.sessionToken);
+      setMaskedTarget(response.maskedTarget);
+      if (response.devOtpHint) {
+        setOtpCode(response.devOtpHint);
+      }
+      setInviteStep('verify');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '친구 추가에 실패했습니다.');
+      setError(e instanceof Error ? e.message : '인증 코드 요청에 실패했습니다.');
     } finally {
       setAddLoading(false);
     }
-  }, [email, token, load]);
+  }, [displayName, email, phone, token, verificationChannel]);
+
+  const handleConfirmInvite = useCallback(async () => {
+    const trimmedOtp = otpCode.trim();
+    if (!inviteSessionToken || trimmedOtp.length < 6) {
+      setError('6자리 인증 코드를 입력해 주세요.');
+      return;
+    }
+    setAddLoading(true);
+    setError(null);
+    try {
+      await confirmFriendInvite({
+        inviteSessionToken,
+        verificationCode: trimmedOtp,
+      }, token);
+      resetInviteForm();
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '친구 인증 확인에 실패했습니다.');
+    } finally {
+      setAddLoading(false);
+    }
+  }, [inviteSessionToken, load, otpCode, resetInviteForm, token]);
 
   const handleRemove = useCallback((friend: Friend) => {
     Alert.alert(
@@ -79,67 +370,390 @@ export function FriendFolderScreen({ userId, token }: Props) {
     );
   }, [token, load]);
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>👥 내 친구 목록</Text>
+  const renderHeaderContent = useCallback(() => (
+    <>
+      {outgoingRequests.length ? (
+        <View style={styles.pendingSection}>
+          <Text style={styles.pendingTitle}>보낸 요청</Text>
+          {outgoingRequests.map((request) => (
+            <View key={request.requestId} style={styles.pendingRow}>
+              <Text style={styles.pendingName}>
+                {(request.receiverCountryFlag || '🌐').trim()} {request.receiverNickname}
+              </Text>
+              <Text style={styles.pendingMeta}>
+                {request.receiverCountryCode || '국가 미상'} · {request.receiverGender || 'unknown'} · 상태 요청 보냄
+              </Text>
+              <Text style={styles.pendingMeta}>
+                보이스 ID {request.receiverVoiceId || '없음'}
+              </Text>
+              <Text style={styles.pendingMeta}>{request.createdAt}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
-      <View style={styles.addRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="친구 이메일 입력"
-          placeholderTextColor="#888"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!addLoading}
-        />
-      </View>
-      <View style={styles.addRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="연락처 번호 (선택)"
-          placeholderTextColor="#888"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-          editable={!addLoading}
-        />
-        <Pressable
-          style={[styles.addBtn, addLoading && styles.addBtnDisabled]}
-          onPress={() => { void handleAdd(); }}
-          disabled={addLoading}
+      {missedCalls.length ? (
+        <View style={styles.missedSection}>
+          <Text style={styles.missedTitle}>부재중 보이스톡</Text>
+          {missedCalls.slice(0, 5).map((item) => (
+            <View key={`${item.callId}-${item.id}`} style={styles.missedRow}>
+              <Text style={styles.missedCaller}>{item.callerLabel}</Text>
+              <Text style={styles.missedMeta}>
+                {(item.callerPreferredLanguage || 'unknown').toUpperCase()} · {item.callerCountryCode || '국가 미상'}
+              </Text>
+              <Text style={styles.missedMeta}>{item.createdAt}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </>
+  ), [missedCalls, outgoingRequests]);
+
+  const renderFriendRow = useCallback((item: Friend) => {
+    const canStartVoiceCall = Boolean(item.friendUserId || item.friendVoiceId);
+    const handlePressVoiceCall = () => {
+      if (!canStartVoiceCall) {
+        Alert.alert('ID 연결 필요', '보이스톡은 앱 보이스 ID 또는 사용자 ID가 있는 대상만 연결할 수 있습니다.');
+        return;
+      }
+      if (onFriendSelected) {
+        onFriendSelected(item);
+      }
+    };
+
+    return (
+      <View
+        key={`friend-row-${item.id}`}
+        style={[styles.friendRow, isNarrowWidth && styles.friendRowCompact]}
+        onLayout={handleMeasuredLayout('friend_row_layout', {
+          friend_id: item.id,
+          friend_user_id: item.friendUserId,
+          friend_email: item.friendEmail,
+          friend_voice_id: item.friendVoiceId ?? null,
+        })}
+      >
+        <View
+          style={[styles.friendInfo, isNarrowWidth && styles.friendInfoCompact]}
+          onLayout={handleMeasuredLayout('friend_info_layout', {
+            friend_id: item.id,
+            friend_user_id: item.friendUserId,
+            friend_email: item.friendEmail,
+            friend_voice_id: item.friendVoiceId ?? null,
+          })}
         >
-          <Text style={styles.addBtnText}>{addLoading ? '추가 중...' : '+ 추가'}</Text>
-        </Pressable>
+          <Text style={styles.friendName}>{item.friendUsername || item.friendEmail.split('@')[0]}</Text>
+          <Text style={styles.friendEmail}>{item.friendEmail}</Text>
+          {item.friendPhone ? (
+            <Text style={styles.friendPhone}>📞 {item.friendPhone}</Text>
+          ) : (
+            <Text style={styles.friendPhoneEmpty}>📞 번호 없음</Text>
+          )}
+          {item.friendVoiceId ? (
+            <Text style={styles.friendVoiceId}>보이스 ID {item.friendVoiceId}</Text>
+          ) : (
+            <Text style={styles.friendPhoneEmpty}>보이스 ID 없음</Text>
+          )}
+          {(item.friendPreferredLanguage || item.friendGender || item.friendCountryCode) ? (
+            <Text style={styles.friendMeta}>
+              지정 언어 {formatPreferredLanguage(item.friendPreferredLanguage)}
+              {' · '}
+              {(item.friendCountryFlag || (item.friendCountryCode ? '🌐' : '')).trim()} {item.friendCountryCode || '국가 미상'}
+              {' · '}
+              {item.friendGender || 'unknown'}
+            </Text>
+          ) : null}
+          <Text style={styles.friendContract}>{buildTranslationContract(item)}</Text>
+        </View>
+        <View style={[styles.friendActions, isNarrowWidth && styles.friendActionsCompact]}>
+          <Pressable
+            style={[styles.voiceCallBtn, !canStartVoiceCall && styles.voiceCallBtnDisabled, isNarrowWidth && styles.friendActionBtnCompact]}
+            onPress={handlePressVoiceCall}
+            disabled={!canStartVoiceCall}
+            accessibilityRole="button"
+            accessibilityLabel={`보이스톡 걸기, ${item.friendUsername || item.friendEmail}`}
+            testID={item.friendVoiceId ? `worldlinco-friend-voice-call-${item.friendVoiceId}` : undefined}
+          >
+            <Text style={[styles.voiceCallBtnText, !canStartVoiceCall && styles.voiceCallBtnTextDisabled]}>보이스톡 걸기</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.removeBtn, isNarrowWidth && styles.friendActionBtnCompact]}
+            onPress={() => handleRemove(item)}
+            accessibilityRole="button"
+            accessibilityLabel={`친구 삭제, ${item.friendUsername || item.friendEmail}`}
+          >
+            <Text style={styles.removeBtnText}>삭제</Text>
+          </Pressable>
+        </View>
       </View>
+    );
+  }, [handleMeasuredLayout, handleRemove, isNarrowWidth, onFriendSelected]);
+
+  const listViewportHeight = Math.max(300, Math.floor(windowHeight * 0.55));
+
+  const renderAccountSummary = useCallback(() => (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryText}>조회 계정: {currentUserEmail || '알 수 없음'}</Text>
+      <Text style={styles.summaryText}>사용자 ID: {userId}</Text>
+      <Text style={styles.summaryText}>친구 수: {friendTotal}</Text>
+    </View>
+  ), [currentUserEmail, friendTotal, userId]);
+
+  const renderAddFriendPanel = useCallback(() => (
+    <View style={styles.manualSection}>
+      <Text style={styles.manualHint}>
+        연락처·직접 입력·근처 찾기로 등록합니다. 이메일/전화 인증이 필요합니다.
+      </Text>
+      {inviteStep === 'form' ? (
+        <>
+          <View style={styles.addModeRow}>
+            <Pressable
+              style={[styles.addModeBtn, addMode === 'contacts' && styles.addModeBtnActive]}
+              onPress={() => setAddMode('contacts')}
+              testID="friend-add-mode-contacts"
+            >
+              <Text style={styles.addModeBtnText}>연락처</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.addModeBtn, addMode === 'manual' && styles.addModeBtnActive]}
+              onPress={() => setAddMode('manual')}
+              testID="friend-add-mode-manual"
+            >
+              <Text style={styles.addModeBtnText}>직접 입력</Text>
+            </Pressable>
+            {onOpenMapDiscovery ? (
+              <Pressable
+                style={styles.addModeBtn}
+                onPress={onOpenMapDiscovery}
+                testID="friend-add-mode-nearby"
+              >
+                <Text style={styles.addModeBtnText}>근처 찾기</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {addMode === 'contacts' ? (
+            <>
+              <Pressable
+                style={[styles.pickContactBtn, (contactPickLoading || addLoading) && styles.addBtnDisabled]}
+                onPress={() => { void handlePickContactFromDevice(); }}
+                disabled={contactPickLoading || addLoading}
+                testID="friend-pick-contact"
+              >
+                <Text style={styles.pickContactBtnText}>
+                  {contactPickLoading ? '연락처 불러오는 중...' : '📇 연락처에서 선택'}
+                </Text>
+              </Pressable>
+              {selectedContactLabel ? (
+                <Text style={styles.selectedContactLabel}>선택: {selectedContactLabel}</Text>
+              ) : (
+                <Text style={styles.contactPickHint}>
+                  연락처 선택 시 이름·이메일·전화가 자동 입력됩니다.
+                </Text>
+              )}
+            </>
+          ) : null}
+
+          <View style={styles.channelRow}>
+            <Pressable
+              style={[styles.channelBtn, verificationChannel === 'email' && styles.channelBtnActive]}
+              onPress={() => setVerificationChannel('email')}
+            >
+              <Text style={styles.channelBtnText}>이메일 인증</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.channelBtn, verificationChannel === 'phone' && styles.channelBtnActive]}
+              onPress={() => setVerificationChannel('phone')}
+            >
+              <Text style={styles.channelBtnText}>전화 인증</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            style={styles.inputFull}
+            placeholder="이름 (표시용)"
+            placeholderTextColor="#888"
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCapitalize="words"
+            editable={!addLoading}
+            testID="friend-manual-display-name"
+          />
+          <TextInput
+            style={styles.inputFull}
+            placeholder="이메일 (필수)"
+            placeholderTextColor="#888"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!addLoading}
+            testID="friend-manual-email"
+          />
+          <TextInput
+            style={styles.inputFull}
+            placeholder={verificationChannel === 'phone' ? '연락처 (전화 인증 필수)' : '연락처 (권장)'}
+            placeholderTextColor="#888"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            editable={!addLoading}
+            testID="friend-manual-phone"
+          />
+          <Pressable
+            style={[styles.addBtnFull, addLoading && styles.addBtnDisabled]}
+            onPress={() => { void handleRequestInviteCode(); }}
+            disabled={addLoading}
+            testID="friend-manual-request-otp"
+          >
+            <Text style={styles.addBtnText}>{addLoading ? '요청 중...' : '인증 코드 받기'}</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <Text style={styles.verifyHint}>
+            {maskedTarget} 으로 인증 코드를 보냈습니다. 6자리 코드를 입력해 주세요.
+          </Text>
+          <TextInput
+            style={styles.inputFull}
+            placeholder="6자리 인증 코드"
+            placeholderTextColor="#888"
+            value={otpCode}
+            onChangeText={setOtpCode}
+            keyboardType="number-pad"
+            maxLength={6}
+            editable={!addLoading}
+            testID="friend-manual-otp"
+          />
+          <Pressable
+            style={[styles.addBtnFull, addLoading && styles.addBtnDisabled]}
+            onPress={() => { void handleConfirmInvite(); }}
+            disabled={addLoading}
+            testID="friend-manual-submit"
+          >
+            <Text style={styles.addBtnText}>{addLoading ? '확인 중...' : '인증 후 친구 등록'}</Text>
+          </Pressable>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => {
+              setInviteStep('form');
+              setOtpCode('');
+              setError(null);
+            }}
+          >
+            <Text style={styles.backBtnText}>입력 다시하기</Text>
+          </Pressable>
+        </>
+      )}
+    </View>
+  ), [
+    addLoading,
+    addMode,
+    contactPickLoading,
+    displayName,
+    email,
+    handleConfirmInvite,
+    handlePickContactFromDevice,
+    handleRequestInviteCode,
+    inviteStep,
+    maskedTarget,
+    onOpenMapDiscovery,
+    otpCode,
+    phone,
+    selectedContactLabel,
+    verificationChannel,
+  ]);
+
+  const renderAccordionHeader = useCallback((
+    label: string,
+    expanded: boolean,
+    onPress: () => void,
+    testId: string,
+  ) => (
+    <Pressable
+      style={styles.accordionHeader}
+      onPress={onPress}
+      accessibilityRole="button"
+      testID={testId}
+    >
+      <Text style={styles.accordionTitle}>{label}</Text>
+      <Text style={styles.accordionChevron}>{expanded ? '▲' : '▼'}</Text>
+    </Pressable>
+  ), []);
+
+  const friendListStyle = embeddedInScrollView
+    ? [styles.listFlex, { maxHeight: listViewportHeight }]
+    : styles.listFlex;
+
+  return (
+    <View
+      style={[
+        embeddedInScrollView ? styles.containerEmbedded : styles.container,
+        isNarrowWidth && styles.containerCompact,
+      ]}
+      onLayout={handleMeasuredLayout('container_layout')}
+    >
+      {renderAccordionHeader(
+        `내 계정 · 친구 ${friendTotal}명`,
+        accountPanelExpanded,
+        () => setAccountPanelExpanded((prev) => !prev),
+        'friend-account-accordion',
+      )}
+      {accountPanelExpanded ? renderAccountSummary() : null}
+
+      {renderAccordionHeader(
+        '친구 추가',
+        addFriendPanelExpanded,
+        () => setAddFriendPanelExpanded((prev) => !prev),
+        'friend-add-accordion',
+      )}
+      {addFriendPanelExpanded ? renderAddFriendPanel() : null}
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
+      <View style={styles.listSectionHeader}>
+        <Text style={styles.listSectionTitle}>친구 연락처</Text>
+        <Text style={styles.listSectionMeta}>{friendTotal}명</Text>
+      </View>
+
       {loading ? (
         <ActivityIndicator color="#6ee7b7" style={styles.loader} />
-      ) : friends.length === 0 ? (
-        <Text style={styles.emptyText}>친구가 없습니다. 이메일로 추가해보세요.</Text>
       ) : (
-        <FlatList
-          data={friends}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <View style={styles.friendRow}>
-              <View style={styles.friendInfo}>
-                <Text style={styles.friendName}>{item.friendUsername || item.friendEmail.split('@')[0]}</Text>
-                <Text style={styles.friendEmail}>{item.friendEmail}</Text>
-                {item.friendPhone ? (
-                  <Text style={styles.friendPhone}>📞 {item.friendPhone}</Text>
-                ) : null}
-              </View>
-              <Pressable style={styles.removeBtn} onPress={() => handleRemove(item)}>
-                <Text style={styles.removeBtnText}>삭제</Text>
-              </Pressable>
-            </View>
-          )}
-          contentContainerStyle={styles.list}
-        />
+        embeddedInScrollView ? (
+          <FlatList
+            data={friends}
+            keyExtractor={(item) => String(item.id)}
+            style={friendListStyle}
+            nestedScrollEnabled
+            onLayout={handleMeasuredLayout('embedded_flatlist_layout', { row_count: friends.length })}
+            ListHeaderComponent={renderHeaderContent()}
+            ListEmptyComponent={<Text style={styles.emptyText}>친구가 없습니다. 친구 추가를 열어 등록해 보세요.</Text>}
+            renderItem={({ item }) => renderFriendRow(item)}
+            contentContainerStyle={styles.list}
+            keyboardShouldPersistTaps="handled"
+          />
+        ) : (
+          <FlatList
+            data={friends}
+            keyExtractor={(item) => String(item.id)}
+            style={friendListStyle}
+            nestedScrollEnabled
+            onLayout={handleMeasuredLayout('flatlist_layout', { row_count: friends.length })}
+            onContentSizeChange={(width, height) => {
+              logLayoutMetric('flatlist_content_size', {
+                user_id: userId,
+                visible,
+                narrow: isNarrowWidth,
+                width,
+                height,
+                row_count: friends.length,
+              });
+            }}
+            ListHeaderComponent={renderHeaderContent()}
+            ListEmptyComponent={<Text style={styles.emptyText}>친구가 없습니다. 친구 추가를 열어 등록해 보세요.</Text>}
+            renderItem={({ item }) => renderFriendRow(item)}
+            contentContainerStyle={styles.list}
+            keyboardShouldPersistTaps="handled"
+          />
+        )
       )}
     </View>
   );
@@ -149,18 +763,196 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0b0f16',
-    padding: 20,
+    padding: 12,
+  },
+  containerEmbedded: {
+    backgroundColor: '#0b0f16',
+    padding: 12,
+  },
+  containerCompact: {
+    padding: 10,
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#2a415e',
+    backgroundColor: '#111827',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 6,
+  },
+  accordionTitle: {
+    color: '#dbeafe',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  accordionChevron: {
+    color: '#93c5fd',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  listSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  listSectionTitle: {
+    color: '#eef7ff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  listSectionMeta: {
+    color: '#9eb3c9',
+    fontSize: 11,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#e2e8f0',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  summaryCard: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+  },
+  summaryText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  manualSection: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+    gap: 6,
+  },
+  manualTitle: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  manualHint: {
+    color: '#94a3b8',
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  addModeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  addModeBtn: {
+    flex: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#1e2533',
+  },
+  addModeBtnActive: {
+    borderColor: '#60a5fa',
+    backgroundColor: '#172554',
+  },
+  addModeBtnText: {
+    color: '#e2e8f0',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  pickContactBtn: {
+    backgroundColor: '#1e3a5f',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  pickContactBtnText: {
+    color: '#bfdbfe',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  selectedContactLabel: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  contactPickHint: {
+    color: '#64748b',
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  inputFull: {
+    backgroundColor: '#1e2533',
+    color: '#e2e8f0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    fontSize: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  addBtnFull: {
+    backgroundColor: '#6ee7b7',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  channelRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  channelBtn: {
+    flex: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#1e2533',
+  },
+  channelBtnActive: {
+    borderColor: '#60a5fa',
+    backgroundColor: '#172554',
+  },
+  channelBtnText: {
+    color: '#e2e8f0',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  verifyHint: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  backBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  backBtnText: {
+    color: '#93c5fd',
+    fontSize: 13,
   },
   addRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
+  },
+  addRowCompact: {
+    flexWrap: 'wrap',
   },
   input: {
     flex: 1,
@@ -173,12 +965,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
   },
+  inputCompact: {
+    minWidth: '100%',
+  },
   addBtn: {
     backgroundColor: '#6ee7b7',
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,
     justifyContent: 'center',
+  },
+  addBtnCompact: {
+    width: '100%',
+    alignItems: 'center',
   },
   addBtnDisabled: {
     opacity: 0.5,
@@ -196,6 +995,64 @@ const styles = StyleSheet.create({
   loader: {
     marginTop: 24,
   },
+  missedSection: {
+    backgroundColor: '#161722',
+    borderWidth: 1,
+    borderColor: '#3a2430',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+    gap: 6,
+  },
+  missedTitle: {
+    color: '#fda4af',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  missedRow: {
+    backgroundColor: '#20141b',
+    borderRadius: 6,
+    padding: 7,
+  },
+  missedCaller: {
+    color: '#ffe4e6',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  missedMeta: {
+    color: '#fbcfe8',
+    fontSize: 10,
+    marginTop: 1,
+  },
+  pendingSection: {
+    backgroundColor: '#13202c',
+    borderWidth: 1,
+    borderColor: '#1d4f73',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+    gap: 6,
+  },
+  pendingTitle: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  pendingRow: {
+    backgroundColor: '#162433',
+    borderRadius: 6,
+    padding: 7,
+  },
+  pendingName: {
+    color: '#dbeafe',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  pendingMeta: {
+    color: '#bfdbfe',
+    fontSize: 10,
+    marginTop: 1,
+  },
   emptyText: {
     color: '#64748b',
     textAlign: 'center',
@@ -205,29 +1062,75 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 16,
   },
+  listFlex: {
+    flex: 1,
+  },
   friendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1e2533',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+  },
+  friendRowCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   friendInfo: {
     flex: 1,
   },
+  friendInfoCompact: {
+    flexBasis: '100%',
+    width: '100%',
+  },
+  friendActions: {
+    width: 108,
+    gap: 6,
+    marginLeft: 8,
+  },
+  friendActionsCompact: {
+    width: '100%',
+    marginLeft: 0,
+    marginTop: 10,
+  },
+  friendActionBtnCompact: {
+    width: '100%',
+    alignItems: 'center',
+  },
   friendName: {
     color: '#e2e8f0',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   friendEmail: {
     color: '#94a3b8',
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+    marginTop: 1,
   },
   friendPhone: {
     color: '#6ee7b7',
+    fontSize: 11,
+    marginTop: 1,
+  },
+  friendVoiceId: {
+    color: '#79c0ff',
+    fontSize: 11,
+    marginTop: 1,
+  },
+  friendMeta: {
+    color: '#cbd5e1',
+    fontSize: 10,
+    marginTop: 1,
+  },
+  friendContract: {
+    color: '#7dd3fc',
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  friendPhoneEmpty: {
+    color: '#64748b',
     fontSize: 12,
     marginTop: 2,
   },
@@ -236,6 +1139,29 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
+    alignItems: 'center',
+  },
+  voiceCallBtn: {
+    backgroundColor: '#0d2a4a',
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  voiceCallBtnDisabled: {
+    opacity: 0.45,
+    borderColor: '#334155',
+    backgroundColor: '#1f2937',
+  },
+  voiceCallBtnText: {
+    color: '#bfdbfe',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  voiceCallBtnTextDisabled: {
+    color: '#94a3b8',
   },
   removeBtnText: {
     color: '#f87171',

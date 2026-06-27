@@ -77,18 +77,7 @@ export function speakAdminAlert(text: string) {
     if (!text || typeof window === 'undefined' || !window.speechSynthesis || !hasSpeechSynthesisActivation()) {
         return false;
     }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    const koreanVoice = window.speechSynthesis
-        .getVoices()
-        .find((voice) => voice.lang.toLowerCase().startsWith('ko'));
-    if (koreanVoice) {
-        utterance.voice = koreanVoice;
-    }
-    window.speechSynthesis.speak(utterance);
+    void import('@/lib/orchestrator-speech').then(({ speakOrchestratorReply }) => speakOrchestratorReply(text));
     return true;
 }
 

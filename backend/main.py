@@ -156,6 +156,11 @@ def _enable_qdrant_rest_only_mode() -> None:
         raise RuntimeError("gRPC is disabled in REST-only Qdrant mode.")
 
     def _grpc_getattr(name: str) -> Any:
+        # dunder 속성(__file__, __path__, __loader__, __spec__ 등)은 실제 모듈처럼
+        # "없음"으로 동작해야 한다. 함수 객체를 반환하면 inspect/torch 등이 모듈 메타데이터를
+        # 훑을 때 `'function' object has no attribute 'endswith'` 류로 깨진다.
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
         if name == "Compression":
             return grpc_stub.__dict__["Compression"]
         if name == "StatusCode":
@@ -382,6 +387,22 @@ def _start_admin_capability_warmup_thread() -> None:
     ).start()
 
 
+def _start_voice_stt_warmup_thread() -> None:
+    def _warmup() -> None:
+        try:
+            from backend.llm.voice_gateway import warmup_faster_whisper_model
+
+            warmup_faster_whisper_model()
+        except Exception as exc:
+            logger.warning(f"[WARN] voice STT warmup failed: {exc}")
+
+    threading.Thread(
+        target=_warmup,
+        name="voice-stt-warmup",
+        daemon=True,
+    ).start()
+
+
 def _run_post_startup_bootstrap() -> None:
     started_at = _mark_bootstrap_stage_started(
         "post_startup_bootstrap",
@@ -525,6 +546,7 @@ def _run_post_startup_bootstrap() -> None:
     _start_ad_order_worker_thread()
     _start_self_run_video_worker_thread()
     _start_admin_capability_warmup_thread()
+    _start_voice_stt_warmup_thread()
     _bootstrap_status["completed_at"] = datetime.now(timezone.utc).isoformat()
     _bootstrap_status["duration_ms"] = round((time.perf_counter() - started_at) * 1000, 1)
     _mark_bootstrap_stage_completed(
@@ -764,6 +786,23 @@ def _build_cors_origins() -> List[str]:
     return deduped
 
 
+_SAFE_DIAGNOSTIC_ERROR_CODES = {
+    "cpu_load_unavailable",
+    "gpu_runtime_unavailable",
+    "memory_snapshot_unavailable",
+    "queue_runtime_unavailable",
+}
+
+
+def _sanitize_diagnostic_error(error: Any, fallback_code: str) -> Optional[str]:
+    if error is None:
+        return None
+    raw = str(error).strip().lower() if not isinstance(error, Exception) else ""
+    if isinstance(error, Exception) or raw not in _SAFE_DIAGNOSTIC_ERROR_CODES:
+        return fallback_code
+    return raw
+
+
 def _relative_percent(numerator: float, denominator: float) -> Optional[float]:
     if denominator <= 0:
         return None
@@ -830,6 +869,14 @@ def _memory_snapshot() -> Dict[str, Any]:
             "available": False,
             "state": "warning",
             "note": "메모리 사용량을 수집하지 못했습니다.",
+        }
+
+    if "error" in snapshot:
+        return {
+            "available": False,
+            "state": "warning",
+            "note": "메모리 사용량을 수집하지 못했습니다.",
+            "error": _sanitize_diagnostic_error(snapshot["error"], "memory_snapshot_unavailable"),
         }
 
     usage_percent = snapshot.get("usage_percent")
@@ -959,7 +1006,7 @@ def _cpu_snapshot() -> Dict[str, Any]:
         "usage_percent": usage_percent,
     }
     if error_message:
-        payload["error"] = error_message
+        payload["error"] = _sanitize_diagnostic_error(error_message, "cpu_load_unavailable")
     return payload
 
 
@@ -971,16 +1018,13 @@ def _gpu_snapshot() -> Dict[str, Any]:
         else []
     )
     if not gpu_runtime.get("available"):
+        raw_error = gpu_runtime.get("error") if isinstance(gpu_runtime, dict) else None
         return {
             "available": False,
             "state": "warning",
             "note": "GPU 런타임이 감지되지 않았습니다. CPU fallback 또는 드라이버 상태를 확인하세요.",
             "devices": [],
-            "error": (
-                gpu_runtime.get("error")
-                if isinstance(gpu_runtime, dict)
-                else None
-            ),
+            "error": _sanitize_diagnostic_error(raw_error, "gpu_runtime_unavailable"),
         }
 
     peak_usage = 0.0
@@ -1283,6 +1327,15 @@ app.add_middleware(
 )
 logger.info("[OK] cors origins loaded: %s", cors_origins)
 
+# ── OpenTelemetry 분산 트레이싱 (opt-in · 의존성 가드 · fail-open, 기술서 §0.22) ──
+# OTEL_TRACING_ENABLED 미설정/미설치/실패 시 no-op — 기동·요청 처리에 무영향.
+try:
+    from backend.observability.tracing import init_tracing
+    init_tracing(app)
+except Exception as _otel_err:
+    logger.warning("[WARN] otel tracing skipped: %s", _otel_err)
+
+
 # ── Prometheus Metrics ──
 try:
     from backend.marketplace.prometheus_metrics import PrometheusMiddleware, get_metrics
@@ -1417,6 +1470,30 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] voice router skipped: {e}")
 
+# ── Tourism Human Review (사람검수) ──
+try:
+    from backend.api.tourism_review_router import router as tourism_review_router
+    app.include_router(tourism_review_router)
+    logger.info("[OK] tourism review router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] tourism review router skipped: {e}")
+
+# ── Carbon/Energy meter (ops) ──
+try:
+    from backend.api.carbon_router import router as carbon_router
+    app.include_router(carbon_router)
+    logger.info("[OK] carbon router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] carbon router skipped: {e}")
+
+# ── Tourism pilot beta feedback (NPS/A·B) ──
+try:
+    from backend.api.tourism_feedback_router import router as tourism_feedback_router
+    app.include_router(tourism_feedback_router)
+    logger.info("[OK] tourism feedback router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] tourism feedback router skipped: {e}")
+
 # ── Mobile Song Translation ──
 try:
     from backend.mobile.song_translation import router as mobile_song_translation_router
@@ -1424,6 +1501,44 @@ try:
     logger.info("[OK] mobile song translation router loaded")
 except Exception as e:
     logger.warning(f"[WARN] mobile song translation router skipped: {e}")
+
+# ── VoIP Interpretation Calls (WorldLinco) ──
+try:
+    from backend.marketplace.nadotongryoksa_voip_router import (
+        router as nadotongryoksa_voip_router,
+    )
+    app.include_router(nadotongryoksa_voip_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa voip router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa voip router skipped: {e}")
+
+# ── WorldLinco mobile: friends / chat / OCR ──
+try:
+    from backend.marketplace.nadotongryoksa_friends_router import (
+        router as nadotongryoksa_friends_router,
+    )
+    app.include_router(nadotongryoksa_friends_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa friends router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa friends router skipped: {e}")
+
+try:
+    from backend.marketplace.nadotongryoksa_chat_router import (
+        router as nadotongryoksa_chat_router,
+    )
+    app.include_router(nadotongryoksa_chat_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa chat router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa chat router skipped: {e}")
+
+try:
+    from backend.mobile.image_translation.router import (
+        router as mobile_image_translation_router,
+    )
+    app.include_router(mobile_image_translation_router)
+    logger.info("[OK] mobile image translation router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] mobile image translation router skipped: {e}")
 
 # ── Marketplace ──
 try:
@@ -1472,6 +1587,14 @@ try:
     logger.info("[OK] external search router loaded")
 except Exception as e:
     logger.warning(f"[WARN] external search router skipped: {e}")
+
+# ── Autonomous Multi-Agent Orchestrator ──
+try:
+    from backend.orchestrator.autonomous.router import router as autonomous_router
+    app.include_router(autonomous_router)
+    logger.info("[OK] autonomous multi-agent orchestrator router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] autonomous orchestrator router skipped: {e}")
 
 # ── Face Recognition / ML Detectors / Vector Search ──
 # NOTE: These routers are registered via the marketplace contract router (with

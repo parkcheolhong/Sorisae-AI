@@ -14,6 +14,9 @@ on:
       - ".github/workflows/admin-regression.yml"
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   admin-regression-precheck:
     runs-on: ubuntu-latest
@@ -25,7 +28,7 @@ jobs:
 
       - name: Detect full-lane impact paths
         id: paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             admin_full:
@@ -33,7 +36,7 @@ jobs:
               - 'frontend/frontend/components/admin/**'
               - 'frontend/frontend/lib/admin*'
               - 'frontend/frontend/tests/admin*.playwright.spec.ts'
-              - 'frontend/frontend/playwright.config.cjs'
+              - 'frontend/frontend/playwright.config.ts'
               - 'frontend/frontend/package.json'
               - 'frontend/frontend/proxy.ts'
               - 'frontend/frontend/next.config.ts'
@@ -73,6 +76,7 @@ jobs:
           PLAYWRIGHT_ADMIN_PORT: "3005"
           PLAYWRIGHT_ADMIN_BASE_URL: "http://127.0.0.1:3005"
           BACKEND_PROXY_TARGET: "http://127.0.0.1:8000"
+          ADMIN_REGRESSION_MOCK_BACKEND: "1"
         run: npm run ci:admin-regression:smoke
 
       - name: Upload smoke Playwright report
@@ -115,6 +119,7 @@ jobs:
           PLAYWRIGHT_ADMIN_PORT: "3005"
           PLAYWRIGHT_ADMIN_BASE_URL: "http://127.0.0.1:3005"
           BACKEND_PROXY_TARGET: "http://127.0.0.1:8000"
+          ADMIN_REGRESSION_MOCK_BACKEND: "1"
         run: npm run ci:admin-regression:full
 
       - name: Upload full Playwright report

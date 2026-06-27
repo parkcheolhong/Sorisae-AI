@@ -3,12 +3,12 @@ import os
 import bcrypt
 import secrets
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer
 
 
@@ -104,7 +104,7 @@ def create_access_token(
 ) -> str:
     to_encode = data.copy()
     if not no_expiry:
-        expire = datetime.utcnow() + (
+        expire = datetime.now(timezone.utc) + (
             expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         to_encode.update({"exp": expire})
@@ -112,6 +112,20 @@ def create_access_token(
 
 
 JWT_SECRET = SECRET_KEY
+
+
+def resolve_token_subject(token: str) -> Optional[str]:
+    token_value = str(token or "").strip()
+    if not token_value:
+        return None
+    try:
+        payload = jwt.decode(token_value, SECRET_KEY, algorithms=[ALGORITHM])
+        subject = payload.get("sub")
+        if isinstance(subject, str) and subject.strip():
+            return subject.strip()
+    except JWTError:
+        return None
+    return None
 
 
 def is_weak_secret_key() -> bool:
@@ -140,6 +154,26 @@ def is_weak_secret_key() -> bool:
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
+    return _resolve_current_user_from_token(token)
+
+
+def get_current_user_flexible(
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    access_token: Optional[str] = Query(None, alias="token"),
+):
+    """Bearer header or ?token= query (EventSource / WebSocket clients)."""
+    effective = str(token or access_token or request.query_params.get("token") or "").strip()
+    if not effective:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="인증 정보가 유효하지 않습니다",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _resolve_current_user_from_token(effective)
+
+
+def _resolve_current_user_from_token(token: str):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증 정보가 유효하지 않습니다",
@@ -151,9 +185,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         if not isinstance(username, str) or not username:
             raise credentials_exception
     except JWTError:
-        username = _resolve_registered_subject(token)
-        if not isinstance(username, str) or not username:
-            raise credentials_exception
+        raise credentials_exception
 
     # DB에서 유저 조회
     from backend.database import SessionLocal

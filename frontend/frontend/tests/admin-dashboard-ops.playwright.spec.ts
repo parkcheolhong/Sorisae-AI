@@ -232,4 +232,11 @@ test.describe('admin dashboard ops regression', () => {
             }
         }
     });
+
+    test('admin llm exposes unified orchestrator workbench shell', async ({ page }) => {
+        await page.goto('/admin/llm', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByTestId('orchestrator-workbench')).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByTestId('orchestrator-live-flow-rail')).toBeVisible();
+        await expect(page.getByTestId('orchestrator-decision-panel')).toBeVisible();
+    });
 });

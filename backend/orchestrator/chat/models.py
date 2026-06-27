@@ -46,6 +46,7 @@ class OrchestratorChatRequest(BaseModel):
     multi_turn_enabled: bool = True
     response_style: str = "balanced"
     tone_preset: str = "auto"
+    reverse_question_mode: Optional[str] = None
     message_kind: Optional[str] = None
     conversation: List[Dict[str, Any]] = Field(default_factory=list)
     context_tags: List[str] = Field(default_factory=list)
@@ -91,6 +92,16 @@ class ProposalItem(BaseModel):
     detail: str
     benefit: Optional[str] = None
     tradeoff: Optional[str] = None
+
+
+class TechnologyRecommendation(BaseModel):
+    title: str
+    source: str = "llm"
+    adoption_risk: str
+    implementation_difficulty: str
+    operating_cost: str
+    alternative: str
+    rationale: str
 
 
 class TargetPatchHint(BaseModel):
@@ -145,6 +156,7 @@ class OrchestratorChatResponse(BaseModel):
     conversation: List[ConversationMessage] = Field(default_factory=list)
     output_dir: Optional[str] = None
     run_id: Optional[str] = None
+    session_id: Optional[str] = None
     grounding_mode: str = "internal"
     grounding_note: Optional[str] = None
     companion_mode: str = "hybrid"
@@ -165,6 +177,7 @@ class OrchestratorChatResponse(BaseModel):
     inferred_goal: Optional[str] = None
     proposal_items: List[ProposalItem] = Field(default_factory=list)
     new_technology_candidates: List[str] = Field(default_factory=list)
+    technology_recommendations: List[TechnologyRecommendation] = Field(default_factory=list)
     target_patch_hints: List[TargetPatchHint] = Field(default_factory=list)
     project_root: Optional[str] = None
     project_memory: Dict[str, Any] = Field(default_factory=dict)

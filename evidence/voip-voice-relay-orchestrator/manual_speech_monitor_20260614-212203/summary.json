@@ -1,0 +1,57 @@
+﻿{
+    "timestamp":  "2026-06-14T21:23:19.1073739+09:00",
+    "run_dir":  "c:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\voip-voice-relay-orchestrator\\manual_speech_monitor_20260614-212203",
+    "monitor_sec":  75,
+    "call_id_hint":  "call-e065d1741786",
+    "silero_speech_end":  {
+                              "tab":  1,
+                              "s10":  3
+                          },
+    "relay_s10_to_tab":  true,
+    "relay_tab_to_s10":  false,
+    "tab_analysis":  {
+                         "device":  "Tab(caller)",
+                         "hits":  {
+                                      "VOIP_VOICE_RELAY_SKIP":  0,
+                                      "SEGMENT_STARTED":  1,
+                                      "SEGMENT_FLUSH":  1,
+                                      "START_BLOCKED":  2,
+                                      "VOIP_VOICE_TRANSLATE":  2,
+                                      "SILERO_SPEECH_END":  1,
+                                      "SILERO_STARTED":  1,
+                                      "VOIP_VOICE_RELAY_SENT":  0,
+                                      "VOIP_VOICE_RELAY_PLAYBACK":  2,
+                                      "SILERO_SPEECH_START":  1
+                                  },
+                         "flush_reasons":  "remote_listen_active=1",
+                         "skip_reasons":  "",
+                         "sent_count":  0,
+                         "playback_count":  2,
+                         "silero_end_count":  1,
+                         "sent_samples":  "",
+                         "playback_samples":  "06-14 21:22:26.451 I/ReactNativeJS(25161): \u0027[UI_PRESS_PROBE]\u0027, \u0027{\"event\":\"VOIP_VOICE_RELAY_PLAYBACK\",\"call_id\":\"call-efa25d8c310a\",\"target_lang\":\"en\",\"translated_text\":\"The call is connected\",\"translated_length\":21,\"tts_delivery\":\"device_speech\",\"speaker_on\":false,\"timestamp\":\"2026-06-14T12:22:26.450Z\"}\u0027\n06-14 21:22:37.366 I/ReactNativeJS(25161): \u0027[UI_PRESS_PROBE]\u0027, \u0027{\"event\":\"VOIP_VOICE_RELAY_PLAYBACK\",\"call_id\":\"call-efa25d8c310a\",\"target_lang\":\"en\",\"translated_text\":\"It\\\u0027s derring.\",\"translated_length\":13,\"tts_delivery\":\"device_speech\",\"speaker_on\":false,\"timestamp\":\"2026-06-14T12:22:37.363Z\"}\u0027"
+                     },
+    "s10_analysis":  {
+                         "device":  "S10(callee)",
+                         "hits":  {
+                                      "VOIP_VOICE_RELAY_SKIP":  0,
+                                      "SEGMENT_STARTED":  3,
+                                      "SEGMENT_FLUSH":  3,
+                                      "START_BLOCKED":  0,
+                                      "VOIP_VOICE_TRANSLATE":  6,
+                                      "SILERO_SPEECH_END":  3,
+                                      "SILERO_STARTED":  3,
+                                      "VOIP_VOICE_RELAY_SENT":  2,
+                                      "VOIP_VOICE_RELAY_PLAYBACK":  0,
+                                      "SILERO_SPEECH_START":  3
+                                  },
+                         "flush_reasons":  "segment_stop=1",
+                         "skip_reasons":  "",
+                         "sent_count":  2,
+                         "playback_count":  0,
+                         "silero_end_count":  3,
+                         "sent_samples":  "06-14 21:22:24.941 I/ReactNativeJS(21888): \u0027[UI_PRESS_PROBE]\u0027, \u0027{\"event\":\"VOIP_VOICE_RELAY_SENT\",\"call_id\":\"call-efa25d8c310a\",\"transcript\":\"통화가 연결된 상태이며\",\"translated_text\":\"The call is connected\",\"utterance_id\":\"call-efa25d8c310a-1781439732750\",\"chunk_index\":0,\"is_final\":true,\"seq_id\":5,\"relay_duration_ms\":3784,\"timestamp\":\"2026-06-14T12:22:24.941Z\"}\u0027\n06-14 21:22:35.848 I/ReactNativeJS(21888): \u0027[UI_PRESS_PROBE]\u0027, \u0027{\"event\":\"VOIP_VOICE_RELAY_SENT\",\"call_id\":\"call-efa25d8c310a\",\"transcript\":\"더링합니다.\",\"translated_text\":\"It\\\u0027s derring.\",\"utterance_id\":\"call-efa25d8c310a-1781439744983\",\"chunk_index\":0,\"is_final\":true,\"seq_id\":6,\"relay_duration_ms\":4487,\"timestamp\":\"2026-06-14T12:22:35.848Z\"}\u0027",
+                         "playback_samples":  ""
+                     },
+    "verdict":  "RELAY_PASS"
+}

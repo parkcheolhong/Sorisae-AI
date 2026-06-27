@@ -56,6 +56,9 @@ class User(Base):
     representative_name = Column(String(120))
     hashed_password = Column(String(255))
     avatar_url = Column(String(500))
+    preferred_language = Column(String(16), nullable=True)
+    country_code = Column(String(8), nullable=True)
+    phone_number = Column(String(40), nullable=True, index=True)
     credit_balance = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, nullable=False, default=False)
@@ -306,5 +309,146 @@ class FeatureRetryQueue(Base):
     attempt_count = Column(Integer, nullable=True, default=0)
     max_attempts = Column(Integer, nullable=True, default=3)
     retry_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
+
+
+class CallModeAuditLog(Base):
+    __tablename__ = 'call_mode_audit_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    call_id = Column(String(120), nullable=False, index=True)
+    session_id = Column(String(120), nullable=True, index=True)
+    event_type = Column(String(80), nullable=False, index=True)
+    requested_mode = Column(String(80), nullable=True)
+    resolved_mode = Column(String(80), nullable=True)
+    auto_relay_requested = Column(Boolean, nullable=False, default=False)
+    auto_relay_applied = Column(Boolean, nullable=False, default=False)
+    call_route = Column(String(80), nullable=True)
+    caller_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    callee_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    callee_phone = Column(String(40), nullable=True)
+    status = Column(String(40), nullable=True)
+    error_code = Column(String(120), nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    duration_sec = Column(Integer, nullable=True)
+    call_quality = Column(String(40), nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class Friend(Base):
+    __tablename__ = 'friends'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    friend_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    friend_email = Column(String(255), nullable=True, index=True)
+    friend_username = Column(String(255), nullable=True)
+    friend_phone = Column(String(40), nullable=True)
+    added_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+    friend_user = relationship("User", foreign_keys=[friend_user_id])
+
+
+class FriendRequest(Base):
+    __tablename__ = 'friend_requests'
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(String(64), nullable=False, unique=True, index=True)
+    sender_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    receiver_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    sender_nickname = Column(String(120), nullable=True)
+    sender_gender = Column(String(20), nullable=True)
+    sender_country_code = Column(String(8), nullable=True)
+    sender_voice_id = Column(String(120), nullable=True)
+    status = Column(String(20), nullable=False, default='pending', index=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    responded_at = Column(DateTime, nullable=True)
+
+
+class FriendDiscoveryLocation(Base):
+    __tablename__ = 'friend_discovery_locations'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True, index=True)
+    nickname = Column(String(120), nullable=True)
+    gender = Column(String(20), nullable=True)
+    country_code = Column(String(8), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    accuracy = Column(Float, nullable=True)
+    share_on_map = Column(Boolean, nullable=False, default=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class ChatRoom(Base):
+    __tablename__ = 'chat_rooms'
+
+    id = Column(Integer, primary_key=True, index=True)
+    room_uuid = Column(String(64), nullable=False, unique=True, index=True)
+    room_type = Column(String(20), nullable=False, default='direct', index=True)
+    title = Column(String(200), nullable=True)
+    owner_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    default_source_lang = Column(String(16), nullable=True)
+    default_target_lang = Column(String(16), nullable=True)
+    translation_mode = Column(String(20), nullable=True)
+    allow_member_invites = Column(Boolean, nullable=False, default=False)
+    member_limit = Column(Integer, nullable=True)
+    is_archived = Column(Boolean, nullable=False, default=False, index=True)
+    last_message_id = Column(Integer, nullable=True)
+    last_message_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class ChatRoomMember(Base):
+    __tablename__ = 'chat_room_members'
+
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    role = Column(String(20), nullable=False, default='member')
+    membership_status = Column(String(20), nullable=False, default='active', index=True)
+    joined_at = Column(DateTime, default=_utcnow_naive, nullable=False)
+    left_at = Column(DateTime, nullable=True)
+    mute_notifications = Column(Boolean, nullable=False, default=False)
+    pinned_order = Column(Integer, nullable=True)
+    last_read_message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=True)
+    last_read_at = Column(DateTime, nullable=True)
+
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_uuid = Column(String(64), nullable=False, unique=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id'), nullable=False, index=True)
+    sender_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    message_type = Column(String(24), nullable=False, default='text')
+    body = Column(Text, nullable=False)
+    translated_body = Column(Text, nullable=True)
+    body_source_lang = Column(String(16), nullable=True)
+    body_target_lang = Column(String(16), nullable=True)
+    translation_engine = Column(String(40), nullable=True)
+    translation_status = Column(String(20), nullable=True)
+    reply_to_message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False, index=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class ChatMessageTranslation(Base):
+    __tablename__ = 'chat_message_translations'
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=False, index=True)
+    recipient_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    target_lang = Column(String(16), nullable=True)
+    translated_body = Column(Text, nullable=True)
+    translation_engine = Column(String(40), nullable=True)
+    translation_status = Column(String(20), nullable=True)
+    failure_code = Column(String(80), nullable=True)
+    failure_detail = Column(Text, nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=_utcnow_naive, index=True)
     updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)

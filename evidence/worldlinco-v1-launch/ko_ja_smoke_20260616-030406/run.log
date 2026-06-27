@@ -1,0 +1,12 @@
+[03:04:06] ko↔ja VoIP smoke -> C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\worldlinco-v1-launch\ko_ja_smoke_20260616-030406
+[03:04:06] Set S10 (119cash@naver.com) preferred_language=ja via API
+[03:04:07] WARN: S10 profile API update failed — app will use cached profile until /me refresh
+[03:04:07] Pre-call hangup + stale call purge
+[03:05:01] Call setup (SetupOnly)
+[03:06:09] Connected call_id=call-2c3cc24922c0 — waiting stable 8s...
+[03:06:19] Call stable 8s on both devices call_id=call-2c3cc24922c0
+[03:06:19] === S10 ONLY: Japanese 6+ sec (e.g. こんにちは。よろしくお願いします。) ===
+[03:07:30] PASS=True call_id=call-2c3cc24922c0 s10_sent=True target_ko=True ja_seg=True tab_play=True ja=True ko_tts=True repetition=0
+[03:07:30] Evidence: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\worldlinco-v1-launch\ko_ja_smoke_20260616-030406
+[03:07:30] Post-call hangup
+[03:08:51] Restore S10 preferred_language=ko

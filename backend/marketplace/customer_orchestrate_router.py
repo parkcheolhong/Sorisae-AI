@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
+
+from backend.auth import ALGORITHM, SECRET_KEY, get_current_user_flexible
 
 
 def build_customer_orchestrate_router(contract: Any) -> APIRouter:
@@ -16,9 +18,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
     ):
         stage_run_payload = None
         if request.run_id:
-            stage_run_payload = contract.load_stage_run(request.run_id)
-
-        from backend.llm.orchestrator import answer_orchestrator_chat as answer_orchestrator_chat_handler
+            stage_run_payload = contract._load_customer_stage_run_for_user(request.run_id, current_user)
 
         project_name = str(request.project_name or (stage_run_payload or {}).get("project_name") or "customer-product").strip() or "customer-product"
         auto_connect = contract.AutoConnectMeta(
@@ -30,31 +30,63 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             panel_id="PANEL-CUSTOMER-ORCHESTRATOR",
             capability_id="customer-orchestrator-chat",
         )
-        chat_response = await answer_orchestrator_chat_handler(
-            request_context=request_context,
-            request=contract.OrchestratorChatRequest(
-                task=str(request.task or "").strip() or project_name,
+        orchestrator_request = contract.OrchestratorChatRequest(
+            task=str(request.task or "").strip() or project_name,
+            message=str(request.message or "").strip(),
+            agent_key="customer_orchestrator",
+            mode="manual_10step",
+            manual_mode=True,
+            companion_mode=str(request.companion_mode or "hybrid").strip() or "hybrid",
+            conversation_mode=str(request.conversation_mode or "auto").strip() or "auto",
+            output_dir=request.output_dir,
+            run_id=request.run_id,
+            session_id=request.session_id or request.run_id,
+            max_tokens=int(request.max_tokens or 768),
+            lightweight=False,
+            multi_turn_enabled=True,
+            response_style=str(request.response_style or "balanced").strip() or "balanced",
+            tone_preset=str(request.tone_preset or "auto").strip() or "auto",
+            reverse_question_mode=request.reverse_question_mode,
+            conversation=list(request.conversation or []),
+            context_tags=list(request.context_tags or []) + ["customer", "stage-run", "manual-10step"],
+            project_root=request.output_dir,
+            project_memory=dict(request.project_memory or {}),
+            auto_connect=auto_connect,
+        )
+
+        from backend.orchestrator.autonomous.surface_adapter import (
+            run_autonomous_surface_chat,
+            should_route_orchestrator_chat_to_autonomous,
+        )
+
+        if should_route_orchestrator_chat_to_autonomous(orchestrator_request, request_context):
+            run_id = str(request.run_id or "").strip() or None
+            stage_run_id = run_id if run_id and run_id.startswith("stage_run_") else None
+            chat_response = await run_autonomous_surface_chat(
                 message=str(request.message or "").strip(),
-                agent_key="customer_orchestrator",
+                owner_id=str(getattr(current_user, "id", None) or "customer-orchestrate"),
+                surface="marketplace",
+                session_id=str(request.session_id or request.run_id or "").strip() or None,
+                run_id=run_id,
+                stage_run_id=stage_run_id,
+                task=str(request.task or "").strip() or project_name,
+                project_name=project_name,
                 mode="manual_10step",
                 manual_mode=True,
-                companion_mode=str(request.companion_mode or "hybrid").strip() or "hybrid",
-                conversation_mode=str(request.conversation_mode or "auto").strip() or "auto",
-                output_dir=request.output_dir,
-                run_id=request.run_id,
-                max_tokens=int(request.max_tokens or 768),
-                lightweight=False,
-                multi_turn_enabled=True,
-                response_style=str(request.response_style or "balanced").strip() or "balanced",
-                tone_preset=str(request.tone_preset or "auto").strip() or "auto",
                 conversation=list(request.conversation or []),
-                context_tags=list(request.context_tags or []) + ["customer", "stage-run", "manual-10step"],
-                project_root=request.output_dir,
-                project_memory=dict(request.project_memory or {}),
-                auto_connect=auto_connect,
-            ),
-            agent_key="customer_orchestrator",
-        )
+                context_tags=list(orchestrator_request.context_tags or []),
+                validation_profile="python_fastapi",
+            )
+        else:
+            from backend.llm.orchestrator import answer_orchestrator_chat as answer_orchestrator_chat_handler
+
+            chat_response = await answer_orchestrator_chat_handler(
+                request_context=request_context,
+                request=orchestrator_request,
+                agent_key="customer_orchestrator",
+                current_user=current_user,
+            )
+
         chat_response.stage_chat = contract._build_customer_stage_chat_context(stage_run_payload, request)
         chat_response.diagnostics = {
             **dict(chat_response.diagnostics or {}),
@@ -63,6 +95,56 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             "stage_run_connected": bool(stage_run_payload),
         }
         return chat_response
+
+    @router.get("/customer-orchestrate/progress/{run_id}")
+    def get_customer_orchestrate_progress(
+        run_id: str,
+        current_user=Depends(contract.get_current_user),
+    ):
+        from backend.orchestrator.autonomous.progress_tracker import load_progress_for_run
+
+        payload = load_progress_for_run(run_id)
+        if not payload:
+            raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
+        return payload
+
+    @router.get("/customer-orchestrate/progress/stream/{run_id}")
+    async def stream_customer_orchestrate_progress(
+        run_id: str,
+        current_user=Depends(get_current_user_flexible),
+    ):
+        from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_sse
+
+        async def _event_stream():
+            async for frame in iter_orchestration_progress_sse(run_id):
+                yield frame
+
+        return contract.StreamingResponse(_event_stream(), media_type="text/event-stream")
+
+    @router.websocket("/customer-orchestrate/progress/ws/{run_id}")
+    async def websocket_customer_orchestrate_progress(websocket: WebSocket, run_id: str):
+        from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_ws
+        from jose import jwt as _jwt
+
+        token = str(websocket.query_params.get("token") or "").strip()
+        if not token:
+            await websocket.close(code=4401, reason="token required")
+            return
+        try:
+            _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            await websocket.close(code=4401, reason="인증 실패")
+            return
+
+        await websocket.accept()
+        try:
+            await websocket.send_json({"event": "connected", "run_id": run_id})
+            async for message in iter_orchestration_progress_ws(run_id):
+                await websocket.send_json(message)
+                if str(message.get("event") or "") in {"done", "error"}:
+                    break
+        except WebSocketDisconnect:
+            pass
 
     @router.post("/customer-orchestrate/stage-runs")
     def create_customer_orchestrate_stage_run(
@@ -134,11 +216,15 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
                 "response": None,
                 "error": None,
             }
+            finalized = False
 
             def _worker() -> None:
                 try:
                     stream_state["response"] = contract.asyncio.run(
-                        contract._run_customer_orchestration_request(orchestration_request)
+                        contract._run_customer_orchestration_request(
+                            orchestration_request,
+                            owner_id=str(getattr(current_user, "id", "unknown")),
+                        )
                     )
                 except Exception as exc:  # pragma: no cover - exercised via SSE error path
                     stream_state["error"] = exc
@@ -152,78 +238,96 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             )
             worker.start()
 
-            yield contract._build_customer_orchestrate_sse_event(
-                "accepted",
-                {
-                    "run_id": effective_request.stage_run_id,
-                    "stage_run": stage_run_payload,
-                    "message": "고객 오케스트레이터 실행을 시작합니다.",
-                },
-            )
-
-            heartbeat_started_at = contract.time.monotonic()
-            while not stream_state["done"]:
-                await contract.asyncio.sleep(1)
-                elapsed = contract.time.monotonic() - heartbeat_started_at
-                if elapsed < 5:
-                    continue
-                heartbeat_started_at = contract.time.monotonic()
+            try:
                 yield contract._build_customer_orchestrate_sse_event(
-                    "progress",
+                    "accepted",
                     {
                         "run_id": effective_request.stage_run_id,
-                        "stage_id": effective_request.stage_id,
-                        "status": "running",
-                        "message": "고객 오케스트레이터 생성 및 검증을 계속 진행 중입니다.",
+                        "stage_run": stage_run_payload,
+                        "message": "고객 오케스트레이터 실행을 시작합니다.",
                     },
                 )
 
-            try:
-                if stream_state["error"] is not None:
-                    raise stream_state["error"]
+                heartbeat_started_at = contract.time.monotonic()
+                while not stream_state["done"]:
+                    await contract.asyncio.sleep(1)
+                    elapsed = contract.time.monotonic() - heartbeat_started_at
+                    if elapsed < 5:
+                        continue
+                    heartbeat_started_at = contract.time.monotonic()
+                    yield contract._build_customer_orchestrate_sse_event(
+                        "progress",
+                        {
+                            "run_id": effective_request.stage_run_id,
+                            "stage_id": effective_request.stage_id,
+                            "status": "running",
+                            "message": "고객 오케스트레이터 생성 및 검증을 계속 진행 중입니다.",
+                        },
+                    )
 
-                response = stream_state["response"]
-                result_event_payload = contract._build_customer_orchestrate_result_payload(
-                    response=response,
-                    request=effective_request,
-                    current_user=current_user,
-                    stage_run_payload=stage_run_payload,
-                )
-                contract._persist_customer_orchestrator_completion(
-                    db,
-                    current_user=current_user,
-                    request=effective_request,
-                    result_payload=dict(result_event_payload.get("result") or {}),
-                )
-                db.commit()
-                result_payload = dict(result_event_payload.get("result") or {})
-                contract._update_customer_stage_execution_metadata(
-                    stage_run_id,
-                    status="completed",
-                    completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
-                    output_dir=result_payload.get("output_dir"),
-                    error_message=None,
-                )
-                yield contract._build_customer_orchestrate_sse_event("result", result_event_payload)
-            except Exception as exc:
-                if hasattr(db, "rollback"):
-                    db.rollback()
-                error_message = str(exc) or "고객 오케스트레이터 실행 중 오류가 발생했습니다."
-                contract._update_customer_stage_execution_metadata(
-                    stage_run_id,
-                    status="failed",
-                    completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
-                    error_message=error_message,
-                )
-                yield contract._build_customer_orchestrate_sse_event(
-                    "error",
-                    contract._build_customer_orchestrate_error_payload(
-                        error_message=error_message,
+                try:
+                    if stream_state["error"] is not None:
+                        raise stream_state["error"]
+
+                    response = stream_state["response"]
+                    result_event_payload = contract._build_customer_orchestrate_result_payload(
+                        response=response,
                         request=effective_request,
+                        current_user=current_user,
                         stage_run_payload=stage_run_payload,
-                    ),
-                )
+                    )
+                    contract._persist_customer_orchestrator_completion(
+                        db,
+                        current_user=current_user,
+                        request=effective_request,
+                        result_payload=dict(result_event_payload.get("result") or {}),
+                    )
+                    db.commit()
+                    result_payload = dict(result_event_payload.get("result") or {})
+                    contract._update_customer_stage_execution_metadata(
+                        stage_run_id,
+                        status="completed",
+                        completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
+                        output_dir=result_payload.get("output_dir"),
+                        error_message=None,
+                    )
+                    finalized = True
+                    yield contract._build_customer_orchestrate_sse_event("result", result_event_payload)
+                except Exception as exc:
+                    if hasattr(db, "rollback"):
+                        db.rollback()
+                    error_message = str(exc) or "고객 오케스트레이터 실행 중 오류가 발생했습니다."
+                    contract._update_customer_stage_execution_metadata(
+                        stage_run_id,
+                        status="failed",
+                        completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
+                        error_message=error_message,
+                    )
+                    finalized = True
+                    yield contract._build_customer_orchestrate_sse_event(
+                        "error",
+                        contract._build_customer_orchestrate_error_payload(
+                            error_message=error_message,
+                            request=effective_request,
+                            stage_run_payload=stage_run_payload,
+                        ),
+                    )
             finally:
+                if not finalized:
+                    if hasattr(db, "rollback"):
+                        db.rollback()
+                    error = stream_state.get("error")
+                    error_message = (
+                        str(error)
+                        if error is not None
+                        else "고객 오케스트레이터 스트림 연결이 완료 전에 종료되었습니다."
+                    )
+                    contract._update_customer_stage_execution_metadata(
+                        stage_run_id,
+                        status="failed",
+                        completed_at=contract.datetime.now(contract.timezone.utc).isoformat(),
+                        error_message=error_message,
+                    )
                 execution_lock.release()
 
         return contract.StreamingResponse(_event_stream(), media_type="text/event-stream")
@@ -233,19 +337,15 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         run_id: str,
         current_user=Depends(contract.get_current_user),
     ):
-        del current_user
-        payload = contract.load_stage_run(run_id)
-        if not payload:
-            raise HTTPException(status_code=404, detail="stage run을 찾을 수 없습니다.")
-        return payload
+        return contract._load_customer_stage_run_for_user(run_id, current_user)
 
     @router.post("/customer-orchestrate/stage-runs/update")
     def update_customer_orchestrate_stage_run(
         payload: contract.CustomerOrchestrateStageUpdateRequest,
         current_user=Depends(contract.get_current_user),
     ):
-        del current_user
         try:
+            contract._load_customer_stage_run_for_user(payload.run_id, current_user)
             return contract.update_stage_run(
                 run_id=payload.run_id,
                 stage_id=payload.stage_id,
