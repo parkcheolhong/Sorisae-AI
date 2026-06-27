@@ -17,6 +17,13 @@ def _env_bool(name: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _cached_web(key_parts: tuple, fetch_fn):
+    """웹 검색 원본 payload 캐시(namespace 'web', 기본 10분). Redis 미가용 시 폴백."""
+    from backend.services.realtime_cache import cached_fetch
+
+    return cached_fetch("web", key_parts, fetch_fn)
+
+
 def should_use_web_search(message: str, message_kind: str) -> bool:
     normalized = " ".join(str(message or "").strip().split()).lower()
     if not normalized:
@@ -93,15 +100,20 @@ def _search_bing(
     endpoint = str(
         os.getenv("BING_SEARCH_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search")
     ).strip()
-    params = urllib.parse.urlencode({"q": query, "count": max(1, min(max_items, 10)), "mkt": "ko-KR"})
-    req = urllib.request.Request(
-        f"{endpoint}?{params}",
-        headers={"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"},
-        method="GET",
-    )
-    try:
+    count = max(1, min(max_items, 10))
+    params = urllib.parse.urlencode({"q": query, "count": count, "mkt": "ko-KR"})
+
+    def _fetch():
+        req = urllib.request.Request(
+            f"{endpoint}?{params}",
+            headers={"Ocp-Apim-Subscription-Key": api_key, "Accept": "application/json"},
+            method="GET",
+        )
         with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
-            payload = json.loads(resp.read().decode("utf-8", errors="replace"))
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+    try:
+        payload = _cached_web(("bing", query, count), _fetch)
     except Exception as exc:
         if logger:
             logger.warning("web search(bing) failed: %s", exc)
@@ -144,20 +156,25 @@ def _search_serpapi(
 ) -> List[WebGroundingItem]:
     if not api_key:
         return []
+    num = max(1, min(max_items, 10))
     params = urllib.parse.urlencode(
         {
             "q": query,
             "hl": "ko",
             "gl": "kr",
-            "num": max(1, min(max_items, 10)),
+            "num": num,
             "api_key": api_key,
         }
     )
     url = f"https://serpapi.com/search.json?{params}"
-    req = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
-    try:
+
+    def _fetch():
+        req = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
         with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
-            payload = json.loads(resp.read().decode("utf-8", errors="replace"))
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+    try:
+        payload = _cached_web(("serpapi", query, num), _fetch)
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
         if logger:
             logger.warning("web search(serpapi) failed: %s", exc)

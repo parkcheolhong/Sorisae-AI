@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -23,7 +24,11 @@ from backend.marketplace.nadotongryoksa_friends_router import router as friends_
 from backend.marketplace.nadotongryoksa_voip_router import router as voip_router
 
 
-def _build_client():
+def _build_client(*, allow_unverified_friend_add: bool = True):
+    if allow_unverified_friend_add:
+        os.environ["ALLOW_UNVERIFIED_FRIEND_ADD"] = "1"
+    else:
+        os.environ.pop("ALLOW_UNVERIFIED_FRIEND_ADD", None)
     class _FakeTranslator:
         def translate(self, text: str, *, from_lang: str, to_lang: str) -> str:
             return f"[{from_lang}->{to_lang}] {text}"
@@ -117,6 +122,58 @@ def test_friends_routes_support_app_user_and_external_phone_contact():
 
     after_delete = client.get("/api/users/1/friends")
     assert after_delete.json()["total"] == 1
+
+
+def test_manual_friend_entry_stores_display_name_for_external_contact():
+    client = _build_client()
+
+    response = client.post(
+        "/api/friends",
+        json={
+            "targetEmail": "beta.tester@example.com",
+            "phoneNumber": "+82-10-5555-6666",
+            "displayName": "베타 테스터",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["friendUserId"] is None
+    assert payload["friendUsername"] == "베타 테스터"
+    assert payload["friendPhone"] == "+82-10-5555-6666"
+
+
+def test_friend_invite_requires_otp_in_production_mode():
+    client = _build_client(allow_unverified_friend_add=False)
+
+    blocked = client.post(
+        "/api/friends",
+        json={"targetEmail": "blocked@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert blocked.status_code == 428
+
+    start = client.post(
+        "/api/friends/invites/request-code",
+        json={
+            "targetEmail": "verified@example.com",
+            "phoneNumber": "+82-10-7777-8888",
+            "displayName": "인증 친구",
+            "verificationChannel": "email",
+        },
+    )
+    assert start.status_code == 200, start.text
+    start_payload = start.json()
+    assert start_payload.get("devOtpHint")
+
+    confirm = client.post(
+        "/api/friends/invites/confirm",
+        json={
+            "inviteSessionToken": start_payload["sessionToken"],
+            "verificationCode": start_payload["devOtpHint"],
+        },
+    )
+    assert confirm.status_code == 200, confirm.text
+    assert confirm.json()["friendEmail"] == "verified@example.com"
+    assert confirm.json()["friendUsername"] == "인증 친구"
 
 
 def test_friend_list_includes_discovery_country_and_gender_for_app_friends():
@@ -291,7 +348,82 @@ def test_voip_initiate_routes_to_online_friend_app_when_voice_target_is_availabl
         assert invite["type"] == "incoming_call"
         assert invite["participant_role"] == "callee"
         assert invite["caller_voice_id"] == "nado-000001"
+        assert invite["display_language"] == "ko"
         assert "/api/v1/voip/signal" in invite["signaling_server"]
+
+
+def test_voip_initiate_prefers_client_language_hints_over_stale_db_profiles():
+    client = _build_client()
+    token = create_access_token({"sub": "callee@example.com"})
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    with client.websocket_connect(f"/api/v1/voip/presence?token={token}") as presence_socket:
+        presence_message = presence_socket.receive_json()
+        assert presence_message["type"] == "presence_ready"
+
+        response = client.post(
+            "/api/v1/voip/calls/initiate",
+            json={
+                "friend_id": friend_id,
+                "caller_id": "caller",
+                "session_id": "friend-session-language-hints",
+                "mode": "voip_full_auto",
+                "caller_preferred_language": "ja",
+                "callee_preferred_language": "ko",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["display_language"] == "ko"
+
+        invite = presence_socket.receive_json()
+        assert invite["display_language"] == "ja"
+
+
+def test_voip_accept_prefers_invite_caller_language_over_stale_db():
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-session-accept-language",
+            "mode": "voip_full_auto",
+            "caller_preferred_language": "ja",
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+        preferred_language="en",
+    )
+
+    accept_response = client.post(
+        f"/api/v1/voip/calls/{call_id}/accept",
+        headers={"Authorization": f"Bearer {create_access_token({'sub': 'callee@example.com'})}"},
+    )
+    assert accept_response.status_code == 200
+    assert accept_response.json()["display_language"] == "ja"
+    assert accept_response.json()["participant_role"] == "callee"
 
 
 def test_voip_initiate_rejects_self_app_call_targets():
@@ -675,6 +807,42 @@ def test_voip_audit_endpoint_returns_initiate_and_end_events(monkeypatch):
     assert events[0]["auto_relay_applied"] is False
     assert events[1]["duration_sec"] == 42
     assert events[1]["call_quality"] == "good"
+
+
+def test_voip_initiate_audit_records_client_network_context(monkeypatch):
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_ENABLED", raising=False)
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("SIP_TRUNK_URI", raising=False)
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_FROM_NUMBER", raising=False)
+
+    client = _build_client()
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "callee_phone": "+82-10-1111-2222",
+            "caller_id": "caller",
+            "session_id": "audit-network-session",
+            "mode": "voip_full_auto",
+            "auto_relay": True,
+            "client_network_context": {
+                "transport": "cellular",
+                "cellular_generation": "5g",
+                "label": "LTE/5G (셀룰러)",
+                "is_accurate_voip_test_ready": True,
+            },
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    audit_response = client.get(f"/api/v1/voip/calls/{call_id}/audit")
+    assert audit_response.status_code == 200
+    events = audit_response.json()
+    assert events[0]["event_type"] == "call_initiated"
+    assert events[0]["metadata"]["client_network"]["transport"] == "cellular"
+    assert events[0]["metadata"]["client_network"]["cellular_generation"] == "5g"
 
 
 def test_voip_audit_endpoint_allows_callee_participant(monkeypatch):

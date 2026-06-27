@@ -17,6 +17,8 @@ import re
 import tempfile
 import threading
 from datetime import datetime, timezone
+
+from backend.time_utils import utcnow
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -317,10 +319,16 @@ def _ensure_customer_stage_run_payload(
     return stage_run_payload
 
 
-async def _run_customer_orchestration_request(orchestration_request: Any) -> Any:
-    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+async def _run_customer_orchestration_request(
+    orchestration_request: Any,
+    owner_id: str | None = None,
+) -> Any:
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_execution
 
-    return await execute_orchestration_handler(orchestration_request)
+    return await run_autonomous_surface_execution(
+        orchestration_request,
+        owner_id=str(owner_id or getattr(orchestration_request, "run_id", "") or "marketplace-customer"),
+    )
 
 
 def _build_customer_orchestrate_result_payload(
@@ -581,17 +589,6 @@ def _sync_stage_run_after_result(
         note=note,
         manual_correction=combined_error if next_status != "passed" else "",
     )
-    if next_status == "passed":
-        synced["status"] = "completed"
-        synced["final_completed"] = True
-        synced["current_stage_id"] = normalized_stage_id
-        for stage in list(synced.get("stages") or []):
-            if str(stage.get("id") or "").upper() == normalized_stage_id:
-                continue
-            if str(stage.get("status") or "").lower() == "running":
-                stage["status"] = "pending"
-                stage["check_label"] = "대기"
-        synced = save_stage_run(synced)
     return synced
 
 
@@ -655,7 +652,7 @@ def _append_customer_follow_up_history(
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]

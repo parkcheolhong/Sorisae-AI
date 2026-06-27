@@ -33,7 +33,9 @@ function Sync-AndroidVersionFromAppJson {
 
 if (-not $SkipBuild) {
     Sync-AndroidVersionFromAppJson
-    $env:GRADLE_USER_HOME = if ($env:GRADLE_USER_HOME) { $env:GRADLE_USER_HOME } else { "C:\gradle-cache" }
+    $env:GRADLE_USER_HOME = "C:\gradle-cache"
+    $env:NODE_ENV = "production"
+    $env:GRADLE_OPTS = "-Dorg.gradle.caching=true"
     $bundleDirs = @(
         "android\app\build\generated\assets\react\release",
         "android\app\build\generated\res\react\release",
@@ -70,10 +72,26 @@ $canonicalPath = Join-Path $PublishDir $canonicalName
 Copy-Item -Force $ReleaseApk $versionedPath
 Copy-Item -Force $ReleaseApk $canonicalPath
 
+$manifestPath = Join-Path $PublishDir "nadotongryoksa-v1.manifest.json"
+$manifest = @{
+    package = "com.parkcheolhong.worldlinco"
+    versionName = $version.VersionName
+    versionCode = $version.VersionCode
+    apkFilename = $canonicalName
+    versionedFilename = $versionedName
+    downloadPath = "/api/marketplace/apk/$canonicalName"
+    publishedAt = (Get-Date).ToUniversalTime().ToString("o")
+    sizeBytes = (Get-Item $canonicalPath).Length
+} | ConvertTo-Json -Depth 3
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($manifestPath, $manifest, $utf8NoBom)
+
 $sizeMb = [math]::Round((Get-Item $canonicalPath).Length / 1MB, 2)
 Write-Host "[publish] $canonicalPath ($sizeMb MB)"
 Write-Host "[publish] $versionedPath"
+Write-Host "[publish] $manifestPath (v$($version.VersionName) build $($version.VersionCode))"
 Write-Host "[marketplace] /api/marketplace/apk/$canonicalName"
+Write-Host "[marketplace] /api/marketplace/apk/worldlinco/manifest"
 
 if ($DeviceId) {
     Write-Host "[install] adb -s $DeviceId install -r $canonicalPath"

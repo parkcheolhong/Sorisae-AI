@@ -19,6 +19,8 @@ export interface AdminSystemSettingField {
     key: string;
     label: string;
     value: string;
+    effective_value?: string;
+    needs_attention?: boolean;
     sensitive: boolean;
     multiline: boolean;
 }
@@ -42,12 +44,18 @@ export interface AdminSystemSettingsSummary {
     admin_domain: string;
     api_domain: string;
     local_api_base_url: string;
+    local_api_base_url_warning?: string;
+    api_docs_url?: string;
     marketplace_host_root: string;
     marketplace_upload_root: string;
     nginx_http_port: string;
     nginx_https_port: string;
     selected_profile: string;
     code_generation_strategy: string;
+    min_files?: number;
+    min_dirs?: number;
+    stage11_min_files?: number;
+    stage11_min_dirs?: number;
     default_model: string;
     chat_model: string;
     voice_chat_model: string;
@@ -63,11 +71,30 @@ export interface AdminSystemSettingsSummary {
     }>;
 }
 
+export interface AdminSystemSettingsIntegrationCheckItem {
+    id: string;
+    label: string;
+    ok: boolean;
+    url: string;
+    detail: string;
+}
+
+export interface AdminSystemSettingsIntegrationChecks {
+    items: AdminSystemSettingsIntegrationCheckItem[];
+    connected_count: number;
+    total_count: number;
+    all_connected: boolean;
+}
+
 export interface AdminSystemSettingsResponse {
     env_path: string;
     runtime_config_path: string;
     sections: AdminSystemSettingSection[];
     summary: AdminSystemSettingsSummary;
+    integration_checks?: AdminSystemSettingsIntegrationChecks;
+    recommended_env_updates?: Record<string, string>;
+    empty_field_count?: number;
+    applied_env_update_count?: number;
 }
 
 export interface AdminIdentityProviderSettings {
@@ -93,6 +120,7 @@ export interface AdminIdentityProviderSettings {
         complete_mapping_ready: boolean;
         complete_payload_fields: string[];
         request_payload_fields: string[];
+        env_keys?: string[];
     }>;
 }
 
@@ -262,6 +290,28 @@ export async function saveAdminSystemSettings(options: {
     const data = await response.json().catch(() => null);
     if (!response.ok || !data) {
         throw new Error((data as any)?.detail || `설정 저장 실패(${response.status})`);
+    }
+
+    return data as AdminSystemSettingsResponse;
+}
+
+export async function fillAdminSystemSettingsMissingDefaults(options: {
+    apiBaseUrl: string;
+    token: string;
+    fetchImpl?: typeof fetch;
+}) {
+    const fetcher = options.fetchImpl || fetch;
+    const response = await fetcher(`${options.apiBaseUrl}/api/admin/system-settings/fill-missing-defaults`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${options.token}` },
+    });
+    if (isUnauthorized(response.status)) {
+        throw new Error('__ADMIN_SYSTEM_UNAUTHORIZED__');
+    }
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) {
+        throw new Error((data as any)?.detail || `빈 값 보강 실패(${response.status})`);
     }
 
     return data as AdminSystemSettingsResponse;

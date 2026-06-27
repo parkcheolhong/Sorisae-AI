@@ -10,15 +10,15 @@ import {
 describe('voiceRelaySegmentBoundary', () => {
     it('defers flush when segment or speech span is too short', () => {
         expect(shouldFlushOnSileroSpeechEnd({
-            segmentDurationMs: 2_639,
-            speechSpanMs: 2_639,
+            segmentDurationMs: VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS.minSegmentMs - 1,
+            speechSpanMs: VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS.minSegmentMs - 1,
             lastSileroFlushAtMs: null,
             nowMs: 10_000,
         })).toEqual({ flush: false, deferReason: 'segment_too_short' });
 
         expect(shouldFlushOnSileroSpeechEnd({
-            segmentDurationMs: 4_000,
-            speechSpanMs: 900,
+            segmentDurationMs: VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS.minSegmentMs + 1_600,
+            speechSpanMs: VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS.minSpeechSpanMs - 1,
             lastSileroFlushAtMs: null,
             nowMs: 10_000,
         })).toEqual({ flush: false, deferReason: 'speech_span_too_short' });
@@ -50,17 +50,18 @@ describe('voiceRelaySegmentBoundary', () => {
         );
     });
 
-    it('flushes safety cap only at 14s with speech', () => {
+    it('flushes safety cap only at the cap with speech', () => {
+        const cap = VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS.safetyCapMs;
         expect(shouldFlushSileroSafetyCap({
-            segmentDurationMs: 12_000,
+            segmentDurationMs: cap - 1,
             hasSpeech: true,
         })).toBe(false);
         expect(shouldFlushSileroSafetyCap({
-            segmentDurationMs: 14_000,
+            segmentDurationMs: cap,
             hasSpeech: true,
         })).toBe(true);
         expect(shouldFlushSileroSafetyCap({
-            segmentDurationMs: 15_000,
+            segmentDurationMs: cap + 1_000,
             hasSpeech: false,
         })).toBe(false);
     });

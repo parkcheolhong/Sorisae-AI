@@ -23,6 +23,12 @@ export interface VoipMessagingAdapter {
     getToken: () => Promise<string | null>;
     /** 포그라운드 착신 data 푸시 구독. unsubscribe 함수 반환. */
     subscribe: (handler: (data: Record<string, unknown>) => void) => () => void;
+    /** 알림 탭으로 앱 복귀 시 data 페이로드. */
+    onNotificationOpened?: (handler: (data: Record<string, unknown>) => void) => () => void;
+    /** cold start 시 알림 탭으로 열린 data 페이로드. */
+    getInitialNotification?: () => Promise<Record<string, unknown> | null>;
+    /** Android 13+ POST_NOTIFICATIONS 등. */
+    requestNotificationPermission?: () => Promise<boolean>;
 }
 
 /** 디바이스 토큰 등록(+presence 갱신). 성공 시 true. */

@@ -6,6 +6,8 @@
 
 import { Platform } from 'react-native';
 
+import { WebRTCStatsReporter } from '../features/voip-voice-relay/webrtcStatsReporter';
+
 // Declare navigator for TypeScript
 declare const navigator: any;
 
@@ -118,6 +120,7 @@ export interface VoIPVoiceTranslationMessage {
     is_final?: boolean;
     detected_lang?: string;
     capture_trust?: string;
+    correlation_id?: string;
 }
 
 export class VoIPCallClient {
@@ -125,8 +128,13 @@ export class VoIPCallClient {
     private localStream: any = null;
     private localAudioSuspendedForRelay = false;
     private remoteStream: any = null;
+    // 통역(풀오토) 통화에서 원음 WebRTC 트랙을 영구히 음소거하기 위한 상태.
+    // ontrack 으로 트랙이 늦게 도착해도 이 값이 true 면 즉시 enabled=false 를 재적용한다.
+    private remoteAudioSuppressed = false;
     private signalingSocket: WebSocket | null = null;
     private signalingKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
+    // opt-in: WebRTC QoS(RTT/jitter/loss) 표본 리포터. startStatsReporter() 호출 시에만 활성.
+    private statsReporter: WebRTCStatsReporter | null = null;
     private readonly config: VoIPCallConfig;
     private readonly iceCandidateQueue: any[] = [];
     private isConnected = false;
@@ -135,6 +143,7 @@ export class VoIPCallClient {
     private onStateChangeCallback: ((state: string) => void) | null = null;
     private onRemoteStreamCallback: ((stream: any) => void) | null = null;
     private onChatMessageCallback: ((message: VoIPChatMessage) => void) | null = null;
+    private onChatMessageRejectedCallback: ((detail: string) => void) | null = null;
     private onVoiceTranslationCallback: ((message: VoIPVoiceTranslationMessage) => void) | null = null;
 
     constructor(config: VoIPCallConfig) {
@@ -154,6 +163,10 @@ export class VoIPCallClient {
 
     onChatMessage(callback: (message: VoIPChatMessage) => void): void {
         this.onChatMessageCallback = callback;
+    }
+
+    onChatMessageRejected(callback: (detail: string) => void): void {
+        this.onChatMessageRejectedCallback = callback;
     }
 
     onVoiceTranslation(callback: (message: VoIPVoiceTranslationMessage) => void): void {
@@ -304,6 +317,7 @@ export class VoIPCallClient {
         this.peerConnection.onaddstream = (event: any) => {
             this.remoteStream = event.stream;
             console.log('[VoIP] Remote stream received (onaddstream)', event.stream);
+            this.applyRemoteAudioSuppression('onaddstream');
             if (this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(event.stream);
             }
@@ -331,6 +345,11 @@ export class VoIPCallClient {
                     }
                 }
             }
+
+            // 트랙이 늦게 도착해도(예: 연결 후 수 초 뒤 ontrack) 통역 모드면 즉시 원음을 음소거한다.
+            // 과거에는 setRemoteAudioEnabled(false) 가 트랙 도착 전에 호출돼 무효화되고,
+            // 이후 도착한 원격 오디오 트랙이 enabled=true 상태로 그대로 재생되는 버그가 있었다.
+            this.applyRemoteAudioSuppression('ontrack');
 
             if (this.remoteStream && this.onRemoteStreamCallback) {
                 this.onRemoteStreamCallback(this.remoteStream);
@@ -587,6 +606,7 @@ export class VoIPCallClient {
         isFinal?: boolean;
         detectedLang?: string;
         captureTrust?: string;
+        correlationId?: string;
     }): boolean {
         const transcript = payload.transcript.trim();
         const translatedText = payload.translatedText.trim();
@@ -629,6 +649,10 @@ export class VoIPCallClient {
         }
         if (typeof payload.captureTrust === 'string' && payload.captureTrust.trim()) {
             message.capture_trust = payload.captureTrust.trim().slice(0, 16);
+        }
+        if (typeof payload.correlationId === 'string' && payload.correlationId.trim()) {
+            // V.2 ID 백본 — 전송(딜리버리) 채널로 상관 ID 전파(수신측 음성 발화가 동일 ID에 붙음).
+            message.correlation_id = payload.correlationId.trim().slice(0, 128);
         }
         this.sendSignalingMessage(message);
         return true;
@@ -767,6 +791,13 @@ export class VoIPCallClient {
                 case 'candidate':
                     await this.handleICECandidate(message);
                     break;
+                case 'chat_message_rejected':
+                    this.onChatMessageRejectedCallback?.(
+                        typeof message.detail === 'string' && message.detail.trim()
+                            ? message.detail.trim()
+                            : '지정 언어와 다른 메시지는 전송할 수 없습니다.',
+                    );
+                    break;
                 case 'chat_message':
                     if (typeof message.text === 'string' && message.text.trim()) {
                         this.onChatMessageCallback?.({
@@ -807,6 +838,7 @@ export class VoIPCallClient {
                             is_final: typeof message.is_final === 'boolean' ? message.is_final : undefined,
                             detected_lang: typeof message.detected_lang === 'string' ? message.detected_lang.trim() : undefined,
                             capture_trust: typeof message.capture_trust === 'string' ? message.capture_trust.trim() : undefined,
+                            correlation_id: typeof message.correlation_id === 'string' ? message.correlation_id.trim() : undefined,
                         });
                     }
                     break;
@@ -1028,16 +1060,57 @@ export class VoIPCallClient {
     }
 
     setRemoteAudioEnabled(enabled: boolean): void {
-        if (this.remoteStream) {
-            this.remoteStream.getAudioTracks().forEach((track: any) => {
+        // 원하는 억제 상태를 영구 저장한다. 트랙이 아직 없더라도 상태를 기억했다가
+        // ontrack/onaddstream 에서 applyRemoteAudioSuppression() 으로 재적용한다.
+        this.remoteAudioSuppressed = !enabled;
+        const tracks = this.remoteStream?.getAudioTracks?.() ?? [];
+        tracks.forEach((track: any) => {
+            track.enabled = enabled;
+        });
+        console.log('[VoIP][Diag] setRemoteAudioEnabled', {
+            callId: this.config.callId,
+            enabled,
+            suppressed: this.remoteAudioSuppressed,
+            trackCount: tracks.length,
+            hadStream: !!this.remoteStream,
+        });
+    }
+
+    /**
+     * 현재 저장된 억제 상태(remoteAudioSuppressed)를 원격 오디오 트랙에 (재)적용한다.
+     * 트랙이 늦게 도착하는 react-native-webrtc 의 ontrack 타이밍 문제를 보정하기 위해
+     * onaddstream/ontrack 콜백에서 매번 호출한다.
+     */
+    private applyRemoteAudioSuppression(reason: string): void {
+        if (!this.remoteStream) {
+            return;
+        }
+        const tracks = this.remoteStream.getAudioTracks?.() ?? [];
+        if (tracks.length === 0) {
+            return;
+        }
+        const enabled = !this.remoteAudioSuppressed;
+        let changed = false;
+        tracks.forEach((track: any) => {
+            if (track.enabled !== enabled) {
                 track.enabled = enabled;
-            });
-            console.log('[VoIP][Diag] setRemoteAudioEnabled', {
+                changed = true;
+            }
+        });
+        if (this.remoteAudioSuppressed || changed) {
+            console.log('[VoIP][Diag] applyRemoteAudioSuppression', {
                 callId: this.config.callId,
+                reason,
+                suppressed: this.remoteAudioSuppressed,
                 enabled,
-                trackCount: this.remoteStream.getAudioTracks().length,
+                trackCount: tracks.length,
+                changed,
             });
         }
+    }
+
+    isRemoteAudioSuppressed(): boolean {
+        return this.remoteAudioSuppressed;
     }
 
     getSignalingStateSnapshot(): { hasSocket: boolean; socketState: string; connectionState: string; hasRemoteAudio: boolean } {
@@ -1050,10 +1123,54 @@ export class VoIPCallClient {
     }
 
     /**
+     * opt-in: WebRTC QoS(RTT/jitter/loss/bitrate) 표본을 백엔드로 주기 보고(off-path, fail-open).
+     * 화면/훅이 연결 성공 후 명시적으로 호출할 때만 활성화된다(미호출 시 완전 비활성 → 통화 동작 무변경).
+     * 기술서 §0.22.5 / 체크리스트 §10.3.
+     */
+    startStatsReporter(opts: {
+        apiBaseUrl: string;
+        authToken: string;
+        role: 'caller' | 'callee' | string;
+        intervalMs?: number;
+    }): void {
+        try {
+            if (this.statsReporter || !this.peerConnection) {
+                return;
+            }
+            const pc = this.peerConnection;
+            if (typeof pc.getStats !== 'function') {
+                return;
+            }
+            this.statsReporter = new WebRTCStatsReporter({
+                apiBaseUrl: opts.apiBaseUrl,
+                authToken: opts.authToken,
+                callId: this.config.callId,
+                role: opts.role,
+                intervalMs: opts.intervalMs,
+                getStats: () => pc.getStats(),
+            });
+            this.statsReporter.start();
+            console.log('[VoIP] stats reporter started', { callId: this.config.callId, role: opts.role });
+        } catch (err) {
+            console.warn('[VoIP] startStatsReporter skipped', err);
+        }
+    }
+
+    private stopStatsReporter(): void {
+        try {
+            this.statsReporter?.stop();
+        } catch {
+            // off-path — 무시
+        }
+        this.statsReporter = null;
+    }
+
+    /**
      * Graceful hangup
      */
     async hangup(): Promise<void> {
         console.log('[VoIP] Hanging up');
+        this.stopStatsReporter();
         this.remoteDescriptionApplied = false;
 
         // Stop local tracks

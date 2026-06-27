@@ -138,7 +138,7 @@ function resolveProxyTimeoutForPath(path: string, timeoutOverrideMs?: number): n
         return Math.round(timeoutOverrideMs);
     }
 
-    if (path.startsWith('/api/llm/orchestrate/chat')) {
+    if (path.startsWith('/api/llm/orchestrate/chat') || path.startsWith('/api/llm/autonomous/chat')) {
         return ORCHESTRATOR_CHAT_PROXY_TIMEOUT_MS;
     }
 

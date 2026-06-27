@@ -156,6 +156,11 @@ def _enable_qdrant_rest_only_mode() -> None:
         raise RuntimeError("gRPC is disabled in REST-only Qdrant mode.")
 
     def _grpc_getattr(name: str) -> Any:
+        # dunder 속성(__file__, __path__, __loader__, __spec__ 등)은 실제 모듈처럼
+        # "없음"으로 동작해야 한다. 함수 객체를 반환하면 inspect/torch 등이 모듈 메타데이터를
+        # 훑을 때 `'function' object has no attribute 'endswith'` 류로 깨진다.
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
         if name == "Compression":
             return grpc_stub.__dict__["Compression"]
         if name == "StatusCode":
@@ -1322,6 +1327,15 @@ app.add_middleware(
 )
 logger.info("[OK] cors origins loaded: %s", cors_origins)
 
+# ── OpenTelemetry 분산 트레이싱 (opt-in · 의존성 가드 · fail-open, 기술서 §0.22) ──
+# OTEL_TRACING_ENABLED 미설정/미설치/실패 시 no-op — 기동·요청 처리에 무영향.
+try:
+    from backend.observability.tracing import init_tracing
+    init_tracing(app)
+except Exception as _otel_err:
+    logger.warning("[WARN] otel tracing skipped: %s", _otel_err)
+
+
 # ── Prometheus Metrics ──
 try:
     from backend.marketplace.prometheus_metrics import PrometheusMiddleware, get_metrics
@@ -1455,6 +1469,30 @@ try:
     logger.info("[OK] voice router loaded")
 except Exception as e:
     logger.warning(f"[WARN] voice router skipped: {e}")
+
+# ── Tourism Human Review (사람검수) ──
+try:
+    from backend.api.tourism_review_router import router as tourism_review_router
+    app.include_router(tourism_review_router)
+    logger.info("[OK] tourism review router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] tourism review router skipped: {e}")
+
+# ── Carbon/Energy meter (ops) ──
+try:
+    from backend.api.carbon_router import router as carbon_router
+    app.include_router(carbon_router)
+    logger.info("[OK] carbon router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] carbon router skipped: {e}")
+
+# ── Tourism pilot beta feedback (NPS/A·B) ──
+try:
+    from backend.api.tourism_feedback_router import router as tourism_feedback_router
+    app.include_router(tourism_feedback_router)
+    logger.info("[OK] tourism feedback router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] tourism feedback router skipped: {e}")
 
 # ── Mobile Song Translation ──
 try:

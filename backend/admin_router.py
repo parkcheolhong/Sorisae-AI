@@ -24,7 +24,11 @@ import tempfile
 import time
 import threading
 from datetime import datetime, timedelta
+
+from backend.time_utils import utcnow
+from urllib.error import URLError
 from urllib.parse import quote
+from urllib.request import urlopen
 import httpx
 from backend.database import get_db
 from backend.models import User
@@ -35,6 +39,7 @@ from backend.orchestration_stage_service import (
     update_stage_run,
 )
 from backend.llm.loader import llm_loader
+from backend.llm.model_config import get_available_ollama_models
 from backend.services.auth_identity_provider import resolve_identity_provider
 from backend.marketplace.minio_service import minio_service
 from backend.marketplace.models import (
@@ -475,7 +480,9 @@ def get_admin_identity_provider_settings(
 
     for provider_name in provider_names:
         provider = resolve_identity_provider(provider_name)
-        provider_statuses.append(provider.build_mapping_status(env_values))
+        provider_status = provider.build_mapping_status(env_values)
+        provider_status["env_keys"] = list(_resolve_identity_provider_env_keys(provider_name).values())
+        provider_statuses.append(provider_status)
         contract = provider.build_complete_payload_contract()
         complete_payload_contracts.append(
             {
@@ -889,7 +896,7 @@ def _build_admin_subscription_monitor_summary_payload(
     period_days: int = 30,
     status_filter: Optional[str] = None,
 ) -> Dict[str, Any]:
-    now = datetime.utcnow()
+    now = utcnow()
     period_days = max(1, min(int(period_days), 90))
     period_since = now - timedelta(days=period_days)
     normalized_status_filter = str(status_filter or "").strip() or None
@@ -1594,6 +1601,7 @@ ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
         "usage": "부팅 기본 모델 환경값 점검 / 교체",
         "description": "부팅 시 참조되는 역할별 기본 모델 환경값입니다.",
         "fields": [
+            "OLLAMA_BASE",
             "LLM_MODEL_DEFAULT",
             "LLM_MODEL_REASONING",
             "LLM_MODEL_CODING",
@@ -1796,6 +1804,202 @@ def _safe_mtime(path: Path) -> float | None:
         return None
 
 
+ADMIN_LLM_ENV_ROUTE_KEYS: Dict[str, str] = {
+    "LLM_MODEL_DEFAULT": "default",
+    "LLM_MODEL_REASONING": "reasoning",
+    "LLM_MODEL_CODING": "coding",
+    "LLM_MODEL_CHAT": "chat",
+    "LLM_MODEL_VOICE_CHAT": "voice_chat",
+    "LLM_MODEL_PLANNER": "planner",
+    "LLM_MODEL_CODER": "coder",
+    "LLM_MODEL_REVIEWER": "reviewer",
+    "LLM_MODEL_DESIGNER": "designer",
+    "LLM_MODEL_SMART_PLANNER": "smart_planner",
+    "LLM_MODEL_SMART_EXECUTOR": "smart_executor",
+    "LLM_MODEL_SMART_DESIGNER": "smart_designer",
+}
+
+
+def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
+    try:
+        with urlopen(url, timeout=timeout_sec) as response:
+            status = int(getattr(response, "status", 200) or 200)
+            return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
+    except Exception as exc:
+        return {"ok": False, "status": None, "url": url, "error": str(exc)}
+
+
+def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
+    display = _resolve_admin_summary_display_values(env_values)
+    admin_domain = display["admin_domain"] or "metanova1004.com"
+    model_routes = runtime_config.get("model_routes") or {}
+    defaults: Dict[str, str] = {
+        "LOCAL_API_BASE_URL": display["local_api_base_url"],
+        "ADMIN_DOMAIN": admin_domain,
+        "MARKETPLACE_API_DOMAIN": str(env_values.get("MARKETPLACE_API_DOMAIN") or admin_domain).strip() or admin_domain,
+        "MARKETPLACE_HOST_ROOT": display["marketplace_host_root"],
+        "MARKETPLACE_UPLOAD_ROOT": display["marketplace_upload_root"],
+        "POSTGRES_HOST": "postgres",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "devanalysis114",
+        "POSTGRES_USER": str(env_values.get("POSTGRES_USER") or "admin").strip() or "admin",
+        "NGINX_HTTP_PORT": "8080",
+        "NGINX_HTTPS_PORT": "8443",
+        "ALLOWED_ORIGINS": f"https://{admin_domain},http://127.0.0.1:3000,http://127.0.0.1:3005,http://localhost:3000,http://localhost:3005",
+        "ORCH_FORCE_COMPLETE": "false",
+        "ORCH_MIN_FILES": str(runtime_config.get("min_files") or 9),
+        "ORCH_MIN_DIRS": str(runtime_config.get("min_dirs") or 3),
+        "ORCH_MAX_FORCE_RETRIES": str(runtime_config.get("max_force_retries") or 3),
+        "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "true",
+        "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "true",
+        "VIDEO_REQUIRE_GENERATIVE_ENGINE": "false",
+        "SELF_ENGINE_MAX_RETRY": "2",
+        "KMC_CALLBACK_URL": f"https://{admin_domain}/api/auth/identity/providers/kmc/callback",
+        "KCB_CALLBACK_URL": f"https://{admin_domain}/api/auth/identity/providers/kcb/callback",
+    }
+    for env_key, route_key in ADMIN_LLM_ENV_ROUTE_KEYS.items():
+        route_value = str(model_routes.get(route_key) or env_values.get(env_key) or env_values.get("LLM_MODEL_DEFAULT") or "").strip()
+        if route_value:
+            defaults[env_key] = route_value
+    recommended: Dict[str, str] = {}
+    for key, value in defaults.items():
+        if not str(env_values.get(key) or "").strip():
+            recommended[key] = str(value)
+    return recommended
+
+
+def _effective_env_field_value(key: str, env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> str:
+    current = str(env_values.get(key) or "").strip()
+    if current:
+        return current
+    route_key = ADMIN_LLM_ENV_ROUTE_KEYS.get(key)
+    if route_key:
+        route_value = str((runtime_config.get("model_routes") or {}).get(route_key) or "").strip()
+        if route_value:
+            return route_value
+    recommended = _compute_recommended_env_defaults(env_values, runtime_config)
+    return str(recommended.get(key) or "").strip()
+
+
+def _build_admin_integration_checks(
+    env_values: Dict[str, str],
+    display_values: Dict[str, str],
+    runtime_config: Dict[str, Any],
+    available_models: List[str],
+) -> Dict[str, Any]:
+    api_base = display_values["local_api_base_url"]
+    health_probe = _probe_http_reachable(f"{api_base}/api/health")
+    docs_probe = _probe_http_reachable(f"{api_base}/docs")
+    ollama_base = str(env_values.get("OLLAMA_BASE") or "http://host.docker.internal:8008/v1").strip().rstrip("/")
+    ollama_probe = _probe_http_reachable(f"{ollama_base}/models")
+    runtime_path = _admin_orchestrator_runtime_config_path()
+    runtime_ok = runtime_path.exists() and bool(runtime_config)
+    upload_root = Path(display_values["marketplace_host_root"])
+    if not upload_root.is_absolute():
+        upload_root = (_admin_workspace_root() / upload_root).resolve()
+    upload_ok = upload_root.exists() and upload_root.is_dir()
+    identity_doc = _admin_workspace_root() / "docs" / "identity-provider-integration-contract.md"
+    identity_doc_ok = identity_doc.exists() and identity_doc.is_file()
+    database_url = str(env_values.get("DATABASE_URL") or "").strip()
+    postgres_host = str(env_values.get("POSTGRES_HOST") or "").strip()
+    postgres_aligned = (not database_url) or (postgres_host and postgres_host in database_url)
+    items = [
+        {
+            "id": "backend_health",
+            "label": "백엔드 API /health",
+            "ok": bool(health_probe.get("ok")),
+            "url": health_probe.get("url"),
+            "detail": f"HTTP {health_probe.get('status')}" if health_probe.get("ok") else str(health_probe.get("error") or "연결 실패"),
+        },
+        {
+            "id": "swagger_docs",
+            "label": "Swagger UI /docs",
+            "ok": bool(docs_probe.get("ok")),
+            "url": docs_probe.get("url"),
+            "detail": f"HTTP {docs_probe.get('status')}" if docs_probe.get("ok") else str(docs_probe.get("error") or "연결 실패"),
+        },
+        {
+            "id": "ollama_models",
+            "label": "LLM 엔진 /models",
+            "ok": bool(ollama_probe.get("ok")) or len(available_models) > 0,
+            "url": f"{ollama_base}/models",
+            "detail": f"모델 {len(available_models)}개" if available_models else str(ollama_probe.get("error") or "모델 목록 없음"),
+        },
+        {
+            "id": "runtime_config",
+            "label": "orchestrator runtime config",
+            "ok": runtime_ok,
+            "url": str(runtime_path),
+            "detail": "runtime JSON 로드 OK" if runtime_ok else "runtime config 없음",
+        },
+        {
+            "id": "identity_docs",
+            "label": "PASS/KMC/KCB 계약 문서",
+            "ok": identity_doc_ok,
+            "url": "/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md",
+            "detail": str(identity_doc) if identity_doc_ok else "docs/identity-provider-integration-contract.md 없음",
+        },
+        {
+            "id": "upload_root",
+            "label": "마켓플레이스 저장 루트",
+            "ok": upload_ok,
+            "url": str(upload_root),
+            "detail": "디렉터리 확인" if upload_ok else "저장 루트 없음",
+        },
+        {
+            "id": "postgres_env",
+            "label": "PostgreSQL env 정렬",
+            "ok": postgres_aligned,
+            "url": database_url or "-",
+            "detail": f"POSTGRES_HOST={postgres_host or '-'}" if postgres_aligned else "DATABASE_URL과 POSTGRES_HOST 불일치",
+        },
+    ]
+    connected_count = sum(1 for item in items if item.get("ok"))
+    return {
+        "items": items,
+        "connected_count": connected_count,
+        "total_count": len(items),
+        "all_connected": connected_count == len(items),
+    }
+
+
+def _resolve_admin_available_models(llm_status: Dict[str, Any]) -> List[str]:
+    merged: List[str] = []
+    installed = llm_status.get("models") or []
+    if isinstance(installed, list) and installed:
+        merged.extend(str(name).strip() for name in installed if str(name).strip())
+    if not merged:
+        merged.extend(get_available_ollama_models())
+    configured = llm_status.get("configured_models") or {}
+    if isinstance(configured, dict):
+        merged.extend(str(name).strip() for name in configured.values() if str(name).strip())
+    return sorted(set(name for name in merged if name))
+
+
+def _resolve_admin_summary_display_values(env_values: Dict[str, str]) -> Dict[str, str]:
+    admin_domain = str(
+        env_values.get("ADMIN_DOMAIN")
+        or env_values.get("DOMAIN_NAME")
+        or env_values.get("MARKETPLACE_API_DOMAIN")
+        or ""
+    ).strip()
+    local_api_base_url = str(env_values.get("LOCAL_API_BASE_URL") or "").strip().rstrip("/")
+    if not local_api_base_url:
+        local_api_base_url = "http://127.0.0.1:8000"
+    marketplace_host_root = str(env_values.get("MARKETPLACE_HOST_ROOT") or "").strip()
+    if not marketplace_host_root:
+        marketplace_host_root = "./uploads"
+    marketplace_upload_root = str(env_values.get("MARKETPLACE_UPLOAD_ROOT") or "").strip()
+    if not marketplace_upload_root:
+        marketplace_upload_root = marketplace_host_root
+    return {
+        "admin_domain": admin_domain,
+        "local_api_base_url": local_api_base_url,
+        "marketplace_host_root": marketplace_host_root,
+        "marketplace_upload_root": marketplace_upload_root,
+    }
+
+
 def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     env_path = _admin_env_path()
     runtime_config_path = _admin_orchestrator_runtime_config_path()
@@ -1815,16 +2019,21 @@ def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str,
 
     env_values = env_values_override or _read_admin_env_values(env_path)
     runtime_config = _load_runtime_config_summary()
+    recommended_env_updates = _compute_recommended_env_defaults(env_values, runtime_config)
     sections: List[Dict[str, Any]] = []
     for section in ADMIN_SYSTEM_ENV_SECTIONS:
         fields = []
         for key in section["fields"]:
             key_text = str(key)
+            raw_value = str(env_values.get(key_text, ""))
+            effective_value = _effective_env_field_value(key_text, env_values, runtime_config)
             fields.append(
                 {
                     "key": key_text,
                     "label": key_text,
-                    "value": str(env_values.get(key_text, "")),
+                    "value": raw_value,
+                    "effective_value": effective_value if not raw_value.strip() and effective_value else "",
+                    "needs_attention": not raw_value.strip(),
                     "sensitive": key_text in ADMIN_SYSTEM_ENV_SENSITIVE_KEYS,
                     "multiline": key_text in ADMIN_SYSTEM_ENV_MULTILINE_KEYS,
                 }
@@ -1840,7 +2049,12 @@ def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str,
         )
     model_routes = runtime_config.get("model_routes") or {}
     llm_status = llm_loader.get_cached_status()
-    available_models = llm_status.get("models") or []
+    available_models = _resolve_admin_available_models(llm_status if isinstance(llm_status, dict) else {})
+    display_values = _resolve_admin_summary_display_values(env_values)
+    local_api_base_url = display_values["local_api_base_url"]
+    local_api_base_url_warning = ""
+    if str(env_values.get("LOCAL_API_BASE_URL") or "").strip().endswith(":8001"):
+        local_api_base_url_warning = "LOCAL_API_BASE_URL 포트 8001은 백엔드 기본 포트(8000)와 다릅니다. .env를 8000으로 맞추세요."
     generator_profiles = [
         {"id": "python_fastapi", "label": "Python FastAPI", "generator": "python_code_generator", "runtime_role": "backend api"},
         {"id": "python_worker", "label": "Python Worker", "generator": "python_code_generator", "runtime_role": "background worker"},
@@ -1851,14 +2065,25 @@ def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str,
         "env_path": str(env_path),
         "runtime_config_path": str(_admin_orchestrator_runtime_config_path()),
         "sections": sections,
+        "integration_checks": _build_admin_integration_checks(env_values, display_values, runtime_config, available_models),
+        "recommended_env_updates": recommended_env_updates,
+        "empty_field_count": sum(1 for section in sections for field in section["fields"] if field.get("needs_attention")),
         "summary": {
-            "admin_domain": str(env_values.get("ADMIN_DOMAIN", "")),
-            "api_domain": str(env_values.get("MARKETPLACE_API_DOMAIN", "")),
-            "local_api_base_url": str(env_values.get("LOCAL_API_BASE_URL", "")),
-            "marketplace_host_root": str(env_values.get("MARKETPLACE_HOST_ROOT", "")),
-            "marketplace_upload_root": str(env_values.get("MARKETPLACE_UPLOAD_ROOT", "")),
+            "admin_domain": display_values["admin_domain"],
+            "api_domain": str(env_values.get("MARKETPLACE_API_DOMAIN") or display_values["admin_domain"]),
+            "local_api_base_url": local_api_base_url,
+            "local_api_base_url_warning": local_api_base_url_warning,
+            "api_docs_url": f"{local_api_base_url}/docs",
+            "marketplace_host_root": display_values["marketplace_host_root"],
+            "marketplace_upload_root": display_values["marketplace_upload_root"],
+            "nginx_http_port": str(env_values.get("NGINX_HTTP_PORT") or "8080"),
+            "nginx_https_port": str(env_values.get("NGINX_HTTPS_PORT") or "8443"),
             "selected_profile": str(runtime_config.get("selected_profile") or ""),
             "code_generation_strategy": str(runtime_config.get("code_generation_strategy") or ""),
+            "min_files": int(runtime_config.get("min_files") or 9),
+            "min_dirs": int(runtime_config.get("min_dirs") or 3),
+            "stage11_min_files": int(runtime_config.get("stage11_min_files") or 32),
+            "stage11_min_dirs": int(runtime_config.get("stage11_min_dirs") or 11),
             "default_model": str(model_routes.get("default") or ""),
             "chat_model": str(model_routes.get("chat") or ""),
             "voice_chat_model": str(model_routes.get("voice_chat") or ""),
@@ -1890,7 +2115,7 @@ def _coerce_env_int(value: Any, default: int, minimum: int = 0) -> int:
 
 def _build_global_automatic_env_updates(env_values: Dict[str, str]) -> Dict[str, str]:
     current_retry = _coerce_env_int(env_values.get("SELF_ENGINE_MAX_RETRY"), 1, minimum=1)
-    current_min_files = _coerce_env_int(env_values.get("ORCH_MIN_FILES"), 27, minimum=1)
+    current_min_files = _coerce_env_int(env_values.get("ORCH_MIN_FILES"), 9, minimum=1)
     current_min_dirs = _coerce_env_int(env_values.get("ORCH_MIN_DIRS"), 3, minimum=0)
     generative_ready = any(
         str(env_values.get(key) or "").strip()
@@ -1898,7 +2123,7 @@ def _build_global_automatic_env_updates(env_values: Dict[str, str]) -> Dict[str,
     )
     return {
         "ORCH_FORCE_COMPLETE": "false",
-        "ORCH_MIN_FILES": str(max(27, current_min_files)),
+        "ORCH_MIN_FILES": str(max(9, current_min_files)),
         "ORCH_MIN_DIRS": str(max(3, current_min_dirs)),
         "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "true",
         "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "true",
@@ -1932,7 +2157,7 @@ async def _apply_global_automatic_mode() -> AdminGlobalAutomaticModeResponse:
         force_complete=False,
         allow_synthetic_fallback=True,
         max_force_retries=max(2, _coerce_env_int(current_runtime.get("max_force_retries"), 2, 1)),
-        min_files=max(27, _coerce_env_int(current_runtime.get("min_files"), 27, 1)),
+        min_files=max(9, _coerce_env_int(current_runtime.get("min_files"), 9, 1)),
         min_dirs=max(3, _coerce_env_int(current_runtime.get("min_dirs"), 3, 0)),
         model_tuning_level=0,
         token_tuning_level=0,
@@ -2600,7 +2825,7 @@ def _self_run_execution_mode(requested_mode: str, directive_template: str = "", 
     if requested_mode == "self-improvement":
         return "full"
     if requested_mode == "self-expansion":
-        return "plan"
+        return "full"
     return "review"
 
 
@@ -2618,6 +2843,7 @@ def _self_run_directive_template_label(template_key: str) -> str:
         "marketplace_conversion": "마켓플레이스 전환 개선",
         "llm_cost_latency": "LLM 비용/지연 최적화",
         "focused-self-healing": "원인 집중 자가치유",
+        "tower_crane_expansion": "Tower Crane 확장 실험",
     }
     return template_labels.get(template, "직접 주문")
 
@@ -2651,6 +2877,21 @@ def _build_self_run_directive_block(directive_template: str, directive_scope: st
     return "\n".join(lines)
 
 
+def _build_self_expansion_protocol_block(requested_mode: str) -> str:
+    if requested_mode != "self-expansion":
+        return ""
+    return "\n".join(
+        [
+            "[자가확장 full 실험 프로토콜]",
+            "- 1단계 발견: capability 진단, Tower Crane A/B/C 옵션, 웹 리서치 근거를 작업문에 반영",
+            "- 2단계 실험: 실험 복제본에서 Autonomous TurnController 11단계 또는 지정 범위 full 실행",
+            "- 3단계 검증: py_compile, pytest, semantic audit, 11단계 probe 근거 수집",
+            "- 4단계 승인: 원본 반영은 workspace-self-run/approve 승인 후에만 수행",
+            "- plan-only 금지: 설계만 남기지 말고 복제본에 실제 코드/구조 변경을 생성할 것",
+        ]
+    )
+
+
 def _build_debug_remediation_protocol_block(requested_mode: str, directive_request: str) -> str:
     if requested_mode != "self-improvement":
         return ""
@@ -2671,7 +2912,7 @@ def _suggested_self_mode(requested_mode: str) -> str:
     if requested_mode == "self-improvement":
         return "full"
     if requested_mode == "self-expansion":
-        return "plan"
+        return "full"
     return "review"
 
 
@@ -2728,6 +2969,7 @@ def _build_self_run_task(requested_mode: str, source_dir: Path, experiment_clone
     content_bundle = _build_self_task_content_bundle(bundle_result)
     directive_block = _build_self_run_directive_block(directive_template, directive_scope, directive_request)
     debug_protocol_block = _build_debug_remediation_protocol_block(requested_mode, directive_request)
+    expansion_protocol_block = _build_self_expansion_protocol_block(requested_mode)
     return (
         f"{title}\n\n"
         f"원본 대상 경로: {source_dir}\n"
@@ -2736,6 +2978,7 @@ def _build_self_run_task(requested_mode: str, source_dir: Path, experiment_clone
         f"[반드시 지킬 원칙]\n- " + "\n- ".join(action_lines) + "\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n"
         + (f"{directive_block}\n\n" if directive_block else "")
         + (f"{debug_protocol_block}\n\n" if debug_protocol_block else "")
+        + (f"{expansion_protocol_block}\n\n" if expansion_protocol_block else "")
         + "[대상 구조 요약]\n"
         + f"- 디렉터리 수: {scan_result['total_directories']}\n"
         + f"- 파일 수: {scan_result['total_files']}\n"
@@ -3118,6 +3361,23 @@ def _stabilize_running_self_run_record(record_path: Path, approval_payload: Dict
     return _force_fail_running_self_run_record(record_path, stale_reason=stale_reason, detail=stale_detail)
 
 
+@router.post("/system-settings/fill-missing-defaults")
+def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_admin)):
+    del admin
+    env_path = _admin_env_path()
+    env_values = _read_admin_env_values(env_path)
+    runtime_config = _load_runtime_config_summary()
+    updates = _compute_recommended_env_defaults(env_values, runtime_config)
+    if not updates:
+        payload = _build_admin_system_settings_payload(env_values_override=env_values)
+        payload["applied_env_update_count"] = 0
+        return payload
+    updated_env_values = _write_admin_env_values(env_path, updates)
+    payload = _build_admin_system_settings_payload(env_values_override=updated_env_values)
+    payload["applied_env_update_count"] = len(updates)
+    return payload
+
+
 @router.get("/system-settings")
 def get_admin_system_settings(admin: User = Depends(require_admin)):
     del admin
@@ -3456,3 +3716,30 @@ async def apply_focused_self_healing_plan(payload: FocusedSelfHealingApplyReques
         'execution': executed,
         'message': 'focused self-healing 이 실제 workspace self-run 재실행까지 연결되었습니다.',
     }
+
+
+from backend.marketplace.worldlinco_tuning import WorldlincoTuningUpdate
+
+
+@router.get("/worldlinco/tuning")
+async def admin_get_worldlinco_tuning(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import load_worldlinco_tuning
+
+    _ = admin
+    return load_worldlinco_tuning()
+
+
+@router.put("/worldlinco/tuning")
+async def admin_update_worldlinco_tuning(
+    update: WorldlincoTuningUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import (
+        WorldlincoTuningUpdate,
+        apply_worldlinco_tuning_update,
+    )
+
+    _ = admin
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    return apply_worldlinco_tuning_update(update, updated_by=updated_by)
+

@@ -3,6 +3,24 @@
 import * as React from 'react';
 import { resolveApiBaseUrl } from '@shared/api';
 import OrchestratorStageCardPanel, { type SharedOrchestratorStageRun } from '@shared/orchestrator-stage-card-panel';
+import OrchestratorLiveFlowRail from '@shared/orchestrator-live-flow-rail';
+import OrchestratorDecisionPanel from '@shared/orchestrator-decision-card';
+import OrchestratorThreeTrackDiagram from '@shared/orchestrator-three-track-diagram';
+import {
+    buildApprovalProceedMessage,
+    buildApprovalRejectMessage,
+    buildApprovalReviseMessage,
+    buildDecisionApplyMessage,
+    buildDecisionItems,
+    buildDecisionReviseMessage,
+    buildDecisionSaveMessage,
+    buildLiveFlowSnapshotFromDiagnostics,
+    mapEvidenceHighlights,
+    mergeLiveFlowWithProgress,
+    mergeLiveFlowWithStageRun,
+    resolveDiscussArchId,
+    resolveCommandRules,
+} from '@/lib/orchestrator-live-flow';
 import SharedOrchestratorFollowUpCard from '@shared/orchestrator-follow-up-card';
 import { buildFollowUpPriorityScore } from '@shared/orchestrator-follow-up-history';
 import { MarketplaceLeftRail, MarketplaceRightRail, type MarketplaceEngineRail } from '@/components/marketplace/marketplace-rails';
@@ -11,6 +29,18 @@ import {
     type MarketplaceOrchestratorBridgePayload,
 } from '@/lib/admin-orchestrator-bridge';
 import { getAdminToken } from '@/lib/admin-session';
+import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
+import { postCustomerOrchestratorChat } from '@/lib/orchestrator-chat-client';
+import { useOrchestratorLiveProgress } from '@/lib/use-orchestrator-live-progress';
+import { speakOrchestratorReply } from '@/lib/orchestrator-speech';
+import {
+    buildVoiceContextTags,
+    buildVoiceDiagnosticsPatch,
+    enrichVoiceMessageForStage,
+    normalizeVoiceTranscript,
+    resolveVoiceSpeaker,
+} from '@/lib/orchestrator-voice-entry';
+import { useOrchestratorVoiceStt } from '@/lib/use-orchestrator-voice-stt';
 
 type ConversationMessage = {
     role: string;
@@ -23,6 +53,14 @@ type ConversationMessage = {
 type AdvisoryQuestion = {
     prompt: string;
     reason?: string | null;
+};
+
+type AdvisoryEvidenceItem = {
+    title: string;
+    source_label: string;
+    why_it_matters: string;
+    url?: string | null;
+    trust_score?: number;
 };
 
 type AdvisoryNextAction = {
@@ -48,6 +86,25 @@ type TechnologyRecommendation = {
     operating_cost: string;
     alternative: string;
     rationale: string;
+};
+
+type CustomerOrchestratorChatResponse = {
+    conversation?: ConversationMessage[];
+    clarification_questions?: AdvisoryQuestion[];
+    proposal_items?: ProposalItem[];
+    next_action_suggestions?: AdvisoryNextAction[];
+    new_technology_candidates?: string[];
+    technology_recommendations?: TechnologyRecommendation[];
+    evidence_highlights?: AdvisoryEvidenceItem[];
+    diagnostics?: Record<string, unknown> & {
+        synced_stage_run?: SharedOrchestratorStageRun;
+        stage_run_id?: string;
+    };
+    session_id?: string;
+    run_id?: string;
+    stage_chat?: {
+        pending_revision_note?: string;
+    };
 };
 
 type Product = {
@@ -367,7 +424,7 @@ const MEMBER_TYPE_LABELS: Record<CustomerMemberType, string> = {
     corporation: '법인사업자',
 };
 
-type ReverseQuestionMode = 'implementation' | 'pass_review' | 'feature_innovation';
+type ReverseQuestionMode = 'direct' | 'implementation' | 'pass_review' | 'feature_innovation';
 
 type ConversationTonePreset = 'auto' | 'free_talk' | 'concise' | 'execution';
 
@@ -379,6 +436,12 @@ type ReverseQuestionModeConfig = {
 };
 
 const REVERSE_QUESTION_MODE_CONFIGS: ReverseQuestionModeConfig[] = [
+    {
+        id: 'direct',
+        label: '직접 답변',
+        description: '설계·구현 내용을 바로 제시합니다. 기본 모드.',
+        tag: 'direct-answer',
+    },
     {
         id: 'implementation',
         label: '구현 역질문',
@@ -534,11 +597,13 @@ export default function MarketplaceOrchestratorClient({
     const [nextActionSuggestions, setNextActionSuggestions] = React.useState<AdvisoryNextAction[]>([]);
     const [newTechnologyCandidates, setNewTechnologyCandidates] = React.useState<string[]>([]);
     const [technologyRecommendations, setTechnologyRecommendations] = React.useState<TechnologyRecommendation[]>([]);
+    const [evidenceHighlights, setEvidenceHighlights] = React.useState<AdvisoryEvidenceItem[]>([]);
+    const [liveFlowDiagnostics, setLiveFlowDiagnostics] = React.useState<Record<string, unknown> | null>(null);
     const [engineRails, setEngineRails] = React.useState<MarketplaceEngineRail[] | undefined>(undefined);
     const [engineSlots, setEngineSlots] = React.useState<MarketplaceSlotRow[]>([]);
     const [selectedEngineRailId, setSelectedEngineRailId] = React.useState<string>('RAIL-01');
     const [conversationTonePreset] = React.useState<ConversationTonePreset>('auto');
-    const [reverseQuestionMode, setReverseQuestionMode] = React.useState<ReverseQuestionMode>('implementation');
+    const [reverseQuestionMode, setReverseQuestionMode] = React.useState<ReverseQuestionMode>('direct');
     const [compactUi, setCompactUi] = React.useState(true);
     const terminalFocusedView = false;
 
@@ -549,6 +614,60 @@ export default function MarketplaceOrchestratorClient({
     const activeStage = React.useMemo(
         () => (stageRun?.stages || []).find((stage) => stage.id === stageRun?.current_stage_id) || null,
         [stageRun],
+    );
+    const progressRunId = String(chatSessionId || runId || '').trim();
+    const progressUrl = progressRunId && authHeaders
+        ? `${apiBaseUrl}/api/marketplace/customer-orchestrate/progress/${encodeURIComponent(progressRunId)}`
+        : null;
+    const executionState = typeof liveFlowDiagnostics?.execution_state === 'string'
+        ? liveFlowDiagnostics.execution_state
+        : '';
+    const progressPollingEnabled = chatLoading
+        || executionState === 'executing'
+        || liveFlowDiagnostics?.progress_status === 'running';
+    const { snapshot: liveProgressSnapshot } = useOrchestratorLiveProgress({
+        enabled: Boolean(progressPollingEnabled && progressUrl),
+        progressUrl,
+        accessToken: token || null,
+        authHeaders,
+        preferStream: true,
+    });
+    const liveFlowSnapshot = React.useMemo(
+        () => mergeLiveFlowWithProgress(
+            mergeLiveFlowWithStageRun(
+                buildLiveFlowSnapshotFromDiagnostics(liveFlowDiagnostics, { chatLoading, stageRun }),
+                stageRun,
+            ),
+            liveProgressSnapshot,
+            { chatLoading, stageRun },
+        ),
+        [chatLoading, liveFlowDiagnostics, liveProgressSnapshot, stageRun],
+    );
+    const discussHighlightArchId = React.useMemo(
+        () => resolveDiscussArchId(liveFlowSnapshot, stageRun),
+        [liveFlowSnapshot, stageRun],
+    );
+    const mirroredCommandRules = React.useMemo(
+        () => resolveCommandRules(liveFlowDiagnostics, []),
+        [liveFlowDiagnostics],
+    );
+    const marketDecisionItems = React.useMemo(
+        () => buildDecisionItems({
+            proposalItems,
+            technologyRecommendations,
+            nextActionSuggestions,
+            newTechnologyCandidates,
+            stageNumber: liveFlowSnapshot.stageNumber,
+        }),
+        [liveFlowSnapshot.stageNumber, newTechnologyCandidates, nextActionSuggestions, proposalItems, technologyRecommendations],
+    );
+    const showLegacyStructuredResponse = marketDecisionItems.length === 0
+        && technologyRecommendations.length === 0
+        && proposalItems.length === 0
+        && nextActionSuggestions.filter((item) => item.action_type !== 'stage_hint').length === 0;
+    const marketEvidenceItems = React.useMemo(
+        () => mapEvidenceHighlights(evidenceHighlights),
+        [evidenceHighlights],
     );
     const customerFollowUpScore = React.useMemo(() => {
         const completionPenalty = generatedProgramSummary?.publish_ready ? 5 : 75;
@@ -1363,9 +1482,13 @@ export default function MarketplaceOrchestratorClient({
         }
     }, [apiBaseUrl, authHeaders, loadHistory, runId, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, stageSubstepChecks]);
 
-    const sendStageChat = React.useCallback(async () => {
-        const content = chatInput.trim();
-        if (!content || !authHeaders) return;
+    const sendStageChat = React.useCallback(async (contentOverride?: string, speakerOverride?: string) => {
+        const rawContent = String(contentOverride ?? chatInput).trim();
+        if (!rawContent || !authHeaders) return;
+        const isVoice = (speakerOverride || '').includes('음성');
+        const content = isVoice
+            ? enrichVoiceMessageForStage(rawContent, { stageNumber: liveFlowSnapshot.stageNumber })
+            : rawContent;
         if (/^\/run(?:\s+|$)/i.test(content)) {
             const nextTask = content.replace(/^\/run\s*/i, '').trim();
             if (nextTask) {
@@ -1381,23 +1504,27 @@ export default function MarketplaceOrchestratorClient({
         }
         setChatLoading(true);
         setErrorText('');
+        if (isVoice) {
+            setLiveFlowDiagnostics((prev) => ({
+                ...(prev || {}),
+                ...buildVoiceDiagnosticsPatch('marketplace'),
+            }));
+        }
         try {
             const userMessage: ConversationMessage = {
                 role: 'user',
-                speaker: '고객',
+                speaker: speakerOverride || '고객',
                 content,
                 timestamp: new Date().toISOString(),
                 step_title: activeStage?.title,
             };
             const nextConversation = [...conversation, userMessage];
             setConversation(nextConversation);
-            const response = await fetch(`${apiBaseUrl}/api/marketplace/customer-orchestrate/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...authHeaders,
-                },
-                body: JSON.stringify({
+            const useReverseQuestion = reverseQuestionMode !== 'direct';
+            const data = await postCustomerOrchestratorChat<CustomerOrchestratorChatResponse>(
+                apiBaseUrl,
+                authHeaders,
+                {
                     task: buildTask(selectedProduct, taskDraft, projectName),
                     message: content,
                     conversation: nextConversation,
@@ -1406,15 +1533,17 @@ export default function MarketplaceOrchestratorClient({
                     stage_id: stageRun?.current_stage_id || undefined,
                     project_name: projectName.trim() || selectedProduct.id,
                     companion_mode: 'hybrid',
-                    conversation_mode: 'reverse_question',
+                    conversation_mode: useReverseQuestion ? 'reverse_question' : 'auto',
                     multi_turn_enabled: true,
-                    response_style: `reverse_question:${reverseQuestionMode}`,
+                    response_style: useReverseQuestion
+                        ? `reverse_question:${reverseQuestionMode}`
+                        : (conversationTonePresetConfig.responseStyle || 'balanced'),
                     tone_preset: conversationTonePreset,
-                    reverse_question_mode: reverseQuestionMode,
+                    reverse_question_mode: useReverseQuestion ? reverseQuestionMode : undefined,
                     max_tokens: 640,
                     output_dir: generatedProgramSummary?.output_dir || undefined,
                     project_memory: {
-                        reverse_question_mode: reverseQuestionMode,
+                        ...(useReverseQuestion ? { reverse_question_mode: reverseQuestionMode } : {}),
                         tone_preset: conversationTonePreset,
                         pending_tasks: [stageNoteDraft, stageRevisionNote].filter(Boolean),
                     },
@@ -1422,39 +1551,86 @@ export default function MarketplaceOrchestratorClient({
                         'customer-orchestrator',
                         'manual-10step',
                         'free-dialogue',
-                        'reverse-question',
+                        ...(useReverseQuestion ? ['reverse-question'] : ['direct-answer']),
                         reverseQuestionModeConfig.tag,
                         conversationTonePresetConfig.tag,
+                        ...(isVoice ? buildVoiceContextTags() : []),
                     ],
-                }),
-            });
-            const data = await response.json().catch(() => null);
-            if (!response.ok || !data) {
-                throw new Error(data?.detail || '고객 협업 대화 호출에 실패했습니다.');
-            }
+                },
+            );
             setConversation(Array.isArray(data.conversation) ? data.conversation : nextConversation);
             setClarificationQuestions(Array.isArray(data.clarification_questions) ? data.clarification_questions : []);
             setProposalItems(Array.isArray(data.proposal_items) ? data.proposal_items : []);
             setNextActionSuggestions(Array.isArray(data.next_action_suggestions) ? data.next_action_suggestions : []);
             setNewTechnologyCandidates(Array.isArray(data.new_technology_candidates) ? data.new_technology_candidates : []);
             setTechnologyRecommendations(Array.isArray(data.technology_recommendations) ? data.technology_recommendations : []);
+            setEvidenceHighlights(Array.isArray(data.evidence_highlights) ? data.evidence_highlights : []);
+            setLiveFlowDiagnostics(
+                data.diagnostics && typeof data.diagnostics === 'object'
+                    ? {
+                        ...(data.diagnostics as Record<string, unknown>),
+                        ...(isVoice ? buildVoiceDiagnosticsPatch('marketplace') : {}),
+                    }
+                    : (isVoice ? buildVoiceDiagnosticsPatch('marketplace') : null),
+            );
             if (data.session_id) {
                 setChatSessionId(data.session_id);
             }
+            const syncedStageRun = data.diagnostics?.synced_stage_run;
+            const effectiveRunId = String(
+                syncedStageRun?.run_id
+                || runId
+                || data.diagnostics?.stage_run_id
+                || data.run_id
+                || '',
+            ).trim();
+            if (syncedStageRun?.run_id) {
+                setStageRun(syncedStageRun);
+                setRunId(syncedStageRun.run_id);
+            } else if (effectiveRunId.startsWith('stage_run_')) {
+                await refreshStageRun(effectiveRunId);
+            }
             if (data.stage_chat?.pending_revision_note && content.startsWith('/revise')) {
-                setStageRevisionNote((prev) => [prev, data.stage_chat.pending_revision_note].filter(Boolean).join('\n'));
+                setStageRevisionNote((prev) => [prev, data.stage_chat!.pending_revision_note!].filter(Boolean).join('\n'));
             }
             if (content.startsWith('/verify') || content.startsWith('/resume')) {
                 await refreshStageRun();
                 await loadHistory();
             }
-            setChatInput('');
+            if (!contentOverride) {
+                setChatInput('');
+            }
+            if (speakerOverride?.includes('음성')) {
+                const replyText = [...(Array.isArray(data.conversation) ? data.conversation : nextConversation)]
+                    .reverse()
+                    .find((message) => message.role === 'assistant')?.content
+                    || '';
+                if (replyText) {
+                    void speakOrchestratorReply(replyText);
+                }
+            }
         } catch (error: any) {
             setErrorText(error?.message || '고객 협업 대화 처리 중 오류가 발생했습니다.');
         } finally {
             setChatLoading(false);
         }
-    }, [activeStage?.title, apiBaseUrl, authHeaders, chatInput, chatSessionId, conversation, conversationTonePreset, conversationTonePresetConfig.tag, generatedProgramSummary?.output_dir, loadHistory, projectName, refreshStageRun, reverseQuestionMode, reverseQuestionModeConfig.tag, runId, selectedProduct, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, submitOrchestration, taskDraft]);
+    }, [activeStage?.title, apiBaseUrl, authHeaders, chatInput, chatSessionId, conversation, conversationTonePreset, conversationTonePresetConfig.tag, generatedProgramSummary?.output_dir, liveFlowSnapshot.stageNumber, loadHistory, projectName, refreshStageRun, reverseQuestionMode, reverseQuestionModeConfig.tag, runId, selectedProduct, stageNoteDraft, stageRevisionNote, stageRun?.current_stage_id, submitOrchestration, taskDraft]);
+
+    const { listening: marketVoiceListening, startListening: toggleMarketVoiceInput } = useOrchestratorVoiceStt({
+        onTranscript: async (transcript) => {
+            const normalized = normalizeVoiceTranscript(transcript);
+            if (!normalized) {
+                return;
+            }
+            await sendStageChat(normalized, resolveVoiceSpeaker('marketplace'));
+        },
+        onUnsupported: () => {
+            setErrorText('이 브라우저는 음성 인식을 지원하지 않습니다. 크롬 계열 브라우저를 사용해 주세요.');
+        },
+        onError: (detail) => {
+            setErrorText(`음성 인식 실패: ${detail}`);
+        },
+    });
 
     return (
         <div className="workspace-shell">
@@ -1504,7 +1680,7 @@ export default function MarketplaceOrchestratorClient({
                                     </div>
                                     <span className="rounded-xl border border-[#2a7cff] px-3 py-2 text-xs font-semibold text-[#9ecbff]">기능만 표시</span>
                                 </div>
-                                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                                     {REVERSE_QUESTION_MODE_CONFIGS.map((mode) => {
                                         const active = mode.id === reverseQuestionMode;
                                         return (
@@ -1527,7 +1703,10 @@ export default function MarketplaceOrchestratorClient({
                                     </p>
                                 </div>
                                 <p className="mt-3 text-xs text-[#9fb0c2]">
-                                    현재 모드: <span className="font-semibold text-[#d7f3ff]">{reverseQuestionModeConfig.label}</span> · 말투: <span className="font-semibold text-[#d7f3ff]">자동질문</span>
+                                    현재 모드: <span className="font-semibold text-[#d7f3ff]">{reverseQuestionModeConfig.label}</span>
+                                    {reverseQuestionMode === 'direct'
+                                        ? ' · 설계/구현 내용을 바로 답변합니다'
+                                        : ' · 역질문 모드'}
                                 </p>
                             </div>
                         </div>
@@ -2106,6 +2285,12 @@ export default function MarketplaceOrchestratorClient({
                                             <input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명" className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                             <textarea value={taskDraft} onChange={(e) => setTaskDraft(e.target.value)} rows={7} className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                             <div className="flex flex-wrap gap-3">
+                                                <OrchestratorVoiceMicButton
+                                                    listening={marketVoiceListening}
+                                                    disabled={!token || chatLoading || submitLoading}
+                                                    onClick={toggleMarketVoiceInput}
+                                                    testId="marketplace-orchestrator-voice-input-top"
+                                                />
                                                 <button type="button" onClick={() => void createStageRun()} disabled={!token || submitLoading} className="rounded-2xl border border-[#30363d] bg-[#11161d] px-5 py-3 text-base font-semibold text-white">
                                                     단계 카드 시작
                                                 </button>
@@ -2120,6 +2305,30 @@ export default function MarketplaceOrchestratorClient({
                             </section>
 
                             <section className="space-y-6">
+                                <OrchestratorThreeTrackDiagram tone="customer" />
+                                <OrchestratorLiveFlowRail
+                                    tone="customer"
+                                    snapshot={liveFlowSnapshot}
+                                />
+                                <OrchestratorDecisionPanel
+                                    tone="customer"
+                                    items={marketDecisionItems}
+                                    evidenceHighlights={marketEvidenceItems}
+                                    approvalGate={liveFlowSnapshot.requiresApproval ? {
+                                        stageNumber: liveFlowSnapshot.stageNumber,
+                                        hint: liveFlowSnapshot.stageCommandHint,
+                                    } : null}
+                                    disabled={chatLoading}
+                                    onApplyAndProceed={(item) => { void sendStageChat(buildDecisionApplyMessage(item)); }}
+                                    onSaveIdeaOnly={(item) => {
+                                        setStageRevisionNote((prev) => [prev, buildDecisionSaveMessage(item)].filter(Boolean).join('\n'));
+                                        void sendStageChat(buildDecisionSaveMessage(item));
+                                    }}
+                                    onRequestRevision={(item) => { void sendStageChat(buildDecisionReviseMessage(item)); }}
+                                    onApprovalProceed={() => { void sendStageChat(buildApprovalProceedMessage(liveFlowSnapshot.stageNumber)); }}
+                                    onApprovalRevise={() => { void sendStageChat(buildApprovalReviseMessage()); }}
+                                    onApprovalReject={() => { void sendStageChat(buildApprovalRejectMessage()); }}
+                                />
                                 <OrchestratorStageCardPanel
                                     tone="customer"
                                     title="오케스트레이터 터미널"
@@ -2137,7 +2346,7 @@ export default function MarketplaceOrchestratorClient({
                                     onMarkFailed={() => updateStageStatus('failed')}
                                     onRefresh={() => refreshStageRun()}
                                     operationalVerificationLabel="고객 stage run 새로고침"
-                                    commandRules={terminalFocusedView ? [
+                                    commandRules={mirroredCommandRules.length > 0 ? mirroredCommandRules : (terminalFocusedView ? [
                                         '주문 입력 후 역질문 답변을 이어가며 카드 흐름을 진행합니다.',
                                         '필요한 판정만 통과/보정/미통과로 표시하고 나머지 상태 카드는 숨깁니다.',
                                         '`/ask`, `/search`, `/news`, `/revise`만 핵심 명령으로 사용합니다.',
@@ -2147,14 +2356,20 @@ export default function MarketplaceOrchestratorClient({
                                         '`/ask`, `/search`, `/news`는 동료처럼 질문/검색/주요뉴스 탐색을 수행합니다.',
                                         '`/revise`는 중간 설계 변경, `/resume`은 변경 반영 후 흐름 재개입니다.',
                                         '완료/로그/재시도 큐는 하단 이력 패널에서 즉시 확인합니다.',
-                                    ]}
+                                    ])}
                                     conversation={conversation}
                                     chatInput={chatInput}
                                     onChatInputChange={setChatInput}
                                     chatLoading={chatLoading}
-                                    onSubmitChat={sendStageChat}
+                                    onSubmitChat={() => { void sendStageChat(); }}
+                                    voiceListening={marketVoiceListening}
+                                    onVoiceToggle={toggleMarketVoiceInput}
+                                    autonomousIntent={liveFlowSnapshot.autonomousIntent}
+                                    highlightStageId={discussHighlightArchId}
+                                    discussStageNumber={liveFlowSnapshot.stageNumber}
                                 />
 
+                                {showLegacyStructuredResponse ? (
                                 <div data-testid="marketplace-orchestrator-structured-response" className="grid gap-3 xl:grid-cols-2">
                                     <div className="rounded-[24px] border border-[#244766] bg-[#0f1728] p-4 text-xs text-[#c9d1d9]">
                                         <p className="text-sm font-semibold text-white">확인 질문 / 제안 카드</p>
@@ -2202,6 +2417,14 @@ export default function MarketplaceOrchestratorClient({
                                         </div>
                                     </div>
                                 </div>
+                                ) : (
+                                    <p
+                                        data-testid="orchestrator-decision-panel-delegated-hint"
+                                        className="rounded-[24px] border border-dashed border-cyan-800/40 bg-slate-950/40 px-4 py-3 text-[11px] text-slate-400"
+                                    >
+                                        확인 질문 · 기술 제안 · 실행 제안은 상단 Decision Panel에서 반영 / 저장 / 수정하세요. (legacy structured-response 패널은 SSOT 통합으로 숨김)
+                                    </p>
+                                )}
 
                                 {!compactUi && (
                                     <SharedOrchestratorFollowUpCard

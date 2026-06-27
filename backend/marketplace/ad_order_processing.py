@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+
+from backend.time_utils import utcnow
 import io
 import json
 from typing import Any, Optional, cast
@@ -13,7 +15,7 @@ from . import models
 
 
 def build_ad_package_zip(contract: Any, order: models.AdVideoOrder) -> bytes:
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = utcnow().strftime("%Y%m%d_%H%M%S")
     duration = contract._order_duration_seconds(order)
     cut_count = contract._order_cut_count(order)
     cut_seconds = contract._order_cut_seconds(order)
@@ -84,7 +86,7 @@ def reset_ad_order_for_retry(
         order_any.quality_feedback = None
         order_any.quality_checked_at = None
     order_any.error_message = retry_reason
-    order_any.updated_at = datetime.utcnow()
+    order_any.updated_at = utcnow()
     db.commit()
     db.refresh(order)
     contract.ensure_ad_order_runtime_ready()
@@ -216,7 +218,7 @@ def process_ad_order_job(contract: Any, order_id: int) -> None:
         order_any.quality_score = quality_result["score"]
         order_any.quality_gate_passed = bool(quality_result["passed"])
         order_any.quality_feedback = quality_result["feedback"] or None
-        order_any.quality_checked_at = datetime.utcnow()
+        order_any.quality_checked_at = utcnow()
 
         order_any.output_video_key = stored_video_key
         order_any.output_video_filename = video_name

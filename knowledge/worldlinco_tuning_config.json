@@ -1,0 +1,33 @@
+{
+  "version": 3,
+  "updated_at": "2026-06-21T16:26:00Z",
+  "updated_by": "v2-3to7s-window-1s-endpoint",
+  "calibration_notes": "[3~7초 창·1초 엔드포인트(06-21 01:26)] 사용자 실통화 피드백: max 12s 대기가 문맥 끊김 과다 → 발신 구간을 '최소 3초~최대 7초'로 재설정하고, 3초 경과 후 1초 침묵 감지 시 즉시 엔드포인트(서빙→마이크 오픈)하는 순환식으로 전환. 변경: silero_min_segment_ms 2400->3000, silero_safety_cap_ms 12000->7000(※ admin PUT API 하한 8000 미만이라 파일 직접 편집으로만 적용), silero_silence_ms 1400->1000, vad_* 동기화(min 2200->3000 / silence 1500->1000 / max 12000->7000). 주의: 1000ms·7000ms 는 06-19 캘리브레이션(호흡 컷·장문 분할 방지로 올렸던 값)을 의도적으로 되돌린 것 — 단일 장문 충실도↓ vs 턴 응답성↑ 트레이드오프를 사용자가 실통화로 선택. min_speech_span_ms(1700)은 노이즈/빈세그 필터로 유지. 재빌드·백엔드 재시작 불필요(load_worldlinco_tuning 매요청 파일 read + 앱 라이브 fetch). 회귀 시 즉시 원복. [참고] 모바일 TS fallback 기본값(worldlincoTuningConfig.ts)은 다음 빌드에서 동기화 필요(현재는 라이브 fetch가 우선이라 무영향). --- [원복(06-20 12:20)] T2 에코가드 단축이 self-echo 회귀를 유발 — 사용자 실통화에서 'S10이 자기 발화를 자기에게 다시 재생(혼자 듣고 혼자 발화)'. 재생 직후 마이크가 ~1.6~1.8s 일찍 열려 자기 TTS 꼬리를 다시 캡처→릴레이→재생하는 되먹임 루프 발생. 사용자가 정상 확인한 빌드 147(T1) 상태로 즉시 원복: remote_echo_guard_ms 3000->4800, speaker_echo_guard_ms 4000->5800. 재빌드 불필요(앱이 라이브 fetch). 턴 지연 단축은 에코 억제 창을 건드리지 않는 별도 방식(예: 재생 종료 이벤트 기반 즉시 해제)으로만 재시도. --- [무효처리] 본(06-20 10:50) 패스 [턴 핸드백 지연 단축 — 사용자 피드백 '발화(재생) 후 즉시 녹음이 연결돼야 자연스럽다 / 가장 텀 많은 구간']: 재생 시작부터의 에코가드 suppress 창이 재생 종료 후에도 길게 남아 다음 발화까지 사구간 발생. remote_echo_guard_ms 4800->3000, speaker_echo_guard_ms 5800->4000 으로 ~1.6~1.8s 단축. 안전망: F1 텍스트레벨 에코 dedup(CJK 바이그램 Dice≥0.55) + roundtrip_self_echo + remotePlaybackUntil(추정 재생 동안 마이크 비재개)이 TTS 꼬리 되먹임을 잡으므로 시간가드를 타이트화해도 회귀 위험 낮음. [호흡 보존] silero_silence_ms 1400·min_speech_span 1700·safety_cap 12000 은 '한 호흡' 캘리브레이션 그대로 유지(줄이면 문장 중간 조기 flush 회귀). [이전 기록] 본(06-19 13:58) 패스 [V.2 음성부 — 사용자 승인 O-전체]: 장문장이 발화 도중 safety_cap 7000ms 에 강제 flush 되어 '중간 음성 사망 후 분할'·STT/MT 품질 저하 발생. 자연 장문(8~12s)을 한 번에 수용하도록 silero_safety_cap_ms·vad_max_segment_ms 7000->12000 상향. (동시에 STT large-v3 + vLLM 문맥 LLM 번역 전환으로 분할 자체를 줄임.) 본(06-19 11:40) 패스 [① Silero silence 튜닝, B-7 진행형]: v128 연속캡처 큐 설치 후 사용자 피드백 '음성감지 시간이 한 호흡 쉬고 말할 시간조차 없이 바로 서빙' — silero_silence_ms 1000ms 가 대화 중 자연 호흡(0.5~1.0s)을 발화 종료로 오인해 문장 중간 조기 flush. 한 호흡 통과 + 실제 발화 종료(>1.4s)에서만 끊도록 silero_silence_ms 1000->1400, vad_silence_flush_ms(JS 폴백) 1300->1500 상향. 직전(05:10) 패스: 발화 중심 타이트화(min_segment 2800->2400, min_speech_span 2000->1700). 리드인 무음(SEGMENT_STARTED->SPEECH_START 최대 5.9s)은 상수로 해결 불가 — speech_start 까지 녹음 지연 코드가 근본 해법(별도 작업).",
+  "voip": {
+    "silero_silence_ms": 1000,
+    "silero_speech_ms": 120,
+    "silero_min_segment_ms": 3000,
+    "silero_min_speech_span_ms": 1700,
+    "silero_safety_cap_ms": 7000,
+    "silero_post_flush_cooldown_ms": 1000,
+    "remote_echo_guard_ms": 4800,
+    "speaker_echo_guard_ms": 5800,
+    "remote_listen_hold_ms": 2600,
+    "post_playback_guard_ms": 550,
+    "vad_silence_flush_ms": 1000,
+    "vad_min_segment_ms": 3000,
+    "vad_max_segment_ms": 7000,
+    "speech_meter_min_db": -52,
+    "file_speech_rms_db": -52,
+    "meter_unavailable_fixed_flush_ms": 4000
+  },
+  "face_conversation": {
+    "silence_flush_ms": 1600,
+    "min_segment_ms": 2200,
+    "max_segment_ms": 12000,
+    "file_speech_rms_db": -50,
+    "meter_poll_every": 2,
+    "restart_ms": 250,
+    "playback_cap_ms": 10000
+  }
+}

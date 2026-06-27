@@ -227,7 +227,7 @@ export default function AdminLoginPage() {
       return;
     }
     if (!password) {
-      setError('패스키 등록 전 비밀번호로 먼저 본인 확인이 필요합니다.');
+      window.location.href = `/admin/recovery?intent=passkey&email=${encodeURIComponent(normalizedEmail)}`;
       return;
     }
     if (!passkeyReady) {
@@ -241,7 +241,11 @@ export default function AdminLoginPage() {
       const startResponse = await fetch('/api/proxy?action=passkey-register-start', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-        body: JSON.stringify({ email: normalizedEmail, device_label: '이 기기 패스키' }),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          device_label: '이 기기 패스키',
+          password,
+        }),
         cache: 'no-store',
       });
       const startPayload = await startResponse.json().catch(() => null);
@@ -541,25 +545,22 @@ export default function AdminLoginPage() {
 
           <div className="mt-4 flex flex-col gap-2 text-sm">
             <Link href="/admin/recovery" className="font-medium text-[#5b67d8] underline underline-offset-2">
-              비밀번호를 잊으셨나요?
+              비밀번호를 잊으셨나요? (이메일/문자 인증)
+            </Link>
+            <Link href="/admin/recovery?intent=passkey" className="font-medium text-[#5b67d8] underline underline-offset-2">
+              비밀번호 없이 패스키 등록 (이메일/문자 인증)
             </Link>
             <Link href="/admin/recovery" data-testid="admin-login-recovery-link" className="hidden">
               비밀번호를 잊으셨나요?
-            </Link>
-            <Link href="/admin/recovery?mode=carrier" className="font-medium text-[#5b67d8] underline underline-offset-2">
-              통신사 본인확인 후 비밀번호 재설정
-            </Link>
-            <Link href="/admin/recovery?mode=carrier" data-testid="admin-login-carrier-recovery-link" className="hidden">
-              통신사 본인확인 후 비밀번호 재설정
             </Link>
           </div>
 
           <div className="mt-5 rounded-xl border border-[#d8dcff] bg-[#f7f8ff] px-4 py-4 text-sm text-[#4d5588]">
             <div className="font-semibold text-[#2f376d]">로그인 문제 해결 안내</div>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>관리자 비밀번호를 잊은 경우 로그인 전 복구 페이지에서 재설정 흐름을 시작할 수 있습니다.</li>
-              <li>통신사 본인확인과 패스키(지문/Face ID)는 다음 단계에서 관리자/회원 공통 인증 코어로 연결할 예정입니다.</li>
-              <li>고위험 설정 변경 시 추가 본인확인이 필요할 수 있습니다.</li>
+              <li>비밀번호를 잊은 경우 복구 페이지에서 이메일 또는 SMS 인증 코드로 재설정할 수 있습니다.</li>
+              <li>비밀번호 없이도 인증 후 이 기기에 패스키(지문/Face ID)를 등록할 수 있습니다.</li>
+              <li>패스키 등록 버튼을 누르면 비밀번호가 없을 때 자동으로 인증 복구 페이지로 이동합니다.</li>
             </ul>
           </div>
         </form>

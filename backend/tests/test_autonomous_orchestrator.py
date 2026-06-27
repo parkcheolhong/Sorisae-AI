@@ -1,4 +1,6 @@
 """멀티 에이전트 자율대화 오케스트레이터 테스트"""
+from typing import List
+
 import pytest
 
 from backend.orchestrator.autonomous.turn_controller import TurnController, STAGE_DEFINITIONS
@@ -77,6 +79,28 @@ class TestAutonomousSession:
         assert session.conversation[0].role == "user"
         assert session.conversation[1].agent_id == "reasoner"
 
+    def test_save_and_load_restores_stages(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        from backend.orchestrator.autonomous.session import StageState
+
+        session = AutonomousSession.create(owner_id="user1", project_name="test-project")
+        session.stages = [StageState(stage_id="S1", stage_label="1단계", status="in_progress")]
+        session.agent_results.append(
+            AgentResult(agent="reasoner", status="success", output="ok")
+        )
+        session.approval_state = "pending"
+        session.save()
+
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None
+        assert len(loaded.stages) == 1
+        assert loaded.stages[0].stage_id == "S1"
+        assert len(loaded.agent_results) == 1
+        assert loaded.approval_state == "pending"
+
     def test_save_and_load(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
@@ -139,11 +163,25 @@ class TestTurnController:
         assert agents == []
 
     def test_route_to_agents_code_generation_idle(self):
+        """idle fallback — process_turn 첫 code_generation 턴( planning )과는 별도."""
         controller = TurnController()
         session = AutonomousSession.create(owner_id="u")
         agents = controller.route_to_agents("code_generation", session)
-        assert "reasoner" in agents
-        assert "planner" in agents
+        assert agents == ["reasoner", "planner"]
+
+    def test_route_to_agents_code_generation_stage01(self):
+        """process_turn 첫 code_generation 턴: STAGE-01 → reasoner only."""
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="u")
+        from backend.orchestrator.autonomous.session import StageState
+
+        session.task = "FastAPI로 블로그 만들어줘"
+        session.execution_state = "planning"
+        session.stages = [
+            StageState(stage_id="STAGE-01", stage_label="1단계: 구조 설계", status="in_progress"),
+        ]
+        agents = controller.route_to_agents("code_generation", session)
+        assert agents == ["reasoner"]
 
     def test_route_to_agents_question(self):
         controller = TurnController()
@@ -179,12 +217,68 @@ class TestTurnController:
         assert session.task == "FastAPI로 블로그 만들어줘"
 
     @pytest.mark.asyncio
-    async def test_process_code_generation_semi_auto_requires_approval(self):
+    async def test_process_code_generation_semi_auto_registers_task(self):
         controller = TurnController()
         session = AutonomousSession.create(owner_id="user1", mode="semi_auto")
         result = await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        assert result["intent"] == "task_registered"
+        assert result["requires_approval"] is False
+        assert session.approval_state == "none"
+        assert session.execution_state == "idle"
+        assert len(session.stages) == len(STAGE_DEFINITIONS)
+
+    @pytest.mark.asyncio
+    async def test_process_design_after_task_registration_requires_approval(self):
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="semi_auto")
+        await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        result = await controller.process_turn("설계해줘", session)
         assert result["requires_approval"] is True
         assert session.approval_state == "pending"
+
+    @pytest.mark.asyncio
+    async def test_process_code_generation_full_auto_runs_coder(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TMP", str(tmp_path))
+        monkeypatch.setenv("AUTONOMOUS_MAX_STAGES_PER_TURN", "1")
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="full_auto")
+        result = await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        assert result["requires_approval"] is False
+        assert session.approval_state in ("approved", "none")
+        coder_results = [r for r in session.agent_results if r.agent == "coder"]
+        assert len(coder_results) >= 1
+
+    @pytest.mark.asyncio
+    async def test_process_approval_runs_coder_validator(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TMP", str(tmp_path))
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="semi_auto")
+        await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        await controller.process_turn("설계해줘", session)
+        assert session.approval_state == "pending"
+
+        result = await controller.process_turn("승인", session)
+        assert result["intent"] == "approval"
+        assert any(r.agent == "coder" for r in session.agent_results)
+        assert any(r.agent == "validator" for r in session.agent_results)
+
+    @pytest.mark.asyncio
+    async def test_process_rejection_replans_semi_auto(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TMP", str(tmp_path))
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1", mode="semi_auto")
+        await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        await controller.process_turn("설계해줘", session)
+        assert session.approval_state == "pending"
+
+        result = await controller.process_turn("거절", session)
+        assert result["intent"] == "rejection"
+        assert session.approval_state == "pending"
+        assert session.execution_state == "awaiting_approval"
+
+    def test_classify_rejection_intent(self):
+        controller = TurnController()
+        assert controller.classify_intent("거절") == "rejection"
 
     @pytest.mark.asyncio
     async def test_process_approval_without_pending(self):
@@ -208,6 +302,57 @@ class TestTurnController:
         await controller.process_turn("블로그 API를 만들어줘", session)
         log = controller.bus.get_message_log(session.session_id)
         assert len(log) >= 1
+
+    @pytest.mark.asyncio
+    async def test_agent_bus_request_response_handoff(self):
+        controller = TurnController(llm_call=None)
+        session = AutonomousSession.create(owner_id="user1", mode="advisory")
+        await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        log = controller.bus.get_message_log(session.session_id)
+        msg_types = {entry["msg_type"] for entry in log}
+        assert "request" in msg_types
+        assert "response" in msg_types
+        assert "handoff" in msg_types
+        handoffs = [entry for entry in log if entry["msg_type"] == "handoff"]
+        assert any(entry["from_agent"] == "reasoner" for entry in handoffs)
+
+    @pytest.mark.asyncio
+    async def test_abrain_agents_return_stub_without_llm(self):
+        controller = TurnController(llm_call=None)
+        session = AutonomousSession.create(owner_id="user1", mode="advisory")
+        result = await controller.process_turn("FastAPI로 블로그 만들어줘", session)
+        assert result["llm_connected"] is False
+        reasoner_results = [r for r in session.agent_results if r.agent == "reasoner"]
+        assert reasoner_results and reasoner_results[0].status == "stub"
+
+    @pytest.mark.asyncio
+    async def test_full_auto_respects_max_stages_per_turn(self, monkeypatch):
+        monkeypatch.setenv("AUTONOMOUS_MAX_STAGES_PER_TURN", "3")
+        controller = TurnController()
+        stage_calls: List[int] = []
+
+        async def fake_execute_current_stage(session):
+            stage_calls.append(1)
+            stage = session.get_current_stage()
+            if stage:
+                stage.status = "completed"
+                session.advance_stage()
+            return [AgentResult(agent="coder", status="success", output="ok", artifacts={"passed": True})]
+
+        monkeypatch.setattr(controller, "_execute_current_stage", fake_execute_current_stage)
+        session = AutonomousSession.create(owner_id="user1", mode="full_auto")
+        session.task = "테스트 프로젝트"
+        controller._initialize_stages(session)
+        session.approval_state = "approved"
+        session.execution_state = "executing"
+
+        await controller._execute_code_pipeline(session, continue_stages=True)
+        assert len(stage_calls) == 3
+
+    def test_max_full_auto_stages_default_is_eleven(self, monkeypatch):
+        monkeypatch.delenv("AUTONOMOUS_MAX_STAGES_PER_TURN", raising=False)
+        from backend.orchestrator.autonomous.turn_controller import _max_full_auto_stages_per_turn
+        assert _max_full_auto_stages_per_turn() == len(STAGE_DEFINITIONS)
 
     def test_stage_definitions_complete(self):
         assert len(STAGE_DEFINITIONS) == 11

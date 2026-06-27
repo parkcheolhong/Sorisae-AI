@@ -7,7 +7,7 @@ import {
 } from '@/lib/admin-self-run-presets';
 
 export type SelfPrepareMode = 'self-diagnosis' | 'self-improvement' | 'self-expansion';
-export type SelfRunDirectiveTemplate = '' | 'debug_remediation_loop' | 'video_ad_clarity' | 'video_ad_conversion' | 'video_ad_speed_optimization' | 'video_ad_storytelling' | 'video_ad_quality_upgrade' | 'video_ad_new_tech' | 'admin_ops_efficiency' | 'marketplace_conversion' | 'llm_cost_latency';
+export type SelfRunDirectiveTemplate = '' | 'debug_remediation_loop' | 'video_ad_clarity' | 'video_ad_conversion' | 'video_ad_speed_optimization' | 'video_ad_storytelling' | 'video_ad_quality_upgrade' | 'video_ad_new_tech' | 'admin_ops_efficiency' | 'marketplace_conversion' | 'llm_cost_latency' | 'tower_crane_expansion';
 export type SelfRunDirectiveScope = 'preset_default' | 'diagnosis_only' | 'targeted_implementation' | 'feature_expansion' | 'modernization';
 
 interface UseAdminSelfRunOptions {

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Response
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, func
 from typing import Any, Callable, Dict, List, Optional
 from pydantic import BaseModel
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+
+from backend.time_utils import utcnow
 import asyncio
 import logging
 import os
@@ -516,6 +518,81 @@ def _resolve_latest_marketplace_apk_path() -> Path:
 
     apk_candidates.sort(key=lambda item: item.stat().st_mtime, reverse=True)
     return apk_candidates[0]
+
+
+def _read_worldlinco_apk_manifest() -> dict[str, Any]:
+    apk_dir = _resolve_marketplace_apk_dir()
+    manifest_path = apk_dir / "nadotongryoksa-v1.manifest.json"
+    if manifest_path.is_file():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except json.JSONDecodeError:
+            pass
+
+    target = apk_dir / "nadotongryoksa-v1.apk"
+    if not target.is_file():
+        target = _resolve_latest_marketplace_apk_path()
+    stat = target.stat()
+    return {
+        "package": "com.parkcheolhong.worldlinco",
+        "versionName": None,
+        "versionCode": None,
+        "apkFilename": target.name,
+        "downloadPath": f"/api/marketplace/apk/{target.name}",
+        "publishedAt": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        "sizeBytes": stat.st_size,
+        "manifestMissing": True,
+    }
+
+
+@router.get("/apk/worldlinco/manifest")
+def get_worldlinco_apk_manifest() -> Any:
+    """Marketplace UI용 WorldLinco APK 버전 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/latest-apk-metadata")
+def get_latest_apk_metadata() -> Any:
+    """모바일 앱 자동 업데이트 확인용 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content={
+            "version_name": payload.get("versionName"),
+            "build_number": payload.get("versionCode"),
+            "package": payload.get("package"),
+            "download_path": payload.get("downloadPath"),
+            "published_at": payload.get("publishedAt"),
+            "size_bytes": payload.get("sizeBytes"),
+            "apk_filename": payload.get("apkFilename"),
+        },
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/worldlinco/tuning")
+def get_worldlinco_tuning_public() -> Any:
+    """WorldLinco 모바일 VoIP/대면 통역 튜닝값 (로그인 불필요)."""
+    from backend.marketplace.worldlinco_tuning import worldlinco_tuning_public_payload
+
+    return JSONResponse(
+        content=worldlinco_tuning_public_payload(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 @router.get("/latest.apk")
@@ -1104,6 +1181,14 @@ def _ensure_video_service_user_schema() -> None:
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
             ))
+        if "preferred_language" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(16)"
+            ))
+        if "country_code" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN country_code VARCHAR(8)"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
@@ -1263,10 +1348,13 @@ def _ensure_customer_stage_run_payload(
     return stage_run_payload
 
 
-async def _run_customer_orchestration_request(orchestration_request):
-    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+async def _run_customer_orchestration_request(orchestration_request, owner_id: str | None = None):
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_execution
 
-    return await execute_orchestration_handler(orchestration_request)
+    return await run_autonomous_surface_execution(
+        orchestration_request,
+        owner_id=str(owner_id or getattr(orchestration_request, "run_id", "") or "marketplace-customer"),
+    )
 
 
 def _build_customer_orchestrate_result_payload(
@@ -1615,7 +1703,7 @@ def _append_customer_follow_up_history(*, history_id: str, score: int, limit: in
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]
@@ -1688,6 +1776,7 @@ def _build_customer_orchestrate_request(
             request.manual_correction,
         ),
         mode=safe_mode,
+        run_id=str(request.stage_run_id or "").strip() or None,
         project_name=request.project_name,
         output_base_dir=user_dir,
         output_dir=validated_output_dir,

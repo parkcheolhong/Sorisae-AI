@@ -41,7 +41,7 @@ function Test-CallSessionConnected {
 }
 
 function Wait-ForStableCallSession {
-    param([string]$ExpectedCallId, [int]$StableSeconds = 8, [int]$TimeoutSec = 45)
+    param([string]$ExpectedCallId, [int]$StableSeconds = 8, [int]$TimeoutSec = 90)
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     $stableSince = $null
     while ((Get-Date) -lt $deadline) {
@@ -124,13 +124,14 @@ $s10Log | Out-File (Join-Path $RunDir "s10.log") -Encoding utf8
 $s10Sent = [bool]($s10Log -match 'VOIP_VOICE_RELAY_SENT')
 $tabPlay = [bool]($tabLog -match 'VOIP_VOICE_RELAY_PLAYBACK')
 $jaDetected = [bool]($s10Log -match 'VOIP_VOICE_TRANSLATE_RESULT.*detected_lang":"ja' -or $s10Log -match '"detected_lang":"ja"')
-$koOnTab = [bool]($tabLog -match 'VOIP_VOICE_RELAY_PLAYBACK.*(?:안녕|반갑|부탁|잘)' -or $tabLog -match 'translated_text.*(?:안녕|반갑|부탁|잘)')
+$targetLangKo = [bool]($s10Log -match 'VOIP_VOICE_TRANSLATE_RESULT.*target_lang":"ko' -or $s10Log -match 'VOIP_VOICE_RELAY_SENT.*target_lang":"ko')
+$koOnTab = [bool]($tabLog -match 'VOIP_VOICE_RELAY_PLAYBACK.*(?:안녕|반갑|부탁|잘|만나)' -or $tabLog -match 'translated_text.*(?:안녕|반갑|부탁|잘|만나)')
 $koJaTranslate = [bool]($s10Log -match 'VOIP_VOICE_TRANSLATE_RESULT.*detected_lang":"ja' -or $tabLog -match 'voice_translation.*source_lang":"ja')
 $jaSegment = [bool]($s10Log -match 'VOIP_VOICE_RELAY_SEGMENT_STARTED.*source_lang":"ja')
 $deeplinkLang = [bool]($s10Log -match 'VOIP_DEEPLINK_PREFERRED_LANGUAGE_APPLIED.*preferred_language":"ja"')
 $repetition = ([regex]::Matches($tabLog, 'repetition_hallucination')).Count
 
-$pass = $jaDetected -and ($tabPlay -or $koOnTab -or $koJaTranslate)
+$pass = $jaDetected -and $targetLangKo -and ($tabPlay -or $koOnTab)
 
 $summary = [pscustomobject]@{
     timestamp = (Get-Date).ToString("o")
@@ -140,6 +141,7 @@ $summary = [pscustomobject]@{
     s10_relay_sent = $s10Sent
     s10_ja_segment = $jaSegment
     s10_deeplink_ja = $deeplinkLang
+    s10_target_lang_ko = $targetLangKo
     tab_playback = $tabPlay
     ja_detected = $jaDetected
     tab_ko_playback = $koOnTab
@@ -148,7 +150,7 @@ $summary = [pscustomobject]@{
     pass = $pass
 }
 $summary | ConvertTo-Json -Depth 4 | Out-File (Join-Path $RunDir "summary.json") -Encoding utf8
-Write-Step "PASS=$pass call_id=$callId s10_sent=$s10Sent ja_seg=$jaSegment tab_play=$tabPlay ja=$jaDetected repetition=$repetition"
+Write-Step "PASS=$pass call_id=$callId s10_sent=$s10Sent target_ko=$targetLangKo ja_seg=$jaSegment tab_play=$tabPlay ja=$jaDetected ko_tts=$koOnTab repetition=$repetition"
 Write-Step "Evidence: $RunDir"
 
 Write-Step "Post-call hangup"

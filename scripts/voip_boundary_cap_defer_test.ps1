@@ -4,7 +4,7 @@ param(
     [string]$CallerDevice = "R83W70QY11H",
     [string]$CalleeDevice = "172.30.1.19:5555",
     [string]$PackageName = "com.parkcheolhong.worldlinco",
-    [string]$CalleeVoiceId = "nado-000226",
+    [string]$CalleeVoiceId = "nado-000001",
     [int]$DeferWindowSec = 40,
     [int]$CapWindowSec = 90,
     [switch]$SkipCallSetup,

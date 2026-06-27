@@ -35,15 +35,17 @@ class ReasonerAgent(BaseAgent):
         if context.stage_id:
             user_prompt += f"\n현재 단계: {context.stage_label or context.stage_id}"
 
-        output = await self._call_llm(system_prompt, user_prompt, context)
+        output, llm_connected = await self._call_llm_tracked(system_prompt, user_prompt, context)
 
         return AgentResult(
             agent=self.agent_id,
-            status="success",
+            status="success" if llm_connected else "stub",
             output=output,
             next_agents=["planner"],
             artifacts={
                 "analysis_type": "requirements_and_architecture",
                 "stage_id": context.stage_id,
+                "llm_connected": llm_connected,
             },
+            metadata={"llm_connected": llm_connected},
         )
