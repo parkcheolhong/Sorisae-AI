@@ -94,6 +94,8 @@ def _build_client(*, allow_unverified_friend_add: bool = True):
         username="caller",
         is_active=True,
         is_admin=False,
+        preferred_language="ko",
+        country_code="KR",
     )
     chat_router_module.NadoTranslator = _FakeTranslatorProvider
     voip_router_module.SessionLocal = TestingSessionLocal
