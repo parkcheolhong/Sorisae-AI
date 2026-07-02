@@ -3,10 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
+import pytest
 from fastapi import FastAPI
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -22,6 +25,13 @@ import backend.marketplace.nadotongryoksa_friends_router as friends_router_modul
 import backend.marketplace.nadotongryoksa_voip_router as voip_router_module
 from backend.marketplace.nadotongryoksa_friends_router import router as friends_router
 from backend.marketplace.nadotongryoksa_voip_router import router as voip_router
+
+
+def _ws_path(signaling_url: str) -> str:
+    parsed = urllib.parse.urlsplit(signaling_url)
+    if parsed.scheme and parsed.netloc:
+        return urllib.parse.urlunsplit(("", "", parsed.path, parsed.query, ""))
+    return signaling_url
 
 
 def _build_client(*, allow_unverified_friend_add: bool = True):
@@ -267,6 +277,33 @@ def test_voip_initiate_prefers_public_signaling_base_for_loopback_requests(monke
     assert response.status_code == 200
     payload = response.json()
     assert payload["signaling_server"].startswith("ws://172.30.1.41:8000/api/v1/voip/signal")
+    assert "role=caller" in payload["signaling_server"]
+    assert "token=" in payload["signaling_server"]
+
+
+def test_voip_initiate_enforces_rate_limit_on_production_router(monkeypatch):
+    monkeypatch.setenv("VOIP_CALL_QUOTA_MAX_REQUESTS", "1")
+    monkeypatch.setenv("VOIP_CALL_QUOTA_WINDOW_SEC", "60")
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_ENABLED", raising=False)
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("SIP_TRUNK_URI", raising=False)
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_FROM_NUMBER", raising=False)
+
+    client = _build_client()
+    body = {
+        "callee_phone": "+82-10-1111-2222",
+        "caller_id": "caller",
+        "session_id": "rate-limit-session",
+    }
+
+    first = client.post("/api/v1/voip/calls/initiate", json=body)
+    second = client.post("/api/v1/voip/calls/initiate", json=body)
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.headers["Retry-After"]
 
 
 def test_voip_initiate_accepts_mode_and_auto_relay_without_changing_phone_route(monkeypatch):
@@ -1035,6 +1072,72 @@ def test_send_incoming_call_push_invite_supports_fcm_v1_service_account(monkeypa
     assert post_calls[0][2]["message"]["android"]["priority"] == "HIGH"
 
 
+def test_voip_signal_requires_participant_token_for_production_route():
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-signal-auth-session",
+            "mode": "voip_full_auto",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    call_id = payload["call_id"]
+    caller_path = _ws_path(payload["signaling_server"])
+    assert "token=" in caller_path
+
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect(
+            f"/api/v1/voip/signal?call_id={call_id}&role=caller"
+        ) as socket:
+            socket.receive_json()
+
+    with client.websocket_connect(caller_path):
+        pass
+
+
+def test_voip_signal_rejects_token_for_wrong_role():
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-signal-role-session",
+            "mode": "voip_full_auto",
+        },
+    )
+    assert response.status_code == 200
+    caller_path = _ws_path(response.json()["signaling_server"])
+    parsed = urllib.parse.urlsplit(caller_path)
+    query = dict(urllib.parse.parse_qsl(parsed.query))
+    query["role"] = "callee"
+    wrong_role_path = urllib.parse.urlunsplit(
+        ("", "", parsed.path, urllib.parse.urlencode(query), "")
+    )
+
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect(wrong_role_path) as socket:
+            socket.receive_json()
+
+
 def test_voip_signal_relays_realtime_chat_messages_between_app_participants():
     client = _build_client()
     token = create_access_token({"sub": "callee@example.com"})
@@ -1066,8 +1169,8 @@ def test_voip_signal_relays_realtime_chat_messages_between_app_participants():
         invite = presence_socket.receive_json()
         assert invite["type"] == "incoming_call"
 
-        with client.websocket_connect(f"/api/v1/voip/signal?call_id={call_id}&role=caller") as caller_socket:
-            with client.websocket_connect(f"/api/v1/voip/signal?call_id={call_id}&role=callee") as callee_socket:
+        with client.websocket_connect(_ws_path(payload["signaling_server"])) as caller_socket:
+            with client.websocket_connect(_ws_path(invite["signaling_server"])) as callee_socket:
                 caller_socket.send_json({
                     "type": "chat_message",
                     "text": "안녕하세요, 지금 바로 연결 중입니다.",
@@ -1152,7 +1255,7 @@ def test_voip_signal_relays_voice_translation_messages_between_app_participants(
         invite = presence_socket.receive_json()
         assert invite["type"] == "incoming_call"
 
-        with client.websocket_connect(f"/api/v1/voip/signal?call_id={call_id}&role=caller") as caller_socket:
+        with client.websocket_connect(_ws_path(payload["signaling_server"])) as caller_socket:
             caller_socket.send_json(
                 {
                     "type": "voice_translation",
@@ -1167,7 +1270,7 @@ def test_voip_signal_relays_voice_translation_messages_between_app_participants(
                 }
             )
 
-            with client.websocket_connect(f"/api/v1/voip/signal?call_id={call_id}&role=callee") as callee_socket:
+            with client.websocket_connect(_ws_path(invite["signaling_server"])) as callee_socket:
                 first_message = callee_socket.receive_json()
                 assert first_message["type"] == "voice_translation"
                 assert first_message["from_role"] == "caller"

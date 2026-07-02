@@ -29,12 +29,13 @@ import asyncio
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 
 from backend.database import SessionLocal, get_db
-from backend.auth import get_current_user, SECRET_KEY, ALGORITHM
+from backend.auth import create_access_token, get_current_user, SECRET_KEY, ALGORITHM
 from backend.designated_language import (
     DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
     text_matches_designated_language,
@@ -64,6 +65,7 @@ from backend.marketplace.fcm_push import (
     device_registrations as voip_device_registrations,
     register_device_token,
 )
+from backend.security_gates import require_voip_call_quota
 
 try:
     GoogleAuthRequest = importlib.import_module(
@@ -787,7 +789,94 @@ async def _wait_for_ice_gathering(peer, timeout_sec: float = 5.0) -> None:
         await asyncio.sleep(0.1)
 
 
+def _signaling_token_ttl_seconds() -> int:
+    try:
+        return max(30, int(os.getenv("VOIP_SIGNALING_TOKEN_TTL_SEC", "600")))
+    except (TypeError, ValueError):
+        return 600
+
+
+def _signal_token_subject(user: Any) -> str:
+    subject = (
+        getattr(user, "email", None)
+        or getattr(user, "username", None)
+        or getattr(user, "id", None)
+        or "voip-participant"
+    )
+    return str(subject)
+
+
+def _mint_signal_token(*, user: Any, call_id: str, role: str) -> str:
+    return create_access_token(
+        {
+            "sub": _signal_token_subject(user),
+            "uid": getattr(user, "id", None),
+            "voip_call_id": call_id,
+            "voip_role": role,
+        },
+        expires_delta=timedelta(seconds=_signaling_token_ttl_seconds()),
+    )
+
+
+def _decode_signal_token(token: str, call_id: str, role: str) -> Optional[Dict[str, Any]]:
+    if not str(token or "").strip():
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
+    if payload.get("voip_call_id") != call_id:
+        return None
+    if payload.get("voip_role") != role:
+        return None
+    return payload
+
+
+def _signal_token_matches_call(
+    payload: Dict[str, Any],
+    call_state: CallState,
+    role: str,
+) -> bool:
+    expected_user_id = (
+        call_state.caller_user_id if role == "caller" else call_state.callee_user_id
+    )
+    if expected_user_id is None:
+        return False
+    try:
+        return int(payload.get("uid")) == int(expected_user_id)
+    except (TypeError, ValueError):
+        return False
+
+
+def _append_signaling_query_params(
+    signaling_url: str,
+    params: Dict[str, str],
+) -> str:
+    separator = "&" if "?" in signaling_url else "?"
+    return f"{signaling_url}{separator}{urllib.parse.urlencode(params)}"
+
+
+def _coerce_ws_base_url(raw_base: str) -> str:
+    base = raw_base.strip().rstrip("/")
+    if base.startswith("https://"):
+        return f"wss://{base[len('https://'):]}"
+    if base.startswith("http://"):
+        return f"ws://{base[len('http://'):]}"
+    return base
+
+
 def _build_signaling_server_url(request: Request, call_id: str) -> str:
+    public_base = (
+        os.getenv("VOIP_SIGNALING_PUBLIC_BASE_URL", "").strip()
+        or os.getenv("VOIP_PUBLIC_WS_BASE", "").strip()
+    )
+    if public_base:
+        base = _coerce_ws_base_url(public_base)
+        return (
+            f"{base}/api/v1/voip/signal?"
+            f"{urllib.parse.urlencode({'call_id': call_id})}"
+        )
+
     forwarded_proto = (
         (request.headers.get("x-forwarded-proto") or "")
         .split(",")[0]
@@ -808,12 +897,22 @@ def _build_signaling_server_url(request: Request, call_id: str) -> str:
     proto = forwarded_proto or request.url.scheme or "http"
     host = forwarded_host or request_host or "127.0.0.1:8000"
     ws_proto = "wss" if proto == "https" else "ws"
-    return f"{ws_proto}://{host}/api/v1/voip/signal?call_id={call_id}"
+    return (
+        f"{ws_proto}://{host}/api/v1/voip/signal?"
+        f"{urllib.parse.urlencode({'call_id': call_id})}"
+    )
 
 
-def _with_signal_role(signaling_url: str, role: str) -> str:
-    separator = "&" if "?" in signaling_url else "?"
-    return f"{signaling_url}{separator}role={role}"
+def _with_signal_role(
+    signaling_url: str,
+    role: str,
+    *,
+    token: Optional[str] = None,
+) -> str:
+    params = {"role": role}
+    if token:
+        params["token"] = token
+    return _append_signaling_query_params(signaling_url, params)
 
 
 def _is_pstn_gateway_configured() -> bool:
@@ -1059,6 +1158,9 @@ async def _send_incoming_call_push_invite(
 
 def _build_pending_incoming_call_response(
     call_state: CallState,
+    *,
+    current_user: Any,
+    request: Request,
 ) -> Optional[PendingIncomingCallResponse]:
     if not call_state.incoming_payload:
         return None
@@ -1069,6 +1171,15 @@ def _build_pending_incoming_call_response(
     payload.setdefault("caller_voice_id", call_state.caller_voice_id)
     payload.setdefault("callee_voice_id", call_state.callee_voice_id)
     payload.setdefault("callee_user_id", call_state.callee_user_id)
+    payload["signaling_server"] = _with_signal_role(
+        _build_signaling_server_url(request, call_state.call_id),
+        "callee",
+        token=_mint_signal_token(
+            user=current_user,
+            call_id=call_state.call_id,
+            role="callee",
+        ),
+    )
     return PendingIncomingCallResponse(**payload)
 
 
@@ -1077,6 +1188,7 @@ def _build_active_call_response(
     call_state: CallState,
     *,
     current_user_id: int,
+    current_user: Any,
     request: Optional[Request] = None,
 ) -> Optional[CallInitiateResponse]:
     if call_state.call_route != "app_webrtc":
@@ -1124,9 +1236,22 @@ def _build_active_call_response(
         _with_signal_role(
             _build_signaling_server_url(request, call_state.call_id),
             participant_role,
+            token=_mint_signal_token(
+                user=current_user,
+                call_id=call_state.call_id,
+                role=participant_role,
+            ),
         )
         if request is not None
-        else f"/api/v1/voip/signal?call_id={call_state.call_id}&role={participant_role}"
+        else _with_signal_role(
+            f"/api/v1/voip/signal?{urllib.parse.urlencode({'call_id': call_state.call_id})}",
+            participant_role,
+            token=_mint_signal_token(
+                user=current_user,
+                call_id=call_state.call_id,
+                role=participant_role,
+            ),
+        )
     )
 
     return CallInitiateResponse(
@@ -1211,7 +1336,7 @@ async def register_voip_device(
 async def initiate_voip_call(
     http_request: Request,
     request: CallInitiateRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_voip_call_quota),
     db: Session = Depends(get_db),
 ) -> CallInitiateResponse:
     """
@@ -1364,9 +1489,19 @@ async def initiate_voip_call(
     )
 
     signaling_server = _build_signaling_server_url(http_request, call_id)
+    caller_signal_token = _mint_signal_token(
+        user=current_user,
+        call_id=call_id,
+        role="caller",
+    )
 
     if requested_app_call:
         assert app_callee is not None
+        callee_signal_token = _mint_signal_token(
+            user=app_callee,
+            call_id=call_id,
+            role="callee",
+        )
         incoming_payload = {
             "type": "incoming_call",
             "call_id": call_id,
@@ -1390,7 +1525,11 @@ async def initiate_voip_call(
                 getattr(current_user, "username", None)
                 or getattr(current_user, "email", "caller")
             ),
-            "signaling_server": _with_signal_role(signaling_server, "callee"),
+            "signaling_server": _with_signal_role(
+                signaling_server,
+                "callee",
+                token=callee_signal_token,
+            ),
             "turn_servers": [s.model_dump(exclude_none=True) for s in _default_turn_servers()],
             "call_route": "app_webrtc",
             "requested_mode": requested_mode,
@@ -1459,7 +1598,11 @@ async def initiate_voip_call(
 
         response_payload = CallInitiateResponse(
             call_id=call_id,
-            signaling_server=_with_signal_role(signaling_server, "caller"),
+            signaling_server=_with_signal_role(
+                signaling_server,
+                "caller",
+                token=caller_signal_token,
+            ),
             turn_servers=_default_turn_servers(),
             call_route="app_webrtc",
             pstn_gateway_configured=False,
@@ -1562,7 +1705,11 @@ async def initiate_voip_call(
 
     return CallInitiateResponse(
         call_id=call_id,
-        signaling_server=_with_signal_role(signaling_server, "caller"),
+        signaling_server=_with_signal_role(
+            signaling_server,
+            "caller",
+            token=caller_signal_token,
+        ),
         turn_servers=_default_turn_servers(),
         call_route=(
             "native_phone_dialer"
@@ -1603,6 +1750,7 @@ async def initiate_voip_call(
     response_model=Optional[PendingIncomingCallResponse],
 )
 async def get_pending_incoming_voip_call(
+    http_request: Request,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Optional[PendingIncomingCallResponse]:
@@ -1627,7 +1775,11 @@ async def get_pending_incoming_voip_call(
         pending_call.call_id,
         pending_call.status,
     )
-    return _build_pending_incoming_call_response(pending_call)
+    return _build_pending_incoming_call_response(
+        pending_call,
+        current_user=current_user,
+        request=http_request,
+    )
 
 
 @router.post("/calls/{call_id}/accept", response_model=CallInitiateResponse)
@@ -1666,6 +1818,7 @@ async def accept_voip_call(
         db,
         call_state,
         current_user_id=int(current_user.id),
+        current_user=current_user,
         request=http_request,
     )
     if response is None:
@@ -1746,6 +1899,7 @@ async def get_active_current_voip_call(
         db,
         active_call,
         current_user_id=int(current_user.id),
+        current_user=current_user,
         request=http_request,
     )
 
@@ -2343,24 +2497,41 @@ async def websocket_signaling(
     2. Media relay (receiver + PSTN forwarder)
     """
 
-    if call_id not in call_states:
+    normalized_role = role if role in {"caller", "callee"} else None
+    if normalized_role is None:
         logger.warning(
-            (
-                "[VoIP] Call state missing at signaling connect; "
-                "creating fallback state | call_id=%s"
-            ),
+            "[VoIP] Signal websocket rejected; invalid role | call_id=%s | role=%s",
             call_id,
+            role,
         )
-        call_states[call_id] = CallState(
-            call_id=call_id,
-            callee_phone="unknown",
-            caller_id="unknown",
-            session_id=None,
+        await websocket.close(code=1008)
+        return
+
+    call_state = call_states.get(call_id)
+    if call_state is None:
+        logger.warning(
+            "[VoIP] Signal websocket rejected; call state missing | call_id=%s | role=%s",
+            call_id,
+            normalized_role,
         )
+        await websocket.close(code=1008)
+        return
+
+    token_payload = _decode_signal_token(token or "", call_id, normalized_role)
+    if token_payload is None or not _signal_token_matches_call(
+        token_payload,
+        call_state,
+        normalized_role,
+    ):
+        logger.warning(
+            "[VoIP] Signal websocket rejected; auth failed | call_id=%s | role=%s",
+            call_id,
+            normalized_role,
+        )
+        await websocket.close(code=1008)
+        return
 
     await websocket.accept()
-    call_state = call_states[call_id]
-    normalized_role = role if role in {"caller", "callee"} else "caller"
     client_host = None
     if websocket.client is not None:
         client_host = f"{websocket.client.host}:{websocket.client.port}"
