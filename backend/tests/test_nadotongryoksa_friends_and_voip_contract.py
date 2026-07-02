@@ -1203,7 +1203,7 @@ def test_voip_signal_relays_realtime_chat_messages_between_app_participants():
 
                 callee_socket.send_json({
                     "type": "chat_message",
-                    "text": "네, 채팅도 확인됐어요.",
+                    "text": "Yes, chat is working too.",
                     "sent_at": "2026-05-13T10:00:05Z",
                 })
 
@@ -1211,13 +1211,13 @@ def test_voip_signal_relays_realtime_chat_messages_between_app_participants():
                 reply_message = caller_socket.receive_json()
                 assert callee_ack["type"] == "chat_message"
                 assert callee_ack["from_role"] == "callee"
-                assert callee_ack["text"] == "네, 채팅도 확인됐어요."
+                assert callee_ack["text"] == "Yes, chat is working too."
                 assert callee_ack["client_sent_at"] == "2026-05-13T10:00:05Z"
                 assert callee_ack["room_id"]
                 assert callee_ack["message_id"]
                 assert reply_message["type"] == "chat_message"
                 assert reply_message["from_role"] == "callee"
-                assert reply_message["text"] == "네, 채팅도 확인됐어요."
+                assert reply_message["text"] == "Yes, chat is working too."
                 assert reply_message["translated_text"]
                 assert reply_message["source_lang"] == "en"
                 assert reply_message["target_lang"] == "ko"
