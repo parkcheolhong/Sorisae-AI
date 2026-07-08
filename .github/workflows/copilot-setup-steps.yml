@@ -1,0 +1,33 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Force a supported Copilot model
+        env:
+          COPILOT_AGENT_MODEL_RAW: ${{ vars.COPILOT_AGENT_MODEL }}
+        run: |
+          model="$COPILOT_AGENT_MODEL_RAW"
+          if [ -z "$model" ]; then
+            model="claude-sonnet-4.5"
+            echo "::warning::COPILOT_AGENT_MODEL repository variable is not set. Falling back to ${model}."
+          fi
+          case "$model" in
+            *$'\n'*|*$'\r'*)
+              echo "::error::COPILOT_AGENT_MODEL contains invalid characters (newline or carriage return)."
+              exit 1
+              ;;
+          esac
+          printf 'COPILOT_AGENT_MODEL=%s\n' "${model}" >> "$GITHUB_ENV"
