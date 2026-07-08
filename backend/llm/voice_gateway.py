@@ -1805,7 +1805,11 @@ class FriendChatRequest(BaseModel):
 @router.post(
     "/voice/friend-chat",
     response_model=VoiceResponse,
-    responses={422: {"description": "음성이 감지되지 않았거나 잡음으로 판정되었습니다."}},
+    responses={
+        400: {"description": "입력 부족 또는 STT 실패"},
+        422: {"description": "무음/잡음 입력으로 응답을 생성하지 않음"},
+        502: {"description": "친구 모드 LLM 응답 실패"},
+    },
 )
 async def voice_friend_chat(request: FriendChatRequest):  # NOSONAR
     """대면 통역 '친구 모드' 전용 — 따뜻하고 자연스러운 AI 친구 대화.

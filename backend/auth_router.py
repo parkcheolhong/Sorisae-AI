@@ -810,7 +810,10 @@ def finish_passkey_registration(
 @router.post(
     "/passkey/login/start",
     response_model=PasskeyLoginStartResponse,
-    responses={403: {"description": "관리자 또는 지역관리자 계정만 사용할 수 있습니다."}},
+    responses={
+        403: {"description": "관리자 또는 지역관리자 계정만 사용할 수 있습니다."},
+        404: {"description": "등록된 패스키가 없는 경우"},
+    },
 )
 def start_passkey_login(
     request: Request,

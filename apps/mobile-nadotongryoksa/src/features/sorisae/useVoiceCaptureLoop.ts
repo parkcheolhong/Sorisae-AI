@@ -340,7 +340,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 if (effectiveAutoMode && autoVoiceModeEnabledRef.current && inputTarget === 'main') {
                     autoVoiceRestartTimerRef.current = setTimeout(() => {
                         if (autoVoiceModeEnabledRef.current && !recordingRef.current) {
-                            void startVoiceInput({ autoMode: true });  // NOSONAR
+                            startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });  // NOSONAR
                         }
                     }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
                 }
@@ -540,7 +540,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'capture_start_retry', detail }));
                 autoVoiceRestartTimerRef.current = setTimeout(() => {
                     if (autoVoiceModeEnabledRef.current && !recordingRef.current) {
-                        void startVoiceInput({ autoMode: true });  // NOSONAR
+                        startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });  // NOSONAR
                     }
                 }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
             } else {
@@ -622,7 +622,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     return;
                 }
                 if (voiceInputTargetRef.current === 'main') {
-                    startVoiceInput({ autoMode: true }).catch(() => { });
+                    startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });
                 }
             };
             const armRestart = () => {
@@ -692,7 +692,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     from: voiceInputTargetRef.current,
                 }));
                 voiceInputTargetRef.current = 'main';
-                startVoiceInput({ autoMode: true, target: 'main' }).catch(() => { });
+                startVoiceInput({ autoMode: true, target: 'main' }).catch(() => { /* no-op */ });  // NOSONAR
                 return;
             }
 
@@ -723,7 +723,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 faceVoicePlaybackSoundRef.current.getStatusAsync()
                     .then((status) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
-                            stopFacePlayback().catch(() => { /* no-op */ });
+                            stopFacePlayback().catch(() => { /* no-op */ });  // NOSONAR
                             faceSpeakingRef.current = false;
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                         }
@@ -746,7 +746,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'sorisae_speaking_stuck_recover' }));
                     sorisaeSpeakingRef.current = false;
                     setSorisaeSpeakingUi?.(false);
-                    startVoiceInput({ autoMode: true }).catch(() => { });
+                    startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });
                     return;
                 }
             } else {
@@ -764,7 +764,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     faceSpeakingStuckTicks = 0;
                     console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_stuck_recover' }));
                     faceSpeakingRef.current = false;
-                    startVoiceInput({ autoMode: true }).catch(() => { });
+                    startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });
                     return;
                 }
             } else {
@@ -788,7 +788,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             if (idleTicks >= MIC_WATCHDOG_IDLE_TICKS) {
                 idleTicks = 0;
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'mic_watchdog_recover' }));
-                void startVoiceInput({ autoMode: true });
+                startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });
             }
         }, MIC_WATCHDOG_INTERVAL_MS);
         return () => clearInterval(timer);
@@ -1919,7 +1919,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     if (activeVoiceInputTarget === 'inter_call' && interCallActiveRef.current && interCallVoiceAssistEnabled) {
                         autoVoiceRestartTimerRef.current = setTimeout(() => {
                             if (!recordingRef.current) {
-                                void startVoiceInput({ autoMode: true, target: 'inter_call' });
+                                startVoiceInput({ autoMode: true, target: 'inter_call' }).catch(() => { /* no-op */ });
                             }
                         }, 400);
                     } else if (activeVoiceInputTarget === 'main') {

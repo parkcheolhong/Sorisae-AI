@@ -1648,7 +1648,9 @@ function AppInner() {
     const summarizeIncomingVoipPayload = useCallback((payload: Partial<CallInitResponse> & { caller_voice_id?: string } | null | undefined) => ({
         mode_compact: `${payload?.requested_mode ?? 'null'}->${payload?.resolved_mode ?? 'null'}`,
         relay_compact: `${payload?.auto_relay_requested == null ? 'null' : payload.auto_relay_requested ? '1' : '0'}/${payload?.auto_relay_applied == null ? 'null' : payload.auto_relay_applied ? '1' : '0'}`,
-        key_compact: payload && typeof payload === 'object' ? Object.keys(payload).sort((a, b) => a.localeCompare(b)).join('|') : 'null',
+        key_compact: payload && typeof payload === 'object'
+            ? Object.keys(payload).sort((left, right) => left.localeCompare(right, 'en')).join('|')
+            : 'null',
         caller_voice_id: payload?.caller_voice_id ?? null,
     }), []);
 
@@ -5375,7 +5377,7 @@ function AppInner() {
         }
 
         if (target.type === 'chat') {
-            handleOpenChatRoomById(target.roomId, source).catch(() => { });
+            handleOpenChatRoomById(target.roomId, source).catch(() => { /* no-op */ });
             return;
         }
 
@@ -5385,7 +5387,7 @@ function AppInner() {
                 call_id: target.callId ?? null,
             });
             setActiveRailSection('voip');
-            fetchPendingIncomingVoipCall(`deeplink_${source}`).catch(() => { });
+            fetchPendingIncomingVoipCall(`deeplink_${source}`).catch(() => { /* no-op */ });
             return;
         }
 
@@ -7420,7 +7422,7 @@ function AppInner() {
                 // 실제 음성이 한 번이라도 잡힌 뒤의 말 끝에서만 자연 종료 flush.
                 if (faceSileroFirstSpeechAtMsRef.current != null && recordingRef.current) {
                     console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'vad_end', reason: 'silero_speech_end' }));
-                    void stopVoiceInputRef.current?.();
+                    stopVoiceInputRef.current?.().catch(() => { /* no-op */ });
                 }
             }
         });
@@ -9621,7 +9623,7 @@ function AppInner() {
                                         autoCallVoiceId={showFriendFolder ? null : voipAutoCallVoiceId}
                                         onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
                                         onStartFriendVoiceCall={(friend) => {
-                                            handleStartFriendVoiceCall(friend).catch(() => { });
+                                            handleStartFriendVoiceCall(friend).catch(() => { /* no-op */ });
                                         }}
                                         openGroupSignal={groupComposerSignal}
                                     />

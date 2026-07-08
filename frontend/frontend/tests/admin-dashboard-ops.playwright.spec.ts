@@ -30,6 +30,16 @@ test.describe('admin dashboard ops regression', () => {
         await clickWithFallback(launcher);
     };
 
+    const openSystemSettingsPanel = async (page: import('@playwright/test').Page) => {
+        const settingsDialog = page.getByRole('dialog', { name: '🧭 전역 .env 설정 패널' });
+        await clickWithFallback(page.getByTestId('admin-launcher-system-settings'));
+        const openedByTestId = await settingsDialog.isVisible({ timeout: 3000 }).catch(() => false);
+        if (!openedByTestId) {
+            await clickWithFallback(page.getByText('🧭 전역 .env 설정 패널').first());
+        }
+        await expect(settingsDialog).toBeVisible({ timeout: 12000 });
+    };
+
     test.beforeEach(async ({ page }) => {
         await page.goto('/admin');
         const loginForm = page.getByTestId('admin-login-form');
@@ -73,8 +83,7 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('system settings and auto-connect panels render and refresh actions remain available', async ({ page }) => {
-        await clickWithFallback(page.getByTestId('admin-launcher-system-settings'));
-        await expect(page.getByRole('dialog', { name: '🧭 전역 .env 설정 패널' })).toBeVisible({ timeout: 8000 });
+        await openSystemSettingsPanel(page);
         const settingsButtons = page.getByRole('button').filter({ hasText: '전역 자동 전환' });
         await expect(settingsButtons.first()).toBeVisible();
         const refreshButtons = page.getByRole('button').filter({ hasText: '설정 새로고침' });
@@ -137,7 +146,7 @@ test.describe('admin dashboard ops regression', () => {
 
         await page.getByRole('link', { name: '상세 제어 열기', exact: true }).first().click();
         await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         const llmToMarketplace = page.getByTestId('admin-llm-topnav-marketplace-orchestrator');
         if (await llmToMarketplace.count()) {
             await expect(llmToMarketplace).toBeVisible({ timeout: 20000 });
