@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test.describe('admin dashboard ops regression', () => {
     const clickWithFallback = async (locator: import('@playwright/test').Locator) => {
+        await locator.scrollIntoViewIfNeeded().catch(() => {});
+        await locator.waitFor({ state: 'visible', timeout: 8000 });
         try {
             await locator.click({ force: true });
         } catch {
@@ -45,7 +47,7 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('health/self-run/refresh controls restore after reload', async ({ page }) => {
-        await page.getByTestId('admin-launcher-health-overview').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-launcher-health-overview'));
         await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
         await expect(page.getByText('자동 건강상태 점수')).toBeVisible();
         await expect(page.getByText('자동 자가진단')).toBeVisible();
@@ -63,7 +65,7 @@ test.describe('admin dashboard ops regression', () => {
         await expect(page.getByText('자동 복구 이력')).toBeVisible();
         await page.reload();
         await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
-        await page.getByTestId('admin-launcher-health-overview').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-launcher-health-overview'));
         await expect(page.getByRole('button', { name: '음성 OFF' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'ON' })).toBeVisible();
         await expect(page.getByTitle('실시간 갱신 주기')).toHaveValue('30');
@@ -71,7 +73,7 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('system settings and auto-connect panels render and refresh actions remain available', async ({ page }) => {
-        await page.getByTestId('admin-launcher-system-settings').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-launcher-system-settings'));
         await expect(page.getByRole('dialog', { name: '🧭 전역 .env 설정 패널' })).toBeVisible({ timeout: 8000 });
         const settingsButtons = page.getByRole('button').filter({ hasText: '전역 자동 전환' });
         await expect(settingsButtons.first()).toBeVisible();
@@ -79,13 +81,13 @@ test.describe('admin dashboard ops regression', () => {
         await expect(refreshButtons.first()).toBeVisible();
 
         await page.keyboard.press('Escape');
-        await page.getByTestId('admin-launcher-auto-connect').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-launcher-auto-connect'));
         await expect(page.getByRole('dialog', { name: '🕸️ self auto-connect graph' })).toBeVisible({ timeout: 8000 });
         await expect(page.getByText('현재 active connection')).toBeVisible();
         await expect(page.getByRole('button', { name: 'DB 조회' })).toBeVisible();
 
         await page.keyboard.press('Escape');
-        await page.getByTestId('admin-launcher-manual-orchestrator').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-launcher-manual-orchestrator'));
         await expect(page.getByRole('dialog')).toBeVisible({ timeout: 8000 });
         await page.getByRole('button', { name: '추적 새로고침' }).click();
         await expect(page.getByText('completion 이력 패널')).toBeVisible();
@@ -103,7 +105,7 @@ test.describe('admin dashboard ops regression', () => {
         await page.getByTitle('카테고리 정렬 기준').selectOption('name');
 
         await page.keyboard.press('Escape');
-        await page.getByTestId('admin-launcher-sample').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-launcher-sample'));
         await expect(page.getByTitle('샘플 생성 수량')).toBeVisible();
         await page.getByTitle('샘플 생성 수량').fill('7');
         await page.getByTitle('정리 패턴').fill('[샘플테스트');
@@ -121,8 +123,8 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('logout, refresh, and orchestrator/detail actions remain usable', async ({ page }) => {
-        await page.getByTestId('admin-topnav-refresh').click({ force: true });
-        await page.getByTestId('admin-launcher-health-overview').click({ force: true });
+        await clickWithFallback(page.getByTestId('admin-topnav-refresh'));
+        await clickWithFallback(page.getByTestId('admin-launcher-health-overview'));
         await expect(page.getByText('🧠 오케스트레이터 기능군 상태 요약')).toBeVisible({ timeout: 8000 });
 
         await expect(page.getByTestId('admin-topnav-marketplace')).toHaveAttribute('href', '/marketplace');

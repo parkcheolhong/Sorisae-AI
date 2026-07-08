@@ -26,6 +26,8 @@ async function loginAndInjectAdminToken(page: import('@playwright/test').Page, r
 
 test.describe('admin dashboard capability bootstrap notice', () => {
     const clickWithFallback = async (locator: import('@playwright/test').Locator) => {
+        await locator.scrollIntoViewIfNeeded().catch(() => {});
+        await locator.waitFor({ state: 'visible', timeout: 8000 });
         try {
             await locator.click({ force: true });
         } catch {
@@ -65,6 +67,7 @@ test.describe('admin dashboard capability bootstrap notice', () => {
                 });
             });
 
+            await clickWithFallback(page.getByTestId('admin-launcher-health-overview'));
             await clickWithFallback(page.getByTestId('admin-topnav-refresh'));
 
             await expect(page.getByTestId('admin-dashboard-capability-bootstrap-notice')).toContainText('오케스트레이터 기능군 상세 데이터가 잠시 지연되어 기본 건강상태 카드만 먼저 표시합니다.');
