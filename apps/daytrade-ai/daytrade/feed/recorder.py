@@ -9,6 +9,7 @@ CSV 헤더: ts_ns,symbol,last_price,last_qty,bid_px_0,bid_qty_0,...,ask_px_{d-1}
 from __future__ import annotations
 
 import csv
+import tempfile
 from pathlib import Path
 from typing import Iterable, Iterator
 
@@ -25,6 +26,9 @@ def _resolve_safe_output_path(path: str | Path) -> Path:
     if not input_path.is_absolute() and any(part == ".." for part in input_path.parts):
         raise ValueError("상위 경로(..)는 출력 경로로 허용되지 않습니다.")
     candidate = input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+    allowed_roots = [Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve()]
+    if not any(candidate == root or root in candidate.parents for root in allowed_roots):
+        raise ValueError("출력 경로는 현재 작업 디렉터리 또는 시스템 임시 디렉터리 내부여야 합니다.")
     return candidate
 
 
