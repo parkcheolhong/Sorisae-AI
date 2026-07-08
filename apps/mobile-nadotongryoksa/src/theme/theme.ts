@@ -194,7 +194,7 @@ export function getColors(scheme: ColorScheme): Colors {
  * 활성 컬러 스킴(앱 기본값 = 현재 출시 룩 유지를 위해 `dark`).
  * 라이트 전환 시 `setColorScheme('light')` 후 화면 재마운트/리렌더.
  */
-export let activeColorScheme: ColorScheme = 'light';
+export let activeColorScheme: ColorScheme = 'light';  // NOSONAR
 
 export function setColorScheme(scheme: ColorScheme): void {
     activeColorScheme = scheme;

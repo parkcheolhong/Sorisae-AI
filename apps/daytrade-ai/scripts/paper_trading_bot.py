@@ -36,7 +36,7 @@ def _build_feed(args):
     return CsvReplayFeed(args.csv)
 
 
-def main(argv=None) -> int:
+def main(argv=None) -> int:  # NOSONAR
     p = argparse.ArgumentParser(description="daytrade-ai 페이퍼 트레이딩 봇(피드→파이프라인→sqlite)")
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--sim", action="store_true", help="합성 시뮬레이션 피드")

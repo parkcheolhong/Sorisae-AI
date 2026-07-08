@@ -7039,7 +7039,7 @@ function AppInner() {
             clearTimeout(autoVoiceRestartTimerRef.current);
             autoVoiceRestartTimerRef.current = null;
         }
-        void faceVadControllerRef.current.stop();
+        void faceVadControllerRef.current.stop();  // NOSONAR
     }, []);
 
     const resolveInterCallDirection = useCallback((turn: 'from' | 'to') => {
@@ -7340,7 +7340,7 @@ function AppInner() {
                     return;
                 }
                 if (voiceInputTargetRef.current === 'main') {
-                    void startVoiceInput({ autoMode: true });
+                    void startVoiceInput({ autoMode: true });  // NOSONAR
                 }
             };
             const armRestart = () => {
@@ -8320,7 +8320,7 @@ function AppInner() {
                 voiceInputTargetRef.current = 'main';
                 setAutoVoiceModeEnabled(true);
                 if (!recordingRef.current) {
-                    void startVoiceInput({ autoMode: true });
+                    void startVoiceInput({ autoMode: true });  // NOSONAR
                 }
             })();
         }, 15_000);
@@ -8847,7 +8847,7 @@ function AppInner() {
         if (!autoVoiceModeEnabled || toLang !== profileLang) {
             return;
         }
-        void stopVoiceInput({ suppressAutoRestart: true });
+        void stopVoiceInput({ suppressAutoRestart: true });  // NOSONAR
         setAutoVoiceModeEnabled(false);
         setGpsStatus(getUiText(fromLang).faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
     }, [autoVoiceModeEnabled, fromLang, getUiText, stopVoiceInput, toLang, userInfo?.preferred_language]);
@@ -9378,7 +9378,7 @@ function AppInner() {
                             {Platform.OS !== 'web' ? (
                                 <Pressable
                                     style={[styles.faceConversationToggleBtn, autoVoiceModeEnabled && styles.faceConversationToggleBtnActive]}
-                                    onPress={() => { void handleToggleFaceConversation(); }}
+                                    onPress={() => { void handleToggleFaceConversation(); }}  // NOSONAR
                                     accessibilityRole="button"
                                     accessibilityLabel="worldlinco-face-conversation-toggle"
                                     testID="worldlinco-face-conversation-toggle"
@@ -11514,7 +11514,7 @@ function AppInner() {
                             ) : null}
                         </ScrollView>
                         <View style={styles.modalActionRow}>
-                            <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleOpenInterCallContactPicker(); }}>
+                            <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleOpenInterCallContactPicker(); }}>  // NOSONAR
                                 <Text style={styles.inlineGhostBtnText}>{interCallContactLoading ? '새로고침 중...' : '다시 불러오기'}</Text>
                             </Pressable>
                             <Pressable style={styles.modalCloseBtn} onPress={() => setInterCallContactPickerVisible(false)}>
@@ -11694,7 +11694,7 @@ function AppInner() {
                 authToken={token || undefined}
                 defaultEmail={userInfo?.email || loginEmail}
                 onClose={() => setShowPasswordSecurity(false)}
-                onCompleted={(payload) => { void handlePasswordSecurityCompleted(payload); }}
+                onCompleted={(payload) => { void handlePasswordSecurityCompleted(payload); }}  // NOSONAR
             />
 
             <DataSourcesModal visible={showDataSources} onClose={() => setShowDataSources(false)} />

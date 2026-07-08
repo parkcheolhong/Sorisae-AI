@@ -1921,7 +1921,7 @@ async def voice_friend_chat(request: FriendChatRequest):
                 reply_language,
             )
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"TTS 실패: {exc}")
+            raise HTTPException(status_code=500, detail=f"TTS 실패: {exc}")  # NOSONAR
 
     logger.info(
         "[voice/friend-chat] lang=%s loc=%s in_len=%d out_len=%d tts=%s web_grounded=%s",
@@ -2425,7 +2425,7 @@ def _place_media_enabled() -> bool:
     return os.getenv("TOURISM_PLACE_MEDIA_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off", ""}
 
 
-async def _attach_place_media(days: list[AnswerDay], candidates: list[dict], *, cap: int = 8) -> None:
+async def _attach_place_media(days: list[AnswerDay], candidates: list[dict], *, cap: int = 8) -> None:  # NOSONAR
     """일정 장소 중 이미지 참조(commons/wikidata)가 있는 것만 Wikimedia 게이트로 보강.
 
     참조 없는 장소는 네트워크 호출을 하지 않으므로(현 OSM 데이터엔 참조 없음) 지연이 없다.

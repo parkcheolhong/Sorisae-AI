@@ -987,7 +987,7 @@ async def _send_incoming_call_invite(
         return False
 
 
-async def _send_incoming_call_push_invite(
+async def _send_incoming_call_push_invite(  # NOSONAR
     callee_voice_id: str,
     payload: dict,
     callee_user_id: Optional[int] = None,

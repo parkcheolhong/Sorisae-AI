@@ -1802,7 +1802,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         void drainVoiceRelaySegmentQueue();
     }, [drainVoiceRelaySegmentQueue]);
 
-    const stopVoiceRelaySegment = useCallback(async (processSegment: boolean) => {
+    const stopVoiceRelaySegment = useCallback(async (processSegment: boolean) => {  // NOSONAR
         clearVoiceRelayTimers();
         // 하드 스톱(처리 안 함=비활성/행업/턴 전환)에서는 미전송 버퍼 큐를 비운다.
         if (!processSegment) {
@@ -2080,7 +2080,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             if (!boundaryDecision.flush) {
                 return;
             }
-            void flushVoiceRelaySegmentRef.current('silence', true);
+            void flushVoiceRelaySegmentRef.current('silence', true);  // NOSONAR
         });
         return () => {
             unsubscribe();

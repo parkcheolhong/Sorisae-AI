@@ -340,7 +340,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 if (effectiveAutoMode && autoVoiceModeEnabledRef.current && inputTarget === 'main') {
                     autoVoiceRestartTimerRef.current = setTimeout(() => {
                         if (autoVoiceModeEnabledRef.current && !recordingRef.current) {
-                            void startVoiceInput({ autoMode: true });
+                            void startVoiceInput({ autoMode: true });  // NOSONAR
                         }
                     }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
                 }

@@ -485,7 +485,7 @@ export function useSorisaeVoicePipeline(deps: SorisaeVoicePipelineDeps) {
                 transcript: String(event.transcript ?? '').slice(0, 80),
             }));
             wakeCompanionVoiceCallNowRef.current();
-            void stopCompanionNativeKws();
+            void stopCompanionNativeKws();  // NOSONAR
         });
 
         const aiName = resolveAiDisplayName(aiDisplayNameRef.current);

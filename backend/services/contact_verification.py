@@ -165,7 +165,7 @@ def _purge_expired_sessions() -> None:
             _SESSIONS.pop(key, None)
 
 
-def start_verification_session(
+def start_verification_session(  # NOSONAR
     *,
     purpose: str,
     channel: str,

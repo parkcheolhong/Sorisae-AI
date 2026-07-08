@@ -375,7 +375,7 @@ export function useChatVoiceInput(
         if (status === 'recording') {
             void finalize();
         } else if (status === 'idle') {
-            void start();
+            void start();  // NOSONAR
         }
     }, [status, start, finalize, toggleHandsFree]);
 

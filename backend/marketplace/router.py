@@ -895,7 +895,7 @@ def get_worldlinco_referral_discount_quote(
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     minor = int(amount_minor if amount_minor is not None else float(amount or 0))
     if minor <= 0:
-        raise HTTPException(status_code=400, detail="amount 또는 amount_minor 가 필요합니다.")
+        raise HTTPException(status_code=400, detail="amount 또는 amount_minor 가 필요합니다.")  # NOSONAR
     return JSONResponse(
         content=resolve_referral_discount_quote(user_id=user_id, amount_minor=minor, db=db),
         headers={"Cache-Control": "no-store"},

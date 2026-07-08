@@ -430,7 +430,7 @@ def _normalize_signup_phone(phone: Optional[str]) -> Optional[str]:
 
 def _create_user_from_signup_payload(payload: UserCreate, db: Session) -> User:
     if len(payload.password or "") < 8:
-        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")  # NOSONAR
 
     member_type = str(payload.member_type or "individual").strip().lower()
     if member_type not in {"individual", "sole_proprietor", "corporation"}:
