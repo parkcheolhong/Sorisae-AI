@@ -12,10 +12,21 @@ export type VoiceRelaySileroVadEvent = {
     speechDurationMs: number;
 };
 
+export type VoiceRelaySileroCaptureResult = {
+    path: string;
+    byteCount: number;
+    sampleCount: number;
+    durationMs: number;
+    peakDb: number;
+    rmsDb: number;
+};
+
 type VoiceRelaySileroVadNativeModule = {
     isSupported: () => Promise<boolean>;
     startMonitor: (silenceMs: number, speechMs: number) => Promise<boolean>;
     stopMonitor: () => Promise<boolean>;
+    beginCapture?: () => Promise<boolean>;
+    endCapture?: (outputPath: string) => Promise<VoiceRelaySileroCaptureResult>;
     addListener: (eventName: string) => void;
     removeListeners: (count: number) => void;
 };
@@ -60,6 +71,36 @@ export async function stopVoiceRelaySileroVadMonitor(): Promise<void> {
         await nativeModule!.stopMonitor();
     } catch {
         // ignore stop races during segment teardown
+    }
+}
+
+export function isVoiceRelaySileroCaptureAvailable(): boolean {
+    return isVoiceRelaySileroVadNativeAvailable()
+        && typeof nativeModule?.beginCapture === 'function'
+        && typeof nativeModule?.endCapture === 'function';
+}
+
+export async function beginVoiceRelaySileroCapture(): Promise<boolean> {
+    if (!isVoiceRelaySileroCaptureAvailable()) {
+        return false;
+    }
+    try {
+        return await nativeModule!.beginCapture!();
+    } catch {
+        return false;
+    }
+}
+
+export async function endVoiceRelaySileroCapture(
+    outputPath: string,
+): Promise<VoiceRelaySileroCaptureResult | null> {
+    if (!isVoiceRelaySileroCaptureAvailable()) {
+        return null;
+    }
+    try {
+        return await nativeModule!.endCapture!(outputPath);
+    } catch {
+        return null;
     }
 }
 

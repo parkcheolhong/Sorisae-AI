@@ -43,6 +43,25 @@ def ensure_user_role_columns() -> None:
         statements.append(
             "ALTER TABLE users ADD COLUMN representative_name VARCHAR(120)"
         )
+    if "preferred_language" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(16)"
+        )
+    if "country_code" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN country_code VARCHAR(8)"
+        )
+    if "phone_number" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN phone_number VARCHAR(40)"
+        )
+        statements.append(
+            "CREATE INDEX IF NOT EXISTS ix_users_phone_number ON users (phone_number)"
+        )
+    if "is_staff" not in columns:
+        statements.append(
+            "ALTER TABLE users ADD COLUMN is_staff BOOLEAN NOT NULL DEFAULT FALSE"
+        )
     if "passkey_enabled" not in columns:
         statements.append(
             "ALTER TABLE users ADD COLUMN passkey_enabled BOOLEAN NOT NULL DEFAULT FALSE"

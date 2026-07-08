@@ -1,0 +1,16 @@
+# 관측성(OpenTelemetry) — 옵션 의존성 (기술서 §0.22 / 체크리스트 §10)
+#
+# 메인 requirements.txt / 운영 이미지에는 포함되지 않습니다(무위험 기본값).
+# 분산 트레이싱을 켤 때만 설치하세요:
+#
+#   pip install -r requirements-observability.txt
+#   export OTEL_TRACING_ENABLED=1
+#   export OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317   # 또는 jaeger OTLP
+#   export OTEL_SERVICE_NAME=devanalysis114-backend
+#
+# 미설치 시 backend/observability/tracing.py 는 no-op 으로 폴백합니다.
+
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp>=1.27.0
+opentelemetry-instrumentation-fastapi>=0.48b0
+opentelemetry-instrumentation-httpx>=0.48b0

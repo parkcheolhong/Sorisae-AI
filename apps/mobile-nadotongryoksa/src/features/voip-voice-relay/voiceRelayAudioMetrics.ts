@@ -1,4 +1,8 @@
-/** Minimum PCM / proxy RMS (dBFS) to attempt relay STT on meter-dead Android devices. */
+/** Minimum PCM / proxy RMS (dBFS) to attempt relay STT on meter-dead Android devices.
+ *  (G1) 의도적으로 라이브 meter 게이트(speech_meter_min_db=-52)보다 느슨한 -58 을 유지한다.
+ *  이 값은 meter 사망 단말에서 '조용한 실발화'를 silence 로 오탐·누락하지 않기 위한 사전필터로,
+ *  -52 로 올리면(엄격화) 작은 목소리 클립이 silent_file_rms 로 스킵될 위험이 있어 동작상 분리한다.
+ *  (SSOT voip.file_speech_rms_db 는 현재 이 경로에서 미소비 — 향후 실기기 보정 후 단일화.) */
 export const VOICE_RELAY_FILE_SPEECH_RMS_DB = -58;
 
 function decodeBase64ToBytes(base64: string): Uint8Array | null {

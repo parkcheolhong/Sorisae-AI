@@ -110,18 +110,29 @@ describe('Local mobile validation guards', () => {
         await voiceTranslate('base64-audio', 'en', 'ko', 'kansai');
 
         expect(global.fetch).toHaveBeenCalledWith(
-            'http://127.0.0.1:8000/api/llm/voice-translate',
+            'http://127.0.0.1:8000/api/llm/voip/voice-translate',
             expect.objectContaining({
                 method: 'POST',
-                body: JSON.stringify({
-                    audio_base64: 'base64-audio',
-                    from_lang: 'en',
-                    to_lang: 'ko',
-                    region_hint: 'kansai',
-                    language: 'auto',
-                }),
+                body: expect.stringContaining('"device_tts":true'),
             }),
         );
+    });
+
+    it('forwards session_id only when provided (V2 Session Core)', async () => {
+        fetchMock.mockResolvedValue({
+            ok: true,
+            json: async () => ({ original_text: 'hi', translated: '안녕', engine: 'nado-voice' }),
+        } as Response);
+
+        // 미지정 시 session_id 미포함(하위호환).
+        await voiceTranslate('aud', 'ko', 'ja');
+        let body = (global.fetch as jest.Mock).mock.calls.at(-1)?.[1]?.body as string;
+        expect(body).not.toContain('session_id');
+
+        // 지정 시 session_id 포함.
+        await voiceTranslate('aud', 'ko', 'ja', undefined, 'auto', { sessionId: 'call-abc123' });
+        body = (global.fetch as jest.Mock).mock.calls.at(-1)?.[1]?.body as string;
+        expect(body).toContain('"session_id":"call-abc123"');
     });
 
     it('uses effective OCR source and target languages returned by the server', async () => {

@@ -411,10 +411,31 @@ def _looks_like_directive(message: str) -> bool:
             "최적화해줘",
             "리팩터링",
             "리팩토링",
+            "잡아줘",
+            "잡아 줘",
+            "설계해",
+            "설계해줘",
+            "설계해 줘",
+            "설계부터",
+            "구성해줘",
+            "구성해 줘",
         ],
     ):
         return True
     return False
+
+
+def _is_frustration_message(message: str) -> bool:
+    lowered = _normalize_chat_message(message).lower()
+    if not lowered:
+        return False
+    return _contains_any(
+        lowered,
+        [
+            "장난", "장난하", "뭐하", "화나", "빡", "열받", "개판", "헛소리",
+            "답답", "짜증", "미치", "안되", "안 돼", "말장난", "놀리",
+        ],
+    )
 
 
 def infer_message_kind(message: str) -> str:
@@ -436,7 +457,10 @@ def infer_emotion_signal(message: str) -> str:
         return "neutral"
 
     urgent_tokens = ["급해", "빨리", "지금 당장", "긴급", "urgent", "asap"]
-    frustration_tokens = ["답답", "짜증", "안 풀", "3시간", "망했", "미치겠", "frustrat", "stuck"]
+    frustration_tokens = [
+        "답답", "짜증", "안 풀", "3시간", "망했", "미치겠", "frustrat", "stuck",
+        "장난", "장난하", "뭐하", "화나", "빡", "열받", "개판", "헛소리",
+    ]
     anxious_tokens = ["불안", "걱정", "무서", "막막", "panic", "anxious"]
 
     if any(token in lowered for token in urgent_tokens):
@@ -492,6 +516,30 @@ def build_fast_admin_chat_reply(
     return ""
 
 
+def _build_stock_trading_design_outline() -> str:
+    return "\n".join([
+        "## 기본 AI 주식 자동매매 설계 초안",
+        "### 1. 목표",
+        "- 실시간 시세 수집 → 특징량 생성 → AI 신호 → 리스크 게이트 → 주문(또는 모의체결) → 성과 기록",
+        "### 2. 데이터 소스(기본값)",
+        "- 1차: 공개 REST/WebSocket 시세 API(종목·분봉·체결)",
+        "- 2차: PostgreSQL(시세 캐시·체결·포지션·전략 파라미터)",
+        "- 3차: Redis(실시간 틱/신호 큐)",
+        "### 3. 핵심 모듈",
+        "- `market_data`: 수집·정규화·결측 보정",
+        "- `features`: 이동평균·변동성·거래량 급증 등",
+        "- `model_service`: 학습/추론(Scikit-learn 또는 PyTorch)",
+        "- `strategy`: 단타 규칙(진입·손절·익절·쿨다운)",
+        "- `risk`: 일손실 한도·종목당 비중·중복 주문 차단",
+        "- `execution`: 모의/실거래 어댑터 분리",
+        "- `reporting`: 체결·PnL·드로다운",
+        "### 4. API(초안)",
+        "- `GET /health`, `GET /quotes/{symbol}`, `POST /signals/predict`, `POST /orders`, `GET /positions`, `GET /reports/daily`",
+        "### 5. 다음 결정(1개만 답해 주세요)",
+        "- **A** 모의투자만 / **B** 실거래 연동 / **C** 백테스트 우선",
+    ])
+
+
 def build_admin_chat_fallback_reply(
     message: str,
     *,
@@ -501,6 +549,19 @@ def build_admin_chat_fallback_reply(
 ) -> str:
     normalized = message.strip()
     reply_lines: List[str] = []
+
+    if _is_frustration_message(normalized):
+        return "\n".join([
+            "불편 드려 죄송합니다. 확인 질문만 반복된 것처럼 느껴지셨다면 그 지적이 맞습니다.",
+            "지금부터는 역질문 대신 설계 초안을 바로 드립니다.",
+            _build_stock_trading_design_outline(),
+        ])
+
+    if message_kind == "directive" and conversation_stage == "architecture":
+        return "\n".join([
+            f"요청 이해했습니다. '{normalized}' 기준으로 설계 초안을 바로 정리합니다.",
+            _build_stock_trading_design_outline(),
+        ])
 
     if message_kind == "directive":
         reply_lines.extend([
@@ -542,6 +603,10 @@ def _append_reciprocal_question(
     if not text:
         return text
     if lightweight:
+        return text
+    if _is_frustration_message(message):
+        return text
+    if message_kind == "directive" and conversation_stage in {"architecture", "implementation"}:
         return text
     if requested_conversation_mode == "directive_fixed":
         return text
@@ -1177,10 +1242,12 @@ async def answer_orchestrator_chat(
         or (request.project_memory or {}).get("reverse_question_mode")
         or "",
     ).strip().lower()
-    if reverse_question_mode and requested_conversation_mode not in {"directive_fixed", "research_fixed"}:
-        requested_conversation_mode = "reverse_question"
-        if response_style in {"", "auto", "balanced"}:
-            response_style = f"reverse_question:{reverse_question_mode}"
+    if (
+        reverse_question_mode
+        and requested_conversation_mode in {"reverse_question", "reciprocal", "interview"}
+        and response_style in {"", "auto", "balanced"}
+    ):
+        response_style = f"reverse_question:{reverse_question_mode}"
     selected_tone_from_message = _extract_tone_preset_from_text(message)
     selected_tone_from_history = _infer_tone_preset_from_history(request.conversation)
     if _needs_tone_selection(

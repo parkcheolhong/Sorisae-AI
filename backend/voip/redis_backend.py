@@ -34,16 +34,126 @@ def is_redis_enabled() -> bool:
     return bool(redis_url())
 
 
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _float_env(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _bool_env(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _sentinel_nodes() -> list[tuple[str, int]]:
+    """``VOIP_REDIS_SENTINELS`` = "host1:26379,host2:26379" → [(host, port), …]."""
+
+    raw = (os.getenv("VOIP_REDIS_SENTINELS", "") or "").strip()
+    nodes: list[tuple[str, int]] = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        host, _, port = item.partition(":")
+        if host:
+            nodes.append((host.strip(), _int_env_value(port, 26379)))
+    return nodes
+
+
+def _int_env_value(raw: str, default: int) -> int:
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def _common_client_kwargs() -> Dict[str, Any]:
+    """풀/헬스/타임아웃 — standalone·sentinel·cluster 공통 연결 옵션(운영 하드닝)."""
+
+    return {
+        "decode_responses": True,
+        "encoding": "utf-8",
+        "health_check_interval": _int_env("VOIP_REDIS_HEALTH_CHECK_INTERVAL", 30),
+        "socket_timeout": _float_env("VOIP_REDIS_SOCKET_TIMEOUT", 5.0),
+        "socket_connect_timeout": _float_env("VOIP_REDIS_SOCKET_CONNECT_TIMEOUT", 5.0),
+        "retry_on_timeout": True,
+    }
+
+
+def _client_plan() -> Tuple[str, Dict[str, Any]]:
+    """연결 모드 결정(순수 함수, redis 미설치에도 테스트 가능).
+
+    우선순위: Sentinel(``VOIP_REDIS_SENTINELS``) → Cluster(``VOIP_REDIS_CLUSTER``) → standalone.
+    Sentinel은 pub/sub 릴레이 워크로드에 맞는 master/replica failover를 제공한다.
+    Cluster는 opt-in(샤딩 pub/sub 제약 주의 — 일반 PUBLISH는 전체 브로드캐스트).
+    """
+
+    common = _common_client_kwargs()
+    sentinels = _sentinel_nodes()
+    if sentinels:
+        return "sentinel", {
+            "sentinels": sentinels,
+            "master": (os.getenv("VOIP_REDIS_SENTINEL_MASTER", "") or "mymaster").strip(),
+            "common": common,
+        }
+    if _bool_env("VOIP_REDIS_CLUSTER"):
+        return "cluster", {"url": redis_url(), "common": common}
+    return "standalone", {
+        "url": redis_url(),
+        "common": {**common, "max_connections": _int_env("VOIP_REDIS_MAX_CONNECTIONS", 50)},
+    }
+
+
 _client = None
 
 
 def get_client():
-    global _client
-    if _client is None:
-        import redis.asyncio as aioredis  # lazy import
+    """HA 인지 Redis 클라이언트 싱글톤. HA 구성 실패 시 standalone로 안전 폴백."""
 
+    global _client
+    if _client is not None:
+        return _client
+
+    import redis.asyncio as aioredis  # lazy import
+
+    mode, plan = _client_plan()
+    try:
+        if mode == "sentinel":
+            from redis.asyncio.sentinel import Sentinel
+
+            sentinel = Sentinel(plan["sentinels"], **plan["common"])
+            _client = sentinel.master_for(plan["master"], **plan["common"])
+            logger.info("[VoIP] Redis sentinel client (master=%s, nodes=%d)",
+                        plan["master"], len(plan["sentinels"]))
+        elif mode == "cluster":
+            from redis.asyncio.cluster import RedisCluster
+
+            _client = RedisCluster.from_url(plan["url"], **plan["common"])
+            logger.info("[VoIP] Redis cluster client (caution: pub/sub broadcast semantics)")
+        else:
+            _client = aioredis.from_url(plan["url"], **plan["common"])
+    except Exception as exc:  # noqa: BLE001 - HA 구성 실패 시 standalone 폴백(가용성 우선)
+        logger.warning("[VoIP] Redis HA client init failed (%s); falling back to standalone: %s",
+                       mode, exc)
         _client = aioredis.from_url(redis_url(), encoding="utf-8", decode_responses=True)
     return _client
+
+
+def reset_client_for_test() -> None:
+    """테스트 전용 — env 토글 후 클라이언트 싱글톤 재생성을 위해 초기화."""
+
+    global _client
+    _client = None
 
 
 def _room_key(call_id: str) -> str:

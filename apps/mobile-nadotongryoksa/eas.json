@@ -30,10 +30,14 @@
     "production-apk": {
       "distribution": "internal",
       "channel": "production",
+      "node": "22.22.2",
       "android": {
         "buildType": "apk"
       },
-      "env": { "EXPO_PUBLIC_RELEASE_CHANNEL": "production" }
+      "env": {
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "production",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      }
     },
     "production": {
       "distribution": "store",

@@ -25,8 +25,10 @@
   "force_complete": true,
   "allow_synthetic_fallback": false,
   "code_generation_strategy": "auto_generator",
-  "min_files": 27,
-  "min_dirs": 2,
+  "min_files": 9,
+  "min_dirs": 3,
+  "stage11_min_files": 32,
+  "stage11_min_dirs": 11,
   "selected_profile": "rtx5090_32gb",
   "model_tuning_level": 0,
   "token_tuning_level": 0,
@@ -125,15 +127,8 @@
   "gpu_only_preferred": true,
   "config_path": "knowledge/orchestrator_runtime_config.json",
   "available_models": [
-    "codellama:13b",
-    "deepseek-r1:32b",
-    "deepseek-r1:70b",
-    "gemma3:27b",
-    "glm4:latest",
-    "gpt-oss:120b",
-    "gpt-oss:20b",
-    "llama3.3:70b",
     "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ",
+    "Qwen/Qwen2.5-Coder-14B-Instruct-AWQ",
     "qwen2.5-coder:14b",
     "qwen2.5-coder:7b",
     "qwen2.5-coder:latest",
@@ -249,7 +244,7 @@
         "max_force_retries": 60,
         "force_complete": false,
         "allow_synthetic_fallback": false,
-        "min_files": 27,
+        "min_files": 9,
         "min_dirs": 5
       }
     },
@@ -350,7 +345,7 @@
         "max_force_retries": 99,
         "force_complete": false,
         "allow_synthetic_fallback": false,
-        "min_files": 27,
+        "min_files": 9,
         "min_dirs": 5
       }
     }

@@ -24,7 +24,17 @@ import * as Speech from 'expo-speech';
 import Constants from 'expo-constants';
 import { VoIPCallClient, CallInitResponse, VoIPChatMessage, VoIPVoiceTranslationMessage } from '../services/voipCallClient';
 import { getVoIPToneService } from '../services/voipToneService';
-import { translateText, voiceTranslate } from '../api/translate';
+import { resolveVoipTtsLocale } from '../constants/voipLanguageLocales';
+import {
+    enableVoipAudio,
+    disableVoipAudio,
+    setVoipSpeakerphone,
+    isVoipTtsPlayerNativeAvailable,
+    playVoiceCallTts,
+    stopVoiceCallTts,
+} from '../native/voipAudio';
+import { translateText, voiceTranslate, synthesizeSpeech } from '../api/translate';
+import { FEATURE_IDS, newCorrelationId, deterministicCorrelationId } from '../features/correlation/correlationId';
 import { resolveVoipSignalingServerUrl } from '../utils/voipSignalingUrl';
 import {
     collapseRepeatedRelayPhrases,
@@ -38,9 +48,9 @@ import {
     isVoiceRelaySilenceCapture,
     nextVoiceRelaySegmentStateAfterFlush,
     normalizeRelayText,
+    relayTextsSimilar,
     shouldRejectRemoteVoiceRelayPlayback,
     updateVoiceRelaySegmentSpeechState,
-    updateVoiceRelaySegmentSpeechStateFromFileRms,
     VOICE_RELAY_MAX_SPEAK_CHARS,
     VOICE_RELAY_VAD_DEFAULTS,
     resolveVoiceRelayFixedFlushDelayMs,
@@ -49,23 +59,31 @@ import {
 import {
     applyLocalRelayTurn,
     applyRemoteRelayTurn,
+    buildRemoteRelayDedupeKeys,
     createInitialVoiceRelayTurnSnapshot,
     estimateVoiceRelayPlaybackMs,
     isVoiceRelayListenActive,
+    markRemotePlaybackDrained,
     markRemotePlaybackFinished,
-    resolveVoiceRelayLanguagePair,
+    shouldDedupeRemoteVoiceRelay,
     shouldDeferVoiceRelayFlush,
     shouldPlayRemoteVoiceRelay,
     shouldSendVoiceRelaySegment,
     shouldStartVoiceRelayCapture,
+    type RemoteRelayDedupeRecord,
     type VoiceRelayTurnSnapshot,
 } from '../features/voip-voice-relay/voiceRelayTurnController';
 import {
-    estimateRecordingRmsDb,
-    mapFileRmsToPseudoMeterDb,
+    DESIGNATED_LANGUAGE_MISMATCH_MESSAGE,
+    textMatchesDesignatedLanguage,
+} from '../features/translation/designatedLanguage';
+import {
     shouldSkipSilentVoiceRelayStt,
 } from '../features/voip-voice-relay/voiceRelayAudioMetrics';
 import {
+    beginVoiceRelaySileroCapture,
+    endVoiceRelaySileroCapture,
+    isVoiceRelaySileroCaptureAvailable,
     probeVoiceRelaySileroVadSupport,
     startVoiceRelaySileroVadMonitor,
     stopVoiceRelaySileroVadMonitor,
@@ -77,8 +95,21 @@ import {
     shouldFlushOnSileroSpeechEnd,
     shouldFlushSileroSafetyCap,
 } from '../features/voip-voice-relay/voiceRelaySegmentBoundary';
-import { VoiceRelayPlaybackQueue } from '../features/voip-voice-relay/voiceRelayPlaybackQueue';
+import {
+    getWorldlincoTuning,
+    resolveSileroBoundaryFromTuning,
+} from '../services/worldlincoTuningConfig';
 import type { VoiceRelayChunkMeta, VoiceRelayPlaybackItem } from '../features/voip-voice-relay/types';
+import { VoiceRelayPlaybackQueue } from '../features/voip-voice-relay/voiceRelayPlaybackQueue';
+
+// 재생 종료 후 마이크 재무장까지의 에코 꼬리(실측 종료 시점 기준). 시작 시점에 추정으로
+// 박아둔 억제창과 무관하게, 실제 재생이 끝나는 순간을 기준으로만 적용해
+// "발화 끝 ↔ 마이크 열림" 타이밍을 정확히 일치시킨다.
+//  - 네이티브(HW AEC, USAGE_VOICE_COMMUNICATION): 스피커 출력이 마이크 참조 루프에서
+//    상쇄되므로 짧게(턴 컨트롤러 postPlaybackGuardMs=550 이 사실상의 가드).
+//  - expo/디바이스 폴백(AEC 미정합): TTS 꼬리가 스피커→마이크로 샐 수 있어 보수적 꼬리 유지.
+const VOICE_RELAY_NATIVE_ECHO_TAIL_MS = 250;
+const VOICE_RELAY_FALLBACK_ECHO_TAIL_MS = 700;
 
 type CallChatEntry = {
     id: string;
@@ -129,13 +160,33 @@ type CallVoiceRelayEntry = {
     audioFormat?: string;
 };
 
+// 연속 캡처 큐 파이프라이닝용 세그먼트 스냅샷.
+// 캡처(녹음)와 처리(STT/번역/딜리버리)를 분리하면, 큐 워커가 세그먼트를 처리하는 사이
+// 캡처 루프가 다음 세그먼트로 공유 ref 들을 덮어쓴다. 따라서 한 세그먼트의 판정/메타데이터는
+// flush 시점에 여기로 고정(snapshot)해 워커로 전달한다(스테일 ref 방지).
+type VoiceRelaySegmentSnapshot = {
+    segmentDurationMs: number;
+    meterUnavailable: boolean;
+    flushReason: string | null;
+    flushHadSpeech: boolean;
+    peakMeterDb: number;
+    hasSpeech: boolean;
+    sileroActive: boolean;
+    sileroHadSpeech: boolean;
+    chunkMeta: { utteranceId: string; chunkIndex: number; isFinal: boolean };
+};
+
 const CALL_CONNECT_TIMEOUT_MS = 60_000;
 const VOICE_RELAY_DUPLICATE_GUARD_MS = 12_000;
-const VOICE_RELAY_REMOTE_PLAYBACK_DEDUPE_MS = 4_000;
 const VOICE_RELAY_SUPPRESS_MIN_MS = 900;
 const VOICE_RELAY_SUPPRESS_CHAR_MS = 45;
-const VOICE_RELAY_REMOTE_ECHO_GUARD_MS = 4_000;
-const VOICE_RELAY_SPEAKER_ECHO_GUARD_MS = 5_500;
+const getVoiceRelayEchoGuards = () => {
+    const tuning = getWorldlincoTuning().voip;
+    return {
+        remote: tuning.remote_echo_guard_ms,
+        speaker: tuning.speaker_echo_guard_ms,
+    };
+};
 const VOICE_RELAY_SPEECH_METER_MIN_DB = -48;
 const VOICE_RELAY_MIN_AUDIO_BASE64_LEN = 3_500;
 const VOICE_RELAY_RESTART_DELAY_MS = 220;
@@ -144,6 +195,10 @@ const VOICE_RELAY_METER_UNAVAILABLE_POLLS = 5;
 const VOICE_RELAY_REMOTE_ECHO_DEDUPE_MS = 12_000;
 const VOICE_RELAY_CONNECTED_GRACE_MS = 3_000;
 const REMOTE_AUDIO_DETECT_WARN_MS = 45_000;
+// 리드인 트리밍: Silero 가용 시 STT 녹음을 speech_start 까지 지연(arm)해 발화 전
+// 무음이 업로드 파일에 들어가지 않게 한다. 이 시간 내 발화가 없으면 안전하게 즉시
+// 녹음을 시작(레거시 fixed_flush/file-RMS 경로)해 기존 동작으로 폴백한다.
+const VOICE_RELAY_LEADIN_ARM_TIMEOUT_MS = 9_000;
 
 const buildVoiceRelayRecordingOptions = (): Audio.RecordingOptions => ({
     isMeteringEnabled: true,
@@ -167,27 +222,6 @@ const buildVoiceRelayRecordingOptions = (): Audio.RecordingOptions => ({
     },
     web: Audio.RecordingOptionsPresets.HIGH_QUALITY.web,
 });
-const TTS_LANGUAGE_MAP: Record<string, string> = {
-    ar: 'ar-SA',
-    de: 'de-DE',
-    en: 'en-US',
-    es: 'es-ES',
-    fr: 'fr-FR',
-    hi: 'hi-IN',
-    id: 'id-ID',
-    it: 'it-IT',
-    ja: 'ja-JP',
-    ko: 'ko-KR',
-    pt: 'pt-PT',
-    ru: 'ru-RU',
-    th: 'th-TH',
-    tr: 'tr-TR',
-    vi: 'vi-VN',
-    zh: 'zh-CN',
-    'zh-cn': 'zh-CN',
-    'zh-tw': 'zh-TW',
-};
-
 interface VoIPCallScreenProps {
     callInitResponse: CallInitResponse;
     calleePhone: string;
@@ -261,8 +295,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const [connectionState, setConnectionState] = useState<string>('connecting');
     const [callDuration, setCallDuration] = useState<number>(0);
     const [isMuted, setIsMuted] = useState<boolean>(false);
-    const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(false);
-    const isSpeakerOnRef = useRef<boolean>(false);
+    // 번역 릴레이는 통역 음성을 또렷이 들어야 하므로 스피커를 기본 ON으로 둔다.
+    // (이어피스는 음량이 작아 "음량이 너무 작다"는 문제가 발생) 사용자는 화면에서 수화기로 토글 가능.
+    const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true);
+    const isSpeakerOnRef = useRef<boolean>(true);
     const [hasRemoteAudio, setHasRemoteAudio] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [chatDraft, setChatDraft] = useState<string>('');
@@ -285,6 +321,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const auditEventsRef = useRef<CallModeAuditEvent[]>([]);
     const loadAuditEventsRef = useRef<(options?: { showLoading?: boolean; force?: boolean }) => Promise<CallModeAuditEvent[]>>(() => Promise.resolve([]));
     const startVoiceRelaySegmentRef = useRef<() => Promise<void>>(async () => {});
+    const voiceRelayNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const flushVoiceRelaySegmentRef = useRef<(reason: string, isFinal: boolean) => Promise<void>>(async () => {});
     const isVoiceRelayCallReadyRef = useRef<() => boolean>(() => false);
     const auditFetchInFlightRef = useRef<boolean>(false);
@@ -305,19 +342,39 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const voiceRelayRecordingRef = useRef<Audio.Recording | null>(null);
     const voiceRelayPlaybackRef = useRef<Audio.Sound | null>(null);
     const voiceRelayPlaybackFileRef = useRef<string | null>(null);
+    // G10(A-1): TTS 를 통화 렌더 경로(네이티브 AudioTrack/USAGE_VOICE_COMMUNICATION)로 재생해
+    // HW AEC 참조 루프에 합류시킨다. 기본 on, 네이티브 미가용/실패 시 expo-av 폴백(무회귀).
+    const voiceCallTtsNativeEnabledRef = useRef<boolean>(true);
+    // 네이티브 통화-렌더 TTS 재생 중 표시(expo Sound ref 는 null 이므로 별도 추적해 억제 유지).
+    const voiceRelayNativeTtsActiveRef = useRef<boolean>(false);
     const voiceRelayStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const voiceRelayRestartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const voiceRelayProcessingRef = useRef<boolean>(false);
+    // 연속 캡처 큐(파이프라이닝): 한 세그먼트를 STT/번역/렌더하는 동안에도 마이크를 다시 열어
+    // 다음 발화를 잃지 않도록, 녹음이 끝난 세그먼트는 이 FIFO 큐에 적재하고 별도 워커가 순차
+    // 처리한다. 캡처(녹음)와 처리(서빙/딜리버리)를 분리해 "렌더 중 음성 잘림 + 템 김"을 없앤다.
+    const voiceRelaySegmentQueueRef = useRef<{ uri: string; snapshot: VoiceRelaySegmentSnapshot }[]>([]);
+    const voiceRelayQueueWorkerActiveRef = useRef<boolean>(false);
     const voiceRelayEnabledRef = useRef<boolean>(false);
     const voiceRelaySuggestionShownRef = useRef<boolean>(false);
     const voiceRelayAutoStartedRef = useRef<boolean>(false);
     const voiceRelaySuppressUntilRef = useRef<number>(0);
+    // Layer 1(에코 뿌리 차단): 상대 TTS가 실제로 재생 중인 동안 true. 추정 재생창(estimate)이 아니라
+    // 실제 onDone/onStopped/onError 까지 마이크 재무장을 보류해 ① 장문 TTS 끊김(B)과
+    // ② 내 마이크가 상대 TTS를 주워 한글로 음차하는 에코(A)를 동시에 차단한다.
+    const voiceRelayTtsActiveRef = useRef<boolean>(false);
     const lastVoiceRelayKeyRef = useRef<string>('');
     const lastVoiceRelayAtRef = useRef<number>(0);
     const lastRemoteRelayTranscriptRef = useRef<string>('');
     const lastRemoteRelayAtRef = useRef<number>(0);
+    // 상대(피어)가 실제로 보내온 릴레이의 source_lang을 기억한다. 지정 언어 모드에서 피어의
+    // source_lang은 피어의 고정 지정 언어이므로 신뢰할 수 있다. 콜리(callee)가 콜러의 언어를
+    // 시그널링으로 전달받지 못해 localTargetLang이 잘못된 기본값(예: en)으로 떨어질 때, 수신한
+    // 릴레이에서 상대 언어를 학습해 내 번역 타깃을 보정한다(자가 치유).
+    const observedRemoteRelaySourceLangRef = useRef<string>('');
     const lastRemotePlaybackKeyRef = useRef<string>('');
     const lastRemotePlaybackAtRef = useRef<number>(0);
+    const lastRemoteRelayDedupeRef = useRef<RemoteRelayDedupeRecord | null>(null);
     const voiceRelayPeakMeteringRef = useRef<number>(-160);
     const connectedAtRef = useRef<number | null>(null);
     const voiceRelayMeterPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -325,9 +382,27 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const voiceRelayMeterPollMissesRef = useRef<number>(0);
     const voiceRelayMeterUnavailableRef = useRef<boolean>(false);
     const voiceRelayFileRmsPollTickRef = useRef<number>(0);
+    // 파일 증가율(bytes/sec) 기반 발화 활동 판정 — meter-dead 기기에서 무음(말 끝)을 추정한다.
+    // (AAC 바이트 RMS는 음량과 무관해 무음에도 speech로 오판 → 반복 환각 유발. 증가율로 대체)
+    const voiceRelayPrevFileSizeRef = useRef<number>(0);
+    const voiceRelayPrevFilePollMsRef = useRef<number>(0);
+    const voiceRelayPeakGrowthBpsRef = useRef<number>(0);
+    const voiceRelayGrowthSpeechActiveRef = useRef<boolean>(false);
     const voiceRelaySileroActiveRef = useRef<boolean>(false);
     const voiceRelaySileroSupportedRef = useRef<boolean>(false);
     const voiceRelaySileroFirstSpeechAtMsRef = useRef<number | null>(null);
+    // 마이크 컨텐션 해소: Silero 네이티브 AudioRecord 의 PCM 을 세그먼트 WAV 로 직접 캡처한다.
+    // (삼성 MultiRecord 차단으로 expo-audio 레코더가 무음만 받던 문제 해결)
+    const voiceRelayNativeCaptureActiveRef = useRef<boolean>(false);
+    const voiceRelayNativeCaptureUriRef = useRef<string | null>(null);
+    // 리드인 트리밍 상태: armed=발화 대기 중(녹음 미시작), bypassArm=speech_start/타임아웃에
+    // 의한 즉시 녹음 재진입(게이팅·arm 재실행 생략).
+    const voiceRelayArmedForSpeechRef = useRef<boolean>(false);
+    const voiceRelayArmedAtMsRef = useRef<number>(0);
+    const voiceRelayArmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const voiceRelayBypassArmRef = useRef<boolean>(false);
+    // speech_start 로 인한 재진입(실발화 트리거)과 arm 타임아웃 재진입(무음 폴백)을 구분한다.
+    const voiceRelayLeadInTriggeredRef = useRef<boolean>(false);
     const voiceRelaySileroLastFlushAtMsRef = useRef<number | null>(null);
     const voiceRelayLastFlushReasonRef = useRef<string | null>(null);
     const voiceRelayLastFlushHadSpeechRef = useRef<boolean>(false);
@@ -335,7 +410,16 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const voiceRelayTurnRef = useRef<VoiceRelayTurnSnapshot>(createInitialVoiceRelayTurnSnapshot());
     const voiceRelayAbortGenerationRef = useRef<number>(0);
     const scheduleVoiceRelayCaptureRetryRef = useRef<(retryReason: string) => void>(() => {});
+    // 반이중 하드 가드: 상대 재생이 도착하면 로컬 녹음을 stop 하는데, 그 teardown(stopAndUnloadAsync)
+    // 완료 promise 를 보관한다. 재생(playVoiceRelayOutput)은 이 promise 를 await 한 뒤에만 시작해,
+    // 녹음 미해제 상태로 AudioTrack 이 통화 입력 스트림과 충돌해 무음으로 죽는 레이스를 차단한다.
+    const voiceRelaySegmentStopInFlightRef = useRef<Promise<unknown> | null>(null);
+    const stopVoiceRelaySegmentRef = useRef<(processSegment: boolean) => Promise<void>>(async () => {});
     const lastLocalRelayTranslatedRef = useRef<string>('');
+    // 발신측이 직접 인식한 "원문 전사"(자기 언어). 라운드트립 에코(상대 폰이 내 TTS 를
+    // 다시 잡아 재번역해 되돌려보낸 것)를 잡으려면, 들어온 번역문을 내 번역문이 아니라
+    // 내 원문 전사와 같은 언어로 비교해야 한다.
+    const lastLocalRelayTranscriptRef = useRef<string>('');
     const lastLocalRelaySentAtRef = useRef<number>(0);
     const lastRemotePlaybackTranslatedRef = useRef<string>('');
     const lastRemotePlaybackTranslatedAtRef = useRef<number>(0);
@@ -359,6 +443,11 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const voiceRelayRecordingRemoteSuppressedRef = useRef<boolean>(false);
     const hasRemoteAudioRef = useRef<boolean>(false);
     const remoteAudioSuppressedRef = useRef<boolean>(false);
+    // 일부 기기(예: 특정 Galaxy)에서 WebRTC ontrack/onRemoteStream 콜백이 누락되면, 늦게 도착한
+    // 원격 오디오 트랙이 한 번도 mute 되지 않아 원음(WebRTC)+번역 TTS 가 겹쳐 재생된다(이중 발화).
+    // syncRemoteAudioState 폴링이 트랙을 감지하면 ref 동일성 가드를 우회해 client mute 를 강제
+    // 재적용하는데, 그 1회성 재적용을 로그로 남기기 위한 플래그.
+    const remoteTrackForceSuppressedRef = useRef<boolean>(false);
     const chatScrollRef = useRef<ScrollView | null>(null);
     const voiceRelaySegmentStateRef = useRef<VoiceRelaySegmentState>(
         createInitialVoiceRelaySegmentState(Date.now()),
@@ -420,6 +509,26 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             connectedAtRef.current = Date.now();
         }
         const detected = activeClient?.hasRemoteAudioTrack?.() ?? false;
+        // ontrack/onRemoteStream 콜백 누락 보정: 통역 모드에서 원격 트랙이 폴링으로 감지되면,
+        // setRemoteAudioSuppressed 의 ref 동일성 가드(이미 true 면 client 호출 생략) 때문에
+        // 늦게 도착한 트랙이 mute 되지 못하는 누수가 있다. 여기서 client mute 를 직접·강제
+        // 재적용해 원음 누수를 막는다. 통역 모드는 원음을 끝까지 차단하므로(release 무시)
+        // 멱등 재적용이며 정상 통화엔 무해하다. (대면 경로 무접촉 · VOIP 수신 억제 국한)
+        if (detected && voiceRelayEnabledRef.current) {
+            remoteAudioSuppressedRef.current = true;
+            activeClient?.setRemoteAudioEnabled?.(false);
+            if (!remoteTrackForceSuppressedRef.current) {
+                remoteTrackForceSuppressedRef.current = true;
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_REMOTE_AUDIO_SUPPRESSION',
+                    call_id: callIdRef.current,
+                    suppressed: true,
+                    forced: true,
+                    source: 'sync_detected_track',
+                    timestamp: new Date().toISOString(),
+                }));
+            }
+        }
         const graceReady = Date.now() - connectedAtRef.current >= VOICE_RELAY_CONNECTED_GRACE_MS;
         const ready = detected || graceReady;
         setHasRemoteAudio(ready);
@@ -608,9 +717,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         return `${apiBaseUrl}/${audioUrl.replace(/^\/+/, '')}`;
     }, [apiBaseUrl]);
 
-    const resolveTtsLanguage = useCallback((langCode: string) => {
-        const normalized = langCode.trim().toLowerCase();
-        return TTS_LANGUAGE_MAP[normalized] || langCode || 'ko-KR';
+    const resolveTtsLanguage = useCallback((langCode: string, text?: string) => {
+        return resolveVoipTtsLocale(langCode, text);
     }, []);
 
     const clearVoiceRelayTimers = useCallback(() => {
@@ -622,6 +730,11 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             clearTimeout(voiceRelayRestartTimerRef.current);
             voiceRelayRestartTimerRef.current = null;
         }
+        if (voiceRelayArmTimeoutRef.current) {
+            clearTimeout(voiceRelayArmTimeoutRef.current);
+            voiceRelayArmTimeoutRef.current = null;
+        }
+        voiceRelayArmedForSpeechRef.current = false;
         if (voiceRelayMeterPollRef.current) {
             clearInterval(voiceRelayMeterPollRef.current);
             voiceRelayMeterPollRef.current = null;
@@ -629,6 +742,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         if (voiceRelayFixedFlushTimerRef.current) {
             clearTimeout(voiceRelayFixedFlushTimerRef.current);
             voiceRelayFixedFlushTimerRef.current = null;
+        }
+        if (voiceRelayNoticeTimerRef.current) {
+            clearTimeout(voiceRelayNoticeTimerRef.current);
+            voiceRelayNoticeTimerRef.current = null;
         }
     }, []);
 
@@ -652,9 +769,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             return;
         }
         try {
+            const sileroBoundary = resolveSileroBoundaryFromTuning();
             const started = await startVoiceRelaySileroVadMonitor(
-                VOICE_RELAY_SILERO_DEFAULTS.silenceMs,
-                VOICE_RELAY_SILERO_DEFAULTS.speechMs,
+                sileroBoundary.silenceMs,
+                sileroBoundary.speechMs,
             );
             if (!started) {
                 return;
@@ -664,8 +782,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
                 event: 'VOIP_VOICE_RELAY_SILERO_STARTED',
                 call_id: callInitResponse.call_id,
-                silence_ms: VOICE_RELAY_SILERO_DEFAULTS.silenceMs,
-                speech_ms: VOICE_RELAY_SILERO_DEFAULTS.speechMs,
+                silence_ms: sileroBoundary.silenceMs,
+                speech_ms: sileroBoundary.speechMs,
                 timestamp: new Date().toISOString(),
             }));
         } catch (err) {
@@ -679,6 +797,11 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     }, [callInitResponse.call_id]);
 
     const stopVoiceRelayPlayback = useCallback(async () => {
+        // G10(A-1): 네이티브 통화-렌더 TTS 가 진행 중이면 함께 중단(다음 발화/종료 전 정리).
+        if (voiceRelayNativeTtsActiveRef.current) {
+            voiceRelayNativeTtsActiveRef.current = false;
+            await stopVoiceCallTts();
+        }
         const sound = voiceRelayPlaybackRef.current;
         voiceRelayPlaybackRef.current = null;
         if (!sound) {
@@ -727,10 +850,24 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }));
     }, [callInitResponse.call_id]);
 
-    const finishRemoteVoiceRelayPlayback = useCallback(() => {
-        voiceRelayTurnRef.current = markRemotePlaybackFinished(voiceRelayTurnRef.current);
+    const releaseRemoteAudioSuppressionIfAllowed = useCallback(() => {
+        // 통역 모드에서는 WebRTC 원어를 끝까지 차단 (serverReady 플래그와 무관).
+        if (voiceRelayEnabledRef.current) {
+            return;
+        }
         setRemoteAudioSuppressed(false);
     }, [setRemoteAudioSuppressed]);
+
+    const finishRemoteVoiceRelayPlayback = useCallback(() => {
+        // 재생 큐가 모두 비었으면(이 발화가 마지막) listen hold 를 짧은 에코 가드까지 당겨
+        // 듣기만 하던 쪽이 즉시 턴을 잡도록 한다(한쪽 일방 구동/다른 쪽 반복 루프 해소).
+        // 큐에 후속 재생이 남아 있으면 기존 동작(remotePlaybackUntilMs 만 클램프)을 유지한다.
+        const queueDrained = (voiceRelayPlaybackQueueRef.current?.pendingCount ?? 0) === 0;
+        voiceRelayTurnRef.current = queueDrained
+            ? markRemotePlaybackDrained(voiceRelayTurnRef.current)
+            : markRemotePlaybackFinished(voiceRelayTurnRef.current);
+        releaseRemoteAudioSuppressionIfAllowed();
+    }, [releaseRemoteAudioSuppressionIfAllowed]);
 
     const resolvePlaybackExtension = useCallback((audioFormat?: string) => {
         const normalized = String(audioFormat || '').toLowerCase();
@@ -746,7 +883,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         return 'wav';
     }, []);
 
-    const playVoiceRelayOutput = useCallback(async (audioUrl: string | undefined, audioBase64: string | undefined, audioFormat: string | undefined, translatedText: string, targetLang: string) => {
+    const playVoiceRelayOutput = useCallback(async (audioUrl: string | undefined, audioBase64: string | undefined, audioFormat: string | undefined, translatedText: string, targetLang: string, correlationId?: string) => {
         const collapsedText = collapseRepeatedRelayPhrases(translatedText.trim());
         if (!collapsedText || isLikelyRepetitionHallucination(translatedText) || isLikelyRepetitionHallucination(collapsedText)) {
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
@@ -765,19 +902,42 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         const playbackMs = estimateVoiceRelayPlaybackMs(normalizedText, isSpeakerOnRef.current);
         voiceRelaySuppressUntilRef.current = Date.now() + playbackMs + 700;
 
+        // 반이중 하드 가드: 진행 중이던 로컬 녹음의 teardown(stopAndUnloadAsync)이 완료될 때까지
+        // 재생을 시작하지 않는다. (마이크 동시 오픈 시 수신 핸들러의 stop 과 재생 시작이 레이스 →
+        // AudioRecord 가 통화 입력 스트림을 쥔 채 AudioTrack 출력이 충돌해 재생이 무음으로 죽는 문제 차단.)
+        const pendingSegmentStop = voiceRelaySegmentStopInFlightRef.current;
+        if (pendingSegmentStop) {
+            voiceRelaySegmentStopInFlightRef.current = null;
+            try {
+                await pendingSegmentStop;
+            } catch {
+                // stop 실패는 무시 — 아래에서 잔존 녹음을 한 번 더 해제 시도한다.
+            }
+        }
+        // 그래도 녹음이 남아 있으면(예: 핸들러 경로 외 진입) 직접 해제 후 재생.
+        if (voiceRelayRecordingRef.current) {
+            try {
+                await stopVoiceRelaySegmentRef.current(false);
+            } catch {
+                // ignore
+            }
+        }
+
+        // 원어(WebRTC) 즉시 차단 — TTS 전에 스피커로 상대 음성이 새는 것 방지
+        setRemoteAudioSuppressed(true);
         await stopVoiceRelayPlayback();
         Speech.stop();
-        setRemoteAudioSuppressed(true);
         lastRemotePlaybackTranslatedRef.current = normalizeRelayText(translatedText);
         lastRemotePlaybackTranslatedAtRef.current = Date.now();
 
         console.log('[UI_PRESS_PROBE]', JSON.stringify({
             event: 'VOIP_VOICE_RELAY_PLAYBACK',
             call_id: callInitResponse.call_id,
+            correlation_id: correlationId || null,
             target_lang: targetLang,
             translated_text: normalizedText.slice(0, 120),
             translated_length: normalizedText.length,
-            tts_delivery: 'device_speech',
+            tts_delivery: 'pending',
             speaker_on: isSpeakerOnRef.current,
             timestamp: new Date().toISOString(),
         }));
@@ -787,37 +947,195 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 allowsRecordingIOS: true,
                 playsInSilentModeIOS: true,
                 shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: !isSpeakerOnRef.current,
+                // 통역 통화는 탁자에 둔 폰을 가정 → 항상 라우드스피커. (이어피스 라우팅 금지)
+                playThroughEarpieceAndroid: false,
                 staysActiveInBackground: false,
             });
+            // 근거(하드 증거): 통화 중 AudioManager 가 MODE_IN_COMMUNICATION↔NORMAL 로 깜빡이고,
+            // MODE_IN_COMMUNICATION 의 출력 경로가 '이어피스'라서, 그 구간에 USAGE_MEDIA(TTS)까지
+            // 이어피스로 빠져 탁자 위 폰에선 무음이 된다. 재생 직전 라우드스피커를 강제(speaker=true)하고
+            // 통화 스트림 음량을 최대화해, 어느 모드에서든 TTS 가 내장 스피커로 또렷이 나오게 한다.
+            await setVoipSpeakerphone(true);
+            await enableVoipAudio(true, true);
         } catch {
             // ignore audio mode failures before device TTS
         }
+        setRemoteAudioSuppressed(true);
 
-        await new Promise<void>((resolve) => {
-            Speech.speak(normalizedText, {
-                language: resolveTtsLanguage(targetLang),
-                rate: 0.92,
-                pitch: 1.0,
-                volume: 1.0,
-                onDone: () => {
-                    finishRemoteVoiceRelayPlayback();
-                    scheduleVoiceRelayCaptureRetryRef.current('playback_complete');
+        // Layer 1: 실제 TTS 재생 동안 마이크 재무장을 막는다. 추정 재생창과 무관하게
+        // 재생 완료에서만 해제해, 장문 TTS가 끝까지 재생되고(B 끊김 해소)
+        // 그 사이 마이크가 상대 TTS를 주워 음차하는 에코(A)도 차단한다.
+        voiceRelayTtsActiveRef.current = true;
+        let ttsSettled = false;
+        // 네이티브(HW AEC) 통화-렌더로 실제 재생됐는지 — settleOnce 의 에코 꼬리 결정에 쓴다.
+        let nativeRenderDelivered = false;
+        // 실제 재생은 길이에 비례하므로 추정 상한이 아니라 넉넉한 실측 기반 failsafe(최대 20s)로만 보호한다.
+        // (콜백 누락 시에도 마이크 재무장이 영구 차단되지 않게 한다.)
+        const ttsFailsafeMs = Math.min(20_000, Math.max(4_000, normalizedText.length * 120));
+        const settleOnce = () => {
+            if (ttsSettled) {
+                return;
+            }
+            ttsSettled = true;
+            voiceRelayTtsActiveRef.current = false;
+            // 정밀 재무장: 시작 시점에 추정(playbackMs+700)으로 박아둔 억제창을, '실제 재생 종료'
+            // 시점 기준 짧은 에코 꼬리로 collapse 한다. 추정이 실제보다 길면 마이크가 최대 수초
+            // 늦게 열리던 타이밍 불일치(발화 끝 ↔ 마이크 열림)를 제거해, 재무장이 발화 종료와
+            // 일치하게 한다. (turn 컨트롤러는 markRemotePlaybackDrained 로 이미 실측 collapse됨.)
+            voiceRelaySuppressUntilRef.current = Date.now() + (
+                nativeRenderDelivered
+                    ? VOICE_RELAY_NATIVE_ECHO_TAIL_MS
+                    : VOICE_RELAY_FALLBACK_ECHO_TAIL_MS
+            );
+            finishRemoteVoiceRelayPlayback();
+            scheduleVoiceRelayCaptureRetryRef.current('playback_complete');
+        };
+
+        // 우선순위 1: 서버 뉴럴 TTS(Edge neural). 단말 음성팩 의존을 제거해 50개국 일관 발음·
+        // 자연스러운 톤을 확보한다(로봇 음성·한글 음차 문제 해결). 릴레이로 이미 오디오가 왔으면
+        // 그걸 쓰고, 없으면 수신측이 대상 언어로 직접 합성 요청한다. 실패 시 디바이스 TTS로 폴백(무회귀).
+        let serverAudioBase64: string | undefined;
+        let serverAudioFormat: string | undefined;
+        if (audioBase64 && String(audioFormat || '').startsWith('audio/')) {
+            serverAudioBase64 = audioBase64;
+            serverAudioFormat = audioFormat;
+        } else {
+            try {
+                // V.2 ID 백본 — 발화 단계가 출처 상관 ID에 스스로 붙도록 전달.
+                const synth = await synthesizeSpeech(
+                    normalizedText,
+                    targetLang,
+                    apiBaseUrlRef.current,
+                    undefined,
+                    { correlationId, featureId: FEATURE_IDS.voipVoiceRelay },
+                );
+                if (synth?.audioBase64 && String(synth.audioFormat || '').startsWith('audio/')) {
+                    serverAudioBase64 = synth.audioBase64;
+                    serverAudioFormat = synth.audioFormat;
+                }
+            } catch {
+                // 합성 실패 → 디바이스 TTS 폴백
+            }
+        }
+
+        let playedServerAudio = false;
+        if (serverAudioBase64) {
+            const ext = resolvePlaybackExtension(serverAudioFormat);
+            const fileUri = `${FileSystem.cacheDirectory}voice_relay_out_${Date.now()}.${ext}`;
+            try {
+                await FileSystem.writeAsStringAsync(fileUri, serverAudioBase64, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+                voiceRelayPlaybackFileRef.current = fileUri;
+            } catch {
+                voiceRelayPlaybackFileRef.current = null;
+            }
+
+            // G10(A-1) 우선 경로: 통화 렌더(네이티브 AudioTrack/USAGE_VOICE_COMMUNICATION)로 재생해
+            // HW AEC 참조 루프에 합류 → 마이크가 자기 TTS 를 재캡처하지 못하게 한다(굶김/자가에코 차단).
+            if (
+                voiceRelayPlaybackFileRef.current
+                && voiceCallTtsNativeEnabledRef.current
+                && isVoipTtsPlayerNativeAvailable()
+            ) {
+                voiceRelayNativeTtsActiveRef.current = true;
+                try {
+                    const nativePath = (voiceRelayPlaybackFileRef.current as string).replace(/^file:\/\//, '');
+                    const nativePlayed = await playVoiceCallTts(nativePath);
+                    voiceRelayNativeTtsActiveRef.current = false;
+                    if (nativePlayed) {
+                        playedServerAudio = true;
+                        nativeRenderDelivered = true;
+                        if (voiceRelayPlaybackFileRef.current) {
+                            try {
+                                await FileSystem.deleteAsync(voiceRelayPlaybackFileRef.current, { idempotent: true });
+                            } catch {
+                                // ignore temp cleanup failures
+                            }
+                            voiceRelayPlaybackFileRef.current = null;
+                        }
+                        console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                            event: 'VOIP_VOICE_RELAY_PLAYBACK_DELIVERED',
+                            call_id: callInitResponse.call_id,
+                            correlation_id: correlationId || null,
+                            target_lang: targetLang,
+                            tts_delivery: 'server_audio_voicecall_native',
+                            timestamp: new Date().toISOString(),
+                        }));
+                    }
+                } catch {
+                    voiceRelayNativeTtsActiveRef.current = false;
+                }
+            }
+
+            // 폴백: 네이티브 통화-렌더 미가용/실패 시 기존 expo-av 경로(USAGE_MEDIA, 무회귀).
+            if (!playedServerAudio && voiceRelayPlaybackFileRef.current) {
+                try {
+                    const { sound } = await Audio.Sound.createAsync(
+                        { uri: voiceRelayPlaybackFileRef.current },
+                        { shouldPlay: true, volume: 1.0 },
+                    );
+                    voiceRelayPlaybackRef.current = sound;
+                    await new Promise<void>((resolve) => {
+                        const failsafe = setTimeout(resolve, ttsFailsafeMs);
+                        sound.setOnPlaybackStatusUpdate((status) => {
+                            if (status.isLoaded === false) {
+                                clearTimeout(failsafe);
+                                resolve();
+                                return;
+                            }
+                            if (status.didJustFinish) {
+                                clearTimeout(failsafe);
+                                resolve();
+                            }
+                        });
+                    });
+                    await stopVoiceRelayPlayback();
+                    playedServerAudio = true;
+                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                        event: 'VOIP_VOICE_RELAY_PLAYBACK_DELIVERED',
+                        call_id: callInitResponse.call_id,
+                        correlation_id: correlationId || null,
+                        target_lang: targetLang,
+                        tts_delivery: 'server_audio',
+                        timestamp: new Date().toISOString(),
+                    }));
+                } catch {
+                    await stopVoiceRelayPlayback();
+                    playedServerAudio = false;
+                }
+            }
+        }
+
+        // 우선순위 2: 디바이스 TTS 폴백 (서버 합성 불가/실패 시 기존 동작 유지)
+        if (!playedServerAudio) {
+            await new Promise<void>((resolve) => {
+                const failsafe = setTimeout(resolve, ttsFailsafeMs);
+                const done = () => {
+                    clearTimeout(failsafe);
                     resolve();
-                },
-                onStopped: () => {
-                    finishRemoteVoiceRelayPlayback();
-                    scheduleVoiceRelayCaptureRetryRef.current('playback_complete');
-                    resolve();
-                },
-                onError: () => {
-                    finishRemoteVoiceRelayPlayback();
-                    scheduleVoiceRelayCaptureRetryRef.current('playback_complete');
-                    resolve();
-                },
+                };
+                Speech.speak(normalizedText, {
+                    language: resolveTtsLanguage(targetLang, normalizedText),
+                    rate: 1.05,
+                    pitch: 1.0,
+                    volume: 1.0,
+                    onDone: done,
+                    onStopped: done,
+                    onError: done,
+                });
             });
-        });
-    }, [callInitResponse.call_id, finishRemoteVoiceRelayPlayback, resolveTtsLanguage, setRemoteAudioSuppressed, stopVoiceRelayPlayback]);
+            console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                event: 'VOIP_VOICE_RELAY_PLAYBACK_DELIVERED',
+                call_id: callInitResponse.call_id,
+                target_lang: targetLang,
+                tts_delivery: 'device_speech',
+                timestamp: new Date().toISOString(),
+            }));
+        }
+
+        settleOnce();
+    }, [callInitResponse.call_id, finishRemoteVoiceRelayPlayback, resolvePlaybackExtension, resolveTtsLanguage, setRemoteAudioSuppressed, stopVoiceRelayPlayback]);
 
     const enqueueVoiceRelayPlayback = useCallback((item: VoiceRelayPlaybackItem) => {
         if (!voiceRelayPlaybackQueueRef.current) {
@@ -828,6 +1146,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     queued.audioFormat,
                     queued.translatedText,
                     queued.targetLang,
+                    queued.correlationId,
                 );
             });
         }
@@ -877,9 +1196,26 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         scheduleVoiceRelayCaptureRetryRef.current = scheduleVoiceRelayCaptureRetry;
     }, [scheduleVoiceRelayCaptureRetry]);
 
-    const processVoiceRelaySegment = useCallback(async (uri: string) => {
+    // 지정 언어 안내는 막히는 팝업이 아니라 잠깐 떴다 스스로 사라지는 안내로만 노출한다.
+    // (다시 지정 언어로 말하면 다음 세그먼트가 정상 처리되며 안내도 갱신/해제된다.)
+    const flashVoiceRelayNotice = useCallback((message: string, durationMs = 3200) => {
+        setVoiceRelayError(message);
+        if (voiceRelayNoticeTimerRef.current) {
+            clearTimeout(voiceRelayNoticeTimerRef.current);
+        }
+        voiceRelayNoticeTimerRef.current = setTimeout(() => {
+            voiceRelayNoticeTimerRef.current = null;
+            setVoiceRelayError((cur) => (cur === message ? null : cur));
+        }, durationMs);
+    }, []);
+
+    const processVoiceRelaySegment = useCallback(async (uri: string, snapshot: VoiceRelaySegmentSnapshot) => {
         const segmentStartedAt = Date.now();
         const abortGeneration = voiceRelayAbortGenerationRef.current;
+        // V.2 ID 백본 — 이 캡처 세그먼트의 고유 상관 ID를 1회 발급해
+        // 기능 ID 자동 매핑(STT) → 셀프 서빙(번역) → 전송(딜리버리, 릴레이) → 음성 발화까지
+        // 동일 ID로 자동 연결한다.
+        const segmentCorrelationId = newCorrelationId(FEATURE_IDS.voipVoiceRelay);
 
         const shouldAbortRelayProcessing = () => (
             abortGeneration !== voiceRelayAbortGenerationRef.current
@@ -915,31 +1251,31 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     call_id: callInitResponse.call_id,
                     reason: 'audio_payload_too_small',
                     audio_base64_length: base64Audio?.length || 0,
-                    segment_duration_ms: voiceRelayLastSegmentDurationMsRef.current,
+                    segment_duration_ms: snapshot.segmentDurationMs,
                     timestamp: new Date().toISOString(),
                 }));
                 return;
             }
 
-            if (voiceRelayLastSegmentDurationMsRef.current < VOICE_RELAY_VAD_DEFAULTS.minSegmentMs - 400) {
+            if (snapshot.segmentDurationMs < VOICE_RELAY_VAD_DEFAULTS.minSegmentMs - 400) {
                 console.log('[UI_PRESS_PROBE]', JSON.stringify({
                     event: 'VOIP_VOICE_RELAY_SKIP',
                     call_id: callInitResponse.call_id,
                     reason: 'segment_duration_too_short',
-                    segment_duration_ms: voiceRelayLastSegmentDurationMsRef.current,
+                    segment_duration_ms: snapshot.segmentDurationMs,
                     min_segment_ms: VOICE_RELAY_VAD_DEFAULTS.minSegmentMs,
-                    flush_reason: voiceRelayLastFlushReasonRef.current,
+                    flush_reason: snapshot.flushReason,
                     timestamp: new Date().toISOString(),
                 }));
                 return;
             }
 
-            const meterUnavailable = voiceRelayMeterUnavailableRef.current;
-            const flushReason = voiceRelayLastFlushReasonRef.current;
-            const flushHadSpeech = voiceRelayLastFlushHadSpeechRef.current;
+            const meterUnavailable = snapshot.meterUnavailable;
+            const flushReason = snapshot.flushReason;
+            const flushHadSpeech = snapshot.flushHadSpeech;
             const silentSkip = shouldSkipSilentVoiceRelayStt({
-                peakMeterDb: voiceRelayPeakMeteringRef.current,
-                hasSpeech: voiceRelaySegmentStateRef.current.hasSpeech,
+                peakMeterDb: snapshot.peakMeterDb,
+                hasSpeech: snapshot.hasSpeech,
                 meterUnavailable,
                 audioBase64: base64Audio,
             });
@@ -948,7 +1284,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     event: 'VOIP_VOICE_RELAY_SKIP',
                     call_id: callInitResponse.call_id,
                     reason: silentSkip.reason || 'silent_segment',
-                    peak_meter_db: voiceRelayPeakMeteringRef.current,
+                    peak_meter_db: snapshot.peakMeterDb,
                     estimated_file_rms_db: silentSkip.estimatedRmsDb,
                     flush_reason: flushReason,
                     meter_unavailable: meterUnavailable,
@@ -963,7 +1299,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 meterUnavailable,
                 flushHadSpeech,
                 flushReason,
-                peakMeterDb: voiceRelayPeakMeteringRef.current,
+                peakMeterDb: snapshot.peakMeterDb,
                 hasRemoteAudio: hasRemoteAudioRef.current,
                 remoteAudioSuppressed: remoteAudioSuppressedRef.current,
             });
@@ -973,8 +1309,21 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     call_id: callInitResponse.call_id,
                     reason: sendDecision.reason || 'segment_send_blocked',
                     flush_reason: flushReason,
-                    peak_meter_db: voiceRelayPeakMeteringRef.current,
+                    peak_meter_db: snapshot.peakMeterDb,
                     meter_unavailable: meterUnavailable,
+                    silero_had_speech: snapshot.sileroHadSpeech,
+                    timestamp: new Date().toISOString(),
+                }));
+                return;
+            }
+
+            if (snapshot.sileroActive && !flushHadSpeech) {
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_VOICE_RELAY_SKIP',
+                    call_id: callInitResponse.call_id,
+                    reason: 'silero_no_speech_detected',
+                    flush_reason: flushReason,
+                    segment_duration_ms: snapshot.segmentDurationMs,
                     timestamp: new Date().toISOString(),
                 }));
                 return;
@@ -984,11 +1333,18 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             setVoiceRelayBusy(true);
             setVoiceRelayError(null);
 
+            // 콜리가 시그널링으로 콜러 언어를 못 받아 localTargetLang이 잘못 떨어진 경우
+            // (예: ko→en), 수신한 상대 릴레이에서 학습한 실제 상대 언어로 번역 타깃을 보정한다.
+            const observedRemoteLang = observedRemoteRelaySourceLangRef.current.trim().toLowerCase();
+            const effectiveTargetLang = observedRemoteLang && observedRemoteLang !== localSourceLang
+                ? observedRemoteLang
+                : localTargetLang;
+
             const probePayload = {
                 event: 'VOIP_VOICE_TRANSLATE_REQUEST',
                 call_id: callInitResponse.call_id,
                 source_lang: localSourceLang,
-                target_lang: localTargetLang,
+                target_lang: effectiveTargetLang,
                 region_hint: regionHint || null,
                 audio_base64_length: base64Audio.length,
                 timestamp: new Date().toISOString(),
@@ -998,7 +1354,25 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             setLastTranslationProbe(probeText);
 
             const translateStartedAt = Date.now();
-            const result = await voiceTranslate(base64Audio, localSourceLang, localTargetLang, regionHint, 'auto');
+            // VoIP 통역 통화(designated, 언어 락): 이 기기 화자의 언어(localSourceLang)를 명시 전달해
+            // STT를 해당 언어로 고정한다. 같은 방/스피커폰에서 상대 언어가 섞여 들어와도 내 지정 언어로만
+            // 인식·중계하여 "양 언어가 모두 흡수되는" 혼선과 에코 루프를 막는다.
+            const result = await voiceTranslate(
+                base64Audio,
+                localSourceLang,
+                effectiveTargetLang,
+                regionHint,
+                localSourceLang,
+                {
+                    mode: 'designated',
+                    correlationId: segmentCorrelationId,
+                    featureId: FEATURE_IDS.voipVoiceRelay,
+                    utteranceId: snapshot.chunkMeta.utteranceId,
+                    // V.2 Session Core — 통화 단위 세션 키(call_id)로 언어쌍·맥락 누적.
+                    // 서버는 COMM_V2_SESSION_CORE off면 무시(no-op).
+                    sessionId: callInitResponse.call_id,
+                },
+            );
             if (shouldAbortRelayProcessing()) {
                 console.log('[UI_PRESS_PROBE]', JSON.stringify({
                     event: 'VOIP_VOICE_RELAY_SKIP',
@@ -1027,16 +1401,28 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 return;
             }
             const transcript = collapseRepeatedRelayPhrases(rawTranscript);
-            const translatedText = collapseRepeatedRelayPhrases(rawTranslatedText);
+            let translatedText = collapseRepeatedRelayPhrases(rawTranslatedText);
             const detectedLang = String(result.detected_language || result.from || localSourceLang).trim();
-            const relayLangs = resolveVoiceRelayLanguagePair(localSourceLang, localTargetLang, detectedLang);
-            const relaySourceLang = String(result.from || relayLangs.sourceLang).trim();
-            const relayTargetLang = String(result.to || relayLangs.targetLang).trim();
-            const chunkMeta = voiceRelayChunkMetaRef.current ?? {
-                utteranceId: voiceRelayUtteranceIdRef.current,
-                chunkIndex: voiceRelaySegmentStateRef.current.chunkIndex,
-                isFinal: true,
-            };
+            // 지정 언어 락: 인식문이 내 지정 언어(localSourceLang) 스크립트와 맞지 않으면 거부한다.
+            // (상대 언어/잡음이 섞여 들어온 경우 — 같은 방 스피커폰 교차픽업을 차단)
+            if (!textMatchesDesignatedLanguage(transcript, localSourceLang)) {
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_VOICE_RELAY_SKIP',
+                    call_id: callInitResponse.call_id,
+                    reason: 'designated_language_mismatch',
+                    designated_lang: localSourceLang,
+                    detected_lang: detectedLang,
+                    transcript,
+                    timestamp: new Date().toISOString(),
+                }));
+                // 막히는 팝업 대신 잠깐 안내만 노출하고 듣기는 계속 유지한다.
+                flashVoiceRelayNotice(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
+                return;
+            }
+            // 지정 언어 모드: 릴레이 방향은 항상 고정(내 언어 → 상대 언어).
+            const relaySourceLang = localSourceLang;
+            const relayTargetLang = effectiveTargetLang;
+            const chunkMeta = snapshot.chunkMeta;
             const relayChunkMeta = {
                 ...chunkMeta,
                 isFinal: true,
@@ -1063,6 +1449,27 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 tts_delivery: result.tts_delivery || null,
                 timestamp: new Date().toISOString(),
             }));
+            // [V2 감정 E2] 서버가 동봉한 원문↔출력(TTS) 감정을 로그캣에 emit → 평가 하니스(eval/worldlinco)가
+            // 감정 보존도(E2) 메트릭을 실데이터로 산출. 서버 COMM_V2_EMOTION_PROBE off면 result.emotion 없음 → 생략.
+            if (
+                result.emotion &&
+                typeof result.emotion.src_arousal === 'number' &&
+                typeof result.emotion.out_arousal === 'number'
+            ) {
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_EMOTION_PROBE',
+                    call_id: callInitResponse.call_id,
+                    src_arousal: result.emotion.src_arousal,
+                    src_valence: result.emotion.src_valence,
+                    src_label: result.emotion.src_label ?? null,
+                    out_arousal: result.emotion.out_arousal,
+                    out_valence: result.emotion.out_valence,
+                    out_label: result.emotion.out_label ?? null,
+                    seq_id: seqId,
+                    utterance_id: relayChunkMeta.utteranceId,
+                    timestamp: new Date().toISOString(),
+                }));
+            }
 
             if (!transcript || !translatedText) {
                 console.warn('[VoIPScreen] Voice relay translate returned empty payload', {
@@ -1211,6 +1618,27 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 return;
             }
 
+            // G7: meter-dead(미터 −160dB) 시 RMS 기반 무음/에코 억제가 무력화되고, max_duration
+            // flush로 직전 재생한 상대 TTS가 통째로 재캡처돼 designated(from 고정) STT를 거쳐
+            // 되먹임(재번역→재전송)되는 누수가 있었다. 미터가 죽었을 때만, 캡처문/번역문이 직전
+            // 재생한 상대 출력과 텍스트로 닮으면(타이밍 무관) 차단한다. 정상 신규 발화는 직전
+            // 재생문과 닮지 않아 통과하므로 오차단 위험이 없다. (대면 경로 미접촉 · VOIP 국한)
+            if (meterUnavailable && lastRemotePlaybackTranslatedRef.current) {
+                const playedRemote = lastRemotePlaybackTranslatedRef.current;
+                if (relayTextsSimilar(translatedText, playedRemote) || relayTextsSimilar(transcript, playedRemote)) {
+                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                        event: 'VOIP_VOICE_RELAY_SKIP',
+                        call_id: callInitResponse.call_id,
+                        reason: 'meter_dead_remote_playback_echo',
+                        transcript,
+                        translated_text: translatedText,
+                        recent_remote_playback: playedRemote.slice(0, 80),
+                        timestamp: new Date().toISOString(),
+                    }));
+                    return;
+                }
+            }
+
             const sentAt = new Date().toISOString();
             appendVoiceRelayEntry({
                 id: `voice-local-${sentAt}`,
@@ -1238,6 +1666,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 translationEngine: result.engine,
             });
 
+            // 서버가 echo 한 상관 ID를 우선 사용(STT/번역 로그와 동일 ID). 없으면 캡처 ID로 폴백.
+            const relayCorrelationId = result.correlation_id || segmentCorrelationId;
             const sent = voipClientRef.current?.sendVoiceTranslation({
                 transcript,
                 translatedText,
@@ -1250,19 +1680,21 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 isFinal: relayChunkMeta.isFinal,
                 detectedLang,
                 captureTrust: String(result.stt_trust || 'high'),
+                correlationId: relayCorrelationId,
             });
 
             if (sent) {
                 setLastRelayDeliveryHint(`전달됨 · ${transcript.slice(0, 40)} → ${translatedText.slice(0, 40)}`);
                 lastLocalRelayTranslatedRef.current = normalizeRelayText(translatedText);
+                lastLocalRelayTranscriptRef.current = normalizeRelayText(transcript);
                 lastLocalRelaySentAtRef.current = Date.now();
                 voiceRelayTurnRef.current = applyLocalRelayTurn({
                     turn: voiceRelayTurnRef.current,
                     nowMs: Date.now(),
                     translatedText,
                 });
-                voiceRelayUtteranceIdRef.current = createVoiceRelayUtteranceId(callInitResponse.call_id);
-                voiceRelaySegmentStateRef.current = createInitialVoiceRelaySegmentState(Date.now(), 0);
+                // 연속 캡처: utteranceId 회전/세그먼트 상태 리셋은 캡처 루프(flush)가 소유하므로
+                // 큐 워커에서는 건드리지 않는다(진행 중인 다음 세그먼트 상태 훼손 방지).
                 console.log('[UI_PRESS_PROBE]', JSON.stringify({
                     event: 'VOIP_VOICE_RELAY_SENT',
                     call_id: callInitResponse.call_id,
@@ -1288,11 +1720,11 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 });
                 setVoiceRelayError('음성 통역 relay 채널이 아직 연결되지 않았습니다.');
             }
-            voiceRelayChunkMetaRef.current = null;
         } catch (err) {
             const message = err instanceof Error ? err.message : '실시간 음성 통역 처리에 실패했습니다.';
             const isSilenceRejected = message.includes('음성이 감지되지 않았습니다');
             const isTooShort = message.includes('너무 짧습니다');
+            const isDesignatedMismatch = message.includes('지정 언어와 다른 언어');
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
                 event: isSilenceRejected ? 'VOIP_VOICE_TRANSLATE_REJECTED' : 'VOIP_VOICE_TRANSLATE_FAILED',
                 call_id: callInitResponse.call_id,
@@ -1300,15 +1732,24 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 timestamp: new Date().toISOString(),
             }));
             if (isTooShort) {
-                setVoiceRelayError(`녹음 ${voiceRelayLastSegmentDurationMsRef.current}ms — 조금 더 길게 말해 주세요.`);
+                setVoiceRelayError(`녹음 ${snapshot.segmentDurationMs}ms — 조금 더 길게 말해 주세요.`);
+            } else if (isDesignatedMismatch) {
+                // 막히는 팝업 대신 잠깐 안내만 노출하고 듣기는 계속 유지한다.
+                flashVoiceRelayNotice(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
             } else if (!isSilenceRejected) {
                 setVoiceRelayError(message);
             }
         } finally {
             voiceRelayProcessingRef.current = false;
-            voiceRelayLastFlushReasonRef.current = null;
+            // flush_reason 은 캡처 루프(flush)가 세그먼트마다 새로 설정/리셋하므로, 큐 워커에서는
+            // null 로 덮어쓰지 않는다(진행 중인 다음 세그먼트의 flush_reason 훼손 방지).
             setVoiceRelayBusy(false);
-            if (voiceRelayEnabledRef.current) {
+            // 연속 캡처 큐: 재무장(re-arm)은 녹음 종료 직후 stopVoiceRelaySegment 에서 이미
+            // 트리거하므로, 여기서는 캡처가 멈춰 있을 때만 안전망으로 재무장한다(중복 무해).
+            if (voiceRelayEnabledRef.current
+                && !voiceRelayRecordingRef.current
+                && !voiceRelayArmedForSpeechRef.current
+                && voiceRelaySegmentQueueRef.current.length === 0) {
                 scheduleVoiceRelayCaptureRetry('segment_complete');
             }
             try {
@@ -1317,10 +1758,43 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 // ignore temp cleanup failures
             }
         }
-    }, [appendChatEntry, appendVoiceRelayEntry, callInitResponse.call_id, localSourceLang, localTargetLang, nextVoiceRelaySeqId, participantRole, regionHint, scheduleVoiceRelayCaptureRetry]);
+    }, [appendChatEntry, appendVoiceRelayEntry, callInitResponse.call_id, flashVoiceRelayNotice, localSourceLang, localTargetLang, nextVoiceRelaySeqId, participantRole, regionHint, scheduleVoiceRelayCaptureRetry]);
+
+    // 연속 캡처 큐 워커: 적재된 세그먼트를 FIFO 로 하나씩 직렬 처리한다(순서/백엔드 부하 보호).
+    // 캡처 루프와 독립적으로 동작하므로, 처리 중에도 다음 발화 녹음이 계속된다.
+    const drainVoiceRelaySegmentQueue = useCallback(async () => {
+        if (voiceRelayQueueWorkerActiveRef.current) {
+            return;
+        }
+        voiceRelayQueueWorkerActiveRef.current = true;
+        try {
+            while (voiceRelaySegmentQueueRef.current.length > 0) {
+                const item = voiceRelaySegmentQueueRef.current.shift();
+                if (!item) {
+                    continue;
+                }
+                try {
+                    await processVoiceRelaySegment(item.uri, item.snapshot);
+                } catch (err) {
+                    console.warn('[VoIPScreen] voice relay queue worker error', err);
+                }
+            }
+        } finally {
+            voiceRelayQueueWorkerActiveRef.current = false;
+        }
+    }, [processVoiceRelaySegment]);
+
+    const enqueueVoiceRelaySegment = useCallback((uri: string, snapshot: VoiceRelaySegmentSnapshot) => {
+        voiceRelaySegmentQueueRef.current.push({ uri, snapshot });
+        void drainVoiceRelaySegmentQueue();
+    }, [drainVoiceRelaySegmentQueue]);
 
     const stopVoiceRelaySegment = useCallback(async (processSegment: boolean) => {
         clearVoiceRelayTimers();
+        // 하드 스톱(처리 안 함=비활성/행업/턴 전환)에서는 미전송 버퍼 큐를 비운다.
+        if (!processSegment) {
+            voiceRelaySegmentQueueRef.current = [];
+        }
         await stopVoiceRelaySileroMonitor(processSegment ? 'segment_flush' : 'segment_stop');
 
         const recording = voiceRelayRecordingRef.current;
@@ -1330,27 +1804,89 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             return;
         }
 
+        const nativeCaptureActive = voiceRelayNativeCaptureActiveRef.current;
+        const nativeCaptureUri = voiceRelayNativeCaptureUriRef.current;
+        voiceRelayNativeCaptureActiveRef.current = false;
+        voiceRelayNativeCaptureUriRef.current = null;
+
         try {
             await recording.stopAndUnloadAsync();
-            const uri = recording.getURI();
+            const m4aUri = recording.getURI();
             if (voiceRelayRecordingRemoteSuppressedRef.current) {
                 voiceRelayRecordingRemoteSuppressedRef.current = false;
-                if (!voiceRelayPlaybackRef.current) {
-                    setRemoteAudioSuppressed(false);
+                if (!voiceRelayPlaybackRef.current && !voiceRelayNativeTtsActiveRef.current) {
+                    releaseRemoteAudioSuppressionIfAllowed();
                 }
             }
-            if (uri && processSegment) {
-                await processVoiceRelaySegment(uri);
-            } else if (uri) {
-                await FileSystem.deleteAsync(uri, { idempotent: true });
+
+            // Silero PCM 캡처가 활성이면, 무음 m4a 대신 네이티브가 export 한 WAV 를 업로드한다.
+            let uploadUri = m4aUri;
+            if (nativeCaptureActive && nativeCaptureUri) {
+                const nativePath = nativeCaptureUri.replace(/^file:\/\//, '');
+                const capture = await endVoiceRelaySileroCapture(nativePath);
+                if (capture && capture.byteCount > 0) {
+                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                        event: 'VOIP_VOICE_RELAY_NATIVE_CAPTURE',
+                        call_id: callInitResponse.call_id,
+                        byte_count: capture.byteCount,
+                        duration_ms: Math.round(capture.durationMs),
+                        peak_db: Math.round(capture.peakDb),
+                        rms_db: Math.round(capture.rmsDb),
+                        process_segment: processSegment,
+                        timestamp: new Date().toISOString(),
+                    }));
+                    // 실제 마이크 레벨(네이티브 산출)로 게이팅을 보정한다(죽은 메터 대체).
+                    voiceRelayPeakMeteringRef.current = Math.max(
+                        voiceRelayPeakMeteringRef.current,
+                        capture.peakDb,
+                    );
+                    voiceRelayMeterUnavailableRef.current = false;
+                    uploadUri = nativeCaptureUri;
+                    // 무음 m4a 는 버린다.
+                    if (m4aUri) {
+                        await FileSystem.deleteAsync(m4aUri, { idempotent: true });
+                    }
+                }
+            }
+
+            if (uploadUri && processSegment) {
+                // 연속 캡처: 처리를 큐에 위임(비차단)하고 즉시 다음 캡처를 재무장한다.
+                // STT/번역/렌더가 끝날 때까지 마이크를 막지 않아 다음 발화 유실/템 김을 없앤다.
+                // 이 세그먼트의 판정/메타데이터는 지금(flush 직후) 고정해 워커로 넘긴다(스테일 ref 방지).
+                const chunkMeta = voiceRelayChunkMetaRef.current ?? {
+                    utteranceId: voiceRelayUtteranceIdRef.current,
+                    chunkIndex: voiceRelaySegmentStateRef.current.chunkIndex,
+                    isFinal: true,
+                };
+                const snapshot: VoiceRelaySegmentSnapshot = {
+                    segmentDurationMs: voiceRelayLastSegmentDurationMsRef.current,
+                    meterUnavailable: voiceRelayMeterUnavailableRef.current,
+                    flushReason: voiceRelayLastFlushReasonRef.current,
+                    flushHadSpeech: voiceRelayLastFlushHadSpeechRef.current,
+                    peakMeterDb: voiceRelayPeakMeteringRef.current,
+                    hasSpeech: voiceRelaySegmentStateRef.current.hasSpeech,
+                    sileroActive: voiceRelaySileroActiveRef.current,
+                    sileroHadSpeech: voiceRelaySileroFirstSpeechAtMsRef.current != null,
+                    chunkMeta: {
+                        utteranceId: chunkMeta.utteranceId,
+                        chunkIndex: chunkMeta.chunkIndex,
+                        isFinal: chunkMeta.isFinal,
+                    },
+                };
+                enqueueVoiceRelaySegment(uploadUri, snapshot);
+                if (voiceRelayEnabledRef.current) {
+                    scheduleVoiceRelayCaptureRetry('segment_buffered');
+                }
+            } else if (uploadUri) {
+                await FileSystem.deleteAsync(uploadUri, { idempotent: true });
             }
         } catch (err) {
             console.warn('[VoIPScreen] Failed to stop voice relay segment', err);
         } finally {
             if (voiceRelayRecordingRemoteSuppressedRef.current) {
                 voiceRelayRecordingRemoteSuppressedRef.current = false;
-                if (!voiceRelayPlaybackRef.current) {
-                    setRemoteAudioSuppressed(false);
+                if (!voiceRelayPlaybackRef.current && !voiceRelayNativeTtsActiveRef.current) {
+                    releaseRemoteAudioSuppressionIfAllowed();
                 }
             }
             try {
@@ -1359,7 +1895,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 console.warn('[VoIPScreen] Failed to restore WebRTC mic after voice relay segment', restoreErr);
             }
         }
-    }, [clearVoiceRelayTimers, processVoiceRelaySegment, restoreWebRtcMicIfVoiceRelayInactive, setRemoteAudioSuppressed, stopVoiceRelaySileroMonitor]);
+    }, [clearVoiceRelayTimers, enqueueVoiceRelaySegment, scheduleVoiceRelayCaptureRetry, releaseRemoteAudioSuppressionIfAllowed, restoreWebRtcMicIfVoiceRelayInactive, stopVoiceRelaySileroMonitor]);
+    stopVoiceRelaySegmentRef.current = stopVoiceRelaySegment;
 
     const flushVoiceRelaySegment = useCallback(async (reason: string, isFinal: boolean) => {
         if (voiceRelayFlushInProgressRef.current || !voiceRelayRecordingRef.current) {
@@ -1368,7 +1905,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
         voiceRelayFlushInProgressRef.current = true;
         voiceRelayLastFlushReasonRef.current = reason;
-        voiceRelayLastFlushHadSpeechRef.current = voiceRelaySegmentStateRef.current.hasSpeech;
+        voiceRelayLastFlushHadSpeechRef.current = voiceRelaySileroActiveRef.current
+            ? voiceRelaySileroFirstSpeechAtMsRef.current != null
+            : voiceRelaySegmentStateRef.current.hasSpeech;
         voiceRelayLastSegmentDurationMsRef.current = Math.max(
             0,
             Date.now() - voiceRelaySegmentStateRef.current.segmentStartedAtMs,
@@ -1447,11 +1986,37 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
     useEffect(() => {
         const unsubscribe = subscribeVoiceRelaySileroVadEvents((event) => {
-            if (!voiceRelayEnabledRef.current || !voiceRelayRecordingRef.current) {
+            if (!voiceRelayEnabledRef.current) {
                 return;
             }
             const nowMs = Date.now();
             if (event.event === 'speech_start') {
+                // 리드인 트리밍: 발화 대기(armed) 중이면 지금 STT 녹음을 시작한다.
+                // 발화 전 무음이 업로드 파일에 포함되지 않아 서버 STT 무음 거부를 막는다.
+                if (voiceRelayArmedForSpeechRef.current && !voiceRelayRecordingRef.current) {
+                    voiceRelayArmedForSpeechRef.current = false;
+                    if (voiceRelayArmTimeoutRef.current) {
+                        clearTimeout(voiceRelayArmTimeoutRef.current);
+                        voiceRelayArmTimeoutRef.current = null;
+                    }
+                    const armWaitMs = voiceRelayArmedAtMsRef.current > 0
+                        ? Math.max(0, nowMs - voiceRelayArmedAtMsRef.current)
+                        : 0;
+                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                        event: 'VOIP_VOICE_RELAY_LEADIN_TRIMMED',
+                        call_id: callInitResponse.call_id,
+                        arm_wait_ms: armWaitMs,
+                        silence_duration_ms: event.silenceDurationMs,
+                        timestamp: new Date().toISOString(),
+                    }));
+                    voiceRelayLeadInTriggeredRef.current = true;
+                    voiceRelayBypassArmRef.current = true;
+                    void startVoiceRelaySegmentRef.current();
+                    return;
+                }
+                if (!voiceRelayRecordingRef.current) {
+                    return;
+                }
                 if (voiceRelaySileroFirstSpeechAtMsRef.current == null) {
                     voiceRelaySileroFirstSpeechAtMsRef.current = nowMs;
                 }
@@ -1468,7 +2033,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 }));
                 return;
             }
-            if (event.event !== 'speech_end' || voiceRelayFlushInProgressRef.current) {
+            if (event.event !== 'speech_end' || voiceRelayFlushInProgressRef.current || !voiceRelayRecordingRef.current) {
                 return;
             }
             const segmentDurationMs = nowMs - voiceRelaySegmentStateRef.current.segmentStartedAtMs;
@@ -1480,11 +2045,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 hasSpeech: true,
                 lastSpeechAtMs: nowMs,
             };
+            const sileroBoundary = resolveSileroBoundaryFromTuning();
             const boundaryDecision = shouldFlushOnSileroSpeechEnd({
                 segmentDurationMs,
                 speechSpanMs,
                 lastSileroFlushAtMs: voiceRelaySileroLastFlushAtMsRef.current,
                 nowMs,
+                config: sileroBoundary,
             });
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
                 event: 'VOIP_VOICE_RELAY_SILERO_SPEECH_END',
@@ -1543,13 +2110,18 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 }
 
                 if (voiceRelaySileroActiveRef.current) {
-                    const hasSpeech = voiceRelaySegmentStateRef.current.hasSpeech
-                        || voiceRelaySileroFirstSpeechAtMsRef.current != null;
+                    const sileroBoundary = resolveSileroBoundaryFromTuning();
+                    const hasSileroSpeech = voiceRelaySileroFirstSpeechAtMsRef.current != null;
                     if (shouldFlushSileroSafetyCap({
                         segmentDurationMs: elapsed,
-                        hasSpeech,
+                        hasSpeech: hasSileroSpeech,
+                        config: sileroBoundary,
                     })) {
                         await flushVoiceRelaySegment('max_duration', true);
+                        return;
+                    }
+                    if (!hasSileroSpeech) {
+                        scheduleVoiceRelayFixedFlush();
                         return;
                     }
                     scheduleVoiceRelayFixedFlush();
@@ -1567,8 +2139,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             setVoiceRelayEnabled(false);
             return;
         }
+        const bypassArm = voiceRelayBypassArmRef.current;
+        voiceRelayBypassArmRef.current = false;
+        if (!bypassArm) {
         const callReady = isVoiceRelayCallReady();
-        if (!voiceRelayEnabledRef.current || !callReady || voiceRelayRecordingRef.current || voiceRelayProcessingRef.current) {
+        // 연속 캡처: 처리(voiceRelayProcessingRef) 중이어도 마이크 재무장을 허용한다.
+        // 처리는 별도 큐 워커가 담당하므로 캡처를 막지 않는다. (자기 에코 방지용 재생 가드는 유지)
+        if (!voiceRelayEnabledRef.current || !callReady || voiceRelayRecordingRef.current || voiceRelayArmedForSpeechRef.current) {
             if (!voiceRelayEnabledRef.current) {
                 console.log('[UI_PRESS_PROBE]', JSON.stringify({
                     event: 'VOIP_VOICE_RELAY_START_SKIPPED',
@@ -1583,9 +2160,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     call_id: callInitResponse.call_id,
                     reason: !callReady
                         ? 'call_not_ready'
-                        : voiceRelayRecordingRef.current
-                            ? 'recording_in_progress'
-                            : 'segment_processing_in_progress',
+                        : 'recording_in_progress',
                     connection_state: connectionState,
                     has_remote_audio: hasRemoteAudio,
                     signaling: voipClientRef.current?.getSignalingStateSnapshot() ?? null,
@@ -1606,9 +2181,22 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             scheduleVoiceRelayCaptureRetry('echo_suppression_window');
             return;
         }
+        // Layer 1: 상대 TTS가 실제 재생 중이면(추정창 만료와 무관) 재무장하지 않는다.
+        // onDone 시 'playback_complete' 로 재무장이 다시 스케줄된다.
+        if (voiceRelayTtsActiveRef.current) {
+            console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                event: 'VOIP_VOICE_RELAY_START_BLOCKED',
+                call_id: callInitResponse.call_id,
+                reason: 'remote_tts_active',
+                timestamp: new Date().toISOString(),
+            }));
+            scheduleVoiceRelayCaptureRetry('remote_tts_active');
+            return;
+        }
         const captureDecision = shouldStartVoiceRelayCapture({
             participantRole,
             turn: voiceRelayTurnRef.current,
+            fairnessBargeInMs: getWorldlincoTuning().voip.fairness_barge_in_ms,
         });
         if (!captureDecision.allowed) {
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
@@ -1620,28 +2208,31 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             scheduleVoiceRelayCaptureRetry(captureDecision.reason || 'remote_listen_active');
             return;
         }
-        if (remoteAudioSuppressedRef.current && !voiceRelayRecordingRemoteSuppressedRef.current) {
+        if (captureDecision.bargeIn) {
+            // 공정성 캡 발동: 상대 연속 발화로 굶주린 로컬이 턴을 강제로 회수했다(에코/활성재생 무관).
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
-                event: 'VOIP_VOICE_RELAY_START_BLOCKED',
+                event: 'VOIP_VOICE_RELAY_FAIRNESS_BARGE_IN',
                 call_id: callInitResponse.call_id,
-                reason: 'remote_audio_suppressed',
-                suppress_remaining_ms: Math.max(0, voiceRelaySuppressUntilRef.current - Date.now()),
-                remote_audio_suppressed: remoteAudioSuppressedRef.current,
+                starved_ms: Math.round(captureDecision.starvedMs ?? 0),
                 timestamp: new Date().toISOString(),
             }));
-            scheduleVoiceRelayCaptureRetry('remote_audio_suppressed');
-            return;
+        }
         }
 
         try {
+            // 재무장 셋업 단계별 경량 타이밍 측정(동작 무변경) — 발화↔마이크 청취 텀의
+            // 진짜 병목(permission/mode/enableVoipAudio/Silero) 핀포인트용.
+            const rearmT0 = Date.now();
             const permission = await Audio.requestPermissionsAsync();
             if (!permission.granted) {
                 setVoiceRelayError('마이크 권한이 없어 실시간 음성 통역을 시작할 수 없습니다.');
                 setVoiceRelayEnabled(false);
                 return;
             }
+            const tPermMs = Date.now() - rearmT0;
 
             voipClientRef.current?.suspendLocalAudioForVoiceRelay();
+            const tSuspendMs = Date.now() - rearmT0 - tPermMs;
 
             await Audio.setAudioModeAsync({
                 allowsRecordingIOS: true,
@@ -1650,19 +2241,99 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 playThroughEarpieceAndroid: !isSpeakerOn,
                 staysActiveInBackground: false,
             });
+            const tSetModeMs = Date.now() - rearmT0 - tPermMs - tSuspendMs;
+            // 녹음 시작 *전에* 통신 모드를 강제한다. 삼성 등 OEM 의 하드웨어 에코 제거(AEC)는
+            // AudioManager.MODE_IN_COMMUNICATION 이 AudioRecord 생성 전에 설정돼야 활성화된다.
+            // (docs/worldlinco-v2/MOBILE_CALL_TRANSLATION_ARCHITECTURE.md §2)
+            await enableVoipAudio(isSpeakerOn, true);
+            const tEnableVoipMs = Date.now() - rearmT0 - tPermMs - tSuspendMs - tSetModeMs;
+
+            // 리드인 트리밍: Silero(자체 AudioRecord)를 먼저 켠다. bypass 재진입이 아니고
+            // Silero 가 실제로 동작하면, 발화(speech_start) 전까지 STT 녹음을 보류(arm)해
+            // 발화 전 무음이 업로드 파일에 포함되지 않게 한다. (서버 STT 무음 거부 방지)
+            if (!bypassArm) {
+                const tBeforeSileroMs = Date.now() - rearmT0;
+                await startVoiceRelaySileroMonitor();
+                const tSileroMs = Date.now() - rearmT0 - tBeforeSileroMs;
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_VOICE_RELAY_REARM_TIMING',
+                    call_id: callInitResponse.call_id,
+                    total_ms: Date.now() - rearmT0,
+                    perm_ms: tPermMs,
+                    suspend_ms: tSuspendMs,
+                    set_mode_ms: tSetModeMs,
+                    enable_voip_ms: tEnableVoipMs,
+                    silero_ms: tSileroMs,
+                    timestamp: new Date().toISOString(),
+                }));
+                if (voiceRelaySileroActiveRef.current) {
+                    voiceRelayArmedForSpeechRef.current = true;
+                    voiceRelayArmedAtMsRef.current = Date.now();
+                    voiceRelayLeadInTriggeredRef.current = false;
+                    setVoiceRelayListenWaiting(true);
+                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                        event: 'VOIP_VOICE_RELAY_SEGMENT_ARMED',
+                        call_id: callInitResponse.call_id,
+                        connection_state: connectionState,
+                        arm_timeout_ms: VOICE_RELAY_LEADIN_ARM_TIMEOUT_MS,
+                        timestamp: new Date().toISOString(),
+                    }));
+                    if (voiceRelayArmTimeoutRef.current) {
+                        clearTimeout(voiceRelayArmTimeoutRef.current);
+                    }
+                    voiceRelayArmTimeoutRef.current = setTimeout(() => {
+                        voiceRelayArmTimeoutRef.current = null;
+                        if (
+                            voiceRelayArmedForSpeechRef.current
+                            && !voiceRelayRecordingRef.current
+                            && voiceRelayEnabledRef.current
+                        ) {
+                            // 발화가 없었음: 무음 폴백으로 즉시 녹음 시작(레거시 경로가 인계).
+                            voiceRelayArmedForSpeechRef.current = false;
+                            voiceRelayLeadInTriggeredRef.current = false;
+                            voiceRelayBypassArmRef.current = true;
+                            void startVoiceRelaySegmentRef.current();
+                        }
+                    }, VOICE_RELAY_LEADIN_ARM_TIMEOUT_MS);
+                    return;
+                }
+            }
+            voiceRelayArmedForSpeechRef.current = false;
 
             voiceRelayPeakMeteringRef.current = -160;
             voiceRelayMeterPollMissesRef.current = 0;
             voiceRelayMeterUnavailableRef.current = false;
             voiceRelayFileRmsPollTickRef.current = 0;
+            voiceRelayPrevFileSizeRef.current = 0;
+            voiceRelayPrevFilePollMsRef.current = 0;
+            voiceRelayPeakGrowthBpsRef.current = 0;
+            voiceRelayGrowthSpeechActiveRef.current = false;
             setVoiceRelayMeterDead(false);
             setVoiceRelayListenWaiting(false);
             voiceRelayLastFlushReasonRef.current = null;
-            voiceRelaySileroFirstSpeechAtMsRef.current = null;
+            const leadInTrimmed = voiceRelayLeadInTriggeredRef.current;
+            voiceRelayLeadInTriggeredRef.current = false;
+            const recordStartMs = Date.now();
+            const armWaitMs = voiceRelayArmedAtMsRef.current > 0
+                ? Math.max(0, recordStartMs - voiceRelayArmedAtMsRef.current)
+                : 0;
+            voiceRelayArmedAtMsRef.current = 0;
             voiceRelaySegmentStateRef.current = createInitialVoiceRelaySegmentState(
-                Date.now(),
+                recordStartMs,
                 voiceRelaySegmentStateRef.current.chunkIndex,
             );
+            if (leadInTrimmed) {
+                // 리드인 트리밍 경유: 발화가 이미 진행 중이므로 녹음 시작=발화 시작으로 본다.
+                // (speechSpan 이 0 으로 잡혀 speech_end 가 'speech_span_too_short' 로 디퍼되는 것 방지)
+                voiceRelaySileroFirstSpeechAtMsRef.current = recordStartMs;
+                voiceRelaySegmentStateRef.current = {
+                    ...voiceRelaySegmentStateRef.current,
+                    hasSpeech: true,
+                    lastSpeechAtMs: recordStartMs,
+                };
+            } else {
+                voiceRelaySileroFirstSpeechAtMsRef.current = null;
+            }
             const recording = new Audio.Recording();
             await recording.prepareToRecordAsync(buildVoiceRelayRecordingOptions());
             await recording.startAsync();
@@ -1672,12 +2343,29 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             voiceRelayRecordingRemoteSuppressedRef.current = true;
             setRemoteAudioSuppressed(true);
             setVoiceRelayError(null);
+
+            // 마이크 컨텐션 해소: Silero 가 활성(자체 AudioRecord 가 실제 마이크를 점유)인 경우,
+            // expo-audio 레코더(삼성 MultiRecord 차단으로 무음)가 아니라 Silero 스트림 PCM 을
+            // 세그먼트 오디오로 캡처한다. expo 레코더는 flush 타이머/라이프사이클 드라이버로만 유지.
+            voiceRelayNativeCaptureActiveRef.current = false;
+            voiceRelayNativeCaptureUriRef.current = null;
+            if (voiceRelaySileroActiveRef.current && isVoiceRelaySileroCaptureAvailable()) {
+                const captureStarted = await beginVoiceRelaySileroCapture();
+                if (captureStarted) {
+                    voiceRelayNativeCaptureActiveRef.current = true;
+                    voiceRelayNativeCaptureUriRef.current =
+                        `${FileSystem.cacheDirectory}voice_relay_seg_${recordStartMs}.wav`;
+                }
+            }
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
                 event: 'VOIP_VOICE_RELAY_SEGMENT_STARTED',
                 call_id: callInitResponse.call_id,
                 connection_state: connectionState,
                 source_lang: localSourceLang,
                 target_lang: localTargetLang,
+                lead_in_trimmed: leadInTrimmed,
+                arm_wait_ms: armWaitMs,
+                native_capture: voiceRelayNativeCaptureActiveRef.current,
                 timestamp: new Date().toISOString(),
             }));
 
@@ -1722,37 +2410,72 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                                     const recordingUri = activeRecording.getURI();
                                     if (recordingUri) {
                                         try {
-                                            const partialBase64 = await FileSystem.readAsStringAsync(recordingUri, {
-                                                encoding: FileSystem.EncodingType.Base64,
-                                            });
-                                            const fileRmsDb = estimateRecordingRmsDb(partialBase64);
+                                            // meter-dead 기기: AAC 바이트 RMS는 음량과 무관해 무음도 speech로 오판하므로,
+                                            // 녹음 파일의 증가율(bytes/sec)로 발화/무음을 추정한다(대면 통역과 동일 방식).
+                                            const info = await FileSystem.getInfoAsync(recordingUri);
+                                            const size = info.exists && typeof info.size === 'number' ? info.size : 0;
                                             const nowMs = Date.now();
-                                            const priorHasSpeech = voiceRelaySegmentStateRef.current.hasSpeech;
-                                            voiceRelaySegmentStateRef.current = updateVoiceRelaySegmentSpeechStateFromFileRms(
-                                                voiceRelaySegmentStateRef.current,
-                                                fileRmsDb,
-                                                nowMs,
-                                            );
-                                            if (!priorHasSpeech && voiceRelaySegmentStateRef.current.hasSpeech) {
-                                                console.log('[UI_PRESS_PROBE]', JSON.stringify({
-                                                    event: 'VOIP_VOICE_RELAY_FILE_RMS_SPEECH',
-                                                    call_id: callInitResponse.call_id,
-                                                    estimated_file_rms_db: fileRmsDb,
-                                                    timestamp: new Date().toISOString(),
-                                                }));
-                                            }
-                                            const pseudoMeterDb = mapFileRmsToPseudoMeterDb(fileRmsDb);
-                                            const fileDecision = evaluateVoiceRelaySegmentDecision(
-                                                voiceRelaySegmentStateRef.current,
-                                                nowMs,
-                                                pseudoMeterDb,
-                                            );
-                                            if (fileDecision.action === 'flush') {
-                                                await flushVoiceRelaySegment(
-                                                    fileDecision.reason,
-                                                    fileDecision.isFinal,
+                                            if (voiceRelayPrevFilePollMsRef.current > 0 && size > 0) {
+                                                const dtSec = Math.max(0.001, (nowMs - voiceRelayPrevFilePollMsRef.current) / 1000);
+                                                const growthBps = Math.max(0, (size - voiceRelayPrevFileSizeRef.current) / dtSec);
+                                                // 발화 중 최고 증가율을 추적(완만한 감쇠)해 상대 임계값을 만든다.
+                                                voiceRelayPeakGrowthBpsRef.current = Math.max(
+                                                    voiceRelayPeakGrowthBpsRef.current * 0.9,
+                                                    growthBps,
                                                 );
+                                                // 32kbps AAC 발화 바닥값 + 발화 정점 대비 상대 임계값.
+                                                const SPEECH_FLOOR_BPS = 1800;
+                                                const relThreshold = voiceRelayPeakGrowthBpsRef.current * 0.5;
+                                                const speechNow = voiceRelayPeakGrowthBpsRef.current >= SPEECH_FLOOR_BPS
+                                                    && growthBps >= Math.max(SPEECH_FLOOR_BPS * 0.6, relThreshold);
+                                                const priorHasSpeech = voiceRelaySegmentStateRef.current.hasSpeech;
+                                                const pseudoMeterDb = speechNow ? -40 : -160;
+                                                voiceRelayPeakMeteringRef.current = Math.max(
+                                                    voiceRelayPeakMeteringRef.current,
+                                                    pseudoMeterDb,
+                                                );
+                                                voiceRelaySegmentStateRef.current = updateVoiceRelaySegmentSpeechState(
+                                                    voiceRelaySegmentStateRef.current,
+                                                    pseudoMeterDb,
+                                                    nowMs,
+                                                );
+                                                if (speechNow !== voiceRelayGrowthSpeechActiveRef.current) {
+                                                    voiceRelayGrowthSpeechActiveRef.current = speechNow;
+                                                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                                                        event: speechNow
+                                                            ? 'VOIP_VOICE_RELAY_FILE_GROWTH_SPEECH'
+                                                            : 'VOIP_VOICE_RELAY_FILE_GROWTH_SILENCE',
+                                                        call_id: callInitResponse.call_id,
+                                                        growth_bps: Math.round(growthBps),
+                                                        peak_bps: Math.round(voiceRelayPeakGrowthBpsRef.current),
+                                                        timestamp: new Date().toISOString(),
+                                                    }));
+                                                }
+                                                if (!priorHasSpeech && voiceRelaySegmentStateRef.current.hasSpeech) {
+                                                    console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                                                        event: 'VOIP_VOICE_RELAY_FILE_RMS_SPEECH',
+                                                        call_id: callInitResponse.call_id,
+                                                        growth_bps: Math.round(growthBps),
+                                                        timestamp: new Date().toISOString(),
+                                                    }));
+                                                }
+                                                const fileDecision = evaluateVoiceRelaySegmentDecision(
+                                                    voiceRelaySegmentStateRef.current,
+                                                    nowMs,
+                                                    pseudoMeterDb,
+                                                );
+                                                if (fileDecision.action === 'flush') {
+                                                    voiceRelayPrevFileSizeRef.current = size;
+                                                    voiceRelayPrevFilePollMsRef.current = nowMs;
+                                                    await flushVoiceRelaySegment(
+                                                        fileDecision.reason,
+                                                        fileDecision.isFinal,
+                                                    );
+                                                    return;
+                                                }
                                             }
+                                            voiceRelayPrevFileSizeRef.current = size;
+                                            voiceRelayPrevFilePollMsRef.current = nowMs;
                                         } catch {
                                             // Partial m4a reads can fail while the recorder is still writing.
                                         }
@@ -1918,6 +2641,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             connectedAtRef.current = Date.now();
                         }
                         handlers?.syncRemoteAudioState();
+                        // opt-in QoS 보고(off-path·fail-open·멱등) — 연결 성공 시 표본 보고 시작.
+                        // 실패해도 통화에 무영향(리포터 내부 try/catch). hangup() 에서 자동 정지.
+                        boundClient.startStatsReporter({
+                            apiBaseUrl: apiBaseUrlRef.current,
+                            authToken: authTokenRef.current,
+                            role: participantRole,
+                        });
                     } else if (state === 'failed' || state === 'disconnected') {
                         connectedAtRef.current = null;
                     }
@@ -1959,6 +2689,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
                 });
 
+                boundClient.onChatMessageRejected((detail: string) => {
+                    setChatError(detail);
+                });
+
                 boundClient.onChatMessage((message: VoIPChatMessage) => {
                     const handlers = voipCallInitHandlersRef.current;
                     if (!handlers) {
@@ -1970,7 +2704,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
 
                     const fromRole = message.from_role === 'callee' ? 'callee' : 'caller';
-                    if (fromRole !== handlers.participantRole) {
+                    if (fromRole !== handlers.participantRole && !voiceRelayEnabledRef.current) {
                         getVoIPToneService().playMessageTone();
                     }
                     const translationPair = handlers.resolveChatLanguagePair(fromRole === handlers.participantRole);
@@ -2022,6 +2756,17 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     if (!isLocal) {
                         voiceRelayAbortGenerationRef.current += 1;
                         voiceRelayProcessingRef.current = false;
+                        // 반이중 턴테이킹: 상대가 발화를 시작하면 내 쪽 버퍼 큐(미전송분)는 비운다.
+                        // (지연 전달되는 교차발화/에코 방지 — 기존 in-flight abort 와 동일한 의도)
+                        voiceRelaySegmentQueueRef.current = [];
+
+                        // 상대가 실제로 보내온 source_lang(피어의 고정 지정 언어)을 학습한다.
+                        // 이후 내가 발화할 때 이 언어를 번역 타깃으로 사용해, 콜리가 콜러 언어를
+                        // 시그널링으로 못 받은 경우의 ko→en 같은 오역 타깃을 자가 보정한다.
+                        const learnedRemoteLang = String(message.source_lang || '').trim().toLowerCase();
+                        if (learnedRemoteLang && learnedRemoteLang !== handlers.localSourceLang) {
+                            observedRemoteRelaySourceLangRef.current = learnedRemoteLang;
+                        }
 
                         const relayLangScope = [
                             relaySourceLang,
@@ -2073,25 +2818,28 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             return;
                         }
 
-                        if (handlers.participantRole === 'caller' && fromRole === 'callee') {
+                        // 라운드트립 에코 차단(양방향): 상대 폰이 "내가 방금 보낸 발화"의 TTS 를
+                        // 다시 마이크로 잡아 재번역해 되돌려보내면, 들어온 번역문이 내 원문 전사와
+                        // 같은 언어로 되돌아온다. 이를 비교해 내 발화가 나에게 되울려 발화되는 것을 막는다.
+                        // (과거에는 caller 전용 + 내 '번역문'(상대 언어)과 비교해 언어가 달라 무력했다.)
+                        {
                             const now = Date.now();
-                            const localNorm = lastLocalRelayTranslatedRef.current;
+                            const localTranscriptNorm = lastLocalRelayTranscriptRef.current;
                             const remoteNorm = normalizeRelayText(translatedText);
-                            if (now - lastLocalRelaySentAtRef.current < 15_000 && localNorm) {
-                                const localWords = localNorm.split(' ').filter((word) => word.length > 2);
-                                const remoteWords = new Set(remoteNorm.split(' '));
-                                const overlap = localWords.filter((word) => remoteWords.has(word)).length;
-                                const similar = localNorm === remoteNorm
-                                    || localNorm.includes(remoteNorm)
-                                    || remoteNorm.includes(localNorm)
-                                    || (localWords.length > 0 && overlap / localWords.length >= 0.5);
+                            if (now - lastLocalRelaySentAtRef.current < 15_000 && localTranscriptNorm && remoteNorm) {
+                                // (G3 정합) 인라인 단어겹침 재구현 제거 → 공유 SSOT relayTextsSimilar 사용.
+                                // 공유 헬퍼는 ===/includes/단어겹침 + F1 CJK 문자 바이그램(Dice≥0.55)까지
+                                // 포함하므로, 띄어쓰기 없는 일본어 등 라운드트립 자가 에코도 차단된다.
+                                const similar = relayTextsSimilar(localTranscriptNorm, remoteNorm);
                                 if (similar) {
                                     console.log('[UI_PRESS_PROBE]', JSON.stringify({
                                         event: 'VOIP_VOICE_RELAY_SKIP',
                                         call_id: callInitResponse.call_id,
-                                        reason: 'acoustic_echo_relay',
+                                        reason: 'roundtrip_self_echo',
+                                        from_role: fromRole,
                                         transcript,
                                         translated_text: translatedText,
+                                        local_transcript: localTranscriptNorm,
                                         timestamp: new Date().toISOString(),
                                     }));
                                     return;
@@ -2149,27 +2897,43 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             return;
                         }
 
-                        const relayKey = `${normalizeRelayText(transcript)}::${normalizeRelayText(translatedText)}`;
                         const now = Date.now();
-                        if (
-                            lastRemotePlaybackKeyRef.current === relayKey
-                            && now - lastRemotePlaybackAtRef.current < VOICE_RELAY_REMOTE_PLAYBACK_DEDUPE_MS
-                        ) {
+                        const dedupeKeys = buildRemoteRelayDedupeKeys({
+                            utteranceId: message.utterance_id,
+                            chunkIndex: typeof message.chunk_index === 'number' ? message.chunk_index : 0,
+                            normalizedTranscript: normalizeRelayText(transcript),
+                            normalizedTranslated: normalizeRelayText(translatedText),
+                            targetLang: relayTargetLang,
+                        });
+                        const dedupeDecision = shouldDedupeRemoteVoiceRelay({
+                            keys: dedupeKeys,
+                            previous: lastRemoteRelayDedupeRef.current,
+                            nowMs: now,
+                        });
+                        if (dedupeDecision.dedupe) {
                             console.log('[UI_PRESS_PROBE]', JSON.stringify({
                                 event: 'VOIP_VOICE_RELAY_SKIP',
                                 call_id: callInitResponse.call_id,
-                                reason: 'remote_relay_dedupe',
+                                reason: dedupeDecision.reason || 'remote_relay_dedupe',
+                                utterance_id: message.utterance_id || null,
+                                chunk_index: typeof message.chunk_index === 'number' ? message.chunk_index : 0,
                                 transcript,
                                 translated_text: translatedText,
                                 timestamp: new Date().toISOString(),
                             }));
                             return;
                         }
-                        lastRemotePlaybackKeyRef.current = relayKey;
+                        lastRemoteRelayDedupeRef.current = {
+                            utteranceKey: dedupeKeys.utteranceKey,
+                            textKey: dedupeKeys.textKey,
+                            atMs: now,
+                        };
+                        lastRemotePlaybackKeyRef.current = dedupeKeys.textKey;
                         lastRemotePlaybackAtRef.current = now;
                     }
 
                     if (!isLocal) {
+                        setRemoteAudioSuppressed(true);
                         voiceRelayTurnRef.current = applyRemoteRelayTurn({
                             turn: voiceRelayTurnRef.current,
                             nowMs: Date.now(),
@@ -2178,24 +2942,38 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         });
                         voiceRelayAbortGenerationRef.current += 1;
                         voiceRelayProcessingRef.current = false;
-                        void handlers.stopVoiceRelaySegment(false);
+                        // 반이중: 상대 재생이 시작되면 내 버퍼 큐(미전송분)도 비워 교차발화/에코를 막는다.
+                        voiceRelaySegmentQueueRef.current = [];
+                        // stop teardown(stopAndUnloadAsync) 완료 promise 를 보관 → 재생 시작 전 await.
+                        // (마이크 동시 오픈 시 녹음 미해제 상태로 재생이 시작돼 무음으로 죽던 레이스 차단.)
+                        voiceRelaySegmentStopInFlightRef.current = handlers.stopVoiceRelaySegment(false);
+                        const echoGuards = getVoiceRelayEchoGuards();
                         const echoGuardMs = isSpeakerOnRef.current
-                            ? VOICE_RELAY_SPEAKER_ECHO_GUARD_MS
-                            : VOICE_RELAY_REMOTE_ECHO_GUARD_MS;
+                            ? echoGuards.speaker
+                            : echoGuards.remote;
                         voiceRelaySuppressUntilRef.current = Date.now() + echoGuardMs;
                         lastRemoteRelayTranscriptRef.current = normalizeRelayText(transcript);
                         lastRemoteRelayAtRef.current = voiceRelayTurnRef.current.lastRemoteRelayAtMs;
-                        getVoIPToneService().playMessageTone();
                         const seqId = typeof message.seq_id === 'number' && Number.isFinite(message.seq_id)
                             ? message.seq_id
                             : handlers.nextVoiceRelaySeqId();
+                        // V.2 ID 백본 — 송신측 상관 ID를 그대로 이어받아 발화가 출처 ID에 스스로 붙는다.
+                        // ID가 누락된 레거시 메시지는 콘텐츠 기반 결정적 ID로 보정한다(랜덤 폴백 금지:
+                        // 같은 발화의 재전송이 서로 다른 ID가 되어 중복제거·순서 상관이 깨지는 것을 차단).
+                        const remoteCorrelationId = message.correlation_id
+                            || deterministicCorrelationId(
+                                FEATURE_IDS.voipVoiceRelay,
+                                `${normalizeRelayText(translatedText)}|${relayTargetLang}`,
+                            );
+                        const remoteUtteranceId = message.utterance_id || remoteCorrelationId;
                         handlers.enqueueVoiceRelayPlayback({
                             seqId,
-                            utteranceId: message.utterance_id || `remote-${seqId}`,
+                            utteranceId: remoteUtteranceId,
                             chunkIndex: typeof message.chunk_index === 'number' ? message.chunk_index : 0,
                             isFinal: message.is_final !== false,
                             translatedText,
                             targetLang: relayTargetLang,
+                            correlationId: remoteCorrelationId,
                         });
                         setLastRelayDeliveryHint(`수신 · ${translatedText.slice(0, 48)}`);
                     }
@@ -2258,6 +3036,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             void cleanupHandlers?.stopVoiceRelayPlayback();
             voiceRelayPlaybackQueueRef.current?.clear();
             setRemoteAudioSuppressed(false);
+            remoteTrackForceSuppressedRef.current = false;
             Speech.stop();
             voipClientRef.current?.hangup();
             voipClientRef.current = null;
@@ -2276,6 +3055,15 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         failCallAndStopTone,
         participantRole,
     ]);
+
+    useEffect(() => {
+        // 통역 모드에서는 서버 준비 여부와 무관하게, 연결되는 즉시 원음(WebRTC)을 영구 차단한다.
+        // serverReady 를 조건에 넣으면 connected~serverReady 사이에 원격 트랙이 enabled 상태로
+        // 도착해 원음이 새는 윈도우가 생기므로 제외한다. (재적용은 client.ontrack 에서 보장)
+        if (voiceRelayEnabled && connectionState === 'connected') {
+            setRemoteAudioSuppressed(true);
+        }
+    }, [connectionState, setRemoteAudioSuppressed, voiceRelayEnabled]);
 
     useEffect(() => {
         isSpeakerOnRef.current = isSpeakerOn;
@@ -2376,7 +3164,12 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             };
         }
 
-        if (connectionState === 'connected' && isVoiceRelayCallReadyRef.current() && !voiceRelayRecording && !voiceRelayBusy) {
+        // build 157: 재무장을 번역 완료(voiceRelayBusy=false)에 직렬로 묶지 않는다.
+        // 큐 워커(번역/전송)는 독립이고 네이티브 캡처는 flush 시점에 이미 해제되므로,
+        // 녹음 종료 직후 마이크를 재무장해 번역과 병렬로 다음 발화를 받는다(설계 의도 L1829).
+        // 과거엔 voiceRelayBusy 의존성이 재실행→클린업으로 segment_buffered 재무장 타이머를
+        // 죽여, 재무장이 SENT(번역 완료) 뒤로 ~1.3s 밀렸다(원거리 실측 build 156).
+        if (connectionState === 'connected' && isVoiceRelayCallReadyRef.current() && !voiceRelayRecording) {
             scheduleCaptureRestart(VOICE_RELAY_RESTART_DELAY_MS);
         }
 
@@ -2386,7 +3179,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 voiceRelayRestartTimerRef.current = null;
             }
         };
-    }, [connectionState, restoreWebRtcMicIfVoiceRelayInactive, stopVoiceRelaySegment, voiceRelayBusy, voiceRelayEnabled, voiceRelayRecording]);
+    }, [connectionState, restoreWebRtcMicIfVoiceRelayInactive, stopVoiceRelaySegment, voiceRelayEnabled, voiceRelayRecording]);
 
     useEffect(() => {
         const callId = callInitResponse.call_id;
@@ -2539,12 +3332,21 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 playThroughEarpieceAndroid: !nextSpeakerOn,
                 staysActiveInBackground: false,
             });
+            // 통신 모드를 유지한 채 출력만 내장 스피커/수화기로 전환한다.
+            await setVoipSpeakerphone(nextSpeakerOn);
             setIsSpeakerOn(nextSpeakerOn);
             isSpeakerOnRef.current = nextSpeakerOn;
         } catch (err) {
             console.error('[VoIPScreen] Failed to toggle speaker route', err);
         }
     }, [isSpeakerOn]);
+
+    useEffect(() => {
+        // 화면이 정상 종료(handleHangup) 없이 언마운트되더라도 통신 모드를 반드시 복원한다.
+        return () => {
+            void disableVoipAudio();
+        };
+    }, []);
 
     const handleHangup = useCallback(async () => {
         // Stop tone on hangup
@@ -2557,6 +3359,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         setVoiceRelayEnabled(false);
         voiceRelayEnabledRef.current = false;
         await restoreWebRtcMicIfVoiceRelayInactive('hangup');
+        // 통화 종료 시 일반 오디오 모드로 복원(통신 모드/스피커폰 해제).
+        await disableVoipAudio();
 
         if (voipClient) {
             await voipClient.hangup();
@@ -2593,6 +3397,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const handleSendChat = useCallback(() => {
         const text = chatDraft.trim();
         if (!text) {
+            return;
+        }
+        if (!textMatchesDesignatedLanguage(text, localSourceLang)) {
+            setChatError(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
             return;
         }
 
@@ -2674,25 +3482,25 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     {appVersionName ? ` (v${appVersionName})` : ''}
                 </Text>
             </View>
-            {voiceRelayBusy ? (
+            {voiceRelayEnabled && voiceRelayBusy && !voiceRelayRecording ? (
                 <View style={styles.chatLiveBanner}>
                     <ActivityIndicator color="#7dd3fc" size="small" />
-                    <Text style={styles.chatLiveBannerText}>음성 통역 처리 중… 약 3~7초 후 채팅에 반영됩니다.</Text>
+                    <Text style={styles.chatLiveBannerText}>음성 감지됨 · 번역 처리 중… (3~7초)</Text>
                 </View>
             ) : null}
-            {!voiceRelayBusy && voiceRelayRecording ? (
+            {voiceRelayEnabled && voiceRelayRecording ? (
                 <View style={styles.chatLiveBanner}>
                     <Text style={styles.chatLiveBannerRecordingDot}>●</Text>
                     <Text style={styles.chatLiveBannerText}>
                         {voiceRelaySileroActive
-                            ? 'Silero VAD · 녹음 중 — 말을 멈추면 자동 번역·전송합니다.'
+                            ? '마이크 듣는 중 · 말이 끝나면 자동 번역'
                             : voiceRelayMeterDead
-                                ? '파일 RMS 음성 감지 · 녹음 중 — 말을 멈추면 자동 번역·전송합니다.'
-                                : '마이크 수신 중 — 말을 멈추면 자동으로 번역·전송합니다.'}
+                                ? '마이크 듣는 중 · 음성 감지 후 자동 번역'
+                                : '마이크 듣는 중 · 말이 끝나면 자동 번역'}
                     </Text>
                 </View>
             ) : null}
-            {!voiceRelayBusy && !voiceRelayRecording && voiceRelayListenWaiting ? (
+            {voiceRelayEnabled && !voiceRelayBusy && !voiceRelayRecording && voiceRelayListenWaiting ? (
                 <View style={styles.chatLiveBanner}>
                     <Text style={styles.chatLiveBannerText}>상대 통역 수신 중 — 잠시 후 마이크가 다시 켜집니다.</Text>
                 </View>

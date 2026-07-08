@@ -1,5 +1,5 @@
 import { Audio } from '../compat/expoAvAudio';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 /**
  * VoIP Tone Service
@@ -200,7 +200,7 @@ export class VoIPToneService {
         playsInSilentModeIOS: true,
         shouldDuckAndroid: false,
         playThroughEarpieceAndroid: false,
-        staysActiveInBackground: false,
+        staysActiveInBackground: toneType === 'ringing',
       });
       if (!this.isPlaying || requestId !== this.nativePlaybackRequestId) return;
 

@@ -7,14 +7,16 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 
 from backend.auth import ALGORITHM, SECRET_KEY, create_access_token, get_current_user
+from backend.security_gates import require_voip_call_quota
 
+from . import metrics as voip_metrics
 from . import push
 from .config import build_signaling_url, get_ice_servers, signaling_token_ttl_sec
 from .models import AuditResponse, CallInitiateRequest, CallInitResponse, DeviceRegisterRequest
@@ -48,7 +50,7 @@ async def register_device(payload: DeviceRegisterRequest, user=Depends(get_curre
 
 
 @router.post("/calls/initiate", response_model=CallInitResponse)
-async def initiate_call(payload: CallInitiateRequest, request: Request, user=Depends(get_current_user)) -> CallInitResponse:
+async def initiate_call(payload: CallInitiateRequest, request: Request, user=Depends(require_voip_call_quota)) -> CallInitResponse:
     caller_user_id = getattr(user, "id", None)
     caller_username = getattr(user, "username", None) or getattr(user, "email", None) or "caller"
 
@@ -62,6 +64,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
                 callee_phone=payload.callee_phone,
                 caller_label=caller_username,
             )
+            voip_metrics.record_call_initiated("pstn", str(payload.mode or ""))
             return CallInitResponse(
                 call_id=result.get("provider_call_id") or "",
                 signaling_server="",
@@ -94,6 +97,7 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
         mode=payload.mode,
         auto_relay=payload.auto_relay,
     )
+    voip_metrics.record_call_initiated("app", str(room.mode or ""))
 
     token = _mint_ws_token(
         username=caller_username,
@@ -230,16 +234,19 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     token = websocket.query_params.get("token", "")
     role = websocket.query_params.get("role", "")
     if role not in ("caller", "callee"):
+        voip_metrics.record_signaling_error("bad_role")
         await websocket.close(code=1008)
         return
     payload = _decode_ws_token(token, call_id, role)
     if payload is None:
+        voip_metrics.record_signaling_error("auth_failed")
         await websocket.close(code=1008)
         return
 
     store = get_store()
     room = await store.get(call_id)
     if room is None or room.status == "ended":
+        voip_metrics.record_signaling_error("room_not_found")
         await websocket.close(code=1008)
         return
 
@@ -249,6 +256,18 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     await relay.register(call_id, role, websocket)
     await websocket.accept()
     await store.mark_connected(call_id, role)
+    voip_metrics.ws_connected(role)
+    # 콜리 합류 지연(룸 생성→callee WS) = 통화 셋업 프록시(off-path, best-effort).
+    if role == "callee":
+        try:
+            created = room.created_at
+            if isinstance(created, datetime):
+                ref = created if created.tzinfo else created.replace(tzinfo=timezone.utc)
+                voip_metrics.observe_call_join_latency(
+                    (datetime.now(timezone.utc) - ref).total_seconds()
+                )
+        except Exception:  # noqa: BLE001 - 메트릭 보조, hot path 보호
+            pass
     # P3-A: ws 접속 = 해당 사용자 온라인 표시(presence 갱신).
     uid = payload.get("uid")
     if uid is not None:
@@ -262,6 +281,7 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
             message = await websocket.receive_json()
             msg_type = str(message.get("type") or "").strip().lower()
             message.setdefault("call_id", call_id)
+            voip_metrics.record_signaling_message(msg_type or "empty", role)
 
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong", "call_id": call_id})
@@ -283,8 +303,10 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001
+        voip_metrics.record_signaling_error("loop_error")
         logger.warning("[VoIP] signaling loop error (call_id=%s role=%s): %s", call_id, role, exc)
     finally:
+        voip_metrics.ws_disconnected()
         await relay.unregister(call_id, role, websocket)
         await store.add_event(call_id, "ws_disconnected", role, {})
 

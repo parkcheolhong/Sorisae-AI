@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
+
+from backend.auth import ALGORITHM, SECRET_KEY, get_current_user_flexible
 
 
 def build_customer_orchestrate_router(contract: Any) -> APIRouter:
@@ -18,8 +20,6 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         if request.run_id:
             stage_run_payload = contract._load_customer_stage_run_for_user(request.run_id, current_user)
 
-        from backend.llm.orchestrator import answer_orchestrator_chat as answer_orchestrator_chat_handler
-
         project_name = str(request.project_name or (stage_run_payload or {}).get("project_name") or "customer-product").strip() or "customer-product"
         auto_connect = contract.AutoConnectMeta(
             connection_id=request.run_id or contract.uuid4().hex,
@@ -30,34 +30,63 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             panel_id="PANEL-CUSTOMER-ORCHESTRATOR",
             capability_id="customer-orchestrator-chat",
         )
-        chat_response = await answer_orchestrator_chat_handler(
-            request_context=request_context,
-            request=contract.OrchestratorChatRequest(
-                task=str(request.task or "").strip() or project_name,
+        orchestrator_request = contract.OrchestratorChatRequest(
+            task=str(request.task or "").strip() or project_name,
+            message=str(request.message or "").strip(),
+            agent_key="customer_orchestrator",
+            mode="manual_10step",
+            manual_mode=True,
+            companion_mode=str(request.companion_mode or "hybrid").strip() or "hybrid",
+            conversation_mode=str(request.conversation_mode or "auto").strip() or "auto",
+            output_dir=request.output_dir,
+            run_id=request.run_id,
+            session_id=request.session_id or request.run_id,
+            max_tokens=int(request.max_tokens or 768),
+            lightweight=False,
+            multi_turn_enabled=True,
+            response_style=str(request.response_style or "balanced").strip() or "balanced",
+            tone_preset=str(request.tone_preset or "auto").strip() or "auto",
+            reverse_question_mode=request.reverse_question_mode,
+            conversation=list(request.conversation or []),
+            context_tags=list(request.context_tags or []) + ["customer", "stage-run", "manual-10step"],
+            project_root=request.output_dir,
+            project_memory=dict(request.project_memory or {}),
+            auto_connect=auto_connect,
+        )
+
+        from backend.orchestrator.autonomous.surface_adapter import (
+            run_autonomous_surface_chat,
+            should_route_orchestrator_chat_to_autonomous,
+        )
+
+        if should_route_orchestrator_chat_to_autonomous(orchestrator_request, request_context):
+            run_id = str(request.run_id or "").strip() or None
+            stage_run_id = run_id if run_id and run_id.startswith("stage_run_") else None
+            chat_response = await run_autonomous_surface_chat(
                 message=str(request.message or "").strip(),
-                agent_key="customer_orchestrator",
+                owner_id=str(getattr(current_user, "id", None) or "customer-orchestrate"),
+                surface="marketplace",
+                session_id=str(request.session_id or request.run_id or "").strip() or None,
+                run_id=run_id,
+                stage_run_id=stage_run_id,
+                task=str(request.task or "").strip() or project_name,
+                project_name=project_name,
                 mode="manual_10step",
                 manual_mode=True,
-                companion_mode=str(request.companion_mode or "hybrid").strip() or "hybrid",
-                conversation_mode=str(request.conversation_mode or "auto").strip() or "auto",
-                output_dir=request.output_dir,
-                run_id=request.run_id,
-                session_id=request.session_id or request.run_id,
-                max_tokens=int(request.max_tokens or 768),
-                lightweight=False,
-                multi_turn_enabled=True,
-                response_style=str(request.response_style or "balanced").strip() or "balanced",
-                tone_preset=str(request.tone_preset or "auto").strip() or "auto",
-                reverse_question_mode=request.reverse_question_mode,
                 conversation=list(request.conversation or []),
-                context_tags=list(request.context_tags or []) + ["customer", "stage-run", "manual-10step"],
-                project_root=request.output_dir,
-                project_memory=dict(request.project_memory or {}),
-                auto_connect=auto_connect,
-            ),
-            agent_key="customer_orchestrator",
-            current_user=current_user,
-        )
+                context_tags=list(orchestrator_request.context_tags or []),
+                validation_profile="python_fastapi",
+            )
+        else:
+            from backend.llm.orchestrator import answer_orchestrator_chat as answer_orchestrator_chat_handler
+
+            chat_response = await answer_orchestrator_chat_handler(
+                request_context=request_context,
+                request=orchestrator_request,
+                agent_key="customer_orchestrator",
+                current_user=current_user,
+            )
+
         chat_response.stage_chat = contract._build_customer_stage_chat_context(stage_run_payload, request)
         chat_response.diagnostics = {
             **dict(chat_response.diagnostics or {}),
@@ -66,6 +95,56 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             "stage_run_connected": bool(stage_run_payload),
         }
         return chat_response
+
+    @router.get("/customer-orchestrate/progress/{run_id}")
+    def get_customer_orchestrate_progress(
+        run_id: str,
+        current_user=Depends(contract.get_current_user),
+    ):
+        from backend.orchestrator.autonomous.progress_tracker import load_progress_for_run
+
+        payload = load_progress_for_run(run_id)
+        if not payload:
+            raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
+        return payload
+
+    @router.get("/customer-orchestrate/progress/stream/{run_id}")
+    async def stream_customer_orchestrate_progress(
+        run_id: str,
+        current_user=Depends(get_current_user_flexible),
+    ):
+        from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_sse
+
+        async def _event_stream():
+            async for frame in iter_orchestration_progress_sse(run_id):
+                yield frame
+
+        return contract.StreamingResponse(_event_stream(), media_type="text/event-stream")
+
+    @router.websocket("/customer-orchestrate/progress/ws/{run_id}")
+    async def websocket_customer_orchestrate_progress(websocket: WebSocket, run_id: str):
+        from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_ws
+        from jose import jwt as _jwt
+
+        token = str(websocket.query_params.get("token") or "").strip()
+        if not token:
+            await websocket.close(code=4401, reason="token required")
+            return
+        try:
+            _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            await websocket.close(code=4401, reason="인증 실패")
+            return
+
+        await websocket.accept()
+        try:
+            await websocket.send_json({"event": "connected", "run_id": run_id})
+            async for message in iter_orchestration_progress_ws(run_id):
+                await websocket.send_json(message)
+                if str(message.get("event") or "") in {"done", "error"}:
+                    break
+        except WebSocketDisconnect:
+            pass
 
     @router.post("/customer-orchestrate/stage-runs")
     def create_customer_orchestrate_stage_run(
@@ -142,7 +221,10 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             def _worker() -> None:
                 try:
                     stream_state["response"] = contract.asyncio.run(
-                        contract._run_customer_orchestration_request(orchestration_request)
+                        contract._run_customer_orchestration_request(
+                            orchestration_request,
+                            owner_id=str(getattr(current_user, "id", "unknown")),
+                        )
                     )
                 except Exception as exc:  # pragma: no cover - exercised via SSE error path
                     stream_state["error"] = exc

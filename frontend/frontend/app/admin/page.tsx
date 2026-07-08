@@ -7,12 +7,13 @@ import { useAdminPageActions } from '@/app/admin/hooks/useAdminPageActions';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { resolveApiBaseUrl } from '@/lib/api';
+import { resolveApiBaseUrl, resolveBackendDocsUrl } from '@/lib/api';
 import AdminAdPreviewModal from '@/components/admin/admin-ad-preview-modal';
 import AdminLlmControlSummary from '@/components/admin/admin-llm-control-summary';
 import AdminManagementSection from '@/components/admin/admin-management-section';
 import AdminStoryboardModal from '@/components/admin/admin-storyboard-modal';
 import AdminSystemSettingsPanel from '@/components/admin/admin-system-settings-panel';
+import { AdminWorldlincoTuningPanel } from '@/components/admin/admin-worldlinco-tuning-panel';
 import WorkspaceChrome from '@/components/ui/workspace-chrome';
 import { buildAdminDashboardSectionsConfig } from '@/app/admin/admin-dashboard-sections-config';
 import { buildAdminLauncherRailItems } from '@/app/admin/admin-rail-builders';
@@ -251,24 +252,12 @@ const initialOverview: OverviewStats = { projects: 0, users: 0, purchases: 0, re
 const initialRevenue: RevenueStats = { total_revenue: 0, total_purchases: 0, average_purchase_amount: 0 };
 const adminPassKmcKcbDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md';
 const adminCommercialTermsDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-terms-checklist.md';
+const adminCommercialValuesInputHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-values-input-checklist.md';
 
 export default function AdminDashboardPage() {
     const router = useRouter();
     const apiBaseUrl = resolveApiBaseUrl();
-    const adminApiDocsHref = useMemo(() => {
-        if (typeof window === 'undefined') {
-            return `${apiBaseUrl}/docs`;
-        }
-
-        const { hostname, protocol, port } = window.location;
-        const isLocalFrontendPort = (hostname === 'localhost' || hostname === '127.0.0.1') && (port === '3000' || port === '3005') && protocol === 'http:';
-
-        if (isLocalFrontendPort) {
-            return `${protocol}//${hostname}:8000/docs`;
-        }
-
-        return `${apiBaseUrl}/docs`;
-    }, [apiBaseUrl]);
+    const adminApiDocsHref = useMemo(() => resolveBackendDocsUrl(apiBaseUrl), [apiBaseUrl]);
     const marketplaceHomeHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace'), []);
     const marketplaceOrchestratorHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace/orchestrator'), []);
     const adminCategoriesBootstrappedRef = useRef(false);
@@ -447,6 +436,7 @@ export default function AdminDashboardPage() {
     const lastSpokenAlertSignatureRef = useRef('');
     const autoOpsSignatureRef = useRef('');
     const [musicPanelOpen, setMusicPanelOpen] = React.useState(false);
+    const [worldlincoTuningPanelOpen, setWorldlincoTuningPanelOpen] = React.useState(false);
     const [musicEmotion, setMusicEmotion] = React.useState('happy');
     const [musicIntensity, setMusicIntensity] = React.useState('0.7');
     const [musicTheme, setMusicTheme] = React.useState('소리새 테마');
@@ -605,6 +595,7 @@ export default function AdminDashboardPage() {
         systemSettingsOpen,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -645,6 +636,7 @@ export default function AdminDashboardPage() {
         setCategorySortBy,
         categoryMessage,
         loadSystemSettings,
+        fillMissingSystemSettings,
         changeAdminPassword,
         updatePostgresRuntimePassword,
         updateSystemSettingValue,
@@ -1872,6 +1864,7 @@ export default function AdminDashboardPage() {
         systemSettingsDisconnected,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -1886,15 +1879,25 @@ export default function AdminDashboardPage() {
         postgresPasswordConfirm,
         postgresPasswordSaving,
         postgresPasswordMessage,
+        adminPasswordCurrent,
+        adminPasswordNext,
+        adminPasswordConfirm,
+        adminPasswordChanging,
+        adminPasswordMessage,
         onApplyGlobalAutomaticMode: applyGlobalAutomaticMode,
         onLoadSystemSettings: loadSystemSettings,
         onSaveSystemSettings: saveSystemSettings,
+        onFillMissingSystemSettings: () => { void fillMissingSystemSettings(); },
         onApplyGeneratorModelOverride: applyGeneratorModelOverride,
         onToggleSystemSettingsSection: toggleSystemSettingsSection,
         onUpdateSystemSettingValue: updateSystemSettingValue,
         onPostgresPasswordNextChange: setPostgresPasswordNext,
         onPostgresPasswordConfirmChange: setPostgresPasswordConfirm,
         onUpdatePostgresRuntimePassword: updatePostgresRuntimePassword,
+        onAdminPasswordCurrentChange: setAdminPasswordCurrent,
+        onAdminPasswordNextChange: setAdminPasswordNext,
+        onAdminPasswordConfirmChange: setAdminPasswordConfirm,
+        onChangeAdminPassword: () => { void changeAdminPassword(); },
     });
 
     const adminSampleProductsAssembly = buildAdminPageSampleProductsAssembly({
@@ -2196,6 +2199,13 @@ export default function AdminDashboardPage() {
             summary: '관리자/고객 공통 StageCardPanel · 단계별 수동 점검 · 구조 설계',
             accent: 'emerald',
             onClick: () => setCustomerOrchestratorPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-tuning',
+            label: '🌐 WorldLinco 튜닝',
+            summary: 'VoIP·대면 통역 VAD/TTS 타이밍 원격 조절',
+            accent: 'cyan',
+            onClick: () => setWorldlincoTuningPanelOpen(true),
         },
         {
             id: 'music-panel',
@@ -2775,6 +2785,14 @@ export default function AdminDashboardPage() {
                         id: 'docs', label: '문서', shortLabel: '문서', href: adminPassKmcKcbDocsHref, accent: 'amber',
                         icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📘</div>
                     },
+                    {
+                        id: 'tourism-review', label: '관광 검수', shortLabel: '검수', href: '/admin/tourism-review', accent: 'emerald', testId: 'admin-rail-tourism-review',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🧭</div>
+                    },
+                    {
+                        id: 'carbon', label: '탄소 측정', shortLabel: '탄소', href: '/admin/carbon', accent: 'emerald', testId: 'admin-rail-carbon',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🌱</div>
+                    },
                     ...buildAdminLauncherRailItems(launcherLeftColumn, ADMIN_LEFT_SHORT_LABEL_OVERRIDES),
                 ]}
                 rightRailItems={[
@@ -2792,8 +2810,11 @@ export default function AdminDashboardPage() {
                 rightRailFooter={opsGateRailFooter}
                 topActions={(
                     <>
-                        <Link prefetch={false} href={marketplaceHomeHref} data-testid="admin-topnav-marketplace" aria-label="마켓플레이스 이동" className="workspace-topbar-chip">
-                            마켓
+                        <Link href="/admin/tourism-review" data-testid="admin-topnav-tourism-review" aria-label="관광 데이터 사람검수 콘솔 열기" className="workspace-topbar-chip">
+                            관광 검수
+                        </Link>
+                        <Link href="/admin/carbon" data-testid="admin-topnav-carbon" aria-label="추론 탄소 전력 측정 열기" className="workspace-topbar-chip">
+                            탄소 측정
                         </Link>
                         <Link href="/admin/users" data-testid="admin-topnav-users" aria-label="회원가입 사용자 확인" className="workspace-topbar-chip">
                             가입 사용자
@@ -2803,6 +2824,9 @@ export default function AdminDashboardPage() {
                         </Link>
                         <Link href={adminCommercialTermsDocsHref} data-testid="admin-topnav-commercial-terms" aria-label="상용화 계약 약관 기준 열기" className="workspace-topbar-chip">
                             계약 기준
+                        </Link>
+                        <Link href={adminCommercialValuesInputHref} data-testid="admin-topnav-commercial-values-input" aria-label="PASS KMC KCB 상용값 입력 체크리스트 열기" className="workspace-topbar-chip">
+                            상용값 입력
                         </Link>
                         <a href={adminApiDocsHref} target="_blank" rel="noreferrer" data-testid="admin-topnav-api-docs" aria-label="API 문서 열기" className="workspace-topbar-chip">
                             API Docs
@@ -2857,6 +2881,19 @@ export default function AdminDashboardPage() {
                     launcherHidden
                 >
                     <AdminSystemSettingsPanel {...adminSystemSettingsAssembly} />
+                </AdminManagementSection>
+
+                <AdminManagementSection
+                    title="🌐 WorldLinco 튜닝"
+                    usage="VoIP·대면 통역 VAD/에코/TTS 타이밍을 슬라이더로 원격 조절"
+                    description="ADB build101 기준값을 시작점으로, 저장 즉시 /api/marketplace/worldlinco/tuning 에 반영됩니다. 모바일은 앱 포그라운드 시 자동 fetch."
+                    open={worldlincoTuningPanelOpen}
+                    onToggle={() => setWorldlincoTuningPanelOpen((prev) => !prev)}
+                    toggleTestId="admin-worldlinco-tuning-section"
+                    windowSize="wide"
+                    launcherHidden
+                >
+                    <AdminWorldlincoTuningPanel apiBaseUrl={apiBaseUrl} getAdminToken={getAdminToken} />
                 </AdminManagementSection>
 
                 <AdminManagementSection

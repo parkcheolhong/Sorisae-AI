@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
                 source: '/api/:path*',
                 destination: `${backendTarget}/api/:path*`,
             },
+            {
+                source: '/docs',
+                destination: `${backendTarget}/docs`,
+            },
+            {
+                source: '/openapi.json',
+                destination: `${backendTarget}/openapi.json`,
+            },
         ];
     },
 

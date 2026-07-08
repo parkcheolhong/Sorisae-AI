@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+
+from backend.time_utils import utcnow
 import logging
 from typing import Any, Optional
 from uuid import uuid4
@@ -23,7 +25,12 @@ from backend.auth import (
     resolve_token_subject,
 )
 from backend.database import get_db
+from backend.designated_language import (
+    DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+    text_matches_designated_language,
+)
 from backend.marketplace import models
+from backend.marketplace.fcm_push import send_push_to_user
 from backend.services.nadotongryoksa.translator import (
     NadoTranslator,
     SUPPORTED_LANGUAGES,
@@ -88,6 +95,12 @@ class ChatRoomWebSocketHub:
             except Exception:
                 self.disconnect(room_id, user_id, websocket)
 
+    def is_user_connected(self, room_id: str, user_id: int) -> bool:
+        room_connections = self._connections.get(room_id)
+        if room_connections is None:
+            return False
+        return bool(room_connections.get(user_id))
+
 
 chat_room_ws_hub = ChatRoomWebSocketHub()
 
@@ -139,7 +152,7 @@ class ReadUpdateRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    return utcnow()
 
 
 def _normalize_text(
@@ -300,6 +313,7 @@ def _serialize_user_summary(
         "nickname": nickname,
         "voice_id": _build_voice_id(user.id),
         "preferred_language": getattr(user, "preferred_language", None),
+        "country_code": getattr(user, "country_code", None),
     }
 
 
@@ -462,6 +476,18 @@ def _resolve_message_translation(
         request_translation,
     )
     resolved_source = plan.source_lang
+    if (
+        resolved_source
+        and message_type == "text"
+        and not text_matches_designated_language(body, resolved_source)
+    ):
+        logger.info(
+            "chat designated-language mismatch room=%s sender=%s designated=%s",
+            room.room_uuid,
+            sender_user_id,
+            resolved_source,
+        )
+        return None, resolved_source, plan.primary_target_lang, None
     if plan.scope == "group" and room.title != SELF_ROOM_TITLE:
         return None, resolved_source, None, None
     resolved_target = plan.primary_target_lang
@@ -1358,17 +1384,19 @@ def create_or_get_direct_room(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="친구 관계가 확인되지 않았습니다",
         )
-    _resolve_user(db, friend_user_id)
+    friend_user = _resolve_user(db, friend_user_id)
     room = _find_direct_room(db, current_user_id, friend_user_id)
     created_now = room is None
+    owner_language = _resolve_user_language(current_user)
+    friend_language = _resolve_user_language(friend_user)
     if room is None:
         now = _utcnow()
         room = models.ChatRoom(
             room_uuid=str(uuid4()),
             room_type="direct",
             owner_user_id=current_user_id,
-            default_source_lang=None,
-            default_target_lang=None,
+            default_source_lang=owner_language,
+            default_target_lang=friend_language,
             translation_mode="direct_auto",
             last_message_at=now,
             created_at=now,
@@ -1775,6 +1803,21 @@ async def create_chat_message(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="메시지 본문을 입력해야 합니다",
         )
+    sender = (
+        db.query(models.User)
+        .filter(models.User.id == current_user_id)
+        .first()
+    )
+    designated_language = _resolve_user_language(sender)
+    if (
+        designated_language
+        and (request.message_type or "text") == "text"
+        and not text_matches_designated_language(body, designated_language)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+        )
     message = _append_message(
         db,
         room=room,
@@ -1791,18 +1834,40 @@ async def create_chat_message(
     db.refresh(room)
     db.refresh(message)
     active_members = _get_room_members(db, room.id)
+    serialized_sender = _serialize_message(db, room, message, current_user_id)
+    sender_label = str(serialized_sender.get("sender_label") or "친구")
+    body_preview = _normalize_text(body, max_length=80)
     for member in active_members:
+        member_user_id = int(member.user_id)
         await chat_room_ws_hub.send_to_user(
             room.room_uuid,
-            int(member.user_id),
+            member_user_id,
             _serialize_message_created_event(
                 db,
                 room,
                 message,
-                int(member.user_id),
+                member_user_id,
             ),
         )
-    return _serialize_message(db, room, message, current_user_id)
+        if member_user_id == current_user_id:
+            continue
+        if chat_room_ws_hub.is_user_connected(room.room_uuid, member_user_id):
+            continue
+        await send_push_to_user(
+            member_user_id,
+            data_payload={
+                "type": "chat_message",
+                "room_id": room.room_uuid,
+                "message_id": message.message_uuid,
+                "sender_label": sender_label,
+                "body_preview": body_preview,
+                "alert_phrase": "친구야~",
+            },
+            title="(월드링코) 채팅",
+            body=f"{sender_label}: 친구야~ {body_preview}",
+            channel_id="worldlinco_chat_message",
+        )
+    return serialized_sender
 
 
 @router.post("/rooms/{room_id}/read")

@@ -13,6 +13,10 @@ import {
 import { getFriends } from '../../../api/friends';
 import type { Friend } from '../../friends/types';
 import { addChatRoomMembers, connectChatRoomEvents, getChatRoomDetail, listChatRoomMessages, markChatRoomRead, sendChatRoomMessage, updateChatRoomSettings } from '../api';
+import {
+  DESIGNATED_LANGUAGE_MISMATCH_MESSAGE,
+  textMatchesDesignatedLanguage,
+} from '../../translation/designatedLanguage';
 import type { ChatMessageItem, ChatRoomDetail, ChatRoomSummary } from '../types';
 
 const GROUP_MEMBER_LIMIT_OPTIONS = [3, 5, 10] as const;
@@ -388,6 +392,10 @@ export function ChatRoomScreen({
       return;
     }
     const languagePair = resolveFixedMessageLanguages(detail, room, userId);
+    if (languagePair.sourceLang && !textMatchesDesignatedLanguage(trimmed, languagePair.sourceLang)) {
+      setError(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
+      return;
+    }
     setSending(true);
     setError('');
     try {

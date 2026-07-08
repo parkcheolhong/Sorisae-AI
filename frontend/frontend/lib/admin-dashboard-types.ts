@@ -266,6 +266,19 @@ export interface OrchestratorCapabilityDetailResponse {
     target_chunk_ids?: string[];
     failure_tags?: string[];
     repair_tags?: string[];
+    expansion_experiment?: {
+        work_document_title?: string;
+        work_document?: string;
+        focus_path?: string;
+        recommended_self_run?: {
+            mode?: string;
+            execution_mode?: string;
+            directive_template?: string;
+            directive_scope?: string;
+            directive_request?: string;
+            endpoint?: string;
+        };
+    } | null;
 }
 
 export interface OrchestratorCapabilitySummaryResponse {

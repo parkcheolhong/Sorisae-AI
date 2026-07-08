@@ -54,7 +54,7 @@ export type CallModeController = {
     showVoipTester: boolean;
     setShowVoipTester: (value: boolean) => void;
     showFriendFolder: boolean;
-    setShowFriendFolder: (value: boolean) => void;
+    setShowFriendFolder: Dispatch<SetStateAction<boolean>>;
     interCallActive: boolean;
     setInterCallActive: (value: boolean) => void;
     interCallTurn: InterCallTurn;
@@ -90,7 +90,7 @@ export type CallModeController = {
     voipIdentity: string;
     setVoipIdentity: (value: string) => void;
     voipActiveProfile: VoipParticipantProfile | null;
-    setVoipActiveProfile: (value: VoipParticipantProfile | null) => void;
+    setVoipActiveProfile: Dispatch<SetStateAction<VoipParticipantProfile | null>>;
 };
 
 export function useCallModeController(initialMode: CallMode = DEFAULT_CALL_MODE): CallModeController {

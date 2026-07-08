@@ -3,7 +3,7 @@
 param(
     [string]$CallerDevice = "R83W70QY11H",
     [string]$CalleeDevice = "172.30.1.19:5555",
-    [string]$CalleeVoiceId = "nado-000226",
+    [string]$CalleeVoiceId = "nado-000001",
     [string]$PackageName = "com.parkcheolhong.worldlinco",
     [int]$ConnectedHoldSec = 35,
     [int]$RelayProbeSec = 25,
@@ -113,7 +113,7 @@ function Start-CallerFriendVoipCall {
     Open-VoipValidationAutoCall $Device
     Start-Sleep -Seconds 6
 
-    $friendsOk = Wait-ForLogPattern -Device $Device -Pattern "VOIP_VALIDATION_AUTO_CALL_DEEPLINK|nado-000226" -TimeoutSec 45 -LogPath (Join-Path $DumpDir "caller_auto_call_deeplink.log")
+    $friendsOk = Wait-ForLogPattern -Device $Device -Pattern "VOIP_VALIDATION_AUTO_CALL_DEEPLINK|$CalleeVoiceId" -TimeoutSec 45 -LogPath (Join-Path $DumpDir "caller_auto_call_deeplink.log")
     if ($friendsOk) { return $true }
 
     Write-Step "Auto-call deeplink not confirmed — falling back to friend folder UI tap"
@@ -124,7 +124,7 @@ function Start-CallerFriendVoipCall {
         if (Tap-ByResourceId -Device $Device -ResourceId $rid -DumpPath $dump) { break }
     }
     Start-Sleep -Seconds 4
-    Wait-ForLogPattern -Device $Device -Pattern "nado-000226" -TimeoutSec 45 | Out-Null
+    Wait-ForLogPattern -Device $Device -Pattern $CalleeVoiceId -TimeoutSec 45 | Out-Null
     for ($i = 0; $i -lt 8; $i++) {
         Invoke-Adb $Device @("shell", "input", "swipe", "400", "1400", "400", "500", "350") | Out-Null
         Start-Sleep -Milliseconds 800

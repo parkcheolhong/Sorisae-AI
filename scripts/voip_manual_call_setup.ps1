@@ -12,6 +12,7 @@ param(
     [int]$MonitorSec = 45,
     [switch]$HangupOnly,
     [switch]$SetupOnly,
+    [switch]$PreserveCalleeSession,
     [string]$SetPreferredLanguage = "",
     [string]$ProfileEmail = "",
     [string]$CallerPreferredLanguage = "",
@@ -183,12 +184,15 @@ function Open-IncomingVoipDeepLinkAutoAccept {
     param(
         [string]$Device,
         [string]$CallId,
-        [string]$SignalingServer
+        [string]$SignalingServer,
+        [string]$DisplayLanguage = ""
     )
     $encSig = [uri]::EscapeDataString($SignalingServer)
+    $encLang = if ($DisplayLanguage) { [uri]::EscapeDataString($DisplayLanguage) } else { "" }
+    $langQuery = if ($encLang) { "&display_language=$encLang" } else { "" }
     Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
     foreach ($scheme in @('worldlingo', 'worldlinco')) {
-        $deeplink = "${scheme}://voip/incoming?call_id=$CallId&signaling_server=$encSig&participant_role=callee&status=ringing&call_route=app_webrtc"
+        $deeplink = "${scheme}://voip/incoming?call_id=$CallId&signaling_server=$encSig&participant_role=callee&status=ringing&call_route=app_webrtc$langQuery"
         Write-Step "Launch incoming deeplink ($scheme) on $Device call_id=$CallId"
         $cmd = "am start -W -a android.intent.action.VIEW -d '$deeplink'"
         Invoke-Adb $Device @("shell", $cmd) | Out-Null
@@ -262,7 +266,7 @@ function Accept-IncomingVoipCall {
         "wss://metanova1004.com/api/v1/voip/signal?call_id=$ExpectedCallId&role=callee"
     }
 
-    if (Open-IncomingVoipDeepLinkAutoAccept -Device $Device -CallId $ExpectedCallId -SignalingServer $signaling) {
+    if (Open-IncomingVoipDeepLinkAutoAccept -Device $Device -CallId $ExpectedCallId -SignalingServer $signaling -DisplayLanguage $CallerPreferredLanguage) {
         return $true
     }
 
@@ -372,7 +376,8 @@ function Open-VoipValidationAutoCall([string]$Device) {
         throw "CalleeVoiceId must not equal CallerVoiceId (self-call): $CalleeVoiceId"
     }
     $runToken = Get-Date -Format "HHmmss"
-    $cmd = "am start -W -a android.intent.action.VIEW -d 'worldlingo://voip/open?action=validation&callee_voice_id=$CalleeVoiceId&force=1&run=$runToken'"
+    $calleeLangQuery = if ($CalleePreferredLanguage) { "&callee_preferred_language=$CalleePreferredLanguage" } else { "" }
+    $cmd = "am start -W -a android.intent.action.VIEW -d 'worldlingo://voip/open?action=validation&callee_voice_id=$CalleeVoiceId&force=1&run=$runToken$calleeLangQuery'"
     Invoke-Adb $Device @("shell", $cmd) | Out-Null
 }
 
@@ -467,9 +472,12 @@ if ($HangupOnly) {
     exit 0
 }
 Write-Step "Grant mic + force-stop apps (reset deeplink consume)"
-foreach ($dev in @($CallerDevice, $CalleeDevice)) {
-    Invoke-Adb $dev @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
-    Invoke-Adb $dev @("shell", "am", "force-stop", $PackageName) | Out-Null
+Invoke-Adb $CallerDevice @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
+Invoke-Adb $CallerDevice @("shell", "am", "force-stop", $PackageName) | Out-Null
+if (-not $PreserveCalleeSession) {
+    Invoke-Adb $CalleeDevice @("shell", "am", "force-stop", $PackageName) | Out-Null
+} else {
+    Write-Step "PreserveCalleeSession: callee app left running for FCM/presence incoming path"
 }
 Start-Sleep -Seconds 2
 Invoke-Adb $CallerDevice @("shell", "pm", "grant", $PackageName, "android.permission.RECORD_AUDIO") | Out-Null
@@ -480,7 +488,14 @@ Start-Sleep -Seconds 8
 
 Write-Step "Waiting auth..."
 if (-not (Wait-ForAuthReady $CallerDevice)) { throw "Tab auth timeout" }
-if (-not (Wait-ForAuthReady $CalleeDevice)) { throw "S10 auth timeout" }
+if (-not (Wait-ForAuthReady $CalleeDevice)) { throw "Callee auth timeout" }
+
+if ($PreserveCalleeSession) {
+    Write-Step "Waiting callee VOIP_PRESENCE_CONNECTED before placing call..."
+    if (-not (Wait-ForLogPattern $CalleeDevice "VOIP_PRESENCE_CONNECTED" 120)) {
+        throw "Callee presence not connected — FCM/background incoming will fail"
+    }
+}
 
 if ($CallerPreferredLanguage) {
     Set-DeviceVoipLanguageViaDeeplink -Device $CallerDevice -Language $CallerPreferredLanguage

@@ -10,6 +10,31 @@ function isDirectLocalBackendUrl(value: string | undefined): boolean {
     return normalized.startsWith('http://localhost:8000') || normalized.startsWith('http://127.0.0.1:8000');
 }
 
+export function resolveBackendDocsUrl(apiBaseUrl?: string): string {
+    const normalizedBase = String(apiBaseUrl || resolveApiBaseUrl()).trim().replace(/\/$/, '');
+
+    if (typeof window !== 'undefined') {
+        const { hostname, origin, port, protocol } = window.location;
+        const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isDirectFrontendDevPort = port === '3000' || port === '3005';
+        const isGatewayPort = port === '8080' || port === '8443';
+
+        if (isDirectFrontendDevPort && protocol !== 'https:') {
+            return `${origin.replace(/\/$/, '')}/docs`;
+        }
+
+        if (normalizedBase === origin.replace(/\/$/, '') && isLocalHost) {
+            return `${origin.replace(/\/$/, '')}/docs`;
+        }
+
+        if (!isLocalHost || isGatewayPort || protocol === 'https:') {
+            return `${origin.replace(/\/$/, '')}/docs`;
+        }
+    }
+
+    return `${normalizedBase}/docs`;
+}
+
 export function resolveApiBaseUrl(): string {
     if (typeof window !== 'undefined') {
         const { hostname, origin, port, protocol } = window.location;

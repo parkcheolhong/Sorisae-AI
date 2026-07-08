@@ -9,6 +9,12 @@ from urllib.request import urlopen
 
 
 DEFAULT_OLLAMA_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+PREFERRED_VLLM_MODEL_32B_AWQ = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+FALLBACK_VLLM_MODEL_14B_AWQ = "Qwen/Qwen2.5-Coder-14B-Instruct-AWQ"
+PREFERRED_VLLM_MODEL_CANDIDATES = (
+    PREFERRED_VLLM_MODEL_32B_AWQ,
+    FALLBACK_VLLM_MODEL_14B_AWQ,
+)
 RUNTIME_CONFIG_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "orchestrator_runtime_config.json"
 MODEL_ROUTE_KEYS = [
     "default",
@@ -262,7 +268,7 @@ def get_smart_designer_model() -> str:
 
 
 def get_configured_model_routes() -> Dict[str, str]:
-    return {
+    routes = {
         "default": get_default_model(),
         "reasoning": get_reasoning_model(),
         "coding": get_coding_model(),
@@ -276,6 +282,12 @@ def get_configured_model_routes() -> Dict[str, str]:
         "smart_executor": get_smart_executor_model(),
         "smart_designer": get_smart_designer_model(),
     }
+    resolve_live = str(os.getenv("LLM_RESOLVE_LIVE_MODELS", "true")).strip().lower() not in {
+        "0", "false", "no", "off",
+    }
+    if resolve_live:
+        routes = resolve_live_model_routes(routes)
+    return routes
 
 
 def _pick_first_available(available_models: List[str], candidates: List[str], fallback: str) -> str:
@@ -286,22 +298,55 @@ def _pick_first_available(available_models: List[str], candidates: List[str], fa
     return fallback
 
 
+def pick_best_live_vllm_model(available_models: List[str], preferred: str = "") -> str:
+    """vLLM /v1/models 목록에서 RTX 5090 용도에 맞는 최적 모델 ID 선택."""
+    if not available_models:
+        return preferred or PREFERRED_VLLM_MODEL_32B_AWQ
+    available_set = set(available_models)
+    if preferred and preferred in available_set:
+        return preferred
+    for candidate in PREFERRED_VLLM_MODEL_CANDIDATES:
+        if candidate in available_set:
+            return candidate
+    for model_id in available_models:
+        lowered = model_id.lower()
+        if "32b" in lowered and "awq" in lowered and "coder" in lowered:
+            return model_id
+    for model_id in available_models:
+        lowered = model_id.lower()
+        if "14b" in lowered and "awq" in lowered and "coder" in lowered:
+            return model_id
+    return available_models[0]
+
+
+def resolve_live_model_routes(
+    model_routes: Dict[str, str],
+    available_models: List[str] | None = None,
+) -> Dict[str, str]:
+    """설정 라우트를 live vLLM 모델 ID에 맞춘다 (32B AWQ 우선, 14B AWQ 폴백)."""
+    resolved_models = list(available_models) if isinstance(available_models, list) else get_available_ollama_models()
+    if not resolved_models:
+        return dict(model_routes)
+    best = pick_best_live_vllm_model(resolved_models, model_routes.get("default", ""))
+    return {key: (value if value in resolved_models else best) for key, value in model_routes.items()}
+
+
 def _runtime_profile_payload(key: str, label: str, description: str, hardware_hint: str, available_models: List[str]) -> Dict[str, Any]:
     fallback_default = get_default_model()
     if key == CURRENT_GPU_PROFILE_KEY:
         model_routes = {
-            "default": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "reasoning": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "coding": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "voice_chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, QWEN_CODER_Q8_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "coder": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "reviewer": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "smart_planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "smart_executor": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, QWEN_CODER_Q4_TAG, "qwen2.5-coder:32b"], fallback_default),
-            "smart_designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q8_TAG, "qwen2.5-coder:32b"], fallback_default),
+            "default": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "reasoning": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "coding": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "voice_chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "coder": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "reviewer": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "smart_planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "smart_executor": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "smart_designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
         }
         settings = {
             "selected_profile": CURRENT_GPU_PROFILE_KEY,
@@ -379,20 +424,40 @@ def get_recommended_runtime_profiles(available_models: List[str] | None = None) 
 
 def get_available_ollama_models() -> List[str]:
     cached = _read_cached_value("available_ollama_models", ttl_sec=OLLAMA_TAGS_CACHE_TTL_SEC)
-    if isinstance(cached, list):
+    if isinstance(cached, list) and cached:
         return list(cached)
-    ollama_base = os.getenv("OLLAMA_BASE", "http://host.docker.internal:8008/v1")
-    try:
-        with urlopen(f"{ollama_base}/models", timeout=10) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (URLError, TimeoutError, ValueError, OSError):
-        return []
-    models = payload.get("data") if isinstance(payload, dict) else []
-    if not isinstance(models, list):
-        return []
-    available = [str(item.get("id", "")).strip() for item in models if isinstance(item, dict) and str(item.get("id", "")).strip()]
-    result = sorted(set(available))
-    return list(_write_cached_value("available_ollama_models", result))
+
+    base_candidates: List[str] = []
+    for raw in (
+        os.getenv("OLLAMA_BASE", "").strip(),
+        "http://127.0.0.1:8008/v1",
+        "http://host.docker.internal:8008/v1",
+    ):
+        normalized = str(raw or "").strip().rstrip("/")
+        if normalized and normalized not in base_candidates:
+            base_candidates.append(normalized)
+
+    for ollama_base in base_candidates:
+        try:
+            with urlopen(f"{ollama_base}/models", timeout=10) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except (URLError, TimeoutError, ValueError, OSError):
+            continue
+        models = payload.get("data") if isinstance(payload, dict) else []
+        if not isinstance(models, list):
+            continue
+        available = [
+            str(item.get("id", "")).strip()
+            for item in models
+            if isinstance(item, dict) and str(item.get("id", "")).strip()
+        ]
+        if available:
+            result = sorted(set(available))
+            return list(_write_cached_value("available_ollama_models", result))
+
+    configured = get_configured_model_routes()
+    fallback = sorted({str(name).strip() for name in configured.values() if str(name).strip()})
+    return list(_write_cached_value("available_ollama_models", fallback))
 
 
 def get_gpu_runtime_info() -> Dict[str, Any]:

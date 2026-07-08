@@ -4,6 +4,9 @@ import type {
   AddFriendPayload,
   DiscoveryLocationPayload,
   Friend,
+  FriendInviteConfirmPayload,
+  FriendInviteRequestPayload,
+  FriendInviteRequestResponse,
   FriendListResponse,
   IncomingFriendRequestResponse,
   MissedVoipCall,
@@ -33,8 +36,38 @@ export async function getFriends(userId: number, token: string): Promise<FriendL
   return res.json() as Promise<FriendListResponse>;
 }
 
-export async function addFriend(payload: AddFriendPayload, token: string): Promise<Friend> {
-  const res = await fetch(`${BASE_URL}/api/friends`, {
+export async function requestFriendInviteCode(
+  payload: FriendInviteRequestPayload,
+  token: string,
+): Promise<FriendInviteRequestResponse> {
+  const res = await fetch(`${BASE_URL}/api/friends/invites/request-code`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      targetEmail: payload.targetEmail.trim(),
+      phoneNumber: payload.phoneNumber?.trim() || undefined,
+      displayName: payload.displayName?.trim() || undefined,
+      verificationChannel: payload.verificationChannel || 'email',
+    }),
+  });
+  const body = await res.json().catch(() => null) as { detail?: string } | FriendInviteRequestResponse | null;
+  if (!res.ok) {
+    const detail = body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string'
+      ? body.detail
+      : null;
+    throw new Error(detail || `친구 인증 요청 실패: ${res.status}`);
+  }
+  return body as FriendInviteRequestResponse;
+}
+
+export async function confirmFriendInvite(
+  payload: FriendInviteConfirmPayload,
+  token: string,
+): Promise<Friend> {
+  const res = await fetch(`${BASE_URL}/api/friends/invites/confirm`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -42,7 +75,34 @@ export async function addFriend(payload: AddFriendPayload, token: string): Promi
     },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`친구 추가 실패: ${res.status}`);
+  const body = await res.json().catch(() => null) as { detail?: string } | Friend | null;
+  if (!res.ok) {
+    const detail = body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string'
+      ? body.detail
+      : null;
+    throw new Error(detail || `친구 인증 확인 실패: ${res.status}`);
+  }
+  return body as Friend;
+}
+
+export async function addFriend(payload: AddFriendPayload, token: string): Promise<Friend> {
+  const res = await fetch(`${BASE_URL}/api/friends`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      targetEmail: payload.targetEmail.trim(),
+      phoneNumber: payload.phoneNumber?.trim() || undefined,
+      displayName: payload.displayName?.trim() || undefined,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { detail?: string } | null;
+    const detail = typeof body?.detail === 'string' ? body.detail : null;
+    throw new Error(detail || `친구 추가 실패: ${res.status}`);
+  }
   return res.json() as Promise<Friend>;
 }
 

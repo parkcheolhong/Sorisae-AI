@@ -73,3 +73,13 @@ def test_prune_connecting_call_with_only_caller_participant(monkeypatch):
     assert call_state.call_id not in voip_router.call_participants
 
     voip_router.call_states.pop(call_state.call_id, None)
+
+
+def test_voip_health_includes_network_test_matrix():
+    import asyncio
+
+    payload = asyncio.run(voip_router.voip_health())
+    matrix = payload.get("network_test_matrix") or {}
+    assert matrix.get("wifi_only_insufficient") is True
+    assert "wifi_lte" in matrix.get("required_combinations", [])
+    assert matrix.get("client_audit_field") == "metadata.client_network"

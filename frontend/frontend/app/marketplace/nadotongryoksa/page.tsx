@@ -213,6 +213,14 @@ type BookingResponse = {
 
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
 const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
+
+type WorldLincoApkManifest = {
+    versionName?: string | null;
+    versionCode?: number | null;
+    publishedAt?: string | null;
+    apkFilename?: string;
+    sizeBytes?: number;
+};
 let cachedWorldLincoProjectId: number | null = null;
 
 const OFFLINE_DICT: Record<string, string> = {
@@ -462,8 +470,15 @@ export default function WorldLincoPage() {
     const [payError, setPayError] = useState('');
     const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
     const [payUrl, setPayUrl] = useState('');
+    const [apkManifest, setApkManifest] = useState<WorldLincoApkManifest | null>(null);
 
     const selectedHotel = nearbyPlaces.find((item) => item.id === selectedHotelId) ?? null;
+    const apkVersionLabel = apkManifest?.versionName && apkManifest?.versionCode != null
+        ? `v${apkManifest.versionName} · build ${apkManifest.versionCode}`
+        : 'v1.0.67 · build 97';
+    const apkPublishedLabel = apkManifest?.publishedAt
+        ? new Date(apkManifest.publishedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+        : null;
 
     // ── 토큰 복원 ─────────────────────────────────────────
     useEffect(() => {
@@ -471,6 +486,20 @@ export default function WorldLincoPage() {
         if (!stored) return;
         setToken(stored);
         callMeApi(API_BASE, stored).then(setUserInfo).catch(() => { clearStoredToken(); setToken(''); });
+    }, []);
+
+    useEffect(() => {
+        if (!API_BASE) return;
+        let active = true;
+        fetch(`${API_BASE}/api/marketplace/apk/worldlinco/manifest`, { cache: 'no-store' })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data: WorldLincoApkManifest | null) => {
+                if (active && data?.versionName && data?.versionCode != null) {
+                    setApkManifest(data);
+                }
+            })
+            .catch(() => {});
+        return () => { active = false; };
     }, []);
 
     // ── 로그인 ────────────────────────────────────────────
@@ -1335,15 +1364,30 @@ export default function WorldLincoPage() {
                 )}
 
                 <div style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 12, padding: 20, marginTop: 24 }}>
-                    <h3 style={{ margin: '0 0 6px', fontSize: 16, color: '#e6edf3' }}>📱 모바일 앱 설치</h3>
-                    <p style={{ margin: '0 0 14px', fontSize: 13, color: '#8b949e' }}>Android 기기에 설치해 오프라인에서도 사용하세요.</p>
+                    <div style={{ background: '#1a2f1a', border: '1px solid #2d6b43', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                        <div style={{ fontWeight: 800, color: '#9be8b3', marginBottom: 6, fontSize: 15 }}>🌐 통역 통화 베타 ({apkVersionLabel})</div>
+                        <p style={{ margin: 0, fontSize: 13, color: '#c9d1d9', lineHeight: 1.55 }}>
+                            <strong>친구와 전화하면, 말하는 대로 상대방 언어로 들려줍니다.</strong>
+                            {' '}한국에 사는 내국인·외국인을 위한 개인용 Android 앱입니다. WiFi·LTE(HTTPS) · 베타 기간 무료 · 피드백 환영.
+                        </p>
+                        <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 12, color: '#8b949e', lineHeight: 1.6 }}>
+                            <li>✅ 통역 통화 · 친구 · 채팅 · 텍스트 통역 · ko↔ja strict PASS (build 73+)</li>
+                            <li>⚠️ LTE 베타: TLS/WSS·로그인 APK만 — 착신 푸시·전용 QA는 v1.1</li>
+                            <li>📄 베타 이용 안내: 레포 `docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`</li>
+                        </ul>
+                    </div>
+                    <h3 style={{ margin: '0 0 6px', fontSize: 16, color: '#e6edf3' }}>📱 WorldLinco APK 설치</h3>
+                    <p style={{ margin: '0 0 14px', fontSize: 13, color: '#8b949e' }}>
+                        Android 7+ · 패키지 <code style={{ color: '#79c0ff' }}>com.parkcheolhong.worldlinco</code> ·{' '}
+                        <strong style={{ color: '#c9d1d9' }}>{apkVersionLabel}</strong>
+                        {apkPublishedLabel ? ` · 배포 ${apkPublishedLabel}` : ''} · 로그인 후 다운로드
+                    </p>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button onClick={handleApkDownload} style={{ display: 'inline-block', background: '#2a7cff', color: '#fff', padding: '10px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>📥 APK 다운로드 (로그인 필요)</button>
                         <a href="/marketplace/1" style={{ display: 'inline-block', background: '#151b23', border: '1px solid #21262d', color: '#8b949e', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>마켓플레이스로 돌아가기</a>
                     </div>
                     <p style={{ margin: '12px 0 0', fontSize: 12, color: '#6b7280' }}>
-                        APK 패키지에는 Expo React Native 소스 + EAS 빌드 가이드가 포함됩니다.<br />
-                        EAS CLI로 클라우드 빌드하면 실제 설치 가능한 APK가 생성됩니다.
+                        통역·통화는 서버 연결이 필요합니다. Play Store 등록은 v1.1 이후 예정입니다.
                     </p>
                 </div>
 
