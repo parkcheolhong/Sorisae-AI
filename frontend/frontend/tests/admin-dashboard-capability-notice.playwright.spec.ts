@@ -50,23 +50,38 @@ test.describe('admin dashboard capability bootstrap notice', () => {
             let capabilitySummaryFailed = false;
             let securityGuardFailed = false;
 
-            await page.route('**/api/admin/orchestrator/capabilities/summary**', async (route) => {
-                capabilitySummaryFailed = true;
-                await route.fulfill({
-                    status: 503,
-                    contentType: 'application/json',
-                    body: JSON.stringify({ detail: 'simulated capability summary outage' }),
-                });
-            });
-            await page.route('**/api/admin/orchestrator/capabilities/security-guard**', async (route) => {
-                securityGuardFailed = true;
-                await route.fulfill({
-                    status: 503,
-                    contentType: 'application/json',
-                    body: JSON.stringify({ detail: 'simulated security guard outage' }),
-                });
-            });
+            const capabilitySummaryRoutes = [
+                '**/api/admin/orchestrator/capabilities/summary**',
+                '**/api/backend-proxy/admin/orchestrator/capabilities/summary**',
+            ];
+            const securityGuardRoutes = [
+                '**/api/admin/orchestrator/capabilities/security-guard**',
+                '**/api/backend-proxy/admin/orchestrator/capabilities/security-guard**',
+            ];
 
+            for (const routePattern of capabilitySummaryRoutes) {
+                await page.route(routePattern, async (route) => {
+                    capabilitySummaryFailed = true;
+                    await route.fulfill({
+                        status: 503,
+                        contentType: 'application/json',
+                        body: JSON.stringify({ detail: 'simulated capability summary outage' }),
+                    });
+                });
+            }
+            for (const routePattern of securityGuardRoutes) {
+                await page.route(routePattern, async (route) => {
+                    securityGuardFailed = true;
+                    await route.fulfill({
+                        status: 503,
+                        contentType: 'application/json',
+                        body: JSON.stringify({ detail: 'simulated security guard outage' }),
+                    });
+                });
+            }
+
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
             await clickWithFallback(page.getByTestId('admin-launcher-health-overview'));
             await clickWithFallback(page.getByTestId('admin-topnav-refresh'));
 

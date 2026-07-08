@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status  # pyright: ignore[reportMissingImports]
 from fastapi.security import OAuth2PasswordRequestForm  # pyright: ignore[reportMissingImports]
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 import re
 from pydantic import BaseModel, ConfigDict, EmailStr  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
