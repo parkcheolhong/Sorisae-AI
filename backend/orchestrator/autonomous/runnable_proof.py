@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
+import tempfile
 
 _HEALTH_ROUTE_MARKERS = (
     "/health",
@@ -42,6 +43,22 @@ def _validator_passed(agent_results: Optional[Sequence[Any]]) -> bool:
         if str(row.get("status") or "") == "success" and artifacts.get("passed") is not False:
             return True
     return False
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _resolve_safe_output_root(output_dir: str) -> Optional[Path]:
+    candidate = Path(output_dir).expanduser().resolve()
+    allowed_roots = [Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve()]
+    if not any(_is_within(candidate, allowed) for allowed in allowed_roots):
+        return None
+    return candidate
 
 
 def _compile_python_files(paths: List[Path]) -> List[str]:
@@ -101,7 +118,10 @@ def evaluate_runnable_proof(
         result["detail"] = "output_dir 없음 — runnable proof 미충족"
         return result
 
-    root = Path(output_dir)
+    root = _resolve_safe_output_root(output_dir)
+    if root is None:
+        result["detail"] = "output_dir 접근 범위 위반"
+        return result
     if not root.exists():
         result["detail"] = f"output_dir 미존재: {root}"
         return result
@@ -110,7 +130,9 @@ def evaluate_runnable_proof(
     for rel in written:
         if not rel.endswith(".py"):
             continue
-        candidate = root / rel
+        candidate = (root / rel).resolve()
+        if not _is_within(candidate, root):
+            continue
         if candidate.is_file():
             py_paths.append(candidate)
     if not py_paths:

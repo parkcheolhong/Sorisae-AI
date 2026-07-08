@@ -9,12 +9,14 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/tourism-feedback", tags=["tourism-feedback"])
+logger = logging.getLogger(__name__)
 
 
 def _enabled() -> bool:
@@ -42,20 +44,30 @@ class AnswerFeedback(BaseModel):
 @router.post("")
 def submit_feedback(fb: AnswerFeedback) -> Any:
     _guard()
-    from backend.services.tourism_kb.feedback import get_feedback_store
+    try:
+        from backend.services.tourism_kb.feedback import get_feedback_store
 
-    store = get_feedback_store()
-    if not store.available:
-        raise HTTPException(status_code=503, detail="feedback DB unavailable")
-    saved = store.save_feedback(fb.model_dump())
-    if not saved:
-        raise HTTPException(status_code=422, detail="rating(up/down) 또는 nps(0~10) 중 하나가 필요합니다")
-    return {"saved": True}
+        store = get_feedback_store()
+        if not store.available:
+            raise HTTPException(status_code=503, detail="feedback DB unavailable")
+        saved = store.save_feedback(fb.model_dump())
+        if not saved:
+            raise HTTPException(status_code=422, detail="rating(up/down) 또는 nps(0~10) 중 하나가 필요합니다")
+        return {"saved": True}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("tourism feedback submit failed")
+        raise HTTPException(status_code=500, detail="feedback submit failed")
 
 
 @router.get("/stats")
 def feedback_stats() -> Any:
     _guard()
-    from backend.services.tourism_kb.feedback import get_feedback_store
+    try:
+        from backend.services.tourism_kb.feedback import get_feedback_store
 
-    return get_feedback_store().stats()
+        return get_feedback_store().stats()
+    except Exception:
+        logger.exception("tourism feedback stats failed")
+        raise HTTPException(status_code=500, detail="feedback stats unavailable")

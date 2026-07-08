@@ -246,6 +246,7 @@ def _build_turn_server_from_env() -> Optional[TURNServer]:
             ttl = 86400
         user_tag = (os.getenv("TURN_USER_TAG", "worldlinco").strip() or "worldlinco")
         username = f"{int(time.time()) + ttl}:{user_tag}"
+        # codeql[py/weak-sensitive-data-hashing] coturn use-auth-secret credential format is base64(HMAC-SHA1(secret, username)).
         digest = hmac.new(secret.encode("utf-8"), username.encode("utf-8"), hashlib.sha1).digest()
         return TURNServer(urls=urls, username=username, credential=base64.b64encode(digest).decode("ascii"))
 

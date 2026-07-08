@@ -461,6 +461,13 @@ function buildInstantDemoCredentials(seed: string) {
     };
 }
 
+let nonceCounter = 0;
+
+function nextNonceTag(): string {
+    nonceCounter = (nonceCounter + 1) % 0x100000;
+    return `${Date.now().toString(36)}${nonceCounter.toString(36)}`;
+}
+
 const AUTO_RELAY_DELAY_OPTIONS_MS = [2000, 2500, 3000] as const;
 const DEFAULT_AUTO_RELAY_DELAY_MS = 2500;
 // [기능 분리 Phase5.1a] 대면통역 타이밍 상수(FACE_CONVERSATION_*/FACE_OUTPUT_ECHO_GUARD_MS)는
@@ -1764,7 +1771,7 @@ function AppInner() {
             let lastError: Error | null = null;
 
             for (let attempt = 0; attempt < 2; attempt += 1) {
-                const seed = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}${attempt}`;
+                const seed = `${nextNonceTag()}${attempt}`;
                 const demoCreds = buildInstantDemoCredentials(seed);
 
                 try {
@@ -6426,7 +6433,7 @@ function AppInner() {
     }, []);
 
     const resolveHybridLocation = useCallback(async (): Promise<HybridGpsResult> => {
-        const attemptId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const attemptId = `${Date.now()}-${nextNonceTag()}`;
 
         const persistSuccessfulLocation = async (result: HybridGpsResult) => {
             if (result.source === 'adb_override') {

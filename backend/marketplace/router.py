@@ -196,6 +196,23 @@ def _schedule_marketplace_storage_cleanup() -> None:
 router = APIRouter()
 
 
+def _resolve_public_api_base() -> str:
+    for key in (
+        "WORLDLINCO_PUBLIC_API_BASE_URL",
+        "MARKETPLACE_PUBLIC_API_BASE_URL",
+        "PUBLIC_API_BASE_URL",
+        "NEXT_PUBLIC_API_BASE_URL",
+        "API_BASE_URL",
+    ):
+        raw = str(os.getenv(key, "") or "").strip()
+        if not raw:
+            continue
+        parsed = urlparse(raw)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    return "http://127.0.0.1:8000"
+
+
 class FeatureOrchestrateAcceptedRequest(BaseModel):
     feature_id: str
     project_name: str
@@ -843,7 +860,7 @@ def get_worldlinco_sales_invite_landing(code: str, request: Request) -> HTMLResp
 
     if not resolve_sales_agent_by_code(code):
         raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
-    api_base = str(request.base_url).rstrip("/")
+    api_base = _resolve_public_api_base()
     return HTMLResponse(content=build_sales_invite_landing_html(code=code, api_base=api_base), headers={"Cache-Control": "no-store"})
 
 
@@ -858,7 +875,7 @@ def get_worldlinco_sales_invite_qr(code: str, request: Request) -> Response:
     agent = resolve_sales_agent_by_code(code)
     if not agent:
         raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
-    api_base = str(request.base_url).rstrip("/")
+    api_base = _resolve_public_api_base()
     invite_url = build_sales_invite_url(api_base=api_base, code=str(agent["code"]))
     return Response(content=render_sales_qr_png(invite_url), media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
 
@@ -942,7 +959,7 @@ def get_worldlinco_referral_me(
     if user_id <= 0:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     username = str(getattr(current_user, "username", None) or getattr(current_user, "email", "") or f"user-{user_id}")
-    api_base = str(request.base_url).rstrip("/")
+    api_base = _resolve_public_api_base()
     return JSONResponse(
         content=referral_me_payload(user_id=user_id, username=username, api_base=api_base),
         headers={"Cache-Control": "no-store"},
@@ -957,7 +974,7 @@ def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
     referrer = resolve_referrer_by_code(code)
     if not referrer:
         raise HTTPException(status_code=404, detail="referral_code_not_found")
-    api_base = str(request.base_url).rstrip("/")
+    api_base = _resolve_public_api_base()
     html = build_invite_landing_html(
         code=str(referrer["code"]),
         api_base=api_base,
@@ -978,7 +995,7 @@ def get_worldlinco_invite_qr(code: str, request: Request) -> Response:
     referrer = resolve_referrer_by_code(code)
     if not referrer:
         raise HTTPException(status_code=404, detail="referral_code_not_found")
-    api_base = str(request.base_url).rstrip("/")
+    api_base = _resolve_public_api_base()
     invite_url = build_invite_url(api_base=api_base, code=str(referrer["code"]))
     png = render_referral_qr_png(invite_url)
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})

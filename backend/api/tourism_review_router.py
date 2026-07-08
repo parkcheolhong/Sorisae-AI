@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -14,6 +15,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/tourism-review", tags=["tourism-review"])
+logger = logging.getLogger(__name__)
 
 
 def _enabled() -> bool:
@@ -44,34 +46,50 @@ class ReviewLabelBatch(BaseModel):
 @router.get("/sample")
 def review_sample(mode: str = "poi", n: int = 20, k: int = 5) -> Any:
     _guard()
+  try:
     from backend.services.tourism_kb.review import get_review_store
 
     store = get_review_store()
     if not store.available:
-        raise HTTPException(status_code=503, detail="review DB unavailable")
+      raise HTTPException(status_code=503, detail="review DB unavailable")
     if mode == "retrieval":
-        return {"mode": "retrieval", "k": k, "batches": store.sample_retrieval(k=k)}
+      return {"mode": "retrieval", "k": k, "batches": store.sample_retrieval(k=k)}
     return {"mode": "poi", "items": store.sample_pois(n=n)}
+  except HTTPException:
+    raise
+  except Exception:
+    logger.exception("tourism review sample failed")
+    raise HTTPException(status_code=500, detail="review sample unavailable")
 
 
 @router.post("/labels")
 def review_labels(batch: ReviewLabelBatch) -> Any:
     _guard()
+  try:
     from backend.services.tourism_kb.review import get_review_store
 
     store = get_review_store()
     if not store.available:
-        raise HTTPException(status_code=503, detail="review DB unavailable")
+      raise HTTPException(status_code=503, detail="review DB unavailable")
     saved = store.save_labels([lb.model_dump() for lb in batch.labels], reviewer=batch.reviewer)
     return {"saved": saved}
+  except HTTPException:
+    raise
+  except Exception:
+    logger.exception("tourism review labels failed")
+    raise HTTPException(status_code=500, detail="review label save failed")
 
 
 @router.get("/stats")
 def review_stats() -> Any:
     _guard()
+  try:
     from backend.services.tourism_kb.review import get_review_store
 
     return get_review_store().stats()
+  except Exception:
+    logger.exception("tourism review stats failed")
+    raise HTTPException(status_code=500, detail="review stats unavailable")
 
 
 @router.get("/console", response_class=HTMLResponse)

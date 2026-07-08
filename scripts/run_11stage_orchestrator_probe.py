@@ -707,12 +707,12 @@ async def _resolve_golden_token(
 
     try:
         token = await _login_token(base_url, probe_email, probe_password)
-    except Exception as exc:
+    except Exception:
         return "", {
             "ok": False,
             "source": "login",
             "email": probe_email,
-            "detail": str(exc)[:240],
+            "detail": "login failed",
         }
 
     return token, {"ok": True, "source": "login", "email": probe_email}
@@ -885,7 +885,7 @@ async def main() -> int:
     )
     report["golden_login"] = golden_login
     if not golden_login.get("ok") and golden_login.get("detail"):
-        print(f"  golden_login: SKIP — {golden_login.get('detail')[:120]}")
+        print("  golden_login: SKIP — login credential unavailable")
 
     try:
         golden = await _run_golden_tasks(
@@ -895,10 +895,10 @@ async def main() -> int:
         report.update(golden)
         if args.mode == "http" and not golden.get("production_green"):
             report.setdefault("errors", []).append("golden_tasks: production_green=false")
-    except Exception as exc:
-        report["golden_tasks"] = {"probe_error": {"ok": False, "detail": str(exc)[:240]}}
+    except Exception:
+        report["golden_tasks"] = {"probe_error": {"ok": False, "detail": "golden task probe failed"}}
         report["production_green"] = False
-        report.setdefault("errors", []).append(f"golden_tasks probe failed: {exc}")
+        report.setdefault("errors", []).append("golden_tasks probe failed")
 
     report_path = out_dir / "report.json"
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
