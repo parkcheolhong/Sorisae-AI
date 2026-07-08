@@ -7422,7 +7422,7 @@ function AppInner() {
                 // 실제 음성이 한 번이라도 잡힌 뒤의 말 끝에서만 자연 종료 flush.
                 if (faceSileroFirstSpeechAtMsRef.current != null && recordingRef.current) {
                     console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'vad_end', reason: 'silero_speech_end' }));
-                    stopVoiceInputRef.current?.().catch(() => { /* no-op */ });
+                    void stopVoiceInputRef.current?.()?.catch(() => { /* no-op */ });
                 }
             }
         });
