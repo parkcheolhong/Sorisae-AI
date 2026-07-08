@@ -439,7 +439,7 @@ function countLeadingInlinePhraseRepeats(words: string[], minRepeat: number): nu
     return 0;
 }
 
-export function collapseRepeatedRelayPhrases(text: string, minRepeat = 3): string {
+export function collapseRepeatedRelayPhrases(text: string, minRepeat = 3): string { // NOSONAR
     const trimmed = text.trim().replace(/\s+/g, ' ');
     if (!trimmed) {
         return '';

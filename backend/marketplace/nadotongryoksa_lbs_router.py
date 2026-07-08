@@ -1139,7 +1139,10 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
     @router.post(
         "/bookings/{booking_ref}/cancel",
         response_model=BookingCancelRefundResponse,
-        responses={500: {"description": "취소 상태 업데이트 실패"}},
+        responses={
+            404: {"description": "booking_ref not found"},
+            500: {"description": "취소 상태 업데이트 실패"},
+        },
     )
     def cancel_booking(
         booking_ref: str,
@@ -1163,6 +1166,7 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
         response_model=BookingCancelRefundResponse,
         responses={
             400: {"description": "요청 본문과 경로 booking_ref 가 일치해야 합니다."},
+            404: {"description": "booking_ref not found"},
             500: {"description": "환불 상태 업데이트 실패"},
         },
     )

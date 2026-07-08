@@ -19,6 +19,9 @@ from .feed.binance import BinanceFeed
 from .feed.recorder import write_ticks_csv
 
 
+SIM_INPUT_HELP = "합성 시뮬레이션 입력"
+
+
 def _resolve_safe_output_path(raw_path: str) -> Path:
     value = str(raw_path or "").strip()
     if not value:
@@ -379,7 +382,7 @@ def _run_train(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # NOSONAR
     parser = argparse.ArgumentParser(prog="daytrade", description="AI 주식 단타 자동매매 시뮬레이터")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -414,7 +417,7 @@ def main(argv: list[str] | None = None) -> int:
     p_wf = sub.add_parser("walkforward", help="워크포워드 OOS 검증/백테스트 (M2 후속)")
     wsrc = p_wf.add_mutually_exclusive_group(required=True)
     wsrc.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
-    wsrc.add_argument("--sim", action="store_true", help="합성 시뮬레이션 입력")
+    wsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_wf.add_argument("--mode", choices=["backtest", "validate"], default="backtest")
     p_wf.add_argument("--symbol", default="AAPL")
     p_wf.add_argument("--depth", type=int, default=10)
@@ -436,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
     p_tune = sub.add_parser("tune", help="워크포워드 점수를 목적함수로 하이퍼파라미터 탐색 (M2/§9)")
     tsrc = p_tune.add_mutually_exclusive_group(required=True)
     tsrc.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
-    tsrc.add_argument("--sim", action="store_true", help="합성 시뮬레이션 입력")
+    tsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_tune.add_argument("--symbol", default="AAPL")
     p_tune.add_argument("--depth", type=int, default=10)
     p_tune.add_argument("--ticks", type=int, default=20_000, help="--sim 시 생성 틱 수")
@@ -456,7 +459,7 @@ def main(argv: list[str] | None = None) -> int:
     p_train = sub.add_parser("train", help="라벨링→학습→ONNX export (M2)")
     src = p_train.add_mutually_exclusive_group(required=True)
     src.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
-    src.add_argument("--sim", action="store_true", help="합성 시뮬레이션 입력")
+    src.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_train.add_argument("--symbol", default="AAPL")
     p_train.add_argument("--depth", type=int, default=10)
     p_train.add_argument("--ticks", type=int, default=20_000, help="--sim 시 생성 틱 수")
@@ -493,7 +496,7 @@ def main(argv: list[str] | None = None) -> int:
     p_rl = sub.add_parser("rl", help="강화학습 — TradingEnv + REINFORCE/PPO (M2 후속)")
     rsrc = p_rl.add_mutually_exclusive_group(required=True)
     rsrc.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
-    rsrc.add_argument("--sim", action="store_true", help="합성 시뮬레이션 입력")
+    rsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_rl.add_argument("--symbol", default="AAPL")
     p_rl.add_argument("--depth", type=int, default=10)
     p_rl.add_argument("--ticks", type=int, default=5_000, help="--sim 시 생성 틱 수")

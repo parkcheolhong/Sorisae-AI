@@ -482,7 +482,10 @@ def _create_user_from_signup_payload(payload: UserCreate, db: Session) -> User:
 @router.post(
     "/signup/request-code",
     response_model=SignupRequestCodeResponse,
-    responses={429: {"description": "verification resend cooldown"}},
+    responses={
+        400: {"description": "잘못된 signup 요청 값입니다."},
+        429: {"description": "verification resend cooldown"},
+    },
 )
 def signup_request_verification_code(
     payload: SignupRequestCode,

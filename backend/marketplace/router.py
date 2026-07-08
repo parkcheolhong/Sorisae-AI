@@ -893,7 +893,10 @@ def get_worldlinco_referral_discount_quote(
     )
 
 
-@router.get("/worldlinco/billing/mobile-offer")
+@router.get(
+    "/worldlinco/billing/mobile-offer",
+    responses={401: {"description": "인증이 필요합니다."}},
+)
 def get_worldlinco_mobile_billing_offer(
     plan_key: str,
     platform: str,
@@ -1427,6 +1430,7 @@ def _finalize_confirmed_marketplace_purchase(
     response_model=schemas.PaymentCallbackResponse,
     responses={
         401: {"description": "인증이 필요합니다."},
+        403: {"description": "본인의 구매만 결제 확정할 수 있습니다."},
         404: {"description": "purchase record not found"},
     },
 )

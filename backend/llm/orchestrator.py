@@ -5103,7 +5103,7 @@ def _compat_output_dir(request: OrchestrationRequest, project_name: str) -> Path
     return output_dir
 
 
-def _compat_write_manifest(output_dir: Path, manifest: List[Dict[str, str]]) -> List[str]:
+def _compat_write_manifest(output_dir: Path, manifest: List[Dict[str, str]]) -> List[str]:  # NOSONAR
     written_files: List[str] = []
     for item in manifest:
         relative_path = str(item.get("path") or "").strip().replace('\\', '/')

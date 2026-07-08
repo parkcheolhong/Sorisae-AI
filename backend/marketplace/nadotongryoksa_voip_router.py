@@ -3026,7 +3026,10 @@ async def voip_health() -> dict:
     }
 
 
-@router.get("/calls/{call_id}")
+@router.get(
+    "/calls/{call_id}",
+    responses={404: {"description": "Call not found"}},
+)
 async def get_call_details(
     call_id: str,
     current_user=Depends(get_current_user),

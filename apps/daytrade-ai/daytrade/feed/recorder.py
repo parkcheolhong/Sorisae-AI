@@ -15,6 +15,20 @@ from typing import Iterable, Iterator
 from ..types import MarketTick
 
 
+def _resolve_safe_output_path(path: str | Path) -> Path:
+    raw = str(path or "").strip()
+    if not raw:
+        raise ValueError("출력 경로가 비어 있습니다.")
+    if "\x00" in raw:
+        raise ValueError("출력 경로에 허용되지 않는 문자가 포함되어 있습니다.")
+    input_path = Path(raw).expanduser()
+    candidate = input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+    base = Path.cwd().resolve()
+    if candidate != base and base not in candidate.parents:
+        raise ValueError("출력 경로는 현재 작업 디렉터리 내부여야 합니다.")
+    return candidate
+
+
 def build_header(depth: int) -> list[str]:
     cols = ["ts_ns", "symbol", "last_price", "last_qty"]
     for i in range(depth):
@@ -50,7 +64,7 @@ def tick_to_row(tick: MarketTick, depth: int) -> dict[str, object]:
 
 def write_ticks_csv(path: str | Path, ticks: Iterable[MarketTick], depth: int = 10) -> int:
     """틱 이터러블을 CSV 로 저장하고 기록한 틱 수를 반환한다."""
-    path = Path(path)
+    path = _resolve_safe_output_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     header = build_header(depth)
     count = 0
@@ -68,7 +82,7 @@ class RecordingFeed:
 
     def __init__(self, inner, path: str | Path, depth: int = 10) -> None:
         self.inner = inner
-        self.path = Path(path)
+        self.path = _resolve_safe_output_path(path)
         self.depth = depth
         self.recorded = 0
 

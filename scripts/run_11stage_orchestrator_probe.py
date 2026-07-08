@@ -53,6 +53,20 @@ def _utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
+def _resolve_safe_output_dir(raw_path: str) -> Path:
+    value = str(raw_path or "").strip()
+    if not value:
+        raise ValueError("출력 경로가 비어 있습니다.")
+    if "\x00" in value:
+        raise ValueError("출력 경로에 허용되지 않는 문자가 포함되어 있습니다.")
+    input_path = Path(value).expanduser()
+    candidate = input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+    base = Path.cwd().resolve()
+    if candidate != base and base not in candidate.parents:
+        raise ValueError("출력 경로는 현재 작업 디렉터리 내부여야 합니다.")
+    return candidate
+
+
 def _build_command_sequence() -> List[Dict[str, str]]:
     """단계별 자연어 명령 시퀀스 — init은 task만 등록, 설계는 design-1."""
     commands: List[Dict[str, str]] = [
@@ -820,7 +834,14 @@ async def main() -> int:
     args = parser.parse_args()
 
     stamp = _utc_stamp()
-    out_dir = Path(args.out_dir) if args.out_dir else ROOT / "evidence" / f"orchestrator-11stage-probe-{stamp}"
+    if args.out_dir:
+        try:
+            out_dir = _resolve_safe_output_dir(args.out_dir)
+        except ValueError as exc:
+            print(f"[ERR] invalid --out-dir: {exc}", file=sys.stderr)
+            return 2
+    else:
+        out_dir = ROOT / "evidence" / f"orchestrator-11stage-probe-{stamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     started = time.perf_counter()

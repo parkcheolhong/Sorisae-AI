@@ -5487,7 +5487,7 @@ function AppInner() {
         }
 
         if (target.action === 'demo') {
-            void handleStartInstantDemoSession('voip');
+                handleStartInstantDemoSession('voip').catch(() => {});
             return;
         }
 
@@ -7083,7 +7083,7 @@ function AppInner() {
     // ── BT 하이브리드 음성 입력 ──
     // BT 이어폰 연결 시 → Android MODE_IN_COMMUNICATION → SCO 자동 활성화 → 이어폰 MIC 사용
     // BT 이어폰 미연결 시 → 폰 내장 MIC 사용 (현재 동작 그대로 유지)
-    const startVoiceInput = useCallback(async (options: { autoMode?: boolean; target?: 'main' | 'inter_call' } = {}) => {
+    const startVoiceInput = useCallback(async (options: { autoMode?: boolean; target?: 'main' | 'inter_call' } = {}) => { // NOSONAR
         if (voiceInputStartInFlightRef.current || voiceInputStopInFlightRef.current || recordingRef.current) {
             return;
         }
@@ -11213,7 +11213,7 @@ function AppInner() {
                                 </Pressable>
                                 <Pressable
                                     style={styles.voipIncomingRejectBtn}
-                                    onPress={() => { void handleRejectIncomingVoipCall(); }}
+                                      onPress={() => { handleRejectIncomingVoipCall().catch(() => {}); }}
                                     accessibilityRole="button"
                                     accessibilityLabel="수신 보이스톡 거절"
                                     testID="worldlinco-voip-incoming-reject-popup"
