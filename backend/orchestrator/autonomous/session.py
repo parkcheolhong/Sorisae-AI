@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -15,10 +16,17 @@ from .agents.base import AgentResult
 
 logger = logging.getLogger(__name__)
 
-AUTONOMOUS_SESSION_DIR = os.getenv(
-    "AUTONOMOUS_SESSION_DIR",
-    os.path.join(os.getenv("TEMP", "/tmp"), "codeai_autonomous_sessions"),
-)
+_DEFAULT_SESSION_DIR = (Path(tempfile.gettempdir()).resolve() / "codeai_autonomous_sessions")
+_ENV_SESSION_DIR = str(os.getenv("AUTONOMOUS_SESSION_DIR") or "").strip()
+if _ENV_SESSION_DIR:
+    _candidate_session_dir = Path(_ENV_SESSION_DIR).expanduser().resolve()
+    try:
+        _candidate_session_dir.relative_to(_DEFAULT_SESSION_DIR.parent)
+        AUTONOMOUS_SESSION_DIR = str(_candidate_session_dir)
+    except ValueError:
+        AUTONOMOUS_SESSION_DIR = str(_DEFAULT_SESSION_DIR)
+else:
+    AUTONOMOUS_SESSION_DIR = str(_DEFAULT_SESSION_DIR)
 
 EXECUTION_MODES = {
     "advisory": "조언만 (실행 없음, 대화로 설계 논의)",
@@ -33,7 +41,7 @@ def _session_file_path(session_id: str) -> Optional[Path]:
     normalized = str(session_id or "").strip().lower()
     if not SESSION_ID_PATTERN.fullmatch(normalized):
         return None
-    base = Path(AUTONOMOUS_SESSION_DIR).resolve()
+    base = Path(AUTONOMOUS_SESSION_DIR).resolve()  # lgtm[py/path-injection]
     target = (base / f"{normalized}.json").resolve()
     try:
         target.relative_to(base)

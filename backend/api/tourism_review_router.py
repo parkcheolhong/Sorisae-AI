@@ -58,7 +58,7 @@ def review_sample(mode: str = "poi", n: int = 20, k: int = 5) -> Any:
     except HTTPException:
         raise
     except Exception:
-        logger.exception("tourism review sample failed")
+      logger.error("tourism review sample failed")
         raise HTTPException(status_code=500, detail="review sample unavailable")
 
 
@@ -76,7 +76,7 @@ def review_labels(batch: ReviewLabelBatch) -> Any:
     except HTTPException:
         raise
     except Exception:
-        logger.exception("tourism review labels failed")
+      logger.error("tourism review labels failed")
         raise HTTPException(status_code=500, detail="review label save failed")
 
 
@@ -88,7 +88,7 @@ def review_stats() -> Any:
 
         return get_review_store().stats()
     except Exception:
-        logger.exception("tourism review stats failed")
+      logger.error("tourism review stats failed")
         raise HTTPException(status_code=500, detail="review stats unavailable")
 
 

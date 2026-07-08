@@ -27,6 +27,7 @@ import requests
 import hashlib
 import base64
 import binascii
+import html
 import hmac as _hmac_module
 from urllib.parse import quote, urlparse
 from uuid import uuid4
@@ -975,10 +976,12 @@ def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
     if not referrer:
         raise HTTPException(status_code=404, detail="referral_code_not_found")
     api_base = _resolve_public_api_base()
+    safe_code = html.escape(str(referrer["code"]), quote=True)
+    safe_username = html.escape(str(referrer.get("username") or ""), quote=True)
     html = build_invite_landing_html(
-        code=str(referrer["code"]),
+        code=safe_code,
         api_base=api_base,
-        referrer_username=str(referrer.get("username") or ""),
+        referrer_username=safe_username,
     )
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 

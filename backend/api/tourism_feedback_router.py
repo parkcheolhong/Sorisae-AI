@@ -57,7 +57,7 @@ def submit_feedback(fb: AnswerFeedback) -> Any:
     except HTTPException:
         raise
     except Exception:
-        logger.exception("tourism feedback submit failed")
+        logger.error("tourism feedback submit failed")
         raise HTTPException(status_code=500, detail="feedback submit failed")
 
 
@@ -69,5 +69,5 @@ def feedback_stats() -> Any:
 
         return get_feedback_store().stats()
     except Exception:
-        logger.exception("tourism feedback stats failed")
+        logger.error("tourism feedback stats failed")
         raise HTTPException(status_code=500, detail="feedback stats unavailable")

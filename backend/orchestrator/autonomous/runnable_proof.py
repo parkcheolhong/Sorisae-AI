@@ -54,7 +54,10 @@ def _is_within(path: Path, root: Path) -> bool:
 
 
 def _resolve_safe_output_root(output_dir: str) -> Optional[Path]:
-    candidate = Path(output_dir).expanduser().resolve()
+    raw = str(output_dir or "").strip()
+    if not raw or "\x00" in raw or ".." in raw:
+        return None
+    candidate = Path(raw).expanduser().resolve()  # lgtm[py/path-injection]
     allowed_roots = [Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve()]
     if not any(_is_within(candidate, allowed) for allowed in allowed_roots):
         return None

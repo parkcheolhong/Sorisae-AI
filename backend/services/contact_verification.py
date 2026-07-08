@@ -141,12 +141,7 @@ def _dispatch_email_otp(email: str, code: str, purpose: str) -> None:
     except RuntimeError:
         raise
     except Exception as exc:
-        logger.exception(
-            "[CONTACT_OTP] channel=email purpose=%s target=%s dispatch_error=%s",
-            purpose,
-            email,
-            exc,
-        )
+        logger.error("[CONTACT_OTP] channel=email purpose=%s dispatch_failed", purpose)
         raise RuntimeError("이메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.") from exc
 
 
@@ -158,12 +153,7 @@ def _dispatch_phone_otp(phone: str, code: str, purpose: str) -> None:
     except RuntimeError:
         raise
     except Exception as exc:
-        logger.exception(
-            "[CONTACT_OTP] channel=phone purpose=%s target=%s dispatch_error=%s",
-            purpose,
-            phone,
-            exc,
-        )
+        logger.error("[CONTACT_OTP] channel=phone purpose=%s dispatch_failed", purpose)
         raise RuntimeError("SMS 발송에 실패했습니다. 잠시 후 다시 시도하세요.") from exc
 
 

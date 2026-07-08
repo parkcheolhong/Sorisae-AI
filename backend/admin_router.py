@@ -3364,36 +3364,52 @@ def _stabilize_running_self_run_record(record_path: Path, approval_payload: Dict
 @router.post("/system-settings/fill-missing-defaults")
 def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_admin)):
     del admin
-    env_path = _admin_env_path()
-    env_values = _read_admin_env_values(env_path)
-    runtime_config = _load_runtime_config_summary()
-    updates = _compute_recommended_env_defaults(env_values, runtime_config)
-    if not updates:
-        payload = _build_admin_system_settings_payload(env_values_override=env_values)
-        payload["applied_env_update_count"] = 0
+    try:
+        env_path = _admin_env_path()
+        env_values = _read_admin_env_values(env_path)
+        runtime_config = _load_runtime_config_summary()
+        updates = _compute_recommended_env_defaults(env_values, runtime_config)
+        if not updates:
+            payload = _build_admin_system_settings_payload(env_values_override=env_values)
+            payload["applied_env_update_count"] = 0
+            return payload
+        updated_env_values = _write_admin_env_values(env_path, updates)
+        payload = _build_admin_system_settings_payload(env_values_override=updated_env_values)
+        payload["applied_env_update_count"] = len(updates)
         return payload
-    updated_env_values = _write_admin_env_values(env_path, updates)
-    payload = _build_admin_system_settings_payload(env_values_override=updated_env_values)
-    payload["applied_env_update_count"] = len(updates)
-    return payload
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("admin system settings fill defaults failed")
+        raise HTTPException(status_code=500, detail="system settings update failed")
 
 
 @router.get("/system-settings")
 def get_admin_system_settings(admin: User = Depends(require_admin)):
     del admin
-    return _build_admin_system_settings_payload()
+    try:
+        return _build_admin_system_settings_payload()
+    except Exception:
+        logger.error("admin system settings read failed")
+        raise HTTPException(status_code=500, detail="system settings unavailable")
 
 
 @router.put("/system-settings")
 def update_admin_system_settings(payload: AdminSystemSettingsUpdateRequest, admin: User = Depends(require_admin)):
     del admin
-    updates = payload.values or {}
-    allowed_keys = _admin_system_env_allowed_keys()
-    unknown_keys = sorted(key for key in updates.keys() if key not in allowed_keys)
-    if unknown_keys:
-        raise HTTPException(status_code=400, detail="관리자 대시보드에서 허용되지 않은 설정 키가 포함되었습니다: " + ", ".join(unknown_keys))
-    env_values = _write_admin_env_values(_admin_env_path(), {key: str(value) for key, value in updates.items()})
-    return _build_admin_system_settings_payload(env_values_override=env_values)
+    try:
+        updates = payload.values or {}
+        allowed_keys = _admin_system_env_allowed_keys()
+        unknown_keys = sorted(key for key in updates.keys() if key not in allowed_keys)
+        if unknown_keys:
+            raise HTTPException(status_code=400, detail="관리자 대시보드에서 허용되지 않은 설정 키가 포함되었습니다.")
+        env_values = _write_admin_env_values(_admin_env_path(), {key: str(value) for key, value in updates.items()})
+        return _build_admin_system_settings_payload(env_values_override=env_values)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("admin system settings update failed")
+        raise HTTPException(status_code=500, detail="system settings update failed")
 
 
 @router.post("/system-settings/postgres-password")

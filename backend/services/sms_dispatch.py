@@ -11,13 +11,6 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 
-def _mask_phone(phone: str) -> str:
-    digits = "".join(ch for ch in str(phone or "") if ch.isdigit())
-    if len(digits) < 4:
-        return "***"
-    return f"***{digits[-4:]}"
-
-
 def _dev_mode() -> bool:
     app_env = str(os.getenv("APP_ENV") or "dev").strip().lower()
     return app_env not in {"prod", "production", "stage", "staging"}
@@ -29,13 +22,10 @@ def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object
     auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     from_number = os.getenv("TWILIO_FROM_NUMBER", "").strip()
     message_body = f"[WorldLinco] {purpose} 인증 코드: {code} (15분 유효)"
-    masked_phone = _mask_phone(phone)
-
     if not (account_sid and auth_token and from_number):
         logger.info(
-            "[SMS_OTP] provider=dev-log purpose=%s target=%s",
+            "[SMS_OTP] provider=dev-log purpose=%s",
             purpose,
-            masked_phone,
         )
         return {
             "provider": "dev-log",
@@ -68,9 +58,8 @@ def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object
         with urllib.request.urlopen(request, timeout=15) as response:
             body = json.loads(response.read().decode("utf-8"))
         logger.info(
-            "[SMS_OTP] provider=twilio purpose=%s target=%s sid=%s",
+            "[SMS_OTP] provider=twilio purpose=%s sid=%s",
             purpose,
-            masked_phone,
             body.get("sid"),
         )
         return {
@@ -82,9 +71,8 @@ def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         logger.error(
-            "[SMS_OTP] provider=twilio purpose=%s target=%s http=%s detail_len=%s",
+            "[SMS_OTP] provider=twilio purpose=%s http=%s detail_len=%s",
             purpose,
-            masked_phone,
             exc.code,
             len(detail),
         )
