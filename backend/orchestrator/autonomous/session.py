@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_SESSION_DIR = (Path(tempfile.gettempdir()).resolve() / "codeai_autonomous_sessions")
 AUTONOMOUS_SESSION_DIR = str(_DEFAULT_SESSION_DIR)
+_SESSION_STORE_FILE = _DEFAULT_SESSION_DIR / "sessions.json"
 
 EXECUTION_MODES = {
     "advisory": "조언만 (실행 없음, 대화로 설계 논의)",
@@ -28,17 +29,31 @@ EXECUTION_MODES = {
 SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 
 
-def _session_file_path(session_id: str) -> Optional[Path]:
+def _normalize_session_id(session_id: str) -> Optional[str]:
     normalized = str(session_id or "").strip().lower()
     if not SESSION_ID_PATTERN.fullmatch(normalized):
         return None
-    base = Path(AUTONOMOUS_SESSION_DIR).resolve()  # lgtm[py/path-injection]
-    target = (base / f"{normalized}.json").resolve()
+    return normalized
+
+
+def _load_session_store() -> Dict[str, Any]:
+    if not _SESSION_STORE_FILE.exists():
+        return {}
     try:
-        target.relative_to(base)
-    except ValueError:
-        return None
-    return target
+        payload = json.loads(_SESSION_STORE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
+def _save_session_store(store: Dict[str, Any]) -> None:
+    _DEFAULT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    _SESSION_STORE_FILE.write_text(
+        json.dumps(store, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 @dataclass
@@ -157,23 +172,24 @@ class AutonomousSession:
         }
 
     def save(self) -> None:
-        dir_path = Path(AUTONOMOUS_SESSION_DIR)
-        dir_path.mkdir(parents=True, exist_ok=True)
-        path = _session_file_path(self.session_id)
-        if path is None:
+        normalized_id = _normalize_session_id(self.session_id)
+        if normalized_id is None:
             raise ValueError("Invalid autonomous session id")
-        path.write_text(json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+        store = _load_session_store()
+        store[normalized_id] = self.to_dict()
+        _save_session_store(store)
 
     @classmethod
     def load(cls, session_id: str, owner_id: str) -> Optional["AutonomousSession"]:
-        path = _session_file_path(session_id)
-        if path is None:
+        normalized_id = _normalize_session_id(session_id)
+        if normalized_id is None:
             logger.warning("Invalid autonomous session id format: %s", session_id)
             return None
-        if not path.exists():
+        store = _load_session_store()
+        data = store.get(normalized_id)
+        if not isinstance(data, dict):
             return None
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
             if str(data.get("owner_id", "")).strip() != str(owner_id).strip():
                 return None
             session = cls(

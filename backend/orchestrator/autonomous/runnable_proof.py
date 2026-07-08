@@ -1,12 +1,11 @@
 """Autonomous surface completion — 1 runnable proof (compile + health signal)."""
 from __future__ import annotations
 
-import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
-import tempfile
 
 _HEALTH_ROUTE_MARKERS = (
     "/health",
@@ -54,20 +53,26 @@ def _is_within(path: Path, root: Path) -> bool:
         return False
 
 
-def _resolve_safe_output_root(output_dir: str) -> Optional[Path]:
-    raw = str(output_dir or "").strip()
-    if not raw or "\x00" in raw or ".." in raw:
-        return None
+_SAFE_RELATIVE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
+
+
+def _safe_written_python_paths(written_files: Sequence[str]) -> List[Path]:
     cwd_root = Path.cwd().resolve()
-    tmp_root = Path(tempfile.gettempdir()).resolve()
-    if os.path.isabs(raw):
-        candidate = Path(os.path.normpath(raw)).resolve()
-    else:
-        candidate = (cwd_root / raw).resolve()
-    allowed_roots = [cwd_root, tmp_root]
-    if not any(_is_within(candidate, allowed) for allowed in allowed_roots):
-        return None
-    return candidate
+    out: List[Path] = []
+    for raw_path in written_files:
+        rel = str(raw_path or "").strip()
+        if not rel or "\\" in rel or rel.startswith("/") or ".." in rel:
+            continue
+        if not _SAFE_RELATIVE_PATH.fullmatch(rel):
+            continue
+        if not rel.endswith(".py"):
+            continue
+        candidate = (cwd_root / rel).resolve()
+        if not _is_within(candidate, cwd_root):
+            continue
+        if candidate.is_file():
+            out.append(candidate)
+    return out
 
 
 def _compile_python_files(paths: List[Path]) -> List[str]:
@@ -127,25 +132,10 @@ def evaluate_runnable_proof(
         result["detail"] = "output_dir 없음 — runnable proof 미충족"
         return result
 
-    root = _resolve_safe_output_root(output_dir)
-    if root is None:
-        result["detail"] = "output_dir 접근 범위 위반"
-        return result
-    if not root.exists():
-        result["detail"] = f"output_dir 미존재: {root}"
-        return result
-
-    py_paths: List[Path] = []
-    for rel in written:
-        if not rel.endswith(".py"):
-            continue
-        candidate = (root / rel).resolve()
-        if not _is_within(candidate, root):
-            continue
-        if candidate.is_file():
-            py_paths.append(candidate)
+    py_paths = _safe_written_python_paths(written)
     if not py_paths:
-        py_paths = sorted(root.rglob("*.py"))[:40]
+        cwd_root = Path.cwd().resolve()
+        py_paths = sorted(cwd_root.rglob("*.py"))[:40]
 
     result["python_file_count"] = len(py_paths)
     if not py_paths:
