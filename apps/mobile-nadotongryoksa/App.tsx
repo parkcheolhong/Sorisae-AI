@@ -1598,15 +1598,23 @@ function AppInner() {
     const logAuthInputProbe = useCallback((event: string, details: Record<string, unknown> = {}) => {
         const timestamp = new Date().toISOString();
         setAuthDebugLastInputEvent(`${event}@${timestamp}`);
+        const sanitizedDetails = Object.fromEntries(
+            Object.entries(details).map(([key, value]) => {
+                if (/(password|passwd|token|secret|otp)/i.test(key)) {
+                    return [key, '[REDACTED]'];
+                }
+                return [key, value];
+            }),
+        );
         console.log('[AUTH_INPUT_PROBE]', JSON.stringify({
             event,
             timestamp,
             show_login: showLogin,
             focus_field: authDebugFocusField,
             email_length: loginEmail.length,
-            ...details,
+            ...sanitizedDetails,
         }));
-    }, [authDebugFocusField, loginEmail.length, loginPw.length, showLogin]);
+    }, [authDebugFocusField, loginEmail.length, showLogin]);
 
     useEffect(() => {
         setAuthDebugSubmitPressed(false);
