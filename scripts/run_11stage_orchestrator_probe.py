@@ -762,7 +762,7 @@ def _load_project_env() -> None:
             os.environ[key] = value.strip().strip('"').strip("'")
 
 
-def _resolve_probe_credentials(email: str, password: str) -> tuple[str, str]:
+def _resolve_probe_credentials(email: str, password: str) -> tuple[str, str]:  # NOSONAR
     """PROBE_* → VERIFY_* → FIXED_ADMIN_* → secrets file."""
     resolved_email = email.strip()
     resolved_password = password.strip()

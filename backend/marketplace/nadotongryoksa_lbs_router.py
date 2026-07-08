@@ -1063,7 +1063,14 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
             click_event_id=click_event_id,
         )
 
-    @router.post("/bookings/start", response_model=BookingLifecycleResponse)
+    @router.post(
+        "/bookings/start",
+        response_model=BookingLifecycleResponse,
+        responses={
+            400: {"description": "booking not supported for selected place"},
+            404: {"description": "place_id not found"},
+        },
+    )
     def start_booking(
         payload: BookingRequest,
         current_user=Depends(contract.get_current_user),

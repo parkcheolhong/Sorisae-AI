@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FREEZE = ROOT / "knowledge" / "worldlinco_section_freeze.json"
 APK_BASELINE = ROOT / "knowledge" / "worldlinco_apk_baseline.json"
+VOIP_CALL_SCREEN_PATH = "apps/mobile-nadotongryoksa/src/screens/VoIPCallScreen.tsx"
 
 FORBIDDEN: list[tuple[str, str, str]] = [
     (
@@ -52,12 +53,12 @@ FORBIDDEN: list[tuple[str, str, str]] = [
         "VoIP 브리지 미문서 PLC/타임라인 패딩 금지 — SSOT AUDIO_SECTION_SSOT §7",
     ),
     (
-        "apps/mobile-nadotongryoksa/src/screens/VoIPCallScreen.tsx",
+        VOIP_CALL_SCREEN_PATH,
         r"setInterval\([^)]*reapplyVoipCallAudioStack|reapplyVoipCallAudioStack",
         "VoIP 화면 주기적 reapplyVoipCallAudioStack 금지",
     ),
     (
-        "apps/mobile-nadotongryoksa/src/screens/VoIPCallScreen.tsx",
+        VOIP_CALL_SCREEN_PATH,
         r"enableVoipAudio\(true,\s*true\)|setVoipSpeakerphone\(true\)",
         "VoIP 화면 스피커 강제 ON 금지 — 사용자 토글·defaultSpeakerOn 만",
     ),
@@ -67,7 +68,7 @@ FORBIDDEN: list[tuple[str, str, str]] = [
         "ICE disconnected grace 는 2500ms 고정(명시 PR 전 변경 금지)",
     ),
     (
-        "apps/mobile-nadotongryoksa/src/screens/VoIPCallScreen.tsx",
+        VOIP_CALL_SCREEN_PATH,
         r"FEATURE_IDS\.faceInterpret|['\"]face\.interpret['\"]",
         "VoIP 화면 face.interpret TTS 경로 금지",
     ),

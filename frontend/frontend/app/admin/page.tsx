@@ -2072,7 +2072,7 @@ export default function AdminDashboardPage() {
         }
     }, [apiBaseUrl, getMusicAuthHeaders, readMusicResponsePayload]);
 
-    const runExtrasPreviewRequest = useCallback(async (target: 'health' | 'catalog', fromRail = false) => {
+    const runExtrasPreviewRequest = useCallback(async (target: 'health' | 'catalog', fromRail = false) => {  // NOSONAR
         const token = getAdminToken();
         if (!token) {
             setExtrasPreviewState((prev) => ({

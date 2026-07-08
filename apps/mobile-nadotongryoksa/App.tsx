@@ -5858,7 +5858,7 @@ function AppInner() {
         setShowVoipTester(false);
     }, [pendingIncomingVoipCall, logUiPressProbe, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert, token]);
 
-    const fetchActiveVoipCallResume = useCallback(async (source: string) => {
+    const fetchActiveVoipCallResume = useCallback(async (source: string) => {  // NOSONAR
         if (!token || !userInfo || pendingIncomingVoipCallRef.current || voipCallInitResponseRef.current || voipCallInitiatingRef.current || acceptingIncomingVoipCallRef.current) {
             return;
         }
@@ -7157,7 +7157,9 @@ function AppInner() {
                 if (effectiveAutoMode && autoVoiceModeEnabledRef.current && inputTarget === 'main') {
                     autoVoiceRestartTimerRef.current = setTimeout(() => {
                         if (autoVoiceModeEnabledRef.current && !recordingRef.current) {
-                            void startVoiceInput({ autoMode: true });
+                            startVoiceInput({ autoMode: true }).catch((error) => {
+                                console.warn('[FACE_CONVERSATION] mic watchdog recover failed', error);
+                            });
                         }
                     }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
                 }
@@ -7323,7 +7325,7 @@ function AppInner() {
         }
     }, [autoRelayDelayMs, clearAutoVoiceTimers, fromLang, getUiText, requestPermissions, runTranslation, toLang]);
 
-    useEffect(() => {
+    useEffect(() => {  // NOSONAR
         autoVoiceModeEnabledRef.current = autoVoiceModeEnabled;
     }, [autoVoiceModeEnabled]);
 
@@ -7395,7 +7397,9 @@ function AppInner() {
             if (idleTicks >= 2) {
                 idleTicks = 0;
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'mic_watchdog_recover' }));
-                void startVoiceInput({ autoMode: true });
+                startVoiceInput({ autoMode: true }).catch((error) => {
+                    console.warn('[SORISAE] auto voice start failed', error);
+                });
             }
         }, 2500);
         return () => clearInterval(timer);
@@ -9231,7 +9235,11 @@ function AppInner() {
                             </Pressable>
                             <Pressable
                                 style={styles.inlineGhostBtn}
-                                onPress={() => { void handleRejectIncomingVoipCall(); }}
+                                onPress={() => {
+                                    handleRejectIncomingVoipCall().catch((error) => {
+                                        console.warn('[VOIP] reject incoming call failed', error);
+                                    });
+                                }}
                                 testID="worldlinco-voip-incoming-reject-banner"
                                 accessibilityLabel="수신 보이스톡 거절"
                             >

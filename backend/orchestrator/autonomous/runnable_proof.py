@@ -114,7 +114,7 @@ def evaluate_runnable_proof(
     written_files: Optional[List[str]] = None,
     validation_profile: str = "python_fastapi",
     agent_results: Optional[Sequence[Any]] = None,
-) -> Dict[str, Any]:
+) -> Dict[str, Any]:  # NOSONAR
     written = [str(path).strip() for path in (written_files or []) if str(path).strip()]
     validator_ok = _validator_passed(agent_results)
     result: Dict[str, Any] = {

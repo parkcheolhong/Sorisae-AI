@@ -3363,7 +3363,10 @@ def _stabilize_running_self_run_record(record_path: Path, approval_payload: Dict
     return _force_fail_running_self_run_record(record_path, stale_reason=stale_reason, detail=stale_detail)
 
 
-@router.post("/system-settings/fill-missing-defaults")
+@router.post(
+    "/system-settings/fill-missing-defaults",
+    responses={500: {"description": "system settings update failed"}},
+)
 def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_admin)):
     del admin
     try:
@@ -3386,7 +3389,10 @@ def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_ad
         raise HTTPException(status_code=500, detail="system settings update failed") from None
 
 
-@router.get("/system-settings")
+@router.get(
+    "/system-settings",
+    responses={500: {"description": "system settings unavailable"}},
+)
 def get_admin_system_settings(admin: User = Depends(require_admin)):
     del admin
     try:
@@ -3396,7 +3402,13 @@ def get_admin_system_settings(admin: User = Depends(require_admin)):
         raise HTTPException(status_code=500, detail="system settings unavailable") from None
 
 
-@router.put("/system-settings")
+@router.put(
+    "/system-settings",
+    responses={
+        400: {"description": "관리자 대시보드에서 허용되지 않은 설정 키 포함"},
+        500: {"description": "system settings update failed"},
+    },
+)
 def update_admin_system_settings(payload: AdminSystemSettingsUpdateRequest, admin: User = Depends(require_admin)):
     del admin
     try:

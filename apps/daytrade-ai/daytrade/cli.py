@@ -405,8 +405,9 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
     p_sim.add_argument("--start-price", dest="start_price", type=float, default=100.0)
     p_sim.add_argument("--event-prob", dest="event_prob", type=float, default=0.01)
 
+    replay_input_help = "리플레이 입력(.csv 또는 .dts 틱스토어)"
     p_rep = sub.add_parser("replay", parents=[common], help="CSV/틱스토어 리플레이 백테스트")
-    p_rep.add_argument("--csv", required=True, help="리플레이 입력(.csv 또는 .dts 틱스토어)")
+    p_rep.add_argument("--csv", required=True, help=replay_input_help)
 
     p_record = sub.add_parser("record", help="Binance 실시간 피드를 CSV(CsvReplayFeed 포맷)로 기록")
     p_record.add_argument("--symbol", default="BTCUSDT")
@@ -416,7 +417,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
 
     p_wf = sub.add_parser("walkforward", help="워크포워드 OOS 검증/백테스트 (M2 후속)")
     wsrc = p_wf.add_mutually_exclusive_group(required=True)
-    wsrc.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
+    wsrc.add_argument("--csv", help=replay_input_help)
     wsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_wf.add_argument("--mode", choices=["backtest", "validate"], default="backtest")
     p_wf.add_argument("--symbol", default="AAPL")
@@ -438,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
 
     p_tune = sub.add_parser("tune", help="워크포워드 점수를 목적함수로 하이퍼파라미터 탐색 (M2/§9)")
     tsrc = p_tune.add_mutually_exclusive_group(required=True)
-    tsrc.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
+    tsrc.add_argument("--csv", help=replay_input_help)
     tsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_tune.add_argument("--symbol", default="AAPL")
     p_tune.add_argument("--depth", type=int, default=10)
@@ -458,7 +459,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
 
     p_train = sub.add_parser("train", help="라벨링→학습→ONNX export (M2)")
     src = p_train.add_mutually_exclusive_group(required=True)
-    src.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
+    src.add_argument("--csv", help=replay_input_help)
     src.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_train.add_argument("--symbol", default="AAPL")
     p_train.add_argument("--depth", type=int, default=10)
@@ -495,7 +496,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
 
     p_rl = sub.add_parser("rl", help="강화학습 — TradingEnv + REINFORCE/PPO (M2 후속)")
     rsrc = p_rl.add_mutually_exclusive_group(required=True)
-    rsrc.add_argument("--csv", help="리플레이 입력(.csv 또는 .dts 틱스토어)")
+    rsrc.add_argument("--csv", help=replay_input_help)
     rsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_rl.add_argument("--symbol", default="AAPL")
     p_rl.add_argument("--depth", type=int, default=10)

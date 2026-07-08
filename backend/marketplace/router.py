@@ -942,7 +942,10 @@ def get_worldlinco_mobile_billing_offer(
     )
 
 
-@router.get("/worldlinco/referral/me")
+@router.get(
+    "/worldlinco/referral/me",
+    responses={401: {"description": "authentication required"}},
+)
 def get_worldlinco_referral_me(
     request: Request,
     current_user: Any = Depends(get_current_user),

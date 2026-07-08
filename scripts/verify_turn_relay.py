@@ -147,15 +147,16 @@ def _build_allocate(txid: bytes, *, principal: bytes = b"", realm: bytes = b"",
         attrs += _stun_attr(0x0015, nonce)
         # MESSAGE-INTEGRITY: key = MD5(principal:realm:token), token=base64(HMAC-SHA1(secret, principal))
         # lgtm[py/weak-sensitive-data-hashing] TURN long-term credential spec requires HMAC-SHA1/MD5.
-        turn_token = base64.b64encode(
+        # TURN long-term credential flow requires HMAC-SHA1/MD5 by RFC5389/RFC5766.
+        turn_token = base64.b64encode(  # NOSONAR
             hmac.new(secret.encode(), principal, hashlib.sha1).digest()
         )
         # lgtm[py/weak-sensitive-data-hashing] RFC5389 MESSAGE-INTEGRITY key derivation uses MD5(principal:realm:token).
-        integrity_key = hashlib.md5(principal + b":" + realm + b":" + turn_token).digest()
+        integrity_key = hashlib.md5(principal + b":" + realm + b":" + turn_token).digest()  # NOSONAR
         header_len = len(attrs) + 24  # + MESSAGE-INTEGRITY attr(4+20)
         msg = struct.pack("!HHI", 0x0003, header_len, _STUN_MAGIC) + txid + attrs
         # lgtm[py/weak-sensitive-data-hashing] TURN MESSAGE-INTEGRITY attribute is HMAC-SHA1.
-        integrity = hmac.new(integrity_key, msg, hashlib.sha1).digest()
+        integrity = hmac.new(integrity_key, msg, hashlib.sha1).digest()  # NOSONAR
         attrs += _stun_attr(0x0008, integrity)
     return struct.pack("!HHI", 0x0003, len(attrs), _STUN_MAGIC) + txid + attrs
 

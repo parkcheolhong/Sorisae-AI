@@ -62,7 +62,14 @@ def review_sample(mode: str = "poi", n: int = 20, k: int = 5) -> Any:
         raise HTTPException(status_code=500, detail="review sample unavailable") from None
 
 
-@router.post("/labels")
+@router.post(
+    "/labels",
+    responses={
+        404: {"description": "tourism review disabled"},
+        500: {"description": "review label save failed"},
+        503: {"description": "review DB unavailable"},
+    },
+)
 def review_labels(batch: ReviewLabelBatch) -> Any:
     _guard()
     try:
