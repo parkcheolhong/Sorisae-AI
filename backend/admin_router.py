@@ -1826,7 +1826,8 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
             status = int(getattr(response, "status", 200) or 200)
             return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
     except Exception as exc:
-        return {"ok": False, "status": None, "url": url, "error": str(exc)}
+        logger.warning("http reachability probe failed for %s", url, exc_info=exc)
+        return {"ok": False, "status": None, "url": url, "error": exc.__class__.__name__}
 
 
 def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
@@ -2647,7 +2648,8 @@ def _run_smoke_test_for_verifier(target_dir: Path, timeout: int = 60) -> Dict[st
             result["pytest_output"] = f"pytest timeout ({timeout}s 초과)"
         except Exception as exc:
             result["pytest_ok"] = False
-            result["pytest_output"] = f"pytest 실행 오류: {exc}"
+            logger.warning("admin smoke pytest execution failed", exc_info=exc)
+            result["pytest_output"] = "pytest 실행 오류: internal_error"
 
     smoke_passed = result["py_compile_ok"] and (result["pytest_ok"] is not False)
     result["smoke_passed"] = smoke_passed
@@ -3570,8 +3572,9 @@ async def execute_workspace_self_run(payload: WorkspaceSelfRunRequest, admin: Us
     try:
         worker_pid, worker_log_path = await asyncio.to_thread(_start_workspace_self_run_job, approval_id, payload.mode, str(payload.directive_template or ""), str(payload.directive_scope or ""), str(payload.directive_request or ""), source_dir)
     except Exception as exc:
+        logger.error("failed to start workspace self-run job", exc_info=exc)
         approval_payload["status"] = "failed"
-        approval_payload["orchestration_error"] = "백그라운드 자가 실행 프로세스를 시작하지 못했습니다: " + f"{exc}"
+        approval_payload["orchestration_error"] = "백그라운드 자가 실행 프로세스를 시작하지 못했습니다."
         approval_payload["finished_at"] = datetime.now().isoformat()
         approval_payload["report_preview"] = f"# {payload.mode} self-run report\n\n- 상태: failed\n- 오류: {approval_payload['orchestration_error']}\n"
         report_path.write_text(approval_payload["report_preview"], encoding="utf-8")
@@ -3767,4 +3770,3 @@ async def admin_update_worldlinco_tuning(
     _ = admin
     updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
     return apply_worldlinco_tuning_update(update, updated_by=updated_by)
-

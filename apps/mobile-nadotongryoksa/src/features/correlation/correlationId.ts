@@ -32,14 +32,30 @@ const MAX_LEN = 128;
 
 let monotonicSalt = 0;
 
+function randomUint32(): number {
+    const cryptoObj = (
+        globalThis as unknown as {
+            crypto?: { getRandomValues?: (array: Uint32Array) => Uint32Array };
+        }
+    ).crypto;
+    if (cryptoObj?.getRandomValues) {
+        const buf = new Uint32Array(1);
+        cryptoObj.getRandomValues(buf);
+        return buf[0] ?? 0;
+    }
+    // crypto 미지원 런타임에서는 시간+salt 기반으로 충돌 회피(보안 토큰 용도 아님).
+    monotonicSalt = (monotonicSalt + 1) % 0x100000;
+    const seed = ((Date.now() & 0xffffffff) ^ monotonicSalt) >>> 0;
+    return (seed * 1664525 + 1013904223) >>> 0;
+}
+
 export function normalizeFeatureId(featureId: string | null | undefined): FeatureId {
     const candidate = String(featureId ?? '').trim();
     return (VALID_FEATURE_IDS.has(candidate) ? candidate : DEFAULT_FEATURE_ID) as FeatureId;
 }
 
 function rand6(): string {
-    // crypto 미지원 환경(일부 RN)에서도 안전하게 동작하도록 Math.random 폴백.
-    const base = Math.floor(Math.random() * 0xffffff).toString(36);
+    const base = (randomUint32() & 0xffffff).toString(36);
     monotonicSalt = (monotonicSalt + 1) % 0x1000;
     const salt = monotonicSalt.toString(36);
     return `${base}${salt}`.slice(0, 6).padStart(4, '0');

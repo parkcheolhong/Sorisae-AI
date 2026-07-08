@@ -344,12 +344,26 @@ export function streamTravelItinerary(
 // ── 파일럿 베타 피드백(만족도·NPS·A/B) ─────────────────────────────────────
 const AB_VARIANT_KEY = 'worldlinco_tourism_ab_variant_v1';
 
+function randomVariantSeed(): number {
+  const cryptoObj = (
+    globalThis as unknown as {
+      crypto?: { getRandomValues?: (array: Uint32Array) => Uint32Array };
+    }
+  ).crypto;
+  if (cryptoObj?.getRandomValues) {
+    const buf = new Uint32Array(1);
+    cryptoObj.getRandomValues(buf);
+    return buf[0] ?? 0;
+  }
+  return Date.now() & 1;
+}
+
 /** 설치별 안정적 A/B 버킷(50:50). 한 번 정해지면 유지 → variant 별 NPS 비교 가능. */
 export async function getAbVariant(): Promise<'A' | 'B'> {
   try {
     const cached = await AsyncStorage.getItem(AB_VARIANT_KEY);
     if (cached === 'A' || cached === 'B') return cached;
-    const variant: 'A' | 'B' = Math.random() < 0.5 ? 'A' : 'B';
+    const variant: 'A' | 'B' = (randomVariantSeed() & 1) === 0 ? 'A' : 'B';
     await AsyncStorage.setItem(AB_VARIANT_KEY, variant);
     return variant;
   } catch {

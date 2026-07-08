@@ -672,7 +672,7 @@ def _build_group_viewer_translation_fallback(
             "translated_body": None,
             "translation_status": "failed",
             "failure_code": "translation_error",
-            "failure_detail": str(exc),
+            "failure_detail": "translation_unavailable",
         }
 
     return {
@@ -743,7 +743,7 @@ def _append_group_message_translations(
                 )
                 translation_status = "failed"
                 failure_code = "translation_error"
-                failure_detail = str(exc)
+                failure_detail = "translation_unavailable"
                 delivered_at = None
 
         translation_rows.append(
