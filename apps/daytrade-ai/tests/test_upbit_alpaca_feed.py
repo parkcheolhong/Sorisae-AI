@@ -4,6 +4,8 @@ from daytrade.feed.alpaca import (
     normalize_alpaca_quote,
     parse_alpaca_trade,
 )
+
+import pytest
 from daytrade.feed.upbit import (
     UpbitFeed,
     normalize_upbit_orderbook,
@@ -51,7 +53,7 @@ def test_upbit_feed_applies_trade_then_depth():
     msgs = [upbit_trade(100.07, 1.0), upbit_orderbook()]
     ticks = list(UpbitFeed(symbol="KRW-BTC", message_source=msgs).ticks())
     assert len(ticks) == 1
-    assert ticks[0].last_price == 100.07
+    assert ticks[0].last_price == pytest.approx(100.07)
     assert ticks[0].symbol == "KRW-BTC"
 
 
@@ -87,7 +89,7 @@ def test_alpaca_feed_trade_then_quote():
     msgs = [alpaca_trade(100.07, 10), alpaca_quote()]
     ticks = list(AlpacaFeed(symbol="AAPL", message_source=msgs).ticks())
     assert len(ticks) == 1
-    assert ticks[0].last_price == 100.07
+    assert ticks[0].last_price == pytest.approx(100.07)
     assert ticks[0].last_qty == 10.0
 
 

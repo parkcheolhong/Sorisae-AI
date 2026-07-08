@@ -1803,10 +1803,9 @@ async def accept_voip_call(
     )
 
     logger.info(
-        "[VoIP] Call accepted | call_id=%s | callee_user_id=%s | display_language=%s",
+        "[VoIP] Call accepted | call_id=%s | callee_user_id=%s",
         call_id,
         current_user.id,
-        response.display_language,
     )
     return response
 
@@ -2806,15 +2805,11 @@ async def websocket_signaling(
                 call_id,
                 normalized_role,
             )
-        except Exception as exc:
-            logger.error(
-                (
-                    "[VoIP] App signaling error | call_id=%s | "
-                    "role=%s | error=%s"
-                ),
+        except Exception:
+            logger.exception(
+                "[VoIP] App signaling error | call_id=%s | role=%s",
                 call_id,
                 normalized_role,
-                exc,
             )
         finally:
             participants = call_participants.get(call_id, {})
@@ -2937,9 +2932,9 @@ async def websocket_signaling(
 
             elif message.get("type") == "candidate":
                 logger.debug(
-                    "[VoIP] ICE candidate | call_id=%s | %s",
+                    "[VoIP] ICE candidate | call_id=%s | has_candidate=%s",
                     call_id,
-                    message.get("candidate"),
+                    bool(message.get("candidate")),
                 )
 
                 peer = webrtc_peers.get(call_id)
@@ -2979,11 +2974,10 @@ async def websocket_signaling(
             "[VoIP] Signaling client disconnected | call_id=%s",
             call_id,
         )
-    except Exception as e:
-        logger.error(
-            "[VoIP] Signaling error | call_id=%s | error=%s",
+    except Exception:
+        logger.exception(
+            "[VoIP] Signaling error | call_id=%s",
             call_id,
-            str(e),
         )
     finally:
         if call_id in connected_clients:

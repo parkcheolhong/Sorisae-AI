@@ -6,6 +6,8 @@ from daytrade.feed.binance import (
     stream_kind,
 )
 
+import pytest
+
 
 def depth_msg(symbol="btcusdt"):
     return {
@@ -57,8 +59,8 @@ def test_normalize_depth_uses_mid_when_no_trade():
 
 def test_normalize_depth_uses_last_trade_price():
     tick = normalize_depth(depth_msg()["data"], "BTCUSDT", depth=10, last_price=100.07, last_qty=2.5)
-    assert tick.last_price == 100.07
-    assert tick.last_qty == 2.5
+    assert tick.last_price == pytest.approx(100.07)
+    assert tick.last_qty == pytest.approx(2.5)
 
 
 def test_feed_emits_tick_per_depth_and_applies_trade_state():

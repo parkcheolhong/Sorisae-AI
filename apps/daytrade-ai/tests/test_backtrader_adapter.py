@@ -27,19 +27,19 @@ def test_ohlcv_buckets_and_aggregates():
     assert len(bars) == 2
     b0 = bars[0]
     assert isinstance(b0, Bar)
-    assert b0.open == 100.0 and b0.close == 101.0
-    assert b0.high == 102.0 and b0.low == 100.0
-    assert b0.volume == 4.0 and b0.trades == 3
+    assert b0.open == pytest.approx(100.0) and b0.close == pytest.approx(101.0)
+    assert b0.high == pytest.approx(102.0) and b0.low == pytest.approx(100.0)
+    assert b0.volume == pytest.approx(4.0) and b0.trades == 3
     b1 = bars[1]
-    assert b1.open == 103.0 and b1.low == 99.0 and b1.close == 99.0
-    assert b1.volume == 5.0
+    assert b1.open == pytest.approx(103.0) and b1.low == pytest.approx(99.0) and b1.close == pytest.approx(99.0)
+    assert b1.volume == pytest.approx(5.0)
 
 
 def test_ohlcv_uses_mid_when_no_last_price():
     t = MarketTick(ts_ns=0, symbol="X", bids=(OrderBookLevel(99.0, 1),),
                    asks=(OrderBookLevel(101.0, 1),), last_price=0.0, last_qty=0.0)
     bars = ticks_to_ohlcv([t], bar_sec=1.0)
-    assert len(bars) == 1 and bars[0].close == 100.0  # mid
+    assert len(bars) == 1 and bars[0].close == pytest.approx(100.0)  # mid
 
 
 def test_ohlcv_empty():
