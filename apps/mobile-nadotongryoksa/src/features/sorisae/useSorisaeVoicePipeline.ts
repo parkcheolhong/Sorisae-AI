@@ -440,7 +440,9 @@ export function useSorisaeVoicePipeline(deps: SorisaeVoicePipelineDeps) {
         if (provider === 'vosk' && modelPath && modelPath !== companionKwsModelPathRef.current) {
             companionKwsModelPathRef.current = modelPath;
             setCompanionKwsModelPath(modelPath);
-            void AsyncStorage.setItem(COMPANION_KWS_MODEL_PATH_STORAGE_KEY, modelPath);
+            AsyncStorage.setItem(COMPANION_KWS_MODEL_PATH_STORAGE_KEY, modelPath).catch((error) => {
+                console.warn('[COMPANION_KWS] failed to persist model path', error);
+            });
         }
 
         if (provider === 'vosk' && !modelPath) {

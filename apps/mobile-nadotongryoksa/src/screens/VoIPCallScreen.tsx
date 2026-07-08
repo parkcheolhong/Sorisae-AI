@@ -3210,7 +3210,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             return;
         }
         auditLoadedCallIdRef.current = callId;
-        void loadAuditEventsRef.current({ showLoading: false });
+        loadAuditEventsRef.current({ showLoading: false }).catch((error) => {
+            console.warn('[VOIP_AUDIT] initial load failed', error);
+        });
     }, [callInitResponse.call_id]);
 
     useEffect(() => {
@@ -3219,7 +3221,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }
 
         const interval = setInterval(() => {
-            void loadAuditEventsRef.current({ showLoading: false });
+            loadAuditEventsRef.current({ showLoading: false }).catch((error) => {
+                console.warn('[VOIP_AUDIT] interval load failed', error);
+            });
         }, 30000);
 
         return () => clearInterval(interval);

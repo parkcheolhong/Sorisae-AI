@@ -13,6 +13,17 @@ test.describe('admin dashboard ops regression', () => {
         }
     };
 
+    const dismissVisibleDialogs = async (page: import('@playwright/test').Page) => {
+        for (let idx = 0; idx < 3; idx += 1) {
+            const visible = await page.getByRole('dialog').first().isVisible({ timeout: 300 }).catch(() => false);
+            if (!visible) {
+                return;
+            }
+            await page.keyboard.press('Escape').catch(() => {});
+            await page.waitForTimeout(150);
+        }
+    };
+
     const openManagementSection = async (page: import('@playwright/test').Page, title: string) => {
         const testIdMap: Record<string, string> = {
             '🗂️ 마켓플레이스 카테고리 관리': 'admin-launcher-category',
@@ -32,10 +43,13 @@ test.describe('admin dashboard ops regression', () => {
 
     const openSystemSettingsPanel = async (page: import('@playwright/test').Page) => {
         const settingsDialog = page.getByRole('dialog', { name: '🧭 전역 .env 설정 패널' });
+        await dismissVisibleDialogs(page);
         await clickWithFallback(page.getByTestId('admin-launcher-system-settings'));
         const openedByTestId = await settingsDialog.isVisible({ timeout: 3000 }).catch(() => false);
         if (!openedByTestId) {
-            await clickWithFallback(page.getByText('🧭 전역 .env 설정 패널').first());
+            await page.getByTestId('admin-launcher-system-settings').evaluate((node) => {
+                (node as HTMLButtonElement).click();
+            });
         }
         await expect(settingsDialog).toBeVisible({ timeout: 12000 });
     };
@@ -161,7 +175,10 @@ test.describe('admin dashboard ops regression', () => {
             await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
             await llmToDashboard.click();
         } else {
-            await page.goto('/admin');
+            await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/).catch(() => {});
+            await page.evaluate(() => {
+                window.location.assign('/admin');
+            });
         }
         await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
 
@@ -212,17 +229,15 @@ test.describe('admin dashboard ops regression', () => {
         const status = page.getByTestId('admin-extras-preview-status');
         const payload = page.getByTestId('admin-extras-preview-payload');
 
-        await page.getByRole('button', { name: '🧪 익스' }).click();
+        await dismissVisibleDialogs(page);
+        await clickWithFallback(page.getByRole('button', { name: '🧪 익스' }));
         await expect(previewTitle).toBeVisible({ timeout: 15000 });
         await expect(endpointText).toContainText('/api/marketplace/extras/health', { timeout: 15000 });
         await expect(status).toHaveText(/\d{3}/, { timeout: 15000 });
         await expect(payload).not.toHaveText('조회 결과가 없습니다.', { timeout: 15000 });
         await expect(payload).toContainText('status', { timeout: 15000 });
 
-        const catalogTrigger = page.getByRole('button', { name: '🧬 카탈' });
-        await catalogTrigger.evaluate((node) => {
-            (node as HTMLButtonElement).click();
-        });
+        await clickWithFallback(page.getByRole('button', { name: '🧬 카탈' }));
         await expect(endpointText).toContainText('/api/marketplace/extras/catalog', { timeout: 15000 });
         await expect(status).toHaveText(/\d{3}/, { timeout: 15000 });
         await expect(payload).not.toHaveText('조회 결과가 없습니다.', { timeout: 15000 });

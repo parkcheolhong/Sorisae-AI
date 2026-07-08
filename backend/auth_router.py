@@ -851,7 +851,16 @@ def start_passkey_login(
     }
 
 
-@router.post("/passkey/login/finish", response_model=Token)
+@router.post(
+    "/passkey/login/finish",
+    response_model=Token,
+    responses={
+        401: {"description": "패스키 로그인 검증 실패"},
+        403: {"description": "관리자·지역관리자 권한이 없는 경우"},
+        404: {"description": "패스키 로그인 대상 계정 또는 세션을 찾을 수 없음"},
+        410: {"description": "패스키 로그인 세션 만료"},
+    },
+)
 def finish_passkey_login(
     request: Request,
     payload: PasskeyLoginFinishRequest,

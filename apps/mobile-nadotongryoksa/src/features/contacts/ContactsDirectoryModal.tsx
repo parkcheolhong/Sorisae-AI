@@ -188,7 +188,11 @@ export function ContactsDirectoryModal({
                     )}
                     <Pressable
                         style={styles.promoBtn}
-                        onPress={() => { void shareAppPromotion({ apiBase, inviterName }); }}
+                        onPress={() => {
+                            shareAppPromotion({ apiBase, inviterName }).catch((error) => {
+                                console.warn('[CONTACTS_DIR] promo share failed', error);
+                            });
+                        }}
                         testID="contacts-dir-promote"
                     >
                         <Text style={styles.promoBtnText}>📣 앱 홍보 공유 (카카오톡·라인·SNS·문자)</Text>
@@ -196,7 +200,15 @@ export function ContactsDirectoryModal({
                     <View style={styles.footer}>
                         <Text style={styles.count}>{filtered.length}명</Text>
                         <View style={styles.footerBtns}>
-                            <Pressable style={styles.ghostBtn} onPress={() => { void load(true); }} testID="contacts-dir-refresh">
+                            <Pressable
+                                style={styles.ghostBtn}
+                                onPress={() => {
+                                    load(true).catch((error) => {
+                                        console.warn('[CONTACTS_DIR] refresh failed', error);
+                                    });
+                                }}
+                                testID="contacts-dir-refresh"
+                            >
                                 <Text style={styles.ghostBtnText}>{loading ? '새로고침 중...' : '다시 불러오기'}</Text>
                             </Pressable>
                             <Pressable style={styles.closeBtn} onPress={onClose} testID="contacts-dir-close">

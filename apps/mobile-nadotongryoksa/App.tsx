@@ -2452,7 +2452,9 @@ function AppInner() {
                 // 링톤이 매번 재생되어 "0.5~2.5초마다 따라 우는" 영구 벨의 원인이 된다.
                 // 네이티브 착신 알림은 startNativeIncomingVoipAlert(멱등)가 유지한다.
                 if (isVoipIncomingAlertNativeAvailable()) {
-                    void startNativeIncomingVoipAlert(callId, callerLabel ?? callerVoiceId ?? '친구', incomingAlertSoundModeRef.current);
+                    startNativeIncomingVoipAlert(callId, callerLabel ?? callerVoiceId ?? '친구', incomingAlertSoundModeRef.current).catch((error) => {
+                        console.warn('[VOIP_INCOMING_ALERT] native alert start failed', error);
+                    });
                 } else if (Platform.OS !== 'web' && incomingAlertSoundModeRef.current !== 'silent') {
                     try {
                         Vibration.vibrate(800);
@@ -2471,7 +2473,9 @@ function AppInner() {
             app_state: AppState.currentState,
         });
 
-        void postIncomingVoipLocalNotification(callId, callerVoiceId, callerLabel);
+        postIncomingVoipLocalNotification(callId, callerVoiceId, callerLabel).catch((error) => {
+            console.warn('[VOIP_INCOMING_ALERT] local notification failed', error);
+        });
 
         const playJsIncomingAlertFallback = () => {
             const alertMode = incomingAlertSoundModeRef.current;
@@ -6635,7 +6639,7 @@ function AppInner() {
 
                     timeoutHandle = setTimeout(() => finish(null), timeoutMs);
 
-                    void Location.watchPositionAsync(
+                    Location.watchPositionAsync(
                         {
                             accuracy,
                             distanceInterval: 0,
@@ -6648,13 +6652,15 @@ function AppInner() {
                             }
 
                             const sampledAccuracy = position.coords.accuracy ?? null;
-                            void appendGpsDebugTrace('mock-location-sample', {
+                            appendGpsDebugTrace('mock-location-sample', {
                                 attemptId,
                                 source,
                                 servicesEnabled,
                                 latitude: position.coords.latitude,
                                 longitude: position.coords.longitude,
                                 accuracy: sampledAccuracy,
+                            }).catch((error) => {
+                                console.warn('[HYBRID_GPS] failed to append mock trace', error);
                             });
                             finish({
                                 latitude: position.coords.latitude,
@@ -8563,7 +8569,14 @@ function AppInner() {
             contact.name,
             `${contact.phone}\n무엇을 할까요?`,
             [
-                { text: '💬 채팅/초대', onPress: () => { void handleOpenChatFromContact(contact); } },
+                {
+                    text: '💬 채팅/초대',
+                    onPress: () => {
+                        handleOpenChatFromContact(contact).catch((error) => {
+                            console.warn('[CONTACT_CHAT] open from contact failed', error);
+                        });
+                    },
+                },
                 { text: '📞 일반통화', onPress: () => { handleSelectInterCallContact(contact); } },
                 { text: '취소', style: 'cancel' },
             ],
@@ -9034,7 +9047,11 @@ function AppInner() {
                             </Text>
                             <Pressable
                                 style={[styles.inlineActionBtn, profileSaving && { opacity: 0.7 }]}
-                                onPress={() => { void handleSaveMyProfile(); }}
+                                onPress={() => {
+                                    handleSaveMyProfile().catch((error) => {
+                                        console.warn('[PROFILE] save failed', error);
+                                    });
+                                }}
                                 disabled={profileSaving}
                                 accessibilityRole="button"
                                 accessibilityLabel="worldlinco-myinfo-save-button"
@@ -9983,7 +10000,13 @@ function AppInner() {
                                                 <Text style={styles.planFormula}>{plan.formulaLabel}</Text>
                                                 <Pressable
                                                     style={[styles.inlineActionBtn, owned && styles.inlineActionBtnActive]}
-                                                    onPress={owned ? handleInlineVoipOpenPress : () => { void handlePremiumPurchase(planKey); }}
+                                                    onPress={owned
+                                                        ? handleInlineVoipOpenPress
+                                                        : () => {
+                                                            handlePremiumPurchase(planKey).catch((error) => {
+                                                                console.warn('[MONETIZATION] purchase request failed', error);
+                                                            });
+                                                        }}
                                                 >
                                                     <Text style={[styles.inlineActionBtnText, owned && styles.inlineActionBtnTextActive]}>{owned ? 'VoIP 열기' : `${plan.shortLabel} 결제`}</Text>
                                                 </Pressable>
