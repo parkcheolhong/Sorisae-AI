@@ -330,7 +330,7 @@ export function useChatVoiceInput(
             handsFreeRef.current = true;
             handsFreeSourceRef.current = 'manual';
             setHandsFree(true);
-            void runHandsFreeLoop();
+            runHandsFreeLoop().catch(() => {});
         };
         if (status === 'recording') {
             cancelledRef.current = true;

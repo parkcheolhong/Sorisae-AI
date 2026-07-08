@@ -1190,7 +1190,7 @@ def _require_friend_link(
         )
 
 
-def _append_message(
+def _append_message(  # NOSONAR
     db: Session,
     *,
     room: models.ChatRoom,

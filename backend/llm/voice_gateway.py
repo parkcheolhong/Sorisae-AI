@@ -1607,7 +1607,11 @@ class VoiceSynthesizeResponse(BaseModel):
     correlation_id: Optional[str] = None
 
 
-@router.post("/voice/synthesize", response_model=VoiceSynthesizeResponse)
+@router.post(
+    "/voice/synthesize",
+    response_model=VoiceSynthesizeResponse,
+    responses={500: {"description": "TTS 처리 실패"}},
+)
 async def voice_synthesize(request: VoiceSynthesizeRequest):
     """오케스트레이터·통역 수신측 TTS — Edge neural 우선, 없으면 device speech."""
     from backend.llm.correlation import FEATURE_IDS, ensure_correlation_id
@@ -1806,8 +1810,8 @@ class FriendChatRequest(BaseModel):
     "/voice/friend-chat",
     response_model=VoiceResponse,
     responses={
-        400: {"description": "입력 부족 또는 STT 실패"},
-        422: {"description": "무음/잡음 입력으로 응답을 생성하지 않음"},
+    400: {"description": "입력 부족 또는 STT 실패"},
+    422: {"description": "무음/잡음 입력으로 응답을 생성하지 않음"},
         502: {"description": "친구 모드 LLM 응답 실패"},
     },
 )

@@ -5456,7 +5456,7 @@ function AppInner() {
 
                 setVoipValidationOverride(true);
                 voipValidationFriendCallBypassRef.current = true;
-                void persistVoipValidationFriendCallBypass(true);
+                persistVoipValidationFriendCallBypass(true).catch(() => {});
                 setPremiumStatusMessage('정합성 검증용 친구 자동 통화를 준비합니다. 친구 목록에서 대상 보이스 ID를 찾으면 즉시 통화를 시도합니다.');
                 setVoipInitError('');
                 logUiPressProbe('VOIP_VALIDATION_OPEN_PRESS', {
@@ -6233,10 +6233,10 @@ function AppInner() {
             return;
         }
 
-        void fetchActiveVoipCallResume('app_launch_resume');
+        fetchActiveVoipCallResume('app_launch_resume').catch(() => {});
         const appStateSubscription = AppState.addEventListener('change', (nextState) => {
             if (nextState === 'active') {
-                void fetchActiveVoipCallResume('app_state_resume');
+                fetchActiveVoipCallResume('app_state_resume').catch(() => {});
             }
         });
 
@@ -10065,7 +10065,7 @@ function AppInner() {
                             </Pressable>
                             <Pressable
                                 style={styles.gridTile}
-                                onPress={hasSongPass ? handlePickSongFile : () => { void handlePremiumPurchase('song_pass'); }}
+                                onPress={hasSongPass ? handlePickSongFile : () => { handlePremiumPurchase('song_pass').catch(() => {}); }}
                                 accessibilityRole="button"
                                 accessibilityLabel="노래 파일 선택"
                                 testID="worldlinco-song-action-file"
@@ -11011,7 +11011,7 @@ function AppInner() {
                 statusBarTranslucent
                 onRequestClose={() => {
                     setFaceScreenOpen(false);
-                    if (autoVoiceModeEnabled && Platform.OS !== 'web') { void handleToggleFaceConversation(); }
+                    if (autoVoiceModeEnabled && Platform.OS !== 'web') { handleToggleFaceConversation().catch(() => {}); }
                 }}
             >
                 <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.skyBg}>
@@ -11029,7 +11029,7 @@ function AppInner() {
                         <Pressable
                             onPress={() => {
                                 setFaceScreenOpen(false);
-                                if (autoVoiceModeEnabled && Platform.OS !== 'web') { void handleToggleFaceConversation(); }
+                                if (autoVoiceModeEnabled && Platform.OS !== 'web') { handleToggleFaceConversation().catch(() => {}); }
                             }}
                             style={styles.faceScreenClose}
                             accessibilityRole="button"

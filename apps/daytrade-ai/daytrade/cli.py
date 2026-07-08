@@ -27,10 +27,11 @@ def _resolve_safe_output_path(raw_path: str) -> Path:
         raise ValueError("출력 경로에 허용되지 않는 문자가 포함되어 있습니다.")
 
     input_path = Path(value).expanduser()
-    if not input_path.is_absolute() and any(part == ".." for part in input_path.parts):
-        raise ValueError("상위 경로(..)는 출력 경로로 허용되지 않습니다.")
-
-    return input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+    candidate = input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+    base = Path.cwd().resolve()
+    if candidate != base and base not in candidate.parents:
+        raise ValueError("출력 경로는 현재 작업 디렉터리 내부여야 합니다.")
+    return candidate
 
 
 def _build_config(args: argparse.Namespace) -> TradingConfig:
@@ -223,10 +224,17 @@ def _run_rl(args: argparse.Namespace) -> int:
     if args.onnx and args.algo == "cppo":
         from .training.onnx_export import export_continuous_policy_to_onnx
 
+        try:
+            onnx_out_path = _resolve_safe_output_path(args.onnx)
+        except ValueError as exc:
+            print(f"[ERR] invalid --onnx: {exc}")
+            return 2
+        onnx_out_path.parent.mkdir(parents=True, exist_ok=True)
+
         export_continuous_policy_to_onnx(
-            agent.W, agent.b, env._mean, env._std, args.onnx
+            agent.W, agent.b, env._mean, env._std, str(onnx_out_path)
         )
-        print(f"[OK] 연속 RL 정책 ONNX export -> {args.onnx}  (추론: OnnxPolicyModel)")
+        print(f"[OK] 연속 RL 정책 ONNX export -> {onnx_out_path}  (추론: OnnxPolicyModel)")
 
     if args.out:
         if args.algo == "cppo":

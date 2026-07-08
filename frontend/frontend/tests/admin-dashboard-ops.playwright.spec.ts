@@ -229,7 +229,7 @@ test.describe('admin dashboard ops regression', () => {
         const status = page.getByTestId('admin-extras-preview-status');
         const payload = page.getByTestId('admin-extras-preview-payload');
 
-        await dismissVisibleDialogs(page);
+    await dismissVisibleDialogs(page);
         await clickWithFallback(page.getByRole('button', { name: '🧪 익스' }));
         await expect(previewTitle).toBeVisible({ timeout: 15000 });
         await expect(endpointText).toContainText('/api/marketplace/extras/health', { timeout: 15000 });

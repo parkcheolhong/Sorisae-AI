@@ -1425,7 +1425,10 @@ def _finalize_confirmed_marketplace_purchase(
 @router.post(
     "/purchase/{purchase_id}/confirm",
     response_model=schemas.PaymentCallbackResponse,
-    responses={404: {"description": "purchase record not found"}},
+    responses={
+        401: {"description": "인증이 필요합니다."},
+        404: {"description": "purchase record not found"},
+    },
 )
 def confirm_marketplace_purchase(
     purchase_id: int,

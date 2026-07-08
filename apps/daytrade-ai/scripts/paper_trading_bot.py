@@ -23,6 +23,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
+def _resolve_safe_output_path(raw_path: str) -> Path:
+    value = str(raw_path or "").strip()
+    if not value:
+        raise ValueError("출력 경로가 비어 있습니다.")
+    if "\x00" in value:
+        raise ValueError("출력 경로에 허용되지 않는 문자가 포함되어 있습니다.")
+
+    input_path = Path(value).expanduser()
+    candidate = input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+    base = Path.cwd().resolve()
+    if candidate != base and base not in candidate.parents:
+        raise ValueError("출력 경로는 현재 작업 디렉터리 내부여야 합니다.")
+    return candidate
+
+
 def _build_feed(args):
     from daytrade.feed.replay import CsvReplayFeed
     from daytrade.feed.simulated import SimulatedFeed
@@ -152,14 +167,32 @@ def main(argv=None) -> int:  # NOSONAR
     # Prometheus 메트릭 노출 텍스트 저장(M6).
     if args.metrics_out:
         reg = registry_from_run(metrics, symbol=args.symbol, mode=pipeline.effective_mode.value)
-        Path(args.metrics_out).write_text(reg.render(), encoding="utf-8")
+        try:
+            metrics_out_path = _resolve_safe_output_path(args.metrics_out)
+        except ValueError as exc:
+            print(f"[ERR] invalid --metrics-out: {exc}")
+            if server is not None:
+                server.stop()
+            store.close()
+            return 2
+        metrics_out_path.parent.mkdir(parents=True, exist_ok=True)
+        metrics_out_path.write_text(reg.render(), encoding="utf-8")
 
     # 트레이싱 span 덤프 + 구간 요약(M6-A).
     trace_summary = None
     if tracer is not None:
         trace_summary = tracer.stage_summary()
         if args.trace_out:
-            Path(args.trace_out).write_text(
+            try:
+                trace_out_path = _resolve_safe_output_path(args.trace_out)
+            except ValueError as exc:
+                print(f"[ERR] invalid --trace-out: {exc}")
+                if server is not None:
+                    server.stop()
+                store.close()
+                return 2
+            trace_out_path.parent.mkdir(parents=True, exist_ok=True)
+            trace_out_path.write_text(
                 json.dumps(tracer.export_jaeger(), ensure_ascii=False, indent=2), encoding="utf-8"
             )
 

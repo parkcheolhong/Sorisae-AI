@@ -1301,7 +1301,11 @@ async def register_voip_device(
     }
 
 
-@router.post("/calls/initiate", response_model=CallInitiateResponse)
+@router.post(
+    "/calls/initiate",
+    response_model=CallInitiateResponse,
+    responses={400: {"description": "전화번호 또는 앱 대상 정보가 올바르지 않습니다."}},
+)
 async def initiate_voip_call(
     http_request: Request,
     request: CallInitiateRequest,
@@ -2579,7 +2583,7 @@ async def websocket_signaling(
                     "[VoIP] Bridge offer sent to callee | call_id=%s", call_id
                 )
             except Exception as exc:  # NOSONAR
-                logger.error(
+                logger.exception(
                     "[VoIP] Bridge callee offer failed | call_id=%s | error=%s",
                     call_id,
                     exc,

@@ -2696,7 +2696,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
                 boundClient.onRemoteStream((stream: any) => {
                     const audioTracks = stream?.getAudioTracks?.() ?? [];
-                    const hasStreamAudio = audioTracks.some((track: any) => track?.enabled !== false && track?.readyState !== 'ended');
+                    let hasStreamAudio = false;
+                    for (const track of audioTracks) {
+                        if (track?.enabled !== false && track?.readyState !== 'ended') {
+                            hasStreamAudio = true;
+                            break;
+                        }
+                    }
                     const hasReceiverAudio = boundClient.hasRemoteAudioTrack();
                     const hasAudio = hasStreamAudio || hasReceiverAudio;
                     console.log('[VoIPScreen] Remote stream update:', {

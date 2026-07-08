@@ -248,7 +248,8 @@ def _rrf_merge(lists: List[List[Any]], top: int, *, k: int = 60) -> tuple:
 def _stable_point_id(source: str, source_id: str) -> int:
     """소스+소스ID 로 결정적(idempotent) 64bit 양수 ID 생성(재적재 시 중복 방지)."""
     raw = f"{source}:{source_id}".encode("utf-8")
-    return int(hashlib.sha1(raw).hexdigest(), 16) % (2**63)
+    digest = hashlib.blake2b(raw, digest_size=8, person=b"tourismkb").digest()
+    return int.from_bytes(digest, byteorder="big", signed=False) % (2**63)
 
 
 # 알려진 카테고리 화이트리스트(QC 게이트) — 적재기 CATEGORY_SYNONYMS/OSM_CATEGORY_CAPS 와 정합.

@@ -1033,7 +1033,11 @@ def start_password_recovery(
     }
 
 
-@router.post("/recovery/verify-identity", response_model=PasswordRecoveryVerifyIdentityResponse)
+@router.post(
+    "/recovery/verify-identity",
+    response_model=PasswordRecoveryVerifyIdentityResponse,
+    responses={401: {"description": "인증 코드가 올바르지 않습니다."}},
+)
 def verify_password_recovery_identity(payload: PasswordRecoveryVerifyIdentityRequest):
     from backend.services.contact_verification import verify_session_code
 
