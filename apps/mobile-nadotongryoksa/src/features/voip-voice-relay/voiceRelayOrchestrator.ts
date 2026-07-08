@@ -41,7 +41,7 @@ export function resolveVoiceRelayFixedFlushDelayMs(
     if (meterUnavailable) {
         return config.meterUnavailableFixedFlushMs;
     }
-    return config.maxSegmentMs;
+    return config.silenceFlushMs;
 }
 
 export const VOICE_RELAY_SILENCE_PEAK_DB = -159;
@@ -589,6 +589,16 @@ export function updateVoiceRelaySegmentSpeechState(
         return state;
     }
 
+    if (!state.hasSpeech) {
+        return {
+            ...state,
+            hasSpeech: true,
+            lastSpeechAtMs: nowMs,
+            // Track active segment duration from first detected speech, not pre-speech wait.
+            segmentStartedAtMs: nowMs,
+        };
+    }
+
     return {
         ...state,
         hasSpeech: true,
@@ -605,6 +615,16 @@ export function updateVoiceRelaySegmentSpeechStateFromFileRms(
 ): VoiceRelaySegmentState {
     if (fileRmsDb === null || fileRmsDb < speechRmsDb) {
         return state;
+    }
+
+    if (!state.hasSpeech) {
+        return {
+            ...state,
+            hasSpeech: true,
+            lastSpeechAtMs: nowMs,
+            // Align Android dead-meter fallback with normal meter timing semantics.
+            segmentStartedAtMs: nowMs,
+        };
     }
 
     return {
