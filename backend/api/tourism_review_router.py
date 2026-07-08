@@ -89,7 +89,7 @@ def review_stats() -> Any:
         return get_review_store().stats()
     except Exception:
         logger.error("tourism review stats failed")
-      raise HTTPException(status_code=500, detail="review stats unavailable") from None
+        raise HTTPException(status_code=500, detail="review stats unavailable") from None
 
 
 @router.get("/console", response_class=HTMLResponse)
