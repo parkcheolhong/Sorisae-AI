@@ -807,7 +807,11 @@ def finish_passkey_registration(
     }
 
 
-@router.post("/passkey/login/start", response_model=PasskeyLoginStartResponse)
+@router.post(
+    "/passkey/login/start",
+    response_model=PasskeyLoginStartResponse,
+    responses={403: {"description": "관리자 또는 지역관리자 계정만 사용할 수 있습니다."}},
+)
 def start_passkey_login(
     request: Request,
     payload: PasskeyLoginStartRequest,

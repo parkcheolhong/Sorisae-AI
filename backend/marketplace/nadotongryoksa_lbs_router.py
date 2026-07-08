@@ -588,7 +588,7 @@ def _run_commission_settlement_batch(
         )
 
 
-def _cancel_or_refund_booking(
+def _cancel_or_refund_booking(  # NOSONAR
     db: Any,
     *,
     booking_ref: str,

@@ -1802,7 +1802,11 @@ class FriendChatRequest(BaseModel):
     feature_id: Optional[str] = None
 
 
-@router.post("/voice/friend-chat", response_model=VoiceResponse)
+@router.post(
+    "/voice/friend-chat",
+    response_model=VoiceResponse,
+    responses={422: {"description": "음성이 감지되지 않았거나 잡음으로 판정되었습니다."}},
+)
 async def voice_friend_chat(request: FriendChatRequest):  # NOSONAR
     """대면 통역 '친구 모드' 전용 — 따뜻하고 자연스러운 AI 친구 대화.
 

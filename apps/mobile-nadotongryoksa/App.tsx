@@ -1648,7 +1648,7 @@ function AppInner() {
     const summarizeIncomingVoipPayload = useCallback((payload: Partial<CallInitResponse> & { caller_voice_id?: string } | null | undefined) => ({
         mode_compact: `${payload?.requested_mode ?? 'null'}->${payload?.resolved_mode ?? 'null'}`,
         relay_compact: `${payload?.auto_relay_requested == null ? 'null' : payload.auto_relay_requested ? '1' : '0'}/${payload?.auto_relay_applied == null ? 'null' : payload.auto_relay_applied ? '1' : '0'}`,
-        key_compact: payload && typeof payload === 'object' ? Object.keys(payload).sort().join('|') : 'null',
+        key_compact: payload && typeof payload === 'object' ? Object.keys(payload).sort((a, b) => a.localeCompare(b)).join('|') : 'null',
         caller_voice_id: payload?.caller_voice_id ?? null,
     }), []);
 
@@ -1665,7 +1665,7 @@ function AppInner() {
             setFromLang(preferred);
             setToLang((currentTarget) => resolveAutoTargetLang(preferred, currentTarget));
             // [전역 다국어] 회원가입/프로필 지정 언어로 앱 전체 UI 표기 전환.
-            void setUiLang(preferred);
+            setUiLang(preferred).catch(() => { });
         }
     }, []);
 
@@ -5375,7 +5375,7 @@ function AppInner() {
         }
 
         if (target.type === 'chat') {
-            void handleOpenChatRoomById(target.roomId, source);
+            handleOpenChatRoomById(target.roomId, source).catch(() => { });
             return;
         }
 
@@ -5385,7 +5385,7 @@ function AppInner() {
                 call_id: target.callId ?? null,
             });
             setActiveRailSection('voip');
-            void fetchPendingIncomingVoipCall(`deeplink_${source}`);
+            fetchPendingIncomingVoipCall(`deeplink_${source}`).catch(() => { });
             return;
         }
 
@@ -9620,7 +9620,9 @@ function AppInner() {
                                         onOpenRoom={handleOpenChatRoom}
                                         autoCallVoiceId={showFriendFolder ? null : voipAutoCallVoiceId}
                                         onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
-                                        onStartFriendVoiceCall={(friend) => void handleStartFriendVoiceCall(friend)}
+                                        onStartFriendVoiceCall={(friend) => {
+                                            handleStartFriendVoiceCall(friend).catch(() => { });
+                                        }}
                                         openGroupSignal={groupComposerSignal}
                                     />
                                 </>

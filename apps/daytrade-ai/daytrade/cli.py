@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 from .backtest.runner import run_backtest
 from .config import SignalConfig, TradingConfig, TradingMode
@@ -16,6 +17,20 @@ from .feed.simulated import SimulatedFeed
 from .feed.replay import CsvReplayFeed
 from .feed.binance import BinanceFeed
 from .feed.recorder import write_ticks_csv
+
+
+def _resolve_safe_output_path(raw_path: str) -> Path:
+    value = str(raw_path or "").strip()
+    if not value:
+        raise ValueError("출력 경로가 비어 있습니다.")
+    if "\x00" in value:
+        raise ValueError("출력 경로에 허용되지 않는 문자가 포함되어 있습니다.")
+
+    input_path = Path(value).expanduser()
+    if not input_path.is_absolute() and any(part == ".." for part in input_path.parts):
+        raise ValueError("상위 경로(..)는 출력 경로로 허용되지 않습니다.")
+
+    return input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
 
 
 def _build_config(args: argparse.Namespace) -> TradingConfig:
@@ -100,16 +115,19 @@ def _run_tune(args: argparse.Namespace) -> int:
     )
 
     if args.out:
-        from pathlib import Path
-
-        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.out).write_text(
+        try:
+            out_path = _resolve_safe_output_path(args.out)
+        except ValueError as exc:
+            print(f"[ERR] invalid --out: {exc}")
+            return 2
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
             json.dumps({"metric": result.metric, "best_value": result.best_value,
                         "best_params": result.best_params, "backend": result.backend},
                        ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"[OK] best 파라미터 저장 -> {args.out}")
+        print(f"[OK] best 파라미터 저장 -> {out_path}")
 
     if args.json:
         print(json.dumps({"backend": result.backend, "metric": result.metric,
@@ -211,19 +229,22 @@ def _run_rl(args: argparse.Namespace) -> int:
         print(f"[OK] 연속 RL 정책 ONNX export -> {args.onnx}  (추론: OnnxPolicyModel)")
 
     if args.out:
-        from pathlib import Path
-
         if args.algo == "cppo":
             payload_w = {"W": agent.W.tolist(), "b": float(agent.b), "log_std": float(agent.log_std)}
         else:
             payload_w = {"W": agent.W.tolist(), "b": agent.b.tolist()}
-        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.out).write_text(
+        try:
+            out_path = _resolve_safe_output_path(args.out)
+        except ValueError as exc:
+            print(f"[ERR] invalid --out: {exc}")
+            return 2
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
             json.dumps({**payload_w, "cost_bps": args.cost_bps, "reward_scale": args.reward_scale},
                        ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"[OK] 정책 가중치 저장 -> {args.out}")
+        print(f"[OK] 정책 가중치 저장 -> {out_path}")
 
     iter_based = args.algo in ("ppo", "cppo")
     payload = {

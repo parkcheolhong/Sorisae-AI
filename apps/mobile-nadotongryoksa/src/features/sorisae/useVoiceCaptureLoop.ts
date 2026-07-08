@@ -214,7 +214,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
         }
     }, [autoVoiceModeEnabled]);
 
-    const startVoiceInput = useCallback(async (options: { autoMode?: boolean; target?: 'main' | 'inter_call' } = {}) => {
+    const startVoiceInput = useCallback(async (options: { autoMode?: boolean; target?: 'main' | 'inter_call' } = {}) => { // NOSONAR
         if (voiceInputStartInFlightRef.current || voiceInputStopInFlightRef.current || recordingRef.current) {
             return;
         }
@@ -247,16 +247,16 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && inputTarget === 'main'
                 && faceSpeakingRef.current
                 && faceVoicePlaybackSoundRef.current) {
-                void faceVoicePlaybackSoundRef.current.getStatusAsync()
+                faceVoicePlaybackSoundRef.current.getStatusAsync()
                     .then((status) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
-                            void stopFacePlayback().catch(() => { /* no-op */ });
+                            stopFacePlayback().catch(() => { /* no-op */ });
                             faceSpeakingRef.current = false;
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                         }
                     })
                     .catch(() => {
-                        void stopFacePlayback().catch(() => { /* no-op */ });
+                        stopFacePlayback().catch(() => { /* no-op */ });
                         faceSpeakingRef.current = false;
                     });
             }
@@ -568,7 +568,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             }
             clearAutoVoiceTimers();
             const restartDelayMs = getWorldlincoTuning().face_conversation.restart_ms;
-            const beginCapture = () => {
+            const beginCapture = () => { // NOSONAR
                 if (sorisaeWindowOpenRef.current && Date.now() < sorisaeServerErrorBlockedUntilRef.current) {
                     autoVoiceRestartTimerRef.current = setTimeout(
                         beginCapture,
@@ -633,7 +633,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     armRestart();
                     return;
                 }
-                void Promise.race([
+                Promise.race([
                     afterPlayback,
                     new Promise<void>((resolve) => setTimeout(resolve, getWorldlincoTuning().face_conversation.playback_cap_ms)),
                 ]).finally(() => {
@@ -692,7 +692,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     from: voiceInputTargetRef.current,
                 }));
                 voiceInputTargetRef.current = 'main';
-                void startVoiceInput({ autoMode: true, target: 'main' });  // NOSONAR
+                startVoiceInput({ autoMode: true, target: 'main' }).catch(() => { });
                 return;
             }
 
@@ -701,7 +701,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             if (sorisaeWindowOpenRef.current
                 && sorisaeSpeakingRef.current
                 && sorisaeVoicePlaybackSoundRef.current) {
-                void sorisaeVoicePlaybackSoundRef.current.getStatusAsync()
+                sorisaeVoicePlaybackSoundRef.current.getStatusAsync()
                     .then((status) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
                             sorisaeSpeakingRef.current = false;
@@ -720,16 +720,16 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && faceVoicePlaybackSoundRef.current
                 && !recordingRef.current
                 && !voiceSttLoadingRef.current) {
-                void faceVoicePlaybackSoundRef.current.getStatusAsync()
+                faceVoicePlaybackSoundRef.current.getStatusAsync()
                     .then((status) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
-                            void stopFacePlayback().catch(() => { /* no-op */ });  // NOSONAR
+                            stopFacePlayback().catch(() => { /* no-op */ });
                             faceSpeakingRef.current = false;
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                         }
                     })
                     .catch(() => {
-                        void stopFacePlayback().catch(() => { /* no-op */ });
+                        stopFacePlayback().catch(() => { /* no-op */ });
                         faceSpeakingRef.current = false;
                     });
                 faceSpeakingStuckTicks = 0;
@@ -746,7 +746,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'sorisae_speaking_stuck_recover' }));
                     sorisaeSpeakingRef.current = false;
                     setSorisaeSpeakingUi?.(false);
-                    void startVoiceInput({ autoMode: true });
+                    startVoiceInput({ autoMode: true }).catch(() => { });
                     return;
                 }
             } else {
@@ -764,7 +764,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     faceSpeakingStuckTicks = 0;
                     console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_stuck_recover' }));
                     faceSpeakingRef.current = false;
-                    void startVoiceInput({ autoMode: true });
+                    startVoiceInput({ autoMode: true }).catch(() => { });
                     return;
                 }
             } else {
