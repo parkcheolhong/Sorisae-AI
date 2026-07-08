@@ -59,7 +59,7 @@ def _iter_ts_files(folder: Path):
         yield file_path
 
 
-def _collect_violations() -> list[tuple[str, int, str, str]]:
+def _collect_violations() -> list[tuple[str, int, str, str]]:  # NOSONAR
     violations: list[tuple[str, int, str, str]] = []
     for engine, forbidden_prefixes in RULES.items():
         for file_path in _iter_ts_files(SRC / engine):

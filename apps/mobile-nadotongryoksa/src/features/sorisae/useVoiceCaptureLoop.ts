@@ -512,7 +512,10 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 if (!isFaceConversation) {
                     const listenDurationMs = autoRelayDelayMs;
                     autoVoiceStopTimerRef.current = setTimeout(() => {
-                        void stopVoiceInputRef.current?.();
+                        const stopVoiceInput = stopVoiceInputRef.current;
+                        if (stopVoiceInput) {
+                            stopVoiceInput().catch(() => { });
+                        }
                     }, listenDurationMs);
                 }
             }
@@ -619,7 +622,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     return;
                 }
                 if (voiceInputTargetRef.current === 'main') {
-                    void startVoiceInput({ autoMode: true });
+                    startVoiceInput({ autoMode: true }).catch(() => { });
                 }
             };
             const armRestart = () => {

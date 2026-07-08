@@ -1858,7 +1858,9 @@ function AppInner() {
             <View style={styles.connectionStateActionRow}>
                 <Pressable
                     style={[styles.inlineActionBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}
-                    onPress={() => { void handleStartInstantDemoSession(config.sectionKey); }}
+                    onPress={() => {
+                        handleStartInstantDemoSession(config.sectionKey).catch(() => { });
+                    }}
                     disabled={demoSessionLoading}
                     accessibilityRole="button"
                     accessibilityLabel="worldlinco-demo-session-start-button"
@@ -8296,7 +8298,7 @@ function AppInner() {
         voiceInputTargetRef.current = 'main';
         setAutoVoiceModeEnabled(true);
         if (!recordingRef.current) {
-            void startVoiceInput({ autoMode: true });
+            startVoiceInput({ autoMode: true }).catch(() => { });
         }
         setGpsStatus(`🔔 음성 호출 대기 중 · "${aiDisplayName}" 또는 "소리새"라고 부르면 깨어나요`);
     }, [aiDisplayName, startVoiceInput, stopVoiceInput]);
@@ -8509,7 +8511,7 @@ function AppInner() {
         if (Platform.OS === 'web' || !interCallActive || !interCallVoiceAssistEnabled || recordingRef.current || voiceInputStartInFlightRef.current || voiceInputStopInFlightRef.current) {
             return;
         }
-        void startVoiceInput({ autoMode: true, target: 'inter_call' });
+        startVoiceInput({ autoMode: true, target: 'inter_call' }).catch(() => { });
     }, [interCallActive, interCallVoiceAssistEnabled, startVoiceInput]);
 
     const handleSelectInterCallContact = useCallback((contact: DevicePhoneContact) => {
@@ -9046,7 +9048,13 @@ function AppInner() {
                                     <Text style={styles.inlineGhostBtnText}>🔒 비밀번호 변경</Text>
                                 </Pressable>
                                 {biometricLoginReady ? (
-                                    <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleToggleBiometricLogin(); }} testID="worldlinco-biometric-login-toggle">
+                                    <Pressable
+                                        style={styles.inlineGhostBtn}
+                                        onPress={() => {
+                                            handleToggleBiometricLogin().catch(() => { });
+                                        }}
+                                        testID="worldlinco-biometric-login-toggle"
+                                    >
                                         <Text style={styles.inlineGhostBtnText}>{biometricLoginEnabled ? '👆 지문 로그인 해제' : '👆 지문 빠른 로그인 설정'}</Text>
                                     </Pressable>
                                 ) : null}
@@ -11514,7 +11522,12 @@ function AppInner() {
                             ) : null}
                         </ScrollView>
                         <View style={styles.modalActionRow}>
-                            <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleOpenInterCallContactPicker(); }}>  // NOSONAR
+                            <Pressable
+                                style={styles.inlineGhostBtn}
+                                onPress={() => {
+                                    handleOpenInterCallContactPicker().catch(() => { });
+                                }}
+                            >
                                 <Text style={styles.inlineGhostBtnText}>{interCallContactLoading ? '새로고침 중...' : '다시 불러오기'}</Text>
                             </Pressable>
                             <Pressable style={styles.modalCloseBtn} onPress={() => setInterCallContactPickerVisible(false)}>

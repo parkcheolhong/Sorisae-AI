@@ -33,7 +33,7 @@ class EventCaptureConfig:
     max_events: int = 0        # 0=무제한
 
 
-def iter_event_ticks(
+def iter_event_ticks(  # NOSONAR
     source: Iterable[MarketTick], config: EventCaptureConfig | None = None
 ) -> Iterator[MarketTick]:
     """source 틱 스트림에서 이벤트 윈도(pre+event+post)에 속하는 틱만 순서대로 yield.

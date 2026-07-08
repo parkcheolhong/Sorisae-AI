@@ -951,7 +951,11 @@ def update_me(
     return current_user
 
 
-@router.post("/recovery/start", response_model=PasswordRecoveryStartResponse)
+@router.post(
+    "/recovery/start",
+    response_model=PasswordRecoveryStartResponse,
+    responses={400: {"description": "잘못된 복구 요청입니다."}},
+)
 def start_password_recovery(
     payload: PasswordRecoveryStartRequest,
     db: Session = Depends(get_db),

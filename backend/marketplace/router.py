@@ -176,6 +176,12 @@ from .ad_video_order_engine import (
 
 logger = logging.getLogger(__name__)
 
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    "Pragma": "no-cache",
+}
+AUTH_REQUIRED_DETAIL = "로그인이 필요합니다."
+
 
 async def _run_async_request_in_thread(coro):
     return await asyncio.to_thread(lambda: asyncio.run(coro))
@@ -743,10 +749,7 @@ def get_worldlinco_apk_manifest() -> Any:
     payload = _read_worldlinco_apk_manifest()
     return JSONResponse(
         content=payload,
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "Pragma": "no-cache",
-        },
+        headers=NO_CACHE_HEADERS,
     )
 
 
@@ -764,10 +767,7 @@ def get_latest_apk_metadata() -> Any:
             "size_bytes": payload.get("sizeBytes"),
             "apk_filename": payload.get("apkFilename"),
         },
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "Pragma": "no-cache",
-        },
+        headers=NO_CACHE_HEADERS,
     )
 
 
@@ -778,10 +778,7 @@ def get_worldlinco_tuning_public() -> Any:
 
     return JSONResponse(
         content=worldlinco_tuning_public_payload(),
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "Pragma": "no-cache",
-        },
+        headers=NO_CACHE_HEADERS,
     )
 
 
@@ -792,10 +789,7 @@ def get_worldlinco_billing_policy_public() -> Any:
 
     return JSONResponse(
         content=worldlinco_billing_policy_public_payload(),
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "Pragma": "no-cache",
-        },
+        headers=NO_CACHE_HEADERS,
     )
 
 
@@ -818,10 +812,7 @@ def get_worldlinco_tourism_promo_public(
             language=lang,
             mode=mode,
         ),
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "Pragma": "no-cache",
-        },
+        headers=NO_CACHE_HEADERS,
     )
 
 
@@ -835,7 +826,7 @@ def post_worldlinco_tourism_promo_user(
 
     user_id = int(getattr(current_user, "id", 0) or 0)
     if user_id <= 0:  # NOSONAR
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+        raise HTTPException(status_code=401, detail=AUTH_REQUIRED_DETAIL)
     author = str(getattr(current_user, "username", None) or getattr(current_user, "email", "") or f"user-{user_id}")
     try:
         post = create_user_tourism_promo(
@@ -892,7 +883,7 @@ def get_worldlinco_referral_discount_quote(
 
     user_id = int(getattr(current_user, "id", 0) or 0)
     if user_id <= 0:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+        raise HTTPException(status_code=401, detail=AUTH_REQUIRED_DETAIL)
     minor = int(amount_minor if amount_minor is not None else float(amount or 0))
     if minor <= 0:
         raise HTTPException(status_code=400, detail="amount 또는 amount_minor 가 필요합니다.")  # NOSONAR
@@ -915,7 +906,7 @@ def get_worldlinco_mobile_billing_offer(
 
     user_id = int(getattr(current_user, "id", 0) or 0)
     if user_id <= 0:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+        raise HTTPException(status_code=401, detail=AUTH_REQUIRED_DETAIL)
     plan = resolve_worldlinco_plan(plan_key)
     if not plan:
         raise HTTPException(status_code=404, detail="plan_key_not_found")
@@ -958,7 +949,7 @@ def get_worldlinco_referral_me(
 
     user_id = int(getattr(current_user, "id", 0) or 0)
     if user_id <= 0:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+        raise HTTPException(status_code=401, detail=AUTH_REQUIRED_DETAIL)
     username = str(getattr(current_user, "username", None) or getattr(current_user, "email", "") or f"user-{user_id}")
     api_base = _resolve_public_api_base()
     return JSONResponse(
@@ -1060,8 +1051,7 @@ def download_latest_marketplace_apk() -> Any:
         filename="latest.apk",
         headers={
             "Content-Disposition": 'attachment; filename="latest.apk"',
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "Pragma": "no-cache",
+            **NO_CACHE_HEADERS,
             "Expires": "0",
         },
     )

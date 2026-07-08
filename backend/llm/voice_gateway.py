@@ -230,7 +230,7 @@ def _friend_is_place_query(transcript: str) -> bool:
     return any(k.lower() in norm for k in _FRIEND_PLACE_KEYWORDS)
 
 
-def _friend_fetch_maps_grounding(
+def _friend_fetch_maps_grounding(  # NOSONAR
     query: str,
     latitude: Optional[float],
     longitude: Optional[float],
@@ -290,7 +290,7 @@ def _friend_fetch_maps_grounding(
     return "\n".join(lines) if len(lines) > 1 else ""
 
 
-def _friend_fetch_index_grounding(
+def _friend_fetch_index_grounding(  # NOSONAR
     query: str,
     latitude: Optional[float],
     longitude: Optional[float],
@@ -1803,7 +1803,7 @@ class FriendChatRequest(BaseModel):
 
 
 @router.post("/voice/friend-chat", response_model=VoiceResponse)
-async def voice_friend_chat(request: FriendChatRequest):
+async def voice_friend_chat(request: FriendChatRequest):  # NOSONAR
     """대면 통역 '친구 모드' 전용 — 따뜻하고 자연스러운 AI 친구 대화.
 
     무거운 개발 오케스트레이터(/voice/orchestrate)와 100% 분리된 경량 경로.

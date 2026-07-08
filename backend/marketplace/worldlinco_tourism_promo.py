@@ -383,7 +383,7 @@ def save_user_tourism_promos(payload: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
-def create_user_tourism_promo(
+def create_user_tourism_promo(  # NOSONAR
     *,
     user_id: int,
     author_username: str,

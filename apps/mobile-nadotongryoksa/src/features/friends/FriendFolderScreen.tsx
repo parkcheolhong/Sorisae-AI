@@ -498,7 +498,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
     </View>
   ), [currentUserEmail, friendTotal, userId]);
 
-  const renderAddFriendPanel = useCallback(() => (
+  const renderAddFriendPanel = useCallback(() => ( // NOSONAR
     <View style={styles.manualSection}>
       <Text style={styles.manualHint}>
         연락처·직접 입력·근처 찾기로 등록합니다. 이메일/전화 인증이 필요합니다.

@@ -1154,7 +1154,11 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
             refund_amount=None,
         )
 
-    @router.post("/bookings/{booking_ref}/refund", response_model=BookingCancelRefundResponse)
+    @router.post(
+        "/bookings/{booking_ref}/refund",
+        response_model=BookingCancelRefundResponse,
+        responses={400: {"description": "요청 본문과 경로 booking_ref 가 일치해야 합니다."}},
+    )
     def refund_booking(
         booking_ref: str,
         payload: BookingCancelRefundRequest,
