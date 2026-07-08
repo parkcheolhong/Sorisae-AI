@@ -3,8 +3,11 @@
 # FEATURE-ID: FEATURE-APP-MAIN-PY-RUNTIME
 # CHUNK-ID: CHUNK-APP-MAIN-PY-001
 
+from threading import Lock
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from app.auth_routes import auth_router
 from app.ops_routes import ops_router
 from app.routes import router
@@ -23,11 +26,36 @@ from backend.marketplace.stats_router import router as marketplace_stats_router
 class Utf8JsonResponse(JSONResponse):
     media_type = 'application/json; charset=utf-8'
 
-def create_application() -> FastAPI:
+
+_runtime_schemas_ready = False
+_runtime_schemas_lock = Lock()
+
+
+def _ensure_runtime_schemas_if_available() -> None:
+    global _runtime_schemas_ready
+
+    if _runtime_schemas_ready:
+        return
+
     database_available, _ = check_database_availability()
-    if database_available:
+    if not database_available:
+        return
+
+    with _runtime_schemas_lock:
+        if _runtime_schemas_ready:
+            return
+
+        database_available, _ = check_database_availability()
+        if not database_available:
+            return
+
         ensure_traceability_schema()
         ensure_marketplace_runtime_schema()
+        _runtime_schemas_ready = True
+
+
+def create_application() -> FastAPI:
+    _ensure_runtime_schemas_if_available()
 
     app = FastAPI(
         title='오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-88b347d566',
@@ -49,6 +77,11 @@ def create_application() -> FastAPI:
     missing_routes = sorted(mandatory_routes - registered_paths)
     if missing_routes:
         raise RuntimeError(f"mandatory routes missing at startup: {', '.join(missing_routes)}")
+
+    @app.middleware('http')
+    async def ensure_runtime_schemas(request, call_next):
+        await run_in_threadpool(_ensure_runtime_schemas_if_available)
+        return await call_next(request)
 
     @app.get('/')
     def root():

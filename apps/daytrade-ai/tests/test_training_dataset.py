@@ -1,6 +1,8 @@
 import numpy as np
 
+from daytrade.config import SignalConfig
 from daytrade.features.engine import FEATURE_NAMES
+from daytrade.feed.memory import ListFeed
 from daytrade.feed.simulated import SimulatedFeed
 from daytrade.training.dataset import (
     build_dataset,
@@ -8,10 +10,24 @@ from daytrade.training.dataset import (
     make_sequences,
     train_val_split,
 )
+from daytrade.types import MarketTick, OrderBookLevel
 
 
 def _feed(n=500):
     return SimulatedFeed(symbol="T", n_ticks=n, depth=10, seed=1)
+
+
+def _tick(idx, price):
+    bids = (OrderBookLevel(price - 0.01, 100.0),)
+    asks = (OrderBookLevel(price + 0.01, 100.0),)
+    return MarketTick(
+        ts_ns=idx * 10_000_000,
+        symbol="T",
+        bids=bids,
+        asks=asks,
+        last_price=price,
+        last_qty=10.0,
+    )
 
 
 def test_feature_matrix_shape_and_order():
@@ -27,6 +43,17 @@ def test_build_dataset_drops_horizon_rows():
     assert len(bundle) == 400 - horizon
     assert bundle.X.shape[0] == len(bundle.y_buy) == len(bundle.y_sell)
     assert bundle.feature_names == FEATURE_NAMES
+
+
+def test_feature_matrix_applies_signal_momentum_window_ms():
+    ticks = [_tick(i, 100.0 + i) for i in range(4)]
+    X, _, _ = build_feature_matrix(
+        ListFeed(ticks),
+        SignalConfig(momentum_window_ms=30.0),
+    )
+
+    micro_momentum_idx = FEATURE_NAMES.index("micro_momentum")
+    assert X[3, micro_momentum_idx] == 3.0
 
 
 def test_make_sequences_windowing():

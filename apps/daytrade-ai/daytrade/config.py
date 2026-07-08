@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass, field
 from enum import Enum
@@ -21,6 +22,7 @@ class TradingMode(str, Enum):
 
 LIVE_ENV_KEY = "DAYTRADE_ALLOW_LIVE"
 LIVE_ENV_TOKEN = "I_UNDERSTAND_THE_RISK"
+SIGNAL_TICK_INTERVAL_MS = 10.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +53,10 @@ class SignalConfig:
     ai_buy_threshold: float = 0.90   # AI 매수 확신 임계
     ai_sell_threshold: float = 0.90  # AI 매도 임계
     use_ai: bool = True              # AI 추론 사용 여부(False=규칙만)
+
+    @property
+    def momentum_window_ticks(self) -> int:
+        return max(1, math.ceil(self.momentum_window_ms / SIGNAL_TICK_INTERVAL_MS))
 
 
 @dataclass(frozen=True, slots=True)

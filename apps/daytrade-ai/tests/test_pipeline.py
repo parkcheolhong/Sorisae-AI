@@ -80,3 +80,14 @@ def test_live_without_token_falls_back_to_paper():
     pipe = TradingPipeline(cfg, env={})
     assert pipe.effective_mode == TradingMode.PAPER
     assert pipe.executor.is_live is False
+
+
+def test_pipeline_applies_signal_momentum_window_ms():
+    cfg = TradingConfig.backtest(signal=SignalConfig(momentum_window_ms=30.0))
+    pipe = TradingPipeline(cfg)
+
+    assert pipe.features.momentum_window == 3
+
+    pipe.apply_signal_config(SignalConfig(momentum_window_ms=40.0))
+
+    assert pipe.features.momentum_window == 4

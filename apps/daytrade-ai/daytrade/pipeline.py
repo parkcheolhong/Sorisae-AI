@@ -73,6 +73,7 @@ class TradingPipeline:
         self.features = FeatureEngine(
             depth=config.signal.depth,
             vwap_window=config.signal.vwap_window,
+            momentum_window=config.signal.momentum_window_ticks,
         )
         self.detection = DetectionEngine(config.signal)
         self.model = model or load_model(model_path)
@@ -82,12 +83,20 @@ class TradingPipeline:
 
     # ── 런타임 모델/시그널 핫스왑(M7 — current.json 결선) ───────────
     def apply_signal_config(self, signal) -> None:
-        """시그널 임계를 런타임에 교체(탐지 엔진까지 즉시 반영). depth 변경 시 FeatureEngine 재구성."""
+        """시그널 임계를 런타임에 교체(탐지 엔진까지 즉시 반영). 피처 설정 변경 시 FeatureEngine 재구성."""
         old = self.config.signal
         self.config.signal = signal
         self.detection.config = signal
-        if signal.depth != old.depth or signal.vwap_window != old.vwap_window:
-            self.features = FeatureEngine(depth=signal.depth, vwap_window=signal.vwap_window)
+        if (
+            signal.depth != old.depth
+            or signal.vwap_window != old.vwap_window
+            or signal.momentum_window_ms != old.momentum_window_ms
+        ):
+            self.features = FeatureEngine(
+                depth=signal.depth,
+                vwap_window=signal.vwap_window,
+                momentum_window=signal.momentum_window_ticks,
+            )
 
     def reload_model(self, model_path: str | None) -> None:
         """추론 모델을 런타임에 교체(Blue-Green 핫스왑 결과 적용)."""

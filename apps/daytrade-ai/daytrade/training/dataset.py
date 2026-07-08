@@ -41,7 +41,11 @@ def build_feature_matrix(
     price_kind: "mid"(기본, mid_price 우선) | "last"(체결가). 라벨 기준가로 사용.
     """
     signal = signal or SignalConfig()
-    fe = FeatureEngine(depth=signal.depth, vwap_window=signal.vwap_window)
+    fe = FeatureEngine(
+        depth=signal.depth,
+        vwap_window=signal.vwap_window,
+        momentum_window=signal.momentum_window_ticks,
+    )
     feats: list[list[float]] = []
     prices: list[float] = []
     for i, tick in enumerate(feed.ticks()):

@@ -8,6 +8,35 @@ from app.main import app
 
 client = TestClient(app)
 
+
+def test_runtime_schema_bootstrap_retries_after_transient_db(monkeypatch):
+    from app import main as app_main
+
+    availability = iter([
+        (False, 'temporary outage'),
+        (True, 'database connection ok'),
+        (True, 'database connection ok'),
+    ])
+    calls = []
+
+    monkeypatch.setattr(app_main, '_runtime_schemas_ready', False)
+    monkeypatch.setattr(app_main, 'check_database_availability', lambda: next(availability))
+    monkeypatch.setattr(
+        app_main, 'ensure_traceability_schema', lambda: calls.append('traceability')
+    )
+    monkeypatch.setattr(
+        app_main, 'ensure_marketplace_runtime_schema', lambda: calls.append('marketplace')
+    )
+
+    retry_app = app_main.create_application()
+    assert calls == []
+
+    response = TestClient(retry_app).get('/')
+
+    assert response.status_code == 200
+    assert calls == ['traceability', 'marketplace']
+
+
 def test_order_profile_route():
     response = client.get('/order-profile')
     assert response.status_code == 200
