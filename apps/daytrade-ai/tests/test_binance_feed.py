@@ -69,8 +69,8 @@ def test_feed_emits_tick_per_depth_and_applies_trade_state():
     feed = BinanceFeed(symbol="BTCUSDT", message_source=messages)
     ticks = list(feed.ticks())
     assert len(ticks) == 2  # depth 메시지 2건만 틱 생성(trade 는 상태만 갱신)
-    assert ticks[0].last_price == 100.07
-    assert ticks[0].last_qty == 2.5
+    assert ticks[0].last_price == pytest.approx(100.07)
+    assert ticks[0].last_qty == pytest.approx(2.5)
     assert ticks[0].symbol == "BTCUSDT"
 
 

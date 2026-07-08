@@ -76,4 +76,4 @@ def test_policy_probs_bounded(tmp_path):
         fv = eng.update(tick)
         pb, ps = model.predict(fv)
         assert 0.0 <= pb <= 1.0 and 0.0 <= ps <= 1.0
-        assert pb == 0.0 or ps == 0.0  # target 부호상 한쪽은 항상 0
+        assert pb <= 1e-9 or ps <= 1e-9  # target 부호상 한쪽은 항상 0

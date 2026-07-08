@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile,
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, func
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Annotated
 from pydantic import BaseModel
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
@@ -885,8 +885,8 @@ def get_worldlinco_sales_invite_qr(code: str, request: Request) -> Response:
 def get_worldlinco_referral_discount_quote(
     amount: Optional[int] = None,
     amount_minor: Optional[int] = None,
-    current_user: Any = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[Any, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> Any:
     from backend.marketplace.worldlinco_referral import resolve_referral_discount_quote
 

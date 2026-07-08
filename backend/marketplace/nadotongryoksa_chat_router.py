@@ -5,7 +5,7 @@ from datetime import datetime
 
 from backend.time_utils import utcnow
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Annotated
 from uuid import uuid4
 
 from fastapi import (
@@ -1493,8 +1493,8 @@ def create_group_room(
 @router.post("/rooms/self")
 def create_or_get_self_room(
     request: SelfRoomCreateRequest,
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[Any, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, Any]:
     current_user_id = int(current_user.id)
     room = _find_self_room(db, current_user_id)
@@ -1708,8 +1708,8 @@ def add_chat_room_members(
 def list_chat_room_messages(
     room_id: str,
     limit: int = Query(default=50, ge=1, le=200),
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[Any, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, Any]:
     current_user_id = int(current_user.id)
     room, _member = _require_room_member(db, room_id, current_user_id)

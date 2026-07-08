@@ -14,7 +14,7 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Annotated
 from datetime import datetime, timedelta, timezone
 
 from backend.time_utils import utcnow
@@ -953,22 +953,19 @@ async def _send_incoming_call_invite(
         logger.info(
             (
                 "[VoIP] Incoming invite skipped; callee offline | "
-                "voice_id=%s | call_id=%s | payload=%s"
+                "voice_id=%s"
             ),
             callee_voice_id,
-            payload.get("call_id"),
-            _serialize_voip_payload(payload),
         )
         return False
     try:
         logger.info(
             (
                 "[VoIP] Publishing incoming invite | voice_id=%s | "
-                "call_id=%s | payload=%s"
+                "call_id=%s"
             ),
             callee_voice_id,
             payload.get("call_id"),
-            _serialize_voip_payload(payload),
         )
         await websocket.send_json(payload)
         return True
@@ -1969,8 +1966,8 @@ async def end_voip_call(
 )
 async def get_call_mode_audit(
     call_id: str,
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[Any, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> List[CallModeAuditEventRead]:
     events = list_call_mode_events(db, call_id=call_id)
     if not events:
@@ -2915,17 +2912,13 @@ async def websocket_signaling(
                         "sdp": current_peer.localDescription.sdp,
                     }
                     await websocket.send_json(answer_message)
-                    logger.info(f"[VoIP] Answer sent | call_id={call_id}")
-                except Exception as e:
-                    logger.error(
-                        "[VoIP] Failed to send answer | call_id=%s | error=%s",
-                        call_id,
-                        str(e),
-                    )
+                    logger.info("[VoIP] Answer sent")
+                except Exception:
+                    logger.exception("[VoIP] Failed to send answer")
 
             elif message.get("type") == "answer":
                 call_state.remote_sdp = message.get("sdp")
-                logger.info(f"[VoIP] Answer received | call_id={call_id}")
+                logger.info("[VoIP] Answer received")
 
                 # TODO: Forward answer to mobile app (relay)
                 # This would come from media relay back to app

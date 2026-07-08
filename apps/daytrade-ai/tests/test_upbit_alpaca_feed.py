@@ -39,8 +39,8 @@ def test_upbit_stream_kind():
 
 def test_upbit_orderbook_normalization():
     t = normalize_upbit_orderbook(upbit_orderbook(), "KRW-BTC", 10, 0.0, 0.0)
-    assert t.best_bid == 100.0
-    assert t.best_ask == 100.1
+    assert t.best_bid == pytest.approx(100.0)
+    assert t.best_ask == pytest.approx(100.1)
     assert len(t.bids) == 2 and len(t.asks) == 2
     assert abs(t.last_price - 100.05) < 1e-9  # mid when no trade
 
@@ -90,7 +90,7 @@ def test_alpaca_feed_trade_then_quote():
     ticks = list(AlpacaFeed(symbol="AAPL", message_source=msgs).ticks())
     assert len(ticks) == 1
     assert ticks[0].last_price == pytest.approx(100.07)
-    assert ticks[0].last_qty == 10.0
+    assert ticks[0].last_qty == pytest.approx(10.0)
 
 
 def test_alpaca_live_requires_keys():

@@ -1,5 +1,6 @@
 from daytrade.execution.portfolio import Portfolio
 from daytrade.types import Fill, Order, OrderSide
+import pytest
 
 
 def buy(symbol, qty, price, ts=1):
@@ -25,7 +26,7 @@ def test_weighted_average_on_scale_in():
     pf.apply_fill(buy("T", 100, 60.0))
     pos = pf.position("T")
     assert pos.qty == 200
-    assert pos.avg_entry == 55.0
+    assert pos.avg_entry == pytest.approx(55.0)
 
 
 def test_realized_pnl_on_close():
