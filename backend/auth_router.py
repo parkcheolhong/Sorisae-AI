@@ -717,7 +717,15 @@ def login(
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.post("/passkey/register/start", response_model=PasskeyRegistrationStartResponse)
+@router.post(
+    "/passkey/register/start",
+    response_model=PasskeyRegistrationStartResponse,
+    responses={
+        401: {"description": "비밀번호가 올바르지 않습니다."},
+        404: {"description": "패스키를 등록할 계정을 찾을 수 없습니다."},
+        428: {"description": "복구 인증 또는 비밀번호 확인이 필요합니다."},
+    },
+)
 def start_passkey_registration(
     request: Request,
     payload: PasskeyRegistrationStartRequest,
@@ -1140,7 +1148,13 @@ def reset_password_via_recovery(
     }
 
 
-@router.post("/password/change", response_model=UserPasswordChangeResponse)
+@router.post(
+    "/password/change",
+    response_model=UserPasswordChangeResponse,
+    responses={
+        400: {"description": "요청 비밀번호 값이 유효하지 않습니다."},
+    },
+)
 def change_user_password(
     payload: UserPasswordChangeRequest,
     db: Session = Depends(get_db),

@@ -20,6 +20,7 @@ from .feed.recorder import write_ticks_csv
 
 
 SIM_INPUT_HELP = "합성 시뮬레이션 입력"
+SIM_TICKS_HELP = "--sim 시 생성 틱 수"
 
 
 def _resolve_safe_output_path(raw_path: str) -> Path:
@@ -171,7 +172,7 @@ def _run_events(args: argparse.Namespace) -> int:
     return 0
 
 
-def _run_rl(args: argparse.Namespace) -> int:
+def _run_rl(args: argparse.Namespace) -> int:  # NOSONAR
     import numpy as np
 
     from .rl import (
@@ -422,7 +423,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
     p_wf.add_argument("--mode", choices=["backtest", "validate"], default="backtest")
     p_wf.add_argument("--symbol", default="AAPL")
     p_wf.add_argument("--depth", type=int, default=10)
-    p_wf.add_argument("--ticks", type=int, default=20_000, help="--sim 시 생성 틱 수")
+    p_wf.add_argument("--ticks", type=int, default=20_000, help=SIM_TICKS_HELP)
     p_wf.add_argument("--cash", type=float, default=1_000_000.0)
     p_wf.add_argument("--seed", type=int, default=42)
     p_wf.add_argument("--n-splits", dest="n_splits", type=int, default=5)
@@ -443,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
     tsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_tune.add_argument("--symbol", default="AAPL")
     p_tune.add_argument("--depth", type=int, default=10)
-    p_tune.add_argument("--ticks", type=int, default=20_000, help="--sim 시 생성 틱 수")
+    p_tune.add_argument("--ticks", type=int, default=20_000, help=SIM_TICKS_HELP)
     p_tune.add_argument("--cash", type=float, default=1_000_000.0)
     p_tune.add_argument("--seed", type=int, default=42)
     p_tune.add_argument("--n-trials", dest="n_trials", type=int, default=20)
@@ -463,7 +464,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
     src.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_train.add_argument("--symbol", default="AAPL")
     p_train.add_argument("--depth", type=int, default=10)
-    p_train.add_argument("--ticks", type=int, default=20_000, help="--sim 시 생성 틱 수")
+    p_train.add_argument("--ticks", type=int, default=20_000, help=SIM_TICKS_HELP)
     p_train.add_argument("--seed", type=int, default=42)
     p_train.add_argument("--backend", choices=["numpy", "torch"], default="numpy")
     p_train.add_argument("--out", required=True, help="numpy=*.json, torch=*.onnx 저장 경로")
@@ -500,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:  # NOSONAR
     rsrc.add_argument("--sim", action="store_true", help=SIM_INPUT_HELP)
     p_rl.add_argument("--symbol", default="AAPL")
     p_rl.add_argument("--depth", type=int, default=10)
-    p_rl.add_argument("--ticks", type=int, default=5_000, help="--sim 시 생성 틱 수")
+    p_rl.add_argument("--ticks", type=int, default=5_000, help=SIM_TICKS_HELP)
     p_rl.add_argument("--seed", type=int, default=0)
     p_rl.add_argument("--algo", choices=["ppo", "cppo", "reinforce"], default="ppo",
                       help="ppo(이산 actor-critic) | cppo(연속 포지션 사이즈) | reinforce(베이스라인)")

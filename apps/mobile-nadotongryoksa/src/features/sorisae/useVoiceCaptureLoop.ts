@@ -459,7 +459,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                     event: 'vad_max_duration_skip_silent',
                                     segment_ms: segmentMs,
                                 }));
-                                void stopVoiceInputRef.current?.({ discardSegment: true });  // NOSONAR
+                                Promise.resolve(stopVoiceInputRef.current?.({ discardSegment: true })).catch(() => {
+                                    // no-op
+                                });
                                 return;
                             }
                             if (shouldDeferSorisaeSegmentStop({
@@ -476,7 +478,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 return;
                             }
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'vad_end', reason }));
-                            void stopVoiceInputRef.current?.();
+                            Promise.resolve(stopVoiceInputRef.current?.()).catch(() => {
+                                // no-op
+                            });
                         },
                         isStillActive: () => autoVoiceModeEnabledRef.current
                             && voiceInputTargetRef.current === 'main'
@@ -802,11 +806,13 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
     // speech_end: 말이 끝나면 즉시 flush(자연스러운 문장 경계 컷, file-growth max_duration 대기 불필요).
     useEffect(() => {
         let cancelled = false;
-        void probeVoiceRelaySileroVadSupport().then((supported) => {
+        probeVoiceRelaySileroVadSupport().then((supported) => {
             if (!cancelled) {
                 faceSileroSupportedRef.current = supported;
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'silero_probe', supported }));
             }
+        }).catch(() => {
+            // no-op
         });
         const unsubscribe = subscribeVoiceRelaySileroVadEvents((evt) => {
             if (!faceSileroActiveRef.current || voiceInputTargetRef.current !== 'main') {
@@ -873,7 +879,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             if (speakingResumed || !recordingRef.current) {
                                 return;
                             }
-                            void stopVoiceInputRef.current?.();
+                            Promise.resolve(stopVoiceInputRef.current?.()).catch(() => {
+                                // no-op
+                            });
                         }, SORISAE_SPEECH_END_SETTLE_MS);
                         return;
                     }
@@ -895,7 +903,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 }
                 // 실제 음성이 한 번이라도 잡힌 뒤의 말 끝에서만 자연 종료 flush.
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'vad_end', reason: 'silero_speech_end' }));
-                void stopVoiceInputRef.current?.();
+                Promise.resolve(stopVoiceInputRef.current?.()).catch(() => {
+                    // no-op
+                });
             }
         });
         return () => {

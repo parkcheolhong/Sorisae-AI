@@ -152,27 +152,12 @@ with tempfile.TemporaryDirectory() as temp_dir:
 
 
 def _m4a_normalize_and_stt_via_docker(m4a: bytes) -> dict[str, Any]:
-    import tempfile
-
-    remote = "/tmp/sorisae_probe_normalize.m4a"
-    with tempfile.NamedTemporaryFile(suffix=".m4a", delete=False) as handle:
-        handle.write(m4a)
-        local_path = Path(handle.name)
-    try:
-        copy = subprocess.run(
-            ["docker", "cp", str(local_path), f"{DOCKER_CONTAINER}:{remote}"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=60,
-        )
-        if copy.returncode != 0:
-            raise RuntimeError((copy.stderr or copy.stdout or "docker cp failed")[:400])
-        code = f"""
+    encoded = base64.b64encode(m4a).decode("ascii")
+    code = f"""
+import base64
 import json
-from pathlib import Path
 from backend.llm.voice_gateway import _normalize_voice_audio_bytes, _run_faster_whisper
-raw = Path({remote!r}).read_bytes()
+raw = base64.b64decode({encoded!r})
 normalized = _normalize_voice_audio_bytes(raw)
 stt = _run_faster_whisper(raw, None)
 print(json.dumps({{
@@ -183,12 +168,10 @@ print(json.dumps({{
     "detected_language": stt.get("detected_language"),
 }}))
 """
-        proc = _docker_backend_python(code)
-        if proc.returncode != 0:
-            raise RuntimeError(proc.stderr.decode("utf-8", errors="replace")[:400])
-        return json.loads(proc.stdout.decode("utf-8"))
-    finally:
-        local_path.unlink(missing_ok=True)
+    proc = _docker_backend_python(code)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.decode("utf-8", errors="replace")[:400])
+    return json.loads(proc.stdout.decode("utf-8"))
 
 
 def _extract_response_text(payload: dict[str, Any]) -> str:

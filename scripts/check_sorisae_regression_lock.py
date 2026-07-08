@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VOICE_CAPTURE_LOOP_PATH = "apps/mobile-nadotongryoksa/src/features/sorisae/useVoiceCaptureLoop.ts"
+VOICE_GATEWAY_PATH = "backend/llm/voice_gateway.py"
 
 FORBIDDEN: list[tuple[str, str]] = [
     (
@@ -19,18 +20,18 @@ FORBIDDEN: list[tuple[str, str]] = [
         r"sorisaeWindowMicBootstrappedRef\.current = true[\s\S]{0,1500}void startVoiceInput\(",
     ),
     (
-        "backend/llm/voice_gateway.py",
+        VOICE_GATEWAY_PATH,
         r"voice_input\.bin",
     ),
 ]
 
 REQUIRED_SNIPPETS: list[tuple[str, str]] = [
     (
-        "backend/llm/voice_gateway.py",
+        VOICE_GATEWAY_PATH,
         "_guess_audio_input_suffix",
     ),
     (
-        "backend/llm/voice_gateway.py",
+        VOICE_GATEWAY_PATH,
         "_friend_chat_dedicated_instance",
     ),
     (

@@ -12,7 +12,7 @@ from typing import Any, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/tourism-review", tags=["tourism-review"])
 logger = logging.getLogger(__name__)
@@ -40,10 +40,17 @@ class ReviewLabel(BaseModel):
 
 class ReviewLabelBatch(BaseModel):
     reviewer: Optional[str] = None
-    labels: List[ReviewLabel] = []
+  labels: List[ReviewLabel] = Field(default_factory=list)
 
 
-@router.get("/sample")
+@router.get(
+  "/sample",
+  responses={
+    404: {"description": "tourism review disabled"},
+    500: {"description": "review sample unavailable"},
+    503: {"description": "review DB unavailable"},
+  },
+)
 def review_sample(mode: str = "poi", n: int = 20, k: int = 5) -> Any:
     _guard()
     try:
@@ -87,7 +94,13 @@ def review_labels(batch: ReviewLabelBatch) -> Any:
         raise HTTPException(status_code=500, detail="review label save failed") from None
 
 
-@router.get("/stats")
+@router.get(
+  "/stats",
+  responses={
+    404: {"description": "tourism review disabled"},
+    500: {"description": "review stats unavailable"},
+  },
+)
 def review_stats() -> Any:
     _guard()
     try:
@@ -99,7 +112,13 @@ def review_stats() -> Any:
         raise HTTPException(status_code=500, detail="review stats unavailable") from None
 
 
-@router.get("/console", response_class=HTMLResponse)
+@router.get(
+  "/console",
+  response_class=HTMLResponse,
+  responses={
+    404: {"description": "tourism review disabled"},
+  },
+)
 def review_console() -> str:
     _guard()
     return _CONSOLE_HTML

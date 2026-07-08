@@ -1079,7 +1079,7 @@ async function stopFaceVoicePlayback(playbackSoundRef: React.MutableRefObject<Au
     playbackSoundRef.current = null;
 }
 
-async function playFaceTranslationOutput(options: {
+async function playFaceTranslationOutput(options: {  // NOSONAR
     translatedText: string;
     targetLang: LangCode;
     audioBase64?: string | null;

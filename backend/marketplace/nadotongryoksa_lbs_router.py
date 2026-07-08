@@ -1107,7 +1107,13 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:  # NOSONAR
             partner_id=partner_id,
         )
 
-    @router.post("/bookings/{booking_ref}/confirm", response_model=BookingLifecycleResponse)
+    @router.post(
+        "/bookings/{booking_ref}/confirm",
+        response_model=BookingLifecycleResponse,
+        responses={
+            400: {"description": "요청 본문과 경로 booking_ref 가 일치해야 합니다."},
+        },
+    )
     def confirm_booking(
         booking_ref: str,
         payload: BookingLifecycleRequest,
@@ -1125,7 +1131,13 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:  # NOSONAR
             partner_id=partner_id,
         )
 
-    @router.post("/bookings/{booking_ref}/complete", response_model=BookingLifecycleResponse)
+    @router.post(
+        "/bookings/{booking_ref}/complete",
+        response_model=BookingLifecycleResponse,
+        responses={
+            400: {"description": "요청 본문과 경로 booking_ref 가 일치해야 합니다."},
+        },
+    )
     def complete_booking(
         booking_ref: str,
         payload: BookingLifecycleRequest,

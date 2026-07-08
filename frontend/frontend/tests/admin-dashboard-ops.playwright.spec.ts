@@ -282,6 +282,21 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('extras health/catalog rail actions open in-app preview with payload', async ({ page }) => {
+        await page.route('**/api/marketplace/extras/health**', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ status: 'ok', source: 'playwright-mock-health' }),
+            });
+        });
+        await page.route('**/api/marketplace/extras/catalog**', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ status: 'ok', items: ['game', 'iot'] }),
+            });
+        });
+
         const previewTitle = page.getByText('🧪/🧬 Extras API 인앱 프리뷰');
         const panel = page.getByTestId('admin-extras-preview-panel');
         const endpointText = panel.locator('p.workspace-card-copy').filter({ hasText: 'endpoint:' });
