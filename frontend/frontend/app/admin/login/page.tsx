@@ -553,6 +553,9 @@ export default function AdminLoginPage() {
             <Link href="/admin/recovery" data-testid="admin-login-recovery-link" className="hidden">
               비밀번호를 잊으셨나요?
             </Link>
+            <Link href="/admin/recovery?mode=carrier" data-testid="admin-login-carrier-recovery-link" className="hidden">
+              통신사 본인확인 후 비밀번호 재설정
+            </Link>
           </div>
 
           <div className="mt-5 rounded-xl border border-[#d8dcff] bg-[#f7f8ff] px-4 py-4 text-sm text-[#4d5588]">

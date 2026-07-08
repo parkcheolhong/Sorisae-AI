@@ -2118,6 +2118,11 @@ export default function AdminDashboardPage() {
                 payload = rawText;
             }
 
+            const normalizedPayload: unknown =
+                payload && typeof payload === 'object' && !Array.isArray(payload)
+                    ? { status: response.status, ...(payload as Record<string, unknown>) }
+                    : { status: response.status, payload };
+
             const finishedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
             setExtrasPreviewState({
                 loading: false,
@@ -2125,7 +2130,7 @@ export default function AdminDashboardPage() {
                 durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
                 fetchedAt: new Date().toISOString(),
                 error: response.ok ? null : `API 응답 실패 (${response.status})`,
-                payload,
+                payload: normalizedPayload,
             });
 
             if (fromRail) {
@@ -2810,6 +2815,9 @@ export default function AdminDashboardPage() {
                 rightRailFooter={opsGateRailFooter}
                 topActions={(
                     <>
+                        <Link href="/marketplace" data-testid="admin-topnav-marketplace" aria-label="마켓플레이스 이동" className="workspace-topbar-chip">
+                            마켓플레이스
+                        </Link>
                         <Link href="/admin/tourism-review" data-testid="admin-topnav-tourism-review" aria-label="관광 데이터 사람검수 콘솔 열기" className="workspace-topbar-chip">
                             관광 검수
                         </Link>
@@ -2860,6 +2868,13 @@ export default function AdminDashboardPage() {
                     </>
                 )}
             >
+                {adminDashboardOverviewAssembly.capabilityBootstrapNotice && (
+                    <div data-testid="admin-dashboard-capability-bootstrap-notice" className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                        <p>ℹ️ {adminDashboardOverviewAssembly.capabilityBootstrapNotice}</p>
+                        <p className="mt-1 text-xs text-blue-700">자동 건강상태 안정 · 기능군 재동기화 대기</p>
+                        <p className="mt-1 text-xs text-blue-700">오케스트레이터 기능군 재동기화 대기</p>
+                    </div>
+                )}
                 <div style={{ maxWidth: '800px', margin: '0 auto', minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                         <h2 style={{ fontSize: '28px', fontWeight: 600, color: 'white', marginBottom: '8px' }}>GenSpark 스타일 AI 워크스페이스 4.0</h2>
