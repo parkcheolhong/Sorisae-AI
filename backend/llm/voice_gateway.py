@@ -28,6 +28,9 @@ from backend.voip_language_locales import (
     resolve_whisper_initial_prompt,
     resolve_whisper_language_hint,
 )
+from backend.llm.correlation import FEATURE_IDS
+from backend.marketplace.worldlinco_section_freeze import frozen_sorisae_edge_tts_prosody_ko
+from backend.voip.voip_tts_prosody import resolve_voip_edge_tts_prosody
 
 from backend.llm.model_config import (
     build_ollama_options,
@@ -532,6 +535,11 @@ def _friend_chat_base_url() -> str:
             "://localhost", "://host.docker.internal"
         )
     return raw
+
+
+def _friend_chat_dedicated_instance() -> str:
+    """Explicit dedicated-instance seam kept for Sorisae friend-chat gates/tests."""
+    return _friend_chat_base_url()
 
 
 def _list_served_models(base_url: Optional[str] = None) -> set[str]:
@@ -1327,17 +1335,39 @@ def edge_tts_base_rate_pct() -> float:
         return -6.0
 
 
+def _edge_tts_prosody_defaults(target_lang: Optional[str]) -> tuple[str, str, str]:
+    lang = _lang_primary(target_lang)
+    if lang == "ko":
+        return resolve_voip_edge_tts_prosody(lang)
+    return (os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%", "+0%", "+0Hz")
+
+
+def _resolve_edge_tts_prosody(
+    target_lang: Optional[str],
+    feature_id: Optional[str],
+) -> tuple[str, str, str]:
+    lang = _lang_primary(target_lang)
+    if lang != "ko":
+        return _edge_tts_prosody_defaults(target_lang)
+
+    resolved_feature = str(feature_id or "").strip()
+    if resolved_feature == FEATURE_IDS["face_interpret"]:
+        return ("-1%", "+28%", "+2Hz")
+    if resolved_feature == "sorisae.friend":
+        return frozen_sorisae_edge_tts_prosody_ko()
+    return resolve_voip_edge_tts_prosody(lang)
+
+
 def _synthesize_edge_tts(
     text: str,
     target_lang: Optional[str] = None,
     *,
+    feature_id: Optional[str] = None,
     expressive: Optional[object] = None,
 ) -> tuple[bytes, str]:
     import edge_tts
 
-    rate = os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%"
-    volume = "+0%"
-    pitch = "+0Hz"
+    rate, volume, pitch = _resolve_edge_tts_prosody(target_lang, feature_id)
     # [V2 감정 E3] 표현형 운율 적용(카나리). expressive 가 주어지면(=COMM_V2_EMOTION_EXPRESSIVE_TTS
     # on + 비중립) rate/volume/pitch 를 감정 운율로 대체. 없으면 기존 동작과 100% 동일.
     if expressive is not None:
@@ -1393,6 +1423,7 @@ def _synthesize_tts(
     text: str,
     target_lang: Optional[str] = None,
     *,
+    feature_id: Optional[str] = None,
     expressive: Optional[object] = None,
 ) -> tuple[Optional[str], Optional[str]]:
     trimmed = str(text or "").strip()
@@ -1402,7 +1433,7 @@ def _synthesize_tts(
     if _edge_tts_enabled():
         try:
             audio_bytes, audio_format = _synthesize_edge_tts(
-                trimmed, target_lang, expressive=expressive
+                trimmed, target_lang, feature_id=feature_id, expressive=expressive
             )
             return base64.b64encode(audio_bytes).decode("ascii"), audio_format
         except ImportError:

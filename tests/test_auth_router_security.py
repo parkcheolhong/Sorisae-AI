@@ -193,3 +193,41 @@ def test_reset_password_updates_hash_and_clears_session(monkeypatch):
     assert user.hashed_password != "old"
     assert db.committed is True
     assert "recovery_test" not in auth_router._password_recovery_store
+
+
+def test_non_expiring_admin_token_forced_off_in_prod(monkeypatch):
+    """[#4] ALLOW_NON_EXPIRING_ADMIN_TOKENS 가 켜져 있어도 prod/stage 에서는 무시(만료 토큰)."""
+    admin_user = SimpleNamespace(is_admin=True, is_superuser=False)
+
+    monkeypatch.setenv("ALLOW_NON_EXPIRING_ADMIN_TOKENS", "true")
+    monkeypatch.setenv("APP_ENV", "production")
+    auth_router = _load_auth_router(monkeypatch)
+    assert auth_router._should_issue_non_expiring_admin_token(admin_user) is False
+
+    monkeypatch.setenv("APP_ENV", "staging")
+    auth_router = _load_auth_router(monkeypatch)
+    assert auth_router._should_issue_non_expiring_admin_token(admin_user) is False
+
+    # dev 에서는 (개발 편의상) 여전히 비만료 발급 허용.
+    monkeypatch.setenv("APP_ENV", "dev")
+    auth_router = _load_auth_router(monkeypatch)
+    assert auth_router._should_issue_non_expiring_admin_token(admin_user) is True
+
+
+def test_lookup_active_session_signals_db_failure(monkeypatch):
+    """[#4] 세션 조회 DB 실패는 (None, True) 로 신호 → 호출측이 admin fail-closed 판단."""
+    import backend.auth as auth
+    import backend.database as database
+
+    def _boom():
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(database, "SessionLocal", _boom, raising=False)
+    sid, failed = auth._lookup_active_session(123)
+    assert sid is None
+    assert failed is True
+
+    # uid<=0 은 조회 자체를 생략하며 실패가 아님(정상 None).
+    sid0, failed0 = auth._lookup_active_session(0)
+    assert sid0 is None
+    assert failed0 is False

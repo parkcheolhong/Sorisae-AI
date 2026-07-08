@@ -152,3 +152,189 @@ def test_booking_rejects_non_hotel_place():
 
     assert response.status_code == 400
     assert "호텔 카테고리" in response.json()["detail"]
+
+
+def test_partner_click_endpoint_returns_click_ref():
+    client = _build_test_client()
+
+    response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/clicks",
+        json={"partner_id": "partner-hotel-default", "landing_url": "https://example.com/hotel"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["click_ref"].startswith("CLK-")
+    assert payload["partner_id"] == "partner-hotel-default"
+
+
+def test_booking_lifecycle_start_confirm_complete_chain():
+    client = _build_test_client()
+
+    start_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/bookings/start",
+        json={
+            "place_id": "hotel-lotte-seoul",
+            "customer_name": "홍길동",
+            "checkin_date": "2026-05-10",
+            "checkout_date": "2026-05-12",
+            "guests": 2,
+            "room_count": 1,
+            "target_lang": "en",
+        },
+    )
+    assert start_response.status_code == 200
+    start_payload = start_response.json()
+    assert start_payload["stage"] == "initiated"
+    booking_ref = start_payload["booking_ref"]
+    assert booking_ref.startswith("BK-")
+
+    confirm_response = client.post(
+        f"/api/marketplace/nadotongryoksa/lbs/bookings/{booking_ref}/confirm",
+        json={"booking_ref": booking_ref, "status_note": "payment authorized"},
+    )
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["stage"] == "confirmed"
+
+    complete_response = client.post(
+        f"/api/marketplace/nadotongryoksa/lbs/bookings/{booking_ref}/complete",
+        json={"booking_ref": booking_ref, "status_note": "voucher issued"},
+    )
+    assert complete_response.status_code == 200
+    assert complete_response.json()["stage"] == "completed"
+
+
+def test_commission_settlement_batch_draft_chain():
+    client = _build_test_client()
+
+    start_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/bookings/start",
+        json={
+            "place_id": "hotel-lotte-seoul",
+            "customer_name": "김정산",
+            "checkin_date": "2026-06-01",
+            "checkout_date": "2026-06-03",
+            "guests": 2,
+            "room_count": 1,
+            "target_lang": "ko",
+        },
+    )
+    assert start_response.status_code == 200
+    booking_ref = start_response.json()["booking_ref"]
+
+    complete_response = client.post(
+        f"/api/marketplace/nadotongryoksa/lbs/bookings/{booking_ref}/complete",
+        json={"booking_ref": booking_ref, "status_note": "settlement ready"},
+    )
+    assert complete_response.status_code == 200
+
+    dry_run_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/settlements/commission-batch",
+        json={
+            "dry_run": True,
+            "limit": 50,
+            "default_commission_amount": 15.5,
+            "commission_rate": 0.1,
+            "currency": "usd",
+        },
+    )
+    assert dry_run_response.status_code == 200
+    dry_payload = dry_run_response.json()
+    assert dry_payload["dry_run"] is True
+    assert dry_payload["created"] >= 1
+    assert dry_payload["currency"] == "USD"
+
+    execute_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/settlements/commission-batch",
+        json={
+            "dry_run": False,
+            "limit": 50,
+            "default_commission_amount": 15.5,
+            "commission_rate": 0.1,
+            "currency": "usd",
+        },
+    )
+    assert execute_response.status_code == 200
+    execute_payload = execute_response.json()
+    assert execute_payload["dry_run"] is False
+    assert execute_payload["created"] >= 1
+
+    rerun_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/settlements/commission-batch",
+        json={
+            "dry_run": False,
+            "limit": 50,
+            "default_commission_amount": 15.5,
+            "commission_rate": 0.1,
+            "currency": "usd",
+        },
+    )
+    assert rerun_response.status_code == 200
+    rerun_payload = rerun_response.json()
+    assert rerun_payload["created"] == 0
+    assert rerun_payload["skipped_existing"] >= 1
+
+
+def test_booking_cancel_and_refund_chain_updates_stage():
+    client = _build_test_client()
+
+    start_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/bookings/start",
+        json={
+            "place_id": "hotel-lotte-seoul",
+            "customer_name": "환불테스트",
+            "checkin_date": "2026-06-11",
+            "checkout_date": "2026-06-12",
+            "guests": 1,
+            "room_count": 1,
+            "target_lang": "ko",
+        },
+    )
+    assert start_response.status_code == 200
+    booking_ref = start_response.json()["booking_ref"]
+
+    cancel_response = client.post(
+        f"/api/marketplace/nadotongryoksa/lbs/bookings/{booking_ref}/cancel",
+        json={"booking_ref": booking_ref, "reason": "customer changed plans"},
+    )
+    assert cancel_response.status_code == 200
+    cancel_payload = cancel_response.json()
+    assert cancel_payload["stage"] == "cancelled"
+    assert cancel_payload["ledger_adjusted"] is False
+
+    refund_response = client.post(
+        f"/api/marketplace/nadotongryoksa/lbs/bookings/{booking_ref}/refund",
+        json={"booking_ref": booking_ref, "reason": "full refund approved", "refund_amount": 18.5},
+    )
+    assert refund_response.status_code == 200
+    refund_payload = refund_response.json()
+    assert refund_payload["stage"] == "refunded"
+    assert refund_payload["ledger_adjusted"] is True
+    assert refund_payload["adjustment_amount"] == 18.5
+
+
+def test_booking_cancel_rejects_mismatched_booking_ref():
+    client = _build_test_client()
+
+    start_response = client.post(
+        "/api/marketplace/nadotongryoksa/lbs/bookings/start",
+        json={
+            "place_id": "hotel-lotte-seoul",
+            "customer_name": "불일치테스트",
+            "checkin_date": "2026-06-21",
+            "checkout_date": "2026-06-23",
+            "guests": 2,
+            "room_count": 1,
+            "target_lang": "ko",
+        },
+    )
+    assert start_response.status_code == 200
+    booking_ref = start_response.json()["booking_ref"]
+
+    response = client.post(
+        f"/api/marketplace/nadotongryoksa/lbs/bookings/{booking_ref}/cancel",
+        json={"booking_ref": "BK-MISMATCH", "reason": "invalid request"},
+    )
+    assert response.status_code == 400
+    assert "booking_ref mismatch" in response.json()["detail"]

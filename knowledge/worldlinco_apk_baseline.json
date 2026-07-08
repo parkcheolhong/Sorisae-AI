@@ -1,0 +1,7 @@
+{
+  "schema": "worldlinco_apk_baseline_v1",
+  "policy": "모바일 APK 빌드 기준선만. 오디오·소리새·VoIP 튜닝과 분리 — VoIP APK만 올릴 때 이 파일만 갱신.",
+  "versionCode": 312,
+  "versionName": "1.0.237",
+  "probe_min_build": 296
+}
