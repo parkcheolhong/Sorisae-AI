@@ -535,7 +535,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
             <>
               <Pressable
                 style={[styles.pickContactBtn, (contactPickLoading || addLoading) && styles.addBtnDisabled]}
-                onPress={() => { void handlePickContactFromDevice(); }}
+                onPress={() => { handlePickContactFromDevice(); }}
                 disabled={contactPickLoading || addLoading}
                 testID="friend-pick-contact"
               >

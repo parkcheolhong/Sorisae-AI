@@ -1476,7 +1476,7 @@ function AppInner() {
     const handleClearVoipLocalLang = useCallback(() => {
         setVoipLocalLangOverride(null);
         setVoipLangModalVisible(false);
-        void AsyncStorage.removeItem(VOIP_LOCAL_LANG_STORAGE_KEY).catch(() => { });
+        AsyncStorage.removeItem(VOIP_LOCAL_LANG_STORAGE_KEY).catch(() => { });
     }, []);
     const [voipAutoCallVoiceId, setVoipAutoCallVoiceId] = useState<string | null>(null);
     const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoomSummary | null>(null);
@@ -3607,15 +3607,15 @@ function AppInner() {
             return;
         }
 
-        void fetchPendingIncomingVoipCall('pending_call_initial');
+        fetchPendingIncomingVoipCall('pending_call_initial');
         const pollTimer = setInterval(() => {
-            void fetchPendingIncomingVoipCall('pending_call_poll');
+            fetchPendingIncomingVoipCall('pending_call_poll');
         }, pendingIncomingVoipCallRef.current?.call_id ? 800 : 2500);
         const appStateSubscription = AppState.addEventListener('change', (nextState) => {
             if (nextState === 'active') {
-                void fetchPendingIncomingVoipCall('pending_call_active');
+                fetchPendingIncomingVoipCall('pending_call_active');
             } else if (nextState === 'background' || nextState === 'inactive') {
-                void fetchPendingIncomingVoipCall('pending_call_background');
+                fetchPendingIncomingVoipCall('pending_call_background');
             }
         });
 
@@ -5993,7 +5993,7 @@ function AppInner() {
         setVoipAutoCallVoiceId(null);
         setVoipValidationOverride(false);
         voipValidationFriendCallBypassRef.current = false;
-        void persistVoipValidationFriendCallBypass(false);
+        persistVoipValidationFriendCallBypass(false);
         logUiPressProbe('FRIEND_FOLDER_CLOSE', { source });
         if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
             restoreVoipRailState(`friend_folder_close_${source}`);
@@ -10533,7 +10533,7 @@ function AppInner() {
                                                     </Text>
                                                     <Pressable
                                                         style={styles.inlineActionBtn}
-                                                        onPress={() => { void handleToggleInterCallVoiceAssist(); }}
+                                                        onPress={() => { handleToggleInterCallVoiceAssist(); }}
                                                         accessibilityLabel="worldlinco-inter-call-voice-assist-toggle"
                                                         testID="worldlinco-inter-call-voice-assist-toggle"
                                                     >

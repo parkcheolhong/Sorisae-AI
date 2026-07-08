@@ -373,7 +373,7 @@ export function ChatRoomListScreen({  // NOSONAR
             </View>
             <Pressable
               style={[styles.primaryButton, busyAction === 'group-room' && styles.disabledButton]}
-              onPress={() => { void handleCreateGroupRoom(); }}
+              onPress={() => { handleCreateGroupRoom(); }}
               disabled={busyAction === 'group-room'}
             >
               <Text style={styles.primaryButtonText}>{busyAction === 'group-room' ? '그룹방 생성 중...' : '선택 멤버로 그룹방 열기'}</Text>

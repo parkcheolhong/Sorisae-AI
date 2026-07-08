@@ -598,16 +598,16 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         });
                 }
                 if (faceSpeakingRef.current && faceVoicePlaybackSoundRef.current) {
-                    void faceVoicePlaybackSoundRef.current.getStatusAsync()
+                    faceVoicePlaybackSoundRef.current.getStatusAsync()
                         .then((status) => {
                             if (!status?.isLoaded || !status?.isPlaying) {
-                                void stopFacePlayback().catch(() => { /* no-op */ });  // NOSONAR
+                                stopFacePlayback().catch(() => { /* no-op */ });  // NOSONAR
                                 faceSpeakingRef.current = false;
                                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                             }
                         })
                         .catch(() => {
-                            void stopFacePlayback().catch(() => { /* no-op */ });
+                            stopFacePlayback().catch(() => { /* no-op */ });
                             faceSpeakingRef.current = false;
                         });
                 }

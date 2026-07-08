@@ -1200,7 +1200,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         voiceRelayRestartTimerRef.current = setTimeout(() => {
             voiceRelayRestartTimerRef.current = null;
             setVoiceRelayListenWaiting(false);
-            void startVoiceRelaySegmentRef.current();
+            startVoiceRelaySegmentRef.current();
         }, waitMs);
     }, [callInitResponse.call_id]);
 
