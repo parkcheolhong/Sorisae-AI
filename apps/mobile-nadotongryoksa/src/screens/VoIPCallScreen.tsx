@@ -966,8 +966,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             // MODE_IN_COMMUNICATION 의 출력 경로가 '이어피스'라서, 그 구간에 USAGE_MEDIA(TTS)까지
             // 이어피스로 빠져 탁자 위 폰에선 무음이 된다. 재생 직전 라우드스피커를 강제(speaker=true)하고
             // 통화 스트림 음량을 최대화해, 어느 모드에서든 TTS 가 내장 스피커로 또렷이 나오게 한다.
-            await setVoipSpeakerphone(true);
-            await enableVoipAudio(true, true);
+            const speakerOn = isSpeakerOnRef.current;
+            await setVoipSpeakerphone(speakerOn);
+            await enableVoipAudio(speakerOn, true);
         } catch {
             // ignore audio mode failures before device TTS
         }

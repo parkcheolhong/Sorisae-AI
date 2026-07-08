@@ -418,8 +418,9 @@ class CallMediaBridge:
         loop = asyncio.get_event_loop()
 
         def _tts():
-            from backend.llm.voice_gateway import _synthesize_tts
-            return _synthesize_tts(text, lang)
+            from backend.voip import bridge_voice_io
+
+            return bridge_voice_io.bridge_synthesize_tts(text, lang)
 
         try:
             b64, fmt = await loop.run_in_executor(None, _tts)
@@ -591,8 +592,13 @@ class _InterpretTap:
 
         # STT (블로킹 → executor).
         def _stt():
-            from backend.llm.voice_gateway import _run_faster_whisper
-            return _run_faster_whisper(wav_bytes, self.source_lang, None)
+            from backend.voip import bridge_voice_io
+
+            return bridge_voice_io.bridge_run_faster_whisper(
+                wav_bytes,
+                self.source_lang,
+                min_segment_ms=int(SEG_MIN_SPEECH_MS),
+            )
 
         stt = await loop.run_in_executor(None, _stt)
         transcript = str((stt or {}).get("transcript") or "").strip()

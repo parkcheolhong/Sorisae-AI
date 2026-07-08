@@ -2,6 +2,7 @@ import type { VoiceRelayPlaybackItem } from './types';
 
 export class VoiceRelayPlaybackQueue {
     private readonly queue: VoiceRelayPlaybackItem[] = [];
+    private readonly acceptedKeys = new Set<string>();
     private processing = false;
     private seqCounter = 0;
 
@@ -13,6 +14,11 @@ export class VoiceRelayPlaybackQueue {
     }
 
     enqueue(item: VoiceRelayPlaybackItem): void {
+        const itemKey = this.buildDedupKey(item);
+        if (this.acceptedKeys.has(itemKey)) {
+            return;
+        }
+        this.acceptedKeys.add(itemKey);
         this.queue.push(item);
         this.queue.sort((left, right) => {
             if (left.seqId !== right.seqId) {
@@ -28,6 +34,7 @@ export class VoiceRelayPlaybackQueue {
 
     clear(): void {
         this.queue.length = 0;
+        this.acceptedKeys.clear();
     }
 
     get pendingCount(): number {
@@ -54,5 +61,20 @@ export class VoiceRelayPlaybackQueue {
                 void this.drain();
             }
         }
+    }
+
+    private buildDedupKey(item: VoiceRelayPlaybackItem): string {
+        const correlation = String(item.correlationId ?? '').trim();
+        if (correlation) {
+            return `corr:${correlation}`;
+        }
+        return [
+            item.utteranceId,
+            item.chunkIndex,
+            item.seqId,
+            item.targetLang,
+            item.translatedText,
+            item.isFinal ? '1' : '0',
+        ].join('|');
     }
 }
