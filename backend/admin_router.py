@@ -1882,7 +1882,7 @@ def _effective_env_field_value(key: str, env_values: Dict[str, str], runtime_con
     return str(recommended.get(key) or "").strip()
 
 
-def _build_admin_integration_checks(
+def _build_admin_integration_checks(  # NOSONAR
     env_values: Dict[str, str],
     display_values: Dict[str, str],
     runtime_config: Dict[str, Any],

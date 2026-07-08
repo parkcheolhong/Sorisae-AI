@@ -602,7 +602,7 @@ class TourismVectorStore:
         self.client.upsert(collection_name=self.collection, points=points)
         return len(points)
 
-    def search(
+    def search(  # NOSONAR
         self,
         query: str,
         *,

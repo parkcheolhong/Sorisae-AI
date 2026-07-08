@@ -5503,7 +5503,9 @@ function AppInner() {
             }
             const payload = parseIncomingVoipDeepLink(url);
             if (payload) {
-                void autoAcceptIncomingVoipDeepLink(payload, source);
+                autoAcceptIncomingVoipDeepLink(payload, source).catch(() => {
+                    logUiPressProbe('VOIP_DEEP_LINK_AUTO_ACCEPT_FAILED', { source });
+                });
                 return;
             }
 

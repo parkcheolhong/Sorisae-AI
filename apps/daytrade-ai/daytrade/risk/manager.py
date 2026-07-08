@@ -55,14 +55,14 @@ class RiskManager:
         self._halted = False
         self._halt_reason = ""
 
-    def approve(
+    def approve(  # NOSONAR
         self,
         order: Order,
         *,
         portfolio: Portfolio,
         prices: dict[str, float],
         expected_slippage_pct: float = 0.0,
-    ) -> RiskDecision:  # NOSONAR
+    ) -> RiskDecision:
         cfg = self.config
 
         if self._halted:

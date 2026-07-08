@@ -548,7 +548,11 @@ export function useSorisaeVoicePipeline(deps: SorisaeVoicePipelineDeps) {
     ]);
     useEffect(() => { startCompanionDormantListeningRef.current = startCompanionDormantListening; }, [startCompanionDormantListening]);
 
-    useEffect(() => () => { void stopCompanionNativeKws(); }, [stopCompanionNativeKws]);
+    useEffect(() => () => {
+        stopCompanionNativeKws().catch(() => {
+            console.warn('[SORISAE_COMPANION] native KWS cleanup stop failed');
+        });
+    }, [stopCompanionNativeKws]);
 
     const setCompanionVoiceCallArmedState = useCallback(async (nextArmed: boolean) => {
         if (Platform.OS === 'web') {

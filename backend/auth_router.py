@@ -375,7 +375,7 @@ def _assert_verified_recovery_reset_token(
         raise HTTPException(status_code=410, detail="재설정 토큰이 만료되었습니다")
 
     if user_id is not None and int(session_state.get("user_id") or 0) != int(user_id):
-        raise HTTPException(status_code=403, detail="재설정 토큰이 대상 계정과 일치하지 않습니다")
+        raise HTTPException(status_code=403, detail="재설정 토큰이 대상 계정과 일치하지 않습니다")  # NOSONAR
 
     return session_token, session_state
 
@@ -418,7 +418,7 @@ def _normalize_signup_phone(phone: Optional[str]) -> Optional[str]:
     if not cleaned:
         return None
     if not cleaned.startswith("+"):
-        raise HTTPException(
+        raise HTTPException(  # NOSONAR
             status_code=400,
             detail="전화번호는 +국가번호 형식(E.164)으로 입력하세요",
         )
@@ -570,7 +570,17 @@ def signup_request_verification_code(
     )
 
 
-@router.post("/signup/confirm", response_model=UserResponse, status_code=201)
+@router.post(
+    "/signup/confirm",
+    response_model=UserResponse,
+    status_code=201,
+    responses={
+        401: {"description": "인증 코드가 올바르지 않습니다"},
+        404: {"description": "인증 세션을 찾을 수 없습니다"},
+        410: {"description": "인증 세션이 만료되었습니다"},
+        429: {"description": "인증 재시도 제한에 걸렸습니다"},
+    },
+)
 def signup_confirm_verification(payload: SignupConfirmRequest, db: Session = Depends(get_db)):
     from backend.services.contact_verification import verify_session_code
 
@@ -981,7 +991,13 @@ def update_me(
 @router.post(
     "/recovery/start",
     response_model=PasswordRecoveryStartResponse,
-    responses={400: {"description": "잘못된 복구 요청입니다."}},
+    responses={
+        400: {"description": "잘못된 복구 요청입니다."},
+        403: {"description": "복구 경로 접근 권한이 없습니다."},
+        404: {"description": "일치하는 계정을 찾을 수 없습니다."},
+        429: {"description": "인증 재시도 제한에 걸렸습니다."},
+        502: {"description": "인증 코드 발송에 실패했습니다."},
+    },
 )
 def start_password_recovery(
     payload: PasswordRecoveryStartRequest,

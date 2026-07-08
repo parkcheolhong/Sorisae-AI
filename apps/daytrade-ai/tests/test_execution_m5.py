@@ -153,7 +153,7 @@ def test_alpaca_executor_with_fake_session():
     order = Order(symbol="AAPL", side=OrderSide.BUY, qty=10, order_type=OrderType.IOC, ts_ns=1)
     fill = ex.submit(order, _tick())
     assert fill.status == "filled" and fill.filled_qty == 10
-    assert sess.calls[0][0].endswith("/v2/orders")
+    assert sess.calls and sess.calls[0][0].endswith("/v2/orders")
 
 
 # ---------------- TradeStore ----------------

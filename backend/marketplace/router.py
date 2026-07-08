@@ -964,7 +964,10 @@ def get_worldlinco_referral_me(
     )
 
 
-@router.get("/worldlinco/invite/{code}")
+@router.get(
+    "/worldlinco/invite/{code}",
+    responses={404: {"description": "referral code not found"}},
+)
 def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
     """추천 QR/링크 랜딩 — APK 설치 + 앱 딥링크."""
     from backend.marketplace.worldlinco_referral import build_invite_landing_html, resolve_referrer_by_code
@@ -1474,7 +1477,11 @@ def confirm_marketplace_purchase(
     )
 
 
-@router.post("/payment/callback", response_model=schemas.PaymentCallbackResponse)
+@router.post(
+    "/payment/callback",
+    response_model=schemas.PaymentCallbackResponse,
+    responses={404: {"description": "구매 기록을 찾을 수 없습니다."}},
+)
 def marketplace_payment_callback(
     order_id: int,
     transaction_id: Optional[str] = None,

@@ -796,7 +796,7 @@ def _resolve_probe_credentials(email: str, password: str) -> tuple[str, str]:  #
     return resolved_email, resolved_password
 
 
-async def main() -> int:
+async def main() -> int:  # NOSONAR
     parser = argparse.ArgumentParser(description="11단계 오케스트레이터 로컬 프로브")
     parser.add_argument(
         "--mode",

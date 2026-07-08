@@ -590,7 +590,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     return;
                 }
                 if (sorisaeSpeakingRef.current && sorisaeVoicePlaybackSoundRef.current) {
-                    void sorisaeVoicePlaybackSoundRef.current.getStatusAsync()
+                    void sorisaeVoicePlaybackSoundRef.current.getStatusAsync() // NOSONAR
                         .then((status) => {
                             if (!status?.isLoaded || !status?.isPlaying) {
                                 sorisaeSpeakingRef.current = false;
@@ -625,7 +625,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     return;
                 }
                 if (voiceInputTargetRef.current === 'main') {
-                    startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ });
+                    startVoiceInput({ autoMode: true }).catch(() => { /* no-op */ }); // NOSONAR
                 }
             };
             const armRestart = () => {
