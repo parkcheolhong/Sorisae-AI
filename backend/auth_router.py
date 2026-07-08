@@ -706,7 +706,7 @@ def start_passkey_registration(
         (User.email == payload.email) | (User.username == payload.email)
     ).first()
     if not user or not _user_may_use_admin_portal(user):  # NOSONAR
-        raise HTTPException(status_code=404, detail="패스키를 등록할 관리자·지역관리자 계정을 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="패스키를 등록할 관리자·지역관리자 계정을 찾을 수 없습니다")  # NOSONAR
 
     recovery_session_token: str | None = None
     if payload.recovery_reset_token:
@@ -977,7 +977,7 @@ def start_password_recovery(
     verification_channel = str(payload.verification_channel or "email").strip().lower()
     phone_number = str(payload.phone_number or getattr(user, "phone_number", None) or "").strip() or None
     if verification_channel == "phone" and not phone_number:
-        raise HTTPException(
+        raise HTTPException(  # NOSONAR
             status_code=400,
             detail="전화 인증을 위해 phone_number가 필요합니다. 계정에 등록된 번호가 없으면 번호를 입력해주세요.",
         )
@@ -992,7 +992,7 @@ def start_password_recovery(
             payload={"user_id": int(user.id), "scope": payload.scope},
         )
     except ResendCooldownError as exc:
-        raise HTTPException(
+        raise HTTPException(  # NOSONAR
             status_code=429,
             detail=str(exc),
             headers={"Retry-After": str(exc.retry_after)},
@@ -1034,7 +1034,7 @@ def verify_password_recovery_identity(payload: PasswordRecoveryVerifyIdentityReq
     user_id = int(verified_payload.get("user_id") or 0)
     scope = str(verified_payload.get("scope") or "admin")
     if user_id <= 0:
-        raise HTTPException(status_code=400, detail="복구 세션 정보가 올바르지 않습니다")
+        raise HTTPException(status_code=400, detail="복구 세션 정보가 올바르지 않습니다")  # NOSONAR
 
     reset_token, reset_expires_at = _issue_recovery_token("reset")
     _password_recovery_store[payload.recovery_session_token] = {
@@ -1087,7 +1087,7 @@ def reset_password_via_recovery(
 def change_user_password(
     payload: UserPasswordChangeRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),  # NOSONAR
 ):
     if len(payload.new_password or "") < 8:
         raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")

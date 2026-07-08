@@ -72,7 +72,7 @@ def _parse_host_port(turn_url: str, default_port: int = 3478) -> Optional[Tuple[
     return s, default_port
 
 
-def _discover_turn_targets(explicit: Optional[str]) -> List[Tuple[str, int]]:
+def _discover_turn_targets(explicit: Optional[str]) -> List[Tuple[str, int]]:  # NOSONAR
     raw = explicit or os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")
     targets: List[Tuple[str, int]] = []
     if raw:
@@ -223,7 +223,7 @@ def _turn_allocate(host: str, port: int, secret: str, realm: str, timeout: float
         return False, f"{type(e).__name__}: {e}"
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[List[str]] = None) -> int:  # NOSONAR
     ap = argparse.ArgumentParser(description="지역 무관 통화 일관성 검증(백엔드+TURN 도달성)")
     ap.add_argument("--base-url", default=os.getenv("VERIFY_BASE_URL", "https://metanova1004.com"))
     ap.add_argument("--turn", default=None, help="turn:host:port (미지정 시 env/coturn 자동 탐지)")

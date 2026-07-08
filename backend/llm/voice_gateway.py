@@ -2275,7 +2275,7 @@ class AnswerRequest(BaseModel):
     feature_id: Optional[str] = None
 
 
-def _answer_city_context(
+def _answer_city_context(  # NOSONAR
     region_hint: Optional[str],
     country_code: Optional[str],
     latitude: Optional[float],

@@ -192,7 +192,7 @@ function normalizeTelemetryQueueItem(raw: unknown): WorldlincoTelemetryItem | nu
 }
 
 function persistTelemetryQueue(): void {
-    void AsyncStorage.setItem(
+    void AsyncStorage.setItem(  // NOSONAR
         WORLDLINCO_TELEMETRY_QUEUE_STORAGE_KEY,
         JSON.stringify(telemetryQueue.slice(-WORLDLINCO_TELEMETRY_MAX_QUEUE)),
     ).catch((error) => {

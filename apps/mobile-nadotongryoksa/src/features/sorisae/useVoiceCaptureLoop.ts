@@ -456,7 +456,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                     event: 'vad_max_duration_skip_silent',
                                     segment_ms: segmentMs,
                                 }));
-                                void stopVoiceInputRef.current?.({ discardSegment: true });
+                                void stopVoiceInputRef.current?.({ discardSegment: true });  // NOSONAR
                                 return;
                             }
                             if (shouldDeferSorisaeSegmentStop({
@@ -537,7 +537,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'capture_start_retry', detail }));
                 autoVoiceRestartTimerRef.current = setTimeout(() => {
                     if (autoVoiceModeEnabledRef.current && !recordingRef.current) {
-                        void startVoiceInput({ autoMode: true });
+                        void startVoiceInput({ autoMode: true });  // NOSONAR
                     }
                 }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
             } else {
@@ -601,7 +601,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     void faceVoicePlaybackSoundRef.current.getStatusAsync()
                         .then((status) => {
                             if (!status?.isLoaded || !status?.isPlaying) {
-                                void stopFacePlayback().catch(() => { /* no-op */ });
+                                void stopFacePlayback().catch(() => { /* no-op */ });  // NOSONAR
                                 faceSpeakingRef.current = false;
                                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                             }

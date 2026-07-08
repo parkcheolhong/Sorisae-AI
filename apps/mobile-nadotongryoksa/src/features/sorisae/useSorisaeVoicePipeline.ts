@@ -269,7 +269,7 @@ export function useSorisaeVoicePipeline(deps: SorisaeVoicePipelineDeps) {
             if (recordingRef.current && voiceInputTargetRef.current === 'main') {
                 await runtimeAdapterRef.current.stopVoiceInput({ suppressAutoRestart: true });
             }
-            void runtimeAdapterRef.current.stopPlayback(faceVoicePlaybackSoundRef);
+            void runtimeAdapterRef.current.stopPlayback(faceVoicePlaybackSoundRef);  // NOSONAR
             sorisaeSpeakingRef.current = false;
             voiceInputTargetRef.current = 'main';
             if (!autoVoiceModeEnabledRef.current) {

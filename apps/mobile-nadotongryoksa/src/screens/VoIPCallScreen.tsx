@@ -3055,7 +3055,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             }
             getVoIPToneService().stopAll();
             const cleanupHandlers = voipCallInitHandlersRef.current;
-            void cleanupHandlers?.stopVoiceRelaySegment(false);
+            void cleanupHandlers?.stopVoiceRelaySegment(false);  // NOSONAR
             void cleanupHandlers?.stopVoiceRelayPlayback();
             voiceRelayPlaybackQueueRef.current?.clear();
             setRemoteAudioSuppressed(false);

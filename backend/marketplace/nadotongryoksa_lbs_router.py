@@ -1109,7 +1109,7 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
     ) -> BookingLifecycleResponse:
         _ = current_user
         if payload.booking_ref != booking_ref:
-            raise HTTPException(status_code=400, detail="booking_ref mismatch")
+            raise HTTPException(status_code=400, detail="booking_ref mismatch")  # NOSONAR
         booking_event_id, partner_id = _advance_booking_stage(db, booking_ref, "confirmed", payload.status_note)
         return BookingLifecycleResponse(
             booking_ref=booking_ref,

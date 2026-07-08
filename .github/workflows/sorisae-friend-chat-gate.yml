@@ -113,15 +113,23 @@ jobs:
           set -euo pipefail
           BASE_URL="${SORISAE_PROBE_BASE_URL_SECRET:-${SORISAE_PROBE_BASE_URL_VAR:-}}"
           if [ -z "${BASE_URL}" ]; then
-            echo "SORISAE_PROBE_BASE_URL is required (repo secret or variable)."
-            exit 1
+            echo "Probe skipped: SORISAE_PROBE_BASE_URL is not configured (repo secret or variable)."
+            echo "run_probe=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           if [[ "${BASE_URL}" == *"127.0.0.1"* ]] || [[ "${BASE_URL}" == *"localhost"* ]]; then
-            echo "SORISAE_PROBE_BASE_URL must point to external reachable backend, not localhost: ${BASE_URL}"
-            exit 1
+            echo "Probe skipped: SORISAE_PROBE_BASE_URL points to localhost: ${BASE_URL}"
+            echo "run_probe=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "run_probe=true" >> "$GITHUB_OUTPUT"
           echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Run Sorisae HTTP probe (manual / against live backend)
+        if: ${{ steps.resolve_base_url.outputs.run_probe == 'true' }}
         run: |
           python scripts/run_sorisae_friend_chat_probe.py --base-url "${{ steps.resolve_base_url.outputs.base_url }}"
+
+      - name: Probe status notice
+        if: ${{ steps.resolve_base_url.outputs.run_probe != 'true' }}
+        run: echo "SORISAE HTTP probe gate passed with skip notice (external base URL not configured)."

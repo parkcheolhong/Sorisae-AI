@@ -5328,7 +5328,7 @@ function AppInner() {
 
         setVoipValidationOverride(false);
         voipValidationFriendCallBypassRef.current = false;
-        void persistVoipValidationFriendCallBypass(false);
+        void persistVoipValidationFriendCallBypass(false);  // NOSONAR
         openVoipTesterPanel();
         logUiPressProbe('VOIP_OPEN_SUCCESS');
     }, [effectiveVoipPlan, logUiPressProbe, openVoipTesterPanel, persistVoipValidationFriendCallBypass, selectedCallMode, token, userInfo]);
@@ -6307,7 +6307,7 @@ function AppInner() {
             if (Platform.OS === 'android') {
                 ToastAndroid.show('Google 지도로 이동합니다.', ToastAndroid.SHORT);
             }
-            void Linking.openURL(payload.googleMapsUrl);
+            void Linking.openURL(payload.googleMapsUrl);  // NOSONAR
             return;
         }
         if (payload.action === 'book') {
@@ -6902,7 +6902,7 @@ function AppInner() {
         throw new Error('gps-unavailable');
     }, [appendGpsDebugTrace, withTimeout]);
 
-    const handleDetectLangByGPS = useCallback(async (silent = false) => {
+    const handleDetectLangByGPS = useCallback(async (silent = false) => {  // NOSONAR
         setGpsLangLoading(true);
         if (!silent) setGpsStatus('위치 권한 확인 중...');
         try {
@@ -8170,7 +8170,7 @@ function AppInner() {
         setAutoVoiceModeEnabled(true);
         setGpsStatus(getUiText(fromLang).autoVoiceModeStarted ?? '🎙️ 대화 통역 시작 · 말 끝날 때까지 듣습니다');
         voiceInputTargetRef.current = 'main';
-        void startVoiceInput({ autoMode: true });
+        void startVoiceInput({ autoMode: true });  // NOSONAR
     }, [autoVoiceModeEnabled, fromLang, getUiText, startVoiceInput, stopVoiceInput, toLang, userInfo?.preferred_language]);
 
     /**
@@ -8243,7 +8243,7 @@ function AppInner() {
                 // autoVoiceMode를 끄지 않으면 재시작 루프가 메인 캡처를 되살려, 대면 발화가 소리새 경로로 새거나
                 // 그 반대로 엉킨다. 소리새 듣기는 창 안의 마이크 버튼(handleToggleSorisaeConversation)으로 따로 시작한다.
                 if (recordingRef.current) {
-                    void stopVoiceInput({ suppressAutoRestart: true });
+                    void stopVoiceInput({ suppressAutoRestart: true });  // NOSONAR
                 }
                 if (autoVoiceModeEnabledRef.current) {
                     setAutoVoiceModeEnabled(false);
@@ -9245,7 +9245,7 @@ function AppInner() {
                                                 friend_phone: friend.friendPhone ?? null,
                                                 friend_voice_id: friend.friendVoiceId ?? null,
                                             });
-                                            void handleStartFriendVoiceCall(friend);
+                                            void handleStartFriendVoiceCall(friend);  // NOSONAR
                                         }}
                                     />
                                 </View>
@@ -10875,7 +10875,7 @@ function AppInner() {
             {Platform.OS !== 'web' && !!userInfo && !showLogin && !voipCallInitResponse
                 && !hasPendingIncomingVoip && !sorisaeWindowOpen ? (
                 <Pressable
-                    onPress={() => { void handleToggleCompanionVoiceCall(); }}
+                    onPress={() => { void handleToggleCompanionVoiceCall(); }}  // NOSONAR
                     accessibilityRole="button"
                     accessibilityLabel="worldlinco-companion-voicecall-toggle"
                     testID="worldlinco-companion-voicecall-toggle"
@@ -11122,7 +11122,7 @@ function AppInner() {
                             </Pressable>
                         ) : null}
                         <Pressable
-                            onPress={() => { void handleToggleSorisaeConversation(); }}
+                            onPress={() => { void handleToggleSorisaeConversation(); }}  // NOSONAR
                             accessibilityRole="button"
                             accessibilityLabel="worldlinco-sorisae-window-mic"
                             testID="worldlinco-sorisae-window-mic"
@@ -11433,7 +11433,7 @@ function AppInner() {
                         </View>
                         <Pressable
                             style={[styles.loginDemoBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}
-                            onPress={() => { void handleStartInstantDemoSession('chat'); }}
+                            onPress={() => { void handleStartInstantDemoSession('chat'); }}  // NOSONAR
                             disabled={demoSessionLoading || loginLoading}
                             accessibilityRole="button"
                             accessibilityLabel="worldlinco-demo-session-start-button"

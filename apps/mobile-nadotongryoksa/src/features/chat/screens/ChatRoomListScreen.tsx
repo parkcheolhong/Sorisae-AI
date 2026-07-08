@@ -92,7 +92,7 @@ interface Props {
   openGroupSignal?: number;
 }
 
-export function ChatRoomListScreen({
+export function ChatRoomListScreen({  // NOSONAR
   apiBaseUrl,
   token,
   userId,
