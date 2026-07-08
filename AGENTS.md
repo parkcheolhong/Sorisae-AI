@@ -70,6 +70,19 @@ This is a Korean-language full-stack AI project analysis + marketplace platform 
 | Qdrant | v1.16.2 | 6333 |
 | MinIO | S3-compatible object store | 9000 (API), 9001 (console) |
 
+### Cloud agent VM bootstrap (no systemd)
+
+The update script only refreshes dependencies (Python venv + frontend `npm ci`). It does **not** start Docker or the infra containers. At the start of a session you must bring those up yourself:
+
+```bash
+# 1. Docker daemon — this VM has no systemd, so start dockerd manually (once per session):
+sudo dockerd > /tmp/dockerd.log 2>&1 &   # wait ~8s, then `sudo docker info` should succeed
+# 2. Start the 4 infra containers (see "Starting infrastructure services"). If they already
+#    exist from a previous session, just `sudo docker start devanalysis114-{postgres,redis,qdrant,minio}`.
+```
+
+Docker is installed with the `fuse-overlayfs` storage driver and `containerd-snapshotter` disabled (`/etc/docker/daemon.json`) — required for Docker 29 in this VM. `docker` needs `sudo` (the `ubuntu` user is not in the `docker` group). The `/etc/hosts` aliases (`postgres`/`redis`/`qdrant`/`minio` → `127.0.0.1`) are already present.
+
 ### Running services locally (outside Docker Compose)
 
 The docker-compose.yml is designed for production with GPU support. For local dev without GPU:
@@ -180,7 +193,10 @@ make check
 - **GPU**: The actual dev/production server has an RTX 5090 32GB. Cursor Cloud Agent VMs do not have GPU hardware, so the health check GPU warning is expected only in cloud agent sessions. On the real server, GPU is fully available and torch/CUDA will work normally.
 - Redis is exposed on host port **6380** (not 6379) to avoid conflicts.
 - Some backend tests (`test_orchestrator_compat_manifest_write`, `test_runtime_config_persistence`) have pre-existing failures unrelated to environment setup.
-- The `test_orchestrator_operational_evidence_targets.py` test file has an import error (missing function) and must be excluded.
+- The `test_orchestrator_operational_evidence_targets.py` and `test_voice_gateway_companion_persona.py` test files have import errors (missing symbols) and must be excluded (`--ignore=...`).
+- The full `backend/tests/` suite contains slow network/LLM-dependent tests (orchestrator/voice/telephony) that can appear to hang without an Ollama/LLM server; for a quick env sanity check run a focused subset (e.g. `test_marketplace_auth_and_state_regression.py`, `test_marketplace_security_improvements.py`, `test_database_traceability_schema.py`, `test_auth_user_profile.py`, `test_public_rate_limit_gates.py`).
+- `make check` and the root `tests/` (`test_health.py`, `test_routes.py`, `test_security_runtime.py`) import the `app/` golden reference app, which fails to build with FastAPI ≥ 0.139 (`app/main.py` iterates `app.routes` expecting `.path`, but `include_router` now yields `_IncludedRouter` objects). This is a pre-existing dep-version incompatibility; the real product `backend.main:app` runs fine on the installed FastAPI. Do not "fix" it as part of unrelated work.
+- Marketplace UI signup (`/marketplace` sidebar → 회원가입) posts directly to `/api/auth/signup`, which returns **428** unless `ALLOW_UNVERIFIED_SIGNUP=true` is exported for the backend (the UI does not implement the OTP flow). With `APP_ENV=dev`, the OTP path (`/api/auth/signup/request-code` → `/confirm`) returns the code in the `devOtpHint` response field, so no real email is needed either way.
 - Async backend tests (those marked `@pytest.mark.asyncio`, e.g. `test_autonomous_orchestrator.py`, `test_orchestrator_dialogue_mode.py`) use **`pytest-asyncio`** (`requirements.txt`). Run with `python -m pytest <file> --asyncio-mode=auto` (default when `pyproject.toml` `[tool.pytest.ini_options] asyncio_mode = "auto"` is present).
 - The autonomous multi-agent orchestrator (`/api/llm/autonomous/chat`) runs the A-brain agents (reasoner/planner/reviewer) via Ollama; without an LLM server those agents return `error`/stub, but the B-brain `coder` (template generator) + `validator` (`py_compile`) work without GPU/LLM, so the approval→code-generation path is testable in cloud agent sessions.
 - Frontend `npm run test` has a pre-existing failure in `tests/rail-labels.test.mjs` (asserts the marketplace page still contains the legacy label `5가지 AI 엔진 상품`, which the current code no longer uses). The other two checks (`smoke`, `nadotongryoksa-contracts`) pass. There is no `lint` script defined for the frontend.
