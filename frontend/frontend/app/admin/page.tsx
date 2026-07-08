@@ -1414,7 +1414,7 @@ export default function AdminDashboardPage() {
         projectQuery,
         topProjects,
         formatCurrency,
-    }), [dashboardSelfRunStatus, formatCurrency, health, llmStatus, orchestratorCapabilitySummary, overview, projectQuery, revenue, securityGuardDetail, systemSettings, systemSettingsLoading, systemSettingsMessage, topProjects]);
+    }), [capabilityBootstrapReady, dashboardSelfRunStatus, formatCurrency, health, llmStatus, orchestratorCapabilitySummary, overview, projectQuery, revenue, securityGuardDetail, systemSettings, systemSettingsLoading, systemSettingsMessage, topProjects]);
     const filteredTopProjects = useMemo(() => {
         const query = projectQuery.trim().toLowerCase();
         if (!query) return topProjects;
