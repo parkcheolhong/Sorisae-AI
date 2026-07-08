@@ -48,7 +48,7 @@ test.describe('admin dashboard capability bootstrap notice', () => {
             let capabilitySummaryFailed = false;
             let securityGuardFailed = false;
 
-            await page.route('**/api/admin/orchestrator/capabilities/summary', async (route) => {
+            await page.route('**/api/admin/orchestrator/capabilities/summary**', async (route) => {
                 capabilitySummaryFailed = true;
                 await route.fulfill({
                     status: 503,
@@ -56,7 +56,7 @@ test.describe('admin dashboard capability bootstrap notice', () => {
                     body: JSON.stringify({ detail: 'simulated capability summary outage' }),
                 });
             });
-            await page.route('**/api/admin/orchestrator/capabilities/security-guard', async (route) => {
+            await page.route('**/api/admin/orchestrator/capabilities/security-guard**', async (route) => {
                 securityGuardFailed = true;
                 await route.fulfill({
                     status: 503,
