@@ -81,7 +81,7 @@ jobs:
         working-directory: apps/mobile-nadotongryoksa
         run: |
           npm install
-          npm run test -- --testPathPattern=sorisaeCaptureSegment
+          npm run test -- --testPathPattern=sorisaeEcho
 
       - name: Sorisae gate skipped (no relevant PR changes)
         if: ${{ github.event_name == 'pull_request' && steps.changes.outputs.sorisae_audio != 'true' }}

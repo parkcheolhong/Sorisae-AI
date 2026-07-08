@@ -267,7 +267,7 @@ def get_smart_designer_model() -> str:
     return _runtime_or_env("smart_designer", "LLM_MODEL_SMART_DESIGNER", "LLM_MODEL_DESIGNER", "LLM_MODEL_CHAT", "LLM_MODEL_DEFAULT") or DEFAULT_OLLAMA_MODEL
 
 
-def get_configured_model_routes() -> Dict[str, str]:
+def _build_configured_model_routes(*, resolve_live: bool) -> Dict[str, str]:
     routes = {
         "default": get_default_model(),
         "reasoning": get_reasoning_model(),
@@ -282,12 +282,16 @@ def get_configured_model_routes() -> Dict[str, str]:
         "smart_executor": get_smart_executor_model(),
         "smart_designer": get_smart_designer_model(),
     }
-    resolve_live = str(os.getenv("LLM_RESOLVE_LIVE_MODELS", "true")).strip().lower() not in {
-        "0", "false", "no", "off",
-    }
     if resolve_live:
         routes = resolve_live_model_routes(routes)
     return routes
+
+
+def get_configured_model_routes() -> Dict[str, str]:
+    resolve_live = str(os.getenv("LLM_RESOLVE_LIVE_MODELS", "true")).strip().lower() not in {
+        "0", "false", "no", "off",
+    }
+    return _build_configured_model_routes(resolve_live=resolve_live)
 
 
 def _pick_first_available(available_models: List[str], candidates: List[str], fallback: str) -> str:
@@ -455,7 +459,8 @@ def get_available_ollama_models() -> List[str]:
             result = sorted(set(available))
             return list(_write_cached_value("available_ollama_models", result))
 
-    configured = get_configured_model_routes()
+    # Avoid recursive resolution loop while computing live model availability.
+    configured = _build_configured_model_routes(resolve_live=False)
     fallback = sorted({str(name).strip() for name in configured.values() if str(name).strip()})
     return list(_write_cached_value("available_ollama_models", fallback))
 
