@@ -22,10 +22,9 @@ def _resolve_safe_output_path(path: str | Path) -> Path:
     if "\x00" in raw:
         raise ValueError("출력 경로에 허용되지 않는 문자가 포함되어 있습니다.")
     input_path = Path(raw).expanduser()
+    if not input_path.is_absolute() and any(part == ".." for part in input_path.parts):
+        raise ValueError("상위 경로(..)는 출력 경로로 허용되지 않습니다.")
     candidate = input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
-    base = Path.cwd().resolve()
-    if candidate != base and base not in candidate.parents:
-        raise ValueError("출력 경로는 현재 작업 디렉터리 내부여야 합니다.")
     return candidate
 
 
