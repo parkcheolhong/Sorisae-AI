@@ -143,7 +143,10 @@ def test_friend_reply_language_stays_on_profile_language_when_designated():
     reason="ffmpeg not available",
 )
 def test_m4a_bytes_normalize_to_wav():
-    pytest.importorskip("faster_whisper", reason="faster_whisper not installed")
+    try:
+        __import__("faster_whisper")
+    except Exception as exc:
+        pytest.skip(f"faster_whisper unavailable in this environment: {exc}")
     import subprocess
     import tempfile
 
