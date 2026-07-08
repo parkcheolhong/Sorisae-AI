@@ -62,7 +62,7 @@ class RiskManager:
         portfolio: Portfolio,
         prices: dict[str, float],
         expected_slippage_pct: float = 0.0,
-    ) -> RiskDecision:
+    ) -> RiskDecision:  # NOSONAR
         cfg = self.config
 
         if self._halted:

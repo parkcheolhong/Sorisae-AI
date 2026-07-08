@@ -651,7 +651,15 @@ def signup_confirm_verification(payload: SignupConfirmRequest, db: Session = Dep
     return user
 
 
-@router.post("/signup", response_model=UserResponse, status_code=201)
+@router.post(
+    "/signup",
+    response_model=UserResponse,
+    status_code=201,
+    responses={
+        400: {"description": "회원가입 입력값이 유효하지 않음"},
+        428: {"description": "회원가입 전 이메일 OTP 인증 필요"},
+    },
+)
 def signup(payload: UserCreate, db: Session = Depends(get_db)):
     from backend.services.contact_verification import allow_unverified_signup
 

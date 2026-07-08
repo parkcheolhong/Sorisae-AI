@@ -7,10 +7,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+VOICE_CAPTURE_LOOP_PATH = "apps/mobile-nadotongryoksa/src/features/sorisae/useVoiceCaptureLoop.ts"
 
 FORBIDDEN: list[tuple[str, str]] = [
     (
-        "apps/mobile-nadotongryoksa/src/features/sorisae/useVoiceCaptureLoop.ts",
+        VOICE_CAPTURE_LOOP_PATH,
         r"skipSilentForSorisaeWindow",
     ),
     (
@@ -37,11 +38,11 @@ REQUIRED_SNIPPETS: list[tuple[str, str]] = [
         "sorisaeWindowMicBootstrappedRef",
     ),
     (
-        "apps/mobile-nadotongryoksa/src/features/sorisae/useVoiceCaptureLoop.ts",
+        VOICE_CAPTURE_LOOP_PATH,
         "shouldDeferSorisaeSegmentStop",
     ),
     (
-        "apps/mobile-nadotongryoksa/src/features/sorisae/useVoiceCaptureLoop.ts",
+        VOICE_CAPTURE_LOOP_PATH,
         "silero_speech_end_sorisae",
     ),
 ]

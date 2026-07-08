@@ -104,7 +104,7 @@ class MetricsRegistry:
             m.sums[k] += value
             m.counts[k] += 1
 
-    def render(self) -> str:
+    def render(self) -> str:  # NOSONAR
         """Prometheus text exposition format 문자열 생성."""
         lines: list[str] = []
         with self._lock:

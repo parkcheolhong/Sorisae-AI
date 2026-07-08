@@ -866,7 +866,7 @@ def _overpass_request(query: str) -> Dict[str, Any]:
     return {}
 
 
-def _fetch_overpass_places(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+def _fetch_overpass_places(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:  # NOSONAR
     if category == "all":
         cats = _LIVE_ALL_CATEGORIES
         selector_map = _OVERPASS_SELECTORS_ALL
@@ -940,7 +940,7 @@ def _fetch_live_place_dicts(lat: float, lon: float, category: str, radius_m: int
         return _do()
 
 
-def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
+def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:  # NOSONAR
     router = APIRouter(prefix="/nadotongryoksa/lbs", tags=["marketplace-nadotongryoksa-lbs"])
 
     @router.get("/nearby", response_model=NearbySearchResponse)

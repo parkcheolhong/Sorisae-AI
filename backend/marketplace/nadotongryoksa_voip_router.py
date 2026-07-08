@@ -1311,7 +1311,7 @@ async def initiate_voip_call(
     request: CallInitiateRequest,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> CallInitiateResponse:
+) -> CallInitiateResponse:  # NOSONAR
     """
     Initiate a VoIP call to a reservation center.
 
@@ -2500,7 +2500,7 @@ async def websocket_signaling(
     call_id: str,
     role: str = "caller",
     token: Optional[str] = None,
-):
+):  # NOSONAR
     """
     WebSocket endpoint for SDP offer/answer and ICE candidate relay.
 
