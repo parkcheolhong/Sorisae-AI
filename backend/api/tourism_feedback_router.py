@@ -66,7 +66,7 @@ def submit_feedback(fb: AnswerFeedback) -> Any:
         raise
     except Exception:
         logger.error("tourism feedback submit failed")
-        raise HTTPException(status_code=500, detail="feedback submit failed")
+        raise HTTPException(status_code=500, detail="feedback submit failed") from None
 
 
 @router.get(
@@ -84,4 +84,4 @@ def feedback_stats() -> Any:
         return get_feedback_store().stats()
     except Exception:
         logger.error("tourism feedback stats failed")
-        raise HTTPException(status_code=500, detail="feedback stats unavailable")
+        raise HTTPException(status_code=500, detail="feedback stats unavailable") from None

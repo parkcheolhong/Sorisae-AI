@@ -3381,7 +3381,7 @@ def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_ad
         raise
     except Exception:
         logger.error("admin system settings fill defaults failed")
-        raise HTTPException(status_code=500, detail="system settings update failed")
+        raise HTTPException(status_code=500, detail="system settings update failed") from None
 
 
 @router.get("/system-settings")
@@ -3391,7 +3391,7 @@ def get_admin_system_settings(admin: User = Depends(require_admin)):
         return _build_admin_system_settings_payload()
     except Exception:
         logger.error("admin system settings read failed")
-        raise HTTPException(status_code=500, detail="system settings unavailable")
+        raise HTTPException(status_code=500, detail="system settings unavailable") from None
 
 
 @router.put("/system-settings")
@@ -3409,35 +3409,41 @@ def update_admin_system_settings(payload: AdminSystemSettingsUpdateRequest, admi
         raise
     except Exception:
         logger.error("admin system settings update failed")
-        raise HTTPException(status_code=500, detail="system settings update failed")
+        raise HTTPException(status_code=500, detail="system settings update failed") from None
 
 
 @router.post("/system-settings/postgres-password")
 def update_postgres_runtime_password(payload: AdminPostgresPasswordUpdateRequest, admin: User = Depends(require_admin)):
-    next_password = _validate_postgres_password_change_payload(payload)
-    env_path = _admin_env_path()
-    env_values = _read_admin_env_values(env_path)
-    secret_host_path = _write_postgres_password_secret(next_password, env_values)
-    file_setting = str(env_values.get("POSTGRES_PASSWORD_FILE") or "").strip() or "/run/codeai-secrets/postgres_password.txt"
-    updated_env_values = _write_admin_env_values(
-        env_path,
-        {
-            "POSTGRES_HOST": str(env_values.get("POSTGRES_HOST") or "localhost") or "localhost",
-            "POSTGRES_USER": str(env_values.get("POSTGRES_USER") or "postgres") or "postgres",
-            "POSTGRES_PASSWORD": next_password,
-            "POSTGRES_PASSWORD_FILE": file_setting,
-            "DATABASE_URL": "",
-        },
-    )
-    return {
-        "changed": True,
-        "message": "PostgreSQL 런타임 비밀번호를 .env와 로컬 시크릿 파일에 기록했습니다.",
-        "env_path": str(env_path),
-        "secret_host_path": secret_host_path,
-        "postgres_user": str(updated_env_values.get("POSTGRES_USER") or ""),
-        "postgres_host": str(updated_env_values.get("POSTGRES_HOST") or ""),
-        "postgres_db": str(updated_env_values.get("POSTGRES_DB") or ""),
-    }
+    try:
+        next_password = _validate_postgres_password_change_payload(payload)
+        env_path = _admin_env_path()
+        env_values = _read_admin_env_values(env_path)
+        secret_host_path = _write_postgres_password_secret(next_password, env_values)
+        file_setting = str(env_values.get("POSTGRES_PASSWORD_FILE") or "").strip() or "/run/codeai-secrets/postgres_password.txt"
+        updated_env_values = _write_admin_env_values(
+            env_path,
+            {
+                "POSTGRES_HOST": str(env_values.get("POSTGRES_HOST") or "localhost") or "localhost",
+                "POSTGRES_USER": str(env_values.get("POSTGRES_USER") or "postgres") or "postgres",
+                "POSTGRES_PASSWORD": next_password,
+                "POSTGRES_PASSWORD_FILE": file_setting,
+                "DATABASE_URL": "",
+            },
+        )
+        return {
+            "changed": True,
+            "message": "PostgreSQL 런타임 비밀번호를 .env와 로컬 시크릿 파일에 기록했습니다.",
+            "env_path": str(env_path),
+            "secret_host_path": secret_host_path,
+            "postgres_user": str(updated_env_values.get("POSTGRES_USER") or ""),
+            "postgres_host": str(updated_env_values.get("POSTGRES_HOST") or ""),
+            "postgres_db": str(updated_env_values.get("POSTGRES_DB") or ""),
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("admin postgres runtime password update failed")
+        raise HTTPException(status_code=500, detail="postgres password update failed") from None
 
 
 @router.post("/system-settings/global-automatic-mode")

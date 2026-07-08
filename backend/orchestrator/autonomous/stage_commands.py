@@ -42,7 +42,7 @@ _DISCUSS_MARKERS = re.compile(
     r"what|how|why|idea|suggest|recommend|search)",
     re.IGNORECASE,
 )
-_STAGE_NUMBER = re.compile(r"(\d+(?:\.\d+)?)\s*단계", re.IGNORECASE)
+_STAGE_NUMBER = re.compile(r"([0-9]{1,2}(?:\.[0-9])?)\s*단계", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
