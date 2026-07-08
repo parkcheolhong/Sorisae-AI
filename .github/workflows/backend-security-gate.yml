@@ -1,0 +1,99 @@
+name: backend-security-gate
+
+# 백엔드 보안/계약 회귀 게이트.
+# 무인증 고비용 엔드포인트(LBS·이미지번역)와 인증 표면(login/OTP/복구) 레이트리밋,
+# R1~R8 보안 게이트, 핵심 마켓플레이스 계약을 PR 단계에서 검증한다.
+# 외부 서비스(Postgres/Redis/Qdrant) 없이 SQLite + 목으로 동작하는 결정적 스위트만 게이트한다.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "app/**"
+      - "tests/**"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - ".github/workflows/backend-security-gate.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-security-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-security-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # 결정적 테스트용 — 실제 서비스 미연결(SQLite + 시뮬레이션 경로).
+      DATABASE_URL: "sqlite:///./tmp/ci_backend_gate.db"
+      SECRET_KEY: "ci-backend-security-gate-secret-not-for-production-0001"
+      ENABLE_AD_ORDER_WORKER_BOOTSTRAP: "false"
+      ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP: "false"
+      ENABLE_AD_ORDER_RUNTIME_RECOVERY_BOOTSTRAP: "false"
+      SORISAE_CENTRAL_ENABLED: "false"
+      VIDEO_REQUIRE_GENERATIVE_ENGINE: "false"
+      VIDEO_ENGINE_FALLBACK_TO_INTERNAL: "true"
+      MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect backend gate scope changes
+        id: changes
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'app/**'
+              - 'tests/**'
+              - 'requirements.txt'
+              - 'pyproject.toml'
+              - '.github/workflows/backend-security-gate.yml'
+
+      - name: Setup Python 3.13
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.backend == 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.backend == 'true' }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile gate (syntax/import sanity)
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.backend == 'true' }}
+        run: python -m compileall -q backend app tests
+
+      - name: Security + contract gate (pytest)
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.backend == 'true' }}
+        run: |
+          mkdir -p tmp
+          python -m pytest -q -p no:cacheprovider \
+            --ignore=backend/tests/test_orchestrator_operational_evidence_targets.py \
+            tests/test_r1_r8_security_gates.py \
+            tests/test_auth_router_security.py \
+            tests/test_health_diagnostics_sanitization.py \
+            backend/tests/test_public_rate_limit_gates.py \
+            backend/tests/test_otp_resend_cooldown.py \
+            backend/tests/test_feature_delivery_path_confinement.py \
+            backend/tests/test_session_cache.py \
+            backend/tests/test_ws_token_auth.py \
+            backend/tests/test_signup_email_otp.py \
+            backend/tests/test_user_password_recovery.py \
+            backend/tests/test_admin_recovery_otp.py \
+            backend/tests/test_nadotongryoksa_image_translation_contract.py \
+            backend/tests/test_marketplace_nadotongryoksa_lbs_contract.py
+
+      - name: Backend gate skipped (no relevant PR changes)
+        if: ${{ github.event_name == 'pull_request' && steps.changes.outputs.backend != 'true' }}
+        run: echo "No backend-scoped changes detected; backend-security-gate passes without test execution."
