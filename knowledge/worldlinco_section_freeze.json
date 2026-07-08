@@ -1,0 +1,35 @@
+{
+  "locked_file_snippets": {
+    "backend/marketplace/worldlinco_tuning.py": [
+      "\"silero_silence_ms\": 1400",
+      "\"silero_speech_ms\": 120",
+      "\"silero_min_segment_ms\": 2400",
+      "\"silero_min_speech_span_ms\": 1700",
+      "\"silero_safety_cap_ms\": 12000",
+      "\"silero_post_flush_cooldown_ms\": 1000",
+      "\"vad_silence_flush_ms\": 1500",
+      "\"vad_min_segment_ms\": 2200",
+      "\"vad_max_segment_ms\": 12000"
+    ],
+    "apps/mobile-nadotongryoksa/src/services/worldlincoTuningConfig.ts": [
+      "silero_silence_ms: 1400",
+      "silero_speech_ms: 120",
+      "silero_min_segment_ms: 2400",
+      "silero_min_speech_span_ms: 1700",
+      "silero_safety_cap_ms: 12000",
+      "silero_post_flush_cooldown_ms: 1000",
+      "vad_silence_flush_ms: 1500",
+      "vad_min_segment_ms: 2200",
+      "vad_max_segment_ms: 12000",
+      "live_duplex_mode: 0"
+    ],
+    "apps/mobile-nadotongryoksa/src/features/voip-voice-relay/voiceRelaySegmentBoundary.ts": [
+      "silenceMs: 1_400",
+      "speechMs: 120",
+      "minSegmentMs: 2_400",
+      "minSpeechSpanMs: 1_700",
+      "safetyCapMs: 12_000",
+      "postFlushCooldownMs: 1_000"
+    ]
+  }
+}

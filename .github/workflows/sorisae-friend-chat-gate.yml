@@ -16,7 +16,9 @@ on:
       - "backend/tests/test_voice_gateway_companion_persona.py"
       - "knowledge/worldlinco_section_freeze.json"
       - "scripts/check_worldlinco_section_ssot_lock.py"
+      - "scripts/check_sorisae_regression_lock.py"
       - "scripts/run_sorisae_friend_chat_probe.py"
+      - "apps/mobile-nadotongryoksa/src/__tests__/sorisaeCaptureSegment.test.ts"
       - ".github/workflows/sorisae-friend-chat-gate.yml"
   workflow_dispatch:
 
@@ -46,7 +48,9 @@ jobs:
               - 'backend/tests/test_voice_gateway_companion_persona.py'
               - 'knowledge/worldlinco_section_freeze.json'
               - 'scripts/check_worldlinco_section_ssot_lock.py'
+              - 'scripts/check_sorisae_regression_lock.py'
               - 'scripts/run_sorisae_friend_chat_probe.py'
+              - 'apps/mobile-nadotongryoksa/src/__tests__/sorisaeCaptureSegment.test.ts'
               - '.github/workflows/sorisae-friend-chat-gate.yml'
 
       - uses: actions/setup-python@v6
