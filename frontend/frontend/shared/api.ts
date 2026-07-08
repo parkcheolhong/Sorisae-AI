@@ -20,7 +20,8 @@ export function resolveBackendDocsUrl(apiBaseUrl?: string): string {
         const isGatewayPort = port === '8080' || port === '8443';
 
         if (isDirectFrontendDevPort && protocol !== 'https:') {
-            return `${origin.replace(/\/$/, '')}/docs`;
+            // In local frontend dev mode, backend docs are served from API base rather than frontend app routes.
+            return `${normalizedBase}/docs`;
         }
 
         if (normalizedBase === origin.replace(/\/$/, '') && isLocalHost) {

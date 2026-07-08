@@ -441,7 +441,17 @@ export default function AdminDashboardOverview(props: AdminDashboardOverviewProp
                     </div>
                     <Link
                         href={props.orchestratorProblemCards[0] ? `/admin/llm?capability=${encodeURIComponent(props.orchestratorProblemCards[0].id)}` : '/admin/llm'}
-                        onClick={() => props.onOpenOrchestratorDetail(props.orchestratorProblemCards[0]?.id || 'summary', props.orchestratorProblemCards[0]?.title || '오케스트레이터 기능군 상세 이동', 'linked')}
+                        onClick={() => {
+                            try {
+                                props.onOpenOrchestratorDetail(
+                                    props.orchestratorProblemCards[0]?.id || 'summary',
+                                    props.orchestratorProblemCards[0]?.title || '오케스트레이터 기능군 상세 이동',
+                                    'linked',
+                                );
+                            } catch {
+                                // Navigation to /admin/llm must not be blocked by optional tracking side effects.
+                            }
+                        }}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                     >
                         상세 제어 열기

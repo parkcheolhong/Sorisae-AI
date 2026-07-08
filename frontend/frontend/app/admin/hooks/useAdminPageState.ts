@@ -56,7 +56,7 @@ export function useAdminPageState(): any {
     const [customerOrchestratorPanelOpen, setCustomerOrchestratorPanelOpen] = useState(false);
     const [topProjectsPanelOpen, setTopProjectsPanelOpen] = useState(false);
     const [adminControlHubOpen, setAdminControlHubOpen] = useState(false);
-    const [healthOverviewOpen, setHealthOverviewOpen] = useState(false);
+    const [healthOverviewOpen, setHealthOverviewOpen] = useState(true);
     const [adOrdersPanelOpen, setAdOrdersPanelOpen] = useState(false);
     const [subscriptionMonitorPanelOpen, setSubscriptionMonitorPanelOpen] = useState(false);
     const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
