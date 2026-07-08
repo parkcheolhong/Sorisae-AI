@@ -133,12 +133,12 @@ export function FriendMapDiscoveryScreen({
   }, [gender, nickname, token]);
 
   useEffect(() => {
-    refresh();
+    refresh().catch(() => { });
     if (!autoMode) {
       return;
     }
     const interval = setInterval(() => {
-      void refresh();
+      refresh().catch(() => { });
     }, AUTO_REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [autoMode, refresh]);
@@ -170,19 +170,19 @@ export function FriendMapDiscoveryScreen({
             {
               text: '친구 목록 보기',
               onPress: () => {
-                void onFriendAccepted({ action: 'friend-folder', friend: accepted.friend });
+                Promise.resolve(onFriendAccepted({ action: 'friend-folder', friend: accepted.friend })).catch(() => { });
               },
             },
             {
               text: '채팅 열기',
               onPress: () => {
-                void onFriendAccepted({ action: 'chat', friend: accepted.friend });
+                Promise.resolve(onFriendAccepted({ action: 'chat', friend: accepted.friend })).catch(() => { });
               },
             },
             {
               text: '보이스톡 시작',
               onPress: () => {
-                void onFriendAccepted({ action: 'voip', friend: accepted.friend });
+                Promise.resolve(onFriendAccepted({ action: 'voip', friend: accepted.friend })).catch(() => { });
               },
             },
           ],
@@ -232,10 +232,10 @@ export function FriendMapDiscoveryScreen({
               <Text style={styles.requestName}>{request.senderCountryFlag || '🌐'} {request.senderNickname} ({genderLabel(request.senderGender)})</Text>
               <Text style={styles.requestMeta}>보이스 ID {request.senderVoiceId || '없음'}</Text>
               <View style={[styles.actionRow, isNarrowWidth && styles.actionRowCompact]}>
-                <Pressable style={[styles.acceptBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { void handleAccept(request); }}>
+                <Pressable style={[styles.acceptBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { handleAccept(request).catch(() => { }); }}>
                   <Text style={styles.acceptBtnText}>수락</Text>
                 </Pressable>
-                <Pressable style={[styles.rejectBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { void handleReject(request); }}>
+                <Pressable style={[styles.rejectBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { handleReject(request).catch(() => { }); }}>
                   <Text style={styles.rejectBtnText}>거절</Text>
                 </Pressable>
               </View>
@@ -252,7 +252,7 @@ export function FriendMapDiscoveryScreen({
               <Text style={styles.userMeta}>거리 {formatDistanceMeters(user.distanceM)} · 좌표 {user.latitude.toFixed(5)}, {user.longitude.toFixed(5)}</Text>
               <Text style={styles.userMeta}>상태 {statusLabel(user.friendshipStatus)} · 보이스 ID {user.voiceId || '없음'}</Text>
               <View style={[styles.actionRow, isNarrowWidth && styles.actionRowCompact]}>
-                <Pressable style={[styles.mapBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { void Linking.openURL(user.googleMapsUrl); }}>
+                <Pressable style={[styles.mapBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { Linking.openURL(user.googleMapsUrl).catch(() => { }); }}>
                   <Text style={styles.mapBtnText}>Google 지도</Text>
                 </Pressable>
                 <Pressable

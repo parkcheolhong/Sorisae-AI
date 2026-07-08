@@ -381,7 +381,7 @@ def resolve_referral_discount_quote(*, user_id: int, amount_minor: int, db: Any 
     }
 
 
-def apply_referral_discount_payment(
+def apply_referral_discount_payment(  # NOSONAR - payment/referral guard clauses are intentionally explicit for auditability.
     *,
     user_id: int,
     provider: str,

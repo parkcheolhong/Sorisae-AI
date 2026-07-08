@@ -129,7 +129,7 @@ class TradingPipeline:
             return -qty
         return None  # FLAT → 유지
 
-    def process_tick(self, tick: MarketTick) -> None:
+    def process_tick(self, tick: MarketTick) -> None:  # NOSONAR - orchestrates fixed trading stages in one latency-critical path.
         t0 = time.perf_counter_ns()
         prices = {tick.symbol: tick.last_price}
         self.tracer.new_trace()

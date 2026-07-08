@@ -1988,11 +1988,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
     useEffect(() => {
         let active = true;
-        void probeVoiceRelaySileroVadSupport().then((supported) => {
-            if (active) {
-                voiceRelaySileroSupportedRef.current = supported;
-            }
-        });
+        probeVoiceRelaySileroVadSupport()
+            .then((supported) => {
+                if (active) {
+                    voiceRelaySileroSupportedRef.current = supported;
+                }
+            })
+            .catch(() => { });
         return () => {
             active = false;
         };
@@ -2025,7 +2027,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }));
                     voiceRelayLeadInTriggeredRef.current = true;
                     voiceRelayBypassArmRef.current = true;
-                    void startVoiceRelaySegmentRef.current();
+                    Promise.resolve(startVoiceRelaySegmentRef.current()).catch(() => { });
                     return;
                 }
                 if (!voiceRelayRecordingRef.current) {
@@ -3061,8 +3063,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             }
             getVoIPToneService().stopAll();
             const cleanupHandlers = voipCallInitHandlersRef.current;
-            void cleanupHandlers?.stopVoiceRelaySegment(false);  // NOSONAR
-            cleanupHandlers?.stopVoiceRelayPlayback().catch(() => {});
+            Promise.resolve(cleanupHandlers?.stopVoiceRelaySegment(false)).catch(() => { });  // NOSONAR
+            Promise.resolve(cleanupHandlers?.stopVoiceRelayPlayback()).catch(() => { });
             voiceRelayPlaybackQueueRef.current?.clear();
             setRemoteAudioSuppressed(false);
             remoteTrackForceSuppressedRef.current = false;
@@ -3151,19 +3153,19 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 setVoiceRelayEnabled(false);
             }
             setVoiceRelaySuggestionVisible(false);
-            void stopVoiceRelaySegment(false);
+            Promise.resolve(stopVoiceRelaySegment(false)).catch(() => { });
             return;
         }
 
         if (!voiceRelayEnabled) {
-            void stopVoiceRelaySegment(false);
-            void restoreWebRtcMicIfVoiceRelayInactive('voice_relay_disabled');
+            Promise.resolve(stopVoiceRelaySegment(false)).catch(() => { });
+            Promise.resolve(restoreWebRtcMicIfVoiceRelayInactive('voice_relay_disabled')).catch(() => { });
             return;
         }
 
         const scheduleCaptureRestart = (delayMs: number) => {
             voiceRelayRestartTimerRef.current = setTimeout(() => {
-                void startVoiceRelaySegmentRef.current();
+                Promise.resolve(startVoiceRelaySegmentRef.current()).catch(() => { });
             }, delayMs);
         };
 

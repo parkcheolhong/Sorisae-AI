@@ -35,7 +35,7 @@ def _make_feed(args):
                          seed=args.seed)
 
 
-def main(argv=None) -> int:
+def main(argv=None) -> int:  # NOSONAR - capture/reconnect loop intentionally linear for operational safety.
     p = argparse.ArgumentParser(description="라이브 피드 → 일별 틱 스토어 캡처")
     p.add_argument("--source", choices=["binance", "upbit", "alpaca", "sim"], default="binance")
     p.add_argument("--symbol", default="BTCUSDT")

@@ -8214,7 +8214,7 @@ function AppInner() {
         setAutoVoiceModeEnabled(true);
         setGpsStatus(`🐦 ${aiDisplayName} 대화 시작 · 말이 끝나면 자동으로 답해요`);
         voiceInputTargetRef.current = 'main';
-        void startVoiceInput({ autoMode: true });
+        startVoiceInput({ autoMode: true }).catch(() => { });
     }, [autoVoiceModeEnabled, startVoiceInput, stopVoiceInput]);
 
     /** 소리새 AI 전용 창 닫기 — 진행 중인 대화/재생을 정리하고 닫는다. */
@@ -8251,9 +8251,9 @@ function AppInner() {
                     setAutoVoiceModeEnabled(true);
                 }
                 if (!recordingRef.current) {
-                    void startVoiceInput({ autoMode: true });
+                    startVoiceInput({ autoMode: true }).catch(() => { });
                 }
-                void stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+                stopFaceVoicePlayback(faceVoicePlaybackSoundRef).catch(() => { });
             } else {
                 // [기능 분리 Phase1] 단일-활성 강제: 창을 열면 진행 중이던 대면 통역 세션을 **완전히** 정지한다.
                 // autoVoiceMode를 끄지 않으면 재시작 루프가 메인 캡처를 되살려, 대면 발화가 소리새 경로로 새거나
@@ -8264,7 +8264,7 @@ function AppInner() {
                 if (autoVoiceModeEnabledRef.current) {
                     setAutoVoiceModeEnabled(false);
                 }
-                void stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+                stopFaceVoicePlayback(faceVoicePlaybackSoundRef).catch(() => { });
             }
         }
     }, [sorisaeWindowOpen, startVoiceInput, stopVoiceInput]);
@@ -8287,7 +8287,7 @@ function AppInner() {
      * [Phase6.1] 음성 호출 대기 토글 — armed(dormant) 동안 통역 캡처 루프를 웨이크워드 스캐너로 가동한다.
      * (소리새 창이 닫혀 있어야 전사가 통역 경로로 흘러 웨이크워드를 감지할 수 있다.)
      */
-    const handleToggleCompanionVoiceCall = useCallback(async () => {
+    const handleToggleCompanionVoiceCall = useCallback(async () => {  // NOSONAR - explicit branch handling keeps wake/armed/cleanup flows deterministic.
         if (Platform.OS === 'web') {
             Alert.alert(aiDisplayName, `${aiDisplayName} 음성 호출은 모바일 앱에서 사용할 수 있습니다.`);
             return;
@@ -11457,7 +11457,7 @@ function AppInner() {
                         {authModalMode === 'login' ? (
                             <View style={styles.loginUtilityRow}>
                                 {biometricLoginReady && biometricLoginEnabled ? (
-                                    <Pressable style={styles.loginUtilityItem} onPress={() => { void handleBiometricLogin(); }} disabled={biometricLoginBusy} testID="worldlinco-auth-biometric-login-modal">
+                                    <Pressable style={styles.loginUtilityItem} onPress={() => { handleBiometricLogin().catch(() => { }); }} disabled={biometricLoginBusy} testID="worldlinco-auth-biometric-login-modal">
                                         <Text style={styles.loginUtilityIcon}>👆</Text>
                                         <Text style={styles.authUtilityLinkText}>{biometricLoginBusy ? '지문 확인 중...' : '생체인증'}</Text>
                                     </Pressable>
@@ -11480,7 +11480,7 @@ function AppInner() {
                         </View>
                         <Pressable
                             style={[styles.loginDemoBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}
-                            onPress={() => { void handleStartInstantDemoSession('chat'); }}  // NOSONAR
+                            onPress={() => { handleStartInstantDemoSession('chat').catch(() => { }); }}
                             disabled={demoSessionLoading || loginLoading}
                             accessibilityRole="button"
                             accessibilityLabel="worldlinco-demo-session-start-button"

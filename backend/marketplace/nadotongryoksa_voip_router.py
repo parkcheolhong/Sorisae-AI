@@ -248,7 +248,7 @@ def _build_turn_server_from_env() -> Optional[TURNServer]:
         principal_tag = (os.getenv("TURN_USER_TAG", "relay").strip() or "relay")
         turn_principal = f"{int(time.time()) + ttl}:{principal_tag}"
         # lgtm[py/weak-sensitive-data-hashing] coturn use-auth-secret credential format is base64(HMAC-SHA1(secret, username)).
-        digest = hmac.new(secret.encode("utf-8"), turn_principal.encode("utf-8"), hashlib.sha1).digest()
+        digest = hmac.new(secret.encode("utf-8"), turn_principal.encode("utf-8"), hashlib.sha1).digest()  # NOSONAR - coturn use-auth-secret requires HMAC-SHA1(username, secret).
         return TURNServer(urls=urls, username=turn_principal, credential=base64.b64encode(digest).decode("ascii"))
 
     username = os.getenv("TURN_USERNAME", "").strip() or None

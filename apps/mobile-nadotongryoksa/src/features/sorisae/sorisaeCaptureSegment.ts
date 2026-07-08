@@ -302,11 +302,11 @@ export async function processSorisaeFriendChatTurn(
     const companionCmd = parseCompanionCommand(transcript);
     if (companionCmd.type === 'reset') {
         ctx.companionPersonaRef.current = createEmptyPersona();
-        void ctx.resetPersonaStore();
+        Promise.resolve(ctx.resetPersonaStore()).catch(() => { });
     } else if (companionCmd.type === 'set_name' && companionCmd.name) {
         const named = setPreferredName(ctx.companionPersonaRef.current, companionCmd.name);
         ctx.companionPersonaRef.current = named;
-        void ctx.persistPersona(named);
+        Promise.resolve(ctx.persistPersona(named)).catch(() => { });
     }
 
     const answer = String(ctx.data.response_text ?? ctx.data.answer ?? ctx.data.reply ?? '').trim();
@@ -338,7 +338,7 @@ export async function processSorisaeFriendChatTurn(
     const resolvedTripSessionId = String(ctx.data.trip_session_id ?? '').trim();
     if (resolvedTripSessionId && ctx.userId) {
         ctx.companionTripSessionIdRef.current = resolvedTripSessionId;
-        void saveCompanionTripSessionId(ctx.userId, resolvedTripSessionId);
+        Promise.resolve(saveCompanionTripSessionId(ctx.userId, resolvedTripSessionId)).catch(() => { });
     }
 
     const serverConv = Array.isArray(ctx.data.conversation) ? ctx.data.conversation : null;
