@@ -1,15 +1,14 @@
 import { VOICE_RELAY_FILE_SPEECH_RMS_DB } from './voiceRelayAudioMetrics';
 
 // NOTE: fallback 값은 SSOT(worldlinco_tuning_config.json voip)와 정합 유지.
-// (G1 정합) maxSegmentMs=12000·silenceFlushMs=1500 은 SSOT(vad_max_segment_ms·vad_silence_flush_ms)와
-// 동일하게 두어, 원격 fetch 실패/콜드스타트 시에도 calibrated 정상값(자연 장문 8~12s 수용)과 일치시킨다.
-// (이전 7000 폴백은 튜닝 미로드 구간에서 장문장을 7s 에 강제 flush → '중간 음성 사망 후 분할'을 유발했다.)
+// (G1 정합) maxSegmentMs=7000·silenceFlushMs=1000 은 SSOT(vad_max_segment_ms·vad_silence_flush_ms)와
+// 동일하게 두어, 원격 fetch 실패/콜드스타트 시에도 현재 운영형 저지연 프로파일과 일치시킨다.
 export const VOICE_RELAY_VAD_DEFAULTS = {
     /** Minimum capture window before any flush/send (prevents ultra-short STT clips). */
-    minSegmentMs: 2_200,
-    maxSegmentMs: 12_000,
+    minSegmentMs: 3_000,
+    maxSegmentMs: 7_000,
     /** Pause after last speech before ending an utterance (natural phrase boundary). */
-    silenceFlushMs: 1_500,
+    silenceFlushMs: 1_000,
     shortSpeechThresholdMs: 3_000,
     speechMeterMinDb: -52,
     meterPollMs: 180,

@@ -122,7 +122,7 @@ class CallLifecycle:
         if not self.state.is_terminal():
             return False
         ref = _now() if now is None else now
-        return (ref - self.updated_at) > ttl_sec
+        return (ref - self.updated_at) >= ttl_sec
 
     def transition(self, new_state: CallStateV2, *, reason: Optional[str] = None,
                    max_events: int = 64) -> LifecycleEvent:

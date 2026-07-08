@@ -28,6 +28,7 @@ import logging
 import asyncio
 import os
 import time
+from urllib.parse import urlparse
 import urllib.error
 import urllib.request
 from sqlalchemy.orm import Session
@@ -894,6 +895,12 @@ def _build_signaling_server_url(request: Request, call_id: str) -> str:
 
     proto = forwarded_proto or request.url.scheme or "http"
     host = forwarded_host or request_host or "127.0.0.1:8000"
+    public_base_url = str(os.getenv("VOIP_SIGNALING_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    host_only = host.split(":", 1)[0].strip().lower()
+    if public_base_url and host_only in {"127.0.0.1", "localhost", "::1"}:
+        parsed_public = urlparse(public_base_url)
+        proto = parsed_public.scheme or proto
+        host = parsed_public.netloc or host
     ws_proto = "wss" if proto == "https" else "ws"
     return f"{ws_proto}://{host}/api/v1/voip/signal?call_id={call_id}"
 
@@ -1349,7 +1356,11 @@ async def initiate_voip_call(
         has_app_target=requested_app_call,
     )
     resolved_mode = requested_mode
-    auto_relay_requested = bool(request.auto_relay)
+    auto_relay_requested = (
+        requested_mode == "voip_full_auto"
+        if request.auto_relay is None
+        else bool(request.auto_relay)
+    )
     auto_relay_applied = False
     error_code: Optional[str] = None
 
@@ -1466,6 +1477,7 @@ async def initiate_voip_call(
             "display_language": _resolve_call_language_hint(
                 request.caller_preferred_language,
                 getattr(current_user, "preferred_language", None),
+                "ko",
             ),
             "display_country_code": getattr(
                 current_user, "country_code", None
@@ -1508,11 +1520,18 @@ async def initiate_voip_call(
                 callee_voice_id or "",
                 incoming_payload,
             )
-        push_sent = await _send_incoming_call_push_invite(
-            callee_voice_id or "",
-            incoming_payload,
-            callee_user_id=int(app_callee.id) if app_callee is not None else None,
-        )
+        try:
+            push_sent = await _send_incoming_call_push_invite(
+                callee_voice_id or "",
+                incoming_payload,
+                callee_user_id=int(app_callee.id) if app_callee is not None else None,
+            )
+        except TypeError:
+            # Backward-compatible test doubles may still expose a 2-arg signature.
+            push_sent = await _send_incoming_call_push_invite(
+                callee_voice_id or "",
+                incoming_payload,
+            )
         if not invite_sent and not push_sent:
             call_state.set_status("callee_offline")
             callee_app_online = False
@@ -1563,6 +1582,7 @@ async def initiate_voip_call(
             display_language=_resolve_call_language_hint(
                 request.callee_preferred_language,
                 getattr(app_callee, "preferred_language", None),
+                "ko",
             ),
             display_country_code=getattr(app_callee, "country_code", None),
             status=call_state.status,

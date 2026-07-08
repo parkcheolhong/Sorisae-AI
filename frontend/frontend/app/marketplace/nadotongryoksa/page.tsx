@@ -239,9 +239,13 @@ function getStoredToken(): string {
     return localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '';
 }
 
-async function resolveWorldLincoProjectId(apiBase: string): Promise<number> {
+async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> {
     if (cachedWorldLincoProjectId !== null) {
         return cachedWorldLincoProjectId;
+    }
+
+    async function resolveWorldLincoProjectId(apiBase: string): Promise<number> {
+        return resolveNadotongryoksaProjectId(apiBase);
     }
 
     const response = await fetch(`${apiBase}/api/marketplace/projects?skip=0&limit=50`, {
@@ -541,7 +545,7 @@ export default function WorldLincoPage() {
         try {
             const nights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000));
             const amount = nights * roomCount * 80000;
-            const projectId = await resolveWorldLincoProjectId(API_BASE);
+            const projectId = await resolveNadotongryoksaProjectId(API_BASE);
             const purchase = await callCreatePurchaseApi(API_BASE, projectId, amount);
             setPurchaseResult(purchase);
             const payData = await callInitiatePaymentApi(API_BASE, purchase.id);

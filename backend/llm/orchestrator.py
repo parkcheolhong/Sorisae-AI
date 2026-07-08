@@ -11690,8 +11690,7 @@ def _build_product_readiness_hard_gate(
     }
 
 
-def _build_operational_evidence_bundle(profile_id: Optional[str] = None, **_: Any) -> Dict[str, Any]:
-    del profile_id
+def _resolve_operational_evidence_target_defaults(profile_id: Optional[str]) -> List[Dict[str, Any]]:
     target_defaults = [
         {
             "id": "websocket",
@@ -11734,12 +11733,60 @@ def _build_operational_evidence_bundle(profile_id: Optional[str] = None, **_: An
             "warning_threshold_ms": 120.0,
         },
     ]
+    try:
+        from backend.llm import admin_capabilities as admin_capabilities_module
+
+        capability_targets = getattr(admin_capabilities_module, "OPERATIONAL_EVIDENCE_TARGETS", None) or []
+        if capability_targets:
+            target_defaults = [dict(item) for item in capability_targets if isinstance(item, dict)]
+    except Exception:
+        pass
+
+    normalized_profile = str(profile_id or "").strip().lower()
+    if normalized_profile == "commerce_platform":
+        allowed_ids = {"marketplace", "system_settings", "workspace_self_run_record"}
+        return [item for item in target_defaults if str(item.get("id") or "").strip() in allowed_ids]
+    return target_defaults
+
+
+def _resolve_operational_evidence_probe_config() -> Dict[str, Any]:
+    admin_probe_base_url = str(
+        os.getenv("ADMIN_PROBE_BASE_URL")
+        or os.getenv("OPERATIONAL_EVIDENCE_BASE_URL")
+        or "https://nginx"
+    ).strip().rstrip("/")
+    if not admin_probe_base_url:
+        admin_probe_base_url = "https://nginx"
+
+    probe_urls = {
+        "admin": str(
+            os.getenv("OPERATIONAL_EVIDENCE_ADMIN_URL")
+            or f"{admin_probe_base_url}/admin/llm"
+        ).strip(),
+        "marketplace": str(
+            os.getenv("OPERATIONAL_EVIDENCE_MARKETPLACE_URL")
+            or f"{admin_probe_base_url}/marketplace/orchestrator"
+        ).strip(),
+    }
+    public_headers: Dict[str, str] = {}
+    admin_probe_host = str(os.getenv("ADMIN_PROBE_HOST") or "").strip()
+    if admin_probe_host:
+        public_headers["Host"] = admin_probe_host
+    return {
+        "admin_probe_base_url": admin_probe_base_url,
+        "probe_urls": probe_urls,
+        "public_headers": public_headers,
+    }
+
+
+def _build_operational_evidence_bundle(profile_id: Optional[str] = None, **_: Any) -> Dict[str, Any]:
+    target_defaults = _resolve_operational_evidence_target_defaults(profile_id)
 
     capability_evidence = {}
     try:
         from backend.llm import admin_capabilities as admin_capabilities_module
 
-        target_defaults = [dict(item) for item in (getattr(admin_capabilities_module, "OPERATIONAL_EVIDENCE_TARGETS", None) or target_defaults)]
+        target_defaults = [dict(item) for item in target_defaults]
         cached_reader = getattr(admin_capabilities_module, "_read_operational_evidence_cache", None)
         if callable(cached_reader):
             cached_payload = cached_reader()

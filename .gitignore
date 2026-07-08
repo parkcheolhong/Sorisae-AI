@@ -26,3 +26,19 @@ TestResults/
 
 # Metro/Gradle 빌드 임시 캐시 (자동 재생성, 추적 금지)
 apps/mobile-nadotongryoksa/.gradle-tmp/
+
+# Build artifacts and operational evidence (keep source repo clean)
+uploads/**/*.apk
+uploads/**/*.aab
+uploads/**/*.ipa
+uploads/**/*.zip
+
+# Do not track heavy/raw evidence payloads in code repository
+evidence/**/*.log
+evidence/**/*.wav
+evidence/**/*.mp3
+evidence/**/*.mp4
+evidence/**/*.png
+evidence/**/*.jpg
+evidence/**/*.jpeg
+evidence/**/*.xml

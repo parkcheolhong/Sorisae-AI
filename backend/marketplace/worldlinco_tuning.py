@@ -18,7 +18,7 @@ WORLDLINGCO_TUNING_PATH = _project_root() / "knowledge" / "worldlinco_tuning_con
 
 
 WORLDLINGCO_TUNING_DEFAULTS: Dict[str, Any] = {
-    "version": 1,
+    "version": 3,
     "updated_at": None,
     "updated_by": "defaults",
     "calibration_notes": "",
@@ -26,19 +26,19 @@ WORLDLINGCO_TUNING_DEFAULTS: Dict[str, Any] = {
     # 정합 유지한다. 원격 fetch 실패(LTE 단절 등) 시에도 14s/12s 과배칭으로 회귀하지
     # 않도록 calibrated safety_cap/max_segment/fixed_flush 를 동일하게 둔다.
     "voip": {
-        "silero_silence_ms": 1400,
+        "silero_silence_ms": 1000,
         "silero_speech_ms": 120,
-        "silero_min_segment_ms": 2400,
+        "silero_min_segment_ms": 3000,
         "silero_min_speech_span_ms": 1700,
-        "silero_safety_cap_ms": 12000,
+        "silero_safety_cap_ms": 7000,
         "silero_post_flush_cooldown_ms": 1000,
         "remote_echo_guard_ms": 4800,
         "speaker_echo_guard_ms": 5800,
         "remote_listen_hold_ms": 2600,
         "post_playback_guard_ms": 550,
-        "vad_silence_flush_ms": 1500,
-        "vad_min_segment_ms": 2200,
-        "vad_max_segment_ms": 12000,
+        "vad_silence_flush_ms": 1000,
+        "vad_min_segment_ms": 3000,
+        "vad_max_segment_ms": 7000,
         "speech_meter_min_db": -52,
         "file_speech_rms_db": -52,
         "meter_unavailable_fixed_flush_ms": 4000,
@@ -60,7 +60,7 @@ class WorldlincoVoipTuningUpdate(BaseModel):
     silero_speech_ms: Optional[int] = Field(None, ge=80, le=400)
     silero_min_segment_ms: Optional[int] = Field(None, ge=1500, le=6000)
     silero_min_speech_span_ms: Optional[int] = Field(None, ge=800, le=5000)
-    silero_safety_cap_ms: Optional[int] = Field(None, ge=8000, le=30000)
+    silero_safety_cap_ms: Optional[int] = Field(None, ge=6000, le=30000)
     silero_post_flush_cooldown_ms: Optional[int] = Field(None, ge=200, le=3000)
     remote_echo_guard_ms: Optional[int] = Field(None, ge=1500, le=10000)
     speaker_echo_guard_ms: Optional[int] = Field(None, ge=2000, le=12000)

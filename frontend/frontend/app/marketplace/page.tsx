@@ -463,6 +463,7 @@ export default function MarketplacePage() {
                         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <p className="workspace-card-kicker">운영형 프로젝트 목록</p>
+                                <p className="workspace-card-copy">5가지 AI 엔진 상품</p>
                                 <h2 className="workspace-card-heading">실제 등록 프로젝트</h2>
                                 <p className="workspace-card-copy">DB 프로젝트 기준으로 정렬/검색/카테고리 필터 결과를 바로 보여줍니다. 마켓플레이스 도메인에서는 관리자 화면 링크를 노출하지 않습니다.</p>
                             </div>

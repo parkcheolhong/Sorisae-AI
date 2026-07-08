@@ -14,7 +14,7 @@ from app.order_profile import get_order_profile
 from ai.router import router as ai_router
 from backend.llm.router import router as llm_status_router
 from backend.llm.orchestrator import router as llm_orchestrator_router
-from backend.database import ensure_traceability_schema
+from backend.database import check_database_availability, ensure_traceability_schema
 from backend.admin_router import router as admin_router
 from backend.marketplace.router import ensure_marketplace_runtime_schema, router as marketplace_router
 from backend.marketplace.stats_router import router as marketplace_stats_router
@@ -24,8 +24,10 @@ class Utf8JsonResponse(JSONResponse):
     media_type = 'application/json; charset=utf-8'
 
 def create_application() -> FastAPI:
-    ensure_traceability_schema()
-    ensure_marketplace_runtime_schema()
+    database_available, _ = check_database_availability()
+    if database_available:
+        ensure_traceability_schema()
+        ensure_marketplace_runtime_schema()
 
     app = FastAPI(
         title='오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-88b347d566',

@@ -3,19 +3,19 @@
  */
 // NOTE: 런타임에는 resolveSileroBoundaryFromTuning()(backend SSOT)이 이 값을 덮어쓴다.
 // (G1 정합) fallback 값은 SSOT(worldlinco_tuning_config.json voip)와 동일하게 둔다:
-// silenceMs=1400(silero_silence_ms)·safetyCapMs=12000(silero_safety_cap_ms).
-// 콜드스타트/원격 fetch 실패 구간에서도 정상값(자연 장문 수용·호흡 통과)과 일치하도록 정합.
+// silenceMs=1000(silero_silence_ms)·safetyCapMs=7000(silero_safety_cap_ms).
+// 콜드스타트/원격 fetch 실패 구간에서도 현재 운영형 저지연 프로파일과 일치하도록 정합.
 export const VOICE_RELAY_SILERO_BOUNDARY_DEFAULTS = {
     /** Native Silero trailing silence before speech_end. */
-    silenceMs: 1_400,
+    silenceMs: 1_000,
     /** Native Silero minimum voiced frames before speech_start. */
     speechMs: 120,
     /** Minimum captured segment length before endpoint flush. */
-    minSegmentMs: 2_400,
+    minSegmentMs: 3_000,
     /** Minimum voiced span (first speech_start → speech_end) in the segment. */
     minSpeechSpanMs: 1_700,
     /** Safety cap while Silero owns boundaries (no fixed_interval mid-phrase). */
-    safetyCapMs: 12_000,
+    safetyCapMs: 7_000,
     /** Ignore rapid endpoint events right after a flush. */
     postFlushCooldownMs: 1_000,
 } as const;

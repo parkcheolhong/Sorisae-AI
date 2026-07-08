@@ -62,7 +62,11 @@ class InMemoryLifecycleStore(LifecycleStore):
 
     def purge_expired(self, ttl_sec: int) -> int:
         with self._lock:
-            stale = [cid for cid, lc in self._data.items() if lc.is_expired(ttl_sec)]
+            stale = [
+                cid
+                for cid, lc in self._data.items()
+                if lc.state.is_terminal() and lc.is_expired(ttl_sec)
+            ]
             for cid in stale:
                 self._data.pop(cid, None)
             return len(stale)
