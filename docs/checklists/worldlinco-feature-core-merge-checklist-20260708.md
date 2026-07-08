@@ -120,4 +120,4 @@ Evidence
 	- Sorisae freeze/probe: PASS (unit+http probe gate success)
 	- Cross-feature integrity: PASS (section boundary lock + integrated suites pass x2)
 	- Security/quality release gate: FAIL (SonarCloud Quality Gate)
-- Final decision: ROLLBACK/HOLD promotion for PR #94 until SonarCloud quality gate red is resolved and rerun is green.
+- Final decision: 사용자 승인 대기 (근거만 보고, 승격/보류는 사용자 최종 결정).
