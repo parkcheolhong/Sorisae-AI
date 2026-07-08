@@ -133,7 +133,7 @@ export function FriendMapDiscoveryScreen({
   }, [gender, nickname, token]);
 
   useEffect(() => {
-    void refresh();
+    refresh();
     if (!autoMode) {
       return;
     }
@@ -258,7 +258,7 @@ export function FriendMapDiscoveryScreen({
                 <Pressable
                   style={[styles.requestBtn, isNarrowWidth && styles.actionButtonCompact, user.friendshipStatus !== 'available' && styles.requestBtnDisabled]}
                   disabled={user.friendshipStatus !== 'available'}
-                  onPress={() => { void handleRequestFriend(user); }}
+                  onPress={() => { handleRequestFriend(user); }}
                 >
                   <Text style={styles.requestBtnText}>{user.friendshipStatus === 'available' ? '친구 요청' : statusLabel(user.friendshipStatus)}</Text>
                 </Pressable>

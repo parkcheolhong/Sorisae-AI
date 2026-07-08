@@ -1799,7 +1799,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
     const enqueueVoiceRelaySegment = useCallback((uri: string, snapshot: VoiceRelaySegmentSnapshot) => {
         voiceRelaySegmentQueueRef.current.push({ uri, snapshot });
-        void drainVoiceRelaySegmentQueue();
+        drainVoiceRelaySegmentQueue();
     }, [drainVoiceRelaySegmentQueue]);
 
     const stopVoiceRelaySegment = useCallback(async (processSegment: boolean) => {  // NOSONAR

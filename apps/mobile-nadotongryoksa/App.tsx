@@ -3587,7 +3587,7 @@ function AppInner() {
                 });
                 return;
             }
-            void resolveStalePendingIncomingCall('incoming_ring_timeout', 'local_ring_timeout');
+            resolveStalePendingIncomingCall('incoming_ring_timeout', 'local_ring_timeout');
         }, PENDING_INCOMING_RING_MAX_MS);
 
         return () => clearTimeout(ringTimer);
@@ -4861,7 +4861,7 @@ function AppInner() {
     }, [handleDispatchChatShare, pendingChatShare]);
 
     const handleShareTranslationToChat = useCallback(async () => {
-        void handleShareMessageToChat({
+        handleShareMessageToChat({
             messageType: 'translation',
             body: inputText,
             translatedBody: resultText,
@@ -7238,7 +7238,7 @@ function AppInner() {
                         recording,
                         onFlush: (reason) => {
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'vad_end', reason }));
-                            void stopVoiceInputRef.current?.();
+                            stopVoiceInputRef.current?.();
                         },
                         isStillActive: () => autoVoiceModeEnabledRef.current
                             && voiceInputTargetRef.current === 'main'
@@ -7302,7 +7302,7 @@ function AppInner() {
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'capture_start_retry', detail }));
                 autoVoiceRestartTimerRef.current = setTimeout(() => {
                     if (autoVoiceModeEnabledRef.current && !recordingRef.current) {
-                        void startVoiceInput({ autoMode: true });
+                        startVoiceInput({ autoMode: true });
                     }
                 }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
             } else {
@@ -8115,7 +8115,7 @@ function AppInner() {
     useEffect(() => {
         if (!autoVoiceModeEnabled) {
             clearAutoVoiceTimers();
-            void stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
             faceSpokenHistoryRef.current = [];
             faceGptSpokenEchoRef.current = [];
             mainLastAutoVoiceRelayRef.current = null;
@@ -8243,7 +8243,7 @@ function AppInner() {
                 // autoVoiceMode를 끄지 않으면 재시작 루프가 메인 캡처를 되살려, 대면 발화가 소리새 경로로 새거나
                 // 그 반대로 엉킨다. 소리새 듣기는 창 안의 마이크 버튼(handleToggleSorisaeConversation)으로 따로 시작한다.
                 if (recordingRef.current) {
-                    void stopVoiceInput({ suppressAutoRestart: true });  // NOSONAR
+                    stopVoiceInput({ suppressAutoRestart: true });  // NOSONAR
                 }
                 if (autoVoiceModeEnabledRef.current) {
                     setAutoVoiceModeEnabled(false);
@@ -11064,14 +11064,14 @@ function AppInner() {
                 visible={sorisaeWindowOpen}
                 animationType="slide"
                 statusBarTranslucent
-                onRequestClose={() => { void closeSorisaeWindow(); }}
+                onRequestClose={() => { closeSorisaeWindow(); }}
             >
                 <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.skyBg}>
                 <SafeAreaView style={styles.sorisaeWindowRoot}>
                     <View style={styles.sorisaeWindowHeader}>
                         <Text style={styles.sorisaeWindowTitle}>🐦 {aiDisplayName}</Text>
                         <Pressable
-                            onPress={() => { void closeSorisaeWindow(); }}
+                            onPress={() => { closeSorisaeWindow(); }}
                             accessibilityRole="button"
                             accessibilityLabel="worldlinco-sorisae-window-close"
                             testID="worldlinco-sorisae-window-close"
