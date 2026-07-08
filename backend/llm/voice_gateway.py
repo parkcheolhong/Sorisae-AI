@@ -408,7 +408,7 @@ def _friend_fetch_osm_grounding(
         if not isinstance(item, dict):
             continue
         namedetails = item.get("namedetails") if isinstance(item.get("namedetails"), dict) else {}
-        name = str(namedetails.get("name") or item.get("name") or "").strip()
+        name = str(namedetails.get("name") or item.get("name") or "").strip() # type: ignore
         display = str(item.get("display_name") or "").strip()
         if not name and display:
             name = display.split(",")[0].strip()
@@ -418,13 +418,13 @@ def _friend_fetch_osm_grounding(
         if display:
             parts.append(f"주소: {display}")
         extratags = item.get("extratags") if isinstance(item.get("extratags"), dict) else {}
-        phone = str(extratags.get("phone") or extratags.get("contact:phone") or "").strip()
+        phone = str(extratags.get("phone") or extratags.get("contact:phone") or "").strip() # type: ignore
         if phone:
             parts.append(f"전화: {phone}")
-        hours = str(extratags.get("opening_hours") or "").strip()
+        hours = str(extratags.get("opening_hours") or "").strip() # type: ignore
         if hours:
             parts.append(f"영업: {hours}")
-        website = str(extratags.get("website") or extratags.get("contact:website") or "").strip()
+        website = str(extratags.get("website") or extratags.get("contact:website") or "").strip() # type: ignore
         if website:
             parts.append(f"웹: {website}")
         ptype = str(item.get("type") or item.get("addresstype") or "").strip()
@@ -953,9 +953,9 @@ def _resolve_friend_reply_budget(
     config: dict[str, object],
 ) -> dict[str, object]:
     is_guide_query = _friend_is_tourism_guide_query(transcript)
-    tier = int(config.get("tourism_guide_tier", 1) or 1)
-    reply_tokens = int(config.get("friend_reply_max_tokens", 256) or 256)
-    realtime_tokens = int(config.get("friend_realtime_max_tokens", 192) or 192)
+    tier = int(config.get("tourism_guide_tier", 1) or 1) # type: ignore
+    reply_tokens = int(config.get("friend_reply_max_tokens", 256) or 256) # type: ignore
+    realtime_tokens = int(config.get("friend_realtime_max_tokens", 192) or 192) # type: ignore
     max_len_ko = 320
     if is_guide_query:
         if tier >= 3:
@@ -976,7 +976,7 @@ def _resolve_friend_reply_budget(
 def _trim_friend_reply_for_speed(text: str, profile_language: Optional[str], transcript: str) -> str:
     cleaned = _sanitize_friend_reply_for_speech(text)
     budget = _resolve_friend_reply_budget(transcript, {})
-    max_len_ko = int(budget.get("max_len_ko", 320) or 320)
+    max_len_ko = int(budget.get("max_len_ko", 320) or 320) # type: ignore
     if _lang_primary(profile_language) == "ko" and len(cleaned) > max_len_ko:
         return cleaned[:max_len_ko].rstrip()
     return cleaned
@@ -1296,8 +1296,8 @@ def _run_faster_whisper(
 
         transcript = str(payload.get("transcript") or "").strip()
         detected = str(payload.get("detected_language") or "").strip() or None
-        avg_logprob = float(payload.get("avg_logprob", -5.0))
-        max_no_speech_prob = float(payload.get("max_no_speech_prob", 1.0))
+        avg_logprob = float(payload.get("avg_logprob", -5.0)) # type: ignore
+        max_no_speech_prob = float(payload.get("max_no_speech_prob", 1.0)) # type: ignore
         return {
             "transcript": transcript,
             "detected_language": detected,
@@ -1516,7 +1516,7 @@ def _synthesize_edge_tts(
         chunks: list[bytes] = []
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
-                chunks.append(chunk["data"])
+                chunks.append(chunk["data"]) # type: ignore
         return b"".join(chunks)
 
     # edge-tts는 MS 엔드포인트의 Sec-MS-GEC 토큰 타이밍/콜드스타트로 드물게
@@ -1674,7 +1674,7 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
                         request.language,
                     )
                     transcript = str(whisper_payload.get("transcript") or "").strip()
-                    detected_language = whisper_payload.get("detected_language")
+                    detected_language = whisper_payload.get("detected_language") # type: ignore
                 except Exception as exc:
                     stt_errors.append(f"faster-whisper: {exc}")
 
@@ -2333,7 +2333,7 @@ def _assemble_answer_days(plan: dict, candidates: list[dict], max_days: int) -> 
             if not isinstance(it, dict):
                 continue
             try:
-                pid = int(it.get("place_id"))
+                pid = int(it.get("place_id")) # type: ignore
             except (TypeError, ValueError):
                 continue
             if pid < 0 or pid >= len(candidates) or pid in seen:
@@ -2358,7 +2358,7 @@ def _assemble_answer_days(plan: dict, candidates: list[dict], max_days: int) -> 
             ))
         if items_out:
             try:
-                day_num = int(d.get("day"))
+                day_num = int(d.get("day")) # type: ignore
             except (TypeError, ValueError):
                 day_num = len(days_out) + 1
             days_out.append(AnswerDay(
