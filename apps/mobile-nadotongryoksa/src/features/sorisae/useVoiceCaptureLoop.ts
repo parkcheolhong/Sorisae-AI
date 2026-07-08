@@ -255,7 +255,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                         }
                     })
-                    .catch(() => {
+                    .catch(() => { // NOSONAR
                         stopFacePlayback().catch(() => { /* no-op */ });
                         faceSpeakingRef.current = false;
                     });

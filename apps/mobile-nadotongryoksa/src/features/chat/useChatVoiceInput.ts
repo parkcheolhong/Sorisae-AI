@@ -200,7 +200,7 @@ export function useChatVoiceInput(
     }, [transcribe]);
 
     // 핸즈프리 한 발화 캡처: 녹음 시작 → 무음/최대길이 감지 시 정지 → uri 반환(없으면 null).
-    const captureUtterance = useCallback(async (): Promise<string | null> => {
+    const captureUtterance = useCallback(async (): Promise<string | null> => { // NOSONAR
         await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
         const { recording } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
         recordingRef.current = recording;

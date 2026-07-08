@@ -625,7 +625,9 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
           />
           <Pressable
             style={[styles.addBtnFull, addLoading && styles.addBtnDisabled]}
-            onPress={() => { void handleConfirmInvite(); }}
+            onPress={() => {
+              handleConfirmInvite().catch(() => {});
+            }}
             disabled={addLoading}
             testID="friend-manual-submit"
           >

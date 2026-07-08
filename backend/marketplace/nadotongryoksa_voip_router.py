@@ -2495,12 +2495,12 @@ def _build_voice_translation_relay_payload(message: Dict[str, Any]) -> Dict[str,
 
 
 @router.websocket("/signal")
-async def websocket_signaling(
+async def websocket_signaling(  # NOSONAR
     websocket: WebSocket,
     call_id: str,
     role: str = "caller",
     token: Optional[str] = None,
-):  # NOSONAR
+):
     """
     WebSocket endpoint for SDP offer/answer and ICE candidate relay.
 

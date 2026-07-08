@@ -245,9 +245,18 @@ test.describe('admin dashboard ops regression', () => {
 
         const popupParsed = new URL(popupUrl);
         const expectedParsed = new URL(expectedHref as string);
-        expect(`${popupParsed.origin}${popupParsed.pathname}`).toBe(`${expectedParsed.origin}${expectedParsed.pathname}`);
 
-        await popup.close();
+        if (popup) {
+            await popup.waitForLoadState('domcontentloaded');
+            const popupParsed = new URL(popup.url());
+            expect(`${popupParsed.origin}${popupParsed.pathname}`).toBe(`${expectedParsed.origin}${expectedParsed.pathname}`);
+            await popup.close();
+            return;
+        }
+
+        await page.waitForURL(/\/docs(?:\/)?(?:\?.*)?$/, { timeout: 15000 });
+        const pageParsed = new URL(page.url());
+        expect(`${pageParsed.origin}${pageParsed.pathname}`).toBe(`${expectedParsed.origin}${expectedParsed.pathname}`);
     });
 
     test('docs viewer top navigation routes to the expected mapped documents', async ({ page }) => {

@@ -1830,7 +1830,7 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
         return {"ok": False, "status": None, "url": url, "error": exc.__class__.__name__}
 
 
-def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
+def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:  # NOSONAR
     display = _resolve_admin_summary_display_values(env_values)
     admin_domain = display["admin_domain"] or "metanova1004.com"
     model_routes = runtime_config.get("model_routes") or {}

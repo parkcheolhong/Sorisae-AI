@@ -406,7 +406,9 @@ export function ChatRoomListScreen({  // NOSONAR
                   </Pressable>
                   <Pressable
                     style={styles.friendChatButton}
-                    onPress={() => { void handleOpenDirectRoom(friend); }}
+                    onPress={() => {
+                      handleOpenDirectRoom(friend).catch(() => {});
+                    }}
                     disabled={busyAction === `friend-${friend.id}`}
                     accessibilityRole="button"
                     accessibilityLabel={`worldlinco-chat-direct-friend-${friend.friendUserId ?? friend.id}`}

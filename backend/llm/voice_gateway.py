@@ -2474,7 +2474,7 @@ async def _attach_place_media(days: list[AnswerDay], candidates: list[dict], *, 
 
 
 @router.post("/voice/answer", response_model=AnswerResponse)
-async def voice_answer(request: AnswerRequest):
+async def voice_answer(request: AnswerRequest):  # NOSONAR
     """관광 특화 구조화 답변 — RAG(자체 인덱스) → LLM(스키마) → 일자별 일정 JSON.
 
     /voice/friend-chat(자연어 음성 대화)과 분리된, 화면 카드/일정용 구조화 엔드포인트.

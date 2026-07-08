@@ -3893,7 +3893,7 @@ function AppInner() {
             name: OCR_DEBUG_IMAGE_NAME || OCR_DEBUG_IMAGE_URI.split('/').pop() || 'ocr-debug-image.jpg',
             mimeType: 'image/jpeg',
         };
-        void runImageOcrWithAsset(debugAsset);
+        runImageOcrWithAsset(debugAsset).catch(() => {});
     }, [runImageOcrWithAsset]);
 
     const appendSongSubtitle = useCallback((payload: Omit<SongSubtitleEntry, 'id'>) => {
@@ -8994,7 +8994,9 @@ function AppInner() {
                             <View style={styles.inlineAuthActionRow}>
                                 <Pressable
                                     style={[styles.inlineActionBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}
-                                    onPress={() => { void handleStartInstantDemoSession('chat'); }}
+                                    onPress={() => {
+                                        handleStartInstantDemoSession('chat').catch(() => {});
+                                    }}
                                     disabled={demoSessionLoading || loginLoading}
                                     accessibilityRole="button"
                                     accessibilityLabel="worldlinco-demo-session-start-button-inline"

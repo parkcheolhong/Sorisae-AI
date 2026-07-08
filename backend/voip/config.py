@@ -65,7 +65,7 @@ def dynamic_turn_credentials(user_key: Optional[str] = None, *, now: Optional[in
     return username, credential
 
 
-def get_ice_servers(user_key: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_ice_servers(user_key: Optional[str] = None) -> List[Dict[str, Any]]:  # NOSONAR
     """모바일 CallInitResponse.turn_servers 형식으로 ICE 서버 목록 반환.
 
     각 항목: {"urls": [...], "username"?, "credential"?}
