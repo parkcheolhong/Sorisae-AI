@@ -90,7 +90,10 @@ jobs:
   sorisae-http-probe-gate:
     runs-on: ubuntu-latest
     needs: sorisae-unit-gate
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'push' }}
+    env:
+      SORISAE_PROBE_BASE_URL_SECRET: ${{ secrets.SORISAE_PROBE_BASE_URL }}
+      SORISAE_PROBE_BASE_URL_VAR: ${{ vars.SORISAE_PROBE_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -103,6 +106,22 @@ jobs:
           pip install faster-whisper av
           sudo apt-get update && sudo apt-get install -y ffmpeg
 
+      - name: Resolve external probe base URL
+        id: resolve_base_url
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_URL="${SORISAE_PROBE_BASE_URL_SECRET:-${SORISAE_PROBE_BASE_URL_VAR:-}}"
+          if [ -z "${BASE_URL}" ]; then
+            echo "SORISAE_PROBE_BASE_URL is required (repo secret or variable)."
+            exit 1
+          fi
+          if [[ "${BASE_URL}" == *"127.0.0.1"* ]] || [[ "${BASE_URL}" == *"localhost"* ]]; then
+            echo "SORISAE_PROBE_BASE_URL must point to external reachable backend, not localhost: ${BASE_URL}"
+            exit 1
+          fi
+          echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
+
       - name: Run Sorisae HTTP probe (manual / against live backend)
         run: |
-          python scripts/run_sorisae_friend_chat_probe.py --base-url "${SORISAE_PROBE_BASE_URL:-http://127.0.0.1:8000}"
+          python scripts/run_sorisae_friend_chat_probe.py --base-url "${{ steps.resolve_base_url.outputs.base_url }}"
