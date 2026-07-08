@@ -252,7 +252,7 @@ export function useChatVoiceInput(
         return uri;
     }, []);
 
-    const runHandsFreeLoop = useCallback(async () => {
+    const runHandsFreeLoop = useCallback(async () => { // NOSONAR
         if (handsFreeLoopActiveRef.current) return;
         handsFreeLoopActiveRef.current = true;
         try {

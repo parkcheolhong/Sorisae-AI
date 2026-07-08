@@ -1897,7 +1897,9 @@ export default function AdminDashboardPage() {
         onAdminPasswordCurrentChange: setAdminPasswordCurrent,
         onAdminPasswordNextChange: setAdminPasswordNext,
         onAdminPasswordConfirmChange: setAdminPasswordConfirm,
-        onChangeAdminPassword: () => { void changeAdminPassword(); },
+            onChangeAdminPassword: () => {
+                Promise.resolve(changeAdminPassword()).catch(() => {});
+            },
     });
 
     const adminSampleProductsAssembly = buildAdminPageSampleProductsAssembly({

@@ -26,12 +26,24 @@ class CurrentModel:
     raw: dict = field(default_factory=dict)
 
 
+def _resolve_safe_model_dir(model_dir: str | Path) -> Path:
+    raw = str(model_dir or "").strip()
+    if not raw:
+        raise ValueError("model_dir 가 비어 있습니다.")
+    if "\x00" in raw:
+        raise ValueError("model_dir 에 허용되지 않는 문자가 포함되어 있습니다.")
+    input_path = Path(raw).expanduser()
+    if not input_path.is_absolute() and any(part == ".." for part in input_path.parts):
+        raise ValueError("상위 경로(..)는 model_dir 로 허용되지 않습니다.")
+    return input_path.resolve() if input_path.is_absolute() else (Path.cwd() / input_path).resolve()
+
+
 def current_path(model_dir: str | Path) -> Path:
-    return Path(model_dir) / "current.json"
+    return _resolve_safe_model_dir(model_dir) / "current.json"
 
 
 def history_path(model_dir: str | Path) -> Path:
-    return Path(model_dir) / "history.jsonl"
+    return _resolve_safe_model_dir(model_dir) / "history.jsonl"
 
 
 def append_history(model_dir: str | Path, entry: dict) -> None:
@@ -129,7 +141,7 @@ def apply_signal_overrides(config: TradingConfig, current: CurrentModel) -> Trad
 # ── M7-M: 롤백 가드 상태(블랙리스트 + 연속 롤백 → 재학습 일시중지) ──────────────
 
 def guard_path(model_dir: str | Path) -> Path:
-    return Path(model_dir) / "guard.json"
+    return _resolve_safe_model_dir(model_dir) / "guard.json"
 
 
 def _load_guard(model_dir: str | Path) -> dict:

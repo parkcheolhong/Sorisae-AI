@@ -975,12 +975,12 @@ def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
     api_base = _resolve_public_api_base()
     safe_code = html.escape(str(referrer["code"]), quote=True)
     safe_username = html.escape(str(referrer.get("username") or ""), quote=True)
-    html = build_invite_landing_html(
+    landing_html = build_invite_landing_html(
         code=safe_code,
         api_base=api_base,
         referrer_username=safe_username,
     )
-    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
+    return HTMLResponse(content=landing_html, headers={"Cache-Control": "no-store"})
 
 
 @router.get(

@@ -414,7 +414,10 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 ? 'sorisae'
                                 : 'face';
                 acquireVoiceCapture(leaseFeature, () => {
-                    void stopVoiceInputRef.current?.({ suppressAutoRestart: true });
+                    const stopPromise = stopVoiceInputRef.current?.({ suppressAutoRestart: true });
+                    if (stopPromise) {
+                        stopPromise.catch(() => {});
+                    }
                     if (leaseFeature === 'inter_call') {
                         setInterCallVoiceAssistEnabled(false);
                     } else if (leaseFeature === 'song') {

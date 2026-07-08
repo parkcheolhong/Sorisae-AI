@@ -78,7 +78,7 @@ def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object
         }
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        logger.error(
+        logger.exception(
             "[SMS_OTP] provider=twilio purpose=%s http=%s detail_len=%s",
             purpose,
             exc.code,

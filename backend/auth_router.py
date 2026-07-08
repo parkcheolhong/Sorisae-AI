@@ -945,8 +945,8 @@ def me(current_user: User = Depends(get_current_user)):
 )
 def update_me(
     payload: UserProfileUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        current_user: Annotated[User, Depends(get_current_user)],
+        db: Annotated[Session, Depends(get_db)],
 ):
     if payload.preferred_language is None and payload.country_code is None:
         raise HTTPException(
@@ -1039,7 +1039,10 @@ def start_password_recovery(
 @router.post(
     "/recovery/verify-identity",
     response_model=PasswordRecoveryVerifyIdentityResponse,
-    responses={401: {"description": "인증 코드가 올바르지 않습니다."}},
+    responses={
+        401: {"description": "인증 코드가 올바르지 않습니다."},
+        410: {"description": "인증 세션이 만료되었습니다."},
+    },
 )
 def verify_password_recovery_identity(payload: PasswordRecoveryVerifyIdentityRequest):
     from backend.services.contact_verification import verify_session_code

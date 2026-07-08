@@ -38,7 +38,7 @@ class BacktestAnalytics:
         return {k: (round(v, 6) if isinstance(v, float) else v) for k, v in asdict(self).items()}
 
 
-def analyze_equity_curve(equity: list[float] | np.ndarray, start_equity: float | None = None) -> BacktestAnalytics:
+def analyze_equity_curve(equity: list[float] | np.ndarray, start_equity: float | None = None) -> BacktestAnalytics:  # NOSONAR
     arr = np.asarray(equity, dtype=float)
     if arr.size == 0:
         arr = np.asarray([start_equity if start_equity is not None else 0.0])

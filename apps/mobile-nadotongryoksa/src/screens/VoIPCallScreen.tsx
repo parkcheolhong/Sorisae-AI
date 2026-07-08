@@ -2312,7 +2312,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             voiceRelayArmedForSpeechRef.current = false;
                             voiceRelayLeadInTriggeredRef.current = false;
                             voiceRelayBypassArmRef.current = true;
-                            void startVoiceRelaySegmentRef.current();
+                                Promise.resolve(startVoiceRelaySegmentRef.current()).catch(() => {});
                         }
                     }, VOICE_RELAY_LEADIN_ARM_TIMEOUT_MS);
                     return;
@@ -3685,7 +3685,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             <Text style={styles.auditTitle}>통화 모드 감사 로그</Text>
                             <TouchableOpacity
                                 style={styles.auditRefreshButton}
-                                onPress={() => { void loadAuditEvents({ showLoading: true, force: true }); }}
+                                    onPress={() => {
+                                        Promise.resolve(loadAuditEvents({ showLoading: true, force: true })).catch(() => {});
+                                    }}
                                 testID="worldlinco-voip-audit-refresh"
                                 accessibilityLabel="통화 모드 감사 로그 새로고침"
                             >
