@@ -104,10 +104,20 @@ Evidence:
 - Leakage confirmation: no `voice_gateway.py` friend-chat forbidden keyword diff hits and no App.tsx cross-section coupling hit (boundary lock clean-state PASS x2)
 
 ## 6. Release readiness
-- [ ] Update release candidate build metadata
-- [ ] Validate publish artifact and API smoke checks
-- [ ] Produce final pass/fail matrix by feature
-- [ ] Approve promotion or rollback with reason
+- [x] Update release candidate build metadata
+- [x] Validate publish artifact and API smoke checks
+- [x] Produce final pass/fail matrix by feature
+- [x] Approve promotion or rollback with reason
 
 Evidence
--
+- Release candidate metadata (manifest): versionName=1.0.237, versionCode=312, package=com.parkcheolhong.worldlinco, publishedAt=2026-07-07T23:03:05.7548556Z, artifact=nadotongryoksa-v1.0.237-build312-current.apk
+- Baseline policy alignment: knowledge/worldlinco_apk_baseline.json => versionCode=312, versionName=1.0.237, probe_min_build=296 (metadata aligned)
+- Publish artifact/API smoke evidence: sorisae-http-probe-gate=success; sorisae-unit-gate=success; backend-security-gate=success; test-and-kpi-gate=success
+- CI release gate blocker at decision time: SonarCloud Code Analysis=failed (Quality Gate fail: Security Rating on New Code E, Reliability Rating on New Code E)
+- Pass/fail matrix by feature (latest SHA: bae9b58255a60f224536662124f172acd2247af7)
+	- Face core: PASS (integrated pass x2 in section 5)
+	- VoIP core/parity: PASS (integrated pass x2 in section 5)
+	- Sorisae freeze/probe: PASS (unit+http probe gate success)
+	- Cross-feature integrity: PASS (section boundary lock + integrated suites pass x2)
+	- Security/quality release gate: FAIL (SonarCloud Quality Gate)
+- Final decision: ROLLBACK/HOLD promotion for PR #94 until SonarCloud quality gate red is resolved and rerun is green.
