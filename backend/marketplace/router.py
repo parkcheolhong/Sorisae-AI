@@ -986,7 +986,10 @@ def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 
-@router.get("/worldlinco/invite/{code}/qr.png")
+@router.get(
+    "/worldlinco/invite/{code}/qr.png",
+    responses={404: {"description": "referral code not found"}},
+)
 def get_worldlinco_invite_qr(code: str, request: Request) -> Response:
     """추천 초대 URL QR PNG."""
     from backend.marketplace.worldlinco_referral import (
@@ -1429,7 +1432,11 @@ def _finalize_confirmed_marketplace_purchase(
     }
 
 
-@router.post("/purchase/{purchase_id}/confirm", response_model=schemas.PaymentCallbackResponse)
+@router.post(
+    "/purchase/{purchase_id}/confirm",
+    response_model=schemas.PaymentCallbackResponse,
+    responses={404: {"description": "purchase record not found"}},
+)
 def confirm_marketplace_purchase(
     purchase_id: int,
     request: schemas.MarketplacePurchaseConfirmRequest,

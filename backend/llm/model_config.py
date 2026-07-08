@@ -37,6 +37,7 @@ QWEN_CODER_Q4_TAG = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
 QWEN_CODER_Q5_TAG = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
 QWEN_CODER_Q6_TAG = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
 QWEN_CODER_Q8_TAG = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+OLLAMA_QWEN_CODER_32B = "qwen2.5-coder:32b"
 FULL_GPU_OFFLOAD_NUM_GPU = -1
 SAFE_GPU_NUM_GPU = 24
 SAFE_CPU_THREAD_CAP = 24
@@ -339,18 +340,18 @@ def _runtime_profile_payload(key: str, label: str, description: str, hardware_hi
     fallback_default = get_default_model()
     if key == CURRENT_GPU_PROFILE_KEY:
         model_routes = {
-            "default": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "reasoning": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "coding": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "voice_chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "coder": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "reviewer": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "smart_planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "smart_executor": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
-            "smart_designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, "qwen2.5-coder:32b"], fallback_default),
+            "default": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "reasoning": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "coding": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "voice_chat": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "coder": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "reviewer": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "smart_planner": _pick_first_available(available_models, [QWEN_CODER_Q6_TAG, QWEN_CODER_Q5_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "smart_executor": _pick_first_available(available_models, [QWEN_CODER_Q5_TAG, QWEN_CODER_Q6_TAG, QWEN_CODER_Q4_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
+            "smart_designer": _pick_first_available(available_models, [QWEN_CODER_Q4_TAG, QWEN_CODER_Q5_TAG, FALLBACK_VLLM_MODEL_14B_AWQ, OLLAMA_QWEN_CODER_32B], fallback_default),
         }
         settings = {
             "selected_profile": CURRENT_GPU_PROFILE_KEY,
@@ -374,17 +375,17 @@ def _runtime_profile_payload(key: str, label: str, description: str, hardware_hi
         execution_controls = _default_execution_controls(key)
     else:
         model_routes = {
-            "default": _pick_first_available(available_models, ["qwen2.5:72b", "llama3.3:70b", "deepseek-r1:70b", "qwen2.5-coder:32b"], fallback_default),
+            "default": _pick_first_available(available_models, ["qwen2.5:72b", "llama3.3:70b", "deepseek-r1:70b", OLLAMA_QWEN_CODER_32B], fallback_default),
             "reasoning": _pick_first_available(available_models, ["deepseek-r1:70b", "qwen2.5:72b", "qwq:32b"], fallback_default),
-            "coding": _pick_first_available(available_models, ["qwen2.5:72b", "deepseek-r1:70b", "qwen2.5-coder:32b"], fallback_default),
+            "coding": _pick_first_available(available_models, ["qwen2.5:72b", "deepseek-r1:70b", OLLAMA_QWEN_CODER_32B], fallback_default),
             "chat": _pick_first_available(available_models, ["llama3.3:70b", "qwen2.5:72b", "gemma3:27b"], fallback_default),
             "voice_chat": _pick_first_available(available_models, ["glm4:latest", "gemma3:27b"], fallback_default),
             "planner": _pick_first_available(available_models, ["deepseek-r1:70b", "qwen2.5:72b", "qwq:32b"], fallback_default),
-            "coder": _pick_first_available(available_models, ["qwen2.5:72b", "deepseek-r1:70b", "qwen2.5-coder:32b"], fallback_default),
+            "coder": _pick_first_available(available_models, ["qwen2.5:72b", "deepseek-r1:70b", OLLAMA_QWEN_CODER_32B], fallback_default),
             "reviewer": _pick_first_available(available_models, ["deepseek-r1:70b", "qwen2.5:72b", "deepseek-r1:32b"], fallback_default),
             "designer": _pick_first_available(available_models, ["llama3.3:70b", "qwen2.5:72b", "gemma3:27b"], fallback_default),
             "smart_planner": _pick_first_available(available_models, ["deepseek-r1:70b", "qwen2.5:72b", "qwq:32b"], fallback_default),
-            "smart_executor": _pick_first_available(available_models, ["qwen2.5:72b", "deepseek-r1:70b", "qwen2.5-coder:32b"], fallback_default),
+            "smart_executor": _pick_first_available(available_models, ["qwen2.5:72b", "deepseek-r1:70b", OLLAMA_QWEN_CODER_32B], fallback_default),
             "smart_designer": _pick_first_available(available_models, ["llama3.3:70b", "qwen2.5:72b", "gemma3:27b"], fallback_default),
         }
         settings = {

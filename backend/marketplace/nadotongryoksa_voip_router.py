@@ -1269,7 +1269,10 @@ async def get_voip_identity(current_user=Depends(get_current_user)) -> dict:
     }
 
 
-@router.post("/devices/register")
+@router.post(
+    "/devices/register",
+    responses={400: {"description": "invalid user or fcm token"}},
+)
 async def register_voip_device(
     payload: VoipDeviceRegisterRequest,
     current_user=Depends(get_current_user),

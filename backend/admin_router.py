@@ -3412,7 +3412,10 @@ def update_admin_system_settings(payload: AdminSystemSettingsUpdateRequest, admi
         raise HTTPException(status_code=500, detail="system settings update failed") from None
 
 
-@router.post("/system-settings/postgres-password")
+@router.post(
+    "/system-settings/postgres-password",
+    responses={500: {"description": "postgres password update failed"}},
+)
 def update_postgres_runtime_password(payload: AdminPostgresPasswordUpdateRequest, admin: User = Depends(require_admin)):
     try:
         next_password = _validate_postgres_password_change_payload(payload)
