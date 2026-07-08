@@ -80,7 +80,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
         working-directory: apps/mobile-nadotongryoksa
         run: |
-          npm ci
+          npm install
           npm run test -- --testPathPattern=sorisaeCaptureSegment
 
       - name: Sorisae gate skipped (no relevant PR changes)
