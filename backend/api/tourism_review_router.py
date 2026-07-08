@@ -59,7 +59,7 @@ def review_sample(mode: str = "poi", n: int = 20, k: int = 5) -> Any:
         raise
     except Exception:
         logger.error("tourism review sample failed")
-      raise HTTPException(status_code=500, detail="review sample unavailable") from None
+        raise HTTPException(status_code=500, detail="review sample unavailable") from None
 
 
 @router.post("/labels")
@@ -77,7 +77,7 @@ def review_labels(batch: ReviewLabelBatch) -> Any:
         raise
     except Exception:
         logger.error("tourism review labels failed")
-      raise HTTPException(status_code=500, detail="review label save failed") from None
+        raise HTTPException(status_code=500, detail="review label save failed") from None
 
 
 @router.get("/stats")
