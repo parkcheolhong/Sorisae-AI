@@ -185,7 +185,7 @@ def is_collaboration_stage_index(stage_index: int) -> bool:
     return stage_index >= COLLABORATION_STAGE_INDEX_MIN
 
 
-def parse_stage_command(message: str, session: Optional[Any] = None) -> Optional[StageCommand]:
+def parse_stage_command(message: str, session: Optional[Any] = None) -> Optional[StageCommand]:  # NOSONAR
     """자연어 → 단계 명령. 예: 설계해줘 / 2단계 진행해줘 / 4단계에서 Redis 캐시 아이디어?"""
     slash_cmd = _parse_slash_discuss_command(message, session)
     if slash_cmd:

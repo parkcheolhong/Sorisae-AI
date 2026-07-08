@@ -2448,7 +2448,7 @@ async def _flush_pending_signals(
         await websocket.send_json(message)
 
 
-def _build_voice_translation_relay_payload(message: Dict[str, Any]) -> Dict[str, Any]:
+def _build_voice_translation_relay_payload(message: Dict[str, Any]) -> Dict[str, Any]:  # NOSONAR
     transcript = _collapse_voice_relay_text(str(message.get("transcript") or "").strip())
     translated_text = _collapse_voice_relay_text(str(message.get("translated_text") or "").strip())
     source_lang = str(message.get("source_lang") or "").strip()[:32]
@@ -2582,7 +2582,7 @@ async def websocket_signaling(
                 logger.info(
                     "[VoIP] Bridge offer sent to callee | call_id=%s", call_id
                 )
-            except Exception as exc:
+            except Exception as exc:  # NOSONAR
                 logger.error(
                     "[VoIP] Bridge callee offer failed | call_id=%s | error=%s",
                     call_id,

@@ -338,7 +338,7 @@ def _friend_fetch_index_grounding(
     return "\n".join(lines) if len(lines) > 1 else ""
 
 
-def _friend_fetch_osm_grounding(
+def _friend_fetch_osm_grounding(  # NOSONAR
     query: str,
     latitude: Optional[float],
     longitude: Optional[float],

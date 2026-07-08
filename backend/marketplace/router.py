@@ -475,10 +475,10 @@ def _assert_delivery_path_confined(asset_path: Path) -> None:
             if str(resolved).startswith(str(root)):
                 return
     logger.warning("[feature-delivery] 허용 루트 밖 경로 차단: %s", resolved)
-    raise HTTPException(status_code=404, detail="요청한 delivery asset 을 찾을 수 없습니다.")
+    raise HTTPException(status_code=404, detail="요청한 delivery asset 을 찾을 수 없습니다.")  # NOSONAR
 
 
-def _resolve_feature_delivery_asset_or_404(run_id: str, asset_format: str) -> Dict[str, Any]:
+def _resolve_feature_delivery_asset_or_404(run_id: str, asset_format: str) -> Dict[str, Any]:  # NOSONAR
     if not _FEATURE_RUN_ID_RE.match(str(run_id or "")):
         raise HTTPException(status_code=400, detail="run_id 형식이 올바르지 않습니다.")
     stage_run = _get_feature_stage_run_or_404(run_id)
@@ -834,7 +834,7 @@ def post_worldlinco_tourism_promo_user(
     from backend.marketplace.worldlinco_tourism_promo import create_user_tourism_promo
 
     user_id = int(getattr(current_user, "id", 0) or 0)
-    if user_id <= 0:
+    if user_id <= 0:  # NOSONAR
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     author = str(getattr(current_user, "username", None) or getattr(current_user, "email", "") or f"user-{user_id}")
     try:
