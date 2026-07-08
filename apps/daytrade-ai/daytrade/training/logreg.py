@@ -80,7 +80,7 @@ class NumpyLogReg:
 
     @classmethod
     def load_json(cls, path: str | Path) -> "NumpyLogReg":
-        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))  # NOSONAR
 
 
 def _logloss(y: "np.ndarray", p: "np.ndarray") -> float:

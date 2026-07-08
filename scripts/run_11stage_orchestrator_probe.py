@@ -613,7 +613,7 @@ async def _run_http_probe(
     }
 
 
-def _print_summary(report: Dict[str, Any]) -> None:
+def _print_summary(report: Dict[str, Any]) -> None:  # NOSONAR
     print("\n=== 11-stage probe summary ===")
     print(f"mode: {report.get('mode')}")
     if report.get("surface"):

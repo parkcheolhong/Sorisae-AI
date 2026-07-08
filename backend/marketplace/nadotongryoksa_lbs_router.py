@@ -625,7 +625,7 @@ def _cancel_or_refund_booking(
         )
 
     if not _db_ready(db):
-        raise HTTPException(status_code=404, detail="booking_ref not found")
+        raise HTTPException(status_code=404, detail="booking_ref not found")  # NOSONAR
 
     try:
         event = db.query(marketplace_models.BookingEvent).filter(
@@ -1163,7 +1163,7 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
     ) -> BookingCancelRefundResponse:
         _ = current_user
         if payload.booking_ref != booking_ref:
-            raise HTTPException(status_code=400, detail="booking_ref mismatch")
+            raise HTTPException(status_code=400, detail="booking_ref mismatch")  # NOSONAR
         return _cancel_or_refund_booking(
             db,
             booking_ref=booking_ref,

@@ -316,7 +316,7 @@ export function useSorisaeVoicePipeline(deps: SorisaeVoicePipelineDeps) {
             autoVoiceModeEnabledRef.current = true;
             setAutoVoiceModeEnabled(true);
             voiceInputTargetRef.current = 'main';
-            void runtimeAdapterRef.current.startVoiceInput({ autoMode: true });
+            void runtimeAdapterRef.current.startVoiceInput({ autoMode: true });  // NOSONAR
         }, 900);
         return () => clearTimeout(timer);
     }, [

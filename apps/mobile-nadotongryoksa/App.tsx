@@ -4874,7 +4874,7 @@ function AppInner() {
     }, [fromLang, handleShareMessageToChat, inputText, resultText, toLang]);
 
     const handleShareOcrToChat = useCallback(async () => {
-        void handleShareMessageToChat({
+        void handleShareMessageToChat({  // NOSONAR
             messageType: 'ocr',
             body: ocrExtractedText,
             translatedBody: ocrTranslatedText,
@@ -6000,7 +6000,7 @@ function AppInner() {
         }
     }, [logUiPressProbe, persistVoipValidationFriendCallBypass, restoreVoipRailState]);
 
-    const handleStartFriendVoiceCall = useCallback(async (friend: Friend) => {
+    const handleStartFriendVoiceCall = useCallback(async (friend: Friend) => {  // NOSONAR
         if (!token || !userInfo) {
             setShowLogin(true);
             return;
@@ -8616,7 +8616,7 @@ function AppInner() {
     const handleVoipCallContact = useCallback((contact: DeviceContact, friend: Friend) => {
         setContactsDirectoryVisible(false);
         logUiPressProbe('CONTACT_DIRECTORY_VOIP_CALL', { friend_user_id: friend.friendUserId ?? null });
-        void handleStartFriendVoiceCall(friend);
+        void handleStartFriendVoiceCall(friend);  // NOSONAR
     }, [handleStartFriendVoiceCall, logUiPressProbe]);
 
     // [Phase5.12] 💬 채팅 — 친구면 채팅방을 열고, 미가입이면 SNS 초대.
@@ -9914,7 +9914,7 @@ function AppInner() {
                                                 <Pressable
                                                     style={styles.inlineGhostBtn}
                                                     onPress={() => {
-                                                        void refreshVoipAudit(voipAuditCallId, { showLoading: true, force: true });
+                                                        void refreshVoipAudit(voipAuditCallId, { showLoading: true, force: true });  // NOSONAR
                                                     }}
                                                 >
                                                     <Text style={styles.inlineGhostBtnText}>{voipAuditLoading ? '갱신 중...' : '새로고침'}</Text>

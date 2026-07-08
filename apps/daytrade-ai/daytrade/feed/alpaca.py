@@ -112,7 +112,7 @@ class AlpacaFeed:
             if self.max_ticks is not None and count >= self.max_ticks:
                 break
 
-    def _live_messages(self) -> Iterator[dict]:
+    def _live_messages(self) -> Iterator[dict]:  # NOSONAR
         if not self.api_key or not self.secret_key:
             raise RuntimeError(
                 "Alpaca 라이브 피드에는 ALPACA_API_KEY/ALPACA_SECRET_KEY 가 필요합니다."

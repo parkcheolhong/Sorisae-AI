@@ -40,18 +40,16 @@ def _normalize_output_dir(output_dir: Optional[str]) -> Optional[str]:
     raw = str(output_dir or "").strip()
     if not raw:
         return None
-    candidate = Path(raw)
-    try:
-        resolved = (Path.cwd().resolve() / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
-    except (OSError, RuntimeError):
+    normalized = raw.replace("\\", "/")
+    if normalized.startswith("/"):
         return None
-    cwd_root = Path.cwd().resolve()
-    try:
-        resolved.relative_to(cwd_root)
-    except ValueError:
-        logger.warning("Rejected autonomous output_dir outside workspace: %s", raw)
+    if ".." in normalized or ":" in normalized:
+        logger.warning("Rejected autonomous output_dir pattern: %s", raw)
         return None
-    return str(resolved)
+    if not re.fullmatch(r"[A-Za-z0-9_./-]{1,200}", normalized):
+        logger.warning("Rejected autonomous output_dir chars: %s", raw)
+        return None
+    return normalized
 
 
 def _load_session_store() -> Dict[str, Any]:

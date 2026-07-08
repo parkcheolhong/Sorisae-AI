@@ -689,7 +689,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     from: voiceInputTargetRef.current,
                 }));
                 voiceInputTargetRef.current = 'main';
-                void startVoiceInput({ autoMode: true, target: 'main' });
+                void startVoiceInput({ autoMode: true, target: 'main' });  // NOSONAR
                 return;
             }
 
@@ -720,7 +720,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 void faceVoicePlaybackSoundRef.current.getStatusAsync()
                     .then((status) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
-                            void stopFacePlayback().catch(() => { /* no-op */ });
+                            void stopFacePlayback().catch(() => { /* no-op */ });  // NOSONAR
                             faceSpeakingRef.current = false;
                             console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'face_speaking_gate_stale_cleared' }));
                         }

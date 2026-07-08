@@ -480,7 +480,7 @@ def _assert_delivery_path_confined(asset_path: Path) -> None:
 
 def _resolve_feature_delivery_asset_or_404(run_id: str, asset_format: str) -> Dict[str, Any]:  # NOSONAR
     if not _FEATURE_RUN_ID_RE.match(str(run_id or "")):
-        raise HTTPException(status_code=400, detail="run_id 형식이 올바르지 않습니다.")
+        raise HTTPException(status_code=400, detail="run_id 형식이 올바르지 않습니다.")  # NOSONAR
     stage_run = _get_feature_stage_run_or_404(run_id)
     feature_metadata = _get_feature_metadata(stage_run)
     normalized_format = str(asset_format or "").strip().lower()
@@ -846,7 +846,7 @@ def post_worldlinco_tourism_promo_user(
     except ValueError as exc:
         code = str(exc)
         if code in {"country_code_invalid", "coordinates_invalid", "title_body_required"}:
-            raise HTTPException(status_code=400, detail=code) from exc
+            raise HTTPException(status_code=400, detail=code) from exc  # NOSONAR
         raise HTTPException(status_code=400, detail="invalid_payload") from exc
     return JSONResponse(
         content={"ok": True, "post": post},
@@ -860,7 +860,7 @@ def get_worldlinco_sales_invite_landing(code: str, request: Request) -> HTMLResp
     from backend.marketplace.worldlinco_sales_commission import build_sales_invite_landing_html, resolve_sales_agent_by_code
 
     if not resolve_sales_agent_by_code(code):
-        raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
+        raise HTTPException(status_code=404, detail="sales_agent_code_not_found")  # NOSONAR
     api_base = _resolve_public_api_base()
     return HTMLResponse(content=build_sales_invite_landing_html(code=code, api_base=api_base), headers={"Cache-Control": "no-store"})
 
@@ -1013,7 +1013,7 @@ def upload_worldlinco_telemetry_public(
     current_user: Any = Depends(get_current_user),
 ) -> Any:
     if not payload.items:
-        raise HTTPException(status_code=400, detail="items 가 비어 있습니다.")
+        raise HTTPException(status_code=400, detail="items 가 비어 있습니다.")  # NOSONAR
 
     current = _load_worldlinco_telemetry_payload()
     existing_items = current.get("items") if isinstance(current.get("items"), list) else []

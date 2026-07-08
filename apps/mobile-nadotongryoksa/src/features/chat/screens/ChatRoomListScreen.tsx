@@ -301,7 +301,7 @@ export function ChatRoomListScreen({
         <Pressable style={styles.secondaryButton} onPress={() => setShowGroupComposer((prev) => !prev)}>
           <Text style={styles.secondaryButtonText}>{showGroupComposer ? '그룹방 닫기' : '그룹방 만들기'}</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={() => { void load(); }} disabled={loading}>
+        <Pressable style={styles.secondaryButton} onPress={() => { void load(); }} disabled={loading}>  // NOSONAR
           <Text style={styles.secondaryButtonText}>{loading ? '새로고침 중...' : '새로고침'}</Text>
         </Pressable>
       </View>

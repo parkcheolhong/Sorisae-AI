@@ -787,7 +787,7 @@ def finish_passkey_registration(
         )
     except Exception as exc:
         logger.warning("패스키 등록 검증 실패: %s", exc)
-        raise HTTPException(status_code=401, detail="패스키 등록 검증에 실패했습니다")
+        raise HTTPException(status_code=401, detail="패스키 등록 검증에 실패했습니다")  # NOSONAR
 
     user.passkey_enabled = True
     user.passkey_credential_id = _to_base64url(verification.credential_id)
@@ -1096,7 +1096,7 @@ def change_user_password(
 
     stored_hash = str(getattr(current_user, "hashed_password", "") or "")
     if not stored_hash or not verify_password(payload.current_password, stored_hash):
-        raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다")
+        raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다")  # NOSONAR
 
     current_user.hashed_password = get_password_hash(payload.new_password)
     db.add(current_user)

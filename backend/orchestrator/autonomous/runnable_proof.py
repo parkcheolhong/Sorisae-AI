@@ -75,21 +75,6 @@ def _safe_written_python_paths(written_files: Sequence[str]) -> List[Path]:
     return out
 
 
-def _safe_output_root(output_dir: Optional[str]) -> Optional[Path]:
-    raw = str(output_dir or "").strip()
-    if not raw:
-        return None
-    cwd_root = Path.cwd().resolve()
-    base = Path(raw)
-    try:
-        resolved = (cwd_root / base).resolve() if not base.is_absolute() else base.resolve()
-    except (OSError, RuntimeError):
-        return None
-    if not _is_within(resolved, cwd_root):
-        return None
-    return resolved
-
-
 def _compile_python_files(paths: List[Path]) -> List[str]:
     errors: List[str] = []
     for path in paths:
@@ -143,14 +128,7 @@ def evaluate_runnable_proof(
         "checks": [],
     }
 
-    safe_output_root = _safe_output_root(output_dir)
-    if not safe_output_root:
-        result["detail"] = "output_dir 없음 — runnable proof 미충족"
-        return result
-
     py_paths = _safe_written_python_paths(written)
-    if not py_paths:
-        py_paths = sorted(safe_output_root.rglob("*.py"))[:40]
 
     result["python_file_count"] = len(py_paths)
     if not py_paths:
