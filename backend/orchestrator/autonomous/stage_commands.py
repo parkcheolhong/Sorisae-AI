@@ -42,9 +42,6 @@ _DISCUSS_MARKERS = re.compile(
     r"what|how|why|idea|suggest|recommend|search)",
     re.IGNORECASE,
 )
-_STAGE_NUMBER = re.compile(r"([0-9]{1,2}(?:\.[0-9])?)\s*단계", re.IGNORECASE)
-
-
 @dataclass(frozen=True)
 class StageCommand:
     action: str  # design | execute | discuss
@@ -65,11 +62,30 @@ def stage_index_from_number(stage_number: float) -> Optional[int]:
 
 
 def parse_stage_number(message: str) -> Optional[int]:
-    match = _STAGE_NUMBER.search(message.strip())
-    if not match:
+    normalized = str(message or "").strip()
+    if not normalized:
+        return None
+    # 사용자 입력 기반 파싱이므로 최대 길이를 제한해 ReDoS류 과부하를 방지한다.
+    head = normalized[:128]
+    marker = head.find("단계")
+    if marker < 0:
+        return None
+    prefix = head[:marker].rstrip()
+    if not prefix:
+        return None
+    cursor = len(prefix) - 1
+    while cursor >= 0 and (prefix[cursor].isdigit() or prefix[cursor] == "."):
+        cursor -= 1
+    number_text = prefix[cursor + 1 :]
+    if (
+        not number_text
+        or number_text.startswith(".")
+        or number_text.endswith(".")
+        or number_text.count(".") > 1
+    ):
         return None
     try:
-        return stage_index_from_number(float(match.group(1)))
+        return stage_index_from_number(float(number_text))
     except ValueError:
         return None
 

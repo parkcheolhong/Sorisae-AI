@@ -17,7 +17,7 @@ def test_turn_secret_unprefixed_alias(monkeypatch):
     monkeypatch.setenv("TURN_SECRET", "compose-injected-secret")
     creds = voip_config.dynamic_turn_credentials("user-9", now=1_000_000)
     assert creds is not None
-    assert creds[0] == "1086400:user-9"  # now + default ttl(86400)
+    assert creds[0] == "1086400:voip"  # now + default ttl(86400)
 
 
 def test_voip_prefixed_secret_takes_precedence(monkeypatch):
@@ -52,7 +52,7 @@ def test_turn_ttl_unprefixed_alias(monkeypatch):
     monkeypatch.setenv("TURN_TTL", "3600")
     monkeypatch.setenv("TURN_SECRET", "s")
     creds = voip_config.dynamic_turn_credentials("u", now=100)
-    assert creds is not None and creds[0] == "3700:u"
+    assert creds is not None and creds[0] == "3700:voip"
 
 
 # ---- #7 메트릭 ----

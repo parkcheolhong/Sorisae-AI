@@ -36,6 +36,24 @@ def _normalize_session_id(session_id: str) -> Optional[str]:
     return normalized
 
 
+def _normalize_output_dir(output_dir: Optional[str]) -> Optional[str]:
+    raw = str(output_dir or "").strip()
+    if not raw:
+        return None
+    candidate = Path(raw)
+    try:
+        resolved = (Path.cwd().resolve() / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+    except (OSError, RuntimeError):
+        return None
+    cwd_root = Path.cwd().resolve()
+    try:
+        resolved.relative_to(cwd_root)
+    except ValueError:
+        logger.warning("Rejected autonomous output_dir outside workspace: %s", raw)
+        return None
+    return str(resolved)
+
+
 def _load_session_store() -> Dict[str, Any]:
     if not _SESSION_STORE_FILE.exists():
         return {}
@@ -151,6 +169,7 @@ class AutonomousSession:
         return True  # semi_auto
 
     def to_dict(self) -> Dict[str, Any]:
+        safe_output_dir = _normalize_output_dir(self.output_dir)
         return {
             "session_id": self.session_id,
             "owner_id": str(self.owner_id).strip(),
@@ -168,7 +187,7 @@ class AutonomousSession:
             "model_routes": self.model_routes,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
-            "output_dir": self.output_dir,
+            "output_dir": safe_output_dir,
         }
 
     def save(self) -> None:
@@ -206,7 +225,7 @@ class AutonomousSession:
                 model_routes=data.get("model_routes", {}),
                 created_at=data.get("created_at", time.time()),
                 updated_at=data.get("updated_at", time.time()),
-                output_dir=data.get("output_dir"),
+                output_dir=_normalize_output_dir(data.get("output_dir")),
             )
             for turn_data in data.get("conversation", []):
                 session.conversation.append(ConversationTurn(**{

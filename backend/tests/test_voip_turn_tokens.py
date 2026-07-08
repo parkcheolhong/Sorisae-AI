@@ -19,8 +19,8 @@ def test_dynamic_turn_credentials_hmac_and_expiry(monkeypatch):
     assert creds is not None
     username, credential = creds
 
-    # username = "<expiry>:<user_key>", expiry = now + ttl
-    assert username == f"{now + 3600}:user-42"
+    # username = "<expiry>:voip", expiry = now + ttl
+    assert username == f"{now + 3600}:voip"
 
     expected = voip_config.dynamic_turn_credentials("user-42", now=now)
     assert expected is not None
@@ -43,7 +43,7 @@ def test_get_ice_servers_uses_dynamic_turn_when_secret_set(monkeypatch):
     turn = [s for s in servers if any(u.startswith("turn:") for u in s["urls"])]
     assert stun and turn
     turn0 = turn[0]
-    assert turn0["username"].endswith(":caller-7")
+    assert turn0["username"].endswith(":voip")
     assert turn0.get("credential")
 
 

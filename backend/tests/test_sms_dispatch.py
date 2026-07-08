@@ -9,4 +9,4 @@ def test_dispatch_sms_otp_dev_log_when_twilio_not_configured(monkeypatch):
     result = dispatch_sms_otp(phone="+82-10-1234-5678", code="123456", purpose="signup")
 
     assert result["provider"] == "dev-log"
-    assert result["phone"] == "+82-10-1234-5678"
+    assert result["phone_masked"] == "***5678"

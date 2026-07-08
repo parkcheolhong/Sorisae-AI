@@ -57,7 +57,9 @@ def dynamic_turn_credentials(user_key: Optional[str] = None, *, now: Optional[in
     if not secret:
         return None
     expiry = (now if now is not None else int(time.time())) + _turn_token_ttl_sec()
-    username = f"{expiry}:{user_key or 'voip'}"
+    # TURN username은 시간제한 토큰 식별자이며 개인 식별자를 포함할 필요가 없다.
+    # user_key를 직접 싣지 않아 민감 식별자 노출/약한 해시 경고를 방지한다.
+    username = f"{expiry}:voip"
     digest = hmac.new(secret.encode("utf-8"), username.encode("utf-8"), hashlib.sha1).digest()
     credential = base64.b64encode(digest).decode("ascii")
     return username, credential
