@@ -1,5 +1,9 @@
 import type { AudioRecording } from '../../compat/expoAvAudio';
 import * as FileSystem from 'expo-file-system/legacy';
+import type {
+    FaceConversationVadController,
+    FaceConversationVadSnapshot,
+} from '../shared/audioControllerTypes';
 
 import {
     estimateRecordingRmsDb,
@@ -29,21 +33,7 @@ function getFaceFileSpeechRmsDb() {
     return resolveFaceFileSpeechRmsDb(getWorldlincoTuning());
 }
 
-export type FaceConversationVadSnapshot = {
-    hasSpeech: boolean;
-    meterUnavailable: boolean;
-    peakMeterDb: number;
-};
-
-export type FaceConversationVadController = {
-    start: (params: {
-        recording: AudioRecording;
-        onFlush: (reason: string) => void;
-        isStillActive: () => boolean;
-    }) => Promise<void>;
-    stop: () => Promise<void>;
-    getSnapshot: () => FaceConversationVadSnapshot;
-};
+export type { FaceConversationVadController, FaceConversationVadSnapshot };
 
 export function createFaceConversationVadController(): FaceConversationVadController {
     let recording: AudioRecording | null = null;
