@@ -17,16 +17,7 @@ from .agents.base import AgentResult
 logger = logging.getLogger(__name__)
 
 _DEFAULT_SESSION_DIR = (Path(tempfile.gettempdir()).resolve() / "codeai_autonomous_sessions")
-_ENV_SESSION_DIR = str(os.getenv("AUTONOMOUS_SESSION_DIR") or "").strip()
-if _ENV_SESSION_DIR:
-    _candidate_session_dir = Path(_ENV_SESSION_DIR).expanduser().resolve()
-    try:
-        _candidate_session_dir.relative_to(_DEFAULT_SESSION_DIR.parent)
-        AUTONOMOUS_SESSION_DIR = str(_candidate_session_dir)
-    except ValueError:
-        AUTONOMOUS_SESSION_DIR = str(_DEFAULT_SESSION_DIR)
-else:
-    AUTONOMOUS_SESSION_DIR = str(_DEFAULT_SESSION_DIR)
+AUTONOMOUS_SESSION_DIR = str(_DEFAULT_SESSION_DIR)
 
 EXECUTION_MODES = {
     "advisory": "조언만 (실행 없음, 대화로 설계 논의)",

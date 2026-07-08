@@ -1,6 +1,7 @@
 """Autonomous surface completion — 1 runnable proof (compile + health signal)."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -57,8 +58,13 @@ def _resolve_safe_output_root(output_dir: str) -> Optional[Path]:
     raw = str(output_dir or "").strip()
     if not raw or "\x00" in raw or ".." in raw:
         return None
-    candidate = Path(raw).expanduser().resolve()  # lgtm[py/path-injection]
-    allowed_roots = [Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve()]
+    cwd_root = Path.cwd().resolve()
+    tmp_root = Path(tempfile.gettempdir()).resolve()
+    if os.path.isabs(raw):
+        candidate = Path(os.path.normpath(raw)).resolve()
+    else:
+        candidate = (cwd_root / raw).resolve()
+    allowed_roots = [cwd_root, tmp_root]
     if not any(_is_within(candidate, allowed) for allowed in allowed_roots):
         return None
     return candidate

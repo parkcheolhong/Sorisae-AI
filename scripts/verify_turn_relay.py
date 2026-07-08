@@ -137,25 +137,25 @@ def _stun_attr(attr_type: int, value: bytes) -> bytes:
     return struct.pack("!HH", attr_type, len(value)) + value + (b"\x00" * pad)
 
 
-def _build_allocate(txid: bytes, *, username: bytes = b"", realm: bytes = b"",
+def _build_allocate(txid: bytes, *, principal: bytes = b"", realm: bytes = b"",
                     nonce: bytes = b"", secret: str = "") -> bytes:
     # REQUESTED-TRANSPORT=UDP(17)
     attrs = _stun_attr(0x0019, struct.pack("!BBH", 17, 0, 0))
-    if username:
-        attrs += _stun_attr(0x0006, username)
+    if principal:
+        attrs += _stun_attr(0x0006, principal)
         attrs += _stun_attr(0x0014, realm)
         attrs += _stun_attr(0x0015, nonce)
-        # MESSAGE-INTEGRITY: key = MD5(username:realm:password), password=base64(HMAC-SHA1(secret, username))
+        # MESSAGE-INTEGRITY: key = MD5(principal:realm:token), token=base64(HMAC-SHA1(secret, principal))
         # lgtm[py/weak-sensitive-data-hashing] TURN long-term credential spec requires HMAC-SHA1/MD5.
-        password = base64.b64encode(
-            hmac.new(secret.encode(), username, hashlib.sha1).digest()
+        turn_token = base64.b64encode(
+            hmac.new(secret.encode(), principal, hashlib.sha1).digest()
         )
-        # lgtm[py/weak-sensitive-data-hashing] RFC5389 MESSAGE-INTEGRITY key derivation uses MD5(username:realm:password).
-        key = hashlib.md5(username + b":" + realm + b":" + password).digest()
+        # lgtm[py/weak-sensitive-data-hashing] RFC5389 MESSAGE-INTEGRITY key derivation uses MD5(principal:realm:token).
+        integrity_key = hashlib.md5(principal + b":" + realm + b":" + turn_token).digest()
         header_len = len(attrs) + 24  # + MESSAGE-INTEGRITY attr(4+20)
         msg = struct.pack("!HHI", 0x0003, header_len, _STUN_MAGIC) + txid + attrs
         # lgtm[py/weak-sensitive-data-hashing] TURN MESSAGE-INTEGRITY attribute is HMAC-SHA1.
-        integrity = hmac.new(key, msg, hashlib.sha1).digest()
+        integrity = hmac.new(integrity_key, msg, hashlib.sha1).digest()
         attrs += _stun_attr(0x0008, integrity)
     return struct.pack("!HHI", 0x0003, len(attrs), _STUN_MAGIC) + txid + attrs
 
@@ -201,10 +201,10 @@ def _turn_allocate(host: str, port: int, secret: str, realm: str, timeout: float
             if not nonce:
                 return False, "NONCE 미수신(401 응답 없음) — TURN 인증 흐름 비정상"
             # 2차: use-auth-secret 시간제한 자격으로 인증 Allocate
-            username = f"{int(time.time()) + 600}:verify".encode()
+            principal = f"{int(time.time()) + 600}:verify".encode()
             txid2 = secrets.token_bytes(12)
             sock.send(_build_allocate(
-                txid2, username=username, realm=srv_realm, nonce=nonce, secret=secret
+                txid2, principal=principal, realm=srv_realm, nonce=nonce, secret=secret
             ))
             resp2 = sock.recv(2048)
             mtype = struct.unpack("!H", resp2[0:2])[0]
