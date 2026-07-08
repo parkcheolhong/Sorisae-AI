@@ -1064,6 +1064,7 @@ def start_password_recovery(
     "/recovery/verify-identity",
     response_model=PasswordRecoveryVerifyIdentityResponse,
     responses={
+        404: {"description": "인증 세션을 찾을 수 없습니다."},
         401: {"description": "인증 코드가 올바르지 않습니다."},
         410: {"description": "인증 세션이 만료되었습니다."},
     },

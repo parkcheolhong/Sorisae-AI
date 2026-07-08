@@ -816,7 +816,13 @@ def get_worldlinco_tourism_promo_public(
     )
 
 
-@router.post("/worldlinco/tourism-promo")
+@router.post(
+    "/worldlinco/tourism-promo",
+    responses={
+        400: {"description": "요청 본문이 유효하지 않습니다."},
+        401: {"description": AUTH_REQUIRED_DETAIL},
+    },
+)
 def post_worldlinco_tourism_promo_user(
     body: UserTourismPromoCreate,
     current_user: Any = Depends(get_current_user),

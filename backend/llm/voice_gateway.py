@@ -2610,7 +2610,12 @@ def _sse(event: str, payload: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-@router.post("/voice/answer/stream")
+@router.post(
+    "/voice/answer/stream",
+    responses={
+        400: {"description": "query 또는 transcript 파라미터가 필요합니다."},
+    },
+)
 async def voice_answer_stream(request: AnswerRequest):
     """SSE 스트리밍 — 검색 직후 `preview`(장소·도시컨텍스트, <1s)를 먼저 보내고,
     LLM 일정 완료 후 `final`(전체 일정)을 전송. 체감/실측 첫 콘텐츠 지연을 1초 미만으로.
