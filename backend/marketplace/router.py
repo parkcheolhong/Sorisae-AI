@@ -883,10 +883,10 @@ def get_worldlinco_sales_invite_qr(code: str, request: Request) -> Response:
 
 @router.get("/worldlinco/referral/discount-quote")
 def get_worldlinco_referral_discount_quote(
-    amount: Optional[int] = None,
-    amount_minor: Optional[int] = None,
     current_user: Annotated[Any, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    amount: Optional[int] = None,
+    amount_minor: Optional[int] = None,
 ) -> Any:
     from backend.marketplace.worldlinco_referral import resolve_referral_discount_quote
 

@@ -1707,9 +1707,9 @@ def add_chat_room_members(
 @router.get("/rooms/{room_id}/messages")
 def list_chat_room_messages(
     room_id: str,
-    limit: int = Query(default=50, ge=1, le=200),
     current_user: Annotated[Any, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(default=50, ge=1, le=200),
 ) -> dict[str, Any]:
     current_user_id = int(current_user.id)
     room, _member = _require_room_member(db, room_id, current_user_id)
