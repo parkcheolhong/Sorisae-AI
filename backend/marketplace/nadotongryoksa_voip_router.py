@@ -2607,7 +2607,7 @@ async def websocket_signaling(
                                 normalized_role,
                             )
                         except Exception as exc:
-                            logger.error(
+                            logger.exception(
                                 "[VoIP] Bridge offer failed, fallback to P2P relay "
                                 "| call_id=%s | error=%s",
                                 call_id,

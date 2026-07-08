@@ -41,7 +41,15 @@ class AnswerFeedback(BaseModel):
     total_ms: Optional[float] = None
 
 
-@router.post("")
+@router.post(
+    "",
+    responses={
+        404: {"description": "tourism feedback disabled"},
+        422: {"description": "invalid feedback payload"},
+        500: {"description": "feedback submit failed"},
+        503: {"description": "feedback DB unavailable"},
+    },
+)
 def submit_feedback(fb: AnswerFeedback) -> Any:
     _guard()
     try:
@@ -61,7 +69,13 @@ def submit_feedback(fb: AnswerFeedback) -> Any:
         raise HTTPException(status_code=500, detail="feedback submit failed")
 
 
-@router.get("/stats")
+@router.get(
+    "/stats",
+    responses={
+        404: {"description": "tourism feedback disabled"},
+        500: {"description": "feedback stats unavailable"},
+    },
+)
 def feedback_stats() -> Any:
     _guard()
     try:

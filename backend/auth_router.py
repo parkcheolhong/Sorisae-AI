@@ -915,7 +915,11 @@ def me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.patch("/me", response_model=UserResponse)
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    responses={400: {"description": "preferred_language/country_code required"}},
+)
 def update_me(
     payload: UserProfileUpdate,
     current_user: User = Depends(get_current_user),
