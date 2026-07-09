@@ -36,6 +36,7 @@ WORLDLINGCO_BILLING_POLICY_DEFAULTS: Dict[str, Any] = {
     "show_pricing_ui": False,
     "note": "관리자 대시보드에서 무료↔유료 전환 및 요금 중지/재개를 제어합니다.",
 }
+WORLDLINGCO_BILLING_POLICY_ALLOWED_KEYS = set(WORLDLINGCO_BILLING_POLICY_DEFAULTS.keys())
 
 
 class WorldlincoBillingPolicyUpdate(BaseModel):
@@ -144,7 +145,8 @@ def save_worldlinco_billing_policy(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     path = WORLDLINGCO_BILLING_POLICY_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
-    sanitized = _sanitize(payload)
+    allowed_payload = {key: payload.get(key) for key in WORLDLINGCO_BILLING_POLICY_ALLOWED_KEYS if key in payload}
+    sanitized = _sanitize(allowed_payload)
     path.write_text(json.dumps(sanitized, ensure_ascii=False, indent=2), encoding="utf-8")
     return sanitized
 

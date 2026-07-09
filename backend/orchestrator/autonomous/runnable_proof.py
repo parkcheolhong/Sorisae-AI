@@ -106,6 +106,13 @@ def evaluate_runnable_proof(
     if not re.fullmatch(r"[A-Za-z0-9._\\/\-: ]{1,260}", output_dir_text):
         result["detail"] = "output_dir 형식 오류"
         return result
+    if "\x00" in output_dir_text:
+        result["detail"] = "output_dir 형식 오류"
+        return result
+    path_parts = Path(output_dir_text).parts
+    if any(part in {"..", ""} for part in path_parts):
+        result["detail"] = "output_dir 형식 오류"
+        return result
     try:
         root = Path(output_dir_text).expanduser().resolve()
     except OSError:

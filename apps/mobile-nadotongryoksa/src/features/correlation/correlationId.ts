@@ -38,8 +38,17 @@ export function normalizeFeatureId(featureId: string | null | undefined): Featur
 }
 
 function rand6(): string {
-    // crypto 미지원 환경(일부 RN)에서도 안전하게 동작하도록 Math.random 폴백.
-    const base = Math.floor(Math.random() * 0xffffff).toString(36);
+    const cryptoApi = (globalThis as { crypto?: { getRandomValues?: (buffer: Uint8Array) => Uint8Array } }).crypto;
+    let base = '';
+    if (cryptoApi?.getRandomValues) {
+        const bytes = new Uint8Array(4);
+        cryptoApi.getRandomValues(bytes);
+        const value = (((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0) % 0xffffff;
+        base = value.toString(36);
+    } else {
+        // crypto 미지원 환경은 시간 기반 단조 증가 salt로만 생성한다.
+        base = Math.floor(Date.now()).toString(36);
+    }
     monotonicSalt = (monotonicSalt + 1) % 0x1000;
     const salt = monotonicSalt.toString(36);
     return `${base}${salt}`.slice(0, 6).padStart(4, '0');

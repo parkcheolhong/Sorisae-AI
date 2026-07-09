@@ -1533,7 +1533,6 @@ function AppInner() {
             show_login: showLogin,
             focus_field: authDebugFocusField,
             email_length: loginEmail.length,
-            password_length: loginPw.length,
             ...details,
         }));
     }, [authDebugFocusField, loginEmail.length, loginPw.length, showLogin]);
