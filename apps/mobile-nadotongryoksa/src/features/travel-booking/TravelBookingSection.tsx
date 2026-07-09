@@ -63,7 +63,7 @@ export type TravelBookingSectionProps = {
     token: string;
     userInfo: UserInfo | null;
     renderSectionConnectionCard: (config: { sectionKey: SectionRailKey; title: string; body: string; bullets: string[]; loginSource: string }) => React.ReactNode;
-    openDialPad: (phone: string) => void;
+    openDialPad: (phone: string, reason?: string) => void | Promise<void>;
     bookingName: string; setBookingName: Dispatch<SetStateAction<string>>;
     checkinDate: string; setCheckinDate: Dispatch<SetStateAction<string>>;
     checkoutDate: string; setCheckoutDate: Dispatch<SetStateAction<string>>;
@@ -538,7 +538,7 @@ export default function TravelBookingSection(props: TravelBookingSectionProps) {
                                         {selectedBookingPlace.phone ? (
                                             <Pressable
                                                 style={styles.inlineActionBtn}
-                                                onPress={() => { void openDialPad(selectedBookingPlace.phone); }}
+                                                onPress={() => { void openDialPad(selectedBookingPlace.phone, 'travel_booking_place_call'); }}
                                                 accessibilityLabel={selectedBookingPlace.category === 'airport'
                                                     ? 'worldlinco-travel-booking-airport-call-button'
                                                     : 'worldlinco-travel-booking-hotel-call-button'}
@@ -546,7 +546,13 @@ export default function TravelBookingSection(props: TravelBookingSectionProps) {
                                                     ? 'worldlinco-travel-booking-airport-call-button'
                                                     : 'worldlinco-travel-booking-hotel-call-button'}
                                             >
-                                                <Text style={styles.inlineActionBtnText}>📞 {selectedBookingPlace.category === 'airport' ? '공항 예약센터' : '호텔'} 전화 예약</Text>
+                                                <Text style={styles.inlineActionBtnText}>
+                                                    {getFeatureUiText(
+                                                        selectedBookingPlace.category === 'airport'
+                                                            ? 'travel.bookingCallAirport'
+                                                            : 'travel.bookingCallHotel',
+                                                    )}
+                                                </Text>
                                             </Pressable>
                                         ) : null}
                                     </View>
@@ -642,11 +648,11 @@ export default function TravelBookingSection(props: TravelBookingSectionProps) {
                                         {bookingResult.support_phone ? (
                                             <Pressable
                                                 style={styles.inlineActionBtn}
-                                                onPress={() => { void openDialPad(bookingResult.support_phone); }}
+                                                onPress={() => { void openDialPad(bookingResult.support_phone, 'travel_booking_support_call'); }}
                                                 accessibilityLabel="worldlinco-travel-booking-support-call-button"
                                                 testID="worldlinco-travel-booking-support-call-button"
                                             >
-                                                <Text style={styles.inlineActionBtnText}>📞 예약센터 통화</Text>
+                                                <Text style={styles.inlineActionBtnText}>{getFeatureUiText('travel.bookingSupportCall')}</Text>
                                             </Pressable>
                                         ) : null}
                                     </View>

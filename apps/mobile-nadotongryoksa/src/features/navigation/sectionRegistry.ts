@@ -14,6 +14,7 @@
  *   가 전부 자동으로 연결된다(수기 중복 0).
  */
 import { FEATURE_IDS, type FeatureId } from '../correlation/correlationId';
+import { getFeatureUiText, type FeatureUiKey } from '../i18n/featureUiCatalog';
 
 // ── 단일 진실원천(SSOT): 이 배열만 편집하면 전 시스템이 자동 반영된다 ──
 //   순서 = 자동 넘버링(numericId). aliases 는 딥링크/레거시 문자열 매칭용(key 포함 불필요 — 자동 포함).
@@ -78,6 +79,19 @@ export const SECTION_RAIL_ITEMS: Array<{ key: SectionRailKey; label: string; ico
 /** 전체 레일(탭 미노출 song-mode 등 포함) — 스크롤 오프셋·딥링크용. */
 export const SECTION_RAIL_ALL_ITEMS: Array<{ key: SectionRailKey; label: string; icon: string }> =
     SECTION_RAIL_DEFS.map(({ key, label, icon }) => ({ key, label, icon }));
+
+const SECTION_TAB_LABEL_KEYS: Record<SectionRailKey, FeatureUiKey> = {
+    chat: 'nav.tabChat',
+    voip: 'nav.tabVoip',
+    'song-mode': 'nav.tabChat',
+    'tourism-promo': 'nav.tabPromo',
+    'travel-booking': 'nav.tabTravel',
+};
+
+/** 하단 탭·레일 표시 라벨 — 프로필 uiLang 기준 오프라인 즉시 표시. */
+export function getSectionRailTabLabel(key: SectionRailKey, lang?: string): string {
+    return getFeatureUiText(SECTION_TAB_LABEL_KEYS[key], undefined, lang);
+}
 
 /** 섹션 접근성/테스트 셀렉터(testID). */
 export function buildSectionRailSelector(section: SectionRailKey): string {

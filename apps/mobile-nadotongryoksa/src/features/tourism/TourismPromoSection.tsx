@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { translateText } from '../../api/translate';
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import { styles } from '../../../App.styles';
 import type { SectionRailKey } from '../navigation/sectionRegistry';
 import {
@@ -35,8 +36,8 @@ export type TourismPromoSectionProps = {
 };
 
 const REASON_MESSAGES: Record<string, string> = {
-    gps_country_required: 'GPS로 현재 국가를 확인한 뒤 근처 숙박·음식점 홍보를 볼 수 있습니다.',
-    empty_board: '아직 근처 숙박·음식점 홍보가 없습니다. 여행 중 편한 곳을 첫 홍보로 올려 보세요!',
+    gps_country_required: 'tourism.gpsRequired',
+    empty_board: 'tourism.emptyBoard',
 };
 
 function normalizeLang(raw: string): string {
@@ -110,18 +111,18 @@ function TranslatedPromoBoardCard({
                 <Text style={styles.tourismPromoMeta}>👤 {item.author_username}</Text>
             ) : null}
             {item.nearby ? (
-                <Text style={[styles.tourismPromoMeta, { color: accent, fontWeight: '800' }]}>📍 근처</Text>
+                <Text wlLocalized style={[styles.tourismPromoMeta, { color: accent, fontWeight: '800' }]}>{getFeatureUiText('tourism.nearbyBadge')}</Text>
             ) : null}
             {translating ? (
-                <Text style={styles.tourismPromoMeta}>🌐 번역 중…</Text>
+                <Text wlLocalized style={styles.tourismPromoMeta}>🌐 {getFeatureUiText('tourism.translating')}</Text>
             ) : null}
             <Text style={styles.tourismPromoTitle}>{title}</Text>
             {subtitle ? <Text style={styles.tourismPromoSubtitle}>{subtitle}</Text> : null}
             {body ? <Text style={styles.tourismPromoBody}>{body}</Text> : null}
             {typeof item.distance_km === 'number' ? (
-                <Text style={styles.tourismPromoMeta}>
+                <Text wlLocalized style={styles.tourismPromoMeta}>
                     {item.distance_km.toFixed(1)}km
-                    {typeof item.radius_km === 'number' ? ` · 반경 ${item.radius_km}km` : ''}
+                    {typeof item.radius_km === 'number' ? ` · ${getFeatureUiText('tourism.radiusKm', { km: item.radius_km.toFixed(1) })}` : ''}
                 </Text>
             ) : null}
             {item.cta_label ? (
@@ -208,13 +209,14 @@ export default function TourismPromoSection({
 
     const emptyMessage = useMemo(() => {
         if (!countryReady) {
-            return REASON_MESSAGES.gps_country_required;
+            return getFeatureUiText(REASON_MESSAGES.gps_country_required as 'tourism.gpsRequired');
         }
         if (board?.reason === 'empty_board' || (board?.enabled && !board.items.length)) {
-            return REASON_MESSAGES.empty_board;
+            return getFeatureUiText(REASON_MESSAGES.empty_board as 'tourism.emptyBoard');
         }
         if (board?.reason) {
-            return REASON_MESSAGES[board.reason] || '표시할 홍보가 없습니다.';
+            const key = REASON_MESSAGES[board.reason];
+            return key ? getFeatureUiText(key as 'tourism.gpsRequired' | 'tourism.emptyBoard') : getFeatureUiText('tourism.emptyBoard');
         }
         return null;
     }, [board, countryReady]);
@@ -258,12 +260,12 @@ export default function TourismPromoSection({
             setDraftSubtitle('');
             setDraftBody('');
             setComposeOpen(false);
-            setPostStatus('홍보가 등록되었습니다.');
+            setPostStatus(getFeatureUiText('tourism.postSuccess'));
             clearTourismPromoCache();
             await reloadBoard();
         } catch (error) {
-            const message = error instanceof Error ? error.message : '등록 실패';
-            setPostStatus(`홍보 등록 오류: ${message}`);
+            const message = error instanceof Error ? error.message : 'failed';
+            setPostStatus(getFeatureUiText('tourism.postFailed', { message }));
         } finally {
             setPosting(false);
         }
@@ -292,9 +294,9 @@ export default function TourismPromoSection({
             }}
             style={[styles.sectionCard, activeRailSection === 'tourism-promo' && styles.sectionCardActive]}
         >
-            <Text style={styles.songFileTimelineTitle}>📣 근처 숙박·음식점 홍보</Text>
-            <Text style={styles.songSubtitleMeta}>
-                여행 중 사용자가 올린 숙박·맛집 홍보를 내 언어로 표시합니다.
+            <Text wlLocalized style={styles.songFileTimelineTitle}>{getFeatureUiText('tourism.promoTitle')}</Text>
+            <Text wlLocalized style={styles.songSubtitleMeta}>
+                {getFeatureUiText('tourism.promoIntro')}
             </Text>
 
             <Pressable
@@ -310,8 +312,8 @@ export default function TourismPromoSection({
                 accessibilityLabel="worldlinco-tourism-promo-compose"
                 testID="worldlinco-tourism-promo-compose"
             >
-                <Text style={styles.inlineGhostBtnText}>
-                    {composeOpen ? '작성 닫기' : '＋ 숙박·맛집 홍보 올리기'}
+                <Text wlLocalized style={styles.inlineGhostBtnText}>
+                    {composeOpen ? getFeatureUiText('tourism.composeClose') : getFeatureUiText('tourism.composeOpen')}
                 </Text>
             </Pressable>
 

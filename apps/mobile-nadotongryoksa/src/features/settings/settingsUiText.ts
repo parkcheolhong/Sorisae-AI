@@ -2,6 +2,9 @@
  * 설정 탭 UI 문자열 카탈로그 — userLang(프로필 언어) 변경 시 라벨이 동시에 바뀌도록 SSOT.
  * ko/en 직접 제공, 그 외 언어는 en 폴백(getUiText 와 동일 정책).
  */
+import { resolveBundledCatalogLang } from '../i18n/bundledUiLangs';
+import { SETTINGS_UI_JA, SETTINGS_UI_ZH } from './settingsUiTextJaZh';
+
 export type SettingsUiText = {
     headerTitle: string;
     intro: string;
@@ -14,6 +17,7 @@ export type SettingsUiText = {
     sectionSecurity: string;
     country: string;
     translationLanguage: string;
+    profileLanguageLinkedHint: string;
     notSet: string;
     saving: string;
     profileLinkLabel: string;
@@ -99,6 +103,7 @@ const KO: SettingsUiText = {
     sectionSecurity: '🔒 보안',
     country: '국가',
     translationLanguage: '통역/번역 언어',
+    profileLanguageLinkedHint: '국가 변경 시 자동 연동 · 채팅·VoIP·일반전화 기본',
     notSet: '미설정',
     saving: '저장 중...',
     profileLinkLabel: '프로필 · 국가 · 언어',
@@ -184,6 +189,7 @@ const EN: SettingsUiText = {
     sectionSecurity: '🔒 Security',
     country: 'Country',
     translationLanguage: 'Interpretation / translation language',
+    profileLanguageLinkedHint: 'Auto-linked to country · default for chat, VoIP, and phone',
     notSet: 'Not set',
     saving: 'Saving...',
     profileLinkLabel: 'Profile · Country · Language',
@@ -257,15 +263,14 @@ const EN: SettingsUiText = {
     passwordChange: 'Change password',
 };
 
-const CATALOG: Record<string, SettingsUiText> = { ko: KO, en: EN };
+const CATALOG: Record<string, SettingsUiText> = { ko: KO, en: EN, ja: SETTINGS_UI_JA, zh: SETTINGS_UI_ZH };
 
 /**
- * 설정 탭 라벨 SSOT — 항상 한국어 원문을 반환한다.
- * 표시 언어는 getUiLang() + App.tsx 전역 Text 패치(translateUiSync)가 담당한다.
- * (ja 등 비-en 언어에 EN 카탈로그를 쓰면 영어가 섞여 보이는 회귀가 난다.)
+ * 설정 탭 라벨 SSOT — ko/en/ja/zh 오프라인 즉시 표시(한국어 플래시 방지).
  */
-export function getSettingsText(_lang?: string): SettingsUiText {
-    return KO;
+export function getSettingsText(lang?: string): SettingsUiText {
+    const catalogLang = resolveBundledCatalogLang(lang ?? 'ko');
+    return CATALOG[catalogLang] ?? CATALOG.en ?? KO;
 }
 
 export function formatSettingsText(template: string, vars: Record<string, string | number>): string {

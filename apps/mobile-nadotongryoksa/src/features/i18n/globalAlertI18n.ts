@@ -24,8 +24,8 @@ export function installGlobalAlertI18n(): void {
         buttons?: AlertButton[],
         options?: AlertOptions,
     ) => original(
-        translateAlertString(title),
-        translateAlertString(message),
+        title == null ? '' : (translateAlertString(title) ?? title),
+        message == null ? '' : (translateAlertString(message) ?? message),
         buttons?.map((button) => ({
             ...button,
             text: typeof button.text === 'string' ? (translateAlertString(button.text) ?? button.text) : button.text,

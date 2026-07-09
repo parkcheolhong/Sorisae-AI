@@ -16,6 +16,7 @@ import {
     View,
 } from 'react-native';
 
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import { loadDeviceContacts, type DeviceContact } from '../../services/deviceContacts';
 import { buildFriendPhoneIndex, matchFriendByPhones } from './contactFriendMatch';
 import { shareAppPromotion } from '../sns-share/snsShare';
@@ -24,19 +25,12 @@ import type { Friend } from '../friends/types';
 export interface ContactsDirectoryModalProps {
     visible: boolean;
     onClose: () => void;
-    // [인라인] true면 모달 오버레이 없이 섹션 안에 바로 렌더한다(통화 섹션 임베드용).
     embedded?: boolean;
-    // 설치/홍보 링크 생성을 위한 API base(미지정 시 링크 생략).
     apiBase?: string | null;
-    // 홍보 공유 카피에 표시할 추천인 이름(선택).
     inviterName?: string | null;
-    // 친구(가입자) 목록 로더. 미로그인/실패 시 빈 배열을 반환하면 된다.
     loadFriends: () => Promise<Friend[]>;
-    // 📞 일반전화 통역: 단말 전화앱으로 발신 + 자동 통역 보조 시작.
     onRegularCall: (contact: DeviceContact) => void;
-    // 📡 VoIP: 앱 친구일 때만 호출된다.
     onVoipCall: (contact: DeviceContact, friend: Friend) => void;
-    // 💬 채팅: 친구면 friend 전달(채팅방), 미가입이면 null(SNS 초대).
     onChat: (contact: DeviceContact, friend: Friend | null) => void;
 }
 
@@ -60,9 +54,7 @@ export function ContactsDirectoryModal({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [query, setQuery] = useState('');
-    // [인라인 접기] 통화 탭 임베드 시 섹션 전체 접기/펼치기(목록 스크롤 위치 유지).
     const [sectionExpanded, setSectionExpanded] = useState(true);
-    // [네이티브 전화앱식] 연락처를 탭하면 그 행만 펼쳐 [전화·문자·통역통화·채팅] 액션을 노출한다.
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const load = useCallback(async (force: boolean) => {
@@ -76,10 +68,10 @@ export function ContactsDirectoryModal({
             setContacts(list);
             setFriendIndex(buildFriendPhoneIndex(friends));
             if (list.length === 0) {
-                setError('단말에 저장된 연락처를 찾지 못했습니다. 연락처 권한을 허용했는지 확인해 주세요.');
+                setError(getFeatureUiText('contacts.loadErrorEmpty'));
             }
         } catch (e: any) {
-            setError(e?.message || '연락처를 불러오지 못했습니다.');
+            setError(e?.message || getFeatureUiText('contacts.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -94,13 +86,12 @@ export function ContactsDirectoryModal({
         }
     }, [embedded, visible, load]);
 
-    // 💬 문자(SMS) — 단말 메시지 앱을 연다(가입 여부 무관, 모든 연락처 공통).
     const handleSms = useCallback((contact: DeviceContact) => {
         const num = digitsOnly(contact.phone);
         if (!num) {
             return;
         }
-        Linking.openURL(`sms:${num}`).catch(() => { /* 메시지 앱 없음/거부 시 무시 */ });
+        Linking.openURL(`sms:${num}`).catch(() => { /* no-op */ });
     }, []);
 
     const filtered = useMemo(() => {
@@ -126,18 +117,17 @@ export function ContactsDirectoryModal({
         const expanded = expandedId === item.id;
         return (
             <View style={styles.row} testID={`contacts-dir-row-${item.id}`}>
-                {/* [네이티브 전화앱식] 행 탭 → 그 연락처만 펼쳐 액션 노출. 다시 탭하면 접힘. */}
                 <Pressable
                     style={styles.rowHead}
                     onPress={() => setExpandedId((prev) => (prev === item.id ? null : item.id))}
                     accessibilityRole="button"
-                    accessibilityLabel={`${item.name} ${expanded ? '닫기' : '열기'}`}
+                    accessibilityLabel={`${item.name} ${expanded ? getFeatureUiText('contacts.rowClose') : getFeatureUiText('contacts.rowOpen')}`}
                     testID={`contacts-dir-head-${item.id}`}
                 >
                     <View style={styles.rowInfo}>
                         <View style={styles.nameRow}>
                             <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                            {isAppUser ? <Text style={styles.appBadge}>앱 친구</Text> : null}
+                            {isAppUser ? <Text style={styles.appBadge}>{getFeatureUiText('contacts.appFriendBadge')}</Text> : null}
                         </View>
                         <Text style={styles.phone} numberOfLines={1}>{item.phone}</Text>
                     </View>
@@ -145,40 +135,39 @@ export function ContactsDirectoryModal({
                 </Pressable>
                 {expanded ? (
                     <View style={styles.actions}>
-                        {/* 모든 연락처 공통: [📞 전화 · 💬 문자]. 앱 친구면 [📡 통역통화 · 💬 채팅] 추가. */}
                         <Pressable
                             style={[styles.actionBtn, styles.callBtn]}
                             onPress={() => onRegularCall(item)}
-                            accessibilityLabel={`${item.name} 전화`}
+                            accessibilityLabel={`${item.name} ${getFeatureUiText('contacts.actionCall')}`}
                             testID={`contacts-dir-call-${item.id}`}
                         >
-                            <Text style={styles.actionText}>📞 전화</Text>
+                            <Text style={styles.actionText}>{getFeatureUiText('contacts.actionCall')}</Text>
                         </Pressable>
                         <Pressable
                             style={[styles.actionBtn, styles.smsBtn]}
                             onPress={() => handleSms(item)}
-                            accessibilityLabel={`${item.name} 문자`}
+                            accessibilityLabel={`${item.name} ${getFeatureUiText('contacts.actionSms')}`}
                             testID={`contacts-dir-sms-${item.id}`}
                         >
-                            <Text style={styles.actionText}>💬 문자</Text>
+                            <Text style={styles.actionText}>{getFeatureUiText('contacts.actionSms')}</Text>
                         </Pressable>
                         {isAppUser && friend ? (
                             <Pressable
                                 style={[styles.actionBtn, styles.voipBtn]}
                                 onPress={() => onVoipCall(item, friend)}
-                                accessibilityLabel={`${item.name} 통역통화 VoIP`}
+                                accessibilityLabel={`${item.name} ${getFeatureUiText('contacts.actionVoip')}`}
                                 testID={`contacts-dir-voip-${item.id}`}
                             >
-                                <Text style={styles.actionText}>📡 통역통화</Text>
+                                <Text style={styles.actionText}>{getFeatureUiText('contacts.actionVoip')}</Text>
                             </Pressable>
                         ) : null}
                         <Pressable
                             style={[styles.actionBtn, styles.chatBtn]}
                             onPress={() => onChat(item, friend)}
-                            accessibilityLabel={`${item.name} 채팅`}
+                            accessibilityLabel={`${item.name} ${isAppUser ? getFeatureUiText('contacts.actionChat') : getFeatureUiText('contacts.actionInvite')}`}
                             testID={`contacts-dir-chat-${item.id}`}
                         >
-                            <Text style={styles.actionText}>{isAppUser ? '💬 채팅' : '💬 초대'}</Text>
+                            <Text style={styles.actionText}>{isAppUser ? getFeatureUiText('contacts.actionChat') : getFeatureUiText('contacts.actionInvite')}</Text>
                         </Pressable>
                     </View>
                 ) : null}
@@ -193,24 +182,26 @@ export function ContactsDirectoryModal({
                     style={styles.sectionHead}
                     onPress={() => setSectionExpanded((prev) => !prev)}
                     accessibilityRole="button"
-                    accessibilityLabel={sectionExpanded ? '연락처에서 바로 연결 접기' : '연락처에서 바로 연결 펼치기'}
+                    accessibilityLabel={sectionExpanded ? getFeatureUiText('contacts.collapse') : getFeatureUiText('contacts.expand')}
                     testID="contacts-dir-section-toggle"
                 >
                     <View style={styles.sectionHeadText}>
-                        <Text style={styles.title}>📇 연락처에서 바로 연결</Text>
+                        <Text style={styles.title}>{getFeatureUiText('contacts.title')}</Text>
                         {!sectionExpanded ? (
-                            <Text style={styles.sectionCollapsedMeta}>{filtered.length}명 · 탭하여 펼치기</Text>
+                            <Text style={styles.sectionCollapsedMeta}>
+                                {getFeatureUiText('contacts.collapseMeta', { count: String(filtered.length) })}
+                            </Text>
                         ) : null}
                     </View>
                     <Text style={styles.sectionChevron}>{sectionExpanded ? '▾' : '›'}</Text>
                 </Pressable>
             ) : (
-                <Text style={styles.title}>📇 연락처에서 바로 연결</Text>
+                <Text style={styles.title}>{getFeatureUiText('contacts.title')}</Text>
             )}
             <View style={[embedded && !sectionExpanded && styles.sectionBodyCollapsed]} pointerEvents={embedded && !sectionExpanded ? 'none' : 'auto'}>
                     <TextInput
                         style={styles.search}
-                        placeholder="이름 또는 번호 검색"
+                        placeholder={getFeatureUiText('contacts.searchPlaceholder')}
                         placeholderTextColor="#8a93a3"
                         value={query}
                         onChangeText={setQuery}
@@ -220,7 +211,7 @@ export function ContactsDirectoryModal({
                     {loading && contacts.length === 0 ? (
                         <View style={styles.loadingBox}>
                             <ActivityIndicator color="#1e6fe0" />
-                            <Text style={styles.loadingText}>연락처를 불러오는 중...</Text>
+                            <Text style={styles.loadingText}>{getFeatureUiText('contacts.loading')}</Text>
                         </View>
                     ) : (
                         <FlatList
@@ -233,7 +224,7 @@ export function ContactsDirectoryModal({
                             nestedScrollEnabled
                             ListEmptyComponent={
                                 <Text style={styles.empty}>
-                                    {query.trim() ? '검색 결과가 없습니다.' : '표시할 연락처가 없습니다.'}
+                                    {query.trim() ? getFeatureUiText('contacts.noSearch') : getFeatureUiText('contacts.noList')}
                                 </Text>
                             }
                         />
@@ -243,17 +234,17 @@ export function ContactsDirectoryModal({
                         onPress={() => { void shareAppPromotion({ apiBase, inviterName }); }}
                         testID="contacts-dir-promote"
                     >
-                        <Text style={styles.promoBtnText}>📣 앱 홍보 공유 (카카오톡·라인·SNS·문자)</Text>
+                        <Text style={styles.promoBtnText}>{getFeatureUiText('contacts.promoShare')}</Text>
                     </Pressable>
                     <View style={styles.footer}>
-                        <Text style={styles.count}>{filtered.length}명</Text>
+                        <Text style={styles.count}>{getFeatureUiText('contacts.count', { count: String(filtered.length) })}</Text>
                         <View style={styles.footerBtns}>
                             <Pressable style={styles.ghostBtn} onPress={() => { void load(true); }} testID="contacts-dir-refresh">
-                                <Text style={styles.ghostBtnText}>{loading ? '새로고침 중...' : '다시 불러오기'}</Text>
+                                <Text style={styles.ghostBtnText}>{loading ? getFeatureUiText('contacts.refreshing') : getFeatureUiText('contacts.refresh')}</Text>
                             </Pressable>
                             {!embedded ? (
                                 <Pressable style={styles.closeBtn} onPress={onClose} testID="contacts-dir-close">
-                                    <Text style={styles.closeBtnText}>닫기</Text>
+                                    <Text style={styles.closeBtnText}>{getFeatureUiText('contacts.close')}</Text>
                                 </Pressable>
                             ) : null}
                         </View>
@@ -262,7 +253,6 @@ export function ContactsDirectoryModal({
         </>
     );
 
-    // [인라인] 통화 섹션 안에 모달 오버레이 없이 그대로 렌더한다.
     if (embedded) {
         return <View style={styles.embeddedCard}>{body}</View>;
     }

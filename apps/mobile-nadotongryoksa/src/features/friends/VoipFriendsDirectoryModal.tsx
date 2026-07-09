@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { getFriends } from '../../api/friends';
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import type { Friend } from './types';
 
 export interface VoipFriendsDirectoryModalProps {
@@ -55,7 +56,7 @@ export function VoipFriendsDirectoryModal({
             const data = await getFriends(userId, token);
             setFriends(data.friends.filter((f) => f.friendUserId != null));
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : '친구 목록을 불러오지 못했습니다.');
+            setError(e instanceof Error ? e.message : getFeatureUiText('voip.friendsLoadError'));
         } finally {
             setLoading(false);
         }
@@ -106,7 +107,7 @@ export function VoipFriendsDirectoryModal({
                         <View style={styles.nameRow}>
                             <Text style={styles.flag}>{item.friendCountryFlag || '🌐'}</Text>
                             <Text style={styles.name} numberOfLines={1}>{label}</Text>
-                            <Text style={styles.appBadge}>앱 친구</Text>
+                            <Text wlLocalized style={styles.appBadge}>{getFeatureUiText('voip.appFriendBadge')}</Text>
                         </View>
                         <Text style={styles.meta} numberOfLines={1}>
                             {item.friendPreferredLanguage?.toUpperCase() || '언어 미설정'}
@@ -156,28 +157,28 @@ export function VoipFriendsDirectoryModal({
                     testID="voip-friends-dir-section-toggle"
                 >
                     <View style={styles.sectionHeadText}>
-                        <Text style={styles.title}>📡 VoIP 친구 — 통역통화</Text>
+                        <Text wlLocalized style={styles.title}>{getFeatureUiText('voip.friendsTitle')}</Text>
                         {!sectionExpanded ? (
-                            <Text style={styles.sectionCollapsedMeta}>{filtered.length}명 · 탭하여 펼치기</Text>
+                            <Text wlLocalized style={styles.sectionCollapsedMeta}>{filtered.length} · {getFeatureUiText('nav.tabChat')}</Text>
                         ) : (
-                            <Text style={styles.hint}>앱 가입 친구 보이스톡 · 단말 연락처와 별도</Text>
+                            <Text wlLocalized style={styles.hint}>{getFeatureUiText('voip.friendsSubtitle')}</Text>
                         )}
                     </View>
                     <Text style={styles.sectionChevron}>{sectionExpanded ? '▾' : '›'}</Text>
                 </Pressable>
             ) : (
                 <>
-                    <Text style={styles.title}>📡 VoIP 친구 — 통역통화</Text>
-                    <Text style={styles.hint}>앱에 가입한 친구에게 보이스톡을 걸 수 있습니다. 단말 연락처와 별도 목록입니다.</Text>
+                    <Text wlLocalized style={styles.title}>{getFeatureUiText('voip.friendsTitle')}</Text>
+                    <Text wlLocalized style={styles.hint}>{getFeatureUiText('voip.friendsSubtitle')}</Text>
                 </>
             )}
             <View style={[embedded && !sectionExpanded && styles.sectionBodyCollapsed]} pointerEvents={embedded && !sectionExpanded ? 'none' : 'auto'}>
             {embedded && sectionExpanded ? (
-                <Text style={styles.hint}>앱 가입 친구 보이스톡 · 단말 연락처와 별도</Text>
+                <Text wlLocalized style={styles.hint}>{getFeatureUiText('voip.friendsSubtitle')}</Text>
             ) : null}
             <TextInput
                 style={styles.search}
-                placeholder="이름 · 이메일 · 보이스 ID 검색"
+                placeholder={getFeatureUiText('voip.friendsSearch')}
                 placeholderTextColor="#8a93a3"
                 value={query}
                 onChangeText={setQuery}
@@ -198,8 +199,8 @@ export function VoipFriendsDirectoryModal({
                     nestedScrollEnabled
                     initialNumToRender={12}
                     ListEmptyComponent={
-                        <Text style={styles.empty}>
-                            {query.trim() ? '검색 결과가 없습니다.' : '등록된 VoIP 친구가 없습니다. 채팅 탭에서 친구를 추가해 보세요.'}
+                        <Text wlLocalized style={styles.empty}>
+                            {query.trim() ? getFeatureUiText('voip.friendsNoSearch') : getFeatureUiText('voip.friendsEmpty')}
                         </Text>
                     }
                 />

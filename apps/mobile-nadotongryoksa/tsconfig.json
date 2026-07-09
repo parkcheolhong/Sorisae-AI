@@ -20,6 +20,7 @@
   "exclude": [
     "node_modules",
     "**/dist/**",
-    "**/*.test.js"
+    "**/*.test.js",
+    "eas-archive-inspect/**"
   ]
 }

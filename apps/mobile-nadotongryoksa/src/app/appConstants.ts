@@ -59,8 +59,7 @@ export const AUTH_STORAGE_KEY = 'nadot_auth_state';
 export const WORLDLINCO_SETTINGS_STORAGE_KEY = 'worldlinco_settings_v1';
 export const ACTIVE_VOIP_CALL_STORAGE_KEY = 'nadot_active_voip_call_v1';
 export const VOIP_VALIDATION_FRIEND_CALL_BYPASS_KEY = 'nadot_voip_validation_friend_call_bypass_v1';
-// 실험/베타: VoIP 통역 지정 언어를 백엔드 프로필 고정값 대신 이 단말에서 직접 선택(로컬 오버라이드).
-// 값이 있으면 currentVoipPreferredLanguage가 백엔드 preferred_language보다 우선 사용한다.
+// VoIP/채팅/통역 "내 언어" SSOT는 설정 탭(국가·언어) → fromLang. 단말 로컬 오버라이드는 사용하지 않는다.
 export const VOIP_LOCAL_LANG_STORAGE_KEY = 'nadot_voip_local_lang_v1';
 /** 로그인 후 백그라운드 웨이크워드(홈 호명) — 기본 켬. 홈에서 자동 대기 후 호출어로 소리새를 깨운다. */
 export const COMPANION_HOME_WAKE_ENABLED = true;

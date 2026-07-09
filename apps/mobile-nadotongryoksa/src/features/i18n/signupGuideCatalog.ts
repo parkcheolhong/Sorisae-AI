@@ -61,3 +61,6 @@ export const DOWNLOAD_LANGUAGE_OPTIONS: Array<{ code: BundledUiLang; label: stri
     { code: 'ja', label: '日本語' },
     { code: 'zh', label: '中文(简体)' },
 ];
+
+/** tier-1 앱 표시 언어 칩 — 서비스 국가 로케일 기준(전역 Text 이중번역 방지). */
+export { getDownloadLangChipLabel } from './languageDisplayCatalog';

@@ -21,7 +21,7 @@ import { ManualViewer } from './ManualViewer';
 import { ReferralInvitePanel } from './ReferralInvitePanel';
 import { checkPermissionStatus, usePermissionCheck, type PermissionType } from '../../hooks/usePermissionCheck';
 import { openVoipNotificationSettings, type IncomingAlertSoundMode } from '../../native/voipIncomingAlert';
-import { COUNTRY_NAME_MAP, SIGNUP_COUNTRY_OPTIONS } from '../country/countryCatalog';
+import { SIGNUP_COUNTRY_OPTIONS } from '../country/countryCatalog';
 import { LANGS } from '../language/languageCatalog';
 import {
     getCurrentVoipAudioRoute,
@@ -36,9 +36,13 @@ import {
     saveChatReadAloudEnabled,
 } from '../sorisae/companionChatReadAloud';
 import { getBundledManual } from '../i18n/bundledManuals';
-import { DOWNLOAD_LANGUAGE_OPTIONS, getSignupGuideText } from '../i18n/signupGuideCatalog';
+import { DOWNLOAD_LANGUAGE_OPTIONS, getDownloadLangChipLabel, getSignupGuideText } from '../i18n/signupGuideCatalog';
+import { formatCountryDisplay } from '../i18n/countryDisplayCatalog';
+import { getLanguageDisplayLabel } from '../i18n/languageDisplayCatalog';
+import { resolveProfileDisplayLang, resolveProfileBundledCatalogLang, isTier1DisplayLangActive, TIER1_COUNTRY_BY_DISPLAY_LANG } from '../i18n/profileDisplayLocale';
 import { OperatorLogSection, type OperatorLogSnapshot } from '../operator/OperatorLogSection';
 import { handleOperatorUnlockTap, loadOperatorSurfaceUnlock, setOperatorSurfaceUnlock } from '../operator/operatorAccess';
+import { formatSettingsText, getSettingsText } from './settingsUiText';
 
 type ManualPreviewText = {
     title: string;
@@ -127,7 +131,7 @@ interface SectionCardProps {
 function SectionCard({ title, accent, children }: SectionCardProps) {
     return (
         <View style={styles.groupCard}>
-            <Text style={[styles.groupTitle, { color: accent }]}>{title}</Text>
+            <Text wlLocalized style={[styles.groupTitle, { color: accent }]}>{title}</Text>
             {children}
         </View>
     );
@@ -162,9 +166,12 @@ export function SettingsScreen({
     operatorLogSnapshot,
 }: Props) {
     const settings = useGlobalSettings();
-    const t = getSettingsText(userLang);
+    const profileDisplayLang = resolveProfileDisplayLang(userCountryCode || 'KR');
+    const bundledLang = resolveProfileBundledCatalogLang(userCountryCode || 'KR');
+    const t = getSettingsText(bundledLang);
     const { requestPermissions } = usePermissionCheck();
     const [operatorUnlockTick, setOperatorUnlockTick] = useState(0);
+    const [activeManual, setActiveManual] = useState<FeatureManual | null>(null);
 
     useEffect(() => {
         void loadOperatorSurfaceUnlock().then(() => setOperatorUnlockTick((n) => n + 1));
@@ -531,7 +538,7 @@ export function SettingsScreen({
     return (
         <View style={styles.root}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>{t.headerTitle}</Text>
+                <Text wlLocalized style={styles.headerTitle}>{t.headerTitle}</Text>
                 <Pressable
                     onPress={onClose}
                     style={styles.closeBtn}
@@ -542,27 +549,27 @@ export function SettingsScreen({
                     <Text style={styles.closeBtnText}>✕</Text>
                 </Pressable>
             </View>
-            <Text style={styles.intro}>{t.intro}</Text>
+            <Text wlLocalized style={styles.intro}>{t.intro}</Text>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
                 <SectionCard title={t.sectionAccount} accent="#0B7A4B">
                     {userEmail ? <Text style={styles.toggleDesc}>{userEmail}</Text> : null}
                     {hasInlineProfile ? (
                         <>
-                            <Text style={styles.downloadLangSection}>{getSignupGuideText('downloadLangSection', userLang)}</Text>
-                            <Text style={styles.downloadLangHint}>{getSignupGuideText('downloadLangHint', userLang)}</Text>
+                            <Text wlLocalized style={styles.downloadLangSection}>{getSignupGuideText('downloadLangSection', bundledLang)}</Text>
+                            <Text wlLocalized style={styles.downloadLangHint}>{getSignupGuideText('downloadLangHint', bundledLang)}</Text>
                             <View style={styles.downloadLangRow}>
                                 {DOWNLOAD_LANGUAGE_OPTIONS.map((opt) => {
-                                    const active = userLang === opt.code;
+                                    const active = isTier1DisplayLangActive(userCountryCode, opt.code);
                                     return (
                                         <Pressable
                                             key={`dl-lang-${opt.code}`}
                                             style={[styles.downloadLangChip, active && styles.downloadLangChipActive]}
-                                            onPress={() => onChangeLanguage?.(opt.code)}
+                                            onPress={() => onChangeCountry?.(TIER1_COUNTRY_BY_DISPLAY_LANG[opt.code])}
                                             testID={`worldlinco-settings-download-lang-${opt.code}`}
                                         >
-                                            <Text style={[styles.downloadLangChipText, active && styles.downloadLangChipTextActive]}>
-                                                {opt.label}
+                                            <Text wlLocalized style={[styles.downloadLangChipText, active && styles.downloadLangChipTextActive]}>
+                                                {getDownloadLangChipLabel(opt.code, profileDisplayLang)}
                                             </Text>
                                         </Pressable>
                                     );
@@ -573,12 +580,9 @@ export function SettingsScreen({
                                 onPress={() => { setCountryPickerOpen((v) => !v); setLangPickerOpen(false); }}
                                 testID="worldlinco-settings-country-toggle"
                             >
-                                <Text style={styles.profileRowLabel}>{t.country}</Text>
-                                <Text style={styles.profileRowValue}>
-                                    {(SIGNUP_COUNTRY_OPTIONS.find((c) => c.code === userCountryCode)?.label)
-                                        || COUNTRY_NAME_MAP[userCountryCode]
-                                        || userCountryCode
-                                        || t.notSet} ▾
+                                <Text wlLocalized style={styles.profileRowLabel}>{t.country}</Text>
+                                <Text wlLocalized style={styles.profileRowValue}>
+                                    {formatCountryDisplay(userCountryCode || '', bundledLang) || t.notSet} ▾
                                 </Text>
                             </Pressable>
                             {countryPickerOpen ? (
@@ -595,8 +599,8 @@ export function SettingsScreen({
                                                 }}
                                                 testID={`worldlinco-settings-country-${c.code}`}
                                             >
-                                                <Text style={[styles.profilePickerOptionText, active && styles.profilePickerOptionTextActive]}>
-                                                    {c.label} ({c.code})
+                                                <Text wlLocalized style={[styles.profilePickerOptionText, active && styles.profilePickerOptionTextActive]}>
+                                                    {formatCountryDisplay(c.code, bundledLang)}
                                                 </Text>
                                                 {active ? <Text style={styles.profilePickerCheck}>✓</Text> : null}
                                             </Pressable>
@@ -609,11 +613,9 @@ export function SettingsScreen({
                                 onPress={() => { setLangPickerOpen((v) => !v); setCountryPickerOpen(false); }}
                                 testID="worldlinco-settings-language-toggle"
                             >
-                                <Text style={styles.profileRowLabel}>{t.translationLanguage}</Text>
-                                <Text style={styles.profileRowValue}>
-                                    {(LANGS.find((l) => l.code === userPreferredLanguage)?.label)
-                                        || userPreferredLanguage
-                                        || t.notSet} ▾
+                                <Text wlLocalized style={styles.profileRowLabel}>{t.translationLanguage}</Text>
+                                <Text wlLocalized style={styles.profileRowValue}>
+                                    {getLanguageDisplayLabel(userPreferredLanguage, profileDisplayLang) || t.notSet} ▾
                                 </Text>
                             </Pressable>
                             {langPickerOpen ? (
@@ -630,8 +632,8 @@ export function SettingsScreen({
                                                 }}
                                                 testID={`worldlinco-settings-language-${l.code}`}
                                             >
-                                                <Text style={[styles.profilePickerOptionText, active && styles.profilePickerOptionTextActive]}>
-                                                    {l.label}
+                                                <Text wlLocalized style={[styles.profilePickerOptionText, active && styles.profilePickerOptionTextActive]}>
+                                                    {getLanguageDisplayLabel(l.code, profileDisplayLang)}
                                                 </Text>
                                                 {active ? <Text style={styles.profilePickerCheck}>✓</Text> : null}
                                             </Pressable>
@@ -639,7 +641,8 @@ export function SettingsScreen({
                                     })}
                                 </ScrollView>
                             ) : null}
-                            {profileSaving ? <Text style={styles.toggleDesc}>{t.saving}</Text> : null}
+                            <Text wlLocalized style={styles.downloadLangHint}>{t.profileLanguageLinkedHint}</Text>
+                            {profileSaving ? <Text wlLocalized style={styles.toggleDesc}>{t.saving}</Text> : null}
                             {profileError ? <Text style={styles.kwsSaveError}>{profileError}</Text> : null}
                             {profileSuccess ? <Text style={styles.kwsSaveSuccess}>{profileSuccess}</Text> : null}
                         </>
@@ -871,9 +874,9 @@ export function SettingsScreen({
                 <View style={styles.groupCard}>
                     <Text style={[styles.groupTitle, { color: '#0B6FB0' }]}>{t.sectionManuals}</Text>
                     <Text style={styles.guideIntro}>
-                        {userLang === 'ko'
+                        {profileDisplayLang === 'ko'
                             ? t.manualsIntroKo
-                            : formatSettingsText(t.manualsIntroTranslated, { lang: resolveLanguageLabel(userLang) })}
+                            : formatSettingsText(t.manualsIntroTranslated, { lang: resolveLanguageLabel(profileDisplayLang) })}
                     </Text>
                     {FEATURE_MANUALS.map((m, idx) => (
                         <View key={m.id}>

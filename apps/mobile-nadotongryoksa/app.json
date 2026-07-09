@@ -3,7 +3,7 @@
     "name": "WorldLinco",
     "slug": "nadotongryoksa",
     "scheme": "worldlingo",
-    "version": "1.0.241",
+    "version": "1.0.243",
     "runtimeVersion": "1.0.76",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -28,7 +28,7 @@
     },
     "android": {
       "package": "com.parkcheolhong.worldlinco",
-      "versionCode": 324,
+      "versionCode": 328,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0f16"

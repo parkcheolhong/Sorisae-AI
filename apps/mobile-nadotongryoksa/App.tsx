@@ -41,6 +41,7 @@ import { FEATURE_IDS, newCorrelationId } from './src/features/correlation/correl
 import {
     SECTION_RAIL_ITEMS,
     buildSectionRailSelector,
+    getSectionRailTabLabel,
     parseSectionRailKey,
     type SectionRailKey,
 } from './src/features/navigation/sectionRegistry';
@@ -255,9 +256,11 @@ import {
     getDefaultVoipTurnServers,
     normalizeTurnServers,
 } from './src/features/voip/voipSignaling';
-import { translateUiSync, useUiI18nTick, getUiLang, setUiLang, hydrateUiLangFromStorage } from './src/features/i18n/uiI18n';
-import { getDisplayUiText, normalizeDisplayLang, syncUiLang } from './src/features/i18n/displayLanguage';
-import { getFeatureUiText } from './src/features/i18n/featureUiCatalog';
+import { translateUiSync, useUiI18nTick, getUiLang, getEffectiveUiLang, setUiLang, hydrateUiLangFromStorage, setProfileCountryCode as setGlobalProfileCountryCode } from './src/features/i18n/uiI18n';
+import { getDisplayUiText, normalizeDisplayLang, setProfileDisplayLangOverride, syncUiLang, syncUiLangFromCountry } from './src/features/i18n/displayLanguage';
+import { getFeatureUiText, getTravelCategoryLabel } from './src/features/i18n/featureUiCatalog';
+import { formatCountryDisplay } from './src/features/i18n/countryDisplayCatalog';
+import { resolveProfileDisplayLang, pairFromCountry, pairFromLanguage } from './src/features/i18n/profileDisplayLocale';
 import { formatFlagPrefixedName, resolveUserCountryFlag } from './src/features/i18n/userDisplayIdentity';
 import { BidirectionalLanguagePairBadge } from './src/features/i18n/BidirectionalLanguagePairBadge';
 import { resolveBootstrapUiLang } from './src/features/i18n/bootstrapUiLang';
@@ -305,7 +308,6 @@ import {
     WORLDLINCO_SETTINGS_STORAGE_KEY,
     ACTIVE_VOIP_CALL_STORAGE_KEY,
     VOIP_VALIDATION_FRIEND_CALL_BYPASS_KEY,
-    VOIP_LOCAL_LANG_STORAGE_KEY,
     RELEASE_CHANNEL,
     ENABLE_IN_APP_UPDATE_PROMPT,
     VERSION_SNOOZE_BUILD_KEY,
@@ -364,11 +366,13 @@ const translateChildrenDeep = (children: any): any => {
         if (typeof Orig !== 'function' || Orig.__wlWrapped) return;
         const Wrapped: any = function WlTextWrapper(props: any) {
             useUiI18nTick();
-            let children = props.children;
-            let placeholder = props.placeholder;
-            let accessibilityLabel = props.accessibilityLabel;
-            const uiLang = getUiLang();
-            if (uiLang !== 'ko') {
+            const skipI18n = Boolean(props.wlLocalized || props.noI18n);
+            const { wlLocalized: _wlLocalized, noI18n: _noI18n, ...restProps } = props;
+            let children = restProps.children;
+            let placeholder = restProps.placeholder;
+            let accessibilityLabel = restProps.accessibilityLabel;
+            const uiLang = getEffectiveUiLang();
+            if (!skipI18n && uiLang !== 'ko') {
                 if (mode === 'text' && children != null) {
                     children = translateChildrenDeep(children);
                 }
@@ -381,12 +385,12 @@ const translateChildrenDeep = (children: any): any => {
                     accessibilityLabel = translateUiSync(accessibilityLabel);
                 }
             }
-            const flat = StyleSheet.flatten(props.style) as { fontSize?: number } | undefined;
+            const flat = StyleSheet.flatten(restProps.style) as { fontSize?: number } | undefined;
             const nextStyle = flat && typeof flat.fontSize === 'number'
-                ? [props.style, { fontSize: Math.round(flat.fontSize * GLOBAL_FONT_SCALE) }]
-                : props.style;
+                ? [restProps.style, { fontSize: Math.round(flat.fontSize * GLOBAL_FONT_SCALE) }]
+                : restProps.style;
             return React.createElement(Orig, {
-                ...props,
+                ...restProps,
                 style: nextStyle,
                 children,
                 placeholder,
@@ -1262,7 +1266,6 @@ function AppInner() {
     const [showMyInfo, setShowMyInfo] = useState(false);
     const [profilePreferredLanguage, setProfilePreferredLanguage] = useState<LangCode>('ko');
     const [profileCountryCode, setProfileCountryCode] = useState<SignupCountryCode>('KR');
-    const [profileSelectionModal, setProfileSelectionModal] = useState<SignupSelectionModal>(null);
     const [profileSaving, setProfileSaving] = useState(false);
     const [profileMessage, setProfileMessage] = useState('');
     const [myPurchases, setMyPurchases] = useState<Array<{ id: number; amount: number; status: string; payment_method: string }> | null>(null);
@@ -1315,85 +1318,40 @@ function AppInner() {
             : deriveSignupPreferredLanguage(nextCountryCode);
         setProfileCountryCode(nextCountryCode);
         setProfilePreferredLanguage(nextPreferredLanguage);
-        setProfileSelectionModal(null);
         setProfileMessage('');
     }, [deriveSignupPreferredLanguage, showMyInfo, userInfo]);
+
+    /** 국가↔언어 1:1 동기화 — UI 표시·통역·fromLang 동시 반영. */
+    const applySyncedCountryLanguage = useCallback((input: { countryCode?: string; languageCode?: LangCode }) => {
+        const pair = input.countryCode
+            ? pairFromCountry(input.countryCode)
+            : input.languageCode
+                ? pairFromLanguage(input.languageCode)
+                : null;
+        if (!pair) {
+            return null;
+        }
+        void syncUiLangFromCountry(pair.countryCode);
+        setFromLang(pair.languageCode);
+        setChatRefreshKey((prev) => prev + 1);
+        return pair;
+    }, []);
+
     // [전역 다국어] 번역 캐시가 갱신되거나 uiLang 이 바뀌면 tick 이 올라간다. 모놀리식 루트가 이를
     // 구독해 인라인 Text 트리를 한꺼번에 다시 그린다 → 전역 Text 패치가 최신 uiLang/캐시로 치환.
     useUiI18nTick();
-    // [전역 다국어 — 언어 자동설정 우선순위]
-    //  · 지정언어(preferred_language)가 있으면 그것을 사용한다 → "한번 지정하면 재접속에도 그 언어로".
-    //  · 지정이 없으면(미가입/미지정) GPS 국가 → 언어로 자동감지(1순위). GPS 없으면 단말 로케일 국가.
-    //  결과적으로 단말 설치 즉시 자국어처럼 보이고, 지정 시 그 언어가 영속된다.
+    // [전역 다국어 — 국가↔언어 SSOT] country_code 와 preferred_language 는 항상 1:1(국가→대표언어).
     useEffect(() => {
-        const designated = String(userInfo?.preferred_language || '').trim().toLowerCase();
-        if (designated && isSupportedLangCode(designated)) {
-            void syncUiLang(designated);
-            return;
-        }
-        const country = String(gpsCountryCode || resolveLocaleCountryCode() || '').trim();
-        const gpsLang = country ? resolveLangFromCountryOrEnglish(country) : '';
-        if (gpsLang && isSupportedLangCode(gpsLang)) {
-            void syncUiLang(gpsLang);
-        }
-    }, [userInfo?.preferred_language, gpsCountryCode]);
+        const country = String(
+            userInfo?.country_code || gpsCountryCode || resolveLocaleCountryCode() || 'KR',
+        ).trim();
+        applySyncedCountryLanguage({ countryCode: country });
+    }, [applySyncedCountryLanguage, userInfo?.country_code, gpsCountryCode]);
 
     const [showFriendMapDiscovery, setShowFriendMapDiscovery] = useState(false);
-    // VoIP 지정 언어 로컬 오버라이드(백엔드 고정 해제). null이면 백엔드 프로필 언어 사용.
-    const [voipLocalLangOverride, setVoipLocalLangOverride] = useState<LangCode | null>(null);
-    const [voipLangModalVisible, setVoipLangModalVisible] = useState(false);
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const saved = String((await AsyncStorage.getItem(VOIP_LOCAL_LANG_STORAGE_KEY)) || '').trim().toLowerCase();
-                if (!cancelled && isSupportedLangCode(saved)) {
-                    setVoipLocalLangOverride(saved);
-                }
-            } catch {
-                // ignore — fall back to backend profile language
-            }
-        })();
-        return () => { cancelled = true; };
-    }, []);
-    const handleClearVoipLocalLang = useCallback(() => {
-        setVoipLocalLangOverride(null);
-        setVoipLangModalVisible(false);
-        void AsyncStorage.removeItem(VOIP_LOCAL_LANG_STORAGE_KEY).catch(() => { });
-    }, []);
     const [voipAutoCallVoiceId, setVoipAutoCallVoiceId] = useState<string | null>(null);
     const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoomSummary | null>(null);
     const [chatRefreshKey, setChatRefreshKey] = useState(0);
-
-    /** 프로필/설정 언어·국가 변경 시 fromLang + uiLang 을 동시에 맞춘다(중구난방 방지). */
-    const applyUserDisplayLanguage = useCallback((code: LangCode) => {
-        const safe = normalizeDisplayLang(code);
-        setFromLang(safe);
-        void syncUiLang(safe);
-        setChatRefreshKey((prev) => prev + 1);
-    }, []);
-
-    const handleSelectVoipLocalLang = useCallback((code: LangCode) => {
-        applyUserDisplayLanguage(code);
-        // 1) 즉시 로컬 반영(오프라인/지연에도 통화 언어가 곧바로 바뀌도록).
-        setVoipLocalLangOverride(code);
-        setVoipLangModalVisible(false);
-        void AsyncStorage.setItem(VOIP_LOCAL_LANG_STORAGE_KEY, code).catch(() => { });
-        // 2) 백엔드 실시간 저장: 통역 지정 언어를 프로필 preferred_language 로 즉시 PATCH →
-        //    상대 단말이 읽는 언어까지 한 번에 일관 적용(별도 "프로필 저장" 단계 불필요).
-        if (token && userInfo) {
-            void (async () => {
-                try {
-                    const updated = await callUpdateMeApi(token, { preferred_language: code });
-                    setUserInfo(updated);
-                    await saveStoredAuthState(token, updated);
-                    console.log('[VoIP][lang] preferred_language synced to backend', code);
-                } catch (error: any) {
-                    console.warn('[VoIP][lang] backend sync failed (local override still active)', error?.message || error);
-                }
-            })();
-        }
-    }, [applyUserDisplayLanguage, token, userInfo]);
 
     const [groupComposerSignal, setGroupComposerSignal] = useState(0);
     const [chatShareLoading, setChatShareLoading] = useState(false);
@@ -1582,16 +1540,14 @@ function AppInner() {
         setLoginPw('');
         setLoginError('');
         setDemoSessionError('');
-        const preferred = nextUserInfo.preferred_language?.trim().toLowerCase();
-        if (preferred && isSupportedLangCode(preferred)) {
-            setFromLang(preferred);
-            if (!peerLangManualRef.current) {
-                setToLang((currentTarget) => resolveAutoTargetLang(preferred, currentTarget));
-            }
-            // [전역 다국어] 회원가입/프로필 지정 언어로 앱 전체 UI 표기 전환.
-            void syncUiLang(preferred);
+        const pair = pairFromCountry(
+            nextUserInfo.country_code || gpsCountryCode || resolveLocaleCountryCode() || 'KR',
+        );
+        applySyncedCountryLanguage({ countryCode: pair.countryCode });
+        if (!peerLangManualRef.current) {
+            setToLang((currentTarget) => resolveAutoTargetLang(pair.languageCode, currentTarget));
         }
-    }, []);
+    }, [applySyncedCountryLanguage, gpsCountryCode]);
 
     const openVoipTesterPanel = useCallback(() => {
         setVoipInitError('');
@@ -1858,6 +1814,9 @@ function AppInner() {
     const stopVoiceInputRef = useRef<((options?: { suppressAutoRestart?: boolean }) => Promise<void>) | null>(null);
     const prepareForVoipSessionRef = useRef<(reason: string) => Promise<void>>(async () => { });
     const prepareForPstnDialRef = useRef<(reason: string) => Promise<void>>(async () => { });
+    const openDialPadWithQuiesceRef = useRef<(phone: string, reason: string) => Promise<boolean>>(
+        async (phone) => openDialPad(phone),
+    );
     const endPstnAssistSessionRef = useRef<(reason: string) => void>(() => { });
     const faceVadControllerRef = useRef(createFaceConversationVadController());
     // [Silero 근본 무음 게이트] 단말 진폭 미터가 죽은 기기(meter_unavailable)에서 file-growth VAD는
@@ -2083,14 +2042,16 @@ function AppInner() {
             setSettingsProfileError('로그인 후 변경할 수 있습니다.');
             return;
         }
-        const mappedLang = resolveLangFromCountryOrEnglish(code);
-        applyUserDisplayLanguage(mappedLang);
+        const pair = applySyncedCountryLanguage({ countryCode: code });
+        if (!pair) {
+            return;
+        }
         setSettingsProfileSaving(true);
         void (async () => {
             try {
                 const payload: UserProfileUpdatePayload = {
-                    country_code: code,
-                    preferred_language: mappedLang,
+                    country_code: pair.countryCode,
+                    preferred_language: pair.languageCode,
                 };
                 const updated = await callUpdateMeApi(token, payload);
                 setUserInfo(updated);
@@ -2102,7 +2063,7 @@ function AppInner() {
                 setSettingsProfileSaving(false);
             }
         })();
-    }, [applyUserDisplayLanguage, token, userInfo]);
+    }, [applySyncedCountryLanguage, token, userInfo]);
 
     const handleSettingsChangeLanguage = useCallback((code: string) => {
         setSettingsProfileError('');
@@ -2115,11 +2076,17 @@ function AppInner() {
             setSettingsProfileError('지원하지 않는 언어입니다.');
             return;
         }
-        applyUserDisplayLanguage(code as LangCode);
+        const pair = applySyncedCountryLanguage({ languageCode: code as LangCode });
+        if (!pair) {
+            return;
+        }
         setSettingsProfileSaving(true);
         void (async () => {
             try {
-                const updated = await callUpdateMeApi(token, { preferred_language: code });
+                const updated = await callUpdateMeApi(token, {
+                    preferred_language: pair.languageCode,
+                    country_code: pair.countryCode,
+                });
                 setUserInfo(updated);
                 await saveStoredAuthState(token, updated);
                 setSettingsProfileSuccess('통역/번역 언어가 저장되었습니다.');
@@ -2129,7 +2096,7 @@ function AppInner() {
                 setSettingsProfileSaving(false);
             }
         })();
-    }, [applyUserDisplayLanguage, token, userInfo]);
+    }, [applySyncedCountryLanguage, token, userInfo]);
 
     const handleOpenPasswordChangeFromSettings = useCallback(() => {
         setSettingsTabOpen(false);
@@ -2189,15 +2156,7 @@ function AppInner() {
     const translationRequestSeqRef = useRef(0);
     const latestTranslationMetaRef = useRef<{ source: LangCode; target: LangCode; translated: string } | null>(null);
     const [translationEpoch, setTranslationEpoch] = useState(0);
-    const currentVoipPreferredLanguage = (() => {
-        // 로컬 직접 지정(실험/베타)이 있으면 백엔드 고정 언어보다 우선한다.
-        if (voipLocalLangOverride && isSupportedLangCode(voipLocalLangOverride)) {
-            return voipLocalLangOverride;
-        }
-        const normalized = String(userInfo?.preferred_language || '').trim().toLowerCase();
-        return isSupportedLangCode(normalized) ? normalized : fromLang;
-    })();
-    const isVoipLangLocallyOverridden = Boolean(voipLocalLangOverride && isSupportedLangCode(voipLocalLangOverride));
+    const currentVoipPreferredLanguage: LangCode = fromLang;
     const currentVoipCountryCode = String(userInfo?.country_code || '').trim().toUpperCase() || resolveLocaleCountryCode();
     const currentVoipProfile: VoipParticipantProfile = {
         nickname: userInfo?.username || userInfo?.email.split('@')[0] || '게스트',
@@ -3793,9 +3752,6 @@ function AppInner() {
             setEngine(result.engine);
             setOcrExtractedText(result.original_text);
             setOcrTranslatedText(result.translated);
-            if (effectiveSource !== fromLang) {
-                setFromLang(effectiveSource);
-            }
             if (effectiveTarget !== toLang) {
                 setToLang(effectiveTarget);
             }
@@ -3961,8 +3917,6 @@ function AppInner() {
             setSongFileSegments(timeline.segments);
             const detectedSource = normalizeSongFileLang(timeline.source_language, fromLang);
             const detectedTarget = normalizeSongFileLang(timeline.target_language, toLang);
-            setFromLang(detectedSource);
-            setToLang(detectedTarget);
             setSongModeStatus(`🎵 파일 자막 준비: ${getLangLabelText(detectedSource)} → ${getLangLabelText(detectedTarget)} · ${timeline.segment_count}개 구간 · 품질 ${(timeline.quality_score * 100).toFixed(0)}%`);
         } catch (error) {
             const message = error instanceof Error ? error.message : '노래 파일 처리에 실패했습니다.';
@@ -4212,14 +4166,6 @@ function AppInner() {
         Speech.speak(speakText, { language: inferTtsLanguage(speakText, fallbackTts), rate: 0.9 });
     }, [toLang, voicePreview]);
 
-    // ── 언어 스왑 ──
-    const handleSwap = () => {
-        setFromLang(toLang);
-        setToLang(fromLang);
-        setInputText(resultText);
-        setResultText(inputText);
-    };
-
     // ── TTS 읽기 ──
     const handleSpeak = (text: string, langCode: LangCode) => {
         const speakText = normalizeSpeakText(text);
@@ -4420,81 +4366,14 @@ function AppInner() {
                 ? '전화 인증 코드 받기'
                 : '이메일 인증 코드 받기';
 
-    const handleSelectSignupLanguage = useCallback((code: LangCode) => {
-        setSignupPreferredLanguage(code);
-        setSignupCountryCode(resolveSignupCountryFromLang(code));
-        setFromLang(code);
-        void syncUiLang(code);
-        setSignupSelectionModal(null);
-    }, []);
-
     const handleSelectSignupCountry = useCallback((code: SignupCountryCode) => {
-        setSignupCountryCode(code);
-        const mappedLanguage = resolveLangFromCountryOrEnglish(code);
-        setSignupPreferredLanguage(mappedLanguage);
-        setFromLang(mappedLanguage);
-        void syncUiLang(mappedLanguage);
+        const pair = pairFromCountry(code);
+        setSignupCountryCode(pair.countryCode);
+        setSignupPreferredLanguage(pair.languageCode);
+        setFromLang(pair.languageCode);
+        void syncUiLangFromCountry(pair.countryCode);
         setSignupSelectionModal(null);
     }, []);
-
-    const handleSelectProfileLanguage = useCallback(async (code: LangCode) => {
-        const countryCode = resolveSignupCountryFromLang(code);
-        setProfilePreferredLanguage(code);
-        setProfileCountryCode(countryCode);
-        setProfileSelectionModal(null);
-        applyUserDisplayLanguage(code);
-        if (!token || !userInfo) {
-            return;
-        }
-        setProfileSaving(true);
-        setProfileMessage('');
-        try {
-            const updatedUserInfo = await callUpdateMeApi(token, {
-                preferred_language: code,
-                country_code: countryCode,
-            });
-            setUserInfo(updatedUserInfo);
-            await saveStoredAuthState(token, updatedUserInfo);
-            setProfileMessage('프로필 언어가 저장되었습니다.');
-        } catch (error: any) {
-            setProfileMessage(error?.message || '프로필 언어 저장 실패');
-        } finally {
-            setProfileSaving(false);
-        }
-    }, [applyUserDisplayLanguage, token, userInfo]);
-
-    const handleSelectProfileCountry = useCallback((code: SignupCountryCode) => {
-        setProfileCountryCode(code);
-        const mappedLanguage = resolveLangFromCountryOrEnglish(code);
-        setProfilePreferredLanguage(mappedLanguage);
-        applyUserDisplayLanguage(mappedLanguage);
-        setProfileSelectionModal(null);
-    }, [applyUserDisplayLanguage]);
-
-    const handleSaveMyProfile = useCallback(async () => {
-        if (!token || !userInfo) {
-            setProfileMessage('로그인 후 프로필 기본값을 저장할 수 있습니다.');
-            return;
-        }
-
-        setProfileSaving(true);
-        setProfileMessage('');
-        try {
-            const updatedUserInfo = await callUpdateMeApi(token, {
-                preferred_language: profilePreferredLanguage,
-                country_code: profileCountryCode,
-            });
-            setUserInfo(updatedUserInfo);
-            await saveStoredAuthState(token, updatedUserInfo);
-            applyUserDisplayLanguage(profilePreferredLanguage);
-            setProfileMessage('프로필 기본값 저장됨. 이후 채팅/VoIP 기본 언어 계산에 바로 반영됩니다.');
-            setChatRefreshKey((prev) => prev + 1);
-        } catch (error: any) {
-            setProfileMessage(error?.message || '프로필 기본값 저장 실패');
-        } finally {
-            setProfileSaving(false);
-        }
-    }, [applyUserDisplayLanguage, profileCountryCode, profilePreferredLanguage, token, userInfo]);
 
     const renderSignupProfileSelectors = useCallback(() => (
         <>
@@ -4502,19 +4381,6 @@ function AppInner() {
             <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine1', signupPreferredLanguage)}</Text>
             <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine2', signupPreferredLanguage)}</Text>
             <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine3', signupPreferredLanguage)}</Text>
-            <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupLanguageLabel', signupPreferredLanguage)}</Text>
-            <Pressable
-                style={styles.signupPickerTrigger}
-                onPress={() => setSignupSelectionModal('language')}
-                accessibilityLabel="worldlinco-signup-language-picker-trigger"
-                testID="worldlinco-signup-language-picker-trigger"
-            >
-                <View>
-                    <Text style={styles.signupPickerValue}>{getLangLabelText(signupPreferredLanguage)}</Text>
-                    <Text style={styles.signupPickerMeta}>{getSignupGuideText('signupLanguageMeta', signupPreferredLanguage)}</Text>
-                </View>
-                <Text style={styles.signupPickerHint}>열기</Text>
-            </Pressable>
             <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupCountryLabel', signupPreferredLanguage)}</Text>
             <Pressable
                 style={styles.signupPickerTrigger}
@@ -4531,6 +4397,7 @@ function AppInner() {
             <Text style={styles.signupProfileHint}>
                 {getSignupGuideText('signupProfileHint', signupPreferredLanguage)}
             </Text>
+            <Text style={styles.signupProfileHint}>통역 언어: {getLangLabelText(signupPreferredLanguage)} (국가에 따라 자동)</Text>
             <Modal
                 visible={signupSelectionModal !== null}
                 transparent
@@ -4539,50 +4406,28 @@ function AppInner() {
             >
                 <Pressable style={styles.langModalOverlay} onPress={() => setSignupSelectionModal(null)}>
                     <Pressable style={styles.langModalCard} onPress={() => { }} testID="worldlinco-signup-selection-modal">
-                        <Text style={styles.langModalTitle}>
-                            {signupSelectionModal === 'language' ? '회원 기본 언어 선택' : '프로필 국가 선택'}
-                        </Text>
+                        <Text style={styles.langModalTitle}>프로필 국가 선택</Text>
                         <Text style={styles.signupModalSub}>
-                            {signupSelectionModal === 'language'
-                                ? `지원 언어 ${SUPPORTED_LANGUAGE_COUNT}개 전체를 열어서 선택합니다.`
-                                : `서비스 국가 ${SIGNUP_COUNTRY_OPTION_CODES.length}개 전체를 열어서 선택합니다.`}
+                            {`서비스 국가 ${SIGNUP_COUNTRY_OPTION_CODES.length}개 · 통역 언어는 국가에 따라 자동 설정됩니다.`}
                         </Text>
                         <ScrollView style={styles.langModalList}>
-                            {signupSelectionModal === 'language'
-                                ? LANGS.map((language) => {
-                                    const active = signupPreferredLanguage === language.code;
-                                    return (
-                                        <Pressable
-                                            key={`signup-language-option-${language.code}`}
-                                            style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                            onPress={() => handleSelectSignupLanguage(language.code)}
-                                            accessibilityLabel={`worldlinco-signup-language-${language.code}`}
-                                            testID={`worldlinco-signup-language-${language.code}`}
-                                        >
-                                            <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
-                                                {language.label}
-                                            </Text>
-                                            {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                        </Pressable>
-                                    );
-                                })
-                                : SIGNUP_COUNTRY_OPTIONS.map((country) => {
-                                    const active = signupCountryCode === country.code;
-                                    return (
-                                        <Pressable
-                                            key={`signup-country-option-${country.code}`}
-                                            style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                            onPress={() => handleSelectSignupCountry(country.code)}
-                                            accessibilityLabel={`worldlinco-signup-country-${country.code}`}
-                                            testID={`worldlinco-signup-country-${country.code}`}
-                                        >
-                                            <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
-                                                {resolveCountryFlag(country.code)} {country.label}
-                                            </Text>
-                                            {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                        </Pressable>
-                                    );
-                                })}
+                            {SIGNUP_COUNTRY_OPTIONS.map((country) => {
+                                const active = signupCountryCode === country.code;
+                                return (
+                                    <Pressable
+                                        key={`signup-country-option-${country.code}`}
+                                        style={[styles.langModalOption, active && styles.langModalOptionActive]}
+                                        onPress={() => handleSelectSignupCountry(country.code)}
+                                        accessibilityLabel={`worldlinco-signup-country-${country.code}`}
+                                        testID={`worldlinco-signup-country-${country.code}`}
+                                    >
+                                        <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
+                                            {resolveCountryFlag(country.code)} {country.label}
+                                        </Text>
+                                        {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
+                                    </Pressable>
+                                );
+                            })}
                         </ScrollView>
                         <Pressable
                             style={styles.langModalCloseBtn}
@@ -4595,7 +4440,7 @@ function AppInner() {
                 </Pressable>
             </Modal>
         </>
-    ), [handleSelectSignupCountry, handleSelectSignupLanguage, signupCountryCode, signupPreferredLanguage, signupSelectionModal]);
+    ), [handleSelectSignupCountry, signupCountryCode, signupPreferredLanguage, signupSelectionModal]);
 
     const renderSignupAuthFields = useCallback(() => {
         return (
@@ -4922,6 +4767,9 @@ function AppInner() {
         voipPresenceSocketRef.current = null;
         setToken('');
         setUserInfo(null);
+        setGlobalProfileCountryCode(null);
+        setProfileDisplayLangOverride(null);
+        void syncUiLang('ko');
         setLoginEmail('');
         setLoginPw('');
         setLoginError('');
@@ -4932,7 +4780,6 @@ function AppInner() {
         setSignupFullName('');
         setVoipIdentity('');
         setShowMyInfo(false);
-        setProfileSelectionModal(null);
         setProfileMessage('');
         setShowFriendFolder(false);
         setShowFriendMapDiscovery(false);
@@ -5363,6 +5210,10 @@ function AppInner() {
             return;
         }
 
+        if (target.type === 'invite' || target.type === 'sales') {
+            return;
+        }
+
         if (target.action === 'incoming') {
             logUiPressProbe('APP_ENTRY_DEEP_LINK_VOIP_INCOMING', {
                 source,
@@ -5371,17 +5222,6 @@ function AppInner() {
             setActiveRailSection('voip');
             void fetchPendingIncomingVoipCall(`deeplink_${source}`);
             return;
-        }
-
-        const normalizedPreferredLanguage = String(target.preferredLanguage || '').trim().toLowerCase();
-        if (normalizedPreferredLanguage && isSupportedLangCode(normalizedPreferredLanguage)) {
-            setFromLang(normalizedPreferredLanguage);
-            setToLang((currentTarget) => resolveAutoTargetLang(normalizedPreferredLanguage, currentTarget));
-            setUserInfo((prev) => (prev ? { ...prev, preferred_language: normalizedPreferredLanguage } : prev));
-            logUiPressProbe('VOIP_DEEPLINK_PREFERRED_LANGUAGE_APPLIED', {
-                source,
-                preferred_language: normalizedPreferredLanguage,
-            });
         }
 
         logUiPressProbe('APP_ENTRY_DEEP_LINK_VOIP_OPEN', { source, action: target.action });
@@ -5536,7 +5376,7 @@ function AppInner() {
 
     const handlePhoneOnlyDialFallback = useCallback(async (phone: string, source: string, reason?: string) => {
         logUiPressProbe('VOIP_PHONE_ONLY_DIAL_FALLBACK_START', { phone, source, reason: reason || null });
-        const dialOpened = await openDialPad(phone);
+        const dialOpened = await openDialPadWithQuiesceRef.current(phone, `voip_phone_only_fallback:${source}`);
         logUiPressProbe('VOIP_PHONE_ONLY_DIAL_FALLBACK_RESULT', { phone, source, dial_opened: dialOpened });
         setVoipCallInitResponse(null);
         setVoipAuditCallId('');
@@ -5549,7 +5389,7 @@ function AppInner() {
         }
         setVoipInitError(reason || '전화번호 전용 통화는 시스템 전화앱 연결이 필요하지만 다이얼러를 열지 못했습니다.');
         return false;
-    }, [logUiPressProbe, openDialPad]);
+    }, [logUiPressProbe]);
 
     const handleStartVoipCall = useCallback(async () => {
         logUiPressProbe('VOIP_START_CALL_PRESS', {
@@ -6925,7 +6765,7 @@ function AppInner() {
 
     const handleDetectLangByGPS = useCallback(async (silent = false) => {
         setGpsLangLoading(true);
-        if (!silent) setGpsStatus('위치 권한 확인 중...');
+        if (!silent) setGpsStatus(getFeatureUiText('gps.checkingPermission'));
         try {
             const currentPermission = await Location.getForegroundPermissionsAsync();
             let finalPermission = currentPermission;
@@ -6936,19 +6776,19 @@ function AppInner() {
 
             if (finalPermission.status !== 'granted') {
                 const deniedMessage = finalPermission.canAskAgain === false
-                    ? `위치 권한이 차단되어 있습니다. Android 설정에서 ${WORLDLINGO_APP_NAME} 위치 권한을 허용해 주세요.`
-                    : '현재 위치 확인과 주변 서비스 검색을 위해 위치 권한이 필요합니다.';
-                setGpsStatus(`위치 권한 미허용 · ${deniedMessage}`);
+                    ? getFeatureUiText('gps.permissionBlocked', { appName: WORLDLINGO_APP_NAME })
+                    : getFeatureUiText('gps.permissionNeeded');
+                setGpsStatus(getFeatureUiText('gps.deniedStatus', { message: deniedMessage }));
                 if (!silent) {
-                    Alert.alert('위치 권한 필요', deniedMessage, [
-                        ...(finalPermission.canAskAgain === false ? [{ text: '설정 열기', onPress: () => Linking.openSettings() }] : []),
-                        { text: '확인', style: 'cancel' },
+                    Alert.alert(getFeatureUiText('gps.permissionTitle'), deniedMessage, [
+                        ...(finalPermission.canAskAgain === false ? [{ text: getFeatureUiText('gps.openSettings'), onPress: () => Linking.openSettings() }] : []),
+                        { text: getFeatureUiText('common.ok'), style: 'cancel' },
                     ]);
                 }
                 return;
             }
 
-            setGpsStatus('GPS/Wi-Fi/기지국 위치 확인 중...');
+            setGpsStatus(getFeatureUiText('gps.resolving'));
             const resolved = await resolveHybridLocation();
             setLat(resolved.latitude.toFixed(6));
             setLon(resolved.longitude.toFixed(6));
@@ -6989,17 +6829,9 @@ function AppInner() {
             setGpsCountryCode(countryCode);
             setGpsRegionHint(regionHint);
             const detectedLang = countryCode ? resolveLangFromCountry(countryCode) : null;
-            const profileLangRaw = String(userInfo?.preferred_language || fromLang).trim().toLowerCase();
-            const profileLang = isSupportedLangCode(profileLangRaw) ? profileLangRaw as LangCode : fromLang;
-            const hasDesignatedProfileLang = Boolean(
-                String(userInfo?.preferred_language || '').trim()
-                && isSupportedLangCode(String(userInfo?.preferred_language || '').trim().toLowerCase()),
-            );
             if (
-                !hasDesignatedProfileLang
-                && detectedLang
+                detectedLang
                 && isSupportedLangCode(detectedLang)
-                && detectedLang !== profileLang
                 && detectedLang !== fromLang
             ) {
                 if (!peerLangManualRef.current) {
@@ -7008,35 +6840,47 @@ function AppInner() {
             }
             const modeLabel =
                 resolved.mode === 'satellite'
-                    ? 'Satellite GPS'
+                    ? getFeatureUiText('gps.modeSatellite')
                     : resolved.mode === 'hybrid'
-                        ? 'Hybrid GPS/Wi-Fi'
+                        ? getFeatureUiText('gps.modeHybrid')
                         : resolved.mode === 'wifi_fallback'
-                            ? 'WF Fallback'
+                            ? getFeatureUiText('gps.modeWifiFallback')
                             : resolved.source === 'adb_override'
-                                ? 'ADB Mock GPS'
-                                : 'Cached Wi-Fi/Cell';
+                                ? getFeatureUiText('gps.modeAdbMock')
+                                : getFeatureUiText('gps.modeCached');
             const accText = resolved.accuracy !== null ? `${resolved.accuracy.toFixed(0)}m` : 'N/A';
-            const langText = detectedLang ? ` · 추천 ${getLangLabel(detectedLang)}` : '';
-            const regionText = regionHint ? ` · 지역 ${regionHint}` : '';
+            const langText = detectedLang ? getFeatureUiText('gps.langRecommend', { lang: getLangLabel(detectedLang) }) : '';
+            const regionText = regionHint ? getFeatureUiText('gps.regionSuffix', { region: regionHint }) : '';
 
-            setGpsStatus(`${modeLabel} · 품질 ${resolved.qualityScore}점 · 정확도 ${accText} · 좌표 ${resolved.latitude.toFixed(5)}, ${resolved.longitude.toFixed(5)} · 국가 ${countryCode || 'UNKNOWN'}${langText}${regionText}`);
+            setGpsStatus(getFeatureUiText('gps.resolvedStatus', {
+                mode: modeLabel,
+                score: String(resolved.qualityScore),
+                acc: accText,
+                lat: resolved.latitude.toFixed(5),
+                lng: resolved.longitude.toFixed(5),
+                country: countryCode || 'UNKNOWN',
+                lang: langText,
+                region: regionText,
+            }));
         } catch (error: any) {
             setGpsCountryCode('');
             setGpsRegionHint('');
             const reason = error?.message === 'gps-services-disabled'
-                ? '단말 위치 서비스가 꺼져 있고 저장된 마지막 위치도 없습니다.'
+                ? getFeatureUiText('gps.reasonServicesDisabled')
                 : error?.message === 'gps-unavailable'
-                    ? 'GPS/Wi-Fi/기지국 제공자에서 현재 위치와 마지막 위치를 모두 받지 못했습니다.'
-                    : '위치 제공자 응답 시간이 초과되었거나 단말 위치 제공자가 응답하지 않았습니다.';
-            setGpsStatus(`위치 확인 실패 · ${reason}`);
+                    ? getFeatureUiText('gps.reasonUnavailable')
+                    : getFeatureUiText('gps.reasonTimeout');
+            setGpsStatus(getFeatureUiText('gps.failedStatus', { reason }));
             if (!silent) {
-                Alert.alert('위치 확인 실패', `${reason}\n\nAndroid 위치 서비스와 앱 위치 권한을 확인한 뒤 다시 눌러 주세요.`);
+                Alert.alert(
+                    getFeatureUiText('gps.failedTitle'),
+                    getFeatureUiText('gps.failedBody', { reason }),
+                );
             }
         } finally {
             setGpsLangLoading(false);
         }
-    }, [fromLang, getLangLabel, resolveHybridLocation, userInfo?.preferred_language]);
+    }, [fromLang, getLangLabel, resolveHybridLocation]);
 
     const peerLangBootstrappedRef = useRef(false);
     useEffect(() => {
@@ -7060,30 +6904,20 @@ function AppInner() {
                 // ignore corrupt storage
             }
             if (!peerLangManualRef.current) {
-                const preferred = String(userInfo?.preferred_language || '').trim().toLowerCase();
-                if (preferred && isSupportedLangCode(preferred)) {
-                    setToLang((currentTarget) => resolveAutoTargetLang(preferred as LangCode, currentTarget));
-                } else {
-                    await handleDetectLangByGPS(true);
-                }
+                setToLang((currentTarget) => resolveAutoTargetLang(fromLang, currentTarget));
+                await handleDetectLangByGPS(true);
             }
         })();
-    }, [authHydrated, fromLang, handleDetectLangByGPS, userInfo?.preferred_language]);
+    }, [authHydrated, fromLang, handleDetectLangByGPS]);
 
     useEffect(() => {
-        const preferred = String(userInfo?.preferred_language || '').trim().toLowerCase();
-        if (!isSupportedLangCode(preferred)) {
-            return;
-        }
-        setFromLang(preferred);
-        void syncUiLang(preferred);
         if (peerLangManual) {
             return;
         }
         setToLang((currentTarget) => (
-            currentTarget !== preferred ? currentTarget : resolveAutoTargetLang(preferred, currentTarget)
+            currentTarget !== fromLang ? currentTarget : resolveAutoTargetLang(fromLang, currentTarget)
         ));
-    }, [peerLangManual, userInfo?.preferred_language]);
+    }, [fromLang, peerLangManual]);
 
     const speakWithLang = useCallback((text: string, langCode: LangCode) => {
         const speakText = normalizeSpeakText(text);
@@ -7337,7 +7171,11 @@ function AppInner() {
 
     useEffect(() => {
         prepareForPstnDialRef.current = prepareForPstnDial;
-    }, [prepareForPstnDial]);
+        openDialPadWithQuiesceRef.current = async (phone, reason) => {
+            await prepareForPstnDial(reason);
+            return openDialPad(phone);
+        };
+    }, [openDialPad, prepareForPstnDial]);
 
     useEffect(() => {
         endPstnAssistSessionRef.current = endPstnAssistSession;
@@ -7389,11 +7227,11 @@ function AppInner() {
             return;
         }
         if (Platform.OS === 'web') {
-            Alert.alert('대면 통역', '자동 대화 통역은 모바일 앱에서 사용할 수 있습니다.');
+            Alert.alert(getFeatureUiText('face.webOnlyTitle'), getFeatureUiText('face.webOnlyBody'));
             return;
         }
         if (toLang === profileLang) {
-            Alert.alert('상대 언어 필요', getDisplayUiText().faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
+            Alert.alert(getFeatureUiText('face.peerLangTitle'), getDisplayUiText().faceConversationPeerRequired ?? getFeatureUiText('face.peerLangTitle'));
             return;
         }
         // 대면 통역 화면은 '통역' 단일 모드 — 소리새(gpt) 모드가 메인 캡처 루프로 새지 않게 강제.
@@ -7418,7 +7256,7 @@ function AppInner() {
      */
     const handleToggleSorisaeConversation = useCallback(async () => {
         if (Platform.OS === 'web') {
-            Alert.alert(aiDisplayName, `${aiDisplayName} 음성 대화는 모바일 앱에서 사용할 수 있습니다.`);
+            Alert.alert(aiDisplayName, getFeatureUiText('sorisae.webChatOnly', { name: aiDisplayName }));
             return;
         }
         // 소리새 모드 강제(통역 경로로 새지 않게).
@@ -7431,11 +7269,11 @@ function AppInner() {
             await stopFaceVoicePlayback(sorisaeVoicePlaybackSoundRef);
             sorisaeSpeakingRef.current = false;
             setAutoVoiceModeEnabled(false);
-            setGpsStatus(`🐦 ${aiDisplayName} 대화를 종료했습니다.`);
+            setGpsStatus(getFeatureUiText('sorisae.convEnded', { name: aiDisplayName }));
             return;
         }
         setAutoVoiceModeEnabled(true);
-        setGpsStatus(`🐦 ${aiDisplayName} 대화 시작 · 말이 끝나면 자동으로 답해요`);
+        setGpsStatus(getFeatureUiText('sorisae.convStarted', { name: aiDisplayName }));
         voiceInputTargetRef.current = 'main';
         void startVoiceInput({ autoMode: true });
     }, [autoVoiceModeEnabled, startVoiceInput, stopVoiceInput]);
@@ -7502,7 +7340,7 @@ function AppInner() {
         sorisaeWindowOpenRef.current = true;
         setFaceAiMode('gpt');
         setSorisaeWindowOpen(true);
-        setGpsStatus(`🐦 ${aiDisplayName} 깨어났어요! 말씀하세요 · 3분 무응답이면 잠들어요`);
+        setGpsStatus(getFeatureUiText('sorisae.wakeSuccess', { name: aiDisplayName }));
     }, [aiDisplayName]);
     useEffect(() => { wakeCompanionVoiceCallNowRef.current = wakeCompanionVoiceCallNow; }, [wakeCompanionVoiceCallNow]);
 
@@ -7512,7 +7350,7 @@ function AppInner() {
      */
     const handleToggleCompanionVoiceCall = useCallback(async () => {
         if (Platform.OS === 'web') {
-            Alert.alert(aiDisplayName, `${aiDisplayName} 음성 호출은 모바일 앱에서 사용할 수 있습니다.`);
+            Alert.alert(aiDisplayName, getFeatureUiText('sorisae.webWakeOnly', { name: aiDisplayName }));
             return;
         }
         if (companionVoiceCallArmedRef.current) {
@@ -7523,7 +7361,7 @@ function AppInner() {
                 await stopVoiceInput({ suppressAutoRestart: true });
                 setAutoVoiceModeEnabled(false);
             }
-            setGpsStatus(`🐦 ${aiDisplayName} 음성 호출 대기를 종료했습니다.`);
+            setGpsStatus(getFeatureUiText('sorisae.wakeEnded', { name: aiDisplayName }));
             return;
         }
         // 무장: 통역 단일 모드(스캔)로 듣기 시작.
@@ -7538,7 +7376,7 @@ function AppInner() {
         if (!recordingRef.current) {
             void startVoiceInput({ autoMode: true });
         }
-        setGpsStatus(`🔔 음성 호출 대기 중 · "${aiDisplayName}" 또는 "소리새"라고 부르면 깨어나요`);
+        setGpsStatus(getFeatureUiText('sorisae.wakeArmedStatus', { name: aiDisplayName }));
     }, [aiDisplayName, startVoiceInput, stopVoiceInput]);
 
     /**
@@ -7550,7 +7388,7 @@ function AppInner() {
         const timer = setInterval(() => {
             if (!shouldCompanionVoiceCallSleep(companionVoiceCallRef.current, Date.now())) return;
             companionVoiceCallRef.current = sleepCompanionVoiceCall(companionVoiceCallRef.current);
-            setGpsStatus(`😴 ${aiDisplayName}가 3분 무응답으로 잠들었어요 · 다시 부르면 깨어나요`);
+            setGpsStatus(getFeatureUiText('sorisae.dormant', { name: aiDisplayName }));
             void (async () => {
                 // 창/캡처를 완전히 정리한 뒤, 음성 호출 대기(통역 스캔 캡처)를 재가동한다(stop↔start 레이스 차단).
                 await closeSorisaeWindow();
@@ -7586,7 +7424,7 @@ function AppInner() {
         if (!trimmedText) return;
         const dedupeKey = `${turn}:${normalizeRelayText(trimmedText)}`;
         if (options.isAutoRelay && interLastAutoRelayRef.current && interLastAutoRelayRef.current.key === dedupeKey && Date.now() - interLastAutoRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-            setInterCallStatus(getDisplayUiText().interAutoRelayDuplicateSkipped);
+            setInterCallStatus(getDisplayUiText().interAutoRelayDuplicateSkipped ?? '↺ 중복 자동 통역을 건너뛰었습니다.');
             setInterManualText('');
             return;
         }
@@ -7632,7 +7470,7 @@ function AppInner() {
             return;
         }
 
-        setInterCallStatus(formatStatusText(getDisplayUiText().interAutoRelayPending, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
+        setInterCallStatus(formatStatusText(getDisplayUiText().interAutoRelayPending ?? '자동 전송 대기 · {delay}', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
         clearInterManualAutoRelayTimer();
         interManualAutoRelayTimerRef.current = setTimeout(() => {
             void relayInterCallManual(interCallTurn, pendingText, { isAutoRelay: true });
@@ -7954,11 +7792,11 @@ function AppInner() {
                 } as Friend);
                 return;
             }
-            Alert.alert('통역통화', '최근 기록의 상대를 찾지 못했습니다.');
+            Alert.alert(getFeatureUiText('voip.recentsPeerMissing'), getFeatureUiText('voip.recentsNotFoundBody'));
             return;
         }
         if (!entry.phone) {
-            Alert.alert('일반전화', '저장된 번호가 없어 다시 걸 수 없습니다.');
+            Alert.alert(getFeatureUiText('voip.redialNoNumber'), getFeatureUiText('voip.redialNoNumberBody'));
             return;
         }
         await handleRegularCallContact({
@@ -7992,20 +7830,20 @@ function AppInner() {
             call_mode: selectedCallMode,
         });
         if (Platform.OS === 'web') {
-            Alert.alert('다이얼패드', '웹에서는 시스템 전화앱 연동을 사용할 수 없습니다.');
+            Alert.alert(getFeatureUiText('pstn.dialPadWebTitle'), getFeatureUiText('pstn.dialPadWebBody'));
             return;
         }
-        const dialOpened = await openDialPad(normalized);
+        const dialOpened = await openDialPadWithQuiesceRef.current(normalized, 'phone_dialer_initiated');
         if (dialOpened) {
             setInterCallStatus(getFeatureUiText('pstn.dialPadOpened'));
         } else {
-            setInterCallContactError('다이얼패드에서 선택한 번호로 전화앱을 열지 못했습니다.');
+            setInterCallContactError(getFeatureUiText('pstn.dialPadOpenFailed'));
         }
-    }, [logUiPressProbe, openDialPad, selectedCallMode, setInterCallPhone, setInterCallContactError, setInterCallStatus, setVoipPhone]);
+    }, [logUiPressProbe, selectedCallMode, setInterCallPhone, setInterCallContactError, setInterCallStatus, setVoipPhone]);
 
     const handleOpenInterCallContactPicker = useCallback(async () => {
         if (Platform.OS === 'web') {
-            Alert.alert('전화번호 저장소 열기', '웹에서는 단말 전화번호 저장소를 직접 열 수 없습니다. 모바일 앱에서 사용하세요.');
+            Alert.alert(getFeatureUiText('pstn.contactsWebTitle'), getFeatureUiText('pstn.contactsWebBody'));
             return;
         }
 
@@ -8151,32 +7989,33 @@ function AppInner() {
     }, [activeRailSection, scrollToRailSection]);
 
     const handleSelectLanguage = useCallback(async (code: LangCode) => {
-        if (langPickerFor === 'from') {
-            if (!userInfo) {
-                setFromLang(code);
-            }
+        const peerPickerAllowed = faceScreenOpen || activeRailSection === 'travel-booking' || interCallActive;
+        if (!peerPickerAllowed || langPickerFor !== 'to') {
+            setLangPickerFor(null);
+            return;
         }
-        if (langPickerFor === 'to') {
-            if (code === fromLang) {
-                Alert.alert('상대 언어', '상대 언어는 내 언어(프로필)와 달라야 합니다.');
-                setLangPickerFor(null);
-                return;
-            }
-            try {
-                await AsyncStorage.setItem(MANUAL_PEER_LANG_STORAGE_KEY, JSON.stringify({ manual: true, lang: code }));
-            } catch {
-                // storage failure should not block in-memory selection
-            }
-            peerLangManualRef.current = true;
-            setPeerLangManual(true);
-            setToLang(code);
+        if (code === fromLang) {
+            Alert.alert('상대 언어', '상대 언어는 내 언어(설정 탭)와 달라야 합니다.');
+            setLangPickerFor(null);
+            return;
         }
+        try {
+            await AsyncStorage.setItem(MANUAL_PEER_LANG_STORAGE_KEY, JSON.stringify({ manual: true, lang: code }));
+        } catch {
+            // storage failure should not block in-memory selection
+        }
+        peerLangManualRef.current = true;
+        setPeerLangManual(true);
+        setToLang(code);
         setLangPickerFor(null);
-    }, [faceScreenOpen, fromLang, langPickerFor, toLang, userInfo]);
+    }, [activeRailSection, faceScreenOpen, fromLang, interCallActive, langPickerFor]);
 
-    const openPeerLangPicker = useCallback((source: string) => {
+    const openPeerLangPicker = useCallback(() => {
+        if (!faceScreenOpen && activeRailSection !== 'travel-booking' && !interCallActive) {
+            return;
+        }
         setLangPickerFor('to');
-    }, []);
+    }, [activeRailSection, faceScreenOpen, interCallActive]);
 
     const handlePressSectionRail = useCallback((key: SectionRailKey) => {
         const previousSection = activeRailSectionRef.current;
@@ -8211,15 +8050,13 @@ function AppInner() {
     });
 
     useEffect(() => {
-        const preferred = String(userInfo?.preferred_language || fromLang).trim().toLowerCase();
-        const profileLang: LangCode = isSupportedLangCode(preferred) ? preferred as LangCode : fromLang;
-        if (!autoVoiceModeEnabled || toLang !== profileLang) {
+        if (!autoVoiceModeEnabled || toLang !== fromLang) {
             return;
         }
         void stopVoiceInput({ suppressAutoRestart: true });
         setAutoVoiceModeEnabled(false);
         setGpsStatus(getDisplayUiText().faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
-    }, [autoVoiceModeEnabled, faceScreenOpen, getDisplayUiText, stopVoiceInput, toLang, userInfo?.preferred_language]);
+    }, [autoVoiceModeEnabled, faceScreenOpen, fromLang, getDisplayUiText, stopVoiceInput, toLang]);
 
     useEffect(() => {
         if ((!isTranslateWorkspaceVisible && !faceScreenOpen) && autoVoiceModeEnabled) {
@@ -8266,11 +8103,11 @@ function AppInner() {
                                 accessibilityLabel="worldlinco-translate-home-button"
                                 testID="worldlinco-translate-home-button"
                             >
-                                <Text style={styles.voipLaunchBtnText}>번역 홈</Text>
+                                <Text wlLocalized style={styles.voipLaunchBtnText}>{getFeatureUiText('home.translateHome')}</Text>
                             </Pressable>
                         ) : (
                             <Pressable style={styles.voipLaunchBtn} onPress={handlePressLoginButton}>
-                                <Text style={styles.voipLaunchBtnText}>로그인 / 회원가입</Text>
+                                <Text wlLocalized style={styles.voipLaunchBtnText}>{getFeatureUiText('home.loginSignup')}</Text>
                             </Pressable>
                         )}
                     </View>
@@ -8294,7 +8131,7 @@ function AppInner() {
                                     <Text style={styles.myInfoBtnText}>👤 {userInfo.username || userInfo.email.split('@')[0]}</Text>
                                 </Pressable>
                                 <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-                                    <Text style={styles.logoutBtnText}>로그아웃</Text>
+                                    <Text wlLocalized style={styles.logoutBtnText}>{getFeatureUiText('home.logout')}</Text>
                                 </Pressable>
                             </>
                         ) : (
@@ -8370,49 +8207,15 @@ function AppInner() {
                             <Text style={styles.myInfoText}>ID: {userInfo.id}</Text>
                             <Text style={styles.myInfoText}>보이스 ID: {voipIdentity || buildVoiceId(userInfo.id)}</Text>
                             <Text style={styles.myInfoText}>기본 언어: {getLangLabelText(profilePreferredLanguage)}</Text>
-                            <Text style={styles.myInfoText}>기본 국가: {resolveCountryFlag(profileCountryCode)} {resolveCountryName(profileCountryCode)}</Text>
-                            <Text style={styles.signupProfileLabel}>로그인 후 프로필 기본 언어</Text>
+                            <Text wlLocalized style={styles.myInfoText}>기본 국가: {formatCountryDisplay(profileCountryCode, resolveProfileDisplayLang(profileCountryCode))}</Text>
+                            <Text style={styles.signupProfileHint}>언어·국가 변경은 설정 탭에서만 가능합니다.</Text>
                             <Pressable
-                                style={styles.signupPickerTrigger}
-                                onPress={() => setProfileSelectionModal('language')}
-                                accessibilityLabel="worldlinco-myinfo-language-picker-trigger"
-                                testID="worldlinco-myinfo-language-picker-trigger"
+                                style={styles.inlineGhostBtn}
+                                onPress={() => { setShowMyInfo(false); setSettingsTabOpen(true); }}
+                                testID="worldlinco-myinfo-open-settings"
                             >
-                                <View>
-                                    <Text style={styles.signupPickerValue}>{getLangLabelText(profilePreferredLanguage)}</Text>
-                                    <Text style={styles.signupPickerMeta}>채팅/VoIP 기본 언어로 사용</Text>
-                                </View>
-                                <Text style={styles.signupPickerHint}>열기</Text>
+                                <Text style={styles.inlineGhostBtnText}>⚙️ 설정에서 국가·언어 변경</Text>
                             </Pressable>
-                            <Text style={styles.signupProfileLabel}>로그인 후 프로필 국가</Text>
-                            <Pressable
-                                style={styles.signupPickerTrigger}
-                                onPress={() => setProfileSelectionModal('country')}
-                                accessibilityLabel="worldlinco-myinfo-country-picker-trigger"
-                                testID="worldlinco-myinfo-country-picker-trigger"
-                            >
-                                <View>
-                                    <Text style={styles.signupPickerValue}>{resolveCountryFlag(profileCountryCode)} {resolveCountryName(profileCountryCode)}</Text>
-                                    <Text style={styles.signupPickerMeta}>국가 프로필과 지역 힌트에 사용</Text>
-                                </View>
-                                <Text style={styles.signupPickerHint}>열기</Text>
-                            </Pressable>
-                            <Text style={styles.signupProfileHint}>
-                                로그인 후에도 프로필 언어/국가를 바꿀 수 있어야 채팅 자동 번역과 VoIP 통역 기본값이 실제 사용자 상태를 따라갑니다.
-                            </Text>
-                            <Pressable
-                                style={[styles.inlineActionBtn, profileSaving && { opacity: 0.7 }]}
-                                onPress={() => { void handleSaveMyProfile(); }}
-                                disabled={profileSaving}
-                                accessibilityRole="button"
-                                accessibilityLabel="worldlinco-myinfo-save-button"
-                                testID="worldlinco-myinfo-save-button"
-                            >
-                                <Text style={styles.inlineActionBtnText}>{profileSaving ? '저장 중...' : '프로필 기본값 저장'}</Text>
-                            </Pressable>
-                            {profileMessage ? (
-                                <Text style={styles.myInfoText}>{profileMessage}</Text>
-                            ) : null}
                             <View style={styles.myInfoActionRow}>
                                 <Pressable style={styles.inlineGhostBtn} onPress={openPasswordChange} testID="worldlinco-password-change-open">
                                     <Text style={styles.inlineGhostBtnText}>🔒 비밀번호 변경</Text>
@@ -8426,67 +8229,6 @@ function AppInner() {
                             <Pressable style={styles.inlineActionBtn} onPress={handleShowPurchases}>
                                 <Text style={styles.inlineActionBtnText}>{myPurchasesLoading ? '⏳ 불러오는 중...' : myPurchases !== null ? '📋 내역 닫기' : '📋 구매/예약 내역'}</Text>
                             </Pressable>
-                            <Modal
-                                visible={profileSelectionModal !== null}
-                                transparent
-                                animationType="fade"
-                                onRequestClose={() => setProfileSelectionModal(null)}
-                            >
-                                <Pressable style={styles.langModalOverlay} onPress={() => setProfileSelectionModal(null)}>
-                                    <Pressable style={styles.langModalCard} onPress={() => { }} testID="worldlinco-myinfo-selection-modal">
-                                        <Text style={styles.langModalTitle}>
-                                            {profileSelectionModal === 'language' ? '프로필 기본 언어 선택' : '프로필 국가 선택'}
-                                        </Text>
-                                        <Text style={styles.signupModalSub}>
-                                            {profileSelectionModal === 'language'
-                                                ? `지원 언어 ${SUPPORTED_LANGUAGE_COUNT}개 전체를 열어서 선택합니다.`
-                                                : `서비스 국가 ${SIGNUP_COUNTRY_OPTION_CODES.length}개 전체를 열어서 선택합니다.`}
-                                        </Text>
-                                        <ScrollView style={styles.langModalList}>
-                                            {profileSelectionModal === 'language'
-                                                ? LANGS.map((lang) => (
-                                                    (() => {
-                                                        const active = lang.code === profilePreferredLanguage;
-                                                        return (
-                                                            <Pressable
-                                                                key={`myinfo-lang-${lang.code}`}
-                                                                style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                                                onPress={() => handleSelectProfileLanguage(lang.code)}
-                                                                testID={`worldlinco-myinfo-language-${lang.code}`}
-                                                            >
-                                                                <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>{lang.label}</Text>
-                                                                {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                                            </Pressable>
-                                                        );
-                                                    })()
-                                                ))
-                                                : SIGNUP_COUNTRY_OPTION_CODES.map((countryCode) => (
-                                                    (() => {
-                                                        const active = countryCode === profileCountryCode;
-                                                        return (
-                                                            <Pressable
-                                                                key={`myinfo-country-${countryCode}`}
-                                                                style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                                                onPress={() => handleSelectProfileCountry(countryCode)}
-                                                                testID={`worldlinco-myinfo-country-${countryCode}`}
-                                                            >
-                                                                <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>{resolveCountryFlag(countryCode)} {resolveCountryName(countryCode)}</Text>
-                                                                {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                                            </Pressable>
-                                                        );
-                                                    })()
-                                                ))}
-                                        </ScrollView>
-                                        <Pressable
-                                            style={styles.langModalCloseBtn}
-                                            onPress={() => setProfileSelectionModal(null)}
-                                            testID="worldlinco-myinfo-selection-close"
-                                        >
-                                            <Text style={styles.langModalCloseText}>닫기</Text>
-                                        </Pressable>
-                                    </Pressable>
-                                </Pressable>
-                            </Modal>
                             {myPurchases !== null && (
                                 <View style={styles.purchaseListWrap}>
                                     {myPurchases.length === 0 ? (
@@ -8618,8 +8360,8 @@ function AppInner() {
                     <>
                         {/* ── 홈 런처 (mockup #1) ── */}
                         <View style={styles.homeGreetingWrap}>
-                            <Text style={styles.homeGreeting}>{getFeatureUiText('home.greeting')}</Text>
-                            <Text style={styles.homeGreetingSub}>{getFeatureUiText('home.greetingSub')}</Text>
+                            <Text wlLocalized style={styles.homeGreeting}>{getFeatureUiText('home.greeting')}</Text>
+                            <Text wlLocalized style={styles.homeGreetingSub}>{getFeatureUiText('home.greetingSub')}</Text>
                             <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
                         </View>
 
@@ -8630,8 +8372,8 @@ function AppInner() {
                             accessibilityLabel="worldlinco-home-face-hero"
                             testID="worldlinco-home-face-hero"
                         >
-                            <Text style={styles.faceHeroTitle}>{getFeatureUiText('home.faceTitle')}</Text>
-                            <Text style={styles.faceHeroSub}>{getFeatureUiText('home.faceSub')}</Text>
+                            <Text wlLocalized style={styles.faceHeroTitle}>{getFeatureUiText('home.faceTitle')}</Text>
+                            <Text wlLocalized style={styles.faceHeroSub}>{getFeatureUiText('home.faceSub')}</Text>
                             <View style={styles.faceHeroFlagRow}>
                                 <View style={styles.faceHeroLangCol}>
                                     <Text style={styles.faceHeroFlag}>{homeFromFlag}</Text>
@@ -8646,7 +8388,7 @@ function AppInner() {
                             <View style={[styles.faceHeroMic, autoVoiceModeEnabled && styles.faceHeroMicActive]}>
                                 <Text style={styles.faceHeroMicIcon}>🎙️</Text>
                             </View>
-                            <Text style={styles.faceHeroCta}>
+                            <Text wlLocalized style={styles.faceHeroCta}>
                                 {autoVoiceModeEnabled ? getFeatureUiText('home.faceCtaOn') : getFeatureUiText('home.faceCtaOff')}
                             </Text>
                         </Pressable>
@@ -8661,8 +8403,8 @@ function AppInner() {
                             >
                                 <Text style={styles.homeQuickIcon}>📞</Text>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.homeQuickTitle}>통화하기</Text>
-                                    <Text style={styles.homeQuickSub}>AI 통역 통화</Text>
+                                    <Text wlLocalized style={styles.homeQuickTitle}>{getFeatureUiText('home.quickVoip')}</Text>
+                                    <Text wlLocalized style={styles.homeQuickSub}>{getFeatureUiText('home.quickVoipSub')}</Text>
                                 </View>
                             </Pressable>
                             <Pressable
@@ -8674,8 +8416,8 @@ function AppInner() {
                             >
                                 <Text style={styles.homeQuickIcon}>💬</Text>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.homeQuickTitle}>채팅하기</Text>
-                                    <Text style={styles.homeQuickSub}>실시간 번역 채팅</Text>
+                                    <Text wlLocalized style={styles.homeQuickTitle}>{getFeatureUiText('home.quickChat')}</Text>
+                                    <Text wlLocalized style={styles.homeQuickSub}>{getFeatureUiText('home.quickChatSub')}</Text>
                                 </View>
                             </Pressable>
                         </View>
@@ -8689,8 +8431,8 @@ function AppInner() {
                         >
                             <Text style={styles.homeFavIcon}>⭐</Text>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.homeFavTitle}>정밀 번역 도구</Text>
-                                <Text style={styles.homeFavSub}>직접 입력·이미지(OCR) 번역을 펼쳐보세요</Text>
+                                <Text wlLocalized style={styles.homeFavTitle}>{getFeatureUiText('home.toolsTitle')}</Text>
+                                <Text wlLocalized style={styles.homeFavSub}>{getFeatureUiText('home.toolsSub')}</Text>
                             </View>
                             <Text style={styles.homeFavChevron}>{homeToolsExpanded ? '∧' : '〉'}</Text>
                         </Pressable>
@@ -8750,14 +8492,6 @@ function AppInner() {
                                 ) : null}
                             </View>
 
-                            {!userInfo ? (
-                                <View style={styles.actionRow}>
-                                    <Pressable style={styles.swapBtn} onPress={handleSwap}>
-                                        <Text style={styles.swapText}>{getDisplayUiText().swap}</Text>
-                                    </Pressable>
-                                </View>
-                            ) : null}
-
                             {Platform.OS !== 'web' && !autoVoiceModeEnabled ? (
                                 <View style={styles.autoVoiceModeWrap}>
                                     <Text style={styles.autoVoiceModeStatus}>{getDisplayUiText().manualVoiceOnlyNotice}</Text>
@@ -8766,17 +8500,6 @@ function AppInner() {
                         </View>
 
                         <View>
-                            {/* ── 상대 언어 ── */}
-                            <Text style={styles.label}>{getDisplayUiText().peerLanguageLabel ?? '상대 언어 (GPS/수동)'}</Text>
-                            <Pressable style={styles.langAutoChip} onPress={() => openPeerLangPicker('home_tools_chip')}>
-                                <Text style={styles.langAutoChipValue}>{currentToLabel}</Text>
-                                <Text style={styles.langAutoChipHint}>
-                                    {peerLangManual
-                                        ? '수동 선택 유지 · GPS 자동 변경 안 함'
-                                        : (getDisplayUiText().peerLanguageHint ?? 'GPS 우선 · 필요 시 수동')}
-                                </Text>
-                            </Pressable>
-
                             {/* ── 결과 영역 ── */}
                             <View style={[styles.inputBox, styles.resultBox]}>
                                 <Text style={resultText ? styles.resultText : styles.resultPlaceholder}>
@@ -8809,7 +8532,7 @@ function AppInner() {
                                             <View style={styles.mediaBadgeRow}>
                                                 <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>OCR</Text></View>
                                             </View>
-                                            <Text style={styles.songModeMetaText}>{getDisplayUiText().ocrSelectedFile.replace('{file}', ocrImageName)}</Text>
+                                            <Text style={styles.songModeMetaText}>{(getDisplayUiText().ocrSelectedFile ?? '선택 파일: {file}').replace('{file}', ocrImageName ?? '')}</Text>
                                         </View>
                                     </View>
                                 ) : null}
@@ -8857,41 +8580,41 @@ function AppInner() {
                     >
                         {token && userInfo ? (
                                 <>
-                                    <Text style={[styles.sectionTitle, { color: '#1E6FE0' }]}>💬 채팅 + 친구 허브</Text>
+                                    <Text wlLocalized style={[styles.sectionTitle, { color: '#1E6FE0' }]}>{getFeatureUiText('chat.hubTitle')}</Text>
                                     <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
                                         <View style={styles.actionTileGrid2}>
                                             <Pressable
                                                 style={styles.gridTile}
                                                 onPress={() => setVoipFriendsDirectoryVisible(true)}
                                                 accessibilityRole="button"
-                                                accessibilityLabel="VoIP 친구 찾기"
+                                                accessibilityLabel={getFeatureUiText('chat.hubVoipFriends')}
                                                 testID="worldlinco-chat-action-voip-friends"
                                             >
                                                 <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>📡</Text></View>
-                                                <Text style={styles.gridTileLabel}>VoIP 친구 찾기</Text>
-                                                <Text style={styles.gridTileSub}>앱 가입 친구</Text>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubVoipFriends')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubVoipFriendsSub')}</Text>
                                             </Pressable>
                                             <Pressable
                                                 style={styles.gridTile}
                                                 onPress={() => setContactsDirectoryVisible(true)}
                                                 accessibilityRole="button"
-                                                accessibilityLabel="전화번호로 찾기"
+                                                accessibilityLabel={getFeatureUiText('chat.hubPhoneFind')}
                                                 testID="worldlinco-chat-action-phone"
                                             >
                                                 <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>📇</Text></View>
-                                                <Text style={styles.gridTileLabel}>전화번호로 찾기</Text>
-                                                <Text style={styles.gridTileSub}>번호로 친구 추가</Text>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubPhoneFind')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubPhoneFindSub')}</Text>
                                             </Pressable>
                                             <Pressable
                                                 style={styles.gridTile}
                                                 onPress={() => handleOpenFriendMapFromFolder()}
                                                 accessibilityRole="button"
-                                                accessibilityLabel="지도로 찾기"
+                                                accessibilityLabel={getFeatureUiText('chat.hubMapFind')}
                                                 testID="worldlinco-chat-action-map"
                                             >
                                                 <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>🗺️</Text></View>
-                                                <Text style={styles.gridTileLabel}>지도로 찾기</Text>
-                                                <Text style={styles.gridTileSub}>주변 친구 탐색</Text>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubMapFind')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubMapFindSub')}</Text>
                                             </Pressable>
                                             <Pressable
                                                 style={styles.gridTile}
@@ -8900,18 +8623,18 @@ function AppInner() {
                                                     setGroupComposerSignal((n) => n + 1);
                                                 }}
                                                 accessibilityRole="button"
-                                                accessibilityLabel="단체채팅 만들기"
+                                                accessibilityLabel={getFeatureUiText('chat.hubGroup')}
                                                 testID="worldlinco-chat-action-group"
                                             >
                                                 <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>👥</Text></View>
-                                                <Text style={styles.gridTileLabel}>단체채팅</Text>
-                                                <Text style={styles.gridTileSub}>그룹 만들기</Text>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubGroup')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubGroupSub')}</Text>
                                             </Pressable>
                                         </View>
                                         {showFriendMapDiscovery && userInfo ? (
                                             <View style={styles.sectionCard}>
-                                                <Text style={styles.sectionTitle}>🗺️ 주변 친구 찾기</Text>
-                                                <Text style={styles.sectionSub}>근처 사용자 탐색과 친구 수락 흐름을 채팅 레일 안에서 이어갑니다.</Text>
+                                                <Text wlLocalized style={styles.sectionTitle}>{getFeatureUiText('chat.hubNearbyTitle')}</Text>
+                                                <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('chat.hubNearbySub')}</Text>
                                                 <FriendMapDiscoveryScreen
                                                     token={token}
                                                     nickname={userInfo.username || userInfo.email.split('@')[0]}
@@ -9366,7 +9089,7 @@ function AppInner() {
                             >
                                 <View style={styles.hubHeroRow}>
                                     <View style={[styles.hubHeroIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.hubHeroEmoji}>🧭</Text></View>
-                                    <Text style={styles.hubHeroTitle}>여행을 한 곳에서 예약하세요</Text>
+                                    <Text wlLocalized style={styles.hubHeroTitle}>{getFeatureUiText('travel.hubHero')}</Text>
                                 </View>
                                 <View style={styles.bookingTileGrid}>
                                     <Pressable
@@ -9377,8 +9100,8 @@ function AppInner() {
                                         testID="worldlinco-booking-action-flight"
                                     >
                                         <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>✈️</Text></View>
-                                        <Text style={styles.bookingTileLabel}>항공권</Text>
-                                        <Text style={styles.bookingTileSub}>비행기 예약</Text>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.flight')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.flightSub')}</Text>
                                     </Pressable>
                                     <Pressable
                                         style={styles.bookingTile}
@@ -9388,8 +9111,8 @@ function AppInner() {
                                         testID="worldlinco-booking-action-hotel"
                                     >
                                         <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>🏨</Text></View>
-                                        <Text style={styles.bookingTileLabel}>호텔</Text>
-                                        <Text style={styles.bookingTileSub}>숙소 예약</Text>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.hotel')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.hotelSub')}</Text>
                                     </Pressable>
                                     <Pressable
                                         style={styles.bookingTile}
@@ -9399,8 +9122,8 @@ function AppInner() {
                                         testID="worldlinco-booking-action-nearby"
                                     >
                                         <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>📍</Text></View>
-                                        <Text style={styles.bookingTileLabel}>주변 검색</Text>
-                                        <Text style={styles.bookingTileSub}>맛집·관광</Text>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.nearby')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.nearbySub')}</Text>
                                     </Pressable>
                                     <Pressable
                                         style={styles.bookingTile}
@@ -9410,8 +9133,8 @@ function AppInner() {
                                         testID="worldlinco-booking-action-itinerary"
                                     >
                                         <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>📅</Text></View>
-                                        <Text style={styles.bookingTileLabel}>일정</Text>
-                                        <Text style={styles.bookingTileSub}>여행 타임라인</Text>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.itinerary')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.itinerarySub')}</Text>
                                     </Pressable>
                                 </View>
                                 <Pressable
@@ -9423,17 +9146,17 @@ function AppInner() {
                                 >
                                     <View style={styles.bookingNearbyThumb}><Text style={styles.bookingNearbyThumbEmoji}>🗺️</Text></View>
                                     <View style={styles.bookingNearbyBody}>
-                                        <Text style={styles.bookingNearbyTitle}>주변 추천</Text>
-                                        <Text style={styles.bookingNearbySub}>현재 위치 주변의 맛집과 관광지를 추천해 드려요.</Text>
+                                        <Text wlLocalized style={styles.bookingNearbyTitle}>{getFeatureUiText('travel.nearbyRecommend')}</Text>
+                                        <Text wlLocalized style={styles.bookingNearbySub}>{getFeatureUiText('travel.nearbyRecommendSub')}</Text>
                                     </View>
                                     <Text style={styles.voipTileChevron}>›</Text>
                                 </Pressable>
-                                <Text style={[styles.sectionTitle, { color: '#19C37D', marginTop: 18 }]}>📍 주변 검색</Text>
-                                <Text style={styles.sectionSub}>좌표/카테고리/반경을 선택해 주변 장소를 조회합니다.</Text>
+                                <Text wlLocalized style={[styles.sectionTitle, { color: '#19C37D', marginTop: 18 }]}>{getFeatureUiText('travel.searchSectionTitle')}</Text>
+                                <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('travel.searchSectionSub')}</Text>
 
                                 <View style={styles.coordRow}>
                                     <View style={styles.coordField}>
-                                        <Text style={styles.coordLabel}>위도</Text>
+                                        <Text wlLocalized style={styles.coordLabel}>{getFeatureUiText('travel.latLabel')}</Text>
                                         <TextInput
                                             style={styles.compactInput}
                                             value={lat}
@@ -9443,7 +9166,7 @@ function AppInner() {
                                         />
                                     </View>
                                     <View style={styles.coordField}>
-                                        <Text style={styles.coordLabel}>경도</Text>
+                                        <Text wlLocalized style={styles.coordLabel}>{getFeatureUiText('travel.lonLabel')}</Text>
                                         <TextInput
                                             style={styles.compactInput}
                                             value={lon}
@@ -9454,7 +9177,7 @@ function AppInner() {
                                     </View>
                                 </View>
 
-                                <Text style={styles.label}>카테고리</Text>
+                                <Text wlLocalized style={styles.label}>{getFeatureUiText('travel.categoryLabel')}</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railRow}>
                                     {CATEGORY_OPTIONS.map((item) => (
                                         <Pressable
@@ -9464,12 +9187,12 @@ function AppInner() {
                                             accessibilityLabel={`worldlinco-travel-category-${item.value}`}
                                             testID={`worldlinco-travel-category-${item.value}`}
                                         >
-                                            <Text style={[styles.railBtnText, nearbyCategory === item.value && styles.railBtnTextActive]}>{item.label}</Text>
+                                            <Text wlLocalized style={[styles.railBtnText, nearbyCategory === item.value && styles.railBtnTextActive]}>{getTravelCategoryLabel(item.value)}</Text>
                                         </Pressable>
                                     ))}
                                 </ScrollView>
 
-                                <Text style={styles.label}>검색 반경</Text>
+                                <Text wlLocalized style={styles.label}>{getFeatureUiText('travel.radiusLabel')}</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railRow}>
                                     {RADIUS_OPTIONS.map((item) => (
                                         <Pressable
@@ -9491,7 +9214,7 @@ function AppInner() {
                                     accessibilityLabel="worldlinco-travel-search-button"
                                     testID="worldlinco-travel-search-button"
                                 >
-                                    {nearbyLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.translateBtnText}>주변 장소 찾기</Text>}
+                                    {nearbyLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text wlLocalized style={styles.translateBtnText}>{getFeatureUiText('travel.searchBtn')}</Text>}
                                 </Pressable>
 
                                 <TravelItineraryPanel
@@ -9509,12 +9232,15 @@ function AppInner() {
 
                                 {selectedBookingPlace ? (
                                     <View style={styles.bookingSelectionBanner}>
-                                        <Text style={styles.bookingSelectionBannerTitle}>선택된 예약 장소</Text>
+                                        <Text wlLocalized style={styles.bookingSelectionBannerTitle}>{getFeatureUiText('travel.selectedPlace')}</Text>
                                         <Text style={styles.bookingSelectionBannerPlace}>{selectedBookingPlace.name}</Text>
-                                        <Text style={styles.bookingSelectionBannerMeta}>
-                                            {selectedBookingPlace.category_label} · {formatDistance(selectedBookingPlace.distance_m)} · 아래 예약 카드에 즉시 반영됩니다.
+                                        <Text wlLocalized style={styles.bookingSelectionBannerMeta}>
+                                            {getFeatureUiText('travel.selectedPlaceMeta', {
+                                                category: selectedBookingPlace.category_label,
+                                                distance: formatDistance(selectedBookingPlace.distance_m),
+                                            })}
                                         </Text>
-                                        <Text style={styles.bookingSelectionBannerStatic}>예약 선택 완료 · 예약 폼에 반영됨</Text>
+                                        <Text wlLocalized style={styles.bookingSelectionBannerStatic}>{getFeatureUiText('travel.selectedPlaceDone')}</Text>
                                         {bookingSelectionNotice ? (
                                             <Text style={styles.bookingSelectionBannerNotice}>{bookingSelectionNotice}</Text>
                                         ) : null}
@@ -9524,8 +9250,8 @@ function AppInner() {
                                 {nearbyPlaces.length > 0 && (
                                     <View style={styles.nearbyMapWrap} pointerEvents="none">
                                         <View style={styles.nearbyMapHeaderRow}>
-                                            <Text style={styles.nearbyMapTitle}>지도 미리보기</Text>
-                                            <Text style={styles.nearbyMapSubtitle}>{selectedNearbyPlace?.name || '검색 결과'}</Text>
+                                            <Text wlLocalized style={styles.nearbyMapTitle}>{getFeatureUiText('travel.mapPreview')}</Text>
+                                            <Text wlLocalized style={styles.nearbyMapSubtitle}>{selectedNearbyPlace?.name || getFeatureUiText('travel.searchResults')}</Text>
                                         </View>
                                         {nearbyMapHtml ? (
                                             <WebView
@@ -9558,13 +9284,13 @@ function AppInner() {
                                                         style={[styles.inlineActionBtn, selectedNearbyPlace?.id === place.id && styles.inlineActionBtnActive]}
                                                         onPress={() => setSelectedNearbyPlaceId(place.id)}
                                                     >
-                                                        <Text style={[styles.inlineActionBtnText, selectedNearbyPlace?.id === place.id && styles.inlineActionBtnTextActive]}>지도에서 보기</Text>
+                                                        <Text wlLocalized style={[styles.inlineActionBtnText, selectedNearbyPlace?.id === place.id && styles.inlineActionBtnTextActive]}>{getFeatureUiText('travel.viewOnMap')}</Text>
                                                     </Pressable>
                                                     <Pressable style={styles.inlineActionBtn} onPress={() => {
                                                         setSelectedNearbyPlaceId(place.id);
                                                         Linking.openURL(place.google_maps_url);
                                                     }}>
-                                                        <Text style={styles.inlineActionBtnText}>Google 지도</Text>
+                                                        <Text wlLocalized style={styles.inlineActionBtnText}>{getFeatureUiText('travel.googleMaps')}</Text>
                                                     </Pressable>
                                                     {place.booking_supported && (place.category === 'hotel' || place.category === 'airport') && (
                                                         <Pressable
@@ -9573,7 +9299,7 @@ function AppInner() {
                                                             accessibilityLabel={`worldlinco-travel-booking-select-${place.id}`}
                                                             testID={`worldlinco-travel-booking-select-${place.id}`}
                                                         >
-                                                            <Text style={[styles.inlineActionBtnText, selectedBookingPlaceId === place.id && styles.inlineActionBtnTextActive]}>예약 선택</Text>
+                                                            <Text wlLocalized style={[styles.inlineActionBtnText, selectedBookingPlaceId === place.id && styles.inlineActionBtnTextActive]}>{getFeatureUiText('travel.bookingSelect')}</Text>
                                                         </Pressable>
                                                     )}
                                                 </View>
@@ -9587,12 +9313,39 @@ function AppInner() {
                             <View
                                 style={[styles.sectionCard, activeRailSection === 'travel-booking' && styles.sectionCardActive]}
                             >
-                                <Text style={styles.sectionTitle}>🧳 여행 예약</Text>
-                                <Text style={styles.sectionSub}>예약 가능한 호텔/공항을 선택해 예약 요청을 진행합니다.</Text>
+                                <Text wlLocalized style={styles.sectionTitle}>{getFeatureUiText('travel.bookingSection')}</Text>
+                                <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('travel.bookingSectionSub')}</Text>
                                 <View style={styles.sectionCard}>
                                     <Text style={styles.sectionTitle}>☎ 예약 섹션 일반 통화 모드</Text>
                                     <Text style={styles.sectionSub}>{getFeatureUiText('user.bidirectionalMode')}</Text>
                                     <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
+                                    <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('pstn.peerLanguageLabel')}</Text>
+                                    <Pressable
+                                        style={styles.langAutoChip}
+                                        onPress={() => openPeerLangPicker()}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="worldlinco-pstn-peer-lang"
+                                        testID="worldlinco-pstn-peer-lang"
+                                    >
+                                        <Text style={styles.langAutoChipValue}>{homeToFlag} {currentToLabel} ▾</Text>
+                                        <Text style={styles.langAutoChipHint}>
+                                            {peerLangManual
+                                                ? getFeatureUiText('pstn.peerLanguageHint')
+                                                : (getDisplayUiText().peerLanguageHint ?? getFeatureUiText('pstn.peerLanguageHint'))}
+                                        </Text>
+                                    </Pressable>
+                                    {Platform.OS !== 'web' ? (
+                                        <Pressable
+                                            style={styles.inlineGhostBtn}
+                                            onPress={() => { void handleDetectLangByGPS(false); }}
+                                            accessibilityLabel="worldlinco-pstn-gps-detect"
+                                            testID="worldlinco-pstn-gps-detect"
+                                        >
+                                            <Text wlLocalized style={styles.inlineGhostBtnText}>
+                                                {gpsLangLoading ? getFeatureUiText('gps.checkingPermission') : `📍 ${getFeatureUiText('gps.resolving')}`}
+                                            </Text>
+                                        </Pressable>
+                                    ) : null}
                                     <Pressable style={[styles.interToggleBtn, interCallActive && styles.interToggleBtnActive]} onPress={handleInterCallToggle}>
                                         <Text style={[styles.interToggleText, interCallActive && styles.interToggleTextActive]}>
                                             {interCallActive ? getFeatureUiText('pstn.interToggleEnd') : getFeatureUiText('pstn.interToggleStart')}
@@ -9601,7 +9354,7 @@ function AppInner() {
 
                                     <TextInput
                                         style={styles.compactInput}
-                                        placeholder="통역 통화 전화번호 (예: 01012345678)"
+                                        placeholder={getFeatureUiText('travel.interCallPlaceholder')}
                                         placeholderTextColor={C.sub}
                                         keyboardType="phone-pad"
                                         value={interCallPhone}
@@ -9614,7 +9367,7 @@ function AppInner() {
                                             accessibilityLabel="다이얼패드 열기"
                                             testID="worldlinco-phone-dialer-open"
                                         >
-                                            <Text style={styles.inlineGhostBtnText}>다이얼패드 열기</Text>
+                                            <Text wlLocalized style={styles.inlineGhostBtnText}>{getFeatureUiText('travel.openDialpad')}</Text>
                                         </Pressable>
                                         {interCallPhone ? (
                                             <Pressable style={styles.inlineGhostBtn} onPress={() => setInterCallPhone('')}>
@@ -9738,7 +9491,7 @@ function AppInner() {
                                         {selectedBookingPlace.phone ? (
                                             <Pressable
                                                 style={styles.inlineActionBtn}
-                                                onPress={() => { void openDialPad(selectedBookingPlace.phone); }}
+                                                onPress={() => { void openDialPadWithQuiesceRef.current(selectedBookingPlace.phone, 'travel_booking_place_call'); }}
                                                 accessibilityLabel={selectedBookingPlace.category === 'airport'
                                                     ? 'worldlinco-travel-booking-airport-call-button'
                                                     : 'worldlinco-travel-booking-hotel-call-button'}
@@ -9746,7 +9499,13 @@ function AppInner() {
                                                     ? 'worldlinco-travel-booking-airport-call-button'
                                                     : 'worldlinco-travel-booking-hotel-call-button'}
                                             >
-                                                <Text style={styles.inlineActionBtnText}>📞 {selectedBookingPlace.category === 'airport' ? '공항 예약센터' : '호텔'} 전화 예약</Text>
+                                                <Text wlLocalized style={styles.inlineActionBtnText}>
+                                                    {getFeatureUiText(
+                                                        selectedBookingPlace.category === 'airport'
+                                                            ? 'travel.bookingCallAirport'
+                                                            : 'travel.bookingCallHotel',
+                                                    )}
+                                                </Text>
                                             </Pressable>
                                         ) : null}
                                     </View>
@@ -9844,11 +9603,11 @@ function AppInner() {
                                         {bookingResult.support_phone ? (
                                             <Pressable
                                                 style={styles.inlineActionBtn}
-                                                onPress={() => { void openDialPad(bookingResult.support_phone); }}
+                                                onPress={() => { void openDialPadWithQuiesceRef.current(bookingResult.support_phone, 'travel_booking_support_call'); }}
                                                 accessibilityLabel="worldlinco-travel-booking-support-call-button"
                                                 testID="worldlinco-travel-booking-support-call-button"
                                             >
-                                                <Text style={styles.inlineActionBtnText}>📞 예약센터 통화</Text>
+                                                <Text wlLocalized style={styles.inlineActionBtnText}>{getFeatureUiText('travel.bookingSupportCall')}</Text>
                                             </Pressable>
                                         ) : null}
                                     </View>
@@ -9942,7 +9701,7 @@ function AppInner() {
                                 testID={buildSectionRailSelector(item.key)}
                             >
                                 <Text style={[styles.bottomTabIcon, active ? { color } : null]}>{item.icon}</Text>
-                                <Text style={[styles.bottomTabLabel, active ? { color, fontWeight: '800' } : null]}>{item.label}</Text>
+                                <Text style={[styles.bottomTabLabel, active ? { color, fontWeight: '800' } : null]}>{getSectionRailTabLabel(item.key)}</Text>
                             </Pressable>
                         );
                     })}
@@ -9954,7 +9713,7 @@ function AppInner() {
                         testID="worldlinco-bottom-tab-settings"
                     >
                         <Text style={[styles.bottomTabIcon, settingsTabOpen ? { color: '#41506b' } : null]}>⚙️</Text>
-                        <Text style={[styles.bottomTabLabel, settingsTabOpen ? { color: '#41506b', fontWeight: '800' } : null]}>설정</Text>
+                        <Text style={[styles.bottomTabLabel, settingsTabOpen ? { color: '#41506b', fontWeight: '800' } : null]}>{getFeatureUiText('nav.tabSettings')}</Text>
                     </Pressable>
                 </View>
             ) : null}
@@ -9985,8 +9744,8 @@ function AppInner() {
                     testID="worldlinco-companion-voicecall-toggle"
                     style={[styles.sorisaeCallChip, { bottom: insets.bottom + 72 }, companionVoiceCallArmed ? styles.sorisaeCallChipOn : null]}
                 >
-                    <Text style={styles.sorisaeCallChipText}>
-                        {companionVoiceCallArmed ? `🔔 "${aiDisplayName}" 부르면 깨어나요 · 대기 끄기` : '📞 음성 호출 대기 켜기'}
+                    <Text wlLocalized style={styles.sorisaeCallChipText}>
+                        {companionVoiceCallArmed ? getFeatureUiText('sorisae.voiceCallArmOff', { name: aiDisplayName }) : getFeatureUiText('sorisae.voiceCallArmOn')}
                     </Text>
                 </Pressable>
             ) : null}
@@ -10075,7 +9834,7 @@ function AppInner() {
                             onClose={() => setSettingsTabOpen(false)}
                             appVersion={APP_VERSION_NUMBER}
                             buildNumber={APP_BUILD_NUMBER}
-                            userLang={getUiLang()}
+                            userLang={resolveProfileDisplayLang(userInfo?.country_code || 'KR')}
                             authToken={token}
                             userEmail={userInfo?.email}
                             userCountryCode={userInfo?.country_code || ''}
@@ -10114,6 +9873,7 @@ function AppInner() {
                 animationType="slide"
                 statusBarTranslucent
                 onRequestClose={() => {
+                    setLangPickerFor(null);
                     setFaceScreenOpen(false);
                     if (autoVoiceModeEnabled && Platform.OS !== 'web') { void handleToggleFaceConversation(); }
                 }}
@@ -10122,9 +9882,18 @@ function AppInner() {
                 <SafeAreaView style={styles.faceScreenRoot} edges={['top', 'left', 'right']}>
                     <View style={styles.faceScreenHeader}>
                         <Text style={styles.faceScreenLogo}>🎙️ WorldLinco</Text>
-                        <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} compact />
+                        <Pressable
+                            style={styles.faceScreenLangPill}
+                            onPress={() => openPeerLangPicker()}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-face-screen-lang"
+                            testID="worldlinco-face-screen-lang"
+                        >
+                            <Text style={styles.faceScreenLangPillText}>{currentFromLabel} ⇄ {currentToLabel}</Text>
+                        </Pressable>
                         <Pressable
                             onPress={() => {
+                                setLangPickerFor(null);
                                 setFaceScreenOpen(false);
                                 if (autoVoiceModeEnabled && Platform.OS !== 'web') { void handleToggleFaceConversation(); }
                             }}
@@ -10141,8 +9910,20 @@ function AppInner() {
                         {/* 상단: 상대 언어 (180° 회전, 마주 앉은 상대가 읽음) */}
                         <View style={styles.facePeerHalf}>
                             <View style={styles.faceRotated}>
-                                <Text style={styles.facePeerLangLabel}>{currentToLabel}</Text>
-                                <Text style={styles.facePeerText}>
+                                <Pressable
+                                    onPress={() => openPeerLangPicker()}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="worldlinco-face-peer-lang"
+                                    testID="worldlinco-face-peer-lang"
+                                >
+                                    <Text style={styles.facePeerLangLabel}>{homeToFlag} {currentToLabel} ▾</Text>
+                                    <Text style={styles.langAutoChipHint}>
+                                        {peerLangManual
+                                            ? '수동 선택 · GPS 자동 변경 안 함'
+                                            : (getDisplayUiText().peerLanguageHint ?? 'GPS 우선 · 필요 시 수동')}
+                                    </Text>
+                                </Pressable>
+                                <Text wlLocalized style={styles.facePeerText}>
                                     {resultText || getFeatureUiText('face.peerPlaceholder')}
                                 </Text>
                             </View>
@@ -10151,11 +9932,11 @@ function AppInner() {
                         {/* 하단: 내 언어 (정방향) */}
                         <View style={styles.faceMeHalf}>
                             <View style={styles.faceTapHint}>
-                                <Text style={styles.faceTapHintText}>
+                                <Text wlLocalized style={styles.faceTapHintText}>
                                     {autoVoiceModeEnabled ? getFeatureUiText('face.tapListening') : getFeatureUiText('face.tapToSpeak')}
                                 </Text>
                             </View>
-                            <Text style={styles.faceMeText}>
+                            <Text wlLocalized style={styles.faceMeText}>
                                 {inputText || getFeatureUiText('face.mePlaceholder')}
                             </Text>
                             <Text style={styles.faceMeLangLabel}>{currentFromLabel}</Text>
@@ -10176,15 +9957,15 @@ function AppInner() {
                     </View>
 
                     <View style={[styles.faceTabBar, { paddingBottom: 8 + insets.bottom }]}>
-                        <View style={styles.faceTabItem}><Text style={styles.faceTabIcon}>🧑‍🤝‍🧑</Text><Text style={styles.faceTabLabelActive}>대면 통역</Text></View>
+                        <View style={styles.faceTabItem}><Text style={styles.faceTabIcon}>🧑‍🤝‍🧑</Text><Text style={styles.faceTabLabelActive}>{getFeatureUiText('nav.tabFaceInterpret')}</Text></View>
                         <Pressable style={styles.faceTabItem} onPress={() => { setFaceScreenOpen(false); setActiveRailSection('chat'); }}>
-                            <Text style={styles.faceTabIcon}>💬</Text><Text style={styles.faceTabLabel}>대화 모드</Text>
+                            <Text style={styles.faceTabIcon}>💬</Text><Text style={styles.faceTabLabel}>{getFeatureUiText('nav.tabChatMode')}</Text>
                         </Pressable>
                         <Pressable style={styles.faceTabItem} onPress={() => { setFaceScreenOpen(false); setHomeToolsExpanded(true); }}>
-                            <Text style={styles.faceTabIcon}>📖</Text><Text style={styles.faceTabLabel}>문장 모음</Text>
+                            <Text style={styles.faceTabIcon}>📖</Text><Text style={styles.faceTabLabel}>{getFeatureUiText('nav.tabPhraseBook')}</Text>
                         </Pressable>
                         <Pressable style={styles.faceTabItem} onPress={() => { setFaceScreenOpen(false); setSettingsTabOpen(true); }}>
-                            <Text style={styles.faceTabIcon}>⚙️</Text><Text style={styles.faceTabLabel}>설정</Text>
+                            <Text style={styles.faceTabIcon}>⚙️</Text><Text style={styles.faceTabLabel}>{getFeatureUiText('nav.tabSettings')}</Text>
                         </Pressable>
                     </View>
                 </SafeAreaView>
@@ -10591,7 +10372,7 @@ function AppInner() {
             </Modal>
 
             <Modal
-                visible={langPickerFor !== null}
+                visible={(faceScreenOpen || activeRailSection === 'travel-booking' || interCallActive) && langPickerFor === 'to'}
                 transparent
                 animationType="fade"
                 onRequestClose={() => setLangPickerFor(null)}
@@ -10599,21 +10380,17 @@ function AppInner() {
                 <View style={styles.loginOverlay}>
                     <View style={styles.loginModal}>
                         <Text style={styles.loginModalTitle}>
-                            {langPickerFor === 'from'
-                                ? `${getDisplayUiText().sourceLang} 선택`
-                                : `${getDisplayUiText().peerLanguageLabel ?? getDisplayUiText().targetLang} 선택`}
+                            {getDisplayUiText().peerLanguageLabel ?? '상대 언어 (GPS/수동)'}
                         </Text>
                         <Text style={styles.loginModeHint}>
-                            {langPickerFor === 'from'
-                                ? (userInfo ? '내 언어는 프로필 설정에서 변경합니다.' : getDisplayUiText().manualVoiceOnlyNotice)
-                                : getDisplayUiText().peerLanguageHint ?? getDisplayUiText().manualLanguageHint}
+                            {getDisplayUiText().peerLanguageHint ?? 'GPS 우선 · 필요 시 수동 선택'}
                         </Text>
                         <ScrollView style={styles.contactPickerList} contentContainerStyle={styles.contactPickerListBody}>
-                            {LANGS.filter((lang) => langPickerFor !== 'to' || lang.code !== fromLang).map((lang) => {
-                                const active = (langPickerFor === 'from' ? fromLang : toLang) === lang.code;
+                            {LANGS.filter((lang) => lang.code !== fromLang).map((lang) => {
+                                const active = toLang === lang.code;
                                 return (
                                     <Pressable
-                                        key={`travel-lang-${langPickerFor}-${lang.code}`}
+                                        key={`face-peer-lang-${lang.code}`}
                                         style={[styles.langModalOption, active && styles.langModalOptionActive]}
                                         onPress={() => handleSelectLanguage(lang.code)}
                                     >

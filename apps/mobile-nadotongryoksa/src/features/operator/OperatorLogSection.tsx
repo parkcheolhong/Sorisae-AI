@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { CallModeAuditEvent } from '../../app/appTypes';
-import { getLangLabelText } from '../language/languageCatalog';
+import { getLangLabelText, isSupportedLangCode, type LangCode } from '../language/languageCatalog';
 import { isOperatorSurfaceVisible } from './operatorAccess';
 import { BidirectionalLanguagePairBadge } from '../i18n/BidirectionalLanguagePairBadge';
 
@@ -42,7 +42,9 @@ export function OperatorLogSection({ snapshot, onLock }: Props) {
             <Text style={styles.row}>email: {snapshot.email ?? '—'}</Text>
             <Text style={styles.row}>
                 preferred_language: {snapshot.preferredLanguage ?? '—'}
-                {snapshot.preferredLanguage ? ` (${getLangLabelText(snapshot.preferredLanguage)})` : ''}
+                {snapshot.preferredLanguage && isSupportedLangCode(snapshot.preferredLanguage)
+                    ? ` (${getLangLabelText(snapshot.preferredLanguage as LangCode)})`
+                    : ''}
             </Text>
             <Text style={styles.row}>country_code: {snapshot.countryCode ?? '—'}</Text>
             <Text style={styles.row}>

@@ -88,6 +88,12 @@
     }
   },
   "jest": {
+    "setupFiles": [
+      "<rootDir>/jest.setup.ts"
+    ],
+    "moduleNameMapper": {
+      "^expo/virtual/env$": "<rootDir>/src/__tests__/__mocks__/expoVirtualEnv.cjs"
+    },
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/dist/"

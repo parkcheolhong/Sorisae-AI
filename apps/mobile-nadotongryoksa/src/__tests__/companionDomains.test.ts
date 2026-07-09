@@ -13,7 +13,7 @@ import {
 
 describe('자동 넘버링 — 도메인 numericId', () => {
     it('정의 순서대로 1부터 고유 번호', () => {
-        expect(COMPANION_DOMAINS.map((d) => d.numericId)).toEqual([1, 2]);
+        expect(COMPANION_DOMAINS.map((d) => d.numericId)).toEqual([1, 2, 3, 4, 5, 6]);
         expect(new Set(COMPANION_DOMAINS.map((d) => d.numericId)).size).toBe(COMPANION_DOMAINS.length);
     });
 
@@ -37,15 +37,15 @@ describe('인텐트 분류기', () => {
         expect(classifyCompanionDomain('find a hotel nearby')).toBe('travel');
     });
 
-    it('최신/실시간 여행 맥락 키워드 → travel', () => {
-        expect(classifyCompanionDomain('후쿠오카 최신 날씨랑 환율 알려줘')).toBe('travel');
-        expect(classifyCompanionDomain('latest opening hours near shibuya')).toBe('travel');
+    it('최신/실시간 정보 키워드 → knowledge', () => {
+        expect(classifyCompanionDomain('후쿠오카 최신 날씨랑 환율 알려줘')).toBe('knowledge');
+        expect(classifyCompanionDomain('opening hours near shibuya hotel')).toBe('travel');
     });
 
-    it('기타 대화는 companion(폴백)', () => {
+    it('기타 대화는 companion(폴백) 또는 감정/지식 도메인', () => {
         expect(classifyCompanionDomain('안녕 반가워')).toBe('companion');
-        expect(classifyCompanionDomain('how to boil an egg')).toBe('companion');
-        expect(classifyCompanionDomain('요즘 너무 외롭고 힘들어')).toBe('companion');
+        expect(classifyCompanionDomain('how to boil an egg')).toBe('knowledge');
+        expect(classifyCompanionDomain('요즘 너무 외롭고 힘들어')).toBe('wellbeing');
         expect(classifyCompanionDomain('')).toBe('companion');
     });
 

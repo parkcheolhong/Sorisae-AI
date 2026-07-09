@@ -42,8 +42,11 @@ export type CallModeAuditEvent = {
     requested_mode: string | null;
     resolved_mode: string | null;
     call_route?: string | null;
+    call_id?: string | null;
     status?: string | null;
     error_code?: string | null;
+    auto_relay_requested?: boolean | null;
+    auto_relay_applied?: boolean | null;
     created_at: string;
 };
 

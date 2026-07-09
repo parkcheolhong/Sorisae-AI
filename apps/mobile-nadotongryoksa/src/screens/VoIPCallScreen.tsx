@@ -2513,21 +2513,22 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             return;
                         }
 
+                        const metering = status.metering ?? Number.NEGATIVE_INFINITY;
                         voiceRelayMeterPollMissesRef.current = 0;
                         voiceRelayPeakMeteringRef.current = Math.max(
                             voiceRelayPeakMeteringRef.current,
-                            status.metering,
+                            metering,
                         );
                         const now = Date.now();
                         voiceRelaySegmentStateRef.current = updateVoiceRelaySegmentSpeechState(
                             voiceRelaySegmentStateRef.current,
-                            status.metering,
+                            metering,
                             now,
                         );
                         const decision = evaluateVoiceRelaySegmentDecision(
                             voiceRelaySegmentStateRef.current,
                             now,
-                            status.metering,
+                            metering,
                         );
                         if (voiceRelaySileroActiveRef.current || decision.action !== 'flush') {
                             return;

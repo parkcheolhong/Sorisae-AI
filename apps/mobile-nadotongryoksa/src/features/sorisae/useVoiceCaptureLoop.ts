@@ -7,6 +7,12 @@ import { Alert, Platform, ToastAndroid } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
 import { Audio } from '../../compat/expoAvAudio';
+
+type AvSoundStatus = {
+    isLoaded?: boolean;
+    isPlaying?: boolean;
+    didJustFinish?: boolean;
+};
 import { FEATURE_IDS, newCorrelationId } from '../correlation/correlationId';
 import {
     FACE_CONVERSATION_ECHO_GUARD_MS,
@@ -55,10 +61,12 @@ import {
 } from '../shared/relayTextGuards';
 import { enableConversationCaptureAudio } from '../shared/audioRouteKernel';
 import { acquireVoiceCapture, type VoiceCaptureFeatureId } from '../../services/voiceCaptureLease';
+import { isVoipSessionActive } from '../../services/voipSessionGuard';
 import { checkPermissionStatus } from '../../hooks/usePermissionCheck';
 import type { LangCode } from '../language/languageCatalog';
 import { isSupportedLangCode } from '../language/languageCatalog';
 import { getDisplayUiText } from '../i18n/displayLanguage';
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import { getUiLang, localizeUiString } from '../i18n/uiI18n';
 import { resolveUserOutputLang } from '../i18n/userLanguagePolicy';
 import type { VoiceCaptureLoopDeps } from './voiceCaptureLoopTypes';
@@ -226,6 +234,14 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
         const inputTarget = options.target ?? 'main';
         try {
             voiceInputTargetRef.current = inputTarget;
+            if (isVoipSessionActive()) {
+                console.log('[FACE_CONVERSATION]', JSON.stringify({
+                    event: 'capture_blocked_voip_session',
+                    target: inputTarget,
+                }));
+                scheduleFaceConversationRestartRef.current(null);
+                return;
+            }
             if (
                 inputTarget === 'main'
                 && Date.now() < sorisaePlaybackBlockedUntilRef.current
@@ -251,7 +267,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && faceSpeakingRef.current
                 && faceVoicePlaybackSoundRef.current) {
                 void faceVoicePlaybackSoundRef.current.getStatusAsync()
-                    .then((status) => {
+                    .then((status: AvSoundStatus) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
                             void stopFacePlayback().catch(() => { /* no-op */ });
                             faceSpeakingRef.current = false;
@@ -286,7 +302,10 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 const webAny = globalThis as any;
                 const speechCtor = webAny.window?.SpeechRecognition || webAny.window?.webkitSpeechRecognition;
                 if (!speechCtor) {
-                    Alert.alert('마이크 지원 불가', '현재 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge 최신 버전을 사용해 주세요.');
+                    Alert.alert(
+                        getFeatureUiText('capture.micWebUnsupportedTitle'),
+                        getFeatureUiText('capture.micWebUnsupportedBody'),
+                    );
                     return;
                 }
 
@@ -318,8 +337,8 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     setVoiceSttLoading(false);
                     setIsVoiceRecording(false);
                     webSpeechRecognitionRef.current = null;
-                    setGpsStatus(`🎤 음성 입력 실패: ${detail}`);
-                    Alert.alert('녹음 오류', detail);
+                    setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail }));
+                    Alert.alert(getFeatureUiText('capture.recordErrorTitle'), detail);
                 };
 
                 recognizer.onend = () => {
@@ -336,7 +355,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             let hasPermission = await checkPermissionStatus('RECORD_AUDIO');
             if (!hasPermission) {
                 hasPermission = await requestPermissions(['RECORD_AUDIO'], '음성 입력', (msg) => {
-                    setGpsStatus(`🎤 음성 입력 실패: ${msg}`);
+                    setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail: msg }));
                 });
             }
             if (!hasPermission) {
@@ -432,12 +451,12 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 clearAutoVoiceTimers();
                 const isFaceConversation = inputTarget === 'main' && autoVoiceModeEnabledRef.current;
                 if (inputTarget === 'inter_call') {
-                    setInterCallStatus(`🎙️ 스피커폰 통역 보조 수신 중... ${formatAutoRelayDelayLabel(autoRelayDelayMs)} 후 자동 처리합니다.`);
+                    setInterCallStatus(getFeatureUiText('capture.interCallListening', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
                 } else if (isFaceConversation) {
                     setGpsStatus(
                         sorisaeWindowOpenRef.current
-                            ? '🎙️ 듣는 중 · 말씀하세요'
-                            : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                            ? getFeatureUiText('capture.listeningSorisae')
+                            : (getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae')),
                     );
                     const sorisaeVadConfig = sorisaeWindowOpenRef.current && mainSorisaeRouteRef.current
                         ? resolveSorisaeCompanionVadDefaultsFromTuning(getWorldlincoTuning())
@@ -535,7 +554,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             console.error('[VOICE_INPUT_START_ERROR]', error);
             setIsVoiceRecording(false);
             setVoiceSttLoading(false);
-            setGpsStatus(`🎤 음성 입력 실패: ${detail}`);
+            setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail }));
             if (effectiveAutoMode && autoVoiceModeEnabledRef.current && inputTarget === 'main') {
                 console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'capture_start_retry', detail }));
                 autoVoiceRestartTimerRef.current = setTimeout(() => {
@@ -544,7 +563,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     }
                 }, FACE_CONVERSATION_PERMISSION_RETRY_MS);
             } else {
-                Alert.alert('녹음 오류', detail);
+                Alert.alert(getFeatureUiText('capture.recordErrorTitle'), detail);
             }
         } finally {
             voiceInputStartInFlightRef.current = false;
@@ -588,7 +607,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 }
                 if (sorisaeSpeakingRef.current && sorisaeVoicePlaybackSoundRef.current) {
                     void sorisaeVoicePlaybackSoundRef.current.getStatusAsync()
-                        .then((status) => {
+                        .then((status: AvSoundStatus) => {
                             if (!status?.isLoaded || !status?.isPlaying) {
                                 sorisaeSpeakingRef.current = false;
                                 setSorisaeSpeakingUi?.(false);
@@ -602,7 +621,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 }
                 if (faceSpeakingRef.current && faceVoicePlaybackSoundRef.current) {
                     void faceVoicePlaybackSoundRef.current.getStatusAsync()
-                        .then((status) => {
+                        .then((status: AvSoundStatus) => {
                             if (!status?.isLoaded || !status?.isPlaying) {
                                 void stopFacePlayback().catch(() => { /* no-op */ });
                                 faceSpeakingRef.current = false;
@@ -702,7 +721,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && sorisaeSpeakingRef.current
                 && sorisaeVoicePlaybackSoundRef.current) {
                 void sorisaeVoicePlaybackSoundRef.current.getStatusAsync()
-                    .then((status) => {
+                    .then((status: AvSoundStatus) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
                             sorisaeSpeakingRef.current = false;
                             setSorisaeSpeakingUi?.(false);
@@ -721,7 +740,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && !recordingRef.current
                 && !voiceSttLoadingRef.current) {
                 void faceVoicePlaybackSoundRef.current.getStatusAsync()
-                    .then((status) => {
+                    .then((status: AvSoundStatus) => {
                         if (!status?.isLoaded || !status?.isPlaying) {
                             void stopFacePlayback().catch(() => { /* no-op */ });
                             faceSpeakingRef.current = false;
@@ -1019,6 +1038,15 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 scheduleFaceConversationRestartRef.current(null);
                 return;
             }
+            if (isVoipSessionActive()) {
+                await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => { /* no-op */ });
+                if (faceSileroCaptureUriSnapshot) {
+                    await FileSystem.deleteAsync(faceSileroCaptureUriSnapshot, { idempotent: true }).catch(() => { /* no-op */ });
+                }
+                console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'upload_blocked_voip_session' }));
+                scheduleFaceConversationRestartRef.current(null);
+                return;
+            }
             let uploadUri = uri;
             if (options.discardSegment) {
                 await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => { /* no-op */ });
@@ -1027,8 +1055,8 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 }
                 setGpsStatus(
                     sorisaeWindowOpenRef.current
-                        ? '🎙️ 듣는 중 · 말씀하세요'
-                        : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                        ? getFeatureUiText('capture.listeningSorisae')
+                        : (getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae')),
                 );
                 return;
             }
@@ -1096,8 +1124,8 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 await FileSystem.deleteAsync(faceSileroCaptureUriSnapshot, { idempotent: true }).catch(() => { /* no-op */ });
                                 setGpsStatus(
                                     sorisaeWindowOpenRef.current
-                                        ? '🎙️ 듣는 중 · 말씀하세요'
-                                        : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                                        ? getFeatureUiText('capture.listeningSorisae')
+                                        : (getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae')),
                                 );
                                 if (shouldAutoRestart && activeVoiceInputTarget === 'main') {
                                     scheduleFaceConversationRestartRef.current(null);
@@ -1123,7 +1151,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 file_vad_had_speech: fileVadHadSpeech,
                             }));
                             await FileSystem.deleteAsync(faceSileroCaptureUriSnapshot, { idempotent: true }).catch(() => { /* no-op */ });
-                            setGpsStatus('🔔 호출 대기 · 조금 더 길게 불러 주세요');
+                            setGpsStatus(getFeatureUiText('capture.wakeCallWait'));
                             if (shouldAutoRestart && activeVoiceInputTarget === 'main') {
                                 scheduleFaceConversationRestartRef.current(null);
                             }
@@ -1155,8 +1183,8 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             if (autoVoiceModeEnabledRef.current && activeVoiceInputTarget === 'main') {
                 setGpsStatus(
                     mainSorisaeRouteRef.current || sorisaeWindowOpenRef.current
-                        ? '🔄 답변 준비 중...'
-                        : (getDisplayUiText().faceListenProcessing ?? '🔄 번역·음성 출력 중...'),
+                        ? getFeatureUiText('capture.preparingAnswer')
+                        : (getDisplayUiText().faceListenProcessing ?? getFeatureUiText('capture.preparingAnswer')),
                 );
             }
             try {
@@ -1179,7 +1207,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             audio_base64_len: audioBase64.length,
                             upload_kind: uploadUri === uri ? 'm4a' : 'silero_wav',
                         }));
-                        setGpsStatus('🎙️ 듣는 중 · 말씀하세요');
+                        setGpsStatus(getFeatureUiText('capture.listeningSorisae'));
                         return;
                     }
                 }
@@ -1228,8 +1256,8 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         }
                         setGpsStatus(
                             mainSorisaeRouteRef.current || sorisaeWindowOpenRef.current
-                                ? '🎙️ 듣는 중 · 말씀하세요'
-                                : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                                ? getFeatureUiText('capture.listeningSorisae')
+                                : (getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae')),
                         );
                         return;
                     }
@@ -1262,7 +1290,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         faceSpeakingRef.current = false;
                     } else {
                         console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'segment_discard_while_speaking' }));
-                        setGpsStatus(localizeUiString('🔇 발화 중 입력(에코) 무시 · 발화가 끝나면 다시 들어요'));
+                        setGpsStatus(getFeatureUiText('capture.echoIgnored'));
                         return;
                     }
                 }
@@ -1395,7 +1423,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             min_ms: COMPANION_DORMANT_MIN_SEGMENT_MS,
                             upload_kind: uploadUri === uri ? 'm4a' : 'silero_wav',
                         }));
-                        setGpsStatus('🔔 호출 대기 · 조금 더 길게 불러 주세요');
+                        setGpsStatus(getFeatureUiText('capture.wakeCallWait'));
                         return;
                     }
                 }
@@ -1408,7 +1436,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             message: blockedMessage,
                             highRiskBlocked: false,
                         });
-                        setGpsStatus('⚠️ GPS OFF · 일반 대화는 계속 · 위치 질문은 부정확할 수 있음');
+                        setGpsStatus(getFeatureUiText('capture.gpsOff'));
                     }
                 }
 
@@ -1492,7 +1520,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             stt_trust: sttTrust,
                             transcript: transcript.slice(0, 80),
                         }));
-                        setGpsStatus('🎙️ 듣는 중 · 말씀하세요');
+                        setGpsStatus(getFeatureUiText('capture.listeningSorisae'));
                         if (activeVoiceInputTarget === 'main') {
                             reportFaceVoiceAutoTuningMetric({ overlapDetected: true });
                         }
@@ -1538,7 +1566,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             event: 'segment_skip_low_trust',
                             transcript: transcript.slice(0, 80),
                         }));
-                        setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                        setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae'));
                         return;
                     }
                     if (transcript) {
@@ -1639,7 +1667,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 if (fallbackTranslated && !looksUntranslated) {
                                     commitInterCallRelay(relayTurn, transcript, fallbackTranslated, { isAutoRelay: true });
                                 } else {
-                                    setInterCallStatus('번역에 실패했습니다. 다시 말씀해 주세요.');
+                                    setInterCallStatus(getFeatureUiText('capture.interCallTranslateFailed'));
                                 }
                             }
                         } else if (autoVoiceModeEnabled) {
@@ -1725,9 +1753,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 }));
                                 reportFaceVoiceAutoTuningMetric({ overlapDetected: true });
                                 reportConversationEchoGuardMetric({ echoBlocked: true });
-                                setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                                setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae'));
                             } else if (mainLastAutoVoiceRelayRef.current && mainLastAutoVoiceRelayRef.current.key === relayKey && Date.now() - mainLastAutoVoiceRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-                                setGpsStatus(getDisplayUiText().autoVoiceDuplicateSkipped ?? '중복 자동 음성 통역을 건너뛰었습니다.');
+                                setGpsStatus(getDisplayUiText().autoVoiceDuplicateSkipped ?? getFeatureUiText('capture.segmentErrorContinue'));
                             } else {
                                 // #2 한국어(원문) 표출: 인식한 원문은 번역 성공 여부와 무관하게 항상 표시한다.
                                 lastVoiceDrivenInputRef.current = { text: transcript, atMs: Date.now() };
@@ -1743,7 +1771,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                     }
                                 }
                                 if (!effectiveTranslated) {
-                                    setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                                    setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? getFeatureUiText('capture.listeningSorisae'));
                                 } else {
                                     setResultText(effectiveTranslated);
                                     setOffline(false);
@@ -1764,7 +1792,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                         && lastSpoken.text === spokenKey
                                         && Date.now() - lastSpoken.at < AUTO_RELAY_DUPLICATE_GUARD_MS;
                                     if (isRepeatOutput) {
-                                        setGpsStatus(getDisplayUiText().autoVoiceDuplicateSkipped ?? '중복 자동 음성 통역을 건너뛰었습니다.');
+                                        setGpsStatus(getDisplayUiText().autoVoiceDuplicateSkipped ?? getFeatureUiText('capture.segmentErrorContinue'));
                                     } else {
                                         setGpsStatus(formatStatusText(getDisplayUiText().autoVoiceDetected, {
                                             from: getLangLabel(effectiveFrom),
@@ -1784,7 +1812,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                         // 반이중: 발화 시작과 동시에 게이트를 닫아 재생 중 듣기 재개를 차단한다.
                                         faceSpeakingRef.current = true;
                                         facePlaybackBargeInArmAtRef.current = Date.now() + FACE_PLAYBACK_BARGE_IN_ARM_MS;
-                                        setGpsStatus(getDisplayUiText().faceSpeakingStatus ?? '🔊 통역 음성 출력 중 · 듣기 멈춤');
+                                        setGpsStatus(getDisplayUiText().faceSpeakingStatus ?? getFeatureUiText('capture.preparingAnswer'));
                                         facePlaybackPromise = playFaceTranslationOutputImmediate({
                                             translatedText: effectiveTranslated,
                                             targetLang: effectiveTo,
@@ -1823,7 +1851,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             lastVoiceDrivenInputRef.current = { text: transcript, atMs: Date.now() };
                             setInputText(transcript);
                             if (translatedText) {
-                                setGpsStatus(`🎯 ${getLangLabel(manualFrom)} → ${getLangLabel(manualTo)}`);
+                                setGpsStatus(getFeatureUiText('capture.langPair', { from: getLangLabel(manualFrom), to: getLangLabel(manualTo) }));
                                 setResultText(translatedText);
                                 setOffline(false);
                                 setEngine(String(data.engine ?? 'nado-voice'));
@@ -1853,7 +1881,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                     });
                                 }
                             } else {
-                                setGpsStatus(`🎯 ${getLangLabel(manualFrom)} → ${getLangLabel(manualTo)}`);
+                                setGpsStatus(getFeatureUiText('capture.langPair', { from: getLangLabel(manualFrom), to: getLangLabel(manualTo) }));
                                 await runTranslation(transcript, manualFrom, manualTo);
                             }
                         }
@@ -1886,22 +1914,22 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             sorisaeServerErrorBlockedUntilRef.current = Date.now() + gatewayBackoffMs;
                             setGpsStatus(
                                 res.status === 502
-                                    ? '⚠️ AI 서버 재시작 중(502) · 8초 후 다시 들어요'
-                                    : '⚠️ AI 서버 준비 중(503) · 잠시 후 다시 말씀해 주세요',
+                                    ? getFeatureUiText('capture.server502')
+                                    : getFeatureUiText('capture.server503'),
                             );
                         } else if (mainSorisaeRouteRef.current && res.status >= 500) {
                             sorisaeServerErrorBlockedUntilRef.current = Date.now() + 4500;
-                            setGpsStatus(`⚠️ AI 서버 응답 실패 (${res.status}) · 잠시 후 다시 말씀해 주세요`);
+                            setGpsStatus(getFeatureUiText('capture.serverError', { status: String(res.status) }));
                         } else if (mainSorisaeRouteRef.current && res.status === 401) {
-                            setGpsStatus('⚠️ 로그인이 필요합니다 · 다시 로그인해 주세요');
+                            setGpsStatus(getFeatureUiText('capture.loginRequired'));
                         } else {
                             const recoverable = isRecoverableVoiceCaptureHttpError(res.status, errorText);
                             setGpsStatus(
                                 recoverable || res.status === 422
-                                    ? '🎙️ 듣는 중 · 말씀하세요'
+                                    ? getFeatureUiText('capture.listeningSorisae')
                                     : mainSorisaeRouteRef.current
-                                        ? `⚠️ 답변 실패 (${res.status}) · 다시 말씀해 주세요`
-                                        : '🎙️ 이번 구간 오류 · 계속 듣는 중...',
+                                        ? getFeatureUiText('capture.answerFailed', { status: String(res.status) })
+                                        : getFeatureUiText('capture.segmentErrorContinue'),
                             );
                         }
                     } else {
@@ -1932,9 +1960,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
         } catch (error) {
             setVoiceSttLoading(false);
             if (autoVoiceModeEnabledRef.current && voiceInputTargetRef.current === 'main') {
-                const message = error instanceof Error ? error.message : '음성 처리 오류';
+                const message = error instanceof Error ? error.message : getFeatureUiText('capture.voiceProcessError');
                 console.error('[FACE_CONVERSATION]', JSON.stringify({ event: 'segment_error', message }));
-                setGpsStatus(`🎙️ ${message} · 계속 듣는 중...`);
+                setGpsStatus(getFeatureUiText('capture.continueListening', { message }));
                 if (!options.suppressAutoRestart) {
                     scheduleFaceConversationRestartRef.current(null);
                 }

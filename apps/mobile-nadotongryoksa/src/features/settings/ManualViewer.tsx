@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { translateText } from '../../api/translate';
 import { getBundledManual } from '../i18n/bundledManuals';
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import { resolveLanguageLabel } from '../profile/profileFormatters';
 import type { FeatureManual } from './featureManuals';
 import {
@@ -136,7 +137,7 @@ export function ManualViewer({ manual, userLang, onBack, topSlot }: Props) {
                     accessibilityLabel="worldlinco-manual-back"
                     testID="worldlinco-manual-back"
                 >
-                    <Text style={styles.backBtnText}>‹ 뒤로</Text>
+                    <Text wlLocalized style={styles.backBtnText}>{getFeatureUiText('manual.back', undefined, userLang)}</Text>
                 </Pressable>
                 {loading ? <ActivityIndicator size="small" color="#1E6FE0" /> : null}
             </View>

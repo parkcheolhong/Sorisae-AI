@@ -3,6 +3,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { styles } from '../../../App.styles';
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 
 export type VoipWorkspaceTab = 'contacts' | 'recents' | 'keypad';
 
@@ -15,10 +16,10 @@ export interface VoipPhoneWorkspaceSectionProps {
     keypadPane: React.ReactNode;
 }
 
-const TABS: { key: VoipWorkspaceTab; label: string; emoji: string; testID: string }[] = [
-    { key: 'contacts', label: '연락처', emoji: '📇', testID: 'worldlinco-voip-tab-contacts' },
-    { key: 'recents', label: '최근기록', emoji: '🕘', testID: 'worldlinco-voip-tab-recents' },
-    { key: 'keypad', label: '키패드', emoji: '⌨️', testID: 'worldlinco-voip-tab-keypad' },
+const TABS: { key: VoipWorkspaceTab; labelKey: 'voip.tabContacts' | 'voip.tabRecents' | 'voip.tabKeypad'; emoji: string; testID: string }[] = [
+    { key: 'contacts', labelKey: 'voip.tabContacts', emoji: '📇', testID: 'worldlinco-voip-tab-contacts' },
+    { key: 'recents', labelKey: 'voip.tabRecents', emoji: '🕘', testID: 'worldlinco-voip-tab-recents' },
+    { key: 'keypad', labelKey: 'voip.tabKeypad', emoji: '⌨️', testID: 'worldlinco-voip-tab-keypad' },
 ];
 
 export function VoipPhoneWorkspaceSection({
@@ -34,17 +35,18 @@ export function VoipPhoneWorkspaceSection({
             <View style={styles.voipTabRow}>
                 {TABS.map((tab) => {
                     const active = activeTab === tab.key;
+                    const label = getFeatureUiText(tab.labelKey);
                     return (
                         <Pressable
                             key={tab.key}
                             style={[styles.voipTab, active && styles.voipTabActive]}
                             onPress={() => onTabChange(tab.key)}
                             accessibilityRole="button"
-                            accessibilityLabel={tab.label}
+                            accessibilityLabel={label}
                             testID={tab.testID}
                         >
                             <Text style={[styles.voipTabText, active && styles.voipTabTextActive]}>
-                                {tab.emoji} {tab.label}
+                                {tab.emoji} {label}
                             </Text>
                             {tab.key === 'recents' && recentMissedCount > 0 ? (
                                 <View style={styles.voipTabBadge}>

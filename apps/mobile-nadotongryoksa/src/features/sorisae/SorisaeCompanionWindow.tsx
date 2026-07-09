@@ -26,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { styles } from '../../../App.styles';
 
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import { SorisaeVoiceWaveOrb } from './SorisaeVoiceWaveOrb';
 
 import type { SorisaeQaEntry } from './types';
@@ -101,8 +102,8 @@ export function SorisaeCompanionWindow({
 }: SorisaeCompanionWindowProps) {
 
     const waveHint = sorisaeSpeaking
-        ? '🐦 답변 재생 중 · 잠시 후 다시 들어요'
-        : '🎙️ 음성 대기 중 · 말씀하세요';
+        ? getFeatureUiText('sorisae.waveHintSpeaking')
+        : getFeatureUiText('sorisae.waveHintListening');
 
 
 
@@ -142,7 +143,7 @@ export function SorisaeCompanionWindow({
 
                         >
 
-                            <Text style={styles.sorisaeWindowCloseText}>✕ 닫기</Text>
+                            <Text style={styles.sorisaeWindowCloseText}>{getFeatureUiText('sorisae.windowClose')}</Text>
 
                         </Pressable>
 
@@ -154,7 +155,7 @@ export function SorisaeCompanionWindow({
 
                         {qaLog.length === 0 ? (
 
-                            <Text style={styles.sorisaeWindowEmpty}>대화 없음</Text>
+                            <Text style={styles.sorisaeWindowEmpty}>{getFeatureUiText('sorisae.windowEmpty')}</Text>
 
                         ) : (
 
@@ -168,7 +169,7 @@ export function SorisaeCompanionWindow({
 
                                             <Text style={styles.sorisaeQaRoleLabel}>
 
-                                                {`🙋 질문 · ${getLangLabel(qa.questionLang)}`}
+                                                {getFeatureUiText('sorisae.questionLabel', { lang: getLangLabel(qa.questionLang) })}
 
                                             </Text>
 
@@ -184,18 +185,18 @@ export function SorisaeCompanionWindow({
 
                                             <Text style={styles.sorisaeQaRoleLabelAnswer}>
 
-                                                {`🐦 답변 · ${getLangLabel(qa.answerLang)}`}
+                                                {getFeatureUiText('sorisae.answerLabel', { lang: getLangLabel(qa.answerLang) })}
 
                                             </Text>
 
                                             <Text style={styles.sorisaeQaAnswerText}>{qa.answer}</Text>
                                             {qa.mapContext?.transport_schedule_options?.length ? (
                                                 <View style={{ marginTop: 10, gap: 6 }}>
-                                                    <Text style={styles.sorisaeQaRoleLabelAnswer}>🕒 시간표 근거</Text>
+                                                    <Text style={styles.sorisaeQaRoleLabelAnswer}>{getFeatureUiText('sorisae.scheduleBasis')}</Text>
                                                     {qa.mapContext.transport_schedule_options.slice(0, 3).map((option, index) => (
                                                         <View key={`${qa.id}-schedule-${index}`} style={{ paddingVertical: 4 }}>
                                                             <Text style={styles.sorisaeQaAnswerText}>
-                                                                {`${option.route_label || '교통편'} · ${option.origin_stop || '-'} ${option.departure_local || '--:--'} → ${option.destination_stop || '-'} ${option.arrival_local || '--:--'}`}
+                                                                {`${option.route_label || getFeatureUiText('sorisae.transportFallback')} · ${option.origin_stop || '-'} ${option.departure_local || '--:--'} → ${option.destination_stop || '-'} ${option.arrival_local || '--:--'}`}
                                                             </Text>
                                                         </View>
                                                     ))}
@@ -216,7 +217,7 @@ export function SorisaeCompanionWindow({
                                                             style={styles.inlineGhostBtn}
                                                         >
                                                             <Text style={styles.inlineGhostBtnText}>
-                                                                {`출발지 핀${qa.mapContext?.origin?.display_label ? ` · ${qa.mapContext.origin.display_label}` : qa.mapContext?.origin?.name ? ` · ${qa.mapContext.origin.name}` : ''}`}
+                                                                {`${getFeatureUiText('sorisae.originPin')}${qa.mapContext?.origin?.display_label ? ` · ${qa.mapContext.origin.display_label}` : qa.mapContext?.origin?.name ? ` · ${qa.mapContext.origin.name}` : ''}`}
                                                             </Text>
                                                         </Pressable>
                                                     ) : null}
@@ -233,7 +234,7 @@ export function SorisaeCompanionWindow({
                                                             style={styles.inlineGhostBtn}
                                                         >
                                                             <Text style={styles.inlineGhostBtnText}>
-                                                                {`목적지 핀${qa.mapContext?.destination?.display_label ? ` · ${qa.mapContext.destination.display_label}` : qa.mapContext?.destination?.name ? ` · ${qa.mapContext.destination.name}` : ''}`}
+                                                                {`${getFeatureUiText('sorisae.destinationPin')}${qa.mapContext?.destination?.display_label ? ` · ${qa.mapContext.destination.display_label}` : qa.mapContext?.destination?.name ? ` · ${qa.mapContext.destination.name}` : ''}`}
                                                             </Text>
                                                         </Pressable>
                                                     ) : null}
@@ -268,7 +269,7 @@ export function SorisaeCompanionWindow({
 
                             >
 
-                                <Text style={styles.sorisaeWindowClearText}>대화 지우기</Text>
+                                <Text style={styles.sorisaeWindowClearText}>{getFeatureUiText('sorisae.clearLog')}</Text>
 
                             </Pressable>
 
@@ -302,7 +303,7 @@ export function SorisaeCompanionWindow({
 
                             >
 
-                                <Text style={styles.sorisaeWindowMicText}>{`🎙️ ${aiDisplayName} 대화 시작`}</Text>
+                                <Text style={styles.sorisaeWindowMicText}>{getFeatureUiText('sorisae.startConversation', { name: aiDisplayName })}</Text>
 
                             </Pressable>
 
