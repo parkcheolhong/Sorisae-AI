@@ -131,10 +131,22 @@ def load_worldlinco_billing_policy() -> Dict[str, Any]:
 
 
 def save_worldlinco_billing_policy(payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _sanitize(value: Any, key_hint: str = "") -> Any:
+        if isinstance(value, dict):
+            return {k: _sanitize(v, str(k)) for k, v in value.items()}
+        if isinstance(value, list):
+            return [_sanitize(item, key_hint) for item in value]
+        if isinstance(value, str):
+            key_lower = key_hint.lower()
+            if any(token in key_lower for token in ("secret", "token", "password", "api_key")):
+                return "***"
+        return value
+
     path = WORLDLINGCO_BILLING_POLICY_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    return payload
+    sanitized = _sanitize(payload)
+    path.write_text(json.dumps(sanitized, ensure_ascii=False, indent=2), encoding="utf-8")
+    return sanitized
 
 
 def apply_worldlinco_billing_policy_update(

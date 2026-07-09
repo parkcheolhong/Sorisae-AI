@@ -29,6 +29,14 @@ EXECUTION_MODES = {
 SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 
 
+def _session_storage_path(session_id: str) -> Path:
+    if not SESSION_ID_PATTERN.fullmatch(str(session_id or "")):
+        raise ValueError("invalid autonomous session id")
+    dir_path = Path(AUTONOMOUS_SESSION_DIR).expanduser().resolve()
+    dir_path.mkdir(parents=True, exist_ok=True)
+    return dir_path / f"{session_id}.json"
+
+
 @dataclass
 class ConversationTurn:
     role: str  # user, agent, system
@@ -145,9 +153,7 @@ class AutonomousSession:
         }
 
     def save(self) -> None:
-        dir_path = Path(AUTONOMOUS_SESSION_DIR)
-        dir_path.mkdir(parents=True, exist_ok=True)
-        path = dir_path / f"{self.session_id}.json"
+        path = _session_storage_path(self.session_id)
         path.write_text(json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
 
     @classmethod
@@ -155,7 +161,7 @@ class AutonomousSession:
         if not SESSION_ID_PATTERN.fullmatch(session_id):
             logger.warning("Invalid autonomous session id format: %s", session_id)
             return None
-        path = Path(AUTONOMOUS_SESSION_DIR) / f"{session_id}.json"
+        path = _session_storage_path(session_id)
         if not path.exists():
             return None
         try:

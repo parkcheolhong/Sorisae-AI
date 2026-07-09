@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import hashlib
 import math
 import os
 import re
@@ -69,7 +70,9 @@ def _enforce_target_send_quota(purpose: str, channel: str, target: str) -> None:
     if cooldown <= 0 and max_sends <= 0:
         return
     window = _target_send_window()
-    key = f"{purpose}:{channel}:{(target or '').strip().lower()}"
+    target_normalized = (target or "").strip().lower()
+    target_digest = hashlib.sha256(target_normalized.encode("utf-8", "ignore")).hexdigest()[:16]
+    key = f"{purpose}:{channel}:{target_digest}"
     now = _utcnow()
     with _RESEND_LOCK:
         recent = [t for t in _TARGET_SENDS.get(key, []) if (now - t) < window]

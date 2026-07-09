@@ -11,6 +11,13 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 
+def _mask_phone(phone: str) -> str:
+    raw = str(phone or "").strip()
+    if len(raw) <= 4:
+        return "***"
+    return f"{raw[:3]}***{raw[-2:]}"
+
+
 def _dev_mode() -> bool:
     app_env = str(os.getenv("APP_ENV") or "dev").strip().lower()
     return app_env not in {"prod", "production", "stage", "staging"}
@@ -35,7 +42,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         logger.info(
             "[SMS_TEXT] provider=dev-log purpose=%s target=%s body=%s",
             purpose,
-            phone,
+            _mask_phone(phone),
             normalized_body[:120],
         )
         return {
@@ -71,7 +78,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         logger.info(
             "[SMS_TEXT] provider=twilio purpose=%s target=%s sid=%s",
             purpose,
-            phone,
+            _mask_phone(phone),
             response_body.get("sid"),
         )
         return {
@@ -85,7 +92,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         logger.error(
             "[SMS_TEXT] provider=twilio purpose=%s target=%s http=%s detail=%s",
             purpose,
-            phone,
+            _mask_phone(phone),
             exc.code,
             detail[:500],
         )

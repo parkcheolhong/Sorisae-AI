@@ -3410,7 +3410,7 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
         with urlopen(url, timeout=timeout_sec) as response:
             status = int(getattr(response, "status", 200) or 200)
             return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
-    except Exception as exc:
+    except Exception:
         return {"ok": False, "status": None, "url": url, "error": str(exc)}
 
 
@@ -4230,7 +4230,7 @@ def _run_smoke_test_for_verifier(target_dir: Path, timeout: int = 60) -> Dict[st
         except subprocess.TimeoutExpired:
             result["pytest_ok"] = False
             result["pytest_output"] = f"pytest timeout ({timeout}s 초과)"
-        except Exception as exc:
+        except Exception:
             result["pytest_ok"] = False
             result["pytest_output"] = f"pytest 실행 오류: {exc}"
 
@@ -5323,6 +5323,7 @@ def test_admin_travel_connector(
         }
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        logger.exception("travel partner ping test failed")
         return {
             "tested": True,
             "connector_id": normalized_connector_id,
@@ -5331,7 +5332,7 @@ def test_admin_travel_connector(
             "reachable": False,
             "status_code": None,
             "response_time_ms": elapsed_ms,
-            "error": str(exc),
+            "error": "connectivity_test_failed",
             "tested_at": tested_at,
             "tested_by": tested_by,
         }
@@ -5396,6 +5397,7 @@ def test_admin_travel_partner_webhook(
         }
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        logger.exception("travel partner webhook test failed")
         return {
             "tested": True,
             "partner_id": normalized_partner_id,
@@ -5404,7 +5406,7 @@ def test_admin_travel_partner_webhook(
             "reachable": False,
             "status_code": None,
             "response_time_ms": elapsed_ms,
-            "error": str(exc),
+            "error": "webhook_test_failed",
             "event_type": event_type,
             "request_payload": request_payload,
             "tested_at": tested_at,
@@ -6314,4 +6316,3 @@ async def admin_upload_worldlinco_telemetry(
         "updated_by": saved.get("updated_by"),
         "summary": saved.get("summary") or {},
     }
-

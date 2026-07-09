@@ -9,12 +9,14 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/tourism-feedback", tags=["tourism-feedback"])
+logger = logging.getLogger(__name__)
 
 
 def _enabled() -> bool:
@@ -58,6 +60,10 @@ def submit_feedback(fb: AnswerFeedback) -> Any:
 @router.get("/stats")
 def feedback_stats() -> Any:
     _guard()
-    from backend.services.tourism_kb.feedback import get_feedback_store
+    try:
+        from backend.services.tourism_kb.feedback import get_feedback_store
 
-    return get_feedback_store().stats()
+        return get_feedback_store().stats()
+    except Exception as exc:
+        logger.exception("tourism feedback stats failed")
+        raise HTTPException(status_code=500, detail="feedback_stats_unavailable") from exc

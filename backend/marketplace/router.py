@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 from backend.time_utils import utcnow
 import asyncio
+import html
 import logging
 import os
 import io
@@ -843,8 +844,9 @@ def get_worldlinco_sales_invite_landing(code: str, request: Request) -> HTMLResp
 
     if not resolve_sales_agent_by_code(code):
         raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
-    api_base = str(request.base_url).rstrip("/")
-    return HTMLResponse(content=build_sales_invite_landing_html(code=code, api_base=api_base), headers={"Cache-Control": "no-store"})
+    api_base = html.escape(str(request.base_url).rstrip("/"), quote=True)
+    safe_code = html.escape(str(code), quote=True)
+    return HTMLResponse(content=build_sales_invite_landing_html(code=safe_code, api_base=api_base), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/worldlinco/sales/invite/{code}/qr.png")
@@ -858,7 +860,7 @@ def get_worldlinco_sales_invite_qr(code: str, request: Request) -> Response:
     agent = resolve_sales_agent_by_code(code)
     if not agent:
         raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
-    api_base = str(request.base_url).rstrip("/")
+    api_base = html.escape(str(request.base_url).rstrip("/"), quote=True)
     invite_url = build_sales_invite_url(api_base=api_base, code=str(agent["code"]))
     return Response(content=render_sales_qr_png(invite_url), media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
 
@@ -959,9 +961,9 @@ def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
         raise HTTPException(status_code=404, detail="referral_code_not_found")
     api_base = str(request.base_url).rstrip("/")
     html = build_invite_landing_html(
-        code=str(referrer["code"]),
+        code=html.escape(str(referrer["code"]), quote=True),
         api_base=api_base,
-        referrer_username=str(referrer.get("username") or ""),
+        referrer_username=html.escape(str(referrer.get("username") or ""), quote=True),
     )
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 

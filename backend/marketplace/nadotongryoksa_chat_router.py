@@ -1728,29 +1728,35 @@ def list_chat_room_messages(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    current_user_id = int(current_user.id)
-    room, _member = _require_room_member(db, room_id, current_user_id)
-    latest_messages = (
-        db.query(models.ChatMessage)
-        .filter(
-            models.ChatMessage.room_id == room.id,
-            models.ChatMessage.is_deleted.is_(False),
+    try:
+        current_user_id = int(current_user.id)
+        room, _member = _require_room_member(db, room_id, current_user_id)
+        latest_messages = (
+            db.query(models.ChatMessage)
+            .filter(
+                models.ChatMessage.room_id == room.id,
+                models.ChatMessage.is_deleted.is_(False),
+            )
+            .order_by(
+                models.ChatMessage.created_at.desc(),
+                models.ChatMessage.id.desc(),
+            )
+            .limit(limit)
+            .all()
         )
-        .order_by(
-            models.ChatMessage.created_at.desc(),
-            models.ChatMessage.id.desc(),
-        )
-        .limit(limit)
-        .all()
-    )
-    messages = list(reversed(latest_messages))
-    return {
-        "items": [
-            _serialize_message(db, room, message, current_user_id)
-            for message in messages
-        ],
-        "next_cursor": None,
-    }
+        messages = list(reversed(latest_messages))
+        return {
+            "items": [
+                _serialize_message(db, room, message, current_user_id)
+                for message in messages
+            ],
+            "next_cursor": None,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("list_chat_room_messages failed")
+        raise HTTPException(status_code=500, detail="chat_room_messages_unavailable") from exc
 
 
 @router.websocket("/rooms/{room_id}/ws")
@@ -1812,78 +1818,84 @@ async def create_chat_message(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    current_user_id = int(current_user.id)
-    room, _member = _require_room_member(db, room_id, current_user_id)
-    body = _normalize_text(request.body)
-    if not body:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="메시지 본문을 입력해야 합니다",
+    try:
+        current_user_id = int(current_user.id)
+        room, _member = _require_room_member(db, room_id, current_user_id)
+        body = _normalize_text(request.body)
+        if not body:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="메시지 본문을 입력해야 합니다",
+            )
+        sender = (
+            db.query(models.User)
+            .filter(models.User.id == current_user_id)
+            .first()
         )
-    sender = (
-        db.query(models.User)
-        .filter(models.User.id == current_user_id)
-        .first()
-    )
-    designated_language = _resolve_user_language(sender)
-    if (
-        designated_language
-        and (request.message_type or "text") == "text"
-        and not text_matches_designated_language(body, designated_language)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+        designated_language = _resolve_user_language(sender)
+        if (
+            designated_language
+            and (request.message_type or "text") == "text"
+            and not text_matches_designated_language(body, designated_language)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+            )
+        message = _append_message(
+            db,
+            room=room,
+            sender_user_id=current_user_id,
+            message_type=request.message_type,
+            body=body,
+            translated_body=request.translated_body,
+            source_lang=request.source_lang,
+            target_lang=request.target_lang,
+            request_translation=request.request_translation,
+            reply_to_message_id=request.reply_to_message_id,
         )
-    message = _append_message(
-        db,
-        room=room,
-        sender_user_id=current_user_id,
-        message_type=request.message_type,
-        body=body,
-        translated_body=request.translated_body,
-        source_lang=request.source_lang,
-        target_lang=request.target_lang,
-        request_translation=request.request_translation,
-        reply_to_message_id=request.reply_to_message_id,
-    )
-    db.commit()
-    db.refresh(room)
-    db.refresh(message)
-    active_members = _get_room_members(db, room.id)
-    serialized_sender = _serialize_message(db, room, message, current_user_id)
-    sender_label = str(serialized_sender.get("sender_label") or "친구")
-    body_preview = _normalize_text(body, max_length=80)
-    for member in active_members:
-        member_user_id = int(member.user_id)
-        await chat_room_ws_hub.send_to_user(
-            room.room_uuid,
-            member_user_id,
-            _serialize_message_created_event(
-                db,
-                room,
-                message,
+        db.commit()
+        db.refresh(room)
+        db.refresh(message)
+        active_members = _get_room_members(db, room.id)
+        serialized_sender = _serialize_message(db, room, message, current_user_id)
+        sender_label = str(serialized_sender.get("sender_label") or "친구")
+        body_preview = _normalize_text(body, max_length=80)
+        for member in active_members:
+            member_user_id = int(member.user_id)
+            await chat_room_ws_hub.send_to_user(
+                room.room_uuid,
                 member_user_id,
-            ),
-        )
-        if member_user_id == current_user_id:
-            continue
-        if chat_room_ws_hub.is_user_connected(room.room_uuid, member_user_id):
-            continue
-        await send_push_to_user(
-            member_user_id,
-            data_payload={
-                "type": "chat_message",
-                "room_id": room.room_uuid,
-                "message_id": message.message_uuid,
-                "sender_label": sender_label,
-                "body_preview": body_preview,
-                "alert_phrase": "친구야~",
-            },
-            title="(월드링코) 채팅",
-            body=f"{sender_label}: 친구야~ {body_preview}",
-            channel_id="worldlinco_chat_message",
-        )
+                _serialize_message_created_event(
+                    db,
+                    room,
+                    message,
+                    member_user_id,
+                ),
+            )
+            if member_user_id == current_user_id:
+                continue
+            if chat_room_ws_hub.is_user_connected(room.room_uuid, member_user_id):
+                continue
+            await send_push_to_user(
+                member_user_id,
+                data_payload={
+                    "type": "chat_message",
+                    "room_id": room.room_uuid,
+                    "message_id": message.message_uuid,
+                    "sender_label": sender_label,
+                    "body_preview": body_preview,
+                    "alert_phrase": "친구야~",
+                },
+                title="(월드링코) 채팅",
+                body=f"{sender_label}: 친구야~ {body_preview}",
+                channel_id="worldlinco_chat_message",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("create_chat_message failed")
+        raise HTTPException(status_code=500, detail="chat_message_create_failed") from exc
     return serialized_sender
 
 

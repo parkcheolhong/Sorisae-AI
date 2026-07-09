@@ -101,7 +101,18 @@ def evaluate_runnable_proof(
         result["detail"] = "output_dir 없음 — runnable proof 미충족"
         return result
 
-    root = Path(output_dir)
+    try:
+        root = Path(output_dir).expanduser().resolve()
+    except OSError:
+        result["detail"] = f"output_dir 해석 실패: {output_dir}"
+        return result
+    try:
+        workspace_root = Path.cwd().resolve()
+    except OSError:
+        workspace_root = root
+    if workspace_root not in root.parents and root != workspace_root:
+        result["detail"] = f"output_dir 범위 오류: {root}"
+        return result
     if not root.exists():
         result["detail"] = f"output_dir 미존재: {root}"
         return result
