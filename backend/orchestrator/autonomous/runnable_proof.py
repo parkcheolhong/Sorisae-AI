@@ -114,26 +114,19 @@ def evaluate_runnable_proof(
         result["detail"] = "output_dir 형식 오류"
         return result
     try:
-        root = Path(output_dir_text).expanduser().resolve()
+        root = Path.cwd().resolve()
     except OSError:
-        result["detail"] = f"output_dir 해석 실패: {output_dir}"
-        return result
-    try:
-        workspace_root = Path.cwd().resolve()
-    except OSError:
-        workspace_root = root
-    if workspace_root not in root.parents and root != workspace_root:
-        result["detail"] = f"output_dir 범위 오류: {root}"
-        return result
-    if not root.exists():
-        result["detail"] = f"output_dir 미존재: {root}"
+        result["detail"] = "workspace 경로 해석 실패"
         return result
 
     py_paths: List[Path] = []
     for rel in written:
         if not rel.endswith(".py"):
             continue
-        candidate = root / rel
+        rel_path = Path(rel)
+        if rel_path.is_absolute() or any(part in {"..", ""} for part in rel_path.parts):
+            continue
+        candidate = root / rel_path
         if candidate.is_file():
             py_paths.append(candidate)
     if not py_paths:
