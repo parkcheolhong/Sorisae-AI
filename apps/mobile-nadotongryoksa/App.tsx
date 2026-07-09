@@ -5730,6 +5730,10 @@ export default function App() {
         setShowFriendMapDiscovery(false);
         setSelectedChatRoom(null);
         setMyPurchases(null);
+        setBiometricLoginEnabledState(false);
+        setBiometricLoginEnabled(false).catch((error) => {
+            console.log('[AuthStorage] biometric clear failed', error);
+        });
         clearStoredAuthState().catch((error) => {
             console.log('[AuthStorage] clear failed', error);
         });
