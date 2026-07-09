@@ -10,6 +10,9 @@ import { PermissionsAndroid, Platform } from 'react-native';
 
 import messaging from '@react-native-firebase/messaging';
 
+import { runExclusivePermissionTask } from '../hooks/permissionRequestGate';
+import { checkPermissionStatus } from '../hooks/usePermissionCheck';
+
 
 
 import type { VoipMessagingAdapter } from './voipPresence';
@@ -127,7 +130,7 @@ export function createVoipMessagingAdapter(
         },
 
         requestNotificationPermission: async () => {
-
+            return runExclusivePermissionTask(async () => {
             const ready = await ensureFirebaseReady();
 
             if (!ready) {
@@ -140,15 +143,23 @@ export function createVoipMessagingAdapter(
 
                 if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
 
-                    const result = await PermissionsAndroid.request(
+                    const notificationPermission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
 
-                        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+                    const alreadyGranted = await checkPermissionStatus('POST_NOTIFICATIONS');
 
-                    );
+                    if (!alreadyGranted && notificationPermission) {
 
-                    if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+                        const result = await PermissionsAndroid.request(
 
-                        return false;
+                            notificationPermission,
+
+                        );
+
+                        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+
+                            return false;
+
+                        }
 
                     }
 
@@ -171,7 +182,7 @@ export function createVoipMessagingAdapter(
                 return false;
 
             }
-
+            });
         },
 
     };

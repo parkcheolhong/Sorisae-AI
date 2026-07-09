@@ -8,6 +8,14 @@ jest.mock('expo-constants', () => ({
     },
 }));
 
+jest.mock('expo-file-system/legacy', () => ({
+    FileSystemUploadType: { MULTIPART: 1, BINARY_CONTENT: 0 },
+    cacheDirectory: 'file:///cache/',
+    documentDirectory: 'file:///docs/',
+    copyAsync: jest.fn(async () => undefined),
+    uploadAsync: jest.fn(async () => ({ status: 200, body: '{}' })),
+}));
+
 import { translateImage, translateText, voiceTranslate } from '../api/translate';
 import { parsePersistedGpsSnapshot, serializePersistedGpsSnapshot } from '../utils/hybridGpsCache';
 import { detectHybridGpsMode, scoreLocationQuality } from '../utils/hybridGps';
@@ -136,9 +144,15 @@ describe('Local mobile validation guards', () => {
     });
 
     it('uses effective OCR source and target languages returned by the server', async () => {
-        fetchMock.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({
+        const fileSystem = jest.requireMock('expo-file-system/legacy') as {
+            copyAsync: jest.Mock;
+            uploadAsync: jest.Mock;
+            cacheDirectory: string;
+        };
+        fileSystem.copyAsync.mockImplementation(async () => undefined);
+        fileSystem.uploadAsync.mockImplementationOnce(async () => ({
+            status: 200,
+            body: JSON.stringify({
                 original_text: 'Welcome to Seoul Station',
                 translated: '서울역에 오신 것을 환영합니다',
                 source_language: 'en',
@@ -149,7 +163,7 @@ describe('Local mobile validation guards', () => {
                 content_type: 'image/png',
                 line_count: 1,
             }),
-        } as Response);
+        }));
 
         const result = await translateImage(
             { uri: 'file:///station.png', name: 'station.png', mimeType: 'image/png' },

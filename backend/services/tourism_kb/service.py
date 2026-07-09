@@ -248,7 +248,8 @@ def _rrf_merge(lists: List[List[Any]], top: int, *, k: int = 60) -> tuple:
 def _stable_point_id(source: str, source_id: str) -> int:
     """소스+소스ID 로 결정적(idempotent) 64bit 양수 ID 생성(재적재 시 중복 방지)."""
     raw = f"{source}:{source_id}".encode("utf-8")
-    return int(hashlib.sha1(raw).hexdigest(), 16) % (2**63)
+    digest = hashlib.blake2b(raw, digest_size=8).digest()
+    return int.from_bytes(digest, byteorder="big", signed=False) % (2**63)
 
 
 # 알려진 카테고리 화이트리스트(QC 게이트) — 적재기 CATEGORY_SYNONYMS/OSM_CATEGORY_CAPS 와 정합.
@@ -609,6 +610,7 @@ class TourismVectorStore:
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
         radius_km: float = 30.0,
+        country_code: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         if not self.client or not str(query or "").strip():
             return []
@@ -620,29 +622,46 @@ class TourismVectorStore:
                 Filter,
                 GeoBoundingBox,
                 GeoPoint,
+                MatchValue,
             )
         except Exception:
             Filter = None  # type: ignore
         qvec = self.embedder.encode_one(query, is_query=True)
         if not qvec:
             return []
-        query_filter = None
+        # 지역(국가) 조건 — 좌표가 없어도 '오사카 라멘'(JP) 질의에 인천/후쿠오카가 섞이는
+        # 교차국가 오염을 막는다. 좌표가 있으면 cos(lat) 보정 지오박스와 AND 로 결합한다.
+        country_cond = None
+        cc = str(country_code or "").strip().upper()
+        if cc and Filter is not None:
+            try:
+                country_cond = FieldCondition(key="country", match=MatchValue(value=cc))
+            except Exception:
+                country_cond = None
+        geo_cond = None
         if latitude is not None and longitude is not None and Filter is not None:
             try:
-                d = radius_km / 111.0  # 위도 1도 ≈ 111km 근사
-                query_filter = Filter(
-                    must=[
-                        FieldCondition(
-                            key="location",
-                            geo_bounding_box=GeoBoundingBox(
-                                top_left=GeoPoint(lon=float(longitude) - d, lat=float(latitude) + d),
-                                bottom_right=GeoPoint(lon=float(longitude) + d, lat=float(latitude) - d),
-                            ),
-                        )
-                    ]
+                import math
+
+                lat_deg = radius_km / 111.0  # 위도 1도 ≈ 111km 근사
+                # G-2: 경도 1도의 실제 거리는 cos(위도)배로 짧아진다. 보정하지 않으면 고위도에서
+                # 동서로 과도하게 넓은 박스가 만들어져(서울 ~37km 대신 의도 30km) 먼 장소가 '근처'로
+                # 혼입된다. cos 보정으로 동서/남북 반경을 실제 거리에 맞춘다.
+                cos_lat = max(0.01, math.cos(math.radians(float(latitude))))
+                lon_deg = lat_deg / cos_lat
+                geo_cond = FieldCondition(
+                    key="location",
+                    geo_bounding_box=GeoBoundingBox(
+                        top_left=GeoPoint(lon=float(longitude) - lon_deg, lat=float(latitude) + lat_deg),
+                        bottom_right=GeoPoint(lon=float(longitude) + lon_deg, lat=float(latitude) - lat_deg),
+                    ),
                 )
             except Exception:
-                query_filter = None
+                geo_cond = None
+        _conds = [c for c in (country_cond, geo_cond) if c is not None]
+        query_filter = Filter(must=_conds) if _conds else None
+        # 지오 결과가 비어도 국가는 유지한 채 폴백할 수 있도록 국가-단독 필터를 보관.
+        country_only_filter = Filter(must=[country_cond]) if country_cond is not None else None
         top = max(1, int(limit))
 
         def _dense_query(use_filter: bool):
@@ -714,15 +733,27 @@ class TourismVectorStore:
                     hits = _dense_query(use_filter=query_filter is not None)
                 except Exception:
                     hits = []
-        # 지오 필터 결과가 비면(필드 미인덱스/범위밖) 무필터로 폴백 — 의미검색은 살린다.
+        # 지오 필터 결과가 비면(필드 미인덱스/범위밖) 단계적 폴백.
+        # ① 국가는 유지하고 지오만 해제(교차국가 오염 방지) → ② 그래도 비면 무필터(의미검색만).
         if not hits and query_filter is not None:
-            try:
-                hits = run(use_filter=False)
-            except Exception:
+            if country_only_filter is not None and country_only_filter is not query_filter:
+                query_filter = country_only_filter
                 try:
-                    hits = _dense_query(use_filter=False)
+                    hits = run(use_filter=True)
                 except Exception:
-                    return []
+                    try:
+                        hits = _dense_query(use_filter=True)
+                    except Exception:
+                        hits = []
+            if not hits:
+                query_filter = None
+                try:
+                    hits = run(use_filter=True)  # query_filter=None → 무필터
+                except Exception:
+                    try:
+                        hits = _dense_query(use_filter=True)
+                    except Exception:
+                        return []
 
         # 멀티모달 CLIP 융합: 텍스트→이미지 정렬 검색 결과를 RRF 로 병합(가용 시).
         merged_scores: Optional[Dict[Any, float]] = None
@@ -771,17 +802,22 @@ def search_tourism_places(
     limit: Optional[int] = None,
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
+    country_code: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """friend-chat 그라운딩용 편의 함수. 미가동 시 빈 리스트(상위에서 OSM/웹 폴백).
 
     limit=None 이면 런타임 SSOT(`tourism_rag_top_k()`)를 사용한다 — 재기동 없이
-    top-k 를 라이브 조정할 수 있는 단일 출처. 명시 limit 은 그대로 우선한다."""
+    top-k 를 라이브 조정할 수 있는 단일 출처. 명시 limit 은 그대로 우선한다.
+    country_code 가 있으면 좌표가 없어도 해당 국가로 한정해 교차국가 오염을 막는다."""
     top_k = tourism_rag_top_k() if limit is None else max(1, int(limit))
     try:
         store = get_tourism_store()
         if not store.available:
             return []
-        return store.search(query, limit=top_k, latitude=latitude, longitude=longitude)
+        return store.search(
+            query, limit=top_k, latitude=latitude, longitude=longitude,
+            country_code=country_code,
+        )
     except Exception as exc:
         logger.warning("[tourism_kb] search_tourism_places 실패(폴백): %s", exc)
         return []

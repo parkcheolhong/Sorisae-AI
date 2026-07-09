@@ -16,9 +16,17 @@ function normalizeApiBaseUrl(raw: string): string {
     if (!/^https?:\/\//i.test(trimmed)) {
         return PRODUCTION_API_BASE;
     }
-    // 릴리스 APK에서 로컬/에뮬레이터 주소가 번들에 남아도 운영 URL로 강제한다.
-    // container-dev(LAN http://172.x:8000) 는 허용 — Docker 백엔드 실기기 실험용.
-    if (!__DEV__ && /\/\/(10\.0\.2\.2|127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(trimmed)) {
+    // 릴리스 APK: 로컬/에뮬레이터·사설 LAN 은 운영 URL로 강제 (container-dev 채널만 예외)
+    const releaseChannel = String(process.env.EXPO_PUBLIC_RELEASE_CHANNEL || '').trim().toLowerCase();
+    const isContainerDev = releaseChannel === 'container-dev';
+    if (!__DEV__ && !isContainerDev) {
+        if (/\/\/(10\.0\.2\.2|127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(trimmed)) {
+            return PRODUCTION_API_BASE;
+        }
+        if (/\/\/(172\.|10\.|192\.168\.)/i.test(trimmed)) {
+            return PRODUCTION_API_BASE;
+        }
+    } else if (!__DEV__ && /\/\/(10\.0\.2\.2|127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(trimmed)) {
         return PRODUCTION_API_BASE;
     }
     return trimmed;

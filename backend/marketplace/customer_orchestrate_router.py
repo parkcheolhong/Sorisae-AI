@@ -125,8 +125,10 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
     async def websocket_customer_orchestrate_progress(websocket: WebSocket, run_id: str):
         from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_ws
         from jose import jwt as _jwt
+        from backend.auth import resolve_ws_token
 
-        token = str(websocket.query_params.get("token") or "").strip()
+        # [#6] Sec-WebSocket-Protocol 우선, ?token= 폴백(점진 전환·무중단).
+        token, accept_subprotocol = resolve_ws_token(websocket)
         if not token:
             await websocket.close(code=4401, reason="token required")
             return
@@ -136,7 +138,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             await websocket.close(code=4401, reason="인증 실패")
             return
 
-        await websocket.accept()
+        await websocket.accept(subprotocol=accept_subprotocol)
         try:
             await websocket.send_json({"event": "connected", "run_id": run_id})
             async for message in iter_orchestration_progress_ws(run_id):

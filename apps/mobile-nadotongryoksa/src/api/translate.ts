@@ -1,10 +1,39 @@
 // WorldLinco 통번역 API 클라이언트
-import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
+import { FileSystemUploadType } from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { API_BASE } from '../app/appConstants';
 import { FEATURE_IDS, ensureCorrelationId } from '../features/correlation/correlationId';
 
-const BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
-  'http://10.0.2.2:8000';
+const BASE_URL: string = API_BASE;
+
+const OCR_UPLOAD_MAX_WIDTH = 1920;
+const OCR_UPLOAD_JPEG_QUALITY = 0.82;
+
+async function prepareOcrUploadUri(uri: string, fileName: string): Promise<string> {
+  const cacheRoot = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!cacheRoot) {
+    throw new Error('로컬 캐시 경로를 사용할 수 없습니다.');
+  }
+  const dest = `${cacheRoot}ocr-upload-${Date.now()}.jpg`;
+  try {
+    const manipulated = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: OCR_UPLOAD_MAX_WIDTH } }],
+      {
+        compress: OCR_UPLOAD_JPEG_QUALITY,
+        format: ImageManipulator.SaveFormat.JPEG,
+      },
+    );
+    await FileSystem.copyAsync({ from: manipulated.uri, to: dest });
+    return dest;
+  } catch {
+    const ext = (fileName.split('.').pop() || 'jpg').toLowerCase();
+    const fallbackDest = `${cacheRoot}ocr-upload-${Date.now()}.${ext}`;
+    await FileSystem.copyAsync({ from: uri, to: fallbackDest });
+    return fallbackDest;
+  }
+}
 
 export interface TranslateResult {
   translated: string;
@@ -380,32 +409,48 @@ export async function synthesizeSpeech(
   }
 }
 
+export interface TranslateImageOptions {
+  highDensity?: boolean;
+}
+
 export async function translateImage(
   asset: { uri: string; name?: string | null; mimeType?: string | null },
   from: string,
   to: string,
   regionHint?: string,
+  options: TranslateImageOptions = {},
 ): Promise<ImageTranslateResult> {
-  const formData = new FormData();
   const fileName = asset.name || `ocr-${Date.now()}.jpg`;
   const mimeType = asset.mimeType || 'image/jpeg';
-  formData.append('file', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
-  formData.append('source_language', from);
-  formData.append('target_language', to);
-  if (regionHint) {
-    formData.append('region_hint', regionHint);
-  }
+  const uploadUri = await prepareOcrUploadUri(asset.uri, fileName);
 
-  const res = await fetch(`${BASE_URL}/api/mobile/image-translation`, {
-    method: 'POST',
-    body: formData,
-  });
-  if (!res.ok) {
-    const payload = await res.json().catch(() => ({}));
-    const message = typeof payload.detail === 'string' ? payload.detail : `HTTP ${res.status}`;
+  // RN 0.85 / Expo 56: fetch+FormData 는 "Unsupported FormDataPart implementation" 로 실패할 수 있음.
+  const upload = await FileSystem.uploadAsync(
+    `${BASE_URL}/api/mobile/image-translation`,
+    uploadUri,
+    {
+      uploadType: FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType,
+      parameters: {
+        source_language: from,
+        target_language: to,
+        ...(regionHint ? { region_hint: regionHint } : {}),
+        ...(options.highDensity ? { high_density: '1' } : {}),
+      },
+    },
+  );
+
+  let data: Record<string, unknown> = {};
+  try {
+    data = JSON.parse(upload.body || '{}') as Record<string, unknown>;
+  } catch {
+    data = {};
+  }
+  if (upload.status < 200 || upload.status >= 300) {
+    const message = typeof data.detail === 'string' ? data.detail : `HTTP ${upload.status}`;
     throw new Error(message);
   }
-  const data = await res.json();
   return {
     original_text: String(data.original_text ?? ''),
     translated: String(data.translated ?? ''),

@@ -9,6 +9,8 @@ import {
     normalizeDetectedLangCode,
     inferSpeechLangCode,
     resolveAutoTargetLang,
+    resolvePreferredOutputLang,
+    resolveVoipPeerTargetLang,
 } from '../features/language/languageCatalog';
 
 describe('languageCatalog — LANGS 카탈로그 무결성', () => {
@@ -35,7 +37,8 @@ describe('getLangLabelText', () => {
     it('지원 코드는 라벨을 반환한다', () => {
         expect(getLangLabelText('ko')).toBe('한국어');
         expect(getLangLabelText('en')).toBe('English');
-        expect(getLangLabelText('zh-tw')).toBe('繁體中文');
+        expect(getLangLabelText('zh-tw')).toBe('繁體中文(台灣)');
+        expect(getLangLabelText('zh-hk')).toBe('粵語(香港)');
     });
 });
 
@@ -116,5 +119,45 @@ describe('resolveAutoTargetLang — 자동 타깃 결정', () => {
         expect(resolveAutoTargetLang('ko', 'ko')).toBe('en');
         expect(resolveAutoTargetLang('en', 'en')).toBe('ko');
         expect(resolveAutoTargetLang('fr', 'fr')).toBe('ko');
+    });
+});
+
+describe('resolveVoipPeerTargetLang — VoIP 상대 타깃 복구', () => {
+    it('uses remote preferred language when it differs from my source', () => {
+        expect(resolveVoipPeerTargetLang('ko', 'en', 'ja', 'JP')).toBe('ja');
+    });
+
+    it('falls back to remote country language when remote preferred is incorrectly same as my source', () => {
+        expect(resolveVoipPeerTargetLang('ko', 'ko', 'ko', 'JP')).toBe('ja');
+    });
+
+    it('keeps same-language calls intact when remote country also resolves to my source language', () => {
+        expect(resolveVoipPeerTargetLang('ko', 'ko', 'ko', 'KR')).toBe('en');
+    });
+
+    it('keeps designated output language stable even when spoken transcript is Korean', () => {
+        const spokenDetected = inferSpeechLangCode('안녕하세요', 'ja');
+        expect(spokenDetected).toBe('ko');
+
+        const designatedOutput = resolvePreferredOutputLang('ja', 'ko');
+        expect(designatedOutput).toBe('ja');
+
+        const voipTarget = resolveVoipPeerTargetLang(designatedOutput, 'ko', 'ko', 'KR');
+        expect(voipTarget).toBe('ko');
+        // local designated output should not be overwritten by detected input script.
+        expect(designatedOutput).toBe('ja');
+    });
+});
+
+describe('resolvePreferredOutputLang — preferred_language는 출력 언어 SSOT', () => {
+    it('uses preferred language as output language when supported', () => {
+        expect(resolvePreferredOutputLang('ja', 'ko')).toBe('ja');
+        expect(resolvePreferredOutputLang('EN', 'ko')).toBe('en');
+    });
+
+    it('falls back to current output language when preferred is missing/invalid', () => {
+        expect(resolvePreferredOutputLang('', 'ko')).toBe('ko');
+        expect(resolvePreferredOutputLang('xx', 'ko')).toBe('ko');
+        expect(resolvePreferredOutputLang(undefined, 'ja')).toBe('ja');
     });
 });

@@ -156,7 +156,7 @@ def _check_freeze_manifest(errors: list[str]) -> None:
         if f'"{min_build}"' not in probe:
             errors.append(f"probe MIN_APK_BUILD != freeze {min_build}")
 
-    timing = (ROOT / "apps/mobile-nadotongryoksa/src/features/face-interpretation/faceConversationTiming.ts").read_text(
+    timing = (ROOT / "apps/mobile-nadotongryoksa/src/features/shared/audioConversationTiming.ts").read_text(
         encoding="utf-8"
     )
     cap = int(sorisae.get("playback_cap_ms", 0))

@@ -6,6 +6,8 @@ param(
     [string]$CalleeVoiceId = "nado-000001",
     [string]$CallerVoiceId = "nado-000226",
     [string]$CalleeApiEmail = "119cash@naver.com",
+    [Alias("BaseUrl")]
+    [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$CalleePreferredLanguage = "ja",
     [string]$RestoreCalleeLanguage = "ko",
     [int]$MonitorSec = 70,
@@ -40,17 +42,67 @@ function Test-CallSessionConnected {
     return ($LogText -match 'Connection state: connected|State change callback: connected')
 }
 
+function Get-ApiAuthToken {
+    $password = $env:WORLDLINCO_VOIP_API_PASSWORD
+    if (-not $password) {
+        $passwordPath = Join-Path $RepoRoot ".runtime/secrets/fixed_admin_password.txt"
+        if (Test-Path $passwordPath) {
+            $password = (Get-Content -Raw $passwordPath).Trim()
+        }
+    }
+    if (-not $password) { return $null }
+
+    try {
+        $loginJson = & curl.exe -s --max-time 15 -X POST "$ApiBaseUrl/api/auth/login" `
+            -H "Content-Type: application/x-www-form-urlencoded" `
+            --data-urlencode "username=$CalleeApiEmail" `
+            --data-urlencode "password=$password"
+        if (-not $loginJson -or $loginJson.TrimStart() -notmatch '^\{') { return $null }
+        $login = $loginJson | ConvertFrom-Json
+        return [string]$login.access_token
+    }
+    catch {
+        return $null
+    }
+}
+
+function Test-CallStatusActiveByApi {
+    param([string]$ExpectedCallId, [string]$Token)
+    if (-not $ExpectedCallId -or -not $Token) { return $false }
+    try {
+        $json = & curl.exe -s --max-time 10 -H "Authorization: Bearer $Token" "$ApiBaseUrl/api/v1/voip/calls/$ExpectedCallId"
+        if (-not $json -or $json.TrimStart() -notmatch '^\{') { return $false }
+        return ($json -match '"status"\s*:\s*"(active|connecting|ringing)"')
+    }
+    catch {
+        return $false
+    }
+}
+
+function Test-CalleeAcceptedOrIncomingPipeline {
+    param([string]$LogText, [string]$ExpectedCallId)
+    if (-not $ExpectedCallId) { return $false }
+    if ($LogText -notmatch [regex]::Escape($ExpectedCallId)) { return $false }
+    return ($LogText -match 'VOIP_INCOMING_ACCEPT_API_OK|VOIP_INCOMING_CALL_ACCEPTED|VOIP_INCOMING_CALL_RECEIVED|VOIP_PENDING_CALL_FETCHED|VOIP_INCOMING_CALL_APPLIED')
+}
+
 function Wait-ForStableCallSession {
     param([string]$ExpectedCallId, [int]$StableSeconds = 8, [int]$TimeoutSec = 90)
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     $stableSince = $null
+    $apiToken = Get-ApiAuthToken
     while ((Get-Date) -lt $deadline) {
-        $tabOk = Test-CallSessionConnected -LogText (Get-LogcatText $CallerDevice) -ExpectedCallId $ExpectedCallId
-        $s10Ok = Test-CallSessionConnected -LogText (Get-LogcatText $CalleeDevice) -ExpectedCallId $ExpectedCallId
-        if ($tabOk -and $s10Ok) {
+        $tabLog = Get-LogcatText $CallerDevice
+        $s10Log = Get-LogcatText $CalleeDevice
+        $tabOk = Test-CallSessionConnected -LogText $tabLog -ExpectedCallId $ExpectedCallId
+        $s10Ok = Test-CallSessionConnected -LogText $s10Log -ExpectedCallId $ExpectedCallId
+        $s10PipelineOk = Test-CalleeAcceptedOrIncomingPipeline -LogText $s10Log -ExpectedCallId $ExpectedCallId
+        $apiOk = Test-CallStatusActiveByApi -ExpectedCallId $ExpectedCallId -Token $apiToken
+
+        if ($tabOk -and ($s10Ok -or $s10PipelineOk -or $apiOk)) {
             if (-not $stableSince) { $stableSince = Get-Date }
             if (((Get-Date) - $stableSince).TotalSeconds -ge $StableSeconds) {
-                Write-Step "Call stable ${StableSeconds}s on both devices call_id=$ExpectedCallId"
+                Write-Step "Call stable ${StableSeconds}s call_id=$ExpectedCallId (tab=$tabOk s10=$s10Ok pipeline=$s10PipelineOk api=$apiOk)"
                 return $true
             }
         } else {
@@ -78,13 +130,14 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Step "Pre-call hangup + stale call purge"
 & pwsh -NoProfile -File $setupScript -CallerDevice $CallerDevice -CalleeDevice $CalleeDevice `
-    -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -HangupOnly 2>&1 | Out-Null
+    -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -ApiBaseUrl $ApiBaseUrl -HangupOnly 2>&1 | Out-Null
 
 Write-Step "Call setup (SetupOnly)"
 $setupLogPath = Join-Path $RunDir "setup.log"
 & pwsh -NoProfile -File $setupScript -CallerDevice $CallerDevice -CalleeDevice $CalleeDevice `
     -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId `
-    -CallerPreferredLanguage "ko" -CalleePreferredLanguage $CalleePreferredLanguage -SetupOnly 2>&1 | Tee-Object $setupLogPath
+    -CallerPreferredLanguage "ko" -CalleePreferredLanguage $CalleePreferredLanguage `
+    -ApiBaseUrl $ApiBaseUrl -PreserveCalleeSession -SetupOnly 2>&1 | Tee-Object $setupLogPath
 
 $setupLog = if (Test-Path $setupLogPath) { Get-Content -Raw $setupLogPath } else { "" }
 $callId = $null
@@ -97,7 +150,7 @@ if ($setupLog -match 'SETUP ONLY: connected call_id=(call-[a-f0-9]+)') {
 if (-not $callId) {
     Write-Step "FAIL: setup did not reach connected call_id"
     & pwsh -NoProfile -File $setupScript -CallerDevice $CallerDevice -CalleeDevice $CalleeDevice `
-        -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -HangupOnly 2>&1 | Out-Null
+        -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -ApiBaseUrl $ApiBaseUrl -HangupOnly 2>&1 | Out-Null
     exit 1
 }
 
@@ -107,7 +160,7 @@ if (-not (Wait-ForStableCallSession -ExpectedCallId $callId -StableSeconds $Stab
     Get-LogcatText $CallerDevice | Out-File (Join-Path $RunDir "tab_unstable.log") -Encoding utf8
     Get-LogcatText $CalleeDevice | Out-File (Join-Path $RunDir "s10_unstable.log") -Encoding utf8
     & pwsh -NoProfile -File $setupScript -CallerDevice $CallerDevice -CalleeDevice $CalleeDevice `
-        -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -HangupOnly 2>&1 | Out-Null
+        -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -ApiBaseUrl $ApiBaseUrl -HangupOnly 2>&1 | Out-Null
     exit 1
 }
 
@@ -155,7 +208,7 @@ Write-Step "Evidence: $RunDir"
 
 Write-Step "Post-call hangup"
 & pwsh -NoProfile -File $setupScript -CallerDevice $CallerDevice -CalleeDevice $CalleeDevice `
-    -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -HangupOnly 2>&1 | Out-Null
+    -CalleeVoiceId $CalleeVoiceId -CallerVoiceId $CallerVoiceId -ApiBaseUrl $ApiBaseUrl -HangupOnly 2>&1 | Out-Null
 
 if ($RestoreCalleeLanguage) {
     Write-Step "Restore S10 preferred_language=$RestoreCalleeLanguage"

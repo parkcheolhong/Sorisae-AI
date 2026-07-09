@@ -69,43 +69,47 @@ export const UI_TEXT: Record<string, {
 };
 
 export function getUiText(lang: string) {
-    const fallback = UI_TEXT['en'];
-    const selected = UI_TEXT[lang] ?? fallback;
+    const en = UI_TEXT['en'];
+    const ko = UI_TEXT['ko'];
+    const norm = String(lang || 'ko').trim().toLowerCase();
+    // 비-ko 언어는 미등록 키를 en 으로 채워 한국어 플래시를 방지한다.
+    const selected = UI_TEXT[norm] ?? (norm === 'ko' ? ko : en);
+    const fillFallback = norm === 'ko' ? ko : en;
     const applyLanguageCount = (value: string) => value.replace(/24/g, String(SUPPORTED_LANGUAGE_COUNT));
     return {
         ...selected,
-        subtitle: applyLanguageCount(selected.subtitle),
-        footer: applyLanguageCount(selected.footer),
-        ocrTitle: selected.ocrTitle ?? fallback.ocrTitle ?? 'Image OCR Translation',
-        ocrSubtitle: selected.ocrSubtitle ?? fallback.ocrSubtitle ?? 'Pick an image to extract text and translate it.',
-        ocrPickImage: selected.ocrPickImage ?? fallback.ocrPickImage ?? '🖼️ Pick image',
-        ocrLoading: selected.ocrLoading ?? fallback.ocrLoading ?? 'Running OCR...',
-        ocrExtractedTitle: selected.ocrExtractedTitle ?? fallback.ocrExtractedTitle ?? 'OCR Extracted Text',
-        ocrTranslatedTitle: selected.ocrTranslatedTitle ?? fallback.ocrTranslatedTitle ?? 'OCR Translation Result',
-        ocrSelectedFile: selected.ocrSelectedFile ?? fallback.ocrSelectedFile ?? 'Selected file: {file}',
-        ocrErrorMsg: selected.ocrErrorMsg ?? fallback.ocrErrorMsg ?? 'Image OCR failed. Please try again.',
-        autoVoiceSegmentStatus: selected.autoVoiceSegmentStatus ?? fallback.autoVoiceSegmentStatus ?? '🎙️ Auto voice translation: processing in {delay} chunks.',
-        autoVoiceDuplicateSkipped: selected.autoVoiceDuplicateSkipped ?? fallback.autoVoiceDuplicateSkipped ?? '↺ Duplicate sentence skipped to prevent repeated auto translation.',
-        autoVoiceDetected: selected.autoVoiceDetected ?? fallback.autoVoiceDetected ?? '🎙️ Auto-detected: {from} → {to}',
-        autoVoiceModeStopped: selected.autoVoiceModeStopped ?? fallback.autoVoiceModeStopped ?? '🎙️ Auto voice translation mode has stopped.',
-        autoVoiceModeStarted: selected.autoVoiceModeStarted ?? fallback.autoVoiceModeStarted ?? '🎙️ Auto voice translation mode started ({delay} interval)',
-        manualVoiceOnlyNotice: selected.manualVoiceOnlyNotice ?? fallback.manualVoiceOnlyNotice ?? '🎤 Recording starts only when you press the mic. Select both source and target languages manually.',
-        manualLanguageHint: selected.manualLanguageHint ?? fallback.manualLanguageHint ?? 'Manual selection',
-        profileLanguageLabel: selected.profileLanguageLabel ?? fallback.profileLanguageLabel ?? 'My language (profile)',
-        profileLanguageHint: selected.profileLanguageHint ?? fallback.profileLanguageHint ?? 'Saved in profile',
-        peerLanguageLabel: selected.peerLanguageLabel ?? fallback.peerLanguageLabel ?? 'Peer language (GPS/manual)',
-        peerLanguageHint: selected.peerLanguageHint ?? fallback.peerLanguageHint ?? 'GPS first · manual override',
-        faceConversationOn: selected.faceConversationOn ?? fallback.faceConversationOn ?? '🎙️ Conversation ON',
-        faceConversationOff: selected.faceConversationOff ?? fallback.faceConversationOff ?? 'Conversation OFF',
-        faceConversationPeerRequired: selected.faceConversationPeerRequired ?? fallback.faceConversationPeerRequired ?? 'Set the peer language via GPS or manual selection.',
-        faceListenProcessing: selected.faceListenProcessing ?? fallback.faceListenProcessing ?? '🔄 Translating & speaking...',
-        faceSpeakingStatus: selected.faceSpeakingStatus ?? fallback.faceSpeakingStatus ?? '🔊 Speaking translation · listening paused',
-        faceVadHint: selected.faceVadHint ?? fallback.faceVadHint ?? 'The mic stays on until you finish speaking.',
-        interAutoRelayDuplicateSkipped: selected.interAutoRelayDuplicateSkipped ?? fallback.interAutoRelayDuplicateSkipped ?? '↺ Duplicate sentence skipped to prevent repeated auto relay.',
-        interAutoRelayPending: selected.interAutoRelayPending ?? fallback.interAutoRelayPending ?? '⏱️ Auto relay after {delay} of no input',
-        voipIncomingTitle: selected.voipIncomingTitle ?? fallback.voipIncomingTitle ?? '📞 Incoming voice call',
-        voipIncomingAccept: selected.voipIncomingAccept ?? fallback.voipIncomingAccept ?? 'Accept',
-        voipIncomingReject: selected.voipIncomingReject ?? fallback.voipIncomingReject ?? 'Decline',
-        voipIncomingConnecting: selected.voipIncomingConnecting ?? fallback.voipIncomingConnecting ?? 'Connecting to server… please wait',
+        subtitle: applyLanguageCount(selected.subtitle ?? fillFallback.subtitle),
+        footer: applyLanguageCount(selected.footer ?? fillFallback.footer),
+        ocrTitle: selected.ocrTitle ?? fillFallback.ocrTitle ?? ko.ocrTitle,
+        ocrSubtitle: selected.ocrSubtitle ?? fillFallback.ocrSubtitle ?? ko.ocrSubtitle,
+        ocrPickImage: selected.ocrPickImage ?? fillFallback.ocrPickImage ?? ko.ocrPickImage,
+        ocrLoading: selected.ocrLoading ?? fillFallback.ocrLoading ?? ko.ocrLoading,
+        ocrExtractedTitle: selected.ocrExtractedTitle ?? fillFallback.ocrExtractedTitle ?? ko.ocrExtractedTitle,
+        ocrTranslatedTitle: selected.ocrTranslatedTitle ?? fillFallback.ocrTranslatedTitle ?? ko.ocrTranslatedTitle,
+        ocrSelectedFile: selected.ocrSelectedFile ?? fillFallback.ocrSelectedFile ?? ko.ocrSelectedFile,
+        ocrErrorMsg: selected.ocrErrorMsg ?? fillFallback.ocrErrorMsg ?? ko.ocrErrorMsg,
+        autoVoiceSegmentStatus: selected.autoVoiceSegmentStatus ?? fillFallback.autoVoiceSegmentStatus ?? ko.autoVoiceSegmentStatus,
+        autoVoiceDuplicateSkipped: selected.autoVoiceDuplicateSkipped ?? fillFallback.autoVoiceDuplicateSkipped ?? ko.autoVoiceDuplicateSkipped,
+        autoVoiceDetected: selected.autoVoiceDetected ?? fillFallback.autoVoiceDetected ?? ko.autoVoiceDetected,
+        autoVoiceModeStopped: selected.autoVoiceModeStopped ?? fillFallback.autoVoiceModeStopped ?? ko.autoVoiceModeStopped,
+        autoVoiceModeStarted: selected.autoVoiceModeStarted ?? fillFallback.autoVoiceModeStarted ?? ko.autoVoiceModeStarted,
+        manualVoiceOnlyNotice: selected.manualVoiceOnlyNotice ?? fillFallback.manualVoiceOnlyNotice ?? ko.manualVoiceOnlyNotice,
+        manualLanguageHint: selected.manualLanguageHint ?? fillFallback.manualLanguageHint ?? ko.manualLanguageHint,
+        profileLanguageLabel: selected.profileLanguageLabel ?? fillFallback.profileLanguageLabel ?? ko.profileLanguageLabel,
+        profileLanguageHint: selected.profileLanguageHint ?? fillFallback.profileLanguageHint ?? ko.profileLanguageHint,
+        peerLanguageLabel: selected.peerLanguageLabel ?? fillFallback.peerLanguageLabel ?? ko.peerLanguageLabel,
+        peerLanguageHint: selected.peerLanguageHint ?? fillFallback.peerLanguageHint ?? ko.peerLanguageHint,
+        faceConversationOn: selected.faceConversationOn ?? fillFallback.faceConversationOn ?? ko.faceConversationOn,
+        faceConversationOff: selected.faceConversationOff ?? fillFallback.faceConversationOff ?? ko.faceConversationOff,
+        faceConversationPeerRequired: selected.faceConversationPeerRequired ?? fillFallback.faceConversationPeerRequired ?? ko.faceConversationPeerRequired,
+        faceListenProcessing: selected.faceListenProcessing ?? fillFallback.faceListenProcessing ?? ko.faceListenProcessing,
+        faceSpeakingStatus: selected.faceSpeakingStatus ?? fillFallback.faceSpeakingStatus ?? ko.faceSpeakingStatus,
+        faceVadHint: selected.faceVadHint ?? fillFallback.faceVadHint ?? ko.faceVadHint,
+        interAutoRelayDuplicateSkipped: selected.interAutoRelayDuplicateSkipped ?? fillFallback.interAutoRelayDuplicateSkipped ?? ko.interAutoRelayDuplicateSkipped,
+        interAutoRelayPending: selected.interAutoRelayPending ?? fillFallback.interAutoRelayPending ?? ko.interAutoRelayPending,
+        voipIncomingTitle: selected.voipIncomingTitle ?? fillFallback.voipIncomingTitle ?? ko.voipIncomingTitle,
+        voipIncomingAccept: selected.voipIncomingAccept ?? fillFallback.voipIncomingAccept ?? ko.voipIncomingAccept,
+        voipIncomingReject: selected.voipIncomingReject ?? fillFallback.voipIncomingReject ?? ko.voipIncomingReject,
+        voipIncomingConnecting: selected.voipIncomingConnecting ?? fillFallback.voipIncomingConnecting ?? ko.voipIncomingConnecting,
     };
 }

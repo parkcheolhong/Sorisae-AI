@@ -195,6 +195,8 @@ services:
       # VoIP 시그널링 스토어/릴레이를 Redis(멀티워커 pub/sub)로 승격(#4). 미설정 시 인메모리(P1) 폴백.
       # 마켓플레이스 캐시(/0)와 분리하기 위해 DB 인덱스 1 사용.
       VOIP_REDIS_URL: ${VOIP_REDIS_URL:-redis://redis:6379/1}
+      # LTE/외부망: initiate 응답 signaling URL 이 172.x/127.0.0.1 로 내려가지 않도록 공인 베이스 고정
+      VOIP_SIGNALING_PUBLIC_BASE_URL: ${VOIP_SIGNALING_PUBLIC_BASE_URL:-https://metanova1004.com}
       AUTONOMOUS_SESSION_DIR: /app/data/autonomous_sessions
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: ${MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT:-true}

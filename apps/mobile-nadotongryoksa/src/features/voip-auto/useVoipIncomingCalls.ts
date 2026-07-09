@@ -90,6 +90,11 @@ export function useVoipIncomingCalls(options: UseVoipIncomingCallsOptions): void
         let cancelled = false;
         (async () => {
             try {
+                // 로그인 직후 알림 권한 다이얼로그가 마이크 권한과 겹치면 Android가 전부 거부한다.
+                await new Promise((resolve) => setTimeout(resolve, 2500));
+                if (cancelled) {
+                    return;
+                }
                 if (messaging.requestNotificationPermission) {
                     await messaging.requestNotificationPermission();
                 }

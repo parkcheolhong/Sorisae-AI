@@ -13,12 +13,13 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 _VALID_RATINGS = {"up", "down"}
 _VALID_VARIANTS = {"A", "B"}
+_VALID_EVIDENCE_GRADES = {"확정", "추정", "미확인"}
 
 _DDL = (
     """
@@ -34,11 +35,15 @@ _DDL = (
         candidate_count INT,
         cached BOOLEAN,
         total_ms REAL,
+        evidence_grade TEXT,
+        uncertainty_disclosed BOOLEAN,
         created_at TIMESTAMP DEFAULT now()
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_tourism_feedback_variant ON tourism_answer_feedback (variant)",
     "CREATE INDEX IF NOT EXISTS idx_tourism_feedback_created ON tourism_answer_feedback (created_at)",
+    "ALTER TABLE tourism_answer_feedback ADD COLUMN IF NOT EXISTS evidence_grade TEXT",
+    "ALTER TABLE tourism_answer_feedback ADD COLUMN IF NOT EXISTS uncertainty_disclosed BOOLEAN",
 )
 
 
@@ -140,14 +145,24 @@ class TourismFeedbackStore:
         }
         sql = (
             "INSERT INTO tourism_answer_feedback "
-            "(query, language, variant, rating, nps, comment, days, candidate_count, cached, total_ms) "
+            "(query, language, variant, rating, nps, comment, days, candidate_count, cached, total_ms, evidence_grade, uncertainty_disclosed) "
             "VALUES (%(query)s, %(language)s, %(variant)s, %(rating)s, %(nps)s, %(comment)s, "
-            "%(days)s, %(candidate_count)s, %(cached)s, %(total_ms)s)"
+            "%(days)s, %(candidate_count)s, %(cached)s, %(total_ms)s, %(evidence_grade)s, %(uncertainty_disclosed)s)"
         )
+        evidence_grade = str(fb.get("evidence_grade") or "").strip()
+        if evidence_grade not in _VALID_EVIDENCE_GRADES:
+            evidence_grade = None
+        uncertainty_disclosed = fb.get("uncertainty_disclosed")
+        if uncertainty_disclosed is None:
+            uncertainty_disclosed = None
+        else:
+            uncertainty_disclosed = bool(uncertainty_disclosed)
         try:
             with self._engine.begin() as conn:
                 raw = conn.connection
                 cur = raw.cursor()
+                row["evidence_grade"] = evidence_grade
+                row["uncertainty_disclosed"] = uncertainty_disclosed
                 cur.execute(sql, row)
                 cur.close()
             return True
@@ -180,14 +195,19 @@ class TourismFeedbackStore:
                 "COUNT(*) FILTER (WHERE nps BETWEEN 9 AND 10), "
                 "COUNT(*) FILTER (WHERE nps BETWEEN 7 AND 8), "
                 "COUNT(*) FILTER (WHERE nps BETWEEN 0 AND 6), "
-                "AVG(nps), AVG(total_ms) "
+                "AVG(nps), AVG(total_ms), "
+                "COUNT(*) FILTER (WHERE evidence_grade = '확정'), "
+                "COUNT(*) FILTER (WHERE evidence_grade = '추정'), "
+                "COUNT(*) FILTER (WHERE evidence_grade = '미확인'), "
+                "COUNT(*) FILTER (WHERE uncertainty_disclosed IS TRUE), "
+                "COUNT(*) FILTER (WHERE uncertainty_disclosed IS NOT NULL) "
                 "FROM tourism_answer_feedback" + where,
                 params,
             )
-            r = cur.fetchone() or (0, 0, 0, 0, 0, 0, None, None)
+            r = cur.fetchone() or (0, 0, 0, 0, 0, 0, None, None, 0, 0, 0, 0, 0)
         finally:
             cur.close()
-        total, up, down, promoters, passives, detractors, avg_nps, avg_ms = r
+        total, up, down, promoters, passives, detractors, avg_nps, avg_ms, grade_confirmed, grade_estimated, grade_unverified, uncertainty_true, uncertainty_total = r
         thumbs = (int(up) + int(down))
         return {
             "total": int(total or 0),
@@ -201,6 +221,12 @@ class TourismFeedbackStore:
             "detractors": int(detractors or 0),
             "avg_nps": round(float(avg_nps), 2) if avg_nps is not None else None,
             "avg_total_ms": round(float(avg_ms), 1) if avg_ms is not None else None,
+            "evidence_grades": {
+                "확정": int(grade_confirmed or 0),
+                "추정": int(grade_estimated or 0),
+                "미확인": int(grade_unverified or 0),
+            },
+            "uncertainty_disclosure_rate": round(int(uncertainty_true) / int(uncertainty_total), 4) if int(uncertainty_total or 0) > 0 else None,
         }
 
     def stats(self) -> Dict[str, Any]:

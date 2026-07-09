@@ -50,6 +50,7 @@ interface Props {
   autoCallVoiceId?: string | null;
   onAutoCallConsumed?: () => void;
   onFriendSelected?: (friend: Friend) => void;
+  onStartChat?: (friend: Friend) => void;
   onOpenMapDiscovery?: () => void;
 }
 
@@ -57,7 +58,7 @@ function logFriendFolderDiag(event: string, payload: Record<string, unknown>) {
   console.log('[FRIEND_FOLDER_DIAG]', JSON.stringify({ event, ...payload }));
 }
 
-export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected, onOpenMapDiscovery }: Props) {
+export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected, onStartChat, onOpenMapDiscovery }: Props) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isNarrowWidth = windowWidth < 380;
   const normalizedToken = token?.trim() ?? '';
@@ -420,6 +421,14 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
         onFriendSelected(item);
       }
     };
+    const canStartChat = Boolean(item.friendUserId);
+    const handlePressChat = () => {
+      if (!canStartChat) {
+        Alert.alert('채팅 불가', '앱 사용자 ID가 있는 친구만 1:1 번역 채팅을 열 수 있습니다.');
+        return;
+      }
+      onStartChat?.(item);
+    };
 
     return (
       <View
@@ -476,6 +485,16 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
             <Text style={[styles.voiceCallBtnText, !canStartVoiceCall && styles.voiceCallBtnTextDisabled]}>보이스톡 걸기</Text>
           </Pressable>
           <Pressable
+            style={[styles.chatBtn, !canStartChat && styles.chatBtnDisabled, isNarrowWidth && styles.friendActionBtnCompact]}
+            onPress={handlePressChat}
+            disabled={!canStartChat}
+            accessibilityRole="button"
+            accessibilityLabel={`채팅하기, ${item.friendUsername || item.friendEmail}`}
+            testID={item.friendUserId ? `worldlinco-friend-chat-${item.friendUserId}` : undefined}
+          >
+            <Text style={[styles.chatBtnText, !canStartChat && styles.voiceCallBtnTextDisabled]}>채팅</Text>
+          </Pressable>
+          <Pressable
             style={[styles.removeBtn, isNarrowWidth && styles.friendActionBtnCompact]}
             onPress={() => handleRemove(item)}
             accessibilityRole="button"
@@ -486,7 +505,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
         </View>
       </View>
     );
-  }, [handleMeasuredLayout, handleRemove, isNarrowWidth, onFriendSelected]);
+  }, [handleMeasuredLayout, handleRemove, isNarrowWidth, onFriendSelected, onStartChat]);
 
   const listViewportHeight = Math.max(300, Math.floor(windowHeight * 0.55));
 
@@ -1162,6 +1181,25 @@ const styles = StyleSheet.create({
   },
   voiceCallBtnTextDisabled: {
     color: '#5f6b80',
+  },
+  chatBtn: {
+    backgroundColor: '#1e6fe0',
+    borderWidth: 1,
+    borderColor: '#1e6fe0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  chatBtnDisabled: {
+    opacity: 0.45,
+    borderColor: '#dce6f2',
+    backgroundColor: '#e3eaf5',
+  },
+  chatBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   removeBtnText: {
     color: '#e5484d',

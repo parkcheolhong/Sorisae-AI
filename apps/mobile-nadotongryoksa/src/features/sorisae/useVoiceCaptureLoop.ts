@@ -57,6 +57,10 @@ import { enableConversationCaptureAudio } from '../shared/audioRouteKernel';
 import { acquireVoiceCapture, type VoiceCaptureFeatureId } from '../../services/voiceCaptureLease';
 import { checkPermissionStatus } from '../../hooks/usePermissionCheck';
 import type { LangCode } from '../language/languageCatalog';
+import { isSupportedLangCode } from '../language/languageCatalog';
+import { getDisplayUiText } from '../i18n/displayLanguage';
+import { getUiLang, localizeUiString } from '../i18n/uiI18n';
+import { resolveUserOutputLang } from '../i18n/userLanguagePolicy';
 import type { VoiceCaptureLoopDeps } from './voiceCaptureLoopTypes';
 
 export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
@@ -121,7 +125,6 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
         setItinerarySeedQuery,
         setItinerarySeedNonce,
         setSorisaeQaLog,
-        getUiText,
         getLangLabel,
         requestPermissions,
         runTranslation,
@@ -434,7 +437,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     setGpsStatus(
                         sorisaeWindowOpenRef.current
                             ? '🎙️ 듣는 중 · 말씀하세요'
-                            : (getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                            : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
                     );
                     const sorisaeVadConfig = sorisaeWindowOpenRef.current && mainSorisaeRouteRef.current
                         ? resolveSorisaeCompanionVadDefaultsFromTuning(getWorldlincoTuning())
@@ -507,7 +510,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         }
                     }
                 } else {
-                    setGpsStatus(formatStatusText(getUiText(fromLang).autoVoiceSegmentStatus, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
+                    setGpsStatus(formatStatusText(getDisplayUiText().autoVoiceSegmentStatus, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
                 }
                 if (!isFaceConversation) {
                     const listenDurationMs = autoRelayDelayMs;
@@ -546,7 +549,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
         } finally {
             voiceInputStartInFlightRef.current = false;
         }
-    }, [autoRelayDelayMs, clearAutoVoiceTimers, fromLang, getUiText, requestPermissions, runTranslation, toLang]);
+    }, [autoRelayDelayMs, clearAutoVoiceTimers, requestPermissions, runTranslation, toLang]);
 
     useEffect(() => {
         autoVoiceModeEnabledRef.current = autoVoiceModeEnabled;
@@ -1025,7 +1028,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 setGpsStatus(
                     sorisaeWindowOpenRef.current
                         ? '🎙️ 듣는 중 · 말씀하세요'
-                        : (getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                        : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
                 );
                 return;
             }
@@ -1094,7 +1097,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 setGpsStatus(
                                     sorisaeWindowOpenRef.current
                                         ? '🎙️ 듣는 중 · 말씀하세요'
-                                        : (getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                                        : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
                                 );
                                 if (shouldAutoRestart && activeVoiceInputTarget === 'main') {
                                     scheduleFaceConversationRestartRef.current(null);
@@ -1153,7 +1156,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 setGpsStatus(
                     mainSorisaeRouteRef.current || sorisaeWindowOpenRef.current
                         ? '🔄 답변 준비 중...'
-                        : (getUiText(fromLang).faceListenProcessing ?? '🔄 번역·음성 출력 중...'),
+                        : (getDisplayUiText().faceListenProcessing ?? '🔄 번역·음성 출력 중...'),
                 );
             }
             try {
@@ -1226,7 +1229,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         setGpsStatus(
                             mainSorisaeRouteRef.current || sorisaeWindowOpenRef.current
                                 ? '🎙️ 듣는 중 · 말씀하세요'
-                                : (getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
+                                : (getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역'),
                         );
                         return;
                     }
@@ -1259,12 +1262,14 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         faceSpeakingRef.current = false;
                     } else {
                         console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'segment_discard_while_speaking' }));
-                        setGpsStatus('🔇 발화 중 입력(에코) 무시 · 발화가 끝나면 다시 들어요');
+                        setGpsStatus(localizeUiString('🔇 발화 중 입력(에코) 무시 · 발화가 끝나면 다시 들어요'));
                         return;
                     }
                 }
-                const profileLangRaw = String(userInfo?.preferred_language || toLang).trim().toLowerCase();
-                const profileLang: LangCode = isSupportedLangCode(profileLangRaw) ? profileLangRaw as LangCode : toLang;
+                const profileLang = resolveUserOutputLang(
+                    userInfo?.preferred_language || getUiLang(),
+                    fromLang,
+                );
                 // 대면 통역 언어쌍은 프로필 기본언어가 아니라 화면에서 사용자가 선택한 기준(from/to)을 SSOT로 사용한다.
                 // 프로필/GPS 자동 보정이 수동 상대 언어 선택을 덮어쓰면 안 된다.
                 const localInterpretLang: LangCode = fromLang;
@@ -1291,7 +1296,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                         requested_to: effectiveInterpretToLang,
                     }));
                     setGpsStatus(
-                        getUiText(fromLang).faceConversationPeerRequired
+                        getDisplayUiText().faceConversationPeerRequired
                         ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.',
                     );
                     return;
@@ -1533,7 +1538,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             event: 'segment_skip_low_trust',
                             transcript: transcript.slice(0, 80),
                         }));
-                        setGpsStatus(getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                        setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
                         return;
                     }
                     if (transcript) {
@@ -1608,7 +1613,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                             const dedupeKey = `${relayTurn}:${normalizeRelayText(transcript)}`;
                             const translatedText = String(data.translated ?? '').trim();
                             if (interLastAutoRelayRef.current && interLastAutoRelayRef.current.key === dedupeKey && Date.now() - interLastAutoRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-                                setInterCallStatus(getUiText(fromLang).interAutoRelayDuplicateSkipped ?? '중복 자동 통역을 건너뛰었습니다.');
+                                setInterCallStatus(getDisplayUiText().interAutoRelayDuplicateSkipped ?? '중복 자동 통역을 건너뛰었습니다.');
                             } else if (translatedText) {
                                 commitInterCallRelay(relayTurn, transcript, translatedText, { isAutoRelay: true });
                             } else {
@@ -1720,9 +1725,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 }));
                                 reportFaceVoiceAutoTuningMetric({ overlapDetected: true });
                                 reportConversationEchoGuardMetric({ echoBlocked: true });
-                                setGpsStatus(getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                                setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
                             } else if (mainLastAutoVoiceRelayRef.current && mainLastAutoVoiceRelayRef.current.key === relayKey && Date.now() - mainLastAutoVoiceRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-                                setGpsStatus(getUiText(fromLang).autoVoiceDuplicateSkipped ?? '중복 자동 음성 통역을 건너뛰었습니다.');
+                                setGpsStatus(getDisplayUiText().autoVoiceDuplicateSkipped ?? '중복 자동 음성 통역을 건너뛰었습니다.');
                             } else {
                                 // #2 한국어(원문) 표출: 인식한 원문은 번역 성공 여부와 무관하게 항상 표시한다.
                                 lastVoiceDrivenInputRef.current = { text: transcript, atMs: Date.now() };
@@ -1738,7 +1743,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                     }
                                 }
                                 if (!effectiveTranslated) {
-                                    setGpsStatus(getUiText(fromLang).autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
+                                    setGpsStatus(getDisplayUiText().autoVoiceSegmentStatus ?? '🎙️ 듣는 중 · 말이 끝나면 자동 번역');
                                 } else {
                                     setResultText(effectiveTranslated);
                                     setOffline(false);
@@ -1759,9 +1764,9 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                         && lastSpoken.text === spokenKey
                                         && Date.now() - lastSpoken.at < AUTO_RELAY_DUPLICATE_GUARD_MS;
                                     if (isRepeatOutput) {
-                                        setGpsStatus(getUiText(fromLang).autoVoiceDuplicateSkipped ?? '중복 자동 음성 통역을 건너뛰었습니다.');
+                                        setGpsStatus(getDisplayUiText().autoVoiceDuplicateSkipped ?? '중복 자동 음성 통역을 건너뛰었습니다.');
                                     } else {
-                                        setGpsStatus(formatStatusText(getUiText(fromLang).autoVoiceDetected, {
+                                        setGpsStatus(formatStatusText(getDisplayUiText().autoVoiceDetected, {
                                             from: getLangLabel(effectiveFrom),
                                             to: getLangLabel(effectiveTo),
                                         }));
@@ -1779,7 +1784,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                         // 반이중: 발화 시작과 동시에 게이트를 닫아 재생 중 듣기 재개를 차단한다.
                                         faceSpeakingRef.current = true;
                                         facePlaybackBargeInArmAtRef.current = Date.now() + FACE_PLAYBACK_BARGE_IN_ARM_MS;
-                                        setGpsStatus(getUiText(fromLang).faceSpeakingStatus ?? '🔊 통역 음성 출력 중 · 듣기 멈춤');
+                                        setGpsStatus(getDisplayUiText().faceSpeakingStatus ?? '🔊 통역 음성 출력 중 · 듣기 멈춤');
                                         facePlaybackPromise = playFaceTranslationOutputImmediate({
                                             translatedText: effectiveTranslated,
                                             targetLang: effectiveTo,
@@ -1832,7 +1837,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                                 if (faceConversationAudioEnabledRef.current && activeVoiceInputTarget === 'main') {
                                     faceSpeakingRef.current = true;
                                     facePlaybackBargeInArmAtRef.current = Date.now() + FACE_PLAYBACK_BARGE_IN_ARM_MS;
-                                    setGpsStatus(getUiText(fromLang).faceSpeakingStatus ?? '🔊 통역 음성 출력 중 · 듣기 멈춤');
+                                    setGpsStatus(getDisplayUiText().faceSpeakingStatus ?? '🔊 통역 음성 출력 중 · 듣기 멈춤');
                                     facePlaybackPromise = playFaceTranslationOutputImmediate({
                                         translatedText,
                                         targetLang: manualTo,
@@ -1940,6 +1945,6 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             }
             voiceInputStopInFlightRef.current = false;
         }
-    }, [appendSongSubtitle, autoVoiceModeEnabled, clearAutoVoiceTimers, commitInterCallRelay, fromLang, getLangLabel, getUiText, interCallTurn, interCallVoiceAssistEnabled, resolveInterCallDirection, resolveSongHybridSource, resolveSongHybridTarget, runTranslation, songModeEnabled, startVoiceInput, stopFacePlayback, stopSorisaePlayback, toLang, translateTextWithRegion, userInfo?.preferred_language]);
+    }, [appendSongSubtitle, autoVoiceModeEnabled, clearAutoVoiceTimers, commitInterCallRelay, getLangLabel, interCallTurn, interCallVoiceAssistEnabled, resolveInterCallDirection, resolveSongHybridSource, resolveSongHybridTarget, runTranslation, songModeEnabled, startVoiceInput, stopFacePlayback, stopSorisaePlayback, toLang, translateTextWithRegion, userInfo?.preferred_language]);
     return { startVoiceInput, stopVoiceInput };
 }

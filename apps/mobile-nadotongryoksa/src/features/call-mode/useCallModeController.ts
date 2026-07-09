@@ -1,46 +1,32 @@
-import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import type { CallInitResponse } from '../../services/voipCallClient';
 import { CallMode, DEFAULT_CALL_MODE, getCallModeLabel } from './types';
+import {
+    useInterCallState,
+    type InterCallContactOption,
+    type InterCallLogEntry,
+    type InterCallTurn,
+} from './useInterCallState';
+import {
+    useVoipState,
+    type CallModeAuditEvent,
+    type PendingIncomingVoipCall,
+    type VoipParticipantProfile,
+} from './useVoipState';
 
-type InterCallTurn = 'from' | 'to';
+// [기능 분리 Phase3] 이 컨트롤러는 이제 두 도메인 훅(useVoipState + useInterCallState)을
+// 합성(compose)하는 얇은 어댑터다. 공개 API(CallModeController)와 반환 형태는 기존과
+// 100% 동일하게 유지해 App.tsx 소비부를 한 글자도 바꾸지 않는다(Strangler Fig 무위험 분리).
+// 향후 VOIP+채팅 모듈과 일반전화+예약 모듈은 각자 자기 도메인 훅만 직접 사용하면 된다.
 
-type InterCallLogEntry = {
-    turn: InterCallTurn;
-    text: string;
-    translated: string;
-};
-
-type InterCallContactOption = {
-    id: string;
-    name: string;
-    phone: string;
-    label: string;
-};
-
-type VoipParticipantProfile = {
-    nickname: string;
-    genderLabel: string;
-    countryCode: string;
-    countryName: string;
-    voiceId: string;
-    countryFlag: string;
-    preferredLanguage?: string;
-};
-
-type CallModeAuditEvent = {
-    id: number | string;
-    event_type: string;
-    requested_mode: string | null;
-    resolved_mode: string | null;
-    call_route?: string | null;
-    status?: string | null;
-    error_code?: string | null;
-    created_at: string;
-};
-
-type PendingIncomingVoipCall = CallInitResponse & {
-    caller_label?: string;
-    caller_voice_id?: string;
+// 하위 호환을 위해 기존 타입명을 재노출(re-export).
+export type {
+    InterCallContactOption,
+    InterCallLogEntry,
+    InterCallTurn,
+    CallModeAuditEvent,
+    PendingIncomingVoipCall,
+    VoipParticipantProfile,
 };
 
 export type CallModeController = {
@@ -94,104 +80,58 @@ export type CallModeController = {
 };
 
 export function useCallModeController(initialMode: CallMode = DEFAULT_CALL_MODE): CallModeController {
-    const [selectedCallMode, setSelectedCallMode] = useState<CallMode>(initialMode);
-    const [voipValidationOverride, setVoipValidationOverride] = useState(false);
-    const [showVoipTester, setShowVoipTester] = useState(false);
-    const [showFriendFolder, setShowFriendFolder] = useState(false);
-    const [interCallActive, setInterCallActive] = useState(false);
-    const [interCallTurn, setInterCallTurn] = useState<InterCallTurn>('from');
-    const [interCallStatus, setInterCallStatus] = useState('');
-    const [interCallPhone, setInterCallPhone] = useState('');
-    const [interCallContactPickerVisible, setInterCallContactPickerVisible] = useState(false);
-    const [interCallContactLoading, setInterCallContactLoading] = useState(false);
-    const [interCallContactError, setInterCallContactError] = useState('');
-    const [interCallContactOptions, setInterCallContactOptions] = useState<InterCallContactOption[]>([]);
-    const [interCallLog, setInterCallLog] = useState<InterCallLogEntry[]>([]);
-    const [interManualText, setInterManualText] = useState('');
-    const [voipCallInitResponse, setVoipCallInitResponse] = useState<CallInitResponse | null>(null);
-    const [pendingIncomingVoipCall, setPendingIncomingVoipCall] = useState<PendingIncomingVoipCall | null>(null);
-    const [voipAuditCallId, setVoipAuditCallId] = useState('');
-    const [voipAuditEvents, setVoipAuditEvents] = useState<CallModeAuditEvent[]>([]);
-    const [voipAuditLoading, setVoipAuditLoading] = useState(false);
-    const [voipAuditError, setVoipAuditError] = useState('');
-    const [voipIdentity, setVoipIdentity] = useState('');
-    const [voipActiveProfile, setVoipActiveProfile] = useState<VoipParticipantProfile | null>(null);
-
-    const setCallMode = useCallback((nextMode: CallMode) => {
-        setSelectedCallMode(nextMode);
-    }, []);
+    const voip = useVoipState(initialMode);
+    const inter = useInterCallState();
 
     return useMemo(() => ({
-        selectedCallMode,
-        callModeLabel: getCallModeLabel(selectedCallMode),
-        isPstnAssistMode: selectedCallMode === 'pstn_assist',
-        isVoipFullAutoMode: selectedCallMode === 'voip_full_auto',
-        setCallMode,
-        voipValidationOverride,
-        setVoipValidationOverride,
-        showVoipTester,
-        setShowVoipTester,
-        showFriendFolder,
-        setShowFriendFolder,
-        interCallActive,
-        setInterCallActive,
-        interCallTurn,
-        setInterCallTurn,
-        interCallStatus,
-        setInterCallStatus,
-        interCallPhone,
-        setInterCallPhone,
-        interCallContactPickerVisible,
-        setInterCallContactPickerVisible,
-        interCallContactLoading,
-        setInterCallContactLoading,
-        interCallContactError,
-        setInterCallContactError,
-        interCallContactOptions,
-        setInterCallContactOptions,
-        interCallLog,
-        setInterCallLog,
-        interManualText,
-        setInterManualText,
-        voipCallInitResponse,
-        setVoipCallInitResponse,
-        pendingIncomingVoipCall,
-        setPendingIncomingVoipCall,
-        voipAuditCallId,
-        setVoipAuditCallId,
-        voipAuditEvents,
-        setVoipAuditEvents,
-        voipAuditLoading,
-        setVoipAuditLoading,
-        voipAuditError,
-        setVoipAuditError,
-        voipIdentity,
-        setVoipIdentity,
-        voipActiveProfile,
-        setVoipActiveProfile,
-    }), [
-        interCallActive,
-        interCallContactError,
-        interCallContactLoading,
-        interCallContactOptions,
-        interCallContactPickerVisible,
-        interCallLog,
-        interCallPhone,
-        interCallStatus,
-        interCallTurn,
-        interManualText,
-        pendingIncomingVoipCall,
-        selectedCallMode,
-        setCallMode,
-        showFriendFolder,
-        showVoipTester,
-        voipActiveProfile,
-        voipAuditCallId,
-        voipAuditError,
-        voipAuditEvents,
-        voipAuditLoading,
-        voipCallInitResponse,
-        voipIdentity,
-        voipValidationOverride,
-    ]);
+        // --- VOIP 도메인 ---
+        selectedCallMode: voip.selectedCallMode,
+        callModeLabel: getCallModeLabel(voip.selectedCallMode),
+        isPstnAssistMode: voip.selectedCallMode === 'pstn_assist',
+        isVoipFullAutoMode: voip.selectedCallMode === 'voip_full_auto',
+        setCallMode: voip.setCallMode,
+        voipValidationOverride: voip.voipValidationOverride,
+        setVoipValidationOverride: voip.setVoipValidationOverride,
+        showVoipTester: voip.showVoipTester,
+        setShowVoipTester: voip.setShowVoipTester,
+        showFriendFolder: voip.showFriendFolder,
+        setShowFriendFolder: voip.setShowFriendFolder,
+        voipCallInitResponse: voip.voipCallInitResponse,
+        setVoipCallInitResponse: voip.setVoipCallInitResponse,
+        pendingIncomingVoipCall: voip.pendingIncomingVoipCall,
+        setPendingIncomingVoipCall: voip.setPendingIncomingVoipCall,
+        voipAuditCallId: voip.voipAuditCallId,
+        setVoipAuditCallId: voip.setVoipAuditCallId,
+        voipAuditEvents: voip.voipAuditEvents,
+        setVoipAuditEvents: voip.setVoipAuditEvents,
+        voipAuditLoading: voip.voipAuditLoading,
+        setVoipAuditLoading: voip.setVoipAuditLoading,
+        voipAuditError: voip.voipAuditError,
+        setVoipAuditError: voip.setVoipAuditError,
+        voipIdentity: voip.voipIdentity,
+        setVoipIdentity: voip.setVoipIdentity,
+        voipActiveProfile: voip.voipActiveProfile,
+        setVoipActiveProfile: voip.setVoipActiveProfile,
+        // --- 일반전화(inter-call) 도메인 ---
+        interCallActive: inter.interCallActive,
+        setInterCallActive: inter.setInterCallActive,
+        interCallTurn: inter.interCallTurn,
+        setInterCallTurn: inter.setInterCallTurn,
+        interCallStatus: inter.interCallStatus,
+        setInterCallStatus: inter.setInterCallStatus,
+        interCallPhone: inter.interCallPhone,
+        setInterCallPhone: inter.setInterCallPhone,
+        interCallContactPickerVisible: inter.interCallContactPickerVisible,
+        setInterCallContactPickerVisible: inter.setInterCallContactPickerVisible,
+        interCallContactLoading: inter.interCallContactLoading,
+        setInterCallContactLoading: inter.setInterCallContactLoading,
+        interCallContactError: inter.interCallContactError,
+        setInterCallContactError: inter.setInterCallContactError,
+        interCallContactOptions: inter.interCallContactOptions,
+        setInterCallContactOptions: inter.setInterCallContactOptions,
+        interCallLog: inter.interCallLog,
+        setInterCallLog: inter.setInterCallLog,
+        interManualText: inter.interManualText,
+        setInterManualText: inter.setInterManualText,
+    }), [voip, inter]);
 }

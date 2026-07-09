@@ -3,12 +3,10 @@
 // 장소 사실(이름·주소·좌표·지도URL)은 서버가 검색결과에서 주입하므로 환각이 없다.
 // 지도 링크는 OpenStreetMap(ODbL)만 사용한다(친구챗 그라운딩과 동일한 합법 오픈데이터 정책).
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import { API_BASE } from '../app/appConstants';
 import { MediaInput } from '../media/licenseGate';
 
-const BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
-  'http://10.0.2.2:8000';
+const BASE_URL: string = API_BASE;
 
 export interface ItineraryPlace {
   place_id: number;

@@ -12,6 +12,8 @@ httpx>=0.28.1
 python-multipart>=0.0.29
 email-validator>=2.3.0
 sqlalchemy>=2.0.50
+# DB 스키마 버전 관리(기동 시 create_all + ad-hoc ALTER 대체용 베이스라인 도입).
+alembic>=1.13,<2.0
 psycopg2-binary>=2.9.12
 redis>=5.3.1,<6.0
 python-jose>=3.5.0
@@ -24,6 +26,7 @@ qdrant-client>=1.18.0
 # 관광 KB(소리새 AI) 임베딩 — ONNX 기반(torch 불필요)으로 적재·질의 임베딩 일관 처리.
 fastembed>=0.8.0
 Pillow>=12.2,<13.0
+qrcode[pil]>=7.4.2
 prometheus-client>=0.25.0
 requests>=2.34.2
 webauthn>=2.7.1

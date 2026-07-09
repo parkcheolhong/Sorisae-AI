@@ -73,7 +73,6 @@ export const PhoneDialer: React.FC<PhoneDialerProps> = ({
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.title}>다이얼패드</Text>
-                    <Text style={styles.subtitle}>전화번호를 입력하여 통화를 시작하세요</Text>
                 </View>
 
                 {/* Phone Input Card */}
@@ -92,16 +91,6 @@ export const PhoneDialer: React.FC<PhoneDialerProps> = ({
                         keyboardType="phone-pad"
                     />
                     {error && <Text style={styles.errorText}>{error}</Text>}
-                    <Text style={styles.hint}>예: +82-10-1234-5678 (국가번호 필수)</Text>
-                </View>
-
-                {/* Format Guide */}
-                <View style={styles.guideCard}>
-                    <Text style={styles.guideTitle}>📋 형식 안내</Text>
-                    <Text style={styles.guideItem}>• +로 시작</Text>
-                    <Text style={styles.guideItem}>• 국가번호 포함 (예: 82)</Text>
-                    <Text style={styles.guideItem}>• 총 10-15자리 숫자</Text>
-                    <Text style={styles.guideItem}>• 하이픈(-) 입력 가능</Text>
                 </View>
 
                 {/* Call Button */}

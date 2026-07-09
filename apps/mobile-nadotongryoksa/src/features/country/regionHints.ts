@@ -12,6 +12,8 @@ import { resolveLangFromCountry } from './countryLanguage';
 const GPS_REGION_COORDINATE_FALLBACKS = [
     { countryCode: 'KR', regionHint: 'jeju', latitude: 33.4996, longitude: 126.5312 },
     { countryCode: 'CN', regionHint: 'guangdong', latitude: 23.1291, longitude: 113.2644 },
+    { countryCode: 'HK', regionHint: 'hongkong', latitude: 22.3193, longitude: 114.1694 },
+    { countryCode: 'TW', regionHint: 'taiwan', latitude: 25.0330, longitude: 121.5654 },
     { countryCode: 'JP', regionHint: 'kansai', latitude: 34.6937, longitude: 135.5023 },
     { countryCode: 'IN', regionHint: 'bihar', latitude: 25.5941, longitude: 85.1376 },
     { countryCode: 'IT', regionHint: 'naples', latitude: 40.8518, longitude: 14.2681 },
@@ -32,6 +34,16 @@ const DIALECT_REGION_HINT_KEYWORDS: Record<string, Array<{ hint: string; keyword
         { hint: 'dongbei', keywords: ['liaoning', 'jilin', 'heilongjiang', 'dongbei', '东北', '瀋陽', 'shenyang', 'harbin'] },
         { hint: 'shanghai', keywords: ['shanghai', '상하이', '上海'] },
         { hint: 'beijing', keywords: ['beijing', '베이징', '北京', 'tianjin', '天津'] },
+    ],
+    HK: [
+        { hint: 'hongkong', keywords: ['hong kong', 'hongkong', 'kowloon', 'new territories', '홍콩', '香港', '九龍'] },
+        { hint: 'guangdong', keywords: ['guangdong', '광동', '廣東'] },
+    ],
+    MO: [
+        { hint: 'hongkong', keywords: ['macau', 'macao', '마카오', '澳門'] },
+    ],
+    TW: [
+        { hint: 'taiwan', keywords: ['taiwan', 'taipei', 'taichung', 'kaohsiung', '대만', '台灣', '臺北'] },
     ],
     JP: [
         { hint: 'kansai', keywords: ['osaka', 'kyoto', 'nara', 'kobe', 'wakayama', 'kansai', '간사이', '関西', '大阪', '京都'] },

@@ -50,6 +50,39 @@ def _get_or_create_tag(db: Session, name: str) -> models.Tag:
     return tag
 
 
+def _resolve_tags_batch(db: Session, names: List[str]) -> List[models.Tag]:
+    """태그 이름 목록을 배치 조회/생성해 N+1 쿼리를 피한다."""
+    if not names:
+        return []
+    unique_names: List[str] = []
+    seen: set[str] = set()
+    for raw_name in names:
+        name = str(raw_name or "").strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        unique_names.append(name)
+    if not unique_names:
+        return []
+
+    existing = (
+        db.query(models.Tag)
+        .filter(models.Tag.name.in_(unique_names))
+        .all()
+    )
+    by_name = {str(tag.name): tag for tag in existing if getattr(tag, "name", None)}
+    resolved: List[models.Tag] = []
+    for name in unique_names:
+        tag = by_name.get(name)
+        if tag is None:
+            tag = models.Tag(name=name)
+            db.add(tag)
+            db.flush()
+            by_name[name] = tag
+        resolved.append(tag)
+    return resolved
+
+
 def _sample_project_specs() -> list[dict[str, object]]:
     return [
         {
@@ -296,14 +329,7 @@ def get_projects(
 
 
 def create_project(db: Session, project: schemas.ProjectCreate, author_id: int) -> models.Project:
-    tags = []
-    if project.tags:
-        for tag_name in project.tags:
-            tag = db.query(models.Tag).filter(models.Tag.name == tag_name).first()
-            if not tag:
-                tag = models.Tag(name=tag_name)
-                db.add(tag)
-            tags.append(tag)
+    tags = _resolve_tags_batch(db, list(project.tags or []))
     db_project = models.Project(
         title=project.title,
         description=project.description,
@@ -330,14 +356,7 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
         if value is not None:
             setattr(db_project, key, value)
     if project_update.tags is not None:
-        tags = []
-        for tag_name in project_update.tags:
-            tag = db.query(models.Tag).filter(models.Tag.name == tag_name).first()
-            if not tag:
-                tag = models.Tag(name=tag_name)
-                db.add(tag)
-            tags.append(tag)
-        db_project.tags = tags
+        db_project.tags = _resolve_tags_batch(db, list(project_update.tags or []))
     db.commit()
     db.refresh(db_project)
     return db_project

@@ -95,6 +95,22 @@ async function callInitiatePaymentApi(apiBase: string, purchaseId: number): Prom
     return result;
 }
 
+async function callConfirmPaymentApi(apiBase: string, purchaseId: number, transactionId: string): Promise<void> {
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '') : '';
+    if (!token) throw new Error('결제는 로그인 후 사용할 수 있습니다.');
+    const res = await fetch(`${apiBase}/api/marketplace/purchase/${purchaseId}/confirm`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transaction_id: transactionId, status: 'completed' }),
+        signal: AbortSignal.timeout(10_000),
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(result.detail || result.payment_message || `결제 확정 실패 HTTP ${res.status}`);
+}
+
 function osmEmbedUrl(lat: number, lon: number): string {
     const d = 0.015;
     return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d},${lat - d},${lon + d},${lat + d}&layer=mapnik&marker=${lat},${lon}`;
@@ -546,6 +562,9 @@ export default function WorldLincoPage() {
             setPurchaseResult(purchase);
             const payData = await callInitiatePaymentApi(API_BASE, purchase.id);
             setPayUrl(payData.payment_url);
+            if (payData.transaction_id) {
+                await callConfirmPaymentApi(API_BASE, purchase.id, payData.transaction_id);
+            }
         } catch (e: any) { setPayError(e?.message || '결제 초기화에 실패했습니다.'); }
         finally { setPayLoading(false); }
     }, [bookingResult, selectedHotel, token, checkinDate, checkoutDate, roomCount]);

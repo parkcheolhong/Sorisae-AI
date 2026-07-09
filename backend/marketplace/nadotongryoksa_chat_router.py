@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from backend.time_utils import utcnow
 import logging
@@ -153,6 +153,20 @@ class ReadUpdateRequest(BaseModel):
 
 def _utcnow() -> datetime:
     return utcnow()
+
+
+def _iso_utc_z(value: Optional[datetime]) -> str:
+    """datetime → ISO8601 UTC 문자열(말미 'Z').
+
+    저장 datetime 은 naive UTC(SSOT: backend.time_utils.utcnow)이므로 'Z' 를 붙여
+    클라이언트(JS new Date)가 로컬시간으로 오해(KST ~9h 오프셋)하지 않도록 한다.
+    tz-aware 가 들어오면 UTC 로 변환 후 'Z' 표기. 빈 값은 빈 문자열.
+    """
+    if value is None:
+        return ""
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value.isoformat() + "Z"
 
 
 def _normalize_text(
@@ -801,12 +815,19 @@ def _serialize_message(
         viewer_translation_payload = _serialize_viewer_translation(
             viewer_translation_row
         )
+        # [버그 수정] 늦참여자 번역 폴백이 사실상 '죽은 코드'였던 문제 수정.
+        # 그룹 메시지는 message.translated_body/body_target_lang 를 항상 None 으로 저장하므로
+        # (아래 _append_message 의 group 분기 참조), 과거의 'translated_body 가 있을 때만' 가드는
+        # 그룹에서 절대 참이 될 수 없어 폴백이 한 번도 실행되지 않았다.
+        # → 올바른 신호는 '이 메시지에 번역이 요청됐는가' = 수신자 번역행(translation_rows)의 존재다.
+        #   • 번역행이 하나도 없음 → 번역 미요청 메시지 → 폴백 안 함(명시적 요청 계약 준수).
+        #   • 번역행은 있으나 '나' 행이 없음 → 팬아웃 이후 합류한 늦참여자 → 온더플라이 폴백 번역.
+        #   • 발신자 본인 → 자기 팬아웃 전송 상태(partial_failed/done)를 봐야 하므로 폴백 제외.
+        # (폴백 내부에서 비텍스트=None / 동일언어=skipped / 실패=failed 로 안전 분기한다.)
         if (
             viewer_translation_payload is None
-            and (
-                message.translated_body is not None
-                or message.body_target_lang is not None
-            )
+            and translation_rows
+            and message.sender_user_id != current_user_id
         ):
             viewer_translation_payload = (
                 _build_group_viewer_translation_fallback(
@@ -844,7 +865,7 @@ def _serialize_message(
             if viewer_translation_payload is not None
             else message.translation_status
         ),
-        "created_at": created_at.isoformat() if created_at else "",
+        "created_at": _iso_utc_z(created_at),
         "mine": (sender_user_id or 0) == current_user_id,
     }
     if room.room_type == "group" and room.title != SELF_ROOM_TITLE:
@@ -1084,11 +1105,7 @@ def _serialize_room_summary(
         ),
         "last_message_preview": preview,
         "last_message_type": message_type,
-        "last_message_at": (
-            display_last_message_at.isoformat()
-            if display_last_message_at
-            else ""
-        ),
+        "last_message_at": _iso_utc_z(display_last_message_at),
         "counterpart": counterpart,
     }
 

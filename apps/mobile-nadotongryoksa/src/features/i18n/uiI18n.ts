@@ -23,17 +23,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 import { translateText } from '../../api/translate';
+import { resolveBootstrapUiLang } from './bootstrapUiLang';
+import { collectKoUiStrings } from './uiStringCatalog';
 
 const HANGUL_RE = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/;
 const LATIN_RE = /[A-Za-z]/;
 const LOWER_RE = /[a-z]/;
 const STORAGE_PREFIX = 'worldlinco.uiI18n.v1.'; // + lang
+const UI_LANG_STORAGE_KEY = 'worldlinco.uiLang.v1';
 const MAX_LEN = 400;       // 이보다 긴 문자열은 번역 생략(원문 유지) — UI 라벨은 짧다.
 const FLUSH_MS = 250;
 const BATCH = 24;
 const COOLDOWN_MS = 4000;
 
-let uiLang = 'ko';
+let uiLang = resolveBootstrapUiLang();
 const cache = new Map<string, string>();   // key: `${lang}\u0000${text}`
 const pending = new Set<string>();
 const loadedLangs = new Set<string>();
@@ -94,6 +97,18 @@ export function translateUiSync(text: string): string {
         scheduleFlush();
     }
     return text;
+}
+
+/** 프로그램matic UI 문자열(상태·Alert 인자 등)용 — translateUiSync 별칭. */
+export function localizeUiString(text: string): string {
+    return translateUiSync(text);
+}
+
+/** 언어 변경 직후 카탈로그 원문을 백그라운드 번역 큐에 넣어 51개 LANG 전환을 가속한다. */
+export function prefetchUiStrings(extra: string[] = []): void {
+    if (uiLang === 'ko') return;
+    const strings = [...collectKoUiStrings(), ...extra];
+    strings.forEach((text) => { translateUiSync(text); });
 }
 
 function scheduleFlush() {
@@ -174,13 +189,25 @@ async function loadCacheForLang(lang: string): Promise<void> {
 /** 회원가입/프로필/로그인에서 호출 — UI 표시 언어를 바꾼다(영속 캐시 로드 포함). */
 export async function setUiLang(lang: string | null | undefined): Promise<void> {
     const norm = String(lang || 'ko').trim().toLowerCase() || 'ko';
-    if (norm === uiLang) {
-        if (norm !== 'ko') await loadCacheForLang(norm);
-        return;
-    }
+    const changed = norm !== uiLang;
     uiLang = norm;
     if (norm !== 'ko') await loadCacheForLang(norm);
-    bumpTick();
+    if (changed || norm !== 'ko') bumpTick();
+    void AsyncStorage.setItem(UI_LANG_STORAGE_KEY, norm).catch(() => { /* no-op */ });
+}
+
+/** 앱 cold start — 마지막 uiLang 을 즉시 복원(프로필 로드 전 한국어 플래시 완화). */
+export async function hydrateUiLangFromStorage(): Promise<string | null> {
+    try {
+        const raw = await AsyncStorage.getItem(UI_LANG_STORAGE_KEY);
+        const norm = String(raw || '').trim().toLowerCase();
+        if (!norm || norm === 'ko') return null;
+        await setUiLang(norm);
+        prefetchUiStrings();
+        return norm;
+    } catch {
+        return null;
+    }
 }
 
 export function subscribeTick(fn: () => void): () => void {

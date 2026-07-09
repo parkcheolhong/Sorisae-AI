@@ -28,7 +28,7 @@
     },
     "android": {
       "package": "com.parkcheolhong.worldlinco",
-      "versionCode": 320,
+      "versionCode": 324,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0f16"

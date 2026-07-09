@@ -77,7 +77,7 @@ export type VoiceCaptureLoopDeps = {
     setItinerarySeedNonce: (updater: (n: number) => number) => void;
     setSorisaeQaLog: (updater: (prev: SorisaeQaEntry[]) => SorisaeQaEntry[]) => void;
 
-    getUiText: (lang: LangCode) => Record<string, string | undefined>;
+    getUiText?: (lang: LangCode) => Record<string, string | undefined>;
     getLangLabel: (code: LangCode) => string;
     requestPermissions: (
         perms: PermissionType[],

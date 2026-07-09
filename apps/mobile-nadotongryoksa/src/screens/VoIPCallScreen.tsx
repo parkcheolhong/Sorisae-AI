@@ -36,6 +36,10 @@ import {
 import { translateText, voiceTranslate, synthesizeSpeech } from '../api/translate';
 import { FEATURE_IDS, newCorrelationId, deterministicCorrelationId } from '../features/correlation/correlationId';
 import { resolveVoipSignalingServerUrl } from '../utils/voipSignalingUrl';
+import { getGlobalSettings } from '../features/settings/globalSettings';
+import { getFeatureUiText } from '../features/i18n/featureUiCatalog';
+import { formatFlagPrefixedName } from '../features/i18n/userDisplayIdentity';
+import { BidirectionalLanguagePairBadge } from '../features/i18n/BidirectionalLanguagePairBadge';
 import {
     collapseRepeatedRelayPhrases,
     createInitialVoiceRelaySegmentState,
@@ -235,6 +239,10 @@ interface VoIPCallScreenProps {
         countryFlag: string;
         preferredLanguage?: string;
     };
+    localParticipantProfile?: {
+        nickname: string;
+        countryFlag: string;
+    };
     onHangup: (auditEvents?: CallModeAuditEvent[]) => void;
     apiBaseUrl: string;
     authToken: string;
@@ -247,6 +255,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     callInitResponse,
     calleePhone,
     participantProfile,
+    localParticipantProfile,
     onHangup,
     apiBaseUrl,
     authToken,
@@ -297,10 +306,9 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const [connectionState, setConnectionState] = useState<string>('connecting');
     const [callDuration, setCallDuration] = useState<number>(0);
     const [isMuted, setIsMuted] = useState<boolean>(false);
-    // 번역 릴레이는 통역 음성을 또렷이 들어야 하므로 스피커를 기본 ON으로 둔다.
-    // (이어피스는 음량이 작아 "음량이 너무 작다"는 문제가 발생) 사용자는 화면에서 수화기로 토글 가능.
-    const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true);
-    const isSpeakerOnRef = useRef<boolean>(true);
+    const initialSpeakerOn = getGlobalSettings().voipSpeakerDefaultOn;
+    const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(initialSpeakerOn);
+    const isSpeakerOnRef = useRef<boolean>(initialSpeakerOn);
     const [hasRemoteAudio, setHasRemoteAudio] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [chatDraft, setChatDraft] = useState<string>('');
@@ -1492,7 +1500,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     transcriptLength: transcript.length,
                     translatedLength: translatedText.length,
                 });
-                setVoiceRelayError('음성 통역 결과가 비어 있습니다. 다시 시도해 주세요.');
+                setVoiceRelayError(getFeatureUiText('voip.voiceRelayEmpty'));
                 return;
             }
 
@@ -1697,7 +1705,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             });
 
             if (sent) {
-                setLastRelayDeliveryHint(`전달됨 · ${transcript.slice(0, 40)} → ${translatedText.slice(0, 40)}`);
+                setLastRelayDeliveryHint(getFeatureUiText('voip.deliveredPreview', { from: transcript.slice(0, 40), to: translatedText.slice(0, 40) }));
                 lastLocalRelayTranslatedRef.current = normalizeRelayText(translatedText);
                 lastLocalRelayTranscriptRef.current = normalizeRelayText(transcript);
                 lastLocalRelaySentAtRef.current = Date.now();
@@ -1731,10 +1739,10 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     translatedLength: translatedText.length,
                     signaling: voipClientRef.current?.getSignalingStateSnapshot() ?? null,
                 });
-                setVoiceRelayError('음성 통역 relay 채널이 아직 연결되지 않았습니다.');
+                setVoiceRelayError(getFeatureUiText('voip.voiceRelayRelayNotConnected'));
             }
         } catch (err) {
-            const message = err instanceof Error ? err.message : '실시간 음성 통역 처리에 실패했습니다.';
+            const message = err instanceof Error ? err.message : getFeatureUiText('voip.voiceRelayFailed');
             const isSilenceRejected = message.includes('음성이 감지되지 않았습니다');
             const isTooShort = message.includes('너무 짧습니다');
             const isDesignatedMismatch = message.includes('지정 언어와 다른 언어');
@@ -1745,7 +1753,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 timestamp: new Date().toISOString(),
             }));
             if (isTooShort) {
-                setVoiceRelayError(`녹음 ${snapshot.segmentDurationMs}ms — 조금 더 길게 말해 주세요.`);
+                setVoiceRelayError(getFeatureUiText('voip.recordTooShort', { ms: snapshot.segmentDurationMs }));
             } else if (isDesignatedMismatch) {
                 // 막히는 팝업 대신 잠깐 안내만 노출하고 듣기는 계속 유지한다.
                 flashVoiceRelayNotice(DESIGNATED_LANGUAGE_MISMATCH_MESSAGE);
@@ -2154,7 +2162,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             return;
         }
         if (Platform.OS === 'web') {
-            setVoiceRelayError('웹에서는 통화 중 실시간 음성 통역 녹음을 지원하지 않습니다.');
+            setVoiceRelayError(getFeatureUiText('voip.voiceRelayWebUnsupported'));
             setVoiceRelayEnabled(false);
             return;
         }
@@ -2245,7 +2253,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             const rearmT0 = Date.now();
             const permission = await Audio.requestPermissionsAsync();
             if (!permission.granted) {
-                setVoiceRelayError('마이크 권한이 없어 실시간 음성 통역을 시작할 수 없습니다.');
+                setVoiceRelayError(getFeatureUiText('voip.voiceRelayMicPermission'));
                 setVoiceRelayEnabled(false);
                 return;
             }
@@ -2534,7 +2542,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             await startVoiceRelaySileroMonitor();
             scheduleVoiceRelayFixedFlush();
         } catch (err) {
-            const message = err instanceof Error ? err.message : '실시간 음성 통역 녹음을 시작하지 못했습니다.';
+            const message = err instanceof Error ? err.message : getFeatureUiText('voip.voiceRelayStartFailed');
             console.log('[UI_PRESS_PROBE]', JSON.stringify({
                 event: 'VOIP_VOICE_RELAY_SEGMENT_START_FAILED',
                 call_id: callInitResponse.call_id,
@@ -2689,8 +2697,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     }
                     if ((state === 'failed' || state === 'disconnected') && !errorRef.current) {
                         setError(state === 'failed'
-                            ? '통화 연결에 실패했습니다. 네트워크 또는 서버 상태를 확인해주세요.'
-                            : '통화 연결이 끊어졌습니다.');
+                            ? getFeatureUiText('voip.connectionFailedMsg')
+                            : getFeatureUiText('voip.connectionDisconnectedMsg'));
                     }
                 });
 
@@ -2998,7 +3006,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             targetLang: relayTargetLang,
                             correlationId: remoteCorrelationId,
                         });
-                        setLastRelayDeliveryHint(`수신 · ${translatedText.slice(0, 48)}`);
+                        setLastRelayDeliveryHint(getFeatureUiText('voip.receivedPreview', { text: translatedText.slice(0, 48) }));
                     }
                 });
 
@@ -3263,8 +3271,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                 }
                 if (!error) {
                     setError(state === 'failed'
-                        ? '통화 연결에 실패했습니다. 네트워크 또는 서버 상태를 확인해주세요.'
-                        : '통화 연결이 끊어졌습니다.');
+                        ? getFeatureUiText('voip.connectionFailedMsg')
+                        : getFeatureUiText('voip.connectionDisconnectedMsg'));
                 }
             }
 
@@ -3335,7 +3343,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
     const handleMuteToggle = useCallback(() => {
         if (voiceRelayEnabledRef.current) {
-            setVoiceRelayError('실시간 음성 통역 중에는 WebRTC 원음 경로가 꺼져 있습니다. 통역을 중지하면 일반 음성 버튼을 사용할 수 있습니다.');
+            setVoiceRelayError(getFeatureUiText('voip.webrtcDisabledDuringRelay'));
             return;
         }
         if (voipClient) {
@@ -3429,7 +3437,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
         const sentAt = new Date().toISOString();
         if (!voipClient || !voipClient.sendChatMessage(text, sentAt)) {
-            setChatError('채팅 채널이 아직 연결되지 않았습니다. 잠시 후 다시 시도하세요.');
+            setChatError(getFeatureUiText('voip.chatChannelNotReady'));
             return;
         }
 
@@ -3481,34 +3489,42 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         <Text style={styles.errorAutoReturnHint}>자동 복귀를 막았습니다. 현재 화면에서 상태를 확인한 뒤 직접 돌아가세요.</Text>
                     ) : null}
                     <TouchableOpacity style={styles.button} onPress={handleOpenSettings}>
-                        <Text style={styles.buttonText}>권한 설정 열기</Text>
+                        <Text style={styles.buttonText}>{getFeatureUiText('voip.permissionOpen')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button} onPress={() => { void handleHangup(); }}>
-                        <Text style={styles.buttonText}>돌아가기</Text>
+                        <Text style={styles.buttonText}>{getFeatureUiText('voip.goBack')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
         );
     }
 
-    const remoteDisplayName = participantProfile?.nickname || calleePhone || '상대';
+    const remoteDisplayName = formatFlagPrefixedName(
+        participantProfile?.countryFlag ?? '🌐',
+        participantProfile?.nickname || calleePhone || getFeatureUiText('voip.remoteParty'),
+    );
+    const localDisplayName = formatFlagPrefixedName(
+        localParticipantProfile?.countryFlag ?? '🌐',
+        localParticipantProfile?.nickname || getFeatureUiText('voip.me'),
+    );
     const latestVoiceChatEntry = chatEntries.length ? chatEntries[chatEntries.length - 1] : null;
     const chatSection = (
         <View style={[styles.chatSection, { paddingBottom: sectionPaddingBottom }]}>
             <View style={styles.chatHeaderRow}>
                 <Text style={styles.chatTitle}>
-                    실시간 쌍언어 채팅
-                    {appBuildCode ? ` · build ${appBuildCode}` : ''}
+                    {getFeatureUiText('voip.bilingualChatTitle')}
+                    {__DEV__ && appBuildCode ? ` · build ${appBuildCode}` : ''}
                 </Text>
                 <Text style={styles.chatHint}>
-                    음성 통역 결과가 원문과 번역문 쌍으로 여기에 표시됩니다.
-                    {appVersionName ? ` (v${appVersionName})` : ''}
+                    {getFeatureUiText('voip.bilingualChatHint')}
+                    {__DEV__ && appVersionName ? ` (v${appVersionName})` : ''}
                 </Text>
+                <BidirectionalLanguagePairBadge fromLang={localSourceLang} toLang={localTargetLang} compact />
             </View>
             {voiceRelayEnabled && voiceRelayBusy && !voiceRelayRecording ? (
                 <View style={styles.chatLiveBanner}>
                     <ActivityIndicator color="#7dd3fc" size="small" />
-                    <Text style={styles.chatLiveBannerText}>음성 감지됨 · 번역 처리 중… (3~7초)</Text>
+                    <Text style={styles.chatLiveBannerText}>{getFeatureUiText('voip.voiceDetectedTranslating')}</Text>
                 </View>
             ) : null}
             {voiceRelayEnabled && voiceRelayRecording ? (
@@ -3516,16 +3532,16 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     <Text style={styles.chatLiveBannerRecordingDot}>●</Text>
                     <Text style={styles.chatLiveBannerText}>
                         {voiceRelaySileroActive
-                            ? '마이크 듣는 중 · 말이 끝나면 자동 번역'
+                            ? getFeatureUiText('voip.micListening')
                             : voiceRelayMeterDead
-                                ? '마이크 듣는 중 · 음성 감지 후 자동 번역'
-                                : '마이크 듣는 중 · 말이 끝나면 자동 번역'}
+                                ? getFeatureUiText('voip.micListeningVad')
+                                : getFeatureUiText('voip.micListening')}
                     </Text>
                 </View>
             ) : null}
             {voiceRelayEnabled && !voiceRelayBusy && !voiceRelayRecording && voiceRelayListenWaiting ? (
                 <View style={styles.chatLiveBanner}>
-                    <Text style={styles.chatLiveBannerText}>상대 통역 수신 중 — 잠시 후 마이크가 다시 켜집니다.</Text>
+                    <Text style={styles.chatLiveBannerText}>{getFeatureUiText('voip.peerRelayReceiving')}</Text>
                 </View>
             ) : null}
             {voiceRelayError ? (
@@ -3535,13 +3551,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
             ) : null}
             {lastRelayDeliveryHint ? (
                 <View style={styles.chatLatestPreview}>
-                    <Text style={styles.chatLatestPreviewLabel}>속기·통역 전달</Text>
+                    <Text style={styles.chatLatestPreviewLabel}>{getFeatureUiText('voip.relayDeliveryLabel')}</Text>
                     <Text style={styles.chatLatestPreviewTranslated}>{lastRelayDeliveryHint}</Text>
                 </View>
             ) : null}
             {latestVoiceChatEntry?.translatedText ? (
                 <View style={styles.chatLatestPreview}>
-                    <Text style={styles.chatLatestPreviewLabel}>최근 통역</Text>
+                    <Text style={styles.chatLatestPreviewLabel}>{getFeatureUiText('voip.recentTranslation')}</Text>
                     <Text style={styles.chatLatestPreviewOriginal}>{latestVoiceChatEntry.text}</Text>
                     <Text style={styles.chatLatestPreviewTranslated}>{latestVoiceChatEntry.translatedText}</Text>
                 </View>
@@ -3558,8 +3574,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     keyboardShouldPersistTaps="handled"
                 >
                     {chatEntries.length ? chatEntries.map((entry) => {
-                        const senderLabel = entry.fromRole === participantRole ? '나' : remoteDisplayName;
-                        const translationLabel = `${entry.sourceLang.toUpperCase()} → ${entry.targetLang.toUpperCase()}`;
+                        const senderLabel = entry.fromRole === participantRole ? localDisplayName : remoteDisplayName;
                         const translationPending = entry.translationState === 'pending';
                         const translationFailed = entry.translationState === 'failed';
                         const showTranslationPanel = translationPending || translationFailed || !!entry.translatedText;
@@ -3577,19 +3592,14 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                                     {showTranslationPanel ? (
                                         <>
                                             <View style={styles.chatTranslationDivider} />
-                                            <Text style={styles.chatTranslationLabel}>자동 번역 · {translationLabel}</Text>
+                                            <Text style={styles.chatTranslationLabel}>{getFeatureUiText('voip.chatAutoTranslate')}</Text>
                                             <Text style={styles.chatTranslationText}>
                                                 {translationPending
-                                                    ? '번역 중...'
+                                                    ? getFeatureUiText('voip.chatTranslatePending')
                                                     : translationFailed
-                                                        ? '번역을 불러오지 못했습니다. 원문을 표시합니다.'
+                                                        ? getFeatureUiText('voip.chatTranslateFailed')
                                                         : entry.translatedText}
                                             </Text>
-                                            {!translationPending && entry.translationEngine ? (
-                                                <Text style={styles.chatTranslationMeta}>
-                                                    {entry.translationOffline ? 'offline' : entry.translationEngine}
-                                                </Text>
-                                            ) : null}
                                         </>
                                     ) : null}
                                 </View>
@@ -3597,7 +3607,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         );
                     }                    ) : (
                         <Text style={styles.chatEmptyText}>
-                            아직 통역/채팅이 없습니다. 통화 연결 후 3초 이상 말하면 한국어·영어 쌍이 여기에 표시됩니다.
+                            {getFeatureUiText('voip.chatEmpty')}
                         </Text>
                     )}
                 </ScrollView>
@@ -3607,7 +3617,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         value={chatDraft}
                         onChangeText={setChatDraft}
                         style={[styles.chatInput, { maxHeight: chatInputMaxHeight }, isNarrowWidth && styles.chatInputCompact]}
-                        placeholder="메시지를 입력하세요"
+                        placeholder={getFeatureUiText('voip.chatPlaceholder')}
                         placeholderTextColor="#7b8aa0"
                         multiline
                         maxLength={280}
@@ -3618,7 +3628,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         onPress={handleSendChat}
                         disabled={!chatDraft.trim()}
                     >
-                        <Text style={styles.chatSendButtonText}>전송</Text>
+                        <Text style={styles.chatSendButtonText}>{getFeatureUiText('voip.chatSend')}</Text>
                     </TouchableOpacity>
                 </View>
                 {chatError ? <Text style={styles.chatErrorText}>{chatError}</Text> : null}
@@ -3629,14 +3639,13 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     return (
         <SafeAreaView style={styles.container}>
             <View style={[styles.header, { paddingVertical: headerPaddingVertical }]}>
-                <Text style={[styles.calleePhone, isCompactHeight && styles.calleePhoneCompact, isVeryCompactHeight && styles.calleePhoneVeryCompact]}>{participantProfile ? `${participantProfile.countryFlag} ${participantProfile.nickname}` : calleePhone}</Text>
+                <Text style={[styles.calleePhone, isCompactHeight && styles.calleePhoneCompact, isVeryCompactHeight && styles.calleePhoneVeryCompact]}>{remoteDisplayName}</Text>
+                <BidirectionalLanguagePairBadge fromLang={localSourceLang} toLang={localTargetLang} />
                 {participantProfile ? (
                     <View style={[styles.participantMetaWrap, isCompactHeight && styles.participantMetaWrapCompact]}>
-                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>닉네임: {participantProfile.nickname}</Text>
-                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>성별: {participantProfile.genderLabel}</Text>
-                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>국가: {participantProfile.countryName}</Text>
-                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>언어: {participantProfile.preferredLanguage ? participantProfile.preferredLanguage.toUpperCase() : '미설정'}</Text>
-                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>보이스 ID: {participantProfile.voiceId}</Text>
+                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>{getFeatureUiText('voip.metaNickname')}: {participantProfile.nickname}</Text>
+                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>{getFeatureUiText('voip.metaGender')}: {participantProfile.genderLabel}</Text>
+                        <Text style={[styles.participantMetaText, isCompactHeight && styles.participantMetaTextCompact]}>{getFeatureUiText('voip.metaCountry')}: {participantProfile.countryName}</Text>
                     </View>
                 ) : null}
                 <Text
@@ -3647,14 +3656,14 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                                 : styles.stateConnecting,
                     ]}
                 >
-                    {connectionState === 'connected' && hasRemoteAudio ? '통화 중'
-                        : connectionState === 'connected' ? '음성 연결 대기'
-                            : connectionState === 'failed' ? '연결 실패'
-                                : connectionState === 'disconnected' ? '연결 끊김'
-                                    : '연결 중...'}
+                    {connectionState === 'connected' && hasRemoteAudio ? getFeatureUiText('voip.connectionInCall')
+                        : connectionState === 'connected' ? getFeatureUiText('voip.connectionWaitingAudio')
+                            : connectionState === 'failed' ? getFeatureUiText('voip.connectionFailed')
+                                : connectionState === 'disconnected' ? getFeatureUiText('voip.connectionDisconnected')
+                                    : getFeatureUiText('voip.connecting')}
                 </Text>
                 {connectionState === 'connected' && !hasRemoteAudio ? (
-                    <Text style={styles.audioPendingText}>상대 음성 수신 대기 중</Text>
+                    <Text style={styles.audioPendingText}>{getFeatureUiText('voip.waitingPeerAudio')}</Text>
                 ) : null}
             </View>
 
@@ -3670,6 +3679,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
 
                     {chatSection}
 
+                    {__DEV__ ? (
                     <View style={[styles.auditSection, { paddingBottom: sectionPaddingBottom }]}>
                         <View style={styles.auditHeaderRow}>
                             <Text style={styles.auditTitle}>통화 모드 감사 로그</Text>
@@ -3708,6 +3718,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             )}
                         </View>
                     </View>
+                    ) : null}
 
                     <View style={[styles.voiceRelaySection, { paddingBottom: sectionPaddingBottom }]}>
                         {voiceRelaySuggestionVisible ? (
@@ -3727,14 +3738,14 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                         <View style={[styles.voiceRelayHeaderRow, isNarrowWidth && styles.voiceRelayHeaderRowCompact]}>
                             <View style={styles.voiceRelayHeaderCopy}>
                                 <Text style={styles.voiceRelayTitle}>실시간 음성 통역</Text>
-                                <Text style={styles.voiceRelayHint}>음성 통역 ON 시 결과는 위 「실시간 쌍언어 채팅」에 원문·번역문으로 표시됩니다.</Text>
+                                <Text style={styles.voiceRelayHint}>{getFeatureUiText('voip.voiceRelayHint')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={[styles.voiceRelayToggleButton, voiceRelayEnabled && styles.voiceRelayToggleButtonActive]}
                                 onPress={handleVoiceRelayToggle}
                                 disabled={connectionState === 'failed' || connectionState === 'disconnected'}
                             >
-                                <Text style={styles.voiceRelayToggleButtonText}>{voiceRelayEnabled ? '중지' : '시작'}</Text>
+                                <Text style={styles.voiceRelayToggleButtonText}>{voiceRelayEnabled ? getFeatureUiText('voip.voiceRelayStop') : getFeatureUiText('voip.voiceRelayStart')}</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.voiceRelayCard}>
@@ -3742,26 +3753,30 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                                 {voiceRelayEnabled
                                     ? voiceRelayRecording
                                         ? voiceRelaySileroActive
-                                            ? 'Silero VAD로 음성 끝 감지 · 녹음 중입니다.'
+                                            ? getFeatureUiText('voip.sileroVadRecording')
                                             : voiceRelayMeterDead
-                                                ? '파일 RMS로 음성 감지 · 녹음 중입니다.'
-                                                : '지금 음성을 듣고 있습니다.'
+                                                ? getFeatureUiText('voip.voiceRelayRecording')
+                                                : getFeatureUiText('voip.voiceRelayListening')
                                         : voiceRelayBusy
-                                            ? '통역 및 전송 중입니다.'
+                                            ? getFeatureUiText('voip.voiceRelayTranslating')
                                         : voiceRelayListenWaiting
-                                            ? '상대 통역 재생/수신 중 — 곧 마이크가 재개됩니다.'
+                                            ? getFeatureUiText('voip.voiceRelayPlayback')
                                             : connectionState === 'connected' && hasRemoteAudio
-                                                ? '다음 음성 구간을 대기 중입니다.'
-                                                : '상대 음성 경로가 열리면 시작 준비 상태로 대기합니다.'
+                                                ? getFeatureUiText('voip.voiceRelayWaiting')
+                                                : getFeatureUiText('voip.voiceRelayReady')
                                     : voiceRelayServerReady
-                                        ? '서버 relay 경로가 준비됐습니다. 연결 직후 자동 통역 시작을 대기 중입니다.'
-                                        : '실시간 음성 통역이 꺼져 있습니다.'}
+                                        ? getFeatureUiText('voip.relayServerReady')
+                                        : getFeatureUiText('voip.voiceRelayOff')}
                             </Text>
-                            <Text style={styles.voiceRelayDiagnosticsText}>현재 지역 힌트: {regionHint || '없음'}</Text>
+                            {__DEV__ ? (
+                                <Text style={styles.voiceRelayDiagnosticsText}>
+                                    {getFeatureUiText('voip.regionHint', { hint: regionHint || getFeatureUiText('voip.regionHintNone') })}
+                                </Text>
+                            ) : null}
                             {lastTranslationProbe ? <Text style={styles.voiceRelayPayloadText}>{lastTranslationProbe}</Text> : null}
                             {voiceRelayError ? <Text style={styles.voiceRelayErrorText}>{voiceRelayError}</Text> : null}
                             {voiceRelayEntries.length ? voiceRelayEntries.slice(-3).reverse().map((entry) => {
-                                const speakerLabel = entry.fromRole === participantRole ? '나' : remoteDisplayName;
+                                const speakerLabel = entry.fromRole === participantRole ? localDisplayName : remoteDisplayName;
                                 return (
                                     <View key={entry.id} style={styles.voiceRelayEntryRow}>
                                         <View style={styles.voiceRelayEntryHeader}>
@@ -3782,7 +3797,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     {((connectionState !== 'connected' && connectionState !== 'failed' && connectionState !== 'disconnected') || (connectionState === 'connected' && !hasRemoteAudio)) && (
                         <View style={styles.statusContainer}>
                             <ActivityIndicator color="#FF6B6B" size="large" />
-                            <Text style={styles.statusText}>{connectionState === 'connected' ? '상대 음성 경로 확인 중...' : '음성 경로 연결 중...'}</Text>
+                            <Text style={styles.statusText}>{connectionState === 'connected' ? getFeatureUiText('voip.audioPathChecking') : getFeatureUiText('voip.audioPathConnecting')}</Text>
                         </View>
                     )}
                 </ScrollView>
@@ -3801,7 +3816,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             disabled={connectionState !== 'connected' || !hasRemoteAudio}
                         >
                             <Text style={styles.controlButtonText}>{isMuted ? '🔇' : '🎤'}</Text>
-                            <Text style={[styles.controlButtonLabel, isCompactHeight && styles.controlButtonLabelCompact]}>{isMuted ? '음소거 중' : '음성'}</Text>
+                            <Text style={[styles.controlButtonLabel, isCompactHeight && styles.controlButtonLabelCompact]}>{isMuted ? getFeatureUiText('voip.muteOn') : getFeatureUiText('voip.muteOff')}</Text>
                         </TouchableOpacity>
 
                         {/* Speaker Button */}
@@ -3811,7 +3826,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             disabled={connectionState !== 'connected' || !hasRemoteAudio}
                         >
                             <Text style={styles.controlButtonText}>{isSpeakerOn ? '🔊' : '📞'}</Text>
-                            <Text style={[styles.controlButtonLabel, isCompactHeight && styles.controlButtonLabelCompact]}>{isSpeakerOn ? '스피커' : '수화기'}</Text>
+                            <Text style={[styles.controlButtonLabel, isCompactHeight && styles.controlButtonLabelCompact]}>{isSpeakerOn ? getFeatureUiText('voip.speakerOn') : getFeatureUiText('voip.speakerOff')}</Text>
                         </TouchableOpacity>
 
                     </View>

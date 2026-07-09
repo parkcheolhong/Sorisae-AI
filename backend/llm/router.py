@@ -1,12 +1,14 @@
 import asyncio
 import base64
+import json
 import logging
 import os
 import re
 import time
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, field_validator
+from fastapi import APIRouter, HTTPException  # pyright: ignore[reportMissingImports]
+from pydantic import BaseModel, field_validator  # pyright: ignore[reportMissingImports]
 
 from backend.llm.correlation import (
     FEATURE_IDS,
@@ -17,6 +19,33 @@ from backend.llm.voice_gateway import _synthesize_tts
 
 router = APIRouter(prefix="/api/llm", tags=["llm-status"])
 logger = logging.getLogger(__name__)
+
+_DBG_LOG_PATH = Path(__file__).resolve().parents[1] / "debug-59d09b.log"
+
+
+def _agent_dbg(
+    location: str,
+    message: str,
+    data: dict,
+    hypothesis_id: str,
+    run_id: str = "pre-fix",
+) -> None:
+    # #region agent log
+    try:
+        payload = {
+            "sessionId": "59d09b",
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with _DBG_LOG_PATH.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+    # #endregion
 
 
 @router.get("/status")
@@ -189,8 +218,8 @@ class _VoipVoiceTranslateRequest(BaseModel):
 class _FaceVoiceTranslateRequest(BaseModel):
     """여행 대면 통역 전용(bilingual 자동 감지 또는 수동 단방향 designated). VoIP와 계약 분리.
 
-    대면은 순서/세션 텔레메트리(seq_id·chunk_index·session_id)를 사용하지 않으므로 계약에서
-    제외한다 — VoIP 전용 필드의 검증 변경이 대면 요청에 절대 영향을 줄 수 없다.
+    대면은 순서 텔레메트리(seq_id·chunk_index)는 사용하지 않지만, 짧은 후속 발화의
+    보충 통역을 위해 선택적 session_id 는 허용한다.
     """
 
     audio_base64: str | None = None
@@ -203,9 +232,10 @@ class _FaceVoiceTranslateRequest(BaseModel):
     bilingual_mode: bool = True
     lang_a: str | None = None
     lang_b: str | None = None
-    device_tts: bool = True
+    device_tts: bool = False
     correlation_id: str | None = None
     feature_id: str | None = None
+    session_id: str | None = None
 
     @field_validator("from_lang", mode="before")
     @classmethod
@@ -237,6 +267,7 @@ class _FaceVoiceTranslateRequest(BaseModel):
             device_tts=self.device_tts,
             correlation_id=self.correlation_id,
             feature_id=self.feature_id or FEATURE_IDS["face_interpret"],
+            session_id=self.session_id,
         )
 
 
@@ -454,7 +485,25 @@ def _transcribe_bilingual_voice_audio(
     #    신뢰도가 높으면 추가 패스 없이 즉시 반환한다(공통 경로 = 1회 추론).
     try:
         auto_payload = _run_faster_whisper(normalized_audio, None, "")
-        if _consider(auto_payload) and best_payload is auto_payload:
+        auto_detected = str(auto_payload.get("detected_language") or "").strip() or None
+        auto_matched = _consider(auto_payload) and best_payload is auto_payload
+        # #region agent log
+        _agent_dbg(
+            "router.py:_transcribe_bilingual_voice_audio:auto",
+            "whisper_auto_pass",
+            {
+                "lang_a": lang_a,
+                "lang_b": lang_b,
+                "detected": auto_detected,
+                "matched_pair": auto_matched,
+                "stt_trust": str(auto_payload.get("stt_trust") or ""),
+                "avg_logprob": float(auto_payload.get("avg_logprob", -5.0)),
+                "transcript_preview": str(auto_payload.get("transcript") or "")[:80],
+            },
+            "A",
+        )
+        # #endregion
+        if auto_matched:
             transcript = str(auto_payload.get("transcript") or "").strip()
             detected = str(auto_payload.get("detected_language") or "").strip() or None
             return transcript, detected, auto_payload
@@ -476,6 +525,21 @@ def _transcribe_bilingual_voice_audio(
     if best_payload is not None:
         transcript = str(best_payload.get("transcript") or "").strip()
         detected = str(best_payload.get("detected_language") or "").strip() or None
+        # #region agent log
+        _agent_dbg(
+            "router.py:_transcribe_bilingual_voice_audio:best",
+            "whisper_best_payload",
+            {
+                "lang_a": lang_a,
+                "lang_b": lang_b,
+                "detected": detected,
+                "best_score": best_score,
+                "stt_trust": str(best_payload.get("stt_trust") or ""),
+                "transcript_preview": transcript[:80],
+            },
+            "B",
+        )
+        # #endregion
         return transcript, detected, best_payload
 
     if last_error is not None:
@@ -493,16 +557,83 @@ def _resolve_bilingual_route(
     from backend.designated_language import text_matches_designated_language
 
     detected = _normalize_voice_lang_code(detected_language)
-    if _voice_lang_codes_equivalent(detected, lang_a):
-        return lang_a, lang_b
-    if _voice_lang_codes_equivalent(detected, lang_b):
-        return lang_b, lang_a
 
+    # 1) 전사 문자셋 매칭 우선 — Whisper 언어 오감지보다 결정적이다.
+    #    한글(Hangul) vs 일본어(Kana/Kanji)처럼 문자셋이 겹치지 않는 쌍에서는
+    #    전사 자체가 어느 언어인지 명확하므로, detected가 한쪽으로 오감지되더라도
+    #    (예: 한국어 발화를 ja로 감지) 전사 문자로 올바른 방향을 잡는다.
+    #    문자셋이 겹치는 쌍(ja/zh, en/vi 등)에서 둘 다/둘 다 아님으로 애매하면 detected로 폴백.
     a_matches = text_matches_designated_language(transcript, lang_a, min_match_ratio=0.55)
     b_matches = text_matches_designated_language(transcript, lang_b, min_match_ratio=0.55)
     if a_matches and not b_matches:
+        # #region agent log
+        _agent_dbg(
+            "router.py:_resolve_bilingual_route",
+            "route_resolved",
+            {
+                "route": f"{lang_a}->{lang_b}",
+                "method": "script_a",
+                "detected": detected,
+                "a_matches": a_matches,
+                "b_matches": b_matches,
+                "transcript_preview": transcript[:80],
+            },
+            "A",
+        )
+        # #endregion
         return lang_a, lang_b
     if b_matches and not a_matches:
+        # #region agent log
+        _agent_dbg(
+            "router.py:_resolve_bilingual_route",
+            "route_resolved",
+            {
+                "route": f"{lang_b}->{lang_a}",
+                "method": "script_b",
+                "detected": detected,
+                "a_matches": a_matches,
+                "b_matches": b_matches,
+                "transcript_preview": transcript[:80],
+            },
+            "A",
+        )
+        # #endregion
+        return lang_b, lang_a
+
+    # 2) 전사 문자셋이 애매하면 Whisper 감지 언어로 판정.
+    if _voice_lang_codes_equivalent(detected, lang_a):
+        # #region agent log
+        _agent_dbg(
+            "router.py:_resolve_bilingual_route",
+            "route_resolved",
+            {
+                "route": f"{lang_a}->{lang_b}",
+                "method": "whisper_a",
+                "detected": detected,
+                "a_matches": a_matches,
+                "b_matches": b_matches,
+                "transcript_preview": transcript[:80],
+            },
+            "A",
+        )
+        # #endregion
+        return lang_a, lang_b
+    if _voice_lang_codes_equivalent(detected, lang_b):
+        # #region agent log
+        _agent_dbg(
+            "router.py:_resolve_bilingual_route",
+            "route_resolved",
+            {
+                "route": f"{lang_b}->{lang_a}",
+                "method": "whisper_b",
+                "detected": detected,
+                "a_matches": a_matches,
+                "b_matches": b_matches,
+                "transcript_preview": transcript[:80],
+            },
+            "A",
+        )
+        # #endregion
         return lang_b, lang_a
 
     # V.2 보강: Whisper 감지·문자셋 매칭이 애매하면 LLM 언어식별로 판정한다.
@@ -515,9 +646,57 @@ def _resolve_bilingual_route(
         guessed = None
     guessed_norm = _normalize_voice_lang_code(guessed)
     if _voice_lang_codes_equivalent(guessed_norm, lang_a):
+        # #region agent log
+        _agent_dbg(
+            "router.py:_resolve_bilingual_route",
+            "route_resolved",
+            {
+                "route": f"{lang_a}->{lang_b}",
+                "method": "llm_guess_a",
+                "detected": detected,
+                "a_matches": a_matches,
+                "b_matches": b_matches,
+                "guessed": guessed_norm,
+                "transcript_preview": transcript[:80],
+            },
+            "D",
+        )
+        # #endregion
         return lang_a, lang_b
     if _voice_lang_codes_equivalent(guessed_norm, lang_b):
+        # #region agent log
+        _agent_dbg(
+            "router.py:_resolve_bilingual_route",
+            "route_resolved",
+            {
+                "route": f"{lang_b}->{lang_a}",
+                "method": "llm_guess_b",
+                "detected": detected,
+                "a_matches": a_matches,
+                "b_matches": b_matches,
+                "guessed": guessed_norm,
+                "transcript_preview": transcript[:80],
+            },
+            "D",
+        )
+        # #endregion
         return lang_b, lang_a
+    # #region agent log
+    _agent_dbg(
+        "router.py:_resolve_bilingual_route",
+        "route_failed",
+        {
+            "detected": detected,
+            "lang_a": lang_a,
+            "lang_b": lang_b,
+            "a_matches": a_matches,
+            "b_matches": b_matches,
+            "guessed": guessed_norm,
+            "transcript_preview": transcript[:80],
+        },
+        "A",
+    )
+    # #endregion
     return None
 
 
@@ -548,9 +727,16 @@ _WHISPER_HALLUCINATION_SIGNATURES = (
     re.compile(r"다음\s*(?:영상|시간)(?:에서)?\s*(?:만나|뵙)", re.U),
     # 한국어 STT 근접무음 환각: 실통화에서 "통역 문장"(메타 단어)·자막 크레딧이 반복 생성돼
     # 상대에게 같은 문구가 중복 발화되던 문제(전화/대면 대화엔 등장하지 않는 메타 문구만 차단).
-    re.compile(r"^\s*통역\s*문장\s*[.!?]*$", re.U),
+    re.compile(r"^\s*통역\s*문장\s*(?:입니다|이에요|이예요|이야|임|이다)?\s*[.!?]*$", re.U),
+    re.compile(r"^\s*회의\s*통역\s*문장\s*(?:입니다)?\s*[.!?]*$", re.U),
     # "통역 문장 1, 통역 문장 2, …" 반복 환각(무음 구간에서 메타 문구가 번호와 함께 반복 생성).
     re.compile(r"(?:통역\s*문장\s*\d*\s*[,，、.]?\s*){3,}", re.U),
+    # 일본어 대응 메타 환각: "통역 문장"이 ja 강제 디코딩 시 "翻訳文(です)"·"通訳文(です)"로 생성됨.
+    # 실통화(한/일 VOIP)에서 무음 구간이 "通訳文です"·"会議の通訳文です"로 반복 누수돼 상대
+    # 다운링크에 TTS 가 끊임없이 주입 → 반대편 에코가드 영구점유 → 단방향 통화를 유발했다.
+    # "通訳文"/"翻訳文" 은 통역 메타어로 실제 대화엔 등장하지 않으므로 토큰만 있으면 환각으로 본다.
+    re.compile(r"^\s*翻訳文\s*(?:です|でした)?\s*[。.!?]*$", re.U),
+    re.compile(r"通訳文", re.U),
     re.compile(r"자막\s*(?:제공|by|바이)", re.I | re.U),
     re.compile(r"자막을?\s*(?:사용|제공)(?:하였|했|합)", re.U),
     # 영어 유튜브 아웃트로 계열
@@ -566,11 +752,34 @@ _WHISPER_HALLUCINATION_SIGNATURES = (
     re.compile(r"transcribed\s+by", re.I),
     re.compile(r"subtitles?\s+by", re.I),
     re.compile(r"amara\.org", re.I),
-    # 중국어 유튜브 아웃트로 계열
-    re.compile(r"感谢(?:大家的)?观看", re.U),
-    re.compile(r"谢谢(?:大家的?)?观看", re.U),
+    # 중국어 유튜브 아웃트로·후원·채널 홍보 계열(실통화 call-a679f50093e0: 请不吝点赞…明镜…)
+    re.compile(r"请不吝点赞", re.U),
+    re.compile(r"点赞.*订阅", re.U),
+    re.compile(r"订阅.*转发", re.U),
+    re.compile(r"转发.*打赏", re.U),
+    re.compile(r"打赏", re.U),
+    re.compile(r"明镜", re.U),
+    re.compile(r"明鏡", re.U),
+    re.compile(r"点点栏目", re.U),
     re.compile(r"请(?:点赞)?(?:订阅|关注)", re.U),
-    # 스칸디나비아 유튜브 아웃트로 계열(무음 구간 Whisper가 no/sv/da로 강제 디코딩하며 흔히 생성).
+    # 한국어 유튜브/후원 환각(실통화: 좋아요, 구독, 공유, 후원… / 明鏡과 점점栏目…)
+    re.compile(r"후원을?\s*부탁", re.U),
+    re.compile(r"좋아요.*구독", re.U),
+    re.compile(r"구독.*공유.*후원", re.U),
+    re.compile(r"점점\s*栏目", re.U),
+    re.compile(r"지원해\s*주세요", re.U),
+    # TV/MV 자막 크레딧 환각(실통화: 词曲 李宗盛 / 작사 작곡 김종성)
+    re.compile(r"词曲\s", re.U),
+    re.compile(r"詞曲\s", re.U),
+    re.compile(r"作词\s|作曲\s", re.U),
+    re.compile(r"作詞\s|作曲\s", re.U),
+    re.compile(r"작사\s*작곡", re.U),
+    re.compile(r"작词\s*작曲", re.U),
+    # 홍콩/광둥 TV 뉴스 아웃트로 환각(실통화 call-340090abcd3d: 多谢您收睇時局新聞,再會!)
+    re.compile(r"多谢.*收睇", re.U),
+    re.compile(r"收睇.*(?:时局|時局|新闻|新聞)", re.U),
+    re.compile(r"(?:时局|時局).*(?:新闻|新聞)", re.U),
+    re.compile(r"시국\s*뉴스", re.U),
     # 예: "Takk for att du så med." → 통역 경로에서 영어로 번역·발화되던 환각.
     re.compile(r"takk\s+for\s+at", re.I | re.U),  # no: "takk for at(t) du så / takk for ating med" 변형 전부
     re.compile(r"tack\s+f[\u00f6o]r\s+att\s+du\s+tittade", re.I | re.U),
@@ -1248,6 +1457,20 @@ async def _face_voice_translate_core(payload: _MobileVoiceTranslateRequest):
             lang_b=lang_b,
         )
         if routed is None:
+            # #region agent log
+            _agent_dbg(
+                "router.py:_face_voice_translate_core",
+                "bilingual_route_422",
+                {
+                    "lang_a": lang_a,
+                    "lang_b": lang_b,
+                    "detected_from_lang": detected_from_lang,
+                    "transcript_preview": transcript[:80],
+                    "stt_trust": str(stt_meta.get("stt_trust") or ""),
+                },
+                "A",
+            )
+            # #endregion
             raise HTTPException(
                 status_code=422,
                 detail=(
@@ -1256,6 +1479,22 @@ async def _face_voice_translate_core(payload: _MobileVoiceTranslateRequest):
                 ),
             )
         effective_from_lang, effective_to_lang = routed
+        # #region agent log
+        _agent_dbg(
+            "router.py:_face_voice_translate_core",
+            "bilingual_route_ok",
+            {
+                "lang_a": lang_a,
+                "lang_b": lang_b,
+                "detected_from_lang": detected_from_lang,
+                "effective_from": effective_from_lang,
+                "effective_to": effective_to_lang,
+                "transcript_preview": transcript[:80],
+                "stt_trust": str(stt_meta.get("stt_trust") or ""),
+            },
+            "C",
+        )
+        # #endregion
     else:
         # 지정 언어(designated) 모드 — 대면 화면의 수동 단방향.
         # 화자의 언어를 이미 알고 있고 STT도 from_lang으로 고정(lock_language)했으므로
@@ -1315,17 +1554,15 @@ async def _face_voice_translate_core(payload: _MobileVoiceTranslateRequest):
     )
 
     try:
-        # [V2 Session Core → #9 Meaning] designated 모드에서만 세션 맥락을 MT 보조
-        # 힌트로 주입(bilingual 경로는 동결 — 미주입). flag off / session_id 없음 / 빈
-        # 맥락이면 None → 기존 동작과 동일.
+        # 지정 언어(designated) 모드에서만 세션 맥락을 MT 보조 힌트로 주입한다.
+        # 대면 bilingual 경로는 동결 — 미주입.
         context_hint = None
         if not bilingual_mode and payload.session_id:
             from backend.communication.session import integration as _session_integration
 
             context_hint = _session_integration.build_context_hint(payload.session_id)
-        # [V2 감정 E1] designated 모드에서 감정→register(존댓말/어휘) 지시문을 MT 힌트에
-        # 합성(best-effort, COMM_V2_EMOTION_REGISTER off / 중립·저신뢰면 no-op → 기존과 동일).
-        if not bilingual_mode and relay_audio_bytes:
+        # [V2 감정 E1] designated 모드에서만 register 힌트를 합성한다.
+        if not bilingual_mode and payload.session_id and relay_audio_bytes:
             from backend.communication.emotion import integration as _emotion_integration
             from backend.communication.emotion.register import compose_hint as _compose_hint
 

@@ -7,11 +7,23 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def _worldlinco_json_store_file_backend(monkeypatch):
+    monkeypatch.setenv("WORLDLINCO_JSON_STORE_BACKEND", "file")
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _reset_security_quota():
     try:
         from backend.security_gates import reset_for_test
     except Exception:
-        yield
-        return
-    reset_for_test()
+        reset_for_test = None
+    try:
+        from backend.services.contact_verification import reset_for_test as reset_otp
+    except Exception:
+        reset_otp = None
+    if reset_for_test is not None:
+        reset_for_test()
+    if reset_otp is not None:
+        reset_otp()
     yield

@@ -8,6 +8,8 @@ export type InstantDeviceSpeechOptions = {
     rate?: number;
     allowsRecordingIOS?: boolean;
     playThroughEarpieceAndroid?: boolean;
+    shouldDuckAndroid?: boolean;
+    onError?: (message: string) => void;
 };
 
 /** Start device TTS immediately — no await on audio teardown or mode switches. */
@@ -22,7 +24,7 @@ export function speakDeviceTextInstant(options: InstantDeviceSpeechOptions): Pro
     void Audio.setAudioModeAsync({
         allowsRecordingIOS: options.allowsRecordingIOS ?? false,
         playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
+        shouldDuckAndroid: options.shouldDuckAndroid ?? true,
         playThroughEarpieceAndroid: options.playThroughEarpieceAndroid ?? false,
         staysActiveInBackground: false,
     }).catch(() => {
@@ -30,7 +32,7 @@ export function speakDeviceTextInstant(options: InstantDeviceSpeechOptions): Pro
     });
 
     const rate = options.rate ?? 1.12;
-    const estimatedMs = Math.min(12_000, Math.max(800, normalized.length * 68));
+    const estimatedMs = Math.min(45_000, Math.max(4_000, normalized.length * 170 + 4_000));
 
     return Promise.race([
         new Promise<void>((resolve) => {
@@ -40,9 +42,29 @@ export function speakDeviceTextInstant(options: InstantDeviceSpeechOptions): Pro
                 volume: 1.0,
                 onDone: () => resolve(),
                 onStopped: () => resolve(),
-                onError: () => resolve(),
+                onError: (error) => {
+                    const message = typeof error === 'string'
+                        ? error
+                        : (error && typeof error === 'object' && 'message' in error
+                            ? String((error as { message?: unknown }).message ?? 'speech_error')
+                            : 'speech_error');
+                    options.onError?.(message);
+                    resolve();
+                },
             });
         }),
         new Promise<void>((resolve) => setTimeout(resolve, estimatedMs)),
-    ]);
+    ]).then(async () => {
+        try {
+            for (let i = 0; i < 30; i += 1) {
+                const stillSpeaking = await Speech.isSpeakingAsync();
+                if (!stillSpeaking) {
+                    break;
+                }
+                await new Promise<void>((resolve) => setTimeout(resolve, 150));
+            }
+        } catch {
+            // no-op
+        }
+    });
 }

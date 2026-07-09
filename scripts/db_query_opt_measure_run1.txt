@@ -1,0 +1,24 @@
+
+=== LEGACY (N+1 per-tag query) ===
+iterations           : 150
+avg/p95 latency(ms)  : 6.30 / 8.95
+avg queries total    : 40.00
+avg queries select   : 30.00
+avg queries insert   : 10.00
+throughput(ops/sec)  : 154.30
+
+=== BATCH (current _resolve_tags_batch) ===
+iterations           : 150
+avg/p95 latency(ms)  : 1.50 / 2.10
+avg queries total    : 11.00
+avg queries select   : 1.00
+avg queries insert   : 10.00
+throughput(ops/sec)  : 624.72
+
+=== DELTA ===
+query reduction      : 72.50%
+throughput gain      : 304.87%
+
+=== TARGET CHECK ===
+query_reduction >= 60.0% : PASS (72.50%)
+throughput_gain >= 20.0% : PASS (304.87%)

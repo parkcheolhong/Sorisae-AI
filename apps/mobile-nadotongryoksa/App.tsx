@@ -116,6 +116,12 @@ import type { SearchCategory, NearbyPlace, BookingResponse } from './src/feature
 import { formatDistance, escapeMapLabel, buildNearbyMapHtml, todayPlus } from './src/features/travel-booking/travelBooking';
 import { SettingsScreen } from './src/features/settings/SettingsScreen';
 import { loadGlobalSettings, useGlobalSettings } from './src/features/settings/globalSettings';
+import {
+    loadCompanionKwsSettings,
+    persistCompanionKwsSettings,
+    type CompanionKwsSettings,
+    DEFAULT_COMPANION_KWS_SETTINGS,
+} from './src/features/settings/companionKwsSettingsStorage';
 import { FriendFolderScreen } from './src/features/friends/FriendFolderScreen';
 import { FriendMapDiscoveryScreen } from './src/features/friends/FriendMapDiscoveryScreen';
 import { useAutoNearbyFriendDiscovery } from './src/features/friends/useAutoNearbyFriendDiscovery';
@@ -226,7 +232,7 @@ import {
     type TranslationStatusRoute,
     type TranslationStatusPhase,
 } from './src/features/call-mode/callModeHelpers';
-import { resolveLangFromCountry } from './src/features/country/countryLanguage';
+import { resolveLangFromCountry, resolveLangFromCountryOrEnglish } from './src/features/country/countryLanguage';
 import {
     SIGNUP_COUNTRY_OPTIONS,
     SIGNUP_COUNTRY_OPTION_CODES,
@@ -249,7 +255,15 @@ import {
     getDefaultVoipTurnServers,
     normalizeTurnServers,
 } from './src/features/voip/voipSignaling';
-import { translateUiSync, useUiI18nTick, getUiLang, setUiLang } from './src/features/i18n/uiI18n';
+import { translateUiSync, useUiI18nTick, getUiLang, setUiLang, hydrateUiLangFromStorage } from './src/features/i18n/uiI18n';
+import { getDisplayUiText, normalizeDisplayLang, syncUiLang } from './src/features/i18n/displayLanguage';
+import { getFeatureUiText } from './src/features/i18n/featureUiCatalog';
+import { formatFlagPrefixedName, resolveUserCountryFlag } from './src/features/i18n/userDisplayIdentity';
+import { BidirectionalLanguagePairBadge } from './src/features/i18n/BidirectionalLanguagePairBadge';
+import { resolveBootstrapUiLang } from './src/features/i18n/bootstrapUiLang';
+import { getSignupGuideText } from './src/features/i18n/signupGuideCatalog';
+import { installGlobalAlertI18n } from './src/features/i18n/globalAlertI18n';
+import { installGlobalToastI18n } from './src/features/i18n/globalToastI18n';
 import { C, SECTION_TAB_COLORS } from './src/app/appTheme';
 import { styles } from './App.styles';
 import { parseAppEntryDeepLink, parseIncomingVoipDeepLink } from './src/app/appDeepLinks';
@@ -277,7 +291,6 @@ import type {
     VoiceProfileResponse,
     VoicePreviewResponse,
 } from './src/app/appTypes';
-import { getUiText } from './src/app/appUiText';
 import {
     API_BASE,
     WORLDLINGO_APP_NAME,
@@ -345,21 +358,40 @@ const translateChildrenDeep = (children: any): any => {
 // 지연 참조하므로, 여기서 한 번 교체하면 앱 전역에 적용된다. 래퍼는 진짜 컴포넌트라 useUiI18nTick() 훅으로
 // 번역 도착 시 자동 리렌더가 가능하다.
 (() => {
-    const installWrapper = (key: 'Text' | 'TextInput', translate: boolean) => {
+    const installWrapper = (key: 'Text' | 'TextInput', mode: 'text' | 'input') => {
         const ns: any = ReactNativeExports as any;
         const Orig: any = ns[key];
         if (typeof Orig !== 'function' || Orig.__wlWrapped) return;
         const Wrapped: any = function WlTextWrapper(props: any) {
             useUiI18nTick();
             let children = props.children;
-            if (translate && getUiLang() !== 'ko' && children != null) {
-                children = translateChildrenDeep(children);
+            let placeholder = props.placeholder;
+            let accessibilityLabel = props.accessibilityLabel;
+            const uiLang = getUiLang();
+            if (uiLang !== 'ko') {
+                if (mode === 'text' && children != null) {
+                    children = translateChildrenDeep(children);
+                }
+                if (mode === 'input') {
+                    if (typeof placeholder === 'string') {
+                        placeholder = translateUiSync(placeholder);
+                    }
+                }
+                if (typeof accessibilityLabel === 'string') {
+                    accessibilityLabel = translateUiSync(accessibilityLabel);
+                }
             }
             const flat = StyleSheet.flatten(props.style) as { fontSize?: number } | undefined;
             const nextStyle = flat && typeof flat.fontSize === 'number'
                 ? [props.style, { fontSize: Math.round(flat.fontSize * GLOBAL_FONT_SCALE) }]
                 : props.style;
-            return React.createElement(Orig, { ...props, style: nextStyle, children });
+            return React.createElement(Orig, {
+                ...props,
+                style: nextStyle,
+                children,
+                placeholder,
+                accessibilityLabel,
+            });
         };
         Wrapped.__wlWrapped = true;
         Wrapped.displayName = `Wl(${key})`;
@@ -374,8 +406,11 @@ const translateChildrenDeep = (children: any): any => {
         assign(ns);
         try { assign(require('react-native')); } catch { /* no-op */ }
     };
-    installWrapper('Text', true);
-    installWrapper('TextInput', false);
+    installWrapper('Text', 'text');
+    installWrapper('TextInput', 'input');
+    installGlobalAlertI18n();
+    installGlobalToastI18n();
+    void hydrateUiLangFromStorage();
 })();
 
 // [기능 분리 Phase5.7] SectionRailKey/SECTION_RAIL_ITEMS/buildSectionRailSelector/
@@ -1196,8 +1231,11 @@ function AppInner() {
     // [Phase6.0] 가입 필수: 나의 AI 이름 → "OOOO AI" 표시명으로 자동 치환(온디바이스 SSOT).
     const [signupAiName, setSignupAiName] = useState('');
     const [aiDisplayName, setAiDisplayName] = useState<string>(DEFAULT_AI_DISPLAY_NAME);
-    const [signupPreferredLanguage, setSignupPreferredLanguage] = useState<LangCode>('ko');
-    const [signupCountryCode, setSignupCountryCode] = useState<SignupCountryCode>('KR');
+    const [signupPreferredLanguage, setSignupPreferredLanguage] = useState<LangCode>(() => resolveBootstrapUiLang());
+    const [signupCountryCode, setSignupCountryCode] = useState<SignupCountryCode>(() => {
+        const boot = resolveBootstrapUiLang();
+        return resolveSignupCountryFromLang(boot) as SignupCountryCode;
+    });
     const [signupSelectionModal, setSignupSelectionModal] = useState<SignupSelectionModal>(null);
     const [signupStep, setSignupStep] = useState<'form' | 'verify'>('form');
     const [signupSessionToken, setSignupSessionToken] = useState('');
@@ -1290,15 +1328,16 @@ function AppInner() {
     useEffect(() => {
         const designated = String(userInfo?.preferred_language || '').trim().toLowerCase();
         if (designated && isSupportedLangCode(designated)) {
-            void setUiLang(designated);
+            void syncUiLang(designated);
             return;
         }
         const country = String(gpsCountryCode || resolveLocaleCountryCode() || '').trim();
-        const gpsLang = country ? String(resolveLangFromCountry(country) || '').trim().toLowerCase() : '';
+        const gpsLang = country ? resolveLangFromCountryOrEnglish(country) : '';
         if (gpsLang && isSupportedLangCode(gpsLang)) {
-            void setUiLang(gpsLang);
+            void syncUiLang(gpsLang);
         }
     }, [userInfo?.preferred_language, gpsCountryCode]);
+
     const [showFriendMapDiscovery, setShowFriendMapDiscovery] = useState(false);
     // VoIP 지정 언어 로컬 오버라이드(백엔드 고정 해제). null이면 백엔드 프로필 언어 사용.
     const [voipLocalLangOverride, setVoipLocalLangOverride] = useState<LangCode | null>(null);
@@ -1317,7 +1356,25 @@ function AppInner() {
         })();
         return () => { cancelled = true; };
     }, []);
+    const handleClearVoipLocalLang = useCallback(() => {
+        setVoipLocalLangOverride(null);
+        setVoipLangModalVisible(false);
+        void AsyncStorage.removeItem(VOIP_LOCAL_LANG_STORAGE_KEY).catch(() => { });
+    }, []);
+    const [voipAutoCallVoiceId, setVoipAutoCallVoiceId] = useState<string | null>(null);
+    const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoomSummary | null>(null);
+    const [chatRefreshKey, setChatRefreshKey] = useState(0);
+
+    /** 프로필/설정 언어·국가 변경 시 fromLang + uiLang 을 동시에 맞춘다(중구난방 방지). */
+    const applyUserDisplayLanguage = useCallback((code: LangCode) => {
+        const safe = normalizeDisplayLang(code);
+        setFromLang(safe);
+        void syncUiLang(safe);
+        setChatRefreshKey((prev) => prev + 1);
+    }, []);
+
     const handleSelectVoipLocalLang = useCallback((code: LangCode) => {
+        applyUserDisplayLanguage(code);
         // 1) 즉시 로컬 반영(오프라인/지연에도 통화 언어가 곧바로 바뀌도록).
         setVoipLocalLangOverride(code);
         setVoipLangModalVisible(false);
@@ -1336,15 +1393,8 @@ function AppInner() {
                 }
             })();
         }
-    }, [token, userInfo]);
-    const handleClearVoipLocalLang = useCallback(() => {
-        setVoipLocalLangOverride(null);
-        setVoipLangModalVisible(false);
-        void AsyncStorage.removeItem(VOIP_LOCAL_LANG_STORAGE_KEY).catch(() => { });
-    }, []);
-    const [voipAutoCallVoiceId, setVoipAutoCallVoiceId] = useState<string | null>(null);
-    const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoomSummary | null>(null);
-    const [chatRefreshKey, setChatRefreshKey] = useState(0);
+    }, [applyUserDisplayLanguage, token, userInfo]);
+
     const [groupComposerSignal, setGroupComposerSignal] = useState(0);
     const [chatShareLoading, setChatShareLoading] = useState(false);
     const [shareTargetVisible, setShareTargetVisible] = useState(false);
@@ -1442,18 +1492,19 @@ function AppInner() {
         details: Record<string, unknown> = {},
     ) => {
         const route: TranslationStatusRoute = target === 'pstn' ? 'PSTN' : 'VOIP';
-        const message = formatUnifiedTranslationStatus(route, phase, detail);
+        const operatorMessage = formatUnifiedTranslationStatus(route, phase, detail);
         if (target === 'pstn') {
-            setInterCallStatus(message);
+            setInterCallStatus(detail);
         } else {
-            setVoipStatusMessage(message);
+            setVoipStatusMessage(detail);
         }
         logUiPressProbe('TRANSLATION_STATUS', {
             target,
             route,
             phase,
             detail,
-            message,
+            message: operatorMessage,
+            user_message: detail,
             ...details,
         });
         console.log('[TRANSLATION_STATUS]', JSON.stringify({
@@ -1461,7 +1512,8 @@ function AppInner() {
             route,
             phase,
             detail,
-            message,
+            message: operatorMessage,
+            user_message: detail,
             ...details,
         }));
     }, [logUiPressProbe]);
@@ -1537,7 +1589,7 @@ function AppInner() {
                 setToLang((currentTarget) => resolveAutoTargetLang(preferred, currentTarget));
             }
             // [전역 다국어] 회원가입/프로필 지정 언어로 앱 전체 UI 표기 전환.
-            void setUiLang(preferred);
+            void syncUiLang(preferred);
         }
     }, []);
 
@@ -1970,6 +2022,21 @@ function AppInner() {
     const incomingAlertSoundModeRef = useRef<IncomingAlertSoundMode>('sound');
     const [settingsTabOpen, setSettingsTabOpen] = useState(false);
     const globalSettings = useGlobalSettings();
+    const [companionKwsSettings, setCompanionKwsSettings] = useState<CompanionKwsSettings>(DEFAULT_COMPANION_KWS_SETTINGS);
+
+    useEffect(() => {
+        void loadCompanionKwsSettings().then(setCompanionKwsSettings).catch(() => { /* 기본값 유지 */ });
+    }, []);
+
+    const handleSaveCompanionKwsSettings = useCallback(async (params: {
+        provider: CompanionKwsSettings['provider'];
+        modelPath: string;
+        porcupineAccessKey: string;
+        porcupineKeywordPaths: string[];
+    }) => {
+        const saved = await persistCompanionKwsSettings(params);
+        setCompanionKwsSettings(saved);
+    }, []);
 
     useEffect(() => {
         // 설정값을 단말에서 1회 로드(소리/진동/무음).
@@ -2016,10 +2083,16 @@ function AppInner() {
             setSettingsProfileError('로그인 후 변경할 수 있습니다.');
             return;
         }
+        const mappedLang = resolveLangFromCountryOrEnglish(code);
+        applyUserDisplayLanguage(mappedLang);
         setSettingsProfileSaving(true);
         void (async () => {
             try {
-                const updated = await callUpdateMeApi(token, { country_code: code } as UserProfileUpdatePayload);
+                const payload: UserProfileUpdatePayload = {
+                    country_code: code,
+                    preferred_language: mappedLang,
+                };
+                const updated = await callUpdateMeApi(token, payload);
                 setUserInfo(updated);
                 await saveStoredAuthState(token, updated);
                 setSettingsProfileSuccess('국가가 저장되었습니다.');
@@ -2029,7 +2102,7 @@ function AppInner() {
                 setSettingsProfileSaving(false);
             }
         })();
-    }, [token, userInfo]);
+    }, [applyUserDisplayLanguage, token, userInfo]);
 
     const handleSettingsChangeLanguage = useCallback((code: string) => {
         setSettingsProfileError('');
@@ -2038,6 +2111,11 @@ function AppInner() {
             setSettingsProfileError('로그인 후 변경할 수 있습니다.');
             return;
         }
+        if (!isSupportedLangCode(code)) {
+            setSettingsProfileError('지원하지 않는 언어입니다.');
+            return;
+        }
+        applyUserDisplayLanguage(code as LangCode);
         setSettingsProfileSaving(true);
         void (async () => {
             try {
@@ -2051,7 +2129,7 @@ function AppInner() {
                 setSettingsProfileSaving(false);
             }
         })();
-    }, [token, userInfo]);
+    }, [applyUserDisplayLanguage, token, userInfo]);
 
     const handleOpenPasswordChangeFromSettings = useCallback(() => {
         setSettingsTabOpen(false);
@@ -3103,7 +3181,7 @@ function AppInner() {
             if (requestId !== translationRequestSeqRef.current) {
                 return;
             }
-            const ui = getUiText(source);
+            const ui = getDisplayUiText();
             const timedOut = error instanceof Error && error.message === 'translation_timeout';
             setResultText(timedOut ? '[오류] 번역 응답 시간이 초과되었습니다.' : ui.errorMsg);
             latestTranslationMetaRef.current = null;
@@ -3684,7 +3762,7 @@ function AppInner() {
 
     // ── 번역 실행 ──
     const handleTranslate = useCallback(async () => {
-        const ui = getUiText(fromLang);
+        const ui = getDisplayUiText();
         const trimmed = inputText.trim();
         if (!trimmed) {
             Alert.alert(ui.inputRequired, ui.inputRequiredMsg);
@@ -3694,7 +3772,7 @@ function AppInner() {
     }, [inputText, fromLang, toLang, runTranslation]);
 
     const runImageOcrWithAsset = useCallback(async (asset: { uri: string; name?: string | null; mimeType?: string | null }) => {
-        const ui = getUiText(fromLang);
+        const ui = getDisplayUiText();
         setOcrError('');
         setOcrTranslatedText('');
         try {
@@ -4345,15 +4423,17 @@ function AppInner() {
     const handleSelectSignupLanguage = useCallback((code: LangCode) => {
         setSignupPreferredLanguage(code);
         setSignupCountryCode(resolveSignupCountryFromLang(code));
+        setFromLang(code);
+        void syncUiLang(code);
         setSignupSelectionModal(null);
     }, []);
 
     const handleSelectSignupCountry = useCallback((code: SignupCountryCode) => {
         setSignupCountryCode(code);
-        const mappedLanguage = resolveLangFromCountry(code);
-        if (mappedLanguage) {
-            setSignupPreferredLanguage(mappedLanguage);
-        }
+        const mappedLanguage = resolveLangFromCountryOrEnglish(code);
+        setSignupPreferredLanguage(mappedLanguage);
+        setFromLang(mappedLanguage);
+        void syncUiLang(mappedLanguage);
         setSignupSelectionModal(null);
     }, []);
 
@@ -4362,6 +4442,7 @@ function AppInner() {
         setProfilePreferredLanguage(code);
         setProfileCountryCode(countryCode);
         setProfileSelectionModal(null);
+        applyUserDisplayLanguage(code);
         if (!token || !userInfo) {
             return;
         }
@@ -4374,25 +4455,21 @@ function AppInner() {
             });
             setUserInfo(updatedUserInfo);
             await saveStoredAuthState(token, updatedUserInfo);
-            setFromLang(code);
-            void setUiLang(code);
             setProfileMessage('프로필 언어가 저장되었습니다.');
-            setChatRefreshKey((prev) => prev + 1);
         } catch (error: any) {
             setProfileMessage(error?.message || '프로필 언어 저장 실패');
         } finally {
             setProfileSaving(false);
         }
-    }, [token, userInfo]);
+    }, [applyUserDisplayLanguage, token, userInfo]);
 
     const handleSelectProfileCountry = useCallback((code: SignupCountryCode) => {
         setProfileCountryCode(code);
-        const mappedLanguage = resolveLangFromCountry(code);
-        if (mappedLanguage) {
-            setProfilePreferredLanguage(mappedLanguage);
-        }
+        const mappedLanguage = resolveLangFromCountryOrEnglish(code);
+        setProfilePreferredLanguage(mappedLanguage);
+        applyUserDisplayLanguage(mappedLanguage);
         setProfileSelectionModal(null);
-    }, []);
+    }, [applyUserDisplayLanguage]);
 
     const handleSaveMyProfile = useCallback(async () => {
         if (!token || !userInfo) {
@@ -4409,6 +4486,7 @@ function AppInner() {
             });
             setUserInfo(updatedUserInfo);
             await saveStoredAuthState(token, updatedUserInfo);
+            applyUserDisplayLanguage(profilePreferredLanguage);
             setProfileMessage('프로필 기본값 저장됨. 이후 채팅/VoIP 기본 언어 계산에 바로 반영됩니다.');
             setChatRefreshKey((prev) => prev + 1);
         } catch (error: any) {
@@ -4416,11 +4494,15 @@ function AppInner() {
         } finally {
             setProfileSaving(false);
         }
-    }, [profileCountryCode, profilePreferredLanguage, token, userInfo]);
+    }, [applyUserDisplayLanguage, profileCountryCode, profilePreferredLanguage, token, userInfo]);
 
     const renderSignupProfileSelectors = useCallback(() => (
         <>
-            <Text style={styles.signupProfileLabel}>회원 기본 언어</Text>
+            <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupGuideTitle', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine1', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine2', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine3', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupLanguageLabel', signupPreferredLanguage)}</Text>
             <Pressable
                 style={styles.signupPickerTrigger}
                 onPress={() => setSignupSelectionModal('language')}
@@ -4429,11 +4511,11 @@ function AppInner() {
             >
                 <View>
                     <Text style={styles.signupPickerValue}>{getLangLabelText(signupPreferredLanguage)}</Text>
-                    <Text style={styles.signupPickerMeta}>50개 언어 전체에서 선택</Text>
+                    <Text style={styles.signupPickerMeta}>{getSignupGuideText('signupLanguageMeta', signupPreferredLanguage)}</Text>
                 </View>
                 <Text style={styles.signupPickerHint}>열기</Text>
             </Pressable>
-            <Text style={styles.signupProfileLabel}>프로필 국가</Text>
+            <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupCountryLabel', signupPreferredLanguage)}</Text>
             <Pressable
                 style={styles.signupPickerTrigger}
                 onPress={() => setSignupSelectionModal('country')}
@@ -4442,12 +4524,12 @@ function AppInner() {
             >
                 <View>
                     <Text style={styles.signupPickerValue}>{resolveCountryFlag(signupCountryCode)} {resolveCountryName(signupCountryCode)}</Text>
-                    <Text style={styles.signupPickerMeta}>50개국 서비스 프로필에서 선택</Text>
+                    <Text style={styles.signupPickerMeta}>{getSignupGuideText('signupCountryMeta', signupPreferredLanguage)}</Text>
                 </View>
                 <Text style={styles.signupPickerHint}>열기</Text>
             </Pressable>
             <Text style={styles.signupProfileHint}>
-                VoIP 보이스톡·채팅 통역은 이 프로필의 사용 언어 {getLangLabelText(signupPreferredLanguage)} / 국가 {resolveCountryFlag(signupCountryCode)} {signupCountryCode} 를 상대 연결 기준으로 사용합니다. OTP 인증 단계에서도 변경할 수 있습니다.
+                {getSignupGuideText('signupProfileHint', signupPreferredLanguage)}
             </Text>
             <Modal
                 visible={signupSelectionModal !== null}
@@ -6994,6 +7076,7 @@ function AppInner() {
             return;
         }
         setFromLang(preferred);
+        void syncUiLang(preferred);
         if (peerLangManual) {
             return;
         }
@@ -7037,7 +7120,7 @@ function AppInner() {
         const { translateTo, translateLabel } = resolveInterCallDirection(turn);
         const relayKey = `${turn}:${normalizeRelayText(spokenText)}`;
         setInterCallLog((prev) => [...prev.slice(-19), { turn, text: spokenText, translated: translatedText }]);
-        emitUnifiedTranslationStatus('pstn', 'SPEAK', `${translateLabel} 송출`, {
+        emitUnifiedTranslationStatus('pstn', 'SPEAK', getFeatureUiText('user.speaking'), {
             turn,
             translate_to: translateTo,
             auto_relay: Boolean(options.isAutoRelay),
@@ -7090,7 +7173,6 @@ function AppInner() {
         setItinerarySeedQuery,
         setItinerarySeedNonce,
         setSorisaeQaLog,
-        getUiText,
         getLangLabel,
         requestPermissions,
         runTranslation,
@@ -7176,7 +7258,6 @@ function AppInner() {
         lat,
         lon,
         gpsAccuracyM,
-        getUiText,
         getLangLabel,
         requestPermissions,
         runTranslation,
@@ -7304,7 +7385,7 @@ function AppInner() {
             }
             await stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
             setAutoVoiceModeEnabled(false);
-            setGpsStatus(getUiText(fromLang).autoVoiceModeStopped ?? '🎙️ 대화 통역을 종료했습니다.');
+            setGpsStatus(getDisplayUiText().autoVoiceModeStopped ?? '🎙️ 대화 통역을 종료했습니다.');
             return;
         }
         if (Platform.OS === 'web') {
@@ -7312,7 +7393,7 @@ function AppInner() {
             return;
         }
         if (toLang === profileLang) {
-            Alert.alert('상대 언어 필요', getUiText(fromLang).faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
+            Alert.alert('상대 언어 필요', getDisplayUiText().faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
             return;
         }
         // 대면 통역 화면은 '통역' 단일 모드 — 소리새(gpt) 모드가 메인 캡처 루프로 새지 않게 강제.
@@ -7326,10 +7407,10 @@ function AppInner() {
         faceConversationSessionRef.current = true;
         autoVoiceModeEnabledRef.current = true;
         setAutoVoiceModeEnabled(true);
-        setGpsStatus(getUiText(fromLang).autoVoiceModeStarted ?? '🎙️ 대화 통역 시작 · 말 끝날 때까지 듣습니다');
+        setGpsStatus(getDisplayUiText().autoVoiceModeStarted ?? '🎙️ 대화 통역 시작 · 말 끝날 때까지 듣습니다');
         voiceInputTargetRef.current = 'main';
         void startVoiceInput({ autoMode: true });
-    }, [autoVoiceModeEnabled, fromLang, getUiText, startVoiceInput, stopVoiceInput, toLang, userInfo?.preferred_language]);
+    }, [autoVoiceModeEnabled, getDisplayUiText, startVoiceInput, stopVoiceInput, toLang, userInfo?.preferred_language]);
 
     /**
      * 소리새 AI 전용 대화 토글(통역창과 분리). 통역모드의 '상대 언어 필요' 제약을 받지 않고
@@ -7493,11 +7574,11 @@ function AppInner() {
             if (recordingRef.current && voiceInputTargetRef.current === 'inter_call') {
                 await stopVoiceInput({ suppressAutoRestart: true });
             }
-            emitUnifiedTranslationStatus('pstn', 'INFO', '스피커폰 통역 보조를 종료했습니다. 필요하면 텍스트 입력으로 이어가세요.');
+            emitUnifiedTranslationStatus('pstn', 'INFO', getFeatureUiText('pstn.speakerAssistStopped'));
             return;
         }
         setInterCallVoiceAssistEnabled(true);
-        emitUnifiedTranslationStatus('pstn', 'READY', `스피커폰 통역 보조 준비 중 (${formatAutoRelayDelayLabel(autoRelayDelayMs)} 간격)`);
+        emitUnifiedTranslationStatus('pstn', 'READY', getFeatureUiText('pstn.speakerAssistReady', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
     }, [autoRelayDelayMs, emitUnifiedTranslationStatus, interCallVoiceAssistEnabled, isVoiceRecording, stopVoiceInput, voiceSttLoading]);
 
     const relayInterCallManual = useCallback(async (turn: 'from' | 'to', spokenText: string, options: { isAutoRelay?: boolean } = {}) => {
@@ -7505,12 +7586,12 @@ function AppInner() {
         if (!trimmedText) return;
         const dedupeKey = `${turn}:${normalizeRelayText(trimmedText)}`;
         if (options.isAutoRelay && interLastAutoRelayRef.current && interLastAutoRelayRef.current.key === dedupeKey && Date.now() - interLastAutoRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-            setInterCallStatus(getUiText(fromLang).interAutoRelayDuplicateSkipped);
+            setInterCallStatus(getDisplayUiText().interAutoRelayDuplicateSkipped);
             setInterManualText('');
             return;
         }
         const { listenLang, translateTo } = resolveInterCallDirection(turn);
-        emitUnifiedTranslationStatus('pstn', 'TRANSLATE', `${getLangLabel(listenLang)} -> ${getLangLabel(translateTo)}`, {
+        emitUnifiedTranslationStatus('pstn', 'TRANSLATE', getFeatureUiText('user.translating'), {
             turn,
             auto_relay: Boolean(options.isAutoRelay),
         });
@@ -7522,9 +7603,9 @@ function AppInner() {
             );
             commitInterCallRelay(turn, trimmedText, translated.translated, options);
         } catch {
-            emitUnifiedTranslationStatus('pstn', 'ERROR', '통역 통화 처리 중 오류가 발생했습니다.', { turn });
+            emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.translationError'), { turn });
         }
-    }, [commitInterCallRelay, emitUnifiedTranslationStatus, fromLang, getLangLabel, getUiText, resolveInterCallDirection, translateTextWithRegion]);
+    }, [commitInterCallRelay, emitUnifiedTranslationStatus, getLangLabel, getDisplayUiText, resolveInterCallDirection, translateTextWithRegion]);
 
     const clearInterManualAutoRelayTimer = useCallback(() => {
         if (interManualAutoRelayTimerRef.current) {
@@ -7551,7 +7632,7 @@ function AppInner() {
             return;
         }
 
-        setInterCallStatus(formatStatusText(getUiText(fromLang).interAutoRelayPending, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
+        setInterCallStatus(formatStatusText(getDisplayUiText().interAutoRelayPending, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
         clearInterManualAutoRelayTimer();
         interManualAutoRelayTimerRef.current = setTimeout(() => {
             void relayInterCallManual(interCallTurn, pendingText, { isAutoRelay: true });
@@ -7577,11 +7658,11 @@ function AppInner() {
         const { listenLang, translateTo, listenLabel, translateLabel } = resolveInterCallDirection(turn);
         const listenTts = LANGS.find((l) => l.code === listenLang)?.tts ?? 'en-US';
         setInterCallTurn(turn);
-        emitUnifiedTranslationStatus('pstn', 'LISTEN', `${listenLabel} 입력 대기`, { turn });
+        emitUnifiedTranslationStatus('pstn', 'LISTEN', getFeatureUiText(turn === 'from' ? 'user.mySpeechInput' : 'user.peerSpeechInput'), { turn });
 
         const SpeechRecognitionCtor = webAny.window.SpeechRecognition || webAny.window.webkitSpeechRecognition;
         if (!SpeechRecognitionCtor) {
-            setInterCallStatus('이 환경은 음성 인식을 지원하지 않아 수동 통역 모드로 전환됩니다.');
+            setInterCallStatus(getFeatureUiText('pstn.manualModeFallback'));
             return;
         }
         const recognizer = new SpeechRecognitionCtor();
@@ -7590,7 +7671,7 @@ function AppInner() {
         recognizer.onresult = async (event: any) => {
             const spokenText = event.results?.[0]?.[0]?.transcript ?? '';
             if (!interCallActiveRef.current) return;
-            emitUnifiedTranslationStatus('pstn', 'TRANSLATE', `${listenLabel} -> ${translateLabel}`, { turn });
+            emitUnifiedTranslationStatus('pstn', 'TRANSLATE', getFeatureUiText('user.translating'), { turn });
             try {
                 const translated = await translateTextWithRegion(
                     spokenText,
@@ -7598,11 +7679,11 @@ function AppInner() {
                     translateTo,
                 );
                 setInterCallLog((prev) => [...prev.slice(-19), { turn, text: spokenText, translated: translated.translated }]);
-                emitUnifiedTranslationStatus('pstn', 'SPEAK', `${translateLabel} 송출`, { turn });
+                emitUnifiedTranslationStatus('pstn', 'SPEAK', getFeatureUiText('user.speaking'), { turn });
                 const targetTts = LANGS.find((l) => l.code === translateTo)?.tts ?? 'en-US';
                 const UtteranceCtor = webAny.window.SpeechSynthesisUtterance;
                 if (!UtteranceCtor) {
-                    emitUnifiedTranslationStatus('pstn', 'ERROR', '브라우저 TTS를 사용할 수 없습니다.', { turn });
+                    emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.browserTtsUnavailable'), { turn });
                     return;
                 }
                 const utter = new UtteranceCtor(translated.translated);
@@ -7616,12 +7697,12 @@ function AppInner() {
                 webAny.window.speechSynthesis.cancel();
                 webAny.window.speechSynthesis.speak(utter);
             } catch {
-                emitUnifiedTranslationStatus('pstn', 'ERROR', '통역 통화 처리 중 오류가 발생했습니다.', { turn });
+                emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.translationError'), { turn });
             }
         };
         recognizer.onerror = () => {
             if (interCallActiveRef.current) {
-                emitUnifiedTranslationStatus('pstn', 'ERROR', '음성 인식 오류. 다시 시도하세요.', { turn });
+                emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.speechError'), { turn });
             }
         };
         recognizer.start();
@@ -7655,14 +7736,14 @@ function AppInner() {
             });
             if (dialOpened) {
                 setInterCallVoiceAssistEnabled(true);
-                emitUnifiedTranslationStatus('pstn', 'READY', `${SUPPORTED_LANGUAGE_COUNT}개국어 자동 전달 모드 시작`, {
+                emitUnifiedTranslationStatus('pstn', 'READY', getFeatureUiText('pstn.autoModeStart', { count: SUPPORTED_LANGUAGE_COUNT }), {
                     dial_opened: true,
                 });
             } else {
                 interCallActiveRef.current = false;
                 setInterCallActive(false);
                 endPstnAssistSessionRef.current('inter_call_dial_failed');
-                emitUnifiedTranslationStatus('pstn', 'ERROR', '전화번호를 입력하거나 호텔을 선택하면 다이얼패드를 열 수 있습니다.', {
+                emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.dialPadHint'), {
                     dial_opened: false,
                 });
             }
@@ -7679,7 +7760,7 @@ function AppInner() {
     const handleSelectInterCallContact = useCallback((contact: DevicePhoneContact) => {
         setInterCallPhone(contact.phone);
         setInterCallContactPickerVisible(false);
-        setInterCallStatus(`📇 ${contact.name} 번호를 단말 전화번호 저장소에서 선택했습니다. 통역 통화 시작을 누르면 시스템 전화앱으로 이어집니다.`);
+        setInterCallStatus(getFeatureUiText('pstn.contactPicked', { name: contact.name }));
     }, []);
 
     // [Phase5.11] 연락처에서 직접 채팅 시작/초대 — 번호가 앱 친구면 채팅방을 열고,
@@ -7698,7 +7779,7 @@ function AppInner() {
                 const room = await createDirectChatRoom(API_BASE, token, action.friend.friendUserId);
                 setSelectedChatRoom(room);
                 setShowFriendFolder(false);
-                setInterCallStatus(`💬 ${contact.name}님과의 채팅방을 열었습니다.`);
+                setInterCallStatus(getFeatureUiText('pstn.chatOpened', { name: contact.name }));
                 logUiPressProbe('CONTACT_CHAT_OPENED', {
                     friend_user_id: action.friend.friendUserId,
                     room_id: room.room_id,
@@ -7708,12 +7789,12 @@ function AppInner() {
             const { shared } = await shareChatInvite({ apiBase: API_BASE, contactName: contact.name, inviterName });
             setInterCallStatus(
                 shared
-                    ? `📨 ${contact.name}님에게 채팅 초대를 보냈습니다.`
-                    : `📨 ${contact.name}님은 아직 미가입입니다. 초대 공유를 취소했습니다.`,
+                    ? getFeatureUiText('pstn.contactInviteSent', { name: contact.name })
+                    : getFeatureUiText('pstn.contactNotRegistered', { name: contact.name }),
             );
             logUiPressProbe('CONTACT_CHAT_INVITE_SHARED', { shared });
         } catch (error: any) {
-            Alert.alert('채팅 시작 실패', error?.message || '연락처로 채팅을 시작하지 못했습니다.');
+            Alert.alert(getFeatureUiText('pstn.chatStartFailedTitle'), error?.message || getFeatureUiText('pstn.chatStartFailedBody'));
         }
     }, [logUiPressProbe, token, userInfo?.email, userInfo?.id, userInfo?.username]);
 
@@ -7721,11 +7802,11 @@ function AppInner() {
     const presentContactActionChooser = useCallback((contact: DevicePhoneContact) => {
         Alert.alert(
             contact.name,
-            `${contact.phone}\n무엇을 할까요?`,
+            `${contact.phone}\n${getFeatureUiText('pstn.contactChooserPrompt')}`,
             [
-                { text: '💬 채팅/초대', onPress: () => { void handleOpenChatFromContact(contact); } },
-                { text: '📞 일반통화', onPress: () => { handleSelectInterCallContact(contact); } },
-                { text: '취소', style: 'cancel' },
+                { text: getFeatureUiText('pstn.contactChatInvite'), onPress: () => { void handleOpenChatFromContact(contact); } },
+                { text: getFeatureUiText('pstn.contactInterCall'), onPress: () => { handleSelectInterCallContact(contact); } },
+                { text: getFeatureUiText('pstn.cancel'), style: 'cancel' },
             ],
             { cancelable: true },
         );
@@ -7776,12 +7857,12 @@ function AppInner() {
         });
         if (dialOpened) {
             setInterCallVoiceAssistEnabled(true);
-            setInterCallStatus(`📞 ${contact.name}님께 일반전화 통역 발신 — 통화 중 자동 통역이 전달됩니다.`);
+            setInterCallStatus(getFeatureUiText('pstn.callOutgoing', { name: contact.name }));
         } else {
             interCallActiveRef.current = false;
             setInterCallActive(false);
             endPstnAssistSessionRef.current('contact_directory_dial_failed');
-            setInterCallStatus('전화앱을 열지 못했습니다. 번호를 확인해 주세요.');
+            setInterCallStatus(getFeatureUiText('pstn.dialFailed'));
         }
     }, [bookingResult?.support_phone, logUiPressProbe, selectedBookingPlace?.phone, startInterCallCycleWeb, startPstnAssistDialFlow]);
 
@@ -7802,22 +7883,22 @@ function AppInner() {
                 setSelectedChatRoom(room);
                 setShowFriendFolder(false);
                 setActiveRailSection('chat');
-                setInterCallStatus(`💬 ${contact.name}님과의 채팅방을 열었습니다.`);
+                setInterCallStatus(getFeatureUiText('pstn.chatOpened', { name: contact.name }));
                 logUiPressProbe('CONTACT_DIRECTORY_CHAT_OPENED', {
                     friend_user_id: friend.friendUserId,
                     room_id: room.room_id,
                 });
                 return;
             } catch (error: any) {
-                Alert.alert('채팅 시작 실패', error?.message || '연락처로 채팅을 시작하지 못했습니다.');
+                Alert.alert(getFeatureUiText('pstn.chatStartFailedTitle'), error?.message || getFeatureUiText('pstn.chatStartFailedBody'));
                 return;
             }
         }
         const { shared } = await shareChatInvite({ apiBase: API_BASE, contactName: contact.name, inviterName });
         setInterCallStatus(
             shared
-                ? `📨 ${contact.name}님에게 채팅 초대를 보냈습니다.`
-                : `📨 ${contact.name}님은 아직 미가입입니다. 초대 공유를 취소했습니다.`,
+                ? getFeatureUiText('pstn.contactInviteSent', { name: contact.name })
+                : getFeatureUiText('pstn.contactNotRegistered', { name: contact.name }),
         );
         logUiPressProbe('CONTACT_DIRECTORY_CHAT_INVITE_SHARED', { shared });
     }, [logUiPressProbe, token, userInfo?.email, userInfo?.username]);
@@ -7846,7 +7927,7 @@ function AppInner() {
                 room_id: room.room_id,
             });
         } catch (error: any) {
-            Alert.alert('채팅 시작 실패', error?.message || '친구 채팅을 시작하지 못했습니다.');
+            Alert.alert(getFeatureUiText('pstn.chatStartFailedTitle'), error?.message || getFeatureUiText('pstn.friendChatStartFailedBody'));
         }
     }, [logUiPressProbe, token]);
 
@@ -7916,7 +7997,7 @@ function AppInner() {
         }
         const dialOpened = await openDialPad(normalized);
         if (dialOpened) {
-            setInterCallStatus('📞 다이얼패드 번호로 시스템 전화앱을 열었습니다. 통화 후 수동 통역 모드를 사용하세요.');
+            setInterCallStatus(getFeatureUiText('pstn.dialPadOpened'));
         } else {
             setInterCallContactError('다이얼패드에서 선택한 번호로 전화앱을 열지 못했습니다.');
         }
@@ -7941,7 +8022,7 @@ function AppInner() {
 
             const pickedContact = await Contacts.presentContactPickerAsync();
             if (!pickedContact) {
-                setInterCallStatus('📇 단말 전화번호 저장소 열기를 취소했습니다.');
+                setInterCallStatus(getFeatureUiText('pstn.contactsCancelled'));
                 return;
             }
 
@@ -7970,6 +8051,15 @@ function AppInner() {
 
     const currentFromLabel = getLangLabel(fromLang);
     const currentToLabel = getLangLabel(toLang);
+    const userMeSideLabel = getFeatureUiText('user.meSide');
+    const userPeerSideLabel = getFeatureUiText('user.peerSide');
+    const userFlag = resolveUserCountryFlag(profileCountryCode, profilePreferredLanguage);
+    const peerFlag = resolveUserCountryFlag(null, toLang);
+    const userFlagDisplayName = formatFlagPrefixedName(
+        userFlag,
+        userInfo?.username || userInfo?.email?.split('@')[0] || userMeSideLabel,
+    );
+    const peerFlagDisplayName = formatFlagPrefixedName(peerFlag, userPeerSideLabel);
     // [홈 런처] 대면통역 히어로 카드의 국기 표시용 언어→국기 매핑(목업 #1).
     const langFlag = (code: string): string => {
         const m: Record<string, string> = {
@@ -8128,8 +8218,8 @@ function AppInner() {
         }
         void stopVoiceInput({ suppressAutoRestart: true });
         setAutoVoiceModeEnabled(false);
-        setGpsStatus(getUiText(fromLang).faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
-    }, [autoVoiceModeEnabled, faceScreenOpen, fromLang, getUiText, stopVoiceInput, toLang, userInfo?.preferred_language]);
+        setGpsStatus(getDisplayUiText().faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
+    }, [autoVoiceModeEnabled, faceScreenOpen, getDisplayUiText, stopVoiceInput, toLang, userInfo?.preferred_language]);
 
     useEffect(() => {
         if ((!isTranslateWorkspaceVisible && !faceScreenOpen) && autoVoiceModeEnabled) {
@@ -8160,7 +8250,7 @@ function AppInner() {
                 {/* ── 헤더 + 로그인(내정보) ── */}
                 <View style={styles.header}>
                     <Text style={styles.title}>{WORLDLINGO_APP_NAME}</Text>
-                    <Text style={styles.subtitle}>{getUiText(fromLang).subtitle}</Text>
+                    <Text style={styles.subtitle}>{getDisplayUiText().subtitle}</Text>
                     <View style={styles.versionPillRow}>
                         <View style={styles.versionPill}>
                             <Text style={styles.versionPillText}>{APP_VERSION_LABEL}</Text>
@@ -8187,7 +8277,7 @@ function AppInner() {
                     {engine ? (
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>
-                                {offline ? getUiText(fromLang).offlineBadge : `🟢 ${engine}`}
+                                {offline ? getDisplayUiText().offlineBadge : `🟢 ${engine}`}
                             </Text>
                         </View>
                     ) : null}
@@ -8279,8 +8369,8 @@ function AppInner() {
                             <Text style={styles.myInfoText}>이메일: {userInfo.email}</Text>
                             <Text style={styles.myInfoText}>ID: {userInfo.id}</Text>
                             <Text style={styles.myInfoText}>보이스 ID: {voipIdentity || buildVoiceId(userInfo.id)}</Text>
-                            <Text style={styles.myInfoText}>기본 언어: {getLangLabelText(profilePreferredLanguage)} ({profilePreferredLanguage.toUpperCase()})</Text>
-                            <Text style={styles.myInfoText}>기본 국가: {resolveCountryFlag(profileCountryCode)} {resolveCountryName(profileCountryCode)} ({profileCountryCode})</Text>
+                            <Text style={styles.myInfoText}>기본 언어: {getLangLabelText(profilePreferredLanguage)}</Text>
+                            <Text style={styles.myInfoText}>기본 국가: {resolveCountryFlag(profileCountryCode)} {resolveCountryName(profileCountryCode)}</Text>
                             <Text style={styles.signupProfileLabel}>로그인 후 프로필 기본 언어</Text>
                             <Pressable
                                 style={styles.signupPickerTrigger}
@@ -8528,8 +8618,9 @@ function AppInner() {
                     <>
                         {/* ── 홈 런처 (mockup #1) ── */}
                         <View style={styles.homeGreetingWrap}>
-                            <Text style={styles.homeGreeting}>안녕하세요! 👋</Text>
-                            <Text style={styles.homeGreetingSub}>오늘도 좋은 하루 보내세요.</Text>
+                            <Text style={styles.homeGreeting}>{getFeatureUiText('home.greeting')}</Text>
+                            <Text style={styles.homeGreetingSub}>{getFeatureUiText('home.greetingSub')}</Text>
+                            <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
                         </View>
 
                         <Pressable
@@ -8539,8 +8630,8 @@ function AppInner() {
                             accessibilityLabel="worldlinco-home-face-hero"
                             testID="worldlinco-home-face-hero"
                         >
-                            <Text style={styles.faceHeroTitle}>대면 통역</Text>
-                            <Text style={styles.faceHeroSub}>Face-to-face Interpretation</Text>
+                            <Text style={styles.faceHeroTitle}>{getFeatureUiText('home.faceTitle')}</Text>
+                            <Text style={styles.faceHeroSub}>{getFeatureUiText('home.faceSub')}</Text>
                             <View style={styles.faceHeroFlagRow}>
                                 <View style={styles.faceHeroLangCol}>
                                     <Text style={styles.faceHeroFlag}>{homeFromFlag}</Text>
@@ -8556,7 +8647,7 @@ function AppInner() {
                                 <Text style={styles.faceHeroMicIcon}>🎙️</Text>
                             </View>
                             <Text style={styles.faceHeroCta}>
-                                {autoVoiceModeEnabled ? '대화 통역 ON · 탭하여 끄기' : '탭하여 시작'}
+                                {autoVoiceModeEnabled ? getFeatureUiText('home.faceCtaOn') : getFeatureUiText('home.faceCtaOff')}
                             </Text>
                         </Pressable>
 
@@ -8617,26 +8708,26 @@ function AppInner() {
                                 >
                                     <Text style={[styles.faceConversationToggleText, autoVoiceModeEnabled && styles.faceConversationToggleTextActive]}>
                                         {autoVoiceModeEnabled
-                                            ? (getUiText(fromLang).faceConversationOn ?? '🎙️ 대화 통역 ON')
-                                            : (getUiText(fromLang).faceConversationOff ?? '대화 통역 OFF')}
+                                            ? (getDisplayUiText().faceConversationOn ?? '🎙️ 대화 통역 ON')
+                                            : (getDisplayUiText().faceConversationOff ?? '대화 통역 OFF')}
                                     </Text>
                                 </Pressable>
                             ) : null}
 
                             {Platform.OS !== 'web' && autoVoiceModeEnabled ? (
                                 <Text style={styles.faceVadHintText}>
-                                    {getUiText(fromLang).faceVadHint ?? 'VoIP와 같이 말이 끝날 때까지 마이크가 켜져 있습니다.'}
+                                    {getDisplayUiText().faceVadHint ?? 'VoIP와 같이 말이 끝날 때까지 마이크가 켜져 있습니다.'}
                                 </Text>
                             ) : null}
 
                             <View style={styles.labelRow}>
-                                <Text style={styles.label}>{getUiText(fromLang).profileLanguageLabel ?? '내 언어 (프로필)'}</Text>
+                                <Text style={styles.label}>{getDisplayUiText().profileLanguageLabel ?? '내 언어 (프로필)'}</Text>
                                 <Text style={styles.gpsAutoBadge}>{gpsLangLoading ? '📍 위치 확인 중' : '🎙️ 자동 감지'}</Text>
                             </View>
                             {gpsStatus ? <Text style={styles.gpsStatusText}>{gpsStatus}</Text> : null}
                             <View style={styles.langAutoChip}>
                                 <Text style={styles.langAutoChipValue}>{currentFromLabel}</Text>
-                                <Text style={styles.langAutoChipHint}>{getUiText(fromLang).profileLanguageHint ?? '프로필 저장값'}</Text>
+                                <Text style={styles.langAutoChipHint}>{getDisplayUiText().profileLanguageHint ?? '프로필 저장값'}</Text>
                             </View>
 
                             {/* ── 입력 영역 ── */}
@@ -8644,7 +8735,7 @@ function AppInner() {
                                 <TextInput
                                     style={styles.textInput}
                                     multiline
-                                    placeholder={getUiText(fromLang).inputPlaceholder}
+                                    placeholder={getDisplayUiText().inputPlaceholder}
                                     placeholderTextColor={C.sub}
                                     showSoftInputOnFocus
                                     value={inputText}
@@ -8662,34 +8753,34 @@ function AppInner() {
                             {!userInfo ? (
                                 <View style={styles.actionRow}>
                                     <Pressable style={styles.swapBtn} onPress={handleSwap}>
-                                        <Text style={styles.swapText}>{getUiText(fromLang).swap}</Text>
+                                        <Text style={styles.swapText}>{getDisplayUiText().swap}</Text>
                                     </Pressable>
                                 </View>
                             ) : null}
 
                             {Platform.OS !== 'web' && !autoVoiceModeEnabled ? (
                                 <View style={styles.autoVoiceModeWrap}>
-                                    <Text style={styles.autoVoiceModeStatus}>{getUiText(fromLang).manualVoiceOnlyNotice}</Text>
+                                    <Text style={styles.autoVoiceModeStatus}>{getDisplayUiText().manualVoiceOnlyNotice}</Text>
                                 </View>
                             ) : null}
                         </View>
 
                         <View>
                             {/* ── 상대 언어 ── */}
-                            <Text style={styles.label}>{getUiText(fromLang).peerLanguageLabel ?? '상대 언어 (GPS/수동)'}</Text>
+                            <Text style={styles.label}>{getDisplayUiText().peerLanguageLabel ?? '상대 언어 (GPS/수동)'}</Text>
                             <Pressable style={styles.langAutoChip} onPress={() => openPeerLangPicker('home_tools_chip')}>
                                 <Text style={styles.langAutoChipValue}>{currentToLabel}</Text>
                                 <Text style={styles.langAutoChipHint}>
                                     {peerLangManual
                                         ? '수동 선택 유지 · GPS 자동 변경 안 함'
-                                        : (getUiText(fromLang).peerLanguageHint ?? 'GPS 우선 · 필요 시 수동')}
+                                        : (getDisplayUiText().peerLanguageHint ?? 'GPS 우선 · 필요 시 수동')}
                                 </Text>
                             </Pressable>
 
                             {/* ── 결과 영역 ── */}
                             <View style={[styles.inputBox, styles.resultBox]}>
                                 <Text style={resultText ? styles.resultText : styles.resultPlaceholder}>
-                                    {resultText || getUiText(fromLang).resultPlaceholder}
+                                    {resultText || getDisplayUiText().resultPlaceholder}
                                 </Text>
                                 {resultText.length > 0 && (
                                     <Pressable style={styles.speakBtn} onPress={() => handleSpeak(resultText, toLang)}>
@@ -8698,14 +8789,14 @@ function AppInner() {
                                 )}
                             </View>
                             <View style={styles.ocrCard}>
-                                <Text style={styles.ocrTitle}>{getUiText(fromLang).ocrTitle}</Text>
-                                <Text style={styles.ocrSubtitle}>{getUiText(fromLang).ocrSubtitle}</Text>
+                                <Text style={styles.ocrTitle}>{getDisplayUiText().ocrTitle}</Text>
+                                <Text style={styles.ocrSubtitle}>{getDisplayUiText().ocrSubtitle}</Text>
                                 <Pressable
                                     style={[styles.inlineActionBtn, ocrLoading && styles.inlineGhostBtnDisabled]}
                                     onPress={handlePickImageOcr}
                                     disabled={ocrLoading}
                                 >
-                                    {ocrLoading ? <ActivityIndicator color="#79c0ff" size="small" /> : <Text style={styles.inlineActionBtnText}>{getUiText(fromLang).ocrPickImage}</Text>}
+                                    {ocrLoading ? <ActivityIndicator color="#79c0ff" size="small" /> : <Text style={styles.inlineActionBtnText}>{getDisplayUiText().ocrPickImage}</Text>}
                                 </Pressable>
                                 {ocrImageName ? (
                                     <View style={styles.mediaMetaCard}>
@@ -8716,24 +8807,22 @@ function AppInner() {
                                         <View style={styles.mediaMetaBody}>
                                             <Text style={styles.mediaMetaTitle}>{ocrImageName}</Text>
                                             <View style={styles.mediaBadgeRow}>
-                                                <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>{getLangLabel(fromLang)}</Text></View>
-                                                <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>{getLangLabel(toLang)}</Text></View>
                                                 <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>OCR</Text></View>
                                             </View>
-                                            <Text style={styles.songModeMetaText}>{getUiText(fromLang).ocrSelectedFile.replace('{file}', ocrImageName)}</Text>
+                                            <Text style={styles.songModeMetaText}>{getDisplayUiText().ocrSelectedFile.replace('{file}', ocrImageName)}</Text>
                                         </View>
                                     </View>
                                 ) : null}
                                 {ocrError ? <Text style={styles.errorText}>{ocrError}</Text> : null}
                                 {ocrExtractedText ? (
                                     <View style={styles.ocrPreviewBox}>
-                                        <Text style={styles.successTitle}>{getUiText(fromLang).ocrExtractedTitle}</Text>
+                                        <Text style={styles.successTitle}>{getDisplayUiText().ocrExtractedTitle}</Text>
                                         <Text style={styles.successText}>{ocrExtractedText}</Text>
                                     </View>
                                 ) : null}
                                 {ocrTranslatedText ? (
                                     <View style={styles.ocrPreviewBox}>
-                                        <Text style={styles.successTitle}>{getUiText(fromLang).ocrTranslatedTitle}</Text>
+                                        <Text style={styles.successTitle}>{getDisplayUiText().ocrTranslatedTitle}</Text>
                                         <Text style={styles.successText}>{ocrTranslatedText}</Text>
                                     </View>
                                 ) : null}
@@ -8743,7 +8832,7 @@ function AppInner() {
                             {offline && (
                                 <View style={styles.offlineBanner}>
                                     <Text style={styles.offlineText}>
-                                        {getUiText(fromLang).offlineMsg}
+                                        {getDisplayUiText().offlineMsg}
                                     </Text>
                                 </View>
                             )}
@@ -8769,6 +8858,7 @@ function AppInner() {
                         {token && userInfo ? (
                                 <>
                                     <Text style={[styles.sectionTitle, { color: '#1E6FE0' }]}>💬 채팅 + 친구 허브</Text>
+                                    <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
                                         <View style={styles.actionTileGrid2}>
                                             <Pressable
                                                 style={styles.gridTile}
@@ -8835,6 +8925,8 @@ function AppInner() {
                                         apiBaseUrl={API_BASE}
                                         token={token}
                                         userId={userInfo.id}
+                                        fromLang={fromLang}
+                                        toLang={toLang}
                                         visible={isChatRailSectionVisible}
                                         refreshKey={chatRefreshKey}
                                         onOpenRoom={handleOpenChatRoom}
@@ -8869,6 +8961,11 @@ function AppInner() {
                         style={[styles.sectionCard, activeRailSection === 'voip' && styles.sectionCardActive]}
                     >
                         {token && userInfo ? (
+                            <>
+                                <BidirectionalLanguagePairBadge
+                                    fromLang={effectiveVoipSourceLang}
+                                    toLang={effectiveVoipTargetLang}
+                                />
                             <VoipPhoneWorkspaceSection
                                 activeTab={voipWorkspaceTab}
                                 onTabChange={setVoipWorkspaceTab}
@@ -8913,6 +9010,7 @@ function AppInner() {
                                     />
                                 )}
                             />
+                            </>
                         ) : null}
                         {token && userInfo && !effectiveVoipPlan ? (
                             <View style={styles.voipValidationExitCard}>
@@ -8930,6 +9028,7 @@ function AppInner() {
                                         Lite/Pro 없이도 정합성·오디오 격리(7.6) 검증용 발신을 허용합니다.
                                     </Text>
                                 )}
+                                <BidirectionalLanguagePairBadge fromLang={effectiveVoipSourceLang} toLang={effectiveVoipTargetLang} />
                                 {voipValidationOverride ? (
                                     <Pressable
                                         style={styles.voipValidationExitOffBtn}
@@ -8975,75 +9074,7 @@ function AppInner() {
                                 ) : null}
                             </View>
                         ) : null}
-                        <View style={styles.voipLocalLangCard}>
-                            <Text style={styles.voipLocalLangTitle}>🌐 통역 지정 언어(이 단말)</Text>
-                            <Text style={styles.voipLocalLangSub}>
-                                내가 말하고 받을 언어를 이 단말에서 직접 지정합니다. 지정한 언어만 흡수하고 그 외 언어는 잡음으로 무시합니다. 상대 언어는 통화 중 자동으로 학습됩니다. 지원 {SUPPORTED_LANGUAGE_COUNT}개 언어.
-                            </Text>
-                            <Pressable
-                                style={styles.voipLocalLangTrigger}
-                                onPress={() => setVoipLangModalVisible(true)}
-                                accessibilityLabel="worldlinco-voip-local-lang-trigger"
-                                testID="worldlinco-voip-local-lang-trigger"
-                            >
-                                <View>
-                                    <Text style={styles.voipLocalLangValue}>{getLangLabelText(effectiveVoipSourceLang)}</Text>
-                                    <Text style={styles.voipLocalLangMeta}>
-                                        {isVoipLangLocallyOverridden ? '로컬 직접 지정됨' : `백엔드 프로필 기본값(${getLangLabelText(currentVoipPreferredLanguage)})`}
-                                    </Text>
-                                </View>
-                                <Text style={styles.voipLocalLangHint}>변경</Text>
-                            </Pressable>
-                            {isVoipLangLocallyOverridden ? (
-                                <Pressable
-                                    style={styles.voipLocalLangResetBtn}
-                                    onPress={handleClearVoipLocalLang}
-                                    accessibilityLabel="worldlinco-voip-local-lang-reset"
-                                    testID="worldlinco-voip-local-lang-reset"
-                                >
-                                    <Text style={styles.voipLocalLangResetText}>백엔드 프로필 언어로 되돌리기</Text>
-                                </Pressable>
-                            ) : null}
-                        </View>
-                        <Modal
-                            visible={voipLangModalVisible}
-                            transparent
-                            animationType="fade"
-                            onRequestClose={() => setVoipLangModalVisible(false)}
-                        >
-                            <Pressable style={styles.langModalOverlay} onPress={() => setVoipLangModalVisible(false)}>
-                                <Pressable style={styles.langModalCard} onPress={() => { }} testID="worldlinco-voip-local-lang-modal">
-                                    <Text style={styles.langModalTitle}>통역 지정 언어 선택</Text>
-                                    <Text style={styles.signupModalSub}>지원 언어 {SUPPORTED_LANGUAGE_COUNT}개 전체에서 이 단말이 사용할 언어를 선택합니다.</Text>
-                                    <ScrollView style={styles.langModalList}>
-                                        {LANGS.map((language) => {
-                                            const active = effectiveVoipSourceLang === language.code;
-                                            return (
-                                                <Pressable
-                                                    key={`voip-local-language-option-${language.code}`}
-                                                    style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                                    onPress={() => handleSelectVoipLocalLang(language.code)}
-                                                    accessibilityLabel={`worldlinco-voip-local-language-${language.code}`}
-                                                    testID={`worldlinco-voip-local-language-${language.code}`}
-                                                >
-                                                    <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
-                                                        {language.label}
-                                                    </Text>
-                                                    {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                                </Pressable>
-                                            );
-                                        })}
-                                    </ScrollView>
-                                    <Pressable
-                                        style={styles.langModalCloseBtn}
-                                        onPress={() => setVoipLangModalVisible(false)}
-                                        testID="worldlinco-voip-local-lang-close"
-                                    >
-                                        <Text style={styles.langModalCloseText}>닫기</Text>
-                                    </Pressable>
-                                </Pressable>
-                            </Pressable>
-                        </Modal>
+                        {/* VoIP 언어 지정 UI 비노출 — 회원가입·설정 프로필 언어가 SSOT(양방향 자동). */}
                         {!token || !userInfo ? renderSectionConnectionCard({
                             sectionKey: 'voip',
                             title: '로그인 후 통역 통화를 이용할 수 있습니다',
@@ -9065,7 +9096,7 @@ function AppInner() {
                         gpsCountryCode={gpsCountryCode}
                         latitude={lat}
                         longitude={lon}
-                        userLanguage={fromLang}
+                        userLanguage={getUiLang()}
                     />
                 ) : null}
 
@@ -9135,15 +9166,19 @@ function AppInner() {
                                 <Text style={styles.inlineGhostBtnText}>자막 초기화</Text>
                             </Pressable>
                         </View>
-                        <Text style={styles.songModeMetaText}>
-                            소스: 음성인식 + 문자패턴 자동 판정
-                        </Text>
-                        <Text style={styles.songModeMetaText}>
-                            마이크 타겟: 현재 번역 언어 우선, 소스와 같으면 자동 추천 ({getLangLabel(toLang)})
-                        </Text>
-                        <Text style={styles.songModeMetaText}>
-                            파일 타겟: 자국어 자막 우선 ({getLangLabel(resolveSongFileTargetLang(fromLang, toLang))})
-                        </Text>
+                        {__DEV__ ? (
+                            <>
+                                <Text style={styles.songModeMetaText}>
+                                    소스: 음성인식 + 문자패턴 자동 판정
+                                </Text>
+                                <Text style={styles.songModeMetaText}>
+                                    마이크 타겟: 현재 번역 언어 우선, 소스와 같으면 자동 추천 ({getLangLabel(toLang)})
+                                </Text>
+                                <Text style={styles.songModeMetaText}>
+                                    파일 타겟: 자국어 자막 우선 ({getLangLabel(resolveSongFileTargetLang(fromLang, toLang))})
+                                </Text>
+                            </>
+                        ) : null}
                         {songModeStatus ? <Text style={styles.songModeStatusText}>{songModeStatus}</Text> : null}
                         {songFileJob ? (
                             <View style={styles.songFileJobBox}>
@@ -9556,10 +9591,11 @@ function AppInner() {
                                 <Text style={styles.sectionSub}>예약 가능한 호텔/공항을 선택해 예약 요청을 진행합니다.</Text>
                                 <View style={styles.sectionCard}>
                                     <Text style={styles.sectionTitle}>☎ 예약 섹션 일반 통화 모드</Text>
-                                    <Text style={styles.sectionSub}>{getLangLabel(fromLang)} ⇄ {getLangLabel(toLang)} · {SUPPORTED_LANGUAGE_COUNT}개국어 자동 전달</Text>
+                                    <Text style={styles.sectionSub}>{getFeatureUiText('user.bidirectionalMode')}</Text>
+                                    <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
                                     <Pressable style={[styles.interToggleBtn, interCallActive && styles.interToggleBtnActive]} onPress={handleInterCallToggle}>
                                         <Text style={[styles.interToggleText, interCallActive && styles.interToggleTextActive]}>
-                                            {interCallActive ? '📵 일반 통화 종료' : '📞 일반 통화 + 자동 전달 시작'}
+                                            {interCallActive ? getFeatureUiText('pstn.interToggleEnd') : getFeatureUiText('pstn.interToggleStart')}
                                         </Text>
                                     </Pressable>
 
@@ -9586,17 +9622,18 @@ function AppInner() {
                                             </Pressable>
                                         ) : null}
                                     </View>
-                                    <Text style={styles.interCallHint}>일반통화는 여행 예약 섹션에서 관리하며, 통화가 열리면 {SUPPORTED_LANGUAGE_COUNT}개국어 자동 전달 보조가 시작됩니다. 단말 전화번호 저장소에서 선택한 번호 또는 직접 입력한 번호를 시스템 전화앱으로 넘겨 통역을 이어갑니다.</Text>
+                                    <Text style={styles.interCallHint}>{getFeatureUiText('pstn.interCallHint', { count: SUPPORTED_LANGUAGE_COUNT })}</Text>
 
                                     {interCallActive && (
                                         <View style={styles.interPanel}>
-                                            <Text style={styles.interStatus}>{interCallStatus || '통화 대기 중...'}</Text>
+                                            <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} compact />
+                                            <Text style={styles.interStatus}>{interCallStatus || getFeatureUiText('pstn.callWaiting')}</Text>
                                             {Platform.OS !== 'web' && (
                                                 <>
                                                     <Text style={styles.sectionSub}>
                                                         {interCallTurn === 'from'
-                                                            ? `👤 ${getLangLabel(fromLang)} 발화 입력`
-                                                            : `🤝 ${getLangLabel(toLang)} 발화 입력`}
+                                                            ? `👤 ${getFeatureUiText('user.mySpeechInput')}`
+                                                            : `🤝 ${getFeatureUiText('user.peerSpeechInput')}`}
                                                     </Text>
                                                     <Pressable
                                                         style={styles.inlineActionBtn}
@@ -9606,14 +9643,14 @@ function AppInner() {
                                                     >
                                                         <Text style={styles.inlineActionBtnText}>
                                                             {voiceInputTargetRef.current === 'inter_call' && (isVoiceRecording || voiceSttLoading)
-                                                                ? '⏹️ 스피커폰 통역 보조 중지'
+                                                                ? getFeatureUiText('pstn.voiceAssistStop')
                                                                 : interCallVoiceAssistEnabled
-                                                                    ? '⏳ 스피커폰 통역 보조 준비 중'
-                                                                    : '🎙️ 스피커폰 통역 보조 시작'}
+                                                                    ? getFeatureUiText('pstn.voiceAssistPreparing')
+                                                                    : getFeatureUiText('pstn.voiceAssistStart')}
                                                         </Text>
                                                     </Pressable>
-                                                    <Text style={styles.sectionSub}>스피커폰으로 상대 음성을 들리게 한 뒤 이 보조를 켜면 주변 음성을 구간별로 받아 번역 후 TTS로 재송출합니다.</Text>
-                                                    <Text style={styles.sectionSub}>자동 전송 간격: {formatAutoRelayDelayLabel(autoRelayDelayMs)}</Text>
+                                                    <Text style={styles.sectionSub}>{getFeatureUiText('pstn.speakerAssistHint')}</Text>
+                                                    <Text style={styles.sectionSub}>{getFeatureUiText('pstn.autoRelayInterval', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) })}</Text>
                                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railRow}>
                                                         {AUTO_RELAY_DELAY_OPTIONS_MS.map((optionMs) => (
                                                             <Pressable
@@ -9630,7 +9667,7 @@ function AppInner() {
                                                     <TextInput
                                                         style={[styles.compactInput, styles.noteInput]}
                                                         multiline
-                                                        placeholder="들린 내용을 입력하세요"
+                                                        placeholder={getFeatureUiText('pstn.manualInputPlaceholder')}
                                                         placeholderTextColor={C.sub}
                                                         value={interManualText}
                                                         onChangeText={setInterManualText}
@@ -9639,7 +9676,7 @@ function AppInner() {
                                                         style={styles.inlineActionBtn}
                                                         onPress={() => relayInterCallManual(interCallTurn, interManualText)}
                                                     >
-                                                        <Text style={styles.inlineActionBtnText}>즉시 전송</Text>
+                                                        <Text style={styles.inlineActionBtnText}>{getFeatureUiText('pstn.sendNow')}</Text>
                                                     </Pressable>
                                                 </>
                                             )}
@@ -9649,7 +9686,7 @@ function AppInner() {
                                                     {[...interCallLog].reverse().map((entry, idx) => (
                                                         <View key={`inter-${idx}`} style={styles.placeItem}>
                                                             <Text style={styles.placeMeta}>
-                                                                {entry.turn === 'from' ? getLangLabel(fromLang) : getLangLabel(toLang)}
+                                                                {entry.turn === 'from' ? userFlagDisplayName : peerFlagDisplayName}
                                                             </Text>
                                                             <Text style={styles.placeName}>{entry.text}</Text>
                                                             <Text style={styles.successText}>→ {entry.translated}</Text>
@@ -9873,7 +9910,7 @@ function AppInner() {
                         {/* ── 앱 정보 ── */}
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>
-                                {getUiText(fromLang).footer.replace('\\n', '\n')}
+                                {getDisplayUiText().footer.replace('\\n', '\n')}
                             </Text>
                             <Pressable
                                 onPress={() => setShowDataSources(true)}
@@ -9973,6 +10010,10 @@ function AppInner() {
                                 callInitResponse={voipCallInitResponse}
                                 calleePhone={voipActiveProfile?.nickname || voipCallInitResponse.display_label || voipPhone.trim() || '보이스톡 연결'}
                                 participantProfile={voipActiveProfile ?? undefined}
+                                localParticipantProfile={{
+                                    nickname: currentVoipProfile.nickname,
+                                    countryFlag: currentVoipProfile.countryFlag,
+                                }}
                                 apiBaseUrl={API_BASE}
                                 authToken={token}
                                 localSourceLang={effectiveVoipSourceLang}
@@ -10006,6 +10047,9 @@ function AppInner() {
                                 room={selectedChatRoom}
                                 visible={!!selectedChatRoom}
                                 refreshKey={chatRefreshKey}
+                                userCountryCode={userInfo?.country_code || ''}
+                                userPreferredLanguage={userInfo?.preferred_language || ''}
+                                userDisplayName={userInfo?.username || userInfo?.email?.split('@')[0] || ''}
                                 onBack={() => {
                                     setSelectedChatRoom(null);
                                     setChatRefreshKey((prev) => prev + 1);
@@ -10031,7 +10075,7 @@ function AppInner() {
                             onClose={() => setSettingsTabOpen(false)}
                             appVersion={APP_VERSION_NUMBER}
                             buildNumber={APP_BUILD_NUMBER}
-                            userLang={fromLang}
+                            userLang={getUiLang()}
                             authToken={token}
                             userEmail={userInfo?.email}
                             userCountryCode={userInfo?.country_code || ''}
@@ -10044,11 +10088,21 @@ function AppInner() {
                             incomingAlertSoundMode={incomingAlertSoundMode}
                             onIncomingAlertSoundModeChange={updateIncomingAlertSoundMode}
                             onOpenPasswordChange={token && userInfo ? handleOpenPasswordChangeFromSettings : undefined}
-                            kwsProvider="vosk"
-                            kwsModelPath=""
-                            kwsPorcupineAccessKey=""
-                            kwsPorcupineKeywordPaths={[]}
-                            onSaveKws={async () => {}}
+                            kwsProvider={companionKwsSettings.provider}
+                            kwsModelPath={companionKwsSettings.modelPath}
+                            kwsPorcupineAccessKey={companionKwsSettings.porcupineAccessKey}
+                            kwsPorcupineKeywordPaths={companionKwsSettings.porcupineKeywordPaths}
+                            onSaveKws={handleSaveCompanionKwsSettings}
+                            operatorLogSnapshot={{
+                                userId: userInfo?.id,
+                                email: userInfo?.email,
+                                preferredLanguage: userInfo?.preferred_language,
+                                countryCode: userInfo?.country_code,
+                                fromLang,
+                                toLang,
+                                voipAuditEvents,
+                                lastTranslationLog: interCallStatus || undefined,
+                            }}
                         />
                     </SafeAreaView>
                 </ImageBackground>
@@ -10068,14 +10122,7 @@ function AppInner() {
                 <SafeAreaView style={styles.faceScreenRoot} edges={['top', 'left', 'right']}>
                     <View style={styles.faceScreenHeader}>
                         <Text style={styles.faceScreenLogo}>🎙️ WorldLinco</Text>
-                        <Pressable
-                            style={styles.faceScreenLangPill}
-                            onPress={() => openPeerLangPicker('face_screen_pill')}
-                            accessibilityRole="button"
-                            accessibilityLabel="worldlinco-face-screen-lang"
-                        >
-                            <Text style={styles.faceScreenLangPillText}>{currentFromLabel} ⇄ {currentToLabel}</Text>
-                        </Pressable>
+                        <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} compact />
                         <Pressable
                             onPress={() => {
                                 setFaceScreenOpen(false);
@@ -10094,11 +10141,9 @@ function AppInner() {
                         {/* 상단: 상대 언어 (180° 회전, 마주 앉은 상대가 읽음) */}
                         <View style={styles.facePeerHalf}>
                             <View style={styles.faceRotated}>
-                                <Pressable onPress={() => openPeerLangPicker('face_screen_peer_label')} accessibilityRole="button" accessibilityLabel="worldlinco-face-peer-lang">
-                                    <Text style={styles.facePeerLangLabel}>{homeToFlag} {currentToLabel} ▾</Text>
-                                </Pressable>
+                                <Text style={styles.facePeerLangLabel}>{currentToLabel}</Text>
                                 <Text style={styles.facePeerText}>
-                                    {resultText || '상대에게 보여줄 번역이 여기에 표시됩니다.'}
+                                    {resultText || getFeatureUiText('face.peerPlaceholder')}
                                 </Text>
                             </View>
                         </View>
@@ -10107,13 +10152,13 @@ function AppInner() {
                         <View style={styles.faceMeHalf}>
                             <View style={styles.faceTapHint}>
                                 <Text style={styles.faceTapHintText}>
-                                    👆 {autoVoiceModeEnabled ? '듣는 중 · 말이 끝나면 자동 번역' : '말하려면 탭하세요'}
+                                    {autoVoiceModeEnabled ? getFeatureUiText('face.tapListening') : getFeatureUiText('face.tapToSpeak')}
                                 </Text>
                             </View>
                             <Text style={styles.faceMeText}>
-                                {inputText || '내가 말한 내용이 여기에 표시됩니다.'}
+                                {inputText || getFeatureUiText('face.mePlaceholder')}
                             </Text>
-                            <Text style={styles.faceMeLangLabel}>{homeFromFlag} {currentFromLabel}</Text>
+                            <Text style={styles.faceMeLangLabel}>{currentFromLabel}</Text>
                         </View>
 
                         {/* 중앙: 펄스 코랄 마이크 (경계선에 겹침) */}
@@ -10179,17 +10224,13 @@ function AppInner() {
                                 <View key={qa.id} style={styles.sorisaeQaTurn}>
                                     <View style={styles.sorisaeQaQuestionRow}>
                                         <View style={styles.sorisaeQaBubbleQuestion}>
-                                            <Text style={styles.sorisaeQaRoleLabel}>
-                                                🙋 질문 · {getLangLabel(qa.questionLang as LangCode)}
-                                            </Text>
+                                            <Text style={styles.sorisaeQaRoleLabel}>🙋</Text>
                                             <Text style={styles.sorisaeQaQuestionText}>{qa.question}</Text>
                                         </View>
                                     </View>
                                     <View style={styles.sorisaeQaAnswerRow}>
                                         <View style={styles.sorisaeQaBubbleAnswer}>
-                                            <Text style={styles.sorisaeQaRoleLabelAnswer}>
-                                                🐦 답변 · {getLangLabel(qa.answerLang as LangCode)}
-                                            </Text>
+                                            <Text style={styles.sorisaeQaRoleLabelAnswer}>🐦</Text>
                                             <Text style={styles.sorisaeQaAnswerText}>{qa.answer}</Text>
                                         </View>
                                     </View>
@@ -10236,7 +10277,7 @@ function AppInner() {
                 {pendingIncomingVoipCall ? (
                     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                         <View style={styles.voipIncomingFixedCard}>
-                            <Text style={styles.voipIncomingFixedTitle}>{getUiText(fromLang).voipIncomingTitle ?? '📞 수신 보이스톡'}</Text>
+                            <Text style={styles.voipIncomingFixedTitle}>{getDisplayUiText().voipIncomingTitle ?? '📞 수신 보이스톡'}</Text>
                             <Text style={styles.voipIncomingFixedCaller} numberOfLines={2}>
                                 {pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '상대방'}
                             </Text>
@@ -10244,7 +10285,7 @@ function AppInner() {
                                 <View style={styles.voipIncomingConnectingRow}>
                                     <ActivityIndicator color="#1E6FE0" size="small" />
                                     <Text style={styles.voipIncomingConnectingText}>
-                                        {getUiText(fromLang).voipIncomingConnecting ?? '서버 연결 중… 잠시만 기다려 주세요'}
+                                        {getDisplayUiText().voipIncomingConnecting ?? '서버 연결 중… 잠시만 기다려 주세요'}
                                     </Text>
                                 </View>
                             ) : null}
@@ -10273,7 +10314,7 @@ function AppInner() {
                                     accessibilityLabel="수신 보이스톡 받기"
                                     testID="worldlinco-voip-incoming-accept-popup"
                                 >
-                                    <Text style={styles.voipIncomingAcceptBtnText}>{getUiText(fromLang).voipIncomingAccept ?? '받기'}</Text>
+                                    <Text style={styles.voipIncomingAcceptBtnText}>{getDisplayUiText().voipIncomingAccept ?? '받기'}</Text>
                                 </Pressable>
                                 <Pressable
                                     style={[
@@ -10286,7 +10327,7 @@ function AppInner() {
                                     accessibilityLabel="수신 보이스톡 거절"
                                     testID="worldlinco-voip-incoming-reject-popup"
                                 >
-                                    <Text style={styles.voipIncomingRejectBtnText}>{getUiText(fromLang).voipIncomingReject ?? '거절'}</Text>
+                                    <Text style={styles.voipIncomingRejectBtnText}>{getDisplayUiText().voipIncomingReject ?? '거절'}</Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -10559,13 +10600,13 @@ function AppInner() {
                     <View style={styles.loginModal}>
                         <Text style={styles.loginModalTitle}>
                             {langPickerFor === 'from'
-                                ? `${getUiText(fromLang).sourceLang} 선택`
-                                : `${getUiText(fromLang).peerLanguageLabel ?? getUiText(fromLang).targetLang} 선택`}
+                                ? `${getDisplayUiText().sourceLang} 선택`
+                                : `${getDisplayUiText().peerLanguageLabel ?? getDisplayUiText().targetLang} 선택`}
                         </Text>
                         <Text style={styles.loginModeHint}>
                             {langPickerFor === 'from'
-                                ? (userInfo ? '내 언어는 프로필 설정에서 변경합니다.' : getUiText(fromLang).manualVoiceOnlyNotice)
-                                : getUiText(fromLang).peerLanguageHint ?? getUiText(fromLang).manualLanguageHint}
+                                ? (userInfo ? '내 언어는 프로필 설정에서 변경합니다.' : getDisplayUiText().manualVoiceOnlyNotice)
+                                : getDisplayUiText().peerLanguageHint ?? getDisplayUiText().manualLanguageHint}
                         </Text>
                         <ScrollView style={styles.contactPickerList} contentContainerStyle={styles.contactPickerListBody}>
                             {LANGS.filter((lang) => langPickerFor !== 'to' || lang.code !== fromLang).map((lang) => {
