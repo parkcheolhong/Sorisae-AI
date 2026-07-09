@@ -150,7 +150,7 @@ test.describe('admin dashboard ops regression', () => {
 
         await page.getByRole('link', { name: '상세 제어 열기', exact: true }).first().click();
         await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         const llmToMarketplace = page.getByTestId('admin-llm-topnav-marketplace-orchestrator');
         if (await llmToMarketplace.count() && await llmToMarketplace.first().isVisible({ timeout: 3000 }).catch(() => false)) {
             await llmToMarketplace.click();
