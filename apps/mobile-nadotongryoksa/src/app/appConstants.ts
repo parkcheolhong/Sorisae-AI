@@ -17,6 +17,7 @@ function normalizeApiBaseUrl(raw: string): string {
         return PRODUCTION_API_BASE;
     }
     // 릴리스 APK에서 로컬/에뮬레이터 주소가 번들에 남아도 운영 URL로 강제한다.
+    // container-dev(LAN http://172.x:8000) 는 허용 — Docker 백엔드 실기기 실험용.
     if (!__DEV__ && /\/\/(10\.0\.2\.2|127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(trimmed)) {
         return PRODUCTION_API_BASE;
     }

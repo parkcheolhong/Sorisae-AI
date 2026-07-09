@@ -1,13 +1,36 @@
-# Native source is required because this project has an android directory.
-# Exclude generated native build caches only.
+# Native source is required because this project has an android directory
+# Exclude generated native build caches only
 android/.gradle/
 android/build/
 android/app/build/
 android/app/.cxx/
 android/.kotlin/
 ios/build/
-# 로컬 머신 전용 파일은 EAS(Linux) 빌더에서 무효/충돌 → 반드시 제외.
-# local.properties 의 Windows sdk.dir 경로가 클라우드 gradle 빌드를 깨뜨린다.
+
+# Monorepo 루트 대용량 (EAS 가 apps/mobile-nadotongryoksa 에서 실행될 때 ../../ 경로 필요)
+../../uploads/
+../../uploads/**
+../../evidence/
+../../evidence/**
+../../backend/
+../../frontend/
+../../gpu-llm-server/
+../../certbot/
+../../addons/
+../../.vs/
+../../.vscode/
+../../venv/
+../../venv*/
+../../.venv/
+../../.venv*/
+../../venv.broken-py314/
+../../apps/admin/
+../../apps/marketplace/
+../../apps/mobile-stock-ai/
+../../docs/worldlinco-v2/assets/captures/
+../../agent-transcripts/
+# 로컬 머신 전용 파일은 EAS(Linux) 빌더에서 무효/충돌 → 반드시 제외
+# local.properties 의 Windows sdk.dir 경로가 클라우드 gradle 빌드를 깨뜨린다
 android/local.properties
 **/local.properties
 **/android/build/
@@ -38,7 +61,11 @@ build-artifacts/
 **/metro-cache/
 **/.metro-cache/
 **/coverage/
-**/__tests__/
+**/**tests**/
+.runtime/
+**/.runtime/
+android/build_v*.log
+*.hprof
 *.apk
 *.aab
 *.tar.gz

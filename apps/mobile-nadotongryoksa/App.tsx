@@ -2774,6 +2774,7 @@ function AppInner() {
         });
         acceptedIncomingVoipCallIdRef.current = null;
         setIncomingVoipAcceptInFlight(null);
+        clearVoipAudioSession(`dismiss_pending:${source}:${reason}`);
         void clearStoredActiveVoipSession();
         setPendingIncomingVoipCall(null);
         if (Platform.OS === 'android') {
@@ -4356,11 +4357,33 @@ function AppInner() {
         setSignupSelectionModal(null);
     }, []);
 
-    const handleSelectProfileLanguage = useCallback((code: LangCode) => {
+    const handleSelectProfileLanguage = useCallback(async (code: LangCode) => {
+        const countryCode = resolveSignupCountryFromLang(code);
         setProfilePreferredLanguage(code);
-        setProfileCountryCode(resolveSignupCountryFromLang(code));
+        setProfileCountryCode(countryCode);
         setProfileSelectionModal(null);
-    }, []);
+        if (!token || !userInfo) {
+            return;
+        }
+        setProfileSaving(true);
+        setProfileMessage('');
+        try {
+            const updatedUserInfo = await callUpdateMeApi(token, {
+                preferred_language: code,
+                country_code: countryCode,
+            });
+            setUserInfo(updatedUserInfo);
+            await saveStoredAuthState(token, updatedUserInfo);
+            setFromLang(code);
+            void setUiLang(code);
+            setProfileMessage('프로필 언어가 저장되었습니다.');
+            setChatRefreshKey((prev) => prev + 1);
+        } catch (error: any) {
+            setProfileMessage(error?.message || '프로필 언어 저장 실패');
+        } finally {
+            setProfileSaving(false);
+        }
+    }, [token, userInfo]);
 
     const handleSelectProfileCountry = useCallback((code: SignupCountryCode) => {
         setProfileCountryCode(code);
@@ -5589,6 +5612,15 @@ function AppInner() {
             return;
         }
 
+        if (acceptingIncomingVoipCallRef.current) {
+            logUiPressProbe('VOIP_INCOMING_ACCEPT_SKIPPED_IN_FLIGHT', {
+                source_variant: sourceVariant,
+                pending_call_id: pendingIncomingVoipCall.call_id,
+                accepting_call_id: acceptingIncomingVoipCallIdRef.current,
+            });
+            return;
+        }
+
         const acceptedPayload = pendingIncomingVoipCall;
 
         acceptedIncomingVoipCallIdRef.current = acceptedPayload.call_id;
@@ -5618,6 +5650,8 @@ function AppInner() {
         });
         if (!hasPermission) {
             setIncomingVoipAcceptInFlight(null);
+            acceptedIncomingVoipCallIdRef.current = null;
+            clearVoipAudioSession('incoming_accept_permission_denied');
             return;
         }
 
@@ -5663,7 +5697,9 @@ function AppInner() {
                 });
                 if (!snapshot?.call_id || !isResumableIncomingVoipStatus(snapshot.status)) {
                     setIncomingVoipAcceptInFlight(null);
-                    dismissPendingIncomingAsMissed('manual_accept', 'call_no_longer_active', acceptedPayload);
+                    acceptedIncomingVoipCallIdRef.current = null;
+                    setVoipInitError(acceptError?.message || '수신 연결에 실패했습니다.');
+                    dismissPendingIncomingAsMissed('manual_accept', 'accept_api_failed', acceptedPayload);
                     return;
                 }
                 mergedAcceptedPayload = {
@@ -5704,6 +5740,7 @@ function AppInner() {
         });
 
         stopIncomingVoipAlert('manual_reject');
+        clearVoipAudioSession('incoming_reject');
         if (token) {
             try {
                 await fetch(`${API_BASE}/api/v1/voip/calls/${pendingIncomingVoipCall.call_id}/end`, {
@@ -6872,7 +6909,17 @@ function AppInner() {
             const detectedLang = countryCode ? resolveLangFromCountry(countryCode) : null;
             const profileLangRaw = String(userInfo?.preferred_language || fromLang).trim().toLowerCase();
             const profileLang = isSupportedLangCode(profileLangRaw) ? profileLangRaw as LangCode : fromLang;
-            if (detectedLang && isSupportedLangCode(detectedLang) && detectedLang !== profileLang && detectedLang !== fromLang) {
+            const hasDesignatedProfileLang = Boolean(
+                String(userInfo?.preferred_language || '').trim()
+                && isSupportedLangCode(String(userInfo?.preferred_language || '').trim().toLowerCase()),
+            );
+            if (
+                !hasDesignatedProfileLang
+                && detectedLang
+                && isSupportedLangCode(detectedLang)
+                && detectedLang !== profileLang
+                && detectedLang !== fromLang
+            ) {
                 if (!peerLangManualRef.current) {
                     setToLang(detectedLang);
                 }
@@ -6931,10 +6978,15 @@ function AppInner() {
                 // ignore corrupt storage
             }
             if (!peerLangManualRef.current) {
-                await handleDetectLangByGPS(true);
+                const preferred = String(userInfo?.preferred_language || '').trim().toLowerCase();
+                if (preferred && isSupportedLangCode(preferred)) {
+                    setToLang((currentTarget) => resolveAutoTargetLang(preferred as LangCode, currentTarget));
+                } else {
+                    await handleDetectLangByGPS(true);
+                }
             }
         })();
-    }, [authHydrated, fromLang, handleDetectLangByGPS]);
+    }, [authHydrated, fromLang, handleDetectLangByGPS, userInfo?.preferred_language]);
 
     useEffect(() => {
         const preferred = String(userInfo?.preferred_language || '').trim().toLowerCase();
@@ -10184,14 +10236,26 @@ function AppInner() {
                 {pendingIncomingVoipCall ? (
                     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                         <View style={styles.voipIncomingFixedCard}>
-                            <Text style={styles.voipIncomingFixedTitle}>📞 수신 보이스톡</Text>
+                            <Text style={styles.voipIncomingFixedTitle}>{getUiText(fromLang).voipIncomingTitle ?? '📞 수신 보이스톡'}</Text>
                             <Text style={styles.voipIncomingFixedCaller} numberOfLines={2}>
                                 {pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '상대방'}
                             </Text>
+                            {acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id ? (
+                                <View style={styles.voipIncomingConnectingRow}>
+                                    <ActivityIndicator color="#1E6FE0" size="small" />
+                                    <Text style={styles.voipIncomingConnectingText}>
+                                        {getUiText(fromLang).voipIncomingConnecting ?? '서버 연결 중… 잠시만 기다려 주세요'}
+                                    </Text>
+                                </View>
+                            ) : null}
                             {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
                             <View style={styles.voipIncomingFixedActions}>
                                 <Pressable
-                                    style={styles.voipIncomingAcceptBtn}
+                                    style={[
+                                        styles.voipIncomingAcceptBtn,
+                                        acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id && styles.voipIncomingActionDisabled,
+                                    ]}
+                                    disabled={acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id}
                                     onPressIn={() => {
                                         logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_IN', {
                                             source_variant: 'popup_modal',
@@ -10209,16 +10273,20 @@ function AppInner() {
                                     accessibilityLabel="수신 보이스톡 받기"
                                     testID="worldlinco-voip-incoming-accept-popup"
                                 >
-                                    <Text style={styles.voipIncomingAcceptBtnText}>받기</Text>
+                                    <Text style={styles.voipIncomingAcceptBtnText}>{getUiText(fromLang).voipIncomingAccept ?? '받기'}</Text>
                                 </Pressable>
                                 <Pressable
-                                    style={styles.voipIncomingRejectBtn}
+                                    style={[
+                                        styles.voipIncomingRejectBtn,
+                                        acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id && styles.voipIncomingActionDisabled,
+                                    ]}
+                                    disabled={acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id}
                                     onPress={() => { void handleRejectIncomingVoipCall(); }}
                                     accessibilityRole="button"
                                     accessibilityLabel="수신 보이스톡 거절"
                                     testID="worldlinco-voip-incoming-reject-popup"
                                 >
-                                    <Text style={styles.voipIncomingRejectBtnText}>거절</Text>
+                                    <Text style={styles.voipIncomingRejectBtnText}>{getUiText(fromLang).voipIncomingReject ?? '거절'}</Text>
                                 </Pressable>
                             </View>
                         </View>

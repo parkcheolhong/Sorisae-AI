@@ -27,6 +27,16 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $LogDir = Join-Path $RepoRoot "evidence\phase7-audio-isolation-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
+# SSOT: 로컬 venv/uvicorn 이 아니라 Docker 컨테이너 백엔드
+$ContainerApi = & (Join-Path $RepoRoot "scripts\resolve_container_api_base.ps1")
+try {
+    $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/health" -TimeoutSec 5
+    Write-Host "Docker backend (host forward): OK"
+} catch {
+    Write-Warning "Docker backend not reachable on 127.0.0.1:8000 — run: .\scripts\ensure_docker_backend_lan.ps1"
+}
+Write-Host "Device API target (container LAN): $ContainerApi"
+
 function Invoke-Adb {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
     if ($Device) {

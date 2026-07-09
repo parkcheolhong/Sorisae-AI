@@ -1143,6 +1143,9 @@ export const styles = StyleSheet.create({
     },
     voipIncomingAcceptBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
     voipIncomingRejectBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+    voipIncomingConnectingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+    voipIncomingConnectingText: { color: '#1E6FE0', fontSize: 13, fontWeight: '700', flex: 1 },
+    voipIncomingActionDisabled: { opacity: 0.55 },
     voipIncomingRailCard: {
         marginTop: 12,
         backgroundColor: '#ffffff',
