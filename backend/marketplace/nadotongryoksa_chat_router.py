@@ -1754,9 +1754,9 @@ def list_chat_room_messages(
         }
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
         logger.exception("list_chat_room_messages failed")
-        raise HTTPException(status_code=500, detail="chat_room_messages_unavailable") from exc
+        raise HTTPException(status_code=500, detail="chat_room_messages_unavailable")
 
 
 @router.websocket("/rooms/{room_id}/ws")
@@ -1893,9 +1893,9 @@ async def create_chat_message(
             )
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
         logger.exception("create_chat_message failed")
-        raise HTTPException(status_code=500, detail="chat_message_create_failed") from exc
+        raise HTTPException(status_code=500, detail="chat_message_create_failed")
     return serialized_sender
 
 

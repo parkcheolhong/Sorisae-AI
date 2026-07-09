@@ -40,9 +40,8 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
 
     if not (account_sid and auth_token and from_number):
         logger.info(
-            "[SMS_TEXT] provider=dev-log purpose=%s target=%s body=%s",
+            "[SMS_TEXT] provider=dev-log purpose=%s body=%s",
             purpose,
-            _mask_phone(phone),
             normalized_body[:120],
         )
         return {
@@ -76,9 +75,8 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         with urllib.request.urlopen(request, timeout=15) as response:
             response_body = json.loads(response.read().decode("utf-8"))
         logger.info(
-            "[SMS_TEXT] provider=twilio purpose=%s target=%s sid=%s",
+            "[SMS_TEXT] provider=twilio purpose=%s sid=%s",
             purpose,
-            _mask_phone(phone),
             response_body.get("sid"),
         )
         return {
@@ -90,9 +88,8 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         logger.error(
-            "[SMS_TEXT] provider=twilio purpose=%s target=%s http=%s detail=%s",
+            "[SMS_TEXT] provider=twilio purpose=%s http=%s detail=%s",
             purpose,
-            _mask_phone(phone),
             exc.code,
             detail[:500],
         )

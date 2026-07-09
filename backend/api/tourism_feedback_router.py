@@ -64,6 +64,6 @@ def feedback_stats() -> Any:
         from backend.services.tourism_kb.feedback import get_feedback_store
 
         return get_feedback_store().stats()
-    except Exception as exc:
+    except Exception:
         logger.exception("tourism feedback stats failed")
-        raise HTTPException(status_code=500, detail="feedback_stats_unavailable") from exc
+        raise HTTPException(status_code=500, detail="feedback_stats_unavailable")

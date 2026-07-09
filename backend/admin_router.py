@@ -2670,10 +2670,10 @@ def get_admin_sorisae_failure_monitor_result_json(
     del admin
     try:
         return get_latest_sorisae_failure_result_json_payload()
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="latest_result_not_found")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="latest_result_invalid")
 
 
 @router.post("/sorisae-failure-monitor/latest/push")
@@ -2683,10 +2683,10 @@ async def post_admin_sorisae_failure_monitor_push(
     del admin
     try:
         return await push_latest_sorisae_failure_to_admins()
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="latest_result_not_found")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="latest_result_invalid")
 
 
 @router.get("/llm-gateway/diagnostics")
@@ -5045,8 +5045,8 @@ def apply_admin_threshold_worldlinco_recommendations(admin: User = Depends(requi
     worldlinco_payload = ((current.get("recommendations") or {}).get("worldlinco") or {}) if isinstance((current.get("recommendations") or {}).get("worldlinco"), dict) else {}
     try:
         update = WorldlincoTuningUpdate.model_validate(worldlinco_payload)
-    except ValidationError as exc:
-        raise HTTPException(status_code=400, detail=f"승인된 월드린코 추천값 검증 실패: {exc}") from exc
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="승인된 월드린코 추천값 검증 실패")
     updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
     applied = apply_worldlinco_tuning_update(update, updated_by=updated_by)
     return {

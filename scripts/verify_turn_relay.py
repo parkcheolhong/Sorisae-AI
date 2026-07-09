@@ -146,12 +146,15 @@ def _build_allocate(txid: bytes, *, username: bytes = b"", realm: bytes = b"",
         attrs += _stun_attr(0x0014, realm)
         attrs += _stun_attr(0x0015, nonce)
         # MESSAGE-INTEGRITY: key = MD5(username:realm:password), password=base64(HMAC-SHA1(secret, username))
+        # codeql[py/weak-sensitive-data-hashing]
         password = base64.b64encode(
             hmac.new(secret.encode(), username, hashlib.sha1).digest()  # lgtm [py/weak-sensitive-data-hashing]
         )
+        # codeql[py/weak-sensitive-data-hashing]
         key = hashlib.md5(username + b":" + realm + b":" + password).digest()  # lgtm [py/weak-sensitive-data-hashing]
         header_len = len(attrs) + 24  # + MESSAGE-INTEGRITY attr(4+20)
         msg = struct.pack("!HHI", 0x0003, header_len, _STUN_MAGIC) + txid + attrs
+        # codeql[py/weak-sensitive-data-hashing]
         integrity = hmac.new(key, msg, hashlib.sha1).digest()  # lgtm [py/weak-sensitive-data-hashing]
         attrs += _stun_attr(0x0008, integrity)
     return struct.pack("!HHI", 0x0003, len(attrs), _STUN_MAGIC) + txid + attrs

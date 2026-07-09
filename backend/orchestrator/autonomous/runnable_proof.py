@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -101,8 +102,12 @@ def evaluate_runnable_proof(
         result["detail"] = "output_dir 없음 — runnable proof 미충족"
         return result
 
+    output_dir_text = str(output_dir or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._\\/\-: ]{1,260}", output_dir_text):
+        result["detail"] = "output_dir 형식 오류"
+        return result
     try:
-        root = Path(output_dir).expanduser().resolve()
+        root = Path(output_dir_text).expanduser().resolve()
     except OSError:
         result["detail"] = f"output_dir 해석 실패: {output_dir}"
         return result

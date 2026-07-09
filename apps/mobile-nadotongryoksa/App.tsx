@@ -2767,8 +2767,8 @@ function AppInner() {
 
         logUiPressProbe('VOIP_INCOMING_DEEP_LINK_AUTO_ACCEPT_PERMISSION_GRANTED', {
             source,
-            call_id: payload.call_id,
-            caller_voice_id: payload.caller_voice_id ?? null,
+            call_id: payload.call_id ? 'present' : 'missing',
+            caller_voice_id: null,
         });
 
         let mergedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string } = {
