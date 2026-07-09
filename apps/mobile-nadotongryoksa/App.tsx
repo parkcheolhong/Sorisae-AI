@@ -8862,12 +8862,62 @@ function AppInner() {
                                 )}
                             />
                         ) : null}
+                        {token && userInfo && !effectiveVoipPlan ? (
+                            <View style={styles.voipValidationExitCard}>
+                                <Text style={styles.voipValidationExitTitle}>
+                                    {voipValidationOverride
+                                        ? '🧪 검증 모드 ON — 구독 없이 통역통화 테스트'
+                                        : '통역통화 테스트 출구'}
+                                </Text>
+                                {voipValidationOverride ? (
+                                    <Text style={styles.voipValidationExitSub}>
+                                        친구에게 📡 통역통화를 누르면 월정액 없이 발신됩니다. Phase7 오디오 격리 검증용입니다.
+                                    </Text>
+                                ) : (
+                                    <Text style={styles.voipValidationExitSub}>
+                                        Lite/Pro 없이도 정합성·오디오 격리(7.6) 검증용 발신을 허용합니다.
+                                    </Text>
+                                )}
+                                {voipValidationOverride ? (
+                                    <Pressable
+                                        style={styles.voipValidationExitOffBtn}
+                                        onPress={() => {
+                                            setVoipValidationOverride(false);
+                                            voipValidationFriendCallBypassRef.current = false;
+                                            void persistVoipValidationFriendCallBypass(false);
+                                            setPremiumStatusMessage('');
+                                            setVoipInitError('');
+                                        }}
+                                        testID="worldlinco-voip-validation-test-off"
+                                    >
+                                        <Text style={styles.voipValidationExitOffBtnText}>검증 모드 끄기</Text>
+                                    </Pressable>
+                                ) : (
+                                    <Pressable
+                                        style={styles.voipValidationBypassBtn}
+                                        onPress={handleVoipValidationOpenPress}
+                                        testID="worldlinco-voip-validation-test-open"
+                                    >
+                                        <Text style={styles.voipValidationBypassBtnText}>검증용 통역통화 테스트 열기</Text>
+                                    </Pressable>
+                                )}
+                            </View>
+                        ) : null}
                         {token && userInfo && (voipInitError || premiumStatusMessage || voipInitLoading) ? (
                             <View style={styles.voipStatusBanner}>
                                 {premiumStatusMessage ? (
                                     <Text style={styles.voipStatusBannerText}>{premiumStatusMessage}</Text>
                                 ) : null}
                                 {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
+                                {!voipValidationOverride && (voipInitError.includes('월정액') || voipInitError.includes('Lite') || voipInitError.includes('Pro')) ? (
+                                    <Pressable
+                                        style={styles.voipValidationBypassBtn}
+                                        onPress={handleVoipValidationOpenPress}
+                                        testID="worldlinco-voip-validation-from-error"
+                                    >
+                                        <Text style={styles.voipValidationBypassBtnText}>검증 모드로 다시 시도</Text>
+                                    </Pressable>
+                                ) : null}
                                 {voipInitLoading ? (
                                     <ActivityIndicator color="#1e6fe0" size="small" style={styles.voipLobbyLoading} />
                                 ) : null}

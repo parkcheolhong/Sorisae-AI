@@ -42,6 +42,7 @@ export function VoipFriendsDirectoryModal({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [query, setQuery] = useState('');
+    const [sectionExpanded, setSectionExpanded] = useState(true);
     const [expandedId, setExpandedId] = useState<number | null>(null);
 
     const load = useCallback(async () => {
@@ -146,8 +147,34 @@ export function VoipFriendsDirectoryModal({
 
     const body = (
         <>
-            <Text style={styles.title}>📡 VoIP 친구 — 통역통화</Text>
-            <Text style={styles.hint}>앱에 가입한 친구에게 보이스톡을 걸 수 있습니다. 단말 연락처와 별도 목록입니다.</Text>
+            {embedded ? (
+                <Pressable
+                    style={styles.sectionHead}
+                    onPress={() => setSectionExpanded((prev) => !prev)}
+                    accessibilityRole="button"
+                    accessibilityLabel={sectionExpanded ? 'VoIP 친구 통역통화 접기' : 'VoIP 친구 통역통화 펼치기'}
+                    testID="voip-friends-dir-section-toggle"
+                >
+                    <View style={styles.sectionHeadText}>
+                        <Text style={styles.title}>📡 VoIP 친구 — 통역통화</Text>
+                        {!sectionExpanded ? (
+                            <Text style={styles.sectionCollapsedMeta}>{filtered.length}명 · 탭하여 펼치기</Text>
+                        ) : (
+                            <Text style={styles.hint}>앱 가입 친구 보이스톡 · 단말 연락처와 별도</Text>
+                        )}
+                    </View>
+                    <Text style={styles.sectionChevron}>{sectionExpanded ? '▾' : '›'}</Text>
+                </Pressable>
+            ) : (
+                <>
+                    <Text style={styles.title}>📡 VoIP 친구 — 통역통화</Text>
+                    <Text style={styles.hint}>앱에 가입한 친구에게 보이스톡을 걸 수 있습니다. 단말 연락처와 별도 목록입니다.</Text>
+                </>
+            )}
+            <View style={[embedded && !sectionExpanded && styles.sectionBodyCollapsed]} pointerEvents={embedded && !sectionExpanded ? 'none' : 'auto'}>
+            {embedded && sectionExpanded ? (
+                <Text style={styles.hint}>앱 가입 친구 보이스톡 · 단말 연락처와 별도</Text>
+            ) : null}
             <TextInput
                 style={styles.search}
                 placeholder="이름 · 이메일 · 보이스 ID 검색"
@@ -190,6 +217,7 @@ export function VoipFriendsDirectoryModal({
                     ) : null}
                 </View>
             </View>
+            </View>
         </>
     );
 
@@ -216,6 +244,11 @@ const styles = StyleSheet.create({
     loadingBox: { paddingVertical: 28, alignItems: 'center', gap: 8 },
     loadingText: { color: '#5f6b80', fontSize: 13 },
     embeddedCard: { backgroundColor: '#ffffff', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#dce6f2', marginTop: 12 },
+    sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+    sectionHeadText: { flex: 1, paddingRight: 8 },
+    sectionChevron: { color: '#8a93a3', fontSize: 18, fontWeight: '700' },
+    sectionCollapsedMeta: { color: '#5f6b80', fontSize: 12, marginTop: 2 },
+    sectionBodyCollapsed: { height: 0, overflow: 'hidden', opacity: 0 },
     list: { marginTop: 10, flexGrow: 0 },
     listEmbedded: { maxHeight: 280 },
     row: { borderBottomWidth: 1, borderBottomColor: '#e3eaf5' },
