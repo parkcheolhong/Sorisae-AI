@@ -222,7 +222,7 @@ services:
       - autonomous-session-data:/app/data/autonomous_sessions
       - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
     ports:
-      - "${BACKEND_PUBLISH_HOST:-127.0.0.1}:${BACKEND_PUBLISH_PORT:-8000}:8000"
+      - "127.0.0.1:8000:8000"
     cpus: ${BACKEND_CPU_LIMIT_CORES:-20.0}
     depends_on:
       postgres:
@@ -661,4 +661,3 @@ volumes:
 networks:
   devanalysis114-network:
     driver: bridge
-
