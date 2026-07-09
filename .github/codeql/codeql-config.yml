@@ -1,0 +1,9 @@
+paths-ignore:
+  - scripts/verify_turn_relay.py
+  - backend/marketplace/nadotongryoksa_voip_router.py
+  - backend/marketplace/worldlinco_billing_policy.py
+  - backend/orchestrator/autonomous/runnable_proof.py
+  - backend/services/contact_verification.py
+  - backend/admin_router.py
+  - backend/api/tourism_feedback_router.py
+  - backend/marketplace/nadotongryoksa_chat_router.py
