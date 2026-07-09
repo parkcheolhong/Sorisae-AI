@@ -1702,7 +1702,7 @@ function AppInner() {
             let lastError: Error | null = null;
 
             for (let attempt = 0; attempt < 2; attempt += 1) {
-                const seed = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}${attempt}`;
+                const seed = `${newCorrelationId('instant_demo_seed')}${attempt}`;
                 const demoCreds = buildInstantDemoCredentials(seed);
 
                 try {
@@ -6461,7 +6461,7 @@ function AppInner() {
     }, []);
 
     const resolveHybridLocation = useCallback(async (): Promise<HybridGpsResult> => {
-        const attemptId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const attemptId = newCorrelationId('hybrid_gps_attempt');
 
         const persistSuccessfulLocation = async (result: HybridGpsResult) => {
             if (result.source === 'adb_override') {

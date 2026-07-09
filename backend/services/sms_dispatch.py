@@ -48,7 +48,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         return {
             "provider": "dev-log",
             "delivered": _dev_mode(),
-            "phone": phone,
+            "phone": _mask_phone(phone),
         }
 
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
@@ -84,7 +84,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         return {
             "provider": "twilio",
             "delivered": True,
-            "phone": phone,
+            "phone": _mask_phone(phone),
             "message_sid": response_body.get("sid"),
         }
     except urllib.error.HTTPError as exc:
@@ -100,7 +100,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
             return {
                 "provider": "twilio-failed-dev-fallback",
                 "delivered": False,
-                "phone": phone,
+                "phone": _mask_phone(phone),
                 "error": detail[:200],
             }
         raise RuntimeError("SMS 발송에 실패했습니다. 잠시 후 다시 시도하세요.") from exc
