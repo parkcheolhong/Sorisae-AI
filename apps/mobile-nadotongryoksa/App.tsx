@@ -8048,7 +8048,11 @@ function AppInner() {
         });
         setActiveRailSection(nextSection);
         setIsRailMenuOpen(false);
-    }, [logUiPressProbe]);
+        if (nextSection === 'voip') {
+            setVoipWorkspaceTab('contacts');
+            openVoipTesterPanel();
+        }
+    }, [logUiPressProbe, openVoipTesterPanel]);
 
     const isLoggedIn = Boolean(userInfo);
     const isLobbyVisible = !isLoggedIn;
@@ -8818,17 +8822,28 @@ function AppInner() {
                                 onTabChange={setVoipWorkspaceTab}
                                 recentMissedCount={recentMissedCallCount}
                                 contactsPane={(
-                                    <ContactsDirectoryModal
-                                        visible={isVoipRailSectionVisible && voipWorkspaceTab === 'contacts'}
-                                        embedded
-                                        onClose={() => { }}
-                                        apiBase={API_BASE}
-                                        inviterName={userInfo.username || userInfo.email?.split('@')[0] || ''}
-                                        loadFriends={loadFriendsForDirectory}
-                                        onRegularCall={(contact) => { void handleRegularCallContact(contact); }}
-                                        onVoipCall={handleVoipCallContact}
-                                        onChat={(contact, friend) => { void handleChatContact(contact, friend); }}
-                                    />
+                                    <>
+                                        <ContactsDirectoryModal
+                                            visible={isVoipRailSectionVisible && voipWorkspaceTab === 'contacts'}
+                                            embedded
+                                            onClose={() => { }}
+                                            apiBase={API_BASE}
+                                            inviterName={userInfo.username || userInfo.email?.split('@')[0] || ''}
+                                            loadFriends={loadFriendsForDirectory}
+                                            onRegularCall={(contact) => { void handleRegularCallContact(contact); }}
+                                            onVoipCall={handleVoipCallContact}
+                                            onChat={(contact, friend) => { void handleChatContact(contact, friend); }}
+                                        />
+                                        <VoipFriendsDirectoryModal
+                                            embedded
+                                            visible={isVoipRailSectionVisible && voipWorkspaceTab === 'contacts'}
+                                            onClose={() => { }}
+                                            userId={userInfo.id}
+                                            token={token}
+                                            onVoipCall={(friend) => { void handleStartFriendVoiceCall(friend); }}
+                                            onChat={(friend) => { void handleOpenFriendChatFromDirectory(friend); }}
+                                        />
+                                    </>
                                 )}
                                 recentsPane={(
                                     <RecentCallsSection
@@ -8846,6 +8861,17 @@ function AppInner() {
                                     />
                                 )}
                             />
+                        ) : null}
+                        {token && userInfo && (voipInitError || premiumStatusMessage || voipInitLoading) ? (
+                            <View style={styles.voipStatusBanner}>
+                                {premiumStatusMessage ? (
+                                    <Text style={styles.voipStatusBannerText}>{premiumStatusMessage}</Text>
+                                ) : null}
+                                {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
+                                {voipInitLoading ? (
+                                    <ActivityIndicator color="#1e6fe0" size="small" style={styles.voipLobbyLoading} />
+                                ) : null}
+                            </View>
                         ) : null}
                         <View style={styles.voipLocalLangCard}>
                             <Text style={styles.voipLocalLangTitle}>🌐 통역 지정 언어(이 단말)</Text>

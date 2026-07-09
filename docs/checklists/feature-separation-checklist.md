@@ -111,7 +111,7 @@
 - [x] **7.3** PSTN lifecycle — `prepareForPstnDial` + `deactivateFeatureExclusive('pstn-assist')` on end/fail
 - [x] **7.4** (후속 HIGH) App.tsx → `useVoiceCaptureLoop` SSOT 연결 (`useAppVoiceCaptureLoop` 브리지, 인라인 ~1070줄 제거)
 - [x] **7.5** (후속 HIGH) `song-mode` 레지스트리 정리 — `sectionRegistry` 등록 + `tabVisible:false` (하단 탭 미노출)
-- [ ] **7.6** 디바이스 검증 — 대면→VoIP/PSTN 겹침·일반전화 후 재시작 차단 없음 (build317 설치·프리플라이트 완료, 수동 시나리오 대기)
+- [ ] **7.6** 디바이스 검증 — 대면 TTS 확인(build317); VoIP UI 회귀(친구 섹션·오류 표시) 패치 후 재검증
 
 ## Phase 6 — 터미널/로그 분리 — 완료
 - [x] **6.1** 기능별 로그 태그/correlation 접두 매핑 정의

@@ -17,6 +17,13 @@
 
 ## 수동 시나리오 (테스터 조작 필요)
 
+**2026-07-09 테스터 보고 (build317):**
+- 홈 대면 통역 TTS: OK
+- 통화 탭 VoIP 발신: 불가 (친구 섹션 UI 누락 + 오류 미표시 회귀)
+- 통화 중 스피커/마이크 패드: 미표시 (발신 자체가 안 됨)
+- **원인:** Phase7에서 VoIP 로비 UI 제거 후 `VoipFriendsDirectoryModal`이 채팅 탭 모달로만 남음; `voipInitError`/`premiumStatusMessage` 통화 레일 미노출
+- **패치:** 연락처 탭 하단에 VoIP 친구 인라인 섹션 복원 + 발신/프리미엄 오류 배너
+
 스크립트: `scripts/run_phase7_audio_isolation_device_smoke.ps1`
 
 | ID | 시나리오 | 기대 로그 |
