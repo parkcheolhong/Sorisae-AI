@@ -110,7 +110,7 @@ function mapRecordingOptions(options: LegacyRecordingOptions): ExpoRecordingOpti
             linearPCMIsBigEndian: ios.linearPCMIsBigEndian,
             linearPCMIsFloat: ios.linearPCMIsFloat,
         },
-        web: options.web,
+        web: options.web ?? { mimeType: 'audio/webm', bitsPerSecond: 128_000 },
     };
 }
 
@@ -348,6 +348,12 @@ export const Audio = {
 };
 
 export type RecordingOptions = LegacyRecordingOptions;
-// expo-av 호환 타입: 값(const Audio)은 namespace 병합이 불가하므로 클래스 타입을 직접 노출한다.
 export type AudioSound = Sound;
 export type AudioRecording = Recording;
+
+/** expo-av 호환: `Audio.RecordingOptions` 등 qualified type names */
+export namespace Audio {
+    export type RecordingOptions = LegacyRecordingOptions;
+    export type Sound = AudioSound;
+    export type Recording = AudioRecording;
+}

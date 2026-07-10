@@ -19,14 +19,30 @@ export const VOICE_RELAY_VAD_DEFAULTS = {
     meterUnavailableFilePollEvery: 5,
 } as const;
 
+/**
+ * 런타임 튜닝/면대면 설정처럼 동일 필드를 `number` 로 계산해 넘기는 호출부를 허용하기 위한
+ * 느슨한 설정 타입(SSOT 기본값 `VOICE_RELAY_VAD_DEFAULTS` 도 그대로 대입 가능).
+ * 실제로 판정 로직에서 쓰지 않는 일부 필드(`shortSpeechThresholdMs` 등)는 선택값으로 둔다.
+ */
+export interface VoiceRelayVadConfig {
+    minSegmentMs: number;
+    maxSegmentMs: number;
+    silenceFlushMs: number;
+    speechMeterMinDb: number;
+    meterPollMs: number;
+    meterUnavailableFixedFlushMs: number;
+    shortSpeechThresholdMs?: number;
+    meterUnavailableFilePollEvery?: number;
+}
+
 export function resolveVoiceRelayFixedFlushDelayMs(
     meterUnavailable: boolean,
-    config: typeof VOICE_RELAY_VAD_DEFAULTS = VOICE_RELAY_VAD_DEFAULTS,
+    config: VoiceRelayVadConfig = VOICE_RELAY_VAD_DEFAULTS,
 ): number {
     if (meterUnavailable) {
         return config.meterUnavailableFixedFlushMs;
     }
-    return config.maxSegmentMs;
+    return config.silenceFlushMs;
 }
 
 export const VOICE_RELAY_SILENCE_PEAK_DB = -159;
@@ -131,6 +147,14 @@ const GLOBAL_OUTRO_HALLUCINATION_PATTERNS: RegExp[] = [
 
 export function normalizeRelayText(value: string): string {
     return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/**
+ * 자동 릴레이(스피커폰 통역 보조/대면) 전송 지연을 한국어 라벨로 표기한다.
+ * 정수 초는 "3초", 소수 초는 "2.5초"(소수 1자리). 대면·VOIP·일반전화가 공유.
+ */
+export function formatAutoRelayDelayLabel(ms: number): string {
+    return Number.isInteger(ms / 1000) ? `${ms / 1000}초` : `${(ms / 1000).toFixed(1)}초`;
 }
 
 const WHISPER_NOISE_SCRIPT_PATTERNS: RegExp[] = [
@@ -332,12 +356,20 @@ export function isLikelyVoiceRelayEcho(params: {
     recentRemotePlaybackAtMs?: number;
     recentRemoteTranscript?: string;
     recentRemoteAtMs?: number;
+    // 호출자가 에코 비교 시간창을 명시할 수 있다. 미지정 시 VoIP 기본값(20s).
+    // [버그 수정] 대면통역은 25s(FACE_CONVERSATION_ECHO_GUARD_MS)로 이력을 사전 필터하는데
+    // 내부 기본이 20s 면 20~25s 구간 에코가 within()에서 탈락해 무방비로 통과했다(창 불일치).
+    // → 호출자가 동일 창을 주입해 정합성을 맞춘다.
+    guardWindowMs?: number;
 }): { echo: boolean; reason?: string } {
     const nowMs = params.nowMs ?? Date.now();
+    const guardWindowMs = typeof params.guardWindowMs === 'number' && params.guardWindowMs > 0
+        ? params.guardWindowMs
+        : VOICE_RELAY_ECHO_GUARD_MS;
     const within = (sentAtMs?: number) => (
         typeof sentAtMs === 'number'
         && sentAtMs > 0
-        && nowMs - sentAtMs < VOICE_RELAY_ECHO_GUARD_MS
+        && nowMs - sentAtMs < guardWindowMs
     );
 
     if (within(params.recentLocalSentAtMs) && params.recentLocalTranslated) {
@@ -558,6 +590,16 @@ export function updateVoiceRelaySegmentSpeechState(
         return state;
     }
 
+    if (!state.hasSpeech) {
+        return {
+            ...state,
+            hasSpeech: true,
+            lastSpeechAtMs: nowMs,
+            // Track active segment duration from first detected speech, not pre-speech wait.
+            segmentStartedAtMs: nowMs,
+        };
+    }
+
     return {
         ...state,
         hasSpeech: true,
@@ -576,6 +618,16 @@ export function updateVoiceRelaySegmentSpeechStateFromFileRms(
         return state;
     }
 
+    if (!state.hasSpeech) {
+        return {
+            ...state,
+            hasSpeech: true,
+            lastSpeechAtMs: nowMs,
+            // Align Android dead-meter fallback with normal meter timing semantics.
+            segmentStartedAtMs: nowMs,
+        };
+    }
+
     return {
         ...state,
         hasSpeech: true,
@@ -587,7 +639,7 @@ export function evaluateVoiceRelaySegmentDecision(
     state: VoiceRelaySegmentState,
     nowMs: number,
     currentMeterDb: number,
-    config: typeof VOICE_RELAY_VAD_DEFAULTS = VOICE_RELAY_VAD_DEFAULTS,
+    config: VoiceRelayVadConfig = VOICE_RELAY_VAD_DEFAULTS,
 ): VoiceRelaySegmentDecision {
     const durationMs = nowMs - state.segmentStartedAtMs;
     const speechNow = currentMeterDb >= config.speechMeterMinDb;

@@ -150,9 +150,15 @@ export function shouldStartVoiceRelayCapture(params: {
     participantRole: VoiceRelayParticipantRole;
     turn: VoiceRelayTurnSnapshot;
     fairnessBargeInMs?: number;
+    liveDuplex?: boolean;
     nowMs?: number;
 }): { allowed: boolean; reason?: string; bargeIn?: boolean; starvedMs?: number } {
     const nowMs = params.nowMs ?? Date.now();
+    // 라이브 듀플렉스: 턴 잠금(listen-hold) 으로 캡처를 막지 않는다 → 연속 캡처(무전기 제거).
+    // 자기 TTS 꼬리 에코는 VoIPCallScreen 의 음향 에코 억제창에서 별도로 가드한다.
+    if (params.liveDuplex) {
+        return { allowed: true };
+    }
     if (isVoiceRelayListenActive(params.turn, nowMs)) {
         // 공정성 캡(굶김 방지): 상대가 쉼 없이 발화해 listen-hold 가 계속 갱신되면 로컬이
         // 영원히 턴을 못 잡는다. 일정 시간 굶주리면 캡처를 강제 허용한다.
@@ -178,9 +184,14 @@ export function shouldDeferVoiceRelayFlush(params: {
     flushHadSpeech: boolean;
     hasRemoteAudio: boolean;
     remoteAudioSuppressed?: boolean;
+    liveDuplex?: boolean;
     nowMs?: number;
 }): { defer: boolean; skipReason?: string } {
     if (params.reason !== 'fixed_interval') {
+        return { defer: false };
+    }
+    // 라이브 듀플렉스: listen-hold 로 인한 플러시 지연 없음(연속 처리).
+    if (params.liveDuplex) {
         return { defer: false };
     }
 
@@ -235,10 +246,12 @@ export function shouldSendVoiceRelaySegment(params: {
     peakMeterDb: number;
     hasRemoteAudio: boolean;
     remoteAudioSuppressed?: boolean;
+    liveDuplex?: boolean;
     nowMs?: number;
 }): { allowed: boolean; reason?: string } {
     const nowMs = params.nowMs ?? Date.now();
-    if (isVoiceRelayListenActive(params.turn, nowMs)) {
+    // 라이브 듀플렉스: listen-hold 로 세그먼트 전송을 막지 않는다(아래 발화 메터 게이트만 유지).
+    if (!params.liveDuplex && isVoiceRelayListenActive(params.turn, nowMs)) {
         return { allowed: false, reason: 'remote_listen_active' };
     }
 

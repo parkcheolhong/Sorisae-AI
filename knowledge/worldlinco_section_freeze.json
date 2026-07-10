@@ -1,0 +1,35 @@
+{
+  "schema": "worldlinco_section_freeze_v1",
+  "baseline_date": "2026-07-02",
+  "policy": "오디오·세션 섹션 고정선. APK 빌드 번호는 knowledge/worldlinco_apk_baseline.json (분리).",
+  "audio_session": {
+    "rule": "1_device_1_session",
+    "allowed_active": ["idle", "sorisae", "voip"],
+    "forbid_simultaneous": ["sorisae", "voip"]
+  },
+  "sections": {
+    "sorisae": {
+      "playback_cap_ms": 50000,
+      "safety_cap_min_ms": 8000,
+      "safety_cap_max_ms": 90000,
+      "safety_cap_chars_multiplier": 170,
+      "safety_cap_chars_base_ms": 6000,
+      "synthesize_timeout_ms": 30000,
+      "device_tts_rate_ko_ja": 0.97,
+      "edge_tts_feature_id": "face.interpret",
+      "edge_tts_prosody_ko": ["-1%", "+18%", "+2Hz"]
+    },
+    "voip": {
+      "edge_tts_prosody_ko_default": ["-4%", "+6%", "+1Hz"],
+      "note": "VoIP TTS는 media_bridge → _synthesize_tts 기본 프리셋. 소리새 feature_id 오버라이드 금지."
+    },
+    "shared": {
+      "voip_session_guard_module": "apps/mobile-nadotongryoksa/src/services/voipSessionGuard.ts",
+      "voice_capture_lease_module": "apps/mobile-nadotongryoksa/src/services/voiceCaptureLease.ts"
+    }
+  },
+  "backend": {
+    "sorisae_llm_port": 8009,
+    "sorisae_model_id": "Qwen/Qwen3-8B-AWQ"
+  }
+}

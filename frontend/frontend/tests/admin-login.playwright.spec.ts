@@ -16,9 +16,10 @@ test.describe('admin login regression', () => {
 
         await expect(page.getByTestId('admin-login-form')).toBeVisible();
         await expect(page.getByTestId('admin-login-email')).toHaveValue('119cash@naver.com');
-        await expect(page.getByTestId('admin-login-password')).toHaveValue('sample-password');
+        await expect(page.getByTestId('admin-login-password')).toHaveValue('');
         await expect(page.getByTestId('admin-login-remember-id')).toBeChecked();
-        await expect(page.getByTestId('admin-login-remember-password')).toBeChecked();
+        await expect(page.getByTestId('admin-login-remember-password')).not.toBeChecked();
+        await expect(page.getByTestId('admin-login-remember-password')).toBeDisabled();
         await expect(page.getByTestId('admin-login-allow-passkey')).toBeChecked();
         await expect(page.getByTestId('admin-login-passkey-button')).toBeEnabled();
         await expect(page.getByTestId('admin-login-recovery-link')).toHaveAttribute('href', '/admin/recovery');

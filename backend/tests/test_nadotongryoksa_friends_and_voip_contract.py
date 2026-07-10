@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import queue
+import threading
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -90,6 +92,29 @@ def _build_client(*, allow_unverified_friend_add: bool = True):
     friends_router_module.MAP_DISCOVERY_USERS.clear()
     app.state.testing_session_local = TestingSessionLocal
     return TestClient(app)
+
+
+def _receive_json_with_timeout(ws, *, timeout_sec: float = 5.0):
+    """Fail fast when websocket receive blocks indefinitely in tests."""
+    result_queue: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=1)
+
+    def _recv() -> None:
+        try:
+            result_queue.put(("ok", ws.receive_json()))
+        except BaseException as exc:  # pragma: no cover - helper wrapper
+            result_queue.put(("err", exc))
+
+    threading.Thread(target=_recv, daemon=True).start()
+    try:
+        status, payload = result_queue.get(timeout=timeout_sec)
+    except queue.Empty as exc:
+        raise AssertionError(
+            f"websocket receive timed out after {timeout_sec:.1f}s"
+        ) from exc
+
+    if status == "err":
+        raise payload  # type: ignore[misc]
+    return payload
 
 
 def test_friends_routes_support_app_user_and_external_phone_contact():
@@ -424,6 +449,62 @@ def test_voip_accept_prefers_invite_caller_language_over_stale_db():
     assert accept_response.status_code == 200
     assert accept_response.json()["display_language"] == "ja"
     assert accept_response.json()["participant_role"] == "callee"
+
+
+def test_voip_accept_does_not_dispatch_cancel_push_to_accepting_user(monkeypatch):
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    cancel_calls: list[tuple[str, str, int | None]] = []
+
+    async def fake_send_voip_call_cancel_push(
+        voice_id: str,
+        call_id: str,
+        *,
+        callee_user_id: int | None = None,
+    ) -> bool:
+        cancel_calls.append((voice_id, call_id, callee_user_id))
+        return True
+
+    monkeypatch.setattr(
+        voip_router_module,
+        "_send_voip_call_cancel_push",
+        fake_send_voip_call_cancel_push,
+    )
+
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-session-accept-no-cancel-push",
+            "mode": "voip_full_auto",
+            "caller_preferred_language": "ko",
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+        preferred_language="ja",
+    )
+
+    accept_response = client.post(
+        f"/api/v1/voip/calls/{call_id}/accept",
+        headers={"Authorization": f"Bearer {create_access_token({'sub': 'callee@example.com'})}"},
+    )
+    assert accept_response.status_code == 200
+    assert cancel_calls == []
 
 
 def test_voip_initiate_rejects_self_app_call_targets():
@@ -1098,21 +1179,21 @@ def test_voip_signal_relays_realtime_chat_messages_between_app_participants():
 
                 callee_socket.send_json({
                     "type": "chat_message",
-                    "text": "네, 채팅도 확인됐어요.",
+                    "text": "Yes, chat is confirmed too.",
                     "sent_at": "2026-05-13T10:00:05Z",
                 })
 
-                callee_ack = callee_socket.receive_json()
-                reply_message = caller_socket.receive_json()
+                callee_ack = _receive_json_with_timeout(callee_socket)
+                reply_message = _receive_json_with_timeout(caller_socket)
                 assert callee_ack["type"] == "chat_message"
                 assert callee_ack["from_role"] == "callee"
-                assert callee_ack["text"] == "네, 채팅도 확인됐어요."
+                assert callee_ack["text"] == "Yes, chat is confirmed too."
                 assert callee_ack["client_sent_at"] == "2026-05-13T10:00:05Z"
                 assert callee_ack["room_id"]
                 assert callee_ack["message_id"]
                 assert reply_message["type"] == "chat_message"
                 assert reply_message["from_role"] == "callee"
-                assert reply_message["text"] == "네, 채팅도 확인됐어요."
+                assert reply_message["text"] == "Yes, chat is confirmed too."
                 assert reply_message["translated_text"]
                 assert reply_message["source_lang"] == "en"
                 assert reply_message["target_lang"] == "ko"

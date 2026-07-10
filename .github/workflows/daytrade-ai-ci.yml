@@ -1,0 +1,44 @@
+name: daytrade-ai-ci
+
+on:
+  pull_request:
+    paths:
+      - "apps/daytrade-ai/**"
+      - ".github/workflows/daytrade-ai-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  test-and-kpi-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/daytrade-ai
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pytest
+
+      - name: Compile + tests
+        run: make compile test
+
+      # (J) 튜닝 회귀 자동 차단 — baseline 대비 OOS Sharpe 향상 + 최악 MDD 비악화 실패 시 exit 1.
+      - name: KPI regression gate
+        run: make kpi-gate
+
+      - name: Upload KPI report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daytrade-ai-kpi-regression
+          path: |
+            apps/daytrade-ai/runs/kpi_regression.json
+            apps/daytrade-ai/runs/kpi_regression.prom

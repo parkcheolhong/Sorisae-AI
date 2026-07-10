@@ -10,6 +10,7 @@ from backend.services.tourism_kb.service import (
     TourismVectorStore,
     get_tourism_store,
     search_tourism_places,
+    tourism_rag_top_k,
     validate_places,
 )
 from backend.services.tourism_kb.graph import (
@@ -23,6 +24,7 @@ __all__ = [
     "TourismVectorStore",
     "get_tourism_store",
     "search_tourism_places",
+    "tourism_rag_top_k",
     "validate_places",
     "TourismGraph",
     "get_tourism_graph",

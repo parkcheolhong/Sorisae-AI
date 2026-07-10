@@ -10,12 +10,34 @@ import {
 } from "@/lib/admin-session";
 
 const ADMIN_LOGIN_REMEMBER_ID_KEY = "admin_login_remember_id_v1";
-const ADMIN_LOGIN_REMEMBER_PASSWORD_KEY = "admin_login_remember_password_v1";
 const ADMIN_LOGIN_EMAIL_KEY = "admin_login_email_v1";
 const ADMIN_LOGIN_PASSWORD_KEY = "admin_login_password_v1";
 const ADMIN_LOGIN_ALLOW_PASSKEY_KEY = "admin_login_allow_passkey_v1";
 const ADMIN_LOGIN_REQUEST_TIMEOUT_MS = ADMIN_PROXY_TIMEOUT_MS + 7_000;
 const ADMIN_LOGIN_RETRY_COUNT = 1;
+
+async function resolveAdminPostLoginPath(
+  accessToken: string,
+  me?: { is_admin?: boolean; is_superuser?: boolean } | null,
+): Promise<string> {
+  if (me?.is_admin || me?.is_superuser) {
+    return '/admin';
+  }
+  try {
+    const regionalRes = await fetch('/api/admin/worldlinco/regional/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (regionalRes.ok) {
+      const regionalMe = await regionalRes.json() as { is_regional_manager?: boolean };
+      if (regionalMe.is_regional_manager) {
+        return '/admin/regional';
+      }
+    }
+  } catch {
+    // ignore regional scope probe failures
+  }
+  return '/admin';
+}
 
 const createTimeoutSignal = (timeoutMs: number) => {
   const controller = new AbortController();
@@ -34,7 +56,6 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberId, setRememberId] = useState(true);
-  const [rememberPassword, setRememberPassword] = useState(false);
   const [allowPasskeyOnDevice, setAllowPasskeyOnDevice] = useState(true);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [passkeyReady, setPasskeyReady] = useState(false);
@@ -42,25 +63,20 @@ export default function AdminLoginPage() {
   useEffect(() => {
     try {
       const savedRememberId = localStorage.getItem(ADMIN_LOGIN_REMEMBER_ID_KEY);
-      const savedRememberPassword = localStorage.getItem(ADMIN_LOGIN_REMEMBER_PASSWORD_KEY);
       const savedAllowPasskey = localStorage.getItem(ADMIN_LOGIN_ALLOW_PASSKEY_KEY);
       const savedEmail = localStorage.getItem(ADMIN_LOGIN_EMAIL_KEY);
-      const savedPassword = localStorage.getItem(ADMIN_LOGIN_PASSWORD_KEY);
 
       const nextRememberId = savedRememberId !== 'false';
-      const nextRememberPassword = savedRememberPassword === 'true';
       const nextAllowPasskey = savedAllowPasskey !== 'false';
 
       setRememberId(nextRememberId);
-      setRememberPassword(nextRememberPassword);
       setAllowPasskeyOnDevice(nextAllowPasskey);
 
       if (nextRememberId && savedEmail) {
         setEmail(savedEmail);
       }
-      if (nextRememberPassword && savedPassword) {
-        setPassword(savedPassword);
-      }
+      // Immediately block legacy plaintext password persistence.
+      localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
     } catch {
     }
   }, []);
@@ -76,18 +92,6 @@ export default function AdminLoginPage() {
     } catch {
     }
   }, [email, rememberId]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(ADMIN_LOGIN_REMEMBER_PASSWORD_KEY, rememberPassword ? 'true' : 'false');
-      if (rememberPassword && password) {
-        localStorage.setItem(ADMIN_LOGIN_PASSWORD_KEY, password);
-      } else {
-        localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
-      }
-    } catch {
-    }
-  }, [password, rememberPassword]);
 
   useEffect(() => {
     try {
@@ -211,7 +215,8 @@ export default function AdminLoginPage() {
       }
 
       setAdminToken(finishPayload.access_token);
-      window.location.replace('/admin');
+      const nextPath = await resolveAdminPostLoginPath(finishPayload.access_token);
+      window.location.replace(nextPath);
     } catch (err: any) {
       setError(err?.message || '패스키 로그인 중 오류가 발생했습니다.');
       clearAdminToken();
@@ -373,11 +378,7 @@ export default function AdminLoginPage() {
         } else {
           localStorage.removeItem(ADMIN_LOGIN_EMAIL_KEY);
         }
-        if (rememberPassword) {
-          localStorage.setItem(ADMIN_LOGIN_PASSWORD_KEY, normalizedPassword);
-        } else {
-          localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
-        }
+        localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
       } catch {
       }
 
@@ -391,12 +392,17 @@ export default function AdminLoginPage() {
       }
 
       if (!me.is_admin && !me.is_superuser) {
-        setError("관리자 권한이 없습니다.");
-        clearAdminToken();
+        const nextPath = await resolveAdminPostLoginPath(data.access_token, me);
+        if (nextPath !== '/admin/regional') {
+          setError("관리자 또는 지역 관리자 권한이 없습니다.");
+          clearAdminToken();
+          return;
+        }
+        window.location.replace(nextPath);
         return;
       }
 
-      window.location.replace("/admin");
+      window.location.replace('/admin');
     } catch (err) {
       const message = err instanceof DOMException && err.name === 'AbortError'
         ? `서버 응답이 ${Math.floor(ADMIN_LOGIN_REQUEST_TIMEOUT_MS / 1000)}초 이상 지연되어 로그인을 중단했습니다. 관리자 프록시와 백엔드 상태를 먼저 확인해주세요.`
@@ -419,10 +425,10 @@ export default function AdminLoginPage() {
             관리자 대시보드
           </h1>
           <p className="mt-1.5 text-sm text-[#666]">
-            관리자 계정으로 로그인하세요
+            관리자 · 지역 관리자 로그인
           </p>
           <p className="mt-2 text-xs text-[#7b7b98]">
-            아이디/비밀번호 기억, 지문/패스키 로그인 사용 여부, 로그인 전 복구 진입 경로를 이 화면에서 바로 확인할 수 있습니다.
+            비밀번호 로그인 또는 지문/패스키(등록 후)로 접속합니다. 지역 관리자는 로그인 후 자동으로 지역 대시보드로 이동합니다.
           </p>
         </div>
 
@@ -487,12 +493,12 @@ export default function AdminLoginPage() {
                 id="admin-login-remember-password"
                 name="rememberPassword"
                 type="checkbox"
-                checked={rememberPassword}
-                onChange={(e) => setRememberPassword(e.target.checked)}
+                checked={false}
+                disabled
                 data-testid="admin-login-remember-password"
                 className="h-4 w-4"
               />
-              비밀번호 기억
+              비밀번호 기억 (보안 정책으로 비활성화)
             </label>
             <label htmlFor="admin-login-allow-passkey" className="flex items-center gap-2">
               <input
@@ -507,7 +513,7 @@ export default function AdminLoginPage() {
               이 기기에서 지문/패스키 로그인 사용
             </label>
             <p className="text-[12px] text-[#7b7b98]">
-              공용 기기에서는 비밀번호 기억을 권장하지 않습니다.
+              비밀번호는 브라우저에 저장되지 않습니다.
             </p>
           </div>
 
@@ -552,6 +558,9 @@ export default function AdminLoginPage() {
             </Link>
             <Link href="/admin/recovery" data-testid="admin-login-recovery-link" className="hidden">
               비밀번호를 잊으셨나요?
+            </Link>
+            <Link href="/admin/recovery?mode=carrier" data-testid="admin-login-carrier-recovery-link" className="hidden">
+              통신사 본인확인 후 비밀번호 재설정
             </Link>
           </div>
 
