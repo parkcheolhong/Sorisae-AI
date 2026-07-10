@@ -1,0 +1,5 @@
+﻿out_dir=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_110209
+classification=unknown
+api_fail=-5
+ui_fail=1
+result_json=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_110209\smoke_result.json

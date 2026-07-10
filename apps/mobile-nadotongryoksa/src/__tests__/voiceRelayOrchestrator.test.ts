@@ -15,6 +15,8 @@ import {
     updateVoiceRelaySegmentSpeechStateFromFileRms,
     VOICE_RELAY_VAD_DEFAULTS,
     resolveVoiceRelayFixedFlushDelayMs,
+    normalizeRelayText,
+    formatAutoRelayDelayLabel,
 } from '../features/voip-voice-relay/voiceRelayOrchestrator';
 import { VoiceRelayPlaybackQueue } from '../features/voip-voice-relay/voiceRelayPlaybackQueue';
 
@@ -58,7 +60,7 @@ describe('voiceRelayOrchestrator', () => {
 
         const decision = evaluateVoiceRelaySegmentDecision(
             state,
-            startedAt + VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs,
+            startedAt + 500 + VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs,
             -30,
         );
 
@@ -80,6 +82,38 @@ describe('voiceRelayOrchestrator', () => {
         );
 
         expect(decision.action).toBe('continue');
+    });
+
+    it('does not count pre-speech waiting time toward max duration', () => {
+        const startedAt = 1_000;
+        let state = createInitialVoiceRelaySegmentState(startedAt);
+        state = updateVoiceRelaySegmentSpeechState(state, -30, startedAt + 10_000);
+
+        const decision = evaluateVoiceRelaySegmentDecision(
+            state,
+            startedAt + 10_000 + VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs - 1,
+            -30,
+        );
+
+        expect(decision.action).toBe('continue');
+    });
+
+    it('counts only speech time toward silence minimum duration', () => {
+        const startedAt = 2_000;
+        let state = createInitialVoiceRelaySegmentState(startedAt);
+        state = updateVoiceRelaySegmentSpeechState(state, -30, startedAt + 9_000);
+
+        const decision = evaluateVoiceRelaySegmentDecision(
+            state,
+            startedAt + 9_000 + VOICE_RELAY_VAD_DEFAULTS.silenceFlushMs + VOICE_RELAY_VAD_DEFAULTS.minSegmentMs,
+            -80,
+        );
+
+        expect(decision).toEqual({
+            action: 'flush',
+            reason: 'silence',
+            isFinal: true,
+        });
     });
 
     it('collapses repeated relay phrases', () => {
@@ -260,7 +294,7 @@ describe('voiceRelayOrchestrator', () => {
             VOICE_RELAY_VAD_DEFAULTS.meterUnavailableFixedFlushMs,
         );
         expect(resolveVoiceRelayFixedFlushDelayMs(false)).toBe(
-            VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs,
+            VOICE_RELAY_VAD_DEFAULTS.silenceFlushMs,
         );
     });
 
@@ -273,6 +307,25 @@ describe('voiceRelayOrchestrator', () => {
 
         expect(nextState.chunkIndex).toBe(2);
         expect(nextState.hasSpeech).toBe(false);
+    });
+
+    // [Phase5.1a] App.tsx 로컬 중복 정의에서 통합된 공용 relay 텍스트/지연 라벨 헬퍼 회귀 가드.
+    it('normalizeRelayText trims, collapses whitespace and lowercases (App.tsx 중복 통합)', () => {
+        expect(normalizeRelayText('  Hello   World  ')).toBe('hello world');
+        expect(normalizeRelayText('AnNyeong\t\nHaseyo')).toBe('annyeong haseyo');
+        expect(normalizeRelayText('')).toBe('');
+        // 메서드 순서가 달랐던 이전 App.tsx 구현과 결과 동일성(교환 법칙) 보장.
+        const sample = '  ABC   def\tGHI  ';
+        expect(normalizeRelayText(sample)).toBe(
+            sample.trim().toLowerCase().replace(/\s+/g, ' '),
+        );
+    });
+
+    it('formatAutoRelayDelayLabel renders integer vs decimal seconds (App.tsx 중복 통합)', () => {
+        expect(formatAutoRelayDelayLabel(2000)).toBe('2초');
+        expect(formatAutoRelayDelayLabel(3000)).toBe('3초');
+        expect(formatAutoRelayDelayLabel(2500)).toBe('2.5초');
+        expect(formatAutoRelayDelayLabel(2300)).toBe('2.3초');
     });
 });
 
@@ -302,5 +355,28 @@ describe('voiceRelayPlaybackQueue', () => {
 
         await new Promise((resolve) => setTimeout(resolve, 50));
         expect(played).toEqual([1, 2]);
+    });
+
+    it('suppresses exact duplicate playback items', async () => {
+        const played: string[] = [];
+        const queue = new VoiceRelayPlaybackQueue(async (item) => {
+            played.push(item.correlationId ?? `${item.utteranceId}#${item.chunkIndex}`);
+        });
+
+        const item = {
+            seqId: 1,
+            utteranceId: 'u1',
+            chunkIndex: 0,
+            isFinal: true,
+            translatedText: 'same line',
+            targetLang: 'en',
+            correlationId: 'corr-1',
+        };
+
+        queue.enqueue(item);
+        queue.enqueue(item);
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(played).toEqual(['corr-1']);
     });
 });

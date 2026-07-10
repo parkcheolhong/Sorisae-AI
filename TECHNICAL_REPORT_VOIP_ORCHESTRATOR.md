@@ -885,7 +885,8 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 ```
 
 #### 0.22.3 보류(계획) 항목 — 위험/타당성 사유 (트레이서빌리티)
-- **오토튜너 `search_space` 확장**(코덱·지터버퍼·GPU클럭·번역batch·RAG top-k): `eval/worldlinco/`는 사람승인 게이트라 배포 위험은 없으나, **런타임 SSOT(`worldlinco_tuning_config.json`) 미연결 노브는 무의미한 제안**을 만든다 → 각 노브 런타임 적용 경로 선연결 후 추가. **현 단계 미구현.**
+- **오토튜너 `search_space` 확장 — RAG top-k**: **구현 완료**(§0.22.6) — VoIP 스터디와 분리된 관광 검색 목적함수에 연결.
+- **오토튜너 `search_space` 확장**(번역batch·지터버퍼·코덱·GPU클럭): 4개 모두 **서버 인프라**(번역batch=vLLM `--max-num-seqs`·GPU클럭=`nvidia-smi`) 또는 **동결 미디어 경로**(지터버퍼·코덱, §0.20.3)라 RAG top-k 식 오프라인 연결 불가. 노브별 필요조건·위험·절차는 **체크리스트 §10.5** 에 상세 기록(코드 변경 없이 설계만). 해당 환경/트리거 충족 시 착수. **현 단계 미구현.**
 - **RTP 레벨 지연 메트릭**: P2P 적합 방식(클라이언트 getStats→백엔드 보고)으로 **설계+구현 완료**(§0.22.5). **모바일은 opt-in(기본 비활성)**.
 - **SFU / K8s 멀티-AZ**: 다자 통화·서버 녹음/믹싱·수평확장 요구 시 도입. 현 1:1 P2P·단일 호스트 Compose 로 MVP 충족. **로드맵.**
 
@@ -910,6 +911,44 @@ sudo systemctl enable --now chrony && chronyc tracking    # ±1ms (정밀 타임
 - `py_compile backend/voip/metrics.py backend/marketplace/nadotongryoksa_voip_router.py` OK.
 - 모바일 파서 유닛 테스트 `src/__tests__/webrtcStatsReporter.test.ts` + 변경 파일 typecheck.
 - KPI: Grafana `histogram_quantile(0.95, voip_client_rtt_seconds_bucket)`→스펙 `<30ms`, `voip_client_packet_loss_ratio`→`<2%`.
+
+### 0.22.6 RAG top-k — 런타임 SSOT 연결 + 자동 튜닝 제안기 (오토튜너 확장 1단계) (2026-06-22)
+
+> 체크리스트: §10.4(RAG-1~5). **설계 결정**: RAG top-k 노브는 VoIP voice-relay 자동 튜너(`eval/worldlinco/`, VAD/턴테이킹 QoE 목적함수)와 **목적함수가 달라** worldlinco `SEARCH_SPACE` 에 섞지 않는다. 이미 존재하는 **관광 검색 정확도 목적함수**(`scripts/eval_tourism_retrieval.py`, 골든 질의셋·`category_hit@k`)에 연결해 "런타임 미연결 노브 = 무의미한 제안"(§0.22.3) 안티패턴을 회피한다.
+
+#### 0.22.6.1 런타임 SSOT (비파괴)
+- `backend/services/tourism_kb/service.py`(+): `tourism_rag_top_k()` — env `TOURISM_RAG_TOP_K`(기본 5, [1..20] 클램프). 매 호출 env 재평가 → **재기동 없이 라이브 조정**(worldlinco 파일-SSOT 철학과 동일).
+- `search_tourism_places(limit=None)` 이 SSOT 를 기본값으로 사용. **명시 `limit` 호출자(친구챗 grounding `VOICE_FRIEND_WEB_MAX_ITEMS`·일정 후보 `max_places`·eval)는 영향 없음** → env 미설정 시 기본 동작 완전 불변(기존 기본값 5와 동일).
+- `backend/services/tourism_kb/__init__.py`: `tourism_rag_top_k` 재노출.
+
+#### 0.22.6.2 자동 튜닝 제안기 (사람 승인 게이트)
+- `scripts/eval_tourism_retrieval.py`(+): `--sweep 3,5,8,12` → k 후보별 정확도/정밀도/지연 평가 후 `select_best_k()` 가 최적 k 를 **제안**(`PROPOSAL_ONLY_REQUIRES_HUMAN_APPROVAL`). 선택 기준(사전식): `accuracy ↑ → meanP ↑ → latency ↓ → k ↓`.
+- **정직성 가드:** 현재 운영 k 가 스윕에 없으면 미측정이므로 `improves_over_current=null`(+`current_in_sweep=false`) — 검증 없이 개선으로 단정 금지(헌법 규칙).
+- 산출물 `reports/tourism_rag_topk_proposal.json`(current/proposed top-k·`current_in_sweep`·`improves_over_current`·후보표·`apply_hint`). 채택 시 운영자가 `export TOURISM_RAG_TOP_K=<k>`(재기동 불필요).
+- 기본(`--k`/`--sweep` 미지정) 평가는 `tourism_rag_top_k()` 로 **실제 배포 k** 를 측정.
+
+#### 0.22.6.3 검증
+- `py_compile backend/services/tourism_kb/service.py backend/services/tourism_kb/__init__.py scripts/eval_tourism_retrieval.py` OK.
+- `tests/test_tourism_rag_topk.py`(knob 파싱·클램프·`select_best_k` 순위·정직성, Qdrant/임베딩 불필요) — **8 pass**.
+
+### 0.23 지역 무관 통화 일관성 — TURN 릴레이 연동/검증 (2026-06-22)
+
+> 체크리스트 §11. 증상: 같은 네트워크 폰만 정상, LTE/5G·타 네트워크 원거리 통화는 "신호만·음성 먹통". 원인: **TURN 릴레이 미연동**(CGNAT/대칭 NAT 는 STUN-only 로 P2P 직결 불가 → TURN 필수).
+
+- **fail-loud(코드):** `nadotongryoksa_voip_router.py::_default_turn_servers` — TURN 미설정 시 **조용한 STUN-only 강등 대신 경고 1회**, 활성 시 릴레이 URL·force-relay 상태를 info 로 남김. `turn_relay_configured()` 헬퍼로 상태를 명시.
+- **한-노브(코드):** `_resolved_turn_urls()` — `TURN_URLS` 미지정이라도 `TURN_SECRET` 만 있으면 `TURN_DOMAIN`/`TURN_REALM`:`TURN_PORT` 에서 udp+tcp URL 자동 유도. 운영자 설정을 '시크릿 1개 + 공인 IP'로 축소.
+- **장거리 기준 고정(코드):** `VOIP_FORCE_RELAY=1` → 콜-init 응답 `ice_transport_policy="relay"`. 모바일 `voipCallClient.ts` 가 이를 받아 `RTCPeerConnection({iceTransportPolicy:'relay'})` 로 **릴레이 경로만** 사용 → 같은 LAN 테스트도 셀룰러와 동일 경로 = 지역 의존 불일치('지정 폰만 됨') 제거.
+- **compose 통합:** `docker-compose.yml` 에 coturn 서비스(`profiles:[turn]`, host 네트워킹) + 백엔드 `TURN_DOMAIN`/`TURN_PORT`/`VOIP_FORCE_RELAY` env 배선. `docker compose --profile turn up -d coturn backend` 로 릴레이 포함 기동.
+- **미디어 평면 실측:** `scripts/verify_turn_relay.py --allocate` — 실제 TURN Allocate(use-auth-secret HMAC)로 릴레이 주소 발급까지 확인. TCP 도달만으로는 못 잡던 "신호만·음성 먹통"의 진짜 게이트.
+- **측정 결과(2026-06-22, 서버):** backend_health 200 / turn_relay 211.218.172.124:3478 TCP OK / **turn_allocate 성공 → 릴레이 211.218.172.124:49170**. 공개 DNS `metanova1004.com→211.218.172.124`(프록시 아님). 백엔드 컨테이너 env 에 `TURN_URLS`/`TURN_SECRET`/`VOIP_FORCE_RELAY=1` 적재 확인. → **서버측 릴레이 동작 입증 완료.**
+- **경계(정직):** "어디서나 같은 결과"는 ① force-relay(전 통화 동일 경로) ② 미디어 UDP 레인지(49160-49200) 외부 개방 ③ 신규 빌드 배포(기존 APK 는 `ice_transport_policy` 미지원·단 TURN 후보는 받아 폴백)로 완성. ①은 적용 완료, ②는 원격 LTE 에서 `--allocate` PASS 재현으로 확인, ③은 빌드/배포 영역.
+
+#### 0.23.1 2폰 실측 결과 + ICE 자동 재연결 (build 171, 2026-06-22)
+
+- **relay-only 교차 통신사 실측:** 콜-init `ice_transport_policy:"relay"`, `auto_relay_applied:true` 로 SK↔KT 셀룰러 통화가 **연결 성공**(KT `connection_state:connected`, SK `trackCount:1`, coturn `allocation count 1→8`). relay-only 인데 붙었다 = **미디어가 서버 릴레이를 실제 통과** = 공유기 UDP 3478 + 49160-49200 포워딩 정상 입증. **릴레이는 두 폰의 거리와 무관**(둘 다 같은 서버 릴레이에 붙음) → 교차 통신사에서 붙으면 장거리도 지연만 더해질 뿐 동일 연결.
+- **"엉뚱한 말" 근본 원인 = 언어 오설정:** 단말 지정 언어가 `ja`(일본어)라 한국어를 일본어로 강제 STT. ko 로 지정하니 `detected=ko transcript='지금 현재 음성 테스트 중입니다'` → 영어 번역 정상. 네트워크/통역 엔진 문제가 아님. (참고: SK 계정 `119cash` 백엔드 프로필 `preferred_language=ja/JP` 박혀 있어 프로필 교정 권장 — 미교정 시 단말 로컬 오버라이드 필요.)
+- **코드 결함→수정 (`voipCallClient.ts`):** `oniceconnectionstatechange` 가 `disconnected/failed` 시 복구 없이 통화를 종료시켰음("받으면 끊김"). → **ICE 자동 재연결** 도입: `disconnected` 2.5s 유예→미복구 시 재시작, `failed` 즉시 재시작; `restartIce()`+`createOffer({iceRestart:true})` 재협상(offerer='caller'만, 글레어 방지); 최대 4회 백오프(2/4/6/8s); **재연결 중 'connecting' 유지로 통화 비종료**, 예산 소진 시에만 terminal. `VoIPCallConfig.participantRole` 추가·주입, `hangup()` 정리.
+- **발행:** v1.0.119 / versionCode **171** (`scripts/publish_worldlinco_apk.ps1`, BUILD SUCCESSFUL, 인앱 매니페스트 반영). 원거리 실측 전 두 폰 업데이트 + **단말별 본인 언어 지정** 필수.
 
 ---
 

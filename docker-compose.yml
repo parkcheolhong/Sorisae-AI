@@ -107,6 +107,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    # 서버 미디어 브리지(MCU, §13): 서버 aiortc 가 TURN 클라이언트로 coturn 에 릴레이를 할당해야
+    # NAT 뒤에서도 폰↔서버 미디어가 연결된다. 컨테이너 안에서 TURN_DOMAIN(metanova1004.com)이
+    # 127.0.0.1 로 잡히면 자기 자신을 가리키므로, 호스트 게이트웨이로 매핑해 coturn(호스트 3478)에 도달.
+    # 폰은 공인 DNS 로 해석하므로 영향 없음.
+    extra_hosts:
+      - "metanova1004.com:host-gateway"
     environment:
       <<: *video-env
       SECRET_KEY: ${JWT_SECRET_KEY:-}
@@ -125,7 +131,8 @@ services:
       LLM_MODEL_REASONING: ${LLM_MODEL_REASONING:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
       LLM_MODEL_CODING: ${LLM_MODEL_CODING:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
       LLM_MODEL_CHAT: ${LLM_MODEL_CHAT:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
-      LLM_MODEL_VOICE_CHAT: ${LLM_MODEL_VOICE_CHAT:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
+      LLM_MODEL_VOICE_CHAT: ${LLM_MODEL_VOICE_CHAT:-Qwen/Qwen3-8B-AWQ}
+      LLM_VOICE_FRIEND_BASE_URL: ${LLM_VOICE_FRIEND_BASE_URL:-http://host.docker.internal:8009/v1}
       LLM_MODEL_PLANNER: ${LLM_MODEL_PLANNER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
       LLM_MODEL_CODER: ${LLM_MODEL_CODER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
       LLM_MODEL_REVIEWER: ${LLM_MODEL_REVIEWER:-Qwen/Qwen2.5-Coder-32B-Instruct-AWQ}
@@ -138,6 +145,8 @@ services:
       WEB_SEARCH_PROVIDER: ${WEB_SEARCH_PROVIDER:-auto}
       BING_SEARCH_API_KEY: ${BING_SEARCH_API_KEY:-}
       SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
+      OPEN_TRANSPORT_KR_GTFS_URL: ${OPEN_TRANSPORT_KR_GTFS_URL:-}
+      OPEN_TRANSPORT_JP_GTFS_URL: ${OPEN_TRANSPORT_JP_GTFS_URL:-}
       SORISAE_CENTRAL_ENABLED: ${SORISAE_CENTRAL_ENABLED:-true}
       SORISAE_CENTRAL_RATIO: ${SORISAE_CENTRAL_RATIO:-0.5}
       SORISAE_URL: ${SORISAE_URL:-http://sorisae-brain:5050/v1}
@@ -160,13 +169,34 @@ services:
       FASTER_WHISPER_MODEL: ${FASTER_WHISPER_MODEL:-small}
       FASTER_WHISPER_DEVICE: ${FASTER_WHISPER_DEVICE:-cuda}
       FASTER_WHISPER_COMPUTE_TYPE: ${FASTER_WHISPER_COMPUTE_TYPE:-float16}
+      # 기본 인프로세스(모델 1회 로드·지연 최소). segfault 시 FASTER_WHISPER_SUBPROCESS=1 로 격리.
+      # 워밍업 중 동시 추론은 is_whisper_warmup_active() → 503 으로 502(nginx upstream reset) 방지.
+      FASTER_WHISPER_SUBPROCESS: ${FASTER_WHISPER_SUBPROCESS:-0}
+      # 무음/노이즈/광고에서 Whisper 환각 차단(내장 Silero VAD). 통번역 혼선 저감.
+      WHISPER_VAD_FILTER: ${WHISPER_VAD_FILTER:-0}
+      # 장거리(LTE/5G·타 네트워크) 통화 일관성: TURN 릴레이 한-노브 설정.
+      # 운영자는 .env 에 TURN_SECRET 과 TURN_EXTERNAL_IP(공인 IP)만 넣고
+      # `docker compose --profile turn up -d` 하면 coturn 기동 + 백엔드가 자동으로
+      # turn:${TURN_DOMAIN}:${TURN_PORT} (udp/tcp) URL 을 클라이언트에 내려준다.
       TURN_URLS: ${TURN_URLS:-}
       TURN_SECRET: ${TURN_SECRET:-}
       TURN_TTL: ${TURN_TTL:-86400}
+      TURN_DOMAIN: ${TURN_DOMAIN:-metanova1004.com}
+      TURN_PORT: ${TURN_PORT:-3478}
+      # VOIP_FORCE_RELAY=1 → 모든 통화가 릴레이 경로만 사용(같은 LAN 테스트도 셀룰러와 동일 경로).
+      VOIP_FORCE_RELAY: ${VOIP_FORCE_RELAY:-0}
+      # 서버 미디어 브리지(MCU, 체크리스트 §13): 1 이면 폰↔서버↔폰 연속 라이브 음성 +
+      # 서버측 STT/번역/TTS(무전기 제거). 0(기본)이면 기존 P2P 경로 그대로(회귀 안전).
+      # 서버 aiortc 는 TURN 릴레이 후보로 미디어를 수신하므로 NAT 뒤에서도 동작(coturn 필요).
+      VOIP_SERVER_MEDIA_BRIDGE: ${VOIP_SERVER_MEDIA_BRIDGE:-0}
+      # 번역 음성(TTS) 트랙 주입(원음+번역 멀티트랙). 자막만 원하면 0.
+      VOIP_BRIDGE_TTS: ${VOIP_BRIDGE_TTS:-1}
       STUN_URLS: ${STUN_URLS:-}
       # VoIP 시그널링 스토어/릴레이를 Redis(멀티워커 pub/sub)로 승격(#4). 미설정 시 인메모리(P1) 폴백.
       # 마켓플레이스 캐시(/0)와 분리하기 위해 DB 인덱스 1 사용.
       VOIP_REDIS_URL: ${VOIP_REDIS_URL:-redis://redis:6379/1}
+      # LTE/외부망: initiate 응답 signaling URL 이 172.x/127.0.0.1 로 내려가지 않도록 공인 베이스 고정
+      VOIP_SIGNALING_PUBLIC_BASE_URL: ${VOIP_SIGNALING_PUBLIC_BASE_URL:-https://metanova1004.com}
       AUTONOMOUS_SESSION_DIR: /app/data/autonomous_sessions
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT: ${MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT:-true}
@@ -180,6 +210,7 @@ services:
       - ./AGENTS.md:/app/AGENTS.md:ro
       - ./package.json:/app/package.json:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./backend:/app/backend
       - ./docs:/app/docs
       - ./frontend:/app/frontend
@@ -191,7 +222,7 @@ services:
       - autonomous-session-data:/app/data/autonomous_sessions
       - ${HOST_SECRET_ROOT:-./.runtime/secrets}:${CONTAINER_SECRET_ROOT:-/run/codeai-secrets}:ro
     ports:
-      - "127.0.0.1:8000:8000"
+      - "${BACKEND_PUBLISH_HOST:-127.0.0.1}:${BACKEND_PUBLISH_PORT:-8000}:8000"
     cpus: ${BACKEND_CPU_LIMIT_CORES:-20.0}
     depends_on:
       postgres:
@@ -225,7 +256,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     command: >-
       python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
     networks:
@@ -580,6 +611,46 @@ services:
       devanalysis114-network:
         aliases:
           - sorisae-shopping-mall
+
+  # TURN 릴레이(coturn) — LTE/5G 장거리 통화 미디어 릴레이.
+  # 왜: 통신사 CGNAT/대칭 NAT에서는 STUN만으론 P2P가 막혀 '같은 와이파이만 통화'가 된다.
+  #     릴레이를 거쳐야 음성 미디어가 지역과 무관하게 흐른다.
+  # 기본 `docker compose up` 에는 포함되지 않는다(호스트 포트 점유). 운영 서버에서:
+  #   1) .env 에 TURN_SECRET, TURN_EXTERNAL_IP(이 서버 공인 IP) 설정
+  #   2) 방화벽에서 3478/udp,tcp 와 미디어 레인지(기본 49160-49200/udp) 외부 공개
+  #   3) `docker compose --profile turn up -d coturn backend`
+  coturn:
+    image: coturn/coturn:4.6
+    container_name: devanalysis114-coturn
+    profiles: ["turn"]
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=${TURN_PORT:-3478}
+      - --min-port=${TURN_MIN_PORT:-49160}
+      - --max-port=${TURN_MAX_PORT:-49200}
+      - --fingerprint
+      # TURN_SECRET / TURN_EXTERNAL_IP 는 .env 에 반드시 설정(미설정 시 coturn 기동 실패 = 의도된 loud-fail).
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET:-}
+      - --realm=${TURN_DOMAIN:-metanova1004.com}
+      - --external-ip=${TURN_EXTERNAL_IP:-}
+      - --server-name=devanalysis114-coturn
+      - --no-multicast-peers
+      - --no-cli
+      - --stale-nonce=600
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --total-quota=${TURN_TOTAL_QUOTA:-1200}
+    healthcheck:
+      test: ["CMD-SHELL", "(ss -lun 2>/dev/null || netstat -lun 2>/dev/null) | grep -q ':${TURN_PORT:-3478}' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres-data:

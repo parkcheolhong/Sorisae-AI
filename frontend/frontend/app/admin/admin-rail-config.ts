@@ -11,7 +11,11 @@ export type AdminLauncherRailSource = {
     id: string;
     label: string;
     accent: 'blue' | 'violet' | 'emerald' | 'amber' | 'neutral' | 'slate' | 'cyan';
-    onClick: () => void;
+    onClick?: () => void;
+    collapsible?: boolean;
+    collapsed?: boolean;
+    onToggleCollapsed?: (collapsed: boolean) => void;
+    collapsibleContent?: React.ReactNode;
 };
 
 export const ADMIN_LEFT_SHORT_LABEL_OVERRIDES: Record<string, string> = {
@@ -21,6 +25,7 @@ export const ADMIN_LEFT_SHORT_LABEL_OVERRIDES: Record<string, string> = {
     'health-overview': '건강',
     'ad-orders': '주문',
     'subscription-monitor': '구독',
+    'travel-kpi-dashboard': 'KPI',
     category: '카테',
 };
 
@@ -37,6 +42,7 @@ export const ADMIN_RIGHT_SHORT_LABEL_OVERRIDES: Record<string, string> = {
     'ops-extras-health': '익스',
     'ops-extras-catalog': '카탈',
     'ops-system-settings': '운영',
+    'ops-flow-adm-dash': '회귀',
     'worldlinco-tuning': '링코',
 };
 

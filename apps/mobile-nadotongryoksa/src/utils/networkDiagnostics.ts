@@ -19,7 +19,7 @@ export type NetworkDiagnosticsSnapshot = {
     warningMessage: string | null;
 };
 
-type NetInfoLikeState = {
+export type NetInfoLikeState = {
     type?: string | null;
     isConnected?: boolean | null;
     isInternetReachable?: boolean | null;

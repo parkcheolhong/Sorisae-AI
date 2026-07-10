@@ -1,0 +1,120 @@
+{
+  "startedAt": "2026-06-30T10:46:38.787Z",
+  "outDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630",
+  "timeoutMs": 20000,
+  "harEnabled": true,
+  "harDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\har_capture",
+  "pages": [
+    {
+      "pageLabel": "marketplace",
+      "url": "http://127.0.0.1:3999/marketplace",
+      "ok": false,
+      "status": null,
+      "finalUrl": "",
+      "elapsedMs": 2037,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [
+        "navigation_error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3999/marketplace\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:3999/marketplace\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      ],
+      "requestFailed": [
+        {
+          "url": "http://127.0.0.1:3999/marketplace",
+          "method": "GET",
+          "errorText": "net::ERR_CONNECTION_REFUSED"
+        }
+      ],
+      "requestFailedIgnored": [],
+      "apiHttpErrors": [],
+      "harPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\har_capture\\marketplace.har",
+      "screenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\marketplace.png",
+      "htmlSnapshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\marketplace.html"
+    },
+    {
+      "pageLabel": "admin_3000_login",
+      "url": "http://127.0.0.1:3000/admin/login",
+      "ok": true,
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:3000/admin/login",
+      "elapsedMs": 1251,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "requestFailed": [],
+      "requestFailedIgnored": [
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?intent=passkey&_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?intent=passkey&_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        }
+      ],
+      "apiHttpErrors": [],
+      "harPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\har_capture\\admin_3000_login.har",
+      "screenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\admin_3000_login.png",
+      "htmlSnapshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\admin_3000_login.html"
+    },
+    {
+      "pageLabel": "admin_3005_login",
+      "url": "http://127.0.0.1:3005/admin/login",
+      "ok": true,
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:3005/admin/login",
+      "elapsedMs": 1236,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "requestFailed": [],
+      "requestFailedIgnored": [
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?intent=passkey&_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?intent=passkey&_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        }
+      ],
+      "apiHttpErrors": [],
+      "harPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\har_capture\\admin_3005_login.har",
+      "screenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\admin_3005_login.png",
+      "htmlSnapshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260630_194630\\admin_3005_login.html"
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "ok": 2,
+    "fail": 1,
+    "totalConsoleErrors": 0,
+    "totalPageErrors": 1,
+    "totalRequestFailed": 1,
+    "totalApiHttpErrors": 0,
+    "totalRequestFailedIgnored": 8
+  }
+}

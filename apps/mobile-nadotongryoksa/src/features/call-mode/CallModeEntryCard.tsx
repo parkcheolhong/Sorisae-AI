@@ -61,14 +61,14 @@ const styles = StyleSheet.create({
     },
     card: {
         borderWidth: 1,
-        borderColor: '#3a3a4a',
+        borderColor: '#dce6f2',
         borderRadius: 10,
         padding: 12,
-        backgroundColor: '#1e1e2e',
+        backgroundColor: '#ffffff',
     },
     cardSelected: {
-        borderColor: '#7c6af7',
-        backgroundColor: '#2a2040',
+        borderColor: '#1e6fe0',
+        backgroundColor: '#e3f0ff',
     },
     cardHeader: {
         flexDirection: 'row',
@@ -80,34 +80,34 @@ const styles = StyleSheet.create({
     modeTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#b0b0c8',
+        color: '#3a4356',
     },
     modeTitleSelected: {
-        color: '#d4b8ff',
+        color: '#1e6fe0',
     },
     modeDesc: {
         fontSize: 12,
-        color: '#808090',
+        color: '#5f6b80',
     },
     activeBadge: {
-        backgroundColor: '#4c3f9a',
+        backgroundColor: '#1e6fe0',
         borderRadius: 6,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     activeBadgeText: {
         fontSize: 11,
-        color: '#c8b8ff',
+        color: '#ffffff',
         fontWeight: '600',
     },
     recommendBadge: {
-        backgroundColor: '#3a3020',
+        backgroundColor: '#fff4d6',
         borderRadius: 6,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     recommendBadgeText: {
         fontSize: 11,
-        color: '#e0c060',
+        color: '#b45309',
     },
 });

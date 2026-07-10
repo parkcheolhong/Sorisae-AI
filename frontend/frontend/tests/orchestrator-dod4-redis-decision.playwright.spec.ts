@@ -5,6 +5,40 @@ test.describe.configure({ timeout: 120_000 });
 const MOCK_RUN_ID = 'dod4_redis_decision_e2e';
 const REDIS_TECH_TITLE = 'Redis 캐시 계층';
 
+type StageStatus = 'pending' | 'running' | 'passed';
+
+type StageSubstep = {
+    id: string;
+    title: string;
+    summary: string;
+    sequence: number;
+    status: StageStatus;
+    check_label: string;
+    checked: boolean;
+};
+
+type StageItem = {
+    id: string;
+    label: string;
+    title: string;
+    summary: string;
+    sequence: number;
+    status: StageStatus;
+    check_label: string;
+    substeps: StageSubstep[];
+};
+
+type StageRunPayload = {
+    run_id: string;
+    scope: string;
+    project_name: string;
+    mode: string;
+    status: 'running';
+    current_stage_id: string;
+    final_completed: boolean;
+    stages: StageItem[];
+};
+
 function buildStageDefs() {
     return [
         { id: 'ARCH-001', label: '1단계', title: '구조 설계', summary: '요구사항·구조 고정', sequence: 1 },
@@ -21,7 +55,7 @@ function buildStageDefs() {
     ];
 }
 
-function buildDiscussStageRun() {
+function buildDiscussStageRun(): StageRunPayload {
     const stages = buildStageDefs().map((def) => {
         let status: 'pending' | 'running' | 'passed' = 'pending';
         let checkLabel = '대기';
@@ -62,7 +96,7 @@ function buildDiscussStageRun() {
     };
 }
 
-function buildExecutedStageRun() {
+function buildExecutedStageRun(): StageRunPayload {
     const stages = buildStageDefs().map((def) => {
         let status: 'pending' | 'running' | 'passed' = 'pending';
         let checkLabel = '대기';
@@ -103,7 +137,7 @@ function buildExecutedStageRun() {
     };
 }
 
-function buildDiscussChatResponse(stageRun: ReturnType<typeof buildDiscussStageRun>) {
+function buildDiscussChatResponse(stageRun: StageRunPayload) {
     return {
         session_id: 'dod4-redis-session',
         conversation: [
@@ -149,7 +183,7 @@ function buildDiscussChatResponse(stageRun: ReturnType<typeof buildDiscussStageR
     };
 }
 
-function buildExecuteChatResponse(stageRun: ReturnType<typeof buildExecutedStageRun>) {
+function buildExecuteChatResponse(stageRun: StageRunPayload) {
     return {
         session_id: 'dod4-redis-session',
         conversation: [

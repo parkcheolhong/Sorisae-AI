@@ -1,5 +1,6 @@
 import { Linking, Platform } from 'react-native';
 import { useCallback } from 'react';
+import { activateFeatureExclusive, deactivateFeatureExclusive } from '../isolation/fourFeatureRuntime';
 
 type PstnAssistDialInput = {
     interCallPhone?: string;
@@ -61,12 +62,20 @@ export function usePstnAssistController(): PstnAssistController {
     }, []);
 
     const startPstnAssistDialFlow = useCallback(async (input: PstnAssistDialInput): Promise<PstnAssistDialResult> => {
+        const activation = await activateFeatureExclusive('pstn-assist', 'pstn_dial_flow_start', 'system');
+        if (!activation.ok) {
+            throw new Error('다른 기능이 활성화되어 PSTN 보조 통화를 시작할 수 없습니다. 현재 기능을 종료한 뒤 다시 시도해 주세요.');
+        }
         const targetPhone = chooseFirstAvailable(input);
         if (!targetPhone) {
+            deactivateFeatureExclusive('pstn-assist', 'pstn_dial_flow_no_target', 'system');
             return { dialOpened: false, targetPhone: '' };
         }
 
         const dialOpened = await openDialPad(targetPhone);
+        if (!dialOpened) {
+            deactivateFeatureExclusive('pstn-assist', 'pstn_dial_flow_open_failed', 'system');
+        }
         return { dialOpened, targetPhone };
     }, [openDialPad]);
 

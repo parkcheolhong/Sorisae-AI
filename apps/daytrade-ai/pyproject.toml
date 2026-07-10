@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "daytrade-ai"
+version = "0.1.0"
+description = "AI 주식 단타(스캘핑·초단타) 자동매매 시스템 — 모의투자 우선, 안전 게이트 내장"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+onnx = ["onnxruntime>=1.17"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+daytrade = "daytrade.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["daytrade*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

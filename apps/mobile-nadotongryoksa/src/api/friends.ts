@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { API_BASE } from '../app/appConstants';
 import type {
   AcceptFriendRequestResponse,
   AddFriendPayload,
@@ -14,9 +14,7 @@ import type {
   OutgoingFriendRequestResponse,
 } from '../features/friends/types';
 
-const BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
-  'http://10.0.2.2:8000';
+const BASE_URL: string = API_BASE;
 
 function mapFriendApiError(status: number, fallback: string): Error {
   if (status === 401 || status === 403) {

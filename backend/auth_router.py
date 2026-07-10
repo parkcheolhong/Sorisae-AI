@@ -7,20 +7,20 @@ import os
 logger = logging.getLogger(__name__)
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
-from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, status  # pyright: ignore[reportMissingImports]
+from fastapi.security import OAuth2PasswordRequestForm  # pyright: ignore[reportMissingImports]
+from typing import Any, Optional
 import re
-from pydantic import BaseModel, ConfigDict, EmailStr
-from sqlalchemy.orm import Session
-from webauthn import (
+from pydantic import BaseModel, ConfigDict, EmailStr  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
+from webauthn import (  # pyright: ignore[reportMissingImports]
     generate_authentication_options,
     generate_registration_options,
     options_to_json,
     verify_authentication_response,
     verify_registration_response,
 )
-from webauthn.helpers.structs import (
+from webauthn.helpers.structs import (  # pyright: ignore[reportMissingImports]
     PublicKeyCredentialType,
     AuthenticatorAssertionResponse,
     AuthenticatorAttestationResponse,
@@ -37,11 +37,13 @@ from backend.auth import (
     get_current_user,
     get_password_hash,
     register_issued_token,
+    set_active_session,
     verify_password,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from backend.database import get_db
 from backend.models import User
+from backend.security_gates import require_login_quota, require_otp_send_quota
 from backend.user_profile import normalize_country_code, normalize_preferred_language
 
 router = APIRouter()
@@ -52,6 +54,17 @@ def _should_issue_non_expiring_admin_token(user: User) -> bool:
         "1", "true", "yes", "on",
     }
     if not allow_non_expiring:
+        return False
+    # [보안 보강][#4] 운영/스테이징에서는 비만료 토큰을 절대 발급하지 않는다.
+    # 환경변수가 켜져 있어도 prod/stage 에서는 무시(하드 오프)하고 경고를 남겨,
+    # 유출된 admin 토큰이 영구히 유효해지는 사고를 원천 차단한다(만료 토큰으로 폴백).
+    app_env = str(os.getenv("APP_ENV") or "dev").strip().lower()
+    if app_env in {"prod", "production", "stage", "staging"}:
+        logger.warning(
+            "[AUTH][SECURITY] ALLOW_NON_EXPIRING_ADMIN_TOKENS 가 '%s' 환경에서 설정됐지만 "
+            "보안상 무시합니다(만료 토큰 발급). 이 설정은 로컬 개발에서만 허용됩니다.",
+            app_env,
+        )
         return False
     return bool(
         getattr(user, "is_admin", False)
@@ -136,6 +149,17 @@ class PasskeyLoginFinishRequest(BaseModel):
 
 _passkey_registration_store: dict[str, dict[str, object]] = {}
 _passkey_login_store: dict[str, dict[str, object]] = {}
+
+
+def _user_may_use_admin_portal(user: Any) -> bool:
+    if getattr(user, "is_admin", False) or getattr(user, "is_superuser", False):
+        return True
+    try:
+        from backend.marketplace.worldlinco_sales_commission import resolve_regional_manager_for_user
+
+        return resolve_regional_manager_for_user(int(getattr(user, "id", 0) or 0)) is not None
+    except Exception:
+        return False
 
 
 def _issue_passkey_challenge() -> str:
@@ -292,6 +316,8 @@ class SignupRequestCode(BaseModel):
     country_code: Optional[str] = None
     phone_number: Optional[str] = None
     verificationChannel: str = "email"
+    referral_code: Optional[str] = None
+    sales_agent_code: Optional[str] = None
 
 
 class SignupConfirmRequest(BaseModel):
@@ -300,6 +326,8 @@ class SignupConfirmRequest(BaseModel):
     preferred_language: Optional[str] = None
     country_code: Optional[str] = None
     full_name: Optional[str] = None
+    referral_code: Optional[str] = None
+    sales_agent_code: Optional[str] = None
 
 
 class SignupRequestCodeResponse(BaseModel):
@@ -452,8 +480,16 @@ def _create_user_from_signup_payload(payload: UserCreate, db: Session) -> User:
 
 # ---------- 엔드포인트 ----------
 @router.post("/signup/request-code", response_model=SignupRequestCodeResponse)
-def signup_request_verification_code(payload: SignupRequestCode, db: Session = Depends(get_db)):
-    from backend.services.contact_verification import start_verification_session
+def signup_request_verification_code(
+    payload: SignupRequestCode,
+    db: Session = Depends(get_db),
+    # [보안 보강] OTP 발송 폭탄(비용+스팸) 차단 — IP 단위 분당 발송 제한(기본 5/분).
+    _otp_quota: None = Depends(require_otp_send_quota),
+):
+    from backend.services.contact_verification import (
+        ResendCooldownError,
+        start_verification_session,
+    )
 
     normalized_phone = _normalize_signup_phone(payload.phone_number)
     verification_channel = str(payload.verificationChannel or "email").strip().lower()
@@ -487,14 +523,32 @@ def signup_request_verification_code(payload: SignupRequestCode, db: Session = D
         require_both=True,
     )
 
+    signup_session_payload = signup_payload.model_dump()
+    from backend.marketplace.worldlinco_referral import split_signup_attribution_codes
+
+    referral_code, sales_agent_code = split_signup_attribution_codes(
+        payload.referral_code,
+        payload.sales_agent_code,
+    )
+    if referral_code:
+        signup_session_payload["referral_code"] = referral_code
+    if sales_agent_code:
+        signup_session_payload["sales_agent_code"] = sales_agent_code
+
     try:
         session = start_verification_session(
             purpose="signup",
             channel=verification_channel,
             target_email=str(signup_payload.email),
             target_phone=normalized_phone if verification_channel == "phone" else None,
-            payload=signup_payload.model_dump(),
+            payload=signup_session_payload,
         )
+    except ResendCooldownError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -552,8 +606,42 @@ def signup_confirm_verification(payload: SignupConfirmRequest, db: Session = Dep
         if verification_meta.get("channel") == "phone" and verification_meta.get("phone"):
             verified_payload["phone_number"] = verification_meta["phone"]
 
+    referral_code = (
+        str(verified_payload.pop("referral_code", "") or "").strip().upper()
+        or str(payload.referral_code or "").strip().upper()
+        or None
+    )
+    sales_agent_code = (
+        str(verified_payload.pop("sales_agent_code", "") or "").strip().upper()
+        or str(payload.sales_agent_code or "").strip().upper()
+        or None
+    )
+    from backend.marketplace.worldlinco_referral import split_signup_attribution_codes
+
+    referral_code, sales_agent_code = split_signup_attribution_codes(referral_code, sales_agent_code)
+
     signup_payload = UserCreate(**verified_payload)
-    return _create_user_from_signup_payload(signup_payload, db)
+    user = _create_user_from_signup_payload(signup_payload, db)
+    if referral_code:
+        from backend.marketplace.worldlinco_referral import record_referral_signup
+
+        record_referral_signup(
+            referral_code=referral_code,
+            referred_user_id=int(user.id),
+            referred_username=str(user.username or ""),
+            referred_email=str(user.email or ""),
+        )
+    if sales_agent_code:
+        from backend.marketplace.worldlinco_sales_commission import record_sales_agent_signup
+
+        record_sales_agent_signup(
+            sales_agent_code=sales_agent_code,
+            user_id=int(user.id),
+            username=str(user.username or ""),
+            email=str(user.email or ""),
+            user_country_code=str(user.country_code or "") or None,
+        )
+    return user
 
 
 @router.post("/signup", response_model=UserResponse, status_code=201)
@@ -572,6 +660,8 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
+    # [보안 보강] 크리덴셜 스터핑/브루트포스 차단 — IP 단위 분당 로그인 시도 제한(기본 10/분).
+    _login_quota: None = Depends(require_login_quota),
 ):
     """username 필드에 email 또는 username 모두 허용"""
     user = db.query(User).filter(
@@ -589,11 +679,15 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # 단일 세션 강제: 새 로그인마다 고유 sid 발급 후 활성 세션으로 기록.
+    # 이전 단말/웹의 토큰(다른 sid)은 다음 요청부터 401 → 자동 로그아웃된다.
+    session_id = token_urlsafe(24)
     token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "sid": session_id},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         no_expiry=_should_issue_non_expiring_admin_token(user),
     )
+    set_active_session(int(user.id), session_id)
     register_issued_token(token, str(user.email or user.username or ""))
     return {"access_token": token, "token_type": "bearer"}
 
@@ -607,8 +701,8 @@ def start_passkey_registration(
     user = db.query(User).filter(
         (User.email == payload.email) | (User.username == payload.email)
     ).first()
-    if not user or not (getattr(user, "is_admin", False) or getattr(user, "is_superuser", False)):
-        raise HTTPException(status_code=404, detail="패스키를 등록할 관리자 계정을 찾을 수 없습니다")
+    if not user or not _user_may_use_admin_portal(user):
+        raise HTTPException(status_code=404, detail="패스키를 등록할 관리자·지역관리자 계정을 찾을 수 없습니다")
 
     recovery_session_token: str | None = None
     if payload.recovery_reset_token:
@@ -720,6 +814,8 @@ def start_passkey_login(
     ).first()
     if user is None or not getattr(user, "passkey_enabled", False) or not getattr(user, "passkey_credential_id", None):
         raise HTTPException(status_code=404, detail="등록된 패스키가 없습니다")
+    if not _user_may_use_admin_portal(user):
+        raise HTTPException(status_code=403, detail="관리자·지역관리자 계정만 패스키 로그인할 수 있습니다")
 
     rp_id, expected_origin = _resolve_passkey_request_context(request)
     options = generate_authentication_options(
@@ -755,6 +851,8 @@ def finish_passkey_login(
     ).first()
     if user is None or not getattr(user, "passkey_enabled", False):
         raise HTTPException(status_code=404, detail="패스키 로그인 대상 계정을 찾을 수 없습니다")
+    if not _user_may_use_admin_portal(user):
+        raise HTTPException(status_code=403, detail="관리자·지역관리자 계정만 패스키 로그인할 수 있습니다")
 
     state = _passkey_login_store.get(str(user.email))
     if not state:
@@ -781,11 +879,13 @@ def finish_passkey_login(
         logger.warning("패스키 로그인 검증 실패: %s", exc)
         raise HTTPException(status_code=401, detail="패스키 로그인 검증에 실패했습니다")
 
+    session_id = token_urlsafe(24)
     token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "sid": session_id},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         no_expiry=_should_issue_non_expiring_admin_token(user),
     )
+    set_active_session(int(user.id), session_id)
     register_issued_token(token, str(user.email or user.username or ""))
     user.passkey_sign_count = int(verification.new_sign_count)
     db.add(user)
@@ -797,11 +897,15 @@ def finish_passkey_login(
 @router.put("/extend", response_model=Token)
 def extend_access_token(current_user: User = Depends(get_current_user)):
     subject = current_user.email or current_user.username
+    # 세션 연장: 동일 단말이 토큰만 갱신. sid 를 회전하고 활성 세션으로 재기록해
+    # 단일 세션을 유지(이 단말이 계속 유일한 활성 세션).
+    session_id = token_urlsafe(24)
     token = create_access_token(
-        data={"sub": subject},
+        data={"sub": subject, "sid": session_id},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         no_expiry=_should_issue_non_expiring_admin_token(current_user),
     )
+    set_active_session(int(current_user.id), session_id)
     register_issued_token(token, str(subject or ""))
     return {"access_token": token, "token_type": "bearer"}
 
@@ -843,8 +947,13 @@ def update_me(
 def start_password_recovery(
     payload: PasswordRecoveryStartRequest,
     db: Session = Depends(get_db),
+    # [보안 보강] 복구 코드 발송 폭탄(비용+스팸) 차단 — IP 단위 분당 발송 제한(기본 5/분).
+    _otp_quota: None = Depends(require_otp_send_quota),
 ):
-    from backend.services.contact_verification import start_verification_session
+    from backend.services.contact_verification import (
+        ResendCooldownError,
+        start_verification_session,
+    )
 
     user = db.query(User).filter(
         (User.email == payload.user_hint)
@@ -874,6 +983,12 @@ def start_password_recovery(
             target_phone=phone_number if verification_channel == "phone" else None,
             payload={"user_id": int(user.id), "scope": payload.scope},
         )
+    except ResendCooldownError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -950,6 +1065,9 @@ def reset_password_via_recovery(
     user.hashed_password = get_password_hash(payload.new_password)
     db.add(user)
     db.commit()
+    # [보안 보강] 비밀번호 재설정 시 기존 모든 세션 무효화 — 활성 sid 를 새 값으로 회전하면
+    # 이전에 발급된 모든 토큰(다른 sid)은 다음 요청부터 401 처리된다(계정탈취 복구의 핵심).
+    set_active_session(int(user.id), token_urlsafe(24))
     _password_recovery_store.pop(session_token, None)
     return {
         "reset": True,
@@ -975,6 +1093,9 @@ def change_user_password(
     current_user.hashed_password = get_password_hash(payload.new_password)
     db.add(current_user)
     db.commit()
+    # [보안 보강] 비밀번호 변경 시 기존 모든 세션 무효화(현재 세션 포함) — 활성 sid 회전.
+    # 응답이 must_relogin=True 이므로 클라는 재로그인한다(유출 비밀번호 기반 토큰 무력화).
+    set_active_session(int(current_user.id), token_urlsafe(24))
     return {
         "changed": True,
         "must_relogin": True,

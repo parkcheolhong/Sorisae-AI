@@ -46,6 +46,8 @@ type FeedbackBlock = {
     detractors: number;
     avg_nps?: number | null;
     avg_total_ms?: number | null;
+    evidence_grades?: Record<string, number>;
+    uncertainty_disclosure_rate?: number | null;
 };
 
 type FeedbackStats = {
@@ -327,12 +329,20 @@ export default function AdminTourismReviewPage() {
                                     <span>NPS {feedback.overall.nps ?? '—'} (n={feedback.overall.nps_responses})</span>
                                     <span>👍 비율 {pct(feedback.overall.thumbs_up_rate)} ({feedback.overall.thumbs_up}/{feedback.overall.thumbs_up + feedback.overall.thumbs_down})</span>
                                     <span>추천{feedback.overall.promoters} · 중립{feedback.overall.passives} · 비추{feedback.overall.detractors}</span>
+                                    <span>불확실성 고지율 {pct(feedback.overall.uncertainty_disclosure_rate)}</span>
                                 </div>
+                                {feedback.overall.evidence_grades && (
+                                    <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-[#8b949e]">
+                                        <span>근거등급 확정 {feedback.overall.evidence_grades['확정'] ?? 0}</span>
+                                        <span>근거등급 추정 {feedback.overall.evidence_grades['추정'] ?? 0}</span>
+                                        <span>근거등급 미확인 {feedback.overall.evidence_grades['미확인'] ?? 0}</span>
+                                    </div>
+                                )}
                                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     {feedback.by_variant &&
                                         Object.entries(feedback.by_variant).map(([variant, b]) => (
                                             <div key={variant} className="rounded-lg border border-[#21262d] bg-[#0d1117] p-2 text-xs text-[#8b949e]">
-                                                <span className="font-bold text-[#e6edf3]">변형 {variant}</span> · 응답 {b.total} · NPS {b.nps ?? '—'} (n={b.nps_responses}) · 👍 {pct(b.thumbs_up_rate)}
+                                                <span className="font-bold text-[#e6edf3]">변형 {variant}</span> · 응답 {b.total} · NPS {b.nps ?? '—'} (n={b.nps_responses}) · 👍 {pct(b.thumbs_up_rate)} · 불확실성 {pct(b.uncertainty_disclosure_rate)}
                                             </div>
                                         ))}
                                 </div>

@@ -11,6 +11,7 @@ MOBILE_TTS_LOCALES: Dict[str, str] = {
     "en": "en-US",
     "zh": "zh-CN",
     "zh-tw": "zh-TW",
+    "zh-hk": "zh-HK",
     "ja": "ja-JP",
     "es": "es-ES",
     "fr": "fr-FR",
@@ -65,7 +66,8 @@ EDGE_TTS_NEURAL_VOICES: Dict[str, str] = {
     "en": "en-US-JennyNeural",
     "zh": "zh-CN-XiaoxiaoNeural",
     "zh-tw": "zh-TW-HsiaoChenNeural",
-    "ja": "ja-JP-NanamiNeural",
+    "zh-hk": "zh-HK-HiuMaanNeural",
+    "ja": "ja-JP-AoiNeural",
     "es": "es-ES-ElviraNeural",
     "fr": "fr-FR-DeniseNeural",
     "de": "de-DE-KatjaNeural",
@@ -116,6 +118,7 @@ EDGE_TTS_NEURAL_VOICES: Dict[str, str] = {
 # faster-whisper language codes (ISO 639-1); special remaps only where required.
 _WHISPER_LANG_OVERRIDES: Dict[str, str] = {
     "zh-tw": "zh",
+    "zh-hk": "zh",
     "fil": "tl",
     "no": "no",
 }
@@ -125,6 +128,8 @@ _WHISPER_INITIAL_PROMPTS: Dict[str, str] = {
     "en": "Conversation translation sentence.",
     "ja": "会議の通訳文です。",
     "zh": "会议翻译句子。",
+    "zh-tw": "會議翻譯句子。",
+    "zh-hk": "會議翻譯句子。",
     "vi": "Câu dịch thuật hội thoại.",
     "th": "ประโยคแปลบทสนทนา",
     "es": "Frase de traducción de conversación.",

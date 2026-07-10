@@ -41,11 +41,15 @@ export function resolveApiBaseUrl(): string {
         const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
         const isDirectFrontendDevPort = port === '3000' || port === '3005';
         const isGatewayPort = port === '8080' || port === '8443';
+        const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+        if (configured && configured.length > 0) {
+            return configured;
+        }
 
         if (isDirectFrontendDevPort && protocol !== 'https:') {
-            // Keep browser traffic same-origin so Next.js can proxy and backend restarts do not surface as direct localhost failures.
-            const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
-            return isDirectLocalBackendUrl(configured) ? origin : (configured && configured.length > 0 ? configured : origin);
+            // Keep browser traffic same-origin only when no explicit backend URL is configured.
+            return origin;
         }
 
         if (!isLocalHost || isGatewayPort || protocol === 'https:') {

@@ -1,4 +1,4 @@
-# Sorisae Market/Mobile Readiness Checklist (2026-05-05)
+# Sorisae Market/Mobile Readiness Checklist (2026-06-05)
 
 ## 목적
 - 소리새를 마켓 프로그램으로 운영 가능한 수준으로 고정한다.
@@ -71,6 +71,27 @@
   - 검증 실행 1차:
   - 검증 실행 2차:
   - 비고:
+
+### 6) 소리새 역할 스코프 고정(친근한 대화친구 + 관광 안내)
+- 상태: 구현됨
+- 목표:
+  - 소리새 역할을 2개(친근한 대화친구, 관광 안내)만 허용
+  - 온디바이스 메모리 기반으로 관계가 누적·진화하는 동반자 성격 유지
+  - 불필요한 역할(지식/생활비서/감정지지/언어교습) 분류/프롬프트 제거
+  - 최신 정보 우선 원칙을 여행 안내 프롬프트에 고정
+- 완료 기준:
+  - 프런트 도메인 SSOT가 `companion`, `travel` 두 개만 유지
+  - friend-chat 시스템 프롬프트에 Memory & Evolution Rule 반영
+  - 백엔드 friend-chat 시스템 프롬프트에 Role Scope Lock + Latest-First Rule 반영
+  - 관련 자동검증 2회 통과
+- 증거 기록:
+  - 검증 실행 1차: `npm test -- companionDomains.test.ts companionCommands.test.ts companionMemory.test.ts --runInBand` (3 suites passed, 26 tests passed)
+  - 검증 실행 2차: `npm test -- companionDomains.test.ts companionCommands.test.ts companionMemory.test.ts --runInBand` (3 suites passed, 26 tests passed)
+  - 백엔드 문법검증 1차: `.venv\\Scripts\\python.exe -m py_compile backend/llm/voice_gateway.py` (성공)
+  - 백엔드 문법검증 2차: `.venv\\Scripts\\python.exe -m py_compile backend/llm/voice_gateway.py` (성공)
+  - 메모리 규칙 보강 확인: `backend/llm/voice_gateway.py` `_friend_system_prompt`에 `MEMORY & EVOLUTION RULE` 문구 추가
+  - 프런트 회귀 확인: `npm test -- companionDomains.test.ts --runInBand` (1 suite passed, 8 tests passed)
+  - 비고: 운영 실도메인 대면 검증(모바일 실기기 음성 경로)은 별도 라운드에서 추가 필요
 
 ## 최종 판정
 - 현재 판정: 구현됨
