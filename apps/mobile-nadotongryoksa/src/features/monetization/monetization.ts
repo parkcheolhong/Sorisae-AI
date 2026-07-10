@@ -66,10 +66,16 @@ export function isPurchaseSettled(status: string | null | undefined): boolean {
     return PREMIUM_PURCHASE_STATUSES.has(String(status || '').trim().toLowerCase());
 }
 
-/** 결제 금액으로 플랜 키를 역매핑(일치 금액 없으면 null). */
-export function resolvePlanKeyFromPurchase(amount: number): MonetizationPlanKey | null {
+/** 결제 금액으로 플랜 키를 역매핑(일치 금액 없으면 null). 추천 3% 할인 금액도 허용. */
+export function resolvePlanKeyFromPurchase(amount: number, referralDiscountPercent = 3): MonetizationPlanKey | null {
     const planEntries = Object.entries(MONETIZATION_PLAN_CONFIG) as Array<[MonetizationPlanKey, MonetizationPlanConfig]>;
-    const matchedEntry = planEntries.find(([, config]) => config.amount === amount);
+    const matchedEntry = planEntries.find(([, config]) => {
+        if (config.amount === amount) {
+            return true;
+        }
+        const discounted = Math.round(config.amount * (100 - referralDiscountPercent) / 100);
+        return discounted === amount;
+    });
     return matchedEntry ? matchedEntry[0] : null;
 }
 

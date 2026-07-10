@@ -67,7 +67,46 @@ export function resolveWakeCandidates(
 /**
  * 전사(STT)에 웨이크워드가 포함되어 있는지 판정(언어 무관, 공백·구두점 무시).
  * "OOOO야", "헤이 OOOO", "소리새!" 등 호명형 표현을 폭넓게 수용한다.
+ * 단어 내부 부분 일치(예: 루나틱→루나, alunalpha→luna)는 제외한다.
  */
+const WAKE_SUFFIX_CHARS = new Set(['야', '아', '이', '씨', '님', '요', '!', '~']);
+
+function tokenizeWakeTranscript(transcript: string): string[] {
+    return String(transcript || '')
+        .split(/[\s.,!?;:'"`()\[\]{}~\-·…‥。、！？；：「」『』，．（）【】〔〕《》]+/u)
+        .map((part) => normalizeEchoText(part))
+        .filter(Boolean);
+}
+
+function wakeTokenMatches(token: string, candidate: string): boolean {
+    if (!token || !candidate) return false;
+    if (token === candidate) return true;
+    if (!token.startsWith(candidate)) return false;
+    const rest = token.slice(candidate.length);
+    if (!rest) return true;
+    return [...rest].every((ch) => WAKE_SUFFIX_CHARS.has(ch));
+}
+
+function isEmbeddedWakeCandidate(normTranscript: string, candidate: string): boolean {
+    const isLatin = /^[a-z0-9]+$/i.test(candidate);
+    let from = 0;
+    while (from <= normTranscript.length) {
+        const idx = normTranscript.indexOf(candidate, from);
+        if (idx < 0) return false;
+        const before = idx > 0 ? normTranscript[idx - 1] : '';
+        const after = normTranscript[idx + candidate.length] ?? '';
+        if (isLatin) {
+            const beforeOk = !before || !/[a-z0-9]/i.test(before);
+            const afterOk = !after || !/[a-z0-9]/i.test(after);
+            if (beforeOk && afterOk) return true;
+        } else if (!after || WAKE_SUFFIX_CHARS.has(after) || !/[\uac00-\ud7a3]/.test(after)) {
+            return true;
+        }
+        from = idx + 1;
+    }
+    return false;
+}
+
 export function matchCompanionWakeWord(
     transcript: string | null | undefined,
     aiName: string | null | undefined,
@@ -76,7 +115,11 @@ export function matchCompanionWakeWord(
     const normTranscript = normalizeEchoText(String(transcript ?? ''));
     if (!normTranscript) return false;
     const candidates = resolveWakeCandidates(aiName, extraAliases);
-    return candidates.some((c) => normTranscript.includes(c));
+    const tokens = tokenizeWakeTranscript(String(transcript ?? ''));
+    return candidates.some((candidate) => (
+        tokens.some((token) => wakeTokenMatches(token, candidate))
+        || isEmbeddedWakeCandidate(normTranscript, candidate)
+    ));
 }
 
 /** 무장(armed) — off/awake 와 무관하게 dormant(웨이크워드 대기)로 전환. */

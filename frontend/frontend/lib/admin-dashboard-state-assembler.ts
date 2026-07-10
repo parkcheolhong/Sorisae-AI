@@ -9,6 +9,7 @@ export type AdminDashboardBootstrapPayload = {
     adSettlementData: any;
     capabilityData: any;
     selfRunData: any;
+    sorisaeFailureData: any;
     securityGuardDetailData: any;
     adMonitorUnavailable: boolean;
     adSettlementUnavailable: boolean;
@@ -24,6 +25,7 @@ export type AdminDashboardStateAssembly = {
     orchestratorCapabilitySummary: any;
     securityGuardDetail: any;
     dashboardSelfRunStatus: any;
+    sorisaeFailureStatus: any;
 };
 
 export function assembleAdminDashboardState(payload: AdminDashboardBootstrapPayload): AdminDashboardStateAssembly {
@@ -38,6 +40,7 @@ export function assembleAdminDashboardState(payload: AdminDashboardBootstrapPayl
         orchestratorCapabilitySummary: payload.capabilityData || null,
         securityGuardDetail: payload.securityGuardDetailData || null,
         dashboardSelfRunStatus: payload.selfRunData || null,
+        sorisaeFailureStatus: payload.sorisaeFailureData || null,
     };
 }
 
@@ -53,6 +56,7 @@ export function assertAdminDashboardStateAssemblerContract() {
         adSettlementData: null,
         capabilityData: null,
         selfRunData: null,
+        sorisaeFailureData: null,
         securityGuardDetailData: null,
         adMonitorUnavailable: true,
         adSettlementUnavailable: true,
@@ -67,6 +71,7 @@ export function assertAdminDashboardStateAssemblerContract() {
         'orchestratorCapabilitySummary',
         'securityGuardDetail',
         'dashboardSelfRunStatus',
+        'sorisaeFailureStatus',
     ];
     const missing = requiredKeys.filter((key) => !(key in sample));
     if (missing.length > 0) {

@@ -6,6 +6,7 @@ import {
     createEmptyPersona,
     extractInterestTokens,
     observeTurn,
+    resolveReplyStyle,
     resolveTone,
     setPreferredName,
     topDomains,
@@ -55,6 +56,18 @@ describe('observeTurn — 진화/누적', () => {
         expect(resolveTone(c)).toBe('casual');
     });
 
+    it('답변 길이 선호(짧게/자세히) 누적으로 스타일 추론', () => {
+        let concise = createEmptyPersona();
+        concise = observeTurn(concise, { transcript: '짧게 요약해줘', nowIso: ISO });
+        concise = observeTurn(concise, { transcript: '핵심만 간단히', nowIso: ISO });
+        expect(resolveReplyStyle(concise)).toBe('concise');
+
+        let detailed = createEmptyPersona();
+        detailed = observeTurn(detailed, { transcript: '자세히 설명해줘', nowIso: ISO });
+        detailed = observeTurn(detailed, { transcript: '예시로 단계별로 알려줘', nowIso: ISO });
+        expect(resolveReplyStyle(detailed)).toBe('detailed');
+    });
+
     it('관심 주제 빈도 누적 + 상위 추출', () => {
         let p = createEmptyPersona();
         p = observeTurn(p, { transcript: '커피 좋아해 커피', nowIso: ISO });
@@ -76,7 +89,7 @@ describe('observeTurn — 진화/누적', () => {
         let p = createEmptyPersona();
         p = observeTurn(p, { transcript: '여행 일정', domain: 'travel', nowIso: ISO });
         p = observeTurn(p, { transcript: '맛집', domain: 'travel', nowIso: ISO });
-        p = observeTurn(p, { transcript: '외로워', domain: 'wellbeing', nowIso: ISO });
+        p = observeTurn(p, { transcript: '외로워', domain: 'companion', nowIso: ISO });
         expect(topDomains(p, 1)).toEqual(['travel']);
     });
 });
@@ -109,6 +122,20 @@ describe('buildPersonaBrief', () => {
         expect(brief).toContain('철홍');
         expect(brief).toContain('커피');
         expect(brief.toLowerCase()).toContain('companion memory');
+    });
+
+    it('브리프에 답변 길이 선호(짧게/자세히)도 포함된다', () => {
+        let concise = createEmptyPersona();
+        concise = observeTurn(concise, { transcript: '짧게 대답해줘', nowIso: ISO });
+        concise = observeTurn(concise, { transcript: '한줄로 요약', nowIso: ISO });
+        concise = observeTurn(concise, { transcript: '핵심만 말해줘', nowIso: ISO });
+        expect(buildPersonaBrief(concise).toLowerCase()).toContain('concise answers');
+
+        let detailed = createEmptyPersona();
+        detailed = observeTurn(detailed, { transcript: '자세히 설명해줘', nowIso: ISO });
+        detailed = observeTurn(detailed, { transcript: '예시도 넣어줘', nowIso: ISO });
+        detailed = observeTurn(detailed, { transcript: '단계별로 알려줘', nowIso: ISO });
+        expect(buildPersonaBrief(detailed).toLowerCase()).toContain('step-by-step');
     });
 });
 

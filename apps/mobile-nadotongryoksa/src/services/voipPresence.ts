@@ -57,6 +57,81 @@ export async function registerVoipDevice(
     }
 }
 
+/** 디바이스 토큰 해제(로그아웃). 해제 단말은 더 이상 착신 벨을 울리지 않는다. */
+export async function unregisterVoipDevice(
+    apiBaseUrl: string,
+    authToken: string,
+    fcmToken: string,
+): Promise<boolean> {
+    if (!authToken || !fcmToken) {
+        return false;
+    }
+    try {
+        const res = await fetch(`${apiBaseUrl}/api/v1/voip/devices/unregister`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ fcm_token: fcmToken, platform: Platform.OS }),
+        });
+        return res.ok;
+    } catch (err) {
+        console.warn('[VoIP] unregisterVoipDevice 실패', err);
+        return false;
+    }
+}
+
+/** 부재중 통화 1건. 백엔드 GET /api/v1/voip/calls/missed/recent 응답 항목. */
+export type MissedCallRecord = {
+    id: number;
+    callId: string;
+    createdAt: string;
+    callerLabel: string;
+    callerVoiceId?: string | null;
+};
+
+/**
+ * 최근 부재중 통화 목록 조회(최신순, 최대 20건). 미로그인/실패 시 빈 배열.
+ * 부재중 전화 음성 안내(자동 발화)의 데이터 소스.
+ */
+export async function fetchRecentMissedCalls(
+    apiBaseUrl: string,
+    authToken: string,
+): Promise<MissedCallRecord[]> {
+    if (!authToken) {
+        return [];
+    }
+    try {
+        const res = await fetch(`${apiBaseUrl}/api/v1/voip/calls/missed/recent`, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!res.ok) {
+            return [];
+        }
+        const rows = await res.json();
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+        return rows
+            .filter((r) => r && (r.id != null) && r.callId)
+            .map((r) => ({
+                id: Number(r.id),
+                callId: String(r.callId),
+                createdAt: String(r.createdAt ?? ''),
+                callerLabel: String(r.callerLabel ?? '알 수 없는 발신자'),
+                callerVoiceId: r.callerVoiceId ?? null,
+            }));
+    } catch (err) {
+        console.warn('[VoIP] fetchRecentMissedCalls 실패', err);
+        return [];
+    }
+}
+
 /** 착신 data 푸시 페이로드 파싱. incoming_call이 아니거나 call_id 없으면 null. */
 export function parseIncomingCallPush(data: Record<string, unknown> | undefined | null): IncomingCallPush | null {
     if (!data) {
@@ -72,21 +147,37 @@ export function parseIncomingCallPush(data: Record<string, unknown> | undefined 
     return { callId, callerLabel: String(data.caller_label ?? '') };
 }
 
+const ACCEPT_INCOMING_TIMEOUT_MS = 20_000;
+
 /** 착신 수락: call_id로 콜리 합류해 시그널링 URL(CallInitResponse) 수신. */
 export async function acceptIncomingCall(
     apiBaseUrl: string,
     authToken: string,
     callId: string,
+    options: { timeoutMs?: number } = {},
 ): Promise<CallInitResponse> {
-    const res = await fetch(`${apiBaseUrl}/api/v1/voip/calls/${callId}/accept`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    if (!res.ok) {
-        throw new Error(`착신 수락 실패: HTTP ${res.status}`);
+    const timeoutMs = options.timeoutMs ?? ACCEPT_INCOMING_TIMEOUT_MS;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(`${apiBaseUrl}/api/v1/voip/calls/${callId}/accept`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+        });
+        if (!res.ok) {
+            throw new Error(`착신 수락 실패: HTTP ${res.status}`);
+        }
+        return (await res.json()) as CallInitResponse;
+    } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            throw new Error(`착신 수락 시간 초과 (${Math.round(timeoutMs / 1000)}초)`);
+        }
+        throw error;
+    } finally {
+        clearTimeout(timer);
     }
-    return (await res.json()) as CallInitResponse;
 }

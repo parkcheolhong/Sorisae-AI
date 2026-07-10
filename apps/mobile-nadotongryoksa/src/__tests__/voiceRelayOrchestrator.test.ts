@@ -60,7 +60,7 @@ describe('voiceRelayOrchestrator', () => {
 
         const decision = evaluateVoiceRelaySegmentDecision(
             state,
-            startedAt + VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs,
+            startedAt + 500 + VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs,
             -30,
         );
 
@@ -82,6 +82,38 @@ describe('voiceRelayOrchestrator', () => {
         );
 
         expect(decision.action).toBe('continue');
+    });
+
+    it('does not count pre-speech waiting time toward max duration', () => {
+        const startedAt = 1_000;
+        let state = createInitialVoiceRelaySegmentState(startedAt);
+        state = updateVoiceRelaySegmentSpeechState(state, -30, startedAt + 10_000);
+
+        const decision = evaluateVoiceRelaySegmentDecision(
+            state,
+            startedAt + 10_000 + VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs - 1,
+            -30,
+        );
+
+        expect(decision.action).toBe('continue');
+    });
+
+    it('counts only speech time toward silence minimum duration', () => {
+        const startedAt = 2_000;
+        let state = createInitialVoiceRelaySegmentState(startedAt);
+        state = updateVoiceRelaySegmentSpeechState(state, -30, startedAt + 9_000);
+
+        const decision = evaluateVoiceRelaySegmentDecision(
+            state,
+            startedAt + 9_000 + VOICE_RELAY_VAD_DEFAULTS.silenceFlushMs + VOICE_RELAY_VAD_DEFAULTS.minSegmentMs,
+            -80,
+        );
+
+        expect(decision).toEqual({
+            action: 'flush',
+            reason: 'silence',
+            isFinal: true,
+        });
     });
 
     it('collapses repeated relay phrases', () => {
@@ -262,7 +294,7 @@ describe('voiceRelayOrchestrator', () => {
             VOICE_RELAY_VAD_DEFAULTS.meterUnavailableFixedFlushMs,
         );
         expect(resolveVoiceRelayFixedFlushDelayMs(false)).toBe(
-            VOICE_RELAY_VAD_DEFAULTS.maxSegmentMs,
+            VOICE_RELAY_VAD_DEFAULTS.silenceFlushMs,
         );
     });
 
@@ -323,5 +355,28 @@ describe('voiceRelayPlaybackQueue', () => {
 
         await new Promise((resolve) => setTimeout(resolve, 50));
         expect(played).toEqual([1, 2]);
+    });
+
+    it('suppresses exact duplicate playback items', async () => {
+        const played: string[] = [];
+        const queue = new VoiceRelayPlaybackQueue(async (item) => {
+            played.push(item.correlationId ?? `${item.utteranceId}#${item.chunkIndex}`);
+        });
+
+        const item = {
+            seqId: 1,
+            utteranceId: 'u1',
+            chunkIndex: 0,
+            isFinal: true,
+            translatedText: 'same line',
+            targetLang: 'en',
+            correlationId: 'corr-1',
+        };
+
+        queue.enqueue(item);
+        queue.enqueue(item);
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(played).toEqual(['corr-1']);
     });
 });

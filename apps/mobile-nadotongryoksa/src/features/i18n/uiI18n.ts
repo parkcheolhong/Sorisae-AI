@@ -23,17 +23,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 import { translateText } from '../../api/translate';
+import { isSupportedLangCode, type LangCode } from '../language/languageCatalog';
+import { resolveBootstrapUiLang } from './bootstrapUiLang';
+import { collectKoUiStrings } from './uiStringCatalog';
+import { resolveProfileDisplayLang } from './profileDisplayLocale';
 
 const HANGUL_RE = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/;
 const LATIN_RE = /[A-Za-z]/;
 const LOWER_RE = /[a-z]/;
 const STORAGE_PREFIX = 'worldlinco.uiI18n.v1.'; // + lang
+const UI_LANG_STORAGE_KEY = 'worldlinco.uiLang.v1';
 const MAX_LEN = 400;       // 이보다 긴 문자열은 번역 생략(원문 유지) — UI 라벨은 짧다.
 const FLUSH_MS = 250;
 const BATCH = 24;
 const COOLDOWN_MS = 4000;
 
-let uiLang = 'ko';
+let uiLang: LangCode = resolveBootstrapUiLang();
 const cache = new Map<string, string>();   // key: `${lang}\u0000${text}`
 const pending = new Set<string>();
 const loadedLangs = new Set<string>();
@@ -57,6 +62,32 @@ export function getUiLang(): string {
     return uiLang;
 }
 
+/** 프로필 preferred_language — 통역 fromLang 전용(카탈로그 SSOT 아님). */
+let profileUiLangOverride: string | null = null;
+
+/** 서비스 국가 — UI 카탈로그·국가/언어명 표기 SSOT. */
+let profileCountryCode: string | null = null;
+
+export function setProfileUiLangOverride(lang: string | null): void {
+    profileUiLangOverride = lang;
+}
+
+export function setProfileCountryCode(countryCode: string | null | undefined): void {
+    const norm = String(countryCode || '').trim().toUpperCase();
+    profileCountryCode = norm || null;
+}
+
+export function getProfileCountryCode(): string | null {
+    return profileCountryCode;
+}
+
+export function getEffectiveUiLang(): string {
+    if (profileCountryCode) {
+        return resolveProfileDisplayLang(profileCountryCode);
+    }
+    return profileUiLangOverride || uiLang;
+}
+
 /** 원문 언어 추정: 한글이 있으면 ko, 라틴 글자가 있으면 en, 그 외 null(번역 대상 아님). */
 function sourceLangOf(text: string): 'ko' | 'en' | null {
     if (HANGUL_RE.test(text)) return 'ko';
@@ -72,9 +103,10 @@ function sourceLangOf(text: string): 'ko' | 'en' | null {
 }
 
 export function shouldTranslate(text: string): boolean {
-    if (uiLang === 'ko' || !text || text.length > MAX_LEN) return false;
+    const lang = getEffectiveUiLang();
+    if (lang === 'ko' || !text || text.length > MAX_LEN) return false;
     const src = sourceLangOf(text);
-    return src !== null && src !== uiLang; // 원문 == 표시 언어면 번역 불필요
+    return src !== null && src !== lang;
 }
 
 function keyFor(lang: string, text: string): string {
@@ -84,7 +116,7 @@ function keyFor(lang: string, text: string): string {
 /** 동기 조회: 캐시에 있으면 번역문, 없으면 원문(한글) + 백그라운드 큐잉. */
 export function translateUiSync(text: string): string {
     if (!shouldTranslate(text)) return text;
-    const lang = uiLang;
+    const lang = getEffectiveUiLang();
     const key = keyFor(lang, text);
     const hit = cache.get(key);
     if (hit !== undefined) return hit;
@@ -94,6 +126,18 @@ export function translateUiSync(text: string): string {
         scheduleFlush();
     }
     return text;
+}
+
+/** 프로그램matic UI 문자열(상태·Alert 인자 등)용 — translateUiSync 별칭. */
+export function localizeUiString(text: string): string {
+    return translateUiSync(text);
+}
+
+/** 언어 변경 직후 카탈로그 원문을 백그라운드 번역 큐에 넣어 51개 LANG 전환을 가속한다. */
+export function prefetchUiStrings(extra: string[] = []): void {
+    if (getEffectiveUiLang() === 'ko') return;
+    const strings = [...collectKoUiStrings(), ...extra];
+    strings.forEach((text) => { translateUiSync(text); });
 }
 
 function scheduleFlush() {
@@ -173,14 +217,27 @@ async function loadCacheForLang(lang: string): Promise<void> {
 
 /** 회원가입/프로필/로그인에서 호출 — UI 표시 언어를 바꾼다(영속 캐시 로드 포함). */
 export async function setUiLang(lang: string | null | undefined): Promise<void> {
-    const norm = String(lang || 'ko').trim().toLowerCase() || 'ko';
-    if (norm === uiLang) {
-        if (norm !== 'ko') await loadCacheForLang(norm);
-        return;
-    }
+    const raw = String(lang || 'ko').trim().toLowerCase() || 'ko';
+    const norm: LangCode = isSupportedLangCode(raw) ? raw : 'ko';
+    const changed = norm !== uiLang;
     uiLang = norm;
     if (norm !== 'ko') await loadCacheForLang(norm);
-    bumpTick();
+    if (changed || norm !== 'ko') bumpTick();
+    void AsyncStorage.setItem(UI_LANG_STORAGE_KEY, norm).catch(() => { /* no-op */ });
+}
+
+/** 앱 cold start — 마지막 uiLang 을 즉시 복원(프로필 로드 전 한국어 플래시 완화). */
+export async function hydrateUiLangFromStorage(): Promise<string | null> {
+    try {
+        const raw = await AsyncStorage.getItem(UI_LANG_STORAGE_KEY);
+        const norm = String(raw || '').trim().toLowerCase();
+        if (!norm || norm === 'ko') return null;
+        await setUiLang(norm);
+        prefetchUiStrings();
+        return norm;
+    } catch {
+        return null;
+    }
 }
 
 export function subscribeTick(fn: () => void): () => void {

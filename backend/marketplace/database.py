@@ -245,6 +245,14 @@ def init_db():
 
     Base.metadata.create_all(bind=_get_or_create_engine())
 
+    # 재시작 후에도 단말 FCM 토큰(착신/취소 푸시 대상)이 유지되도록 인메모리 레지스트리 적재.
+    try:
+        from .fcm_push import hydrate_device_registrations_from_db
+
+        hydrate_device_registrations_from_db()
+    except Exception:  # noqa: BLE001
+        pass
+
 
 def check_database_availability() -> tuple[bool, str]:
     try:

@@ -33,6 +33,15 @@ export function shouldReadAloudIncoming(input: ReadAloudDecisionInput): boolean 
     return sanitizeChatTextForSpeech(input.text).length > 0;
 }
 
+const readAloudListeners = new Set<(enabled: boolean) => void>();
+
+export function subscribeChatReadAloudEnabled(listener: (enabled: boolean) => void): () => void {
+    readAloudListeners.add(listener);
+    return () => {
+        readAloudListeners.delete(listener);
+    };
+}
+
 export async function loadChatReadAloudEnabled(): Promise<boolean> {
     try {
         return (await AsyncStorage.getItem(CHAT_READ_ALOUD_STORAGE_KEY)) === '1';
@@ -44,6 +53,9 @@ export async function loadChatReadAloudEnabled(): Promise<boolean> {
 export async function saveChatReadAloudEnabled(enabled: boolean): Promise<boolean> {
     try {
         await AsyncStorage.setItem(CHAT_READ_ALOUD_STORAGE_KEY, enabled ? '1' : '0');
+        readAloudListeners.forEach((fn) => {
+            try { fn(enabled); } catch { /* no-op */ }
+        });
         return true;
     } catch {
         return false;

@@ -14,14 +14,16 @@
  *   가 전부 자동으로 연결된다(수기 중복 0).
  */
 import { FEATURE_IDS, type FeatureId } from '../correlation/correlationId';
+import { getFeatureUiText, type FeatureUiKey } from '../i18n/featureUiCatalog';
 
 // ── 단일 진실원천(SSOT): 이 배열만 편집하면 전 시스템이 자동 반영된다 ──
 //   순서 = 자동 넘버링(numericId). aliases 는 딥링크/레거시 문자열 매칭용(key 포함 불필요 — 자동 포함).
 const SECTION_RAIL_SOURCE = [
-    { key: 'chat', label: '채팅', icon: '💬', featureId: FEATURE_IDS.chatTranslate, aliases: [] },
-    { key: 'voip', label: '통화', icon: '📞', featureId: FEATURE_IDS.voipVoiceRelay, aliases: [] },
-    { key: 'song-mode', label: '노래', icon: '🎵', featureId: FEATURE_IDS.songTranslate, aliases: ['song'] },
-    { key: 'travel-booking', label: '예약', icon: '🧭', featureId: FEATURE_IDS.orchestrate, aliases: ['travel'] },
+    { key: 'chat', label: '채팅', icon: '💬', featureId: FEATURE_IDS.chatTranslate, aliases: [], tabVisible: true },
+    { key: 'voip', label: '통화', icon: '📞', featureId: FEATURE_IDS.voipVoiceRelay, aliases: [], tabVisible: true },
+    { key: 'song-mode', label: '노래', icon: '🎵', featureId: FEATURE_IDS.orchestrate, aliases: ['song'], tabVisible: false },
+    { key: 'tourism-promo', label: '홍보', icon: '📣', featureId: FEATURE_IDS.orchestrate, aliases: ['promo', 'tourism'], tabVisible: true },
+    { key: 'travel-booking', label: '예약', icon: '🧭', featureId: FEATURE_IDS.orchestrate, aliases: ['travel'], tabVisible: true },
 ] as const;
 
 export type SectionRailKey = (typeof SECTION_RAIL_SOURCE)[number]['key'];
@@ -36,6 +38,8 @@ export interface SectionRailDef {
     readonly featureId: FeatureId;
     /** 딥링크/레거시 문자열 별칭(key 는 자동 포함). */
     readonly aliases: readonly string[];
+    /** 하단 탭바 노출 여부(기본 true). song-mode 등 서브 화면은 false. */
+    readonly tabVisible: boolean;
 }
 
 /** 레일 전체 정의(자동 넘버링 적용). */
@@ -46,6 +50,7 @@ export const SECTION_RAIL_DEFS: readonly SectionRailDef[] = SECTION_RAIL_SOURCE.
     icon: def.icon,
     featureId: def.featureId,
     aliases: def.aliases,
+    tabVisible: def.tabVisible ?? true,
 }));
 
 // ── 파생: 조회 인덱스 ──
@@ -67,9 +72,26 @@ const BY_ALIAS: ReadonlyMap<string, SectionRailKey> = new Map(
 
 // ── 파생: 기존 소비부 호환 표면 ──
 
-/** 레일 렌더 아이템({key,label,icon}) — 기존 JSX 호환 형태. */
+/** 레일 렌더 아이템({key,label,icon}) — 하단 탭바용(tabVisible=true 만). */
 export const SECTION_RAIL_ITEMS: Array<{ key: SectionRailKey; label: string; icon: string }> =
+    SECTION_RAIL_DEFS.filter((def) => def.tabVisible).map(({ key, label, icon }) => ({ key, label, icon }));
+
+/** 전체 레일(탭 미노출 song-mode 등 포함) — 스크롤 오프셋·딥링크용. */
+export const SECTION_RAIL_ALL_ITEMS: Array<{ key: SectionRailKey; label: string; icon: string }> =
     SECTION_RAIL_DEFS.map(({ key, label, icon }) => ({ key, label, icon }));
+
+const SECTION_TAB_LABEL_KEYS: Record<SectionRailKey, FeatureUiKey> = {
+    chat: 'nav.tabChat',
+    voip: 'nav.tabVoip',
+    'song-mode': 'nav.tabChat',
+    'tourism-promo': 'nav.tabPromo',
+    'travel-booking': 'nav.tabTravel',
+};
+
+/** 하단 탭·레일 표시 라벨 — 프로필 uiLang 기준 오프라인 즉시 표시. */
+export function getSectionRailTabLabel(key: SectionRailKey, lang?: string): string {
+    return getFeatureUiText(SECTION_TAB_LABEL_KEYS[key], undefined, lang);
+}
 
 /** 섹션 접근성/테스트 셀렉터(testID). */
 export function buildSectionRailSelector(section: SectionRailKey): string {

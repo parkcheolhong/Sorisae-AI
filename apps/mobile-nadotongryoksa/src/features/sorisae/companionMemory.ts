@@ -15,6 +15,7 @@ import { classifyCompanionDomain, domainByKey, type CompanionDomainKey } from '.
 export const COMPANION_PERSONA_VERSION = 1;
 
 export type CompanionTone = 'casual' | 'polite' | 'unknown';
+export type CompanionReplyStyle = 'concise' | 'detailed' | 'unknown';
 
 export interface CompanionPersona {
     version: number;
@@ -23,6 +24,9 @@ export interface CompanionPersona {
     /** 말투 선호 누적 카운트 — resolveTone 으로 해석. */
     casualCount: number;
     politeCount: number;
+    /** 답변 길이 선호 누적 — resolveReplyStyle 으로 해석. */
+    conciseCount: number;
+    detailedCount: number;
     /** 주 사용 언어(마지막 관측). */
     language: string | null;
     /** 관심 주제 토큰 → 누적 빈도. */
@@ -49,6 +53,8 @@ export function createEmptyPersona(): CompanionPersona {
         preferredName: null,
         casualCount: 0,
         politeCount: 0,
+        conciseCount: 0,
+        detailedCount: 0,
         language: null,
         interests: {},
         domainCounts: {},
@@ -95,6 +101,11 @@ export function extractInterestTokens(text: string): string[] {
 const SELF_DISCLOSURE_RE =
     /(^|\s)(나는|난\s|내\s|제\s|저는|저\s|나\s|좋아하|싫어하|취미|꿈은|목표는)|(\bi\s|\bi'm\s|\bmy\s|\bi am\s|\bi like\b|\bi love\b|\bi hate\b)/i;
 
+const CONCISE_STYLE_RE =
+    /(짧게|간단|한\s?줄|핵심만|요약|짧은\s?답|brief|short answer|summarize|in one line|keep it short)/i;
+const DETAILED_STYLE_RE =
+    /(자세히|상세|예시|단계별|설명해|step[\s-]?by[\s-]?step|in detail|explain fully|more detail)/i;
+
 function normalizeFact(text: string): string {
     return String(text || '').replace(/\s+/g, ' ').trim().slice(0, FACT_MAX_LEN);
 }
@@ -134,6 +145,14 @@ export function observeTurn(persona: CompanionPersona, input: ObserveTurnInput):
         casualCount += 1;
     }
 
+    let conciseCount = base.conciseCount ?? 0;
+    let detailedCount = base.detailedCount ?? 0;
+    if (CONCISE_STYLE_RE.test(transcript)) {
+        conciseCount += 1;
+    } else if (DETAILED_STYLE_RE.test(transcript)) {
+        detailedCount += 1;
+    }
+
     // 관심 주제 빈도 누적(상한 유지).
     const interests: Record<string, number> = { ...base.interests };
     for (const tok of extractInterestTokens(transcript)) {
@@ -159,6 +178,8 @@ export function observeTurn(persona: CompanionPersona, input: ObserveTurnInput):
         preferredName: base.preferredName,
         casualCount,
         politeCount,
+        conciseCount,
+        detailedCount,
         language: input.language != null && String(input.language).trim() ? String(input.language).trim() : base.language,
         interests: trimmedInterests,
         domainCounts,
@@ -180,6 +201,14 @@ export function resolveTone(persona: CompanionPersona): CompanionTone {
     if (persona.casualCount === 0 && persona.politeCount === 0) return 'unknown';
     if (persona.casualCount > persona.politeCount) return 'casual';
     if (persona.politeCount > persona.casualCount) return 'polite';
+    return 'unknown';
+}
+
+/** 누적 답변 길이 선호 카운트로 concise/detailed 해석. */
+export function resolveReplyStyle(persona: CompanionPersona): CompanionReplyStyle {
+    if (persona.conciseCount === 0 && persona.detailedCount === 0) return 'unknown';
+    if (persona.conciseCount > persona.detailedCount) return 'concise';
+    if (persona.detailedCount > persona.conciseCount) return 'detailed';
     return 'unknown';
 }
 
@@ -237,6 +266,12 @@ export function buildPersonaBrief(persona: CompanionPersona, options: PersonaBri
         parts.push('They prefer a casual, friendly tone (반말 환영).');
     } else if (tone === 'polite') {
         parts.push('They prefer a polite tone.');
+    }
+    const replyStyle = resolveReplyStyle(persona);
+    if (replyStyle === 'concise') {
+        parts.push('Prefer concise answers.');
+    } else if (replyStyle === 'detailed') {
+        parts.push('Prefer step-by-step detailed answers.');
     }
     const interests = topInterests(persona, options.maxInterests ?? 5);
     if (interests.length) {

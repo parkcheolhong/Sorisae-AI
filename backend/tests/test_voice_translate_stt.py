@@ -207,6 +207,47 @@ def test_voice_translate_device_tts_skips_server_synthesis():
     assert payload.get("audio_base64") is None
 
 
+def test_voice_translate_designated_mode_keeps_output_language_on_korean_speech():
+    from unittest.mock import patch
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from backend.llm.router import router as llm_router
+
+    class _FakeJaTranslator:
+        def translate(self, text: str, *, from_lang: str, to_lang: str, region_hint=None) -> str:
+            assert from_lang == "ko"
+            assert to_lang == "ja"
+            return "こんにちは"
+
+    app = FastAPI()
+    app.include_router(llm_router)
+    client = TestClient(app)
+
+    with patch(
+        "backend.services.nadotongryoksa.translator.NadoTranslator.get_instance",
+        return_value=_FakeJaTranslator(),
+    ):
+        response = client.post(
+            "/api/llm/voice-translate",
+            json={
+                "transcript": "안녕하세요",
+                "mode": "designated",
+                "from_lang": "ko",
+                "to_lang": "ja",
+                "language": "ko",
+                "device_tts": True,
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload.get("from") == "ko"
+    assert payload.get("to") == "ja"
+    assert payload.get("translated") == "こんにちは"
+
+
 def test_transcribe_mobile_voice_audio_prefers_source_lang_hint(monkeypatch):
     from backend.llm import router as llm_router
 
@@ -254,5 +295,5 @@ def test_classify_voice_relay_stt_trust_rejects_low_confidence():
     from backend.llm.voice_gateway import classify_voice_relay_stt_trust
 
     assert classify_voice_relay_stt_trust("hello", -1.4, 0.2) == "low"
-    assert classify_voice_relay_stt_trust("hello", -0.3, 0.8) == "low"
+    assert classify_voice_relay_stt_trust("hello", -0.3, 0.9) == "low"
     assert classify_voice_relay_stt_trust("hello", -0.3, 0.2) == "high"

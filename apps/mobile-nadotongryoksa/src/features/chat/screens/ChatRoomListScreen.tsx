@@ -13,12 +13,19 @@ import { getFriends } from '../../../api/friends';
 import type { Friend } from '../../friends/types';
 import { createDirectChatRoom, createGroupChatRoom, ensureSelfChatRoom, listChatRooms } from '../api';
 import type { ChatRoomSummary } from '../types';
+import type { LangCode } from '../../language/languageCatalog';
+import { getLangLabelText, isSupportedLangCode } from '../../language/languageCatalog';
+import { BidirectionalLanguagePairBadge } from '../../i18n/BidirectionalLanguagePairBadge';
+import { getFeatureUiText } from '../../i18n/featureUiCatalog';
 
 const GROUP_MEMBER_LIMIT_OPTIONS = [3, 5, 10] as const;
 
 function formatPreferredLanguage(language?: string | null): string {
-  const normalized = language?.trim();
-  return normalized ? normalized.toUpperCase() : '미설정';
+  const normalized = language?.trim().toLowerCase();
+  if (normalized && isSupportedLangCode(normalized)) {
+    return getLangLabelText(normalized);
+  }
+  return getFeatureUiText('chat.list.langUnset');
 }
 
 // 서버 last_message_at(naive UTC, 'Z')을 로컬 기준으로 표시.
@@ -35,34 +42,32 @@ function formatRoomTime(iso?: string | null): string {
   if (sameDay) {
     const h = d.getHours();
     const m = d.getMinutes().toString().padStart(2, '0');
-    const ampm = h < 12 ? '오전' : '오후';
+    const ampm = h < 12 ? getFeatureUiText('chat.am') : getFeatureUiText('chat.pm');
     const h12 = h % 12 === 0 ? 12 : h % 12;
     return `${ampm} ${h12}:${m}`;
   }
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function buildTranslationHint(language?: string | null, countryCode?: string | null): string {
-  const normalizedLanguage = language?.trim();
-  if (normalizedLanguage) {
-    return `상대 지정 언어 ${normalizedLanguage.toUpperCase()} 자동 번역`;
+function buildTranslationHint(language?: string | null, _countryCode?: string | null): string {
+  if (language?.trim()) {
+    return getFeatureUiText('chat.peerLangAutoTranslate');
   }
-
-  const normalizedCountry = countryCode?.trim().toUpperCase();
-  return normalizedCountry
-    ? `상대 지정 언어 미설정 · 가입 국가 ${normalizedCountry} fallback`
-    : '상대 지정 언어 미설정 · 가입 국가 fallback 대기';
+  return getFeatureUiText('chat.peerLangAutoDetect');
 }
 
 function getRoomAlertLabel(room: ChatRoomSummary): string | null {
   if (room.last_message_type === 'system_invite') {
-    return '그룹 초대';
+    return getFeatureUiText('chat.list.alertGroupInvite');
+  }
+  if (room.last_message_type === 'system_announcement') {
+    return getFeatureUiText('chat.list.alertAnnouncement');
   }
   if (room.last_message_type === 'translation' || room.last_message_type === 'ocr' || room.last_message_type === 'song_translation') {
-    return '번역 결과 도착';
+    return getFeatureUiText('chat.list.alertTranslation');
   }
   if (room.unread_count > 0) {
-    return '새 메시지';
+    return getFeatureUiText('chat.list.alertNewMessage');
   }
   return null;
 }
@@ -73,16 +78,18 @@ function buildChatRoomSelector(room: ChatRoomSummary): string {
 
 function buildGroupRoomMeta(room: ChatRoomSummary): string {
   if (room.room_type === 'direct') {
-    return '1:1 대화';
+    return getFeatureUiText('chat.list.directRoom');
   }
   const memberLimit = room.member_limit ?? 10;
-  return `${room.member_count}명 참여 · 정원 ${memberLimit}명 고정`;
+  return getFeatureUiText('chat.list.groupRoomMeta', { count: room.member_count, limit: memberLimit });
 }
 
 interface Props {
   apiBaseUrl: string;
   token: string;
   userId: number;
+  fromLang?: LangCode;
+  toLang?: LangCode;
   visible?: boolean;
   refreshKey?: number;
   onOpenRoom: (room: ChatRoomSummary) => void;
@@ -96,6 +103,8 @@ export function ChatRoomListScreen({
   apiBaseUrl,
   token,
   userId,
+  fromLang = 'ko',
+  toLang = 'en',
   visible = true,
   refreshKey = 0,
   onOpenRoom,
@@ -114,6 +123,7 @@ export function ChatRoomListScreen({
   const [groupMemberLimit, setGroupMemberLimit] = useState<number>(10);
   const [selectedGroupMemberIds, setSelectedGroupMemberIds] = useState<number[]>([]);
   const [allowMemberInvites, setAllowMemberInvites] = useState(false);
+  const [expandedFriendId, setExpandedFriendId] = useState<number | null>(null);
   const autoCallKeyRef = useRef<string | null>(null);
   const openGroupSignalRef = useRef<number>(openGroupSignal);
   const unreadRoomCount = rooms.filter((room) => room.unread_count > 0).length;
@@ -173,7 +183,7 @@ export function ChatRoomListScreen({
       setRooms(nextRooms);
       setFriends(friendPayload.friends.filter((friend: Friend) => friend.friendUserId !== null));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '채팅방 목록을 불러오지 못했습니다.');
+      setError(e instanceof Error ? e.message : getFeatureUiText('chat.list.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -193,7 +203,7 @@ export function ChatRoomListScreen({
       const room = await ensureSelfChatRoom(apiBaseUrl, token);
       onOpenRoom(room);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '번역 보관함을 열지 못했습니다.');
+      setError(e instanceof Error ? e.message : getFeatureUiText('chat.list.vaultFailed'));
     } finally {
       setBusyAction('');
     }
@@ -209,7 +219,7 @@ export function ChatRoomListScreen({
       const room = await createDirectChatRoom(apiBaseUrl, token, friend.friendUserId);
       onOpenRoom(room);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '친구 채팅방을 열지 못했습니다.');
+      setError(e instanceof Error ? e.message : getFeatureUiText('chat.list.friendRoomFailed'));
     } finally {
       setBusyAction('');
     }
@@ -225,7 +235,7 @@ export function ChatRoomListScreen({
         return prev.filter((id) => id !== friendUserId);
       }
       if (prev.length >= maxSelectableMembers) {
-        setError(`정원 ${groupMemberLimit}명 방은 방장을 포함해 최대 ${groupMemberLimit}명까지만 입장할 수 있습니다.`);
+        setError(getFeatureUiText('chat.list.groupCapacityLimit', { limit: groupMemberLimit }));
         return prev;
       }
       return [...prev, friendUserId];
@@ -235,15 +245,15 @@ export function ChatRoomListScreen({
   const handleCreateGroupRoom = useCallback(async () => {
     const title = groupTitle.trim();
     if (!title) {
-      setError('그룹방 이름을 입력해야 합니다.');
+      setError(getFeatureUiText('chat.list.groupNameRequired'));
       return;
     }
     if (selectedGroupMemberIds.length === 0) {
-      setError('초대할 친구를 한 명 이상 선택해야 합니다.');
+      setError(getFeatureUiText('chat.list.groupMemberRequired'));
       return;
     }
     if (selectedGroupMemberIds.length + 1 > groupMemberLimit) {
-      setError(`현재 선택 인원은 정원 ${groupMemberLimit}명을 초과합니다.`);
+      setError(getFeatureUiText('chat.list.groupOverCapacity', { limit: groupMemberLimit }));
       return;
     }
     setBusyAction('group-room');
@@ -262,7 +272,7 @@ export function ChatRoomListScreen({
       setAllowMemberInvites(false);
       onOpenRoom(room);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '그룹방을 만들지 못했습니다.');
+      setError(e instanceof Error ? e.message : getFeatureUiText('chat.list.groupFailed'));
     } finally {
       setBusyAction('');
     }
@@ -270,12 +280,12 @@ export function ChatRoomListScreen({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>채팅</Text>
-      <Text style={styles.subtitle}>번역 결과를 보관하고, 친구와 1:1 또는 그룹 대화를 시작할 수 있습니다.</Text>
+      <Text style={styles.title}>{getFeatureUiText('chat.list.title')}</Text>
+      <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} compact />
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeaderRow}>
-          <Text style={styles.summaryTitle}>채팅 알림 요약</Text>
-          <Text style={styles.summaryMetric}>{unreadRoomCount}개 방 · {unreadMessageCount}개 미확인</Text>
+          <Text style={styles.summaryTitle}>{getFeatureUiText('chat.list.summaryTitle')}</Text>
+          <Text style={styles.summaryMetric}>{getFeatureUiText('chat.list.summaryMetric', { rooms: unreadRoomCount, unread: unreadMessageCount })}</Text>
         </View>
         {latestRoom ? (
           <>
@@ -287,22 +297,22 @@ export function ChatRoomListScreen({
                 </View>
               ) : null}
             </View>
-            <Text style={styles.summaryPreview}>{latestRoom.last_message_preview || '최근 메시지 미리보기가 없습니다.'}</Text>
-            <Text style={styles.summaryMeta}>{formatRoomTime(latestRoom.last_message_at) || '최근 수신 시각 없음'}</Text>
+            <Text style={styles.summaryPreview}>{latestRoom.last_message_preview || getFeatureUiText('chat.list.noPreview')}</Text>
+            <Text style={styles.summaryMeta}>{formatRoomTime(latestRoom.last_message_at) || getFeatureUiText('chat.list.noRecentTime')}</Text>
           </>
         ) : (
-          <Text style={styles.summaryPreview}>아직 채팅 알림 정보가 없습니다. 번역 보관함이나 친구 채팅을 열면 최근 대화와 미확인 수가 여기에 쌓입니다.</Text>
+          <Text style={styles.summaryPreview}>{getFeatureUiText('chat.list.noRecentChat')}</Text>
         )}
       </View>
       <View style={styles.quickRow}>
         <Pressable style={styles.primaryButton} onPress={() => { void handleOpenSelfRoom(); }} disabled={busyAction === 'self-room'}>
-          <Text style={styles.primaryButtonText}>{busyAction === 'self-room' ? '열는 중...' : '번역 보관함 열기'}</Text>
+          <Text style={styles.primaryButtonText}>{busyAction === 'self-room' ? getFeatureUiText('chat.list.opening') : getFeatureUiText('chat.list.openVault')}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => setShowGroupComposer((prev) => !prev)}>
-          <Text style={styles.secondaryButtonText}>{showGroupComposer ? '그룹방 닫기' : '그룹방 만들기'}</Text>
+          <Text style={styles.secondaryButtonText}>{showGroupComposer ? getFeatureUiText('chat.list.closeGroup') : getFeatureUiText('chat.list.createGroup')}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => { void load(); }} disabled={loading}>
-          <Text style={styles.secondaryButtonText}>{loading ? '새로고침 중...' : '새로고침'}</Text>
+          <Text style={styles.secondaryButtonText}>{loading ? getFeatureUiText('chat.list.refreshing') : getFeatureUiText('chat.list.refresh')}</Text>
         </Pressable>
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -311,18 +321,18 @@ export function ChatRoomListScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {showGroupComposer ? (
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>그룹방 만들기</Text>
-            <Text style={styles.emptyText}>친구를 골라 번역 채팅방을 바로 열 수 있습니다.</Text>
+            <Text style={styles.sectionTitle}>{getFeatureUiText('chat.list.groupTitle')}</Text>
+            <Text style={styles.emptyText}>{getFeatureUiText('chat.list.groupHint')}</Text>
             <TextInput
               style={styles.groupInput}
-              placeholder="예: 일본 여행 통역방"
+              placeholder={getFeatureUiText('chat.list.groupPlaceholder')}
               placeholderTextColor="#8a93a3"
               value={groupTitle}
               onChangeText={setGroupTitle}
             />
             <View style={styles.limitSection}>
-              <Text style={styles.policyTitle}>방 정원 선택</Text>
-              <Text style={styles.capacityMeta}>방장 포함 기준으로 3명, 5명, 10명 고정방을 만들 수 있습니다. 현재 {selectedGroupMemberIds.length + 1}명 입장 예정</Text>
+              <Text style={styles.policyTitle}>{getFeatureUiText('chat.list.capacityTitle')}</Text>
+              <Text style={styles.capacityMeta}>{getFeatureUiText('chat.list.capacityMeta', { count: selectedGroupMemberIds.length + 1 })}</Text>
               <View style={styles.limitOptionRow}>
                 {GROUP_MEMBER_LIMIT_OPTIONS.map((option) => {
                   const active = groupMemberLimit === option;
@@ -335,7 +345,7 @@ export function ChatRoomListScreen({
                         setError('');
                       }}
                     >
-                      <Text style={[styles.limitOptionText, active && styles.limitOptionTextActive]}>{option}명 고정</Text>
+                      <Text style={[styles.limitOptionText, active && styles.limitOptionTextActive]}>{getFeatureUiText('chat.list.fixedMembers', { n: option })}</Text>
                     </Pressable>
                   );
                 })}
@@ -346,13 +356,13 @@ export function ChatRoomListScreen({
                 <Text style={styles.policyCheckText}>{allowMemberInvites ? '✓' : ''}</Text>
               </View>
               <View style={styles.policyTextWrap}>
-                <Text style={styles.policyTitle}>멤버도 초대 가능</Text>
-                <Text style={styles.policyMeta}>끄면 owner만 초대할 수 있고, 켜면 기존 멤버도 새 친구를 초대할 수 있습니다.</Text>
+                <Text style={styles.policyTitle}>{getFeatureUiText('chat.list.memberInviteTitle')}</Text>
+                <Text style={styles.policyMeta}>{getFeatureUiText('chat.list.memberInviteMeta')}</Text>
               </View>
             </Pressable>
             <View style={styles.memberPickWrap}>
               {friends.length === 0 ? (
-                <Text style={styles.emptyText}>먼저 친구를 추가해야 그룹방을 만들 수 있습니다.</Text>
+                <Text style={styles.emptyText}>{getFeatureUiText('chat.list.noFriendsForGroup')}</Text>
               ) : (
                 friends.map((friend) => {
                   const { friendUserId } = friend;
@@ -376,54 +386,70 @@ export function ChatRoomListScreen({
               onPress={() => { void handleCreateGroupRoom(); }}
               disabled={busyAction === 'group-room'}
             >
-              <Text style={styles.primaryButtonText}>{busyAction === 'group-room' ? '그룹방 생성 중...' : '선택 멤버로 그룹방 열기'}</Text>
+              <Text style={styles.primaryButtonText}>{busyAction === 'group-room' ? getFeatureUiText('chat.list.creatingGroup') : getFeatureUiText('chat.list.openGroup')}</Text>
             </Pressable>
           </View>
         ) : null}
 
+        {/* [단일 통로] 채팅 진입 즉시 등록 친구목록을 화면 안에 나열 → 탭하면 바로 1:1 번역 채팅 시작.
+            (별도 모달/허브를 거치지 않는다. 보이스톡도 같은 행에서 바로 연결.) */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>빠른 시작</Text>
+          <Text style={styles.sectionTitle}>{getFeatureUiText('chat.list.friendsTitle')}</Text>
           {friends.length === 0 ? (
-            <Text style={styles.emptyText}>앱 친구를 추가하면 여기서 바로 상대 지정 언어 기준 1:1 채팅을 열 수 있습니다.</Text>
+            <Text style={styles.emptyText}>{getFeatureUiText('chat.list.noFriends')}</Text>
           ) : (
-            friends.slice(0, 6).map((friend) => (
-              <View key={`chat-friend-${friend.id}`} style={styles.friendRow}>
-                <View style={styles.friendTextWrap}>
-                  <Text style={styles.friendTitle}>{friend.friendCountryFlag || '🌐'} {friend.friendUsername || friend.friendEmail}</Text>
-                  <Text style={styles.friendMeta}>지정 언어 {formatPreferredLanguage(friend.friendPreferredLanguage)} · {friend.friendVoiceId || 'voice id 없음'}</Text>
-                  <Text style={styles.friendHint}>{buildTranslationHint(friend.friendPreferredLanguage, friend.friendCountryCode)}</Text>
-                </View>
-                <View style={styles.friendActionColumn}>
+            friends.map((friend) => {
+              const expanded = expandedFriendId === friend.id;
+              const label = friend.friendUsername || friend.friendEmail;
+              const canVoip = Boolean(friend.friendUserId || friend.friendVoiceId);
+              return (
+                <View key={`chat-friend-${friend.id}`} style={styles.friendRowBlock}>
                   <Pressable
-                    style={styles.friendVoiceButton}
-                    onPress={() => { void onStartFriendVoiceCall?.(friend); }}
-                    disabled={!onStartFriendVoiceCall}
+                    style={styles.friendRowHead}
+                    onPress={() => setExpandedFriendId((prev) => (prev === friend.id ? null : friend.id))}
                     accessibilityRole="button"
-                    accessibilityLabel={`보이스톡 걸기, ${friend.friendVoiceId || friend.friendUserId || friend.friendEmail || friend.id}`}
-                    testID={`worldlinco-friend-voice-call-${friend.friendUserId ?? friend.id}`}
+                    accessibilityLabel={`${label} ${expanded ? '닫기' : '열기'}`}
                   >
-                    <Text style={styles.friendVoiceButtonText}>보이스톡</Text>
+                    <View style={styles.friendTextWrap}>
+                      <Text style={styles.friendTitle}>{friend.friendCountryFlag || '🌐'} {label}</Text>
+                      <Text style={styles.friendMeta}>{getFeatureUiText('chat.directSubtitleAuto')} · {formatPreferredLanguage(friend.friendPreferredLanguage)}</Text>
+                    </View>
+                    <Text style={styles.friendChevron}>{expanded ? '▾' : '›'}</Text>
                   </Pressable>
-                  <Pressable
-                    style={styles.friendChatButton}
-                    onPress={() => { void handleOpenDirectRoom(friend); }}
-                    disabled={busyAction === `friend-${friend.id}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={`worldlinco-chat-direct-friend-${friend.friendUserId ?? friend.id}`}
-                    testID={`worldlinco-chat-direct-friend-${friend.friendUserId ?? friend.id}`}
-                  >
-                    <Text style={styles.friendChatButtonText}>{busyAction === `friend-${friend.id}` ? '여는 중...' : '채팅'}</Text>
-                  </Pressable>
+                  {expanded ? (
+                    <View style={styles.friendActions}>
+                      <Pressable
+                        style={[styles.friendVoipButton, !canVoip && styles.friendActionDisabled]}
+                        disabled={!canVoip || !onStartFriendVoiceCall}
+                        onPress={() => { void onStartFriendVoiceCall?.(friend); }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`통역통화, ${label}`}
+                        testID={`worldlinco-friend-voice-call-${friend.friendUserId ?? friend.id}`}
+                      >
+                        <Text style={styles.friendVoipButtonText}>{getFeatureUiText('chat.list.voipCall')}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.friendChatButton}
+                        onPress={() => { void handleOpenDirectRoom(friend); }}
+                        disabled={busyAction === `friend-${friend.id}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={`채팅, ${label}`}
+                        testID={`worldlinco-chat-direct-friend-${friend.friendUserId ?? friend.id}`}
+                      >
+                        <Text style={styles.friendChatButtonText}>{busyAction === `friend-${friend.id}` ? getFeatureUiText('chat.list.opening') : getFeatureUiText('chat.list.chatBtn')}</Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>최근 대화방</Text>
+          <Text style={styles.sectionTitle}>{getFeatureUiText('chat.list.recentRooms')}</Text>
           {rooms.length === 0 ? (
-            <Text style={styles.emptyText}>아직 생성된 채팅방이 없습니다. 번역 보관함 또는 친구 채팅부터 시작하세요.</Text>
+            <Text style={styles.emptyText}>{getFeatureUiText('chat.list.noRooms')}</Text>
           ) : (
             rooms.map((room) => {
               const alertLabel = getRoomAlertLabel(room);
@@ -455,7 +481,7 @@ export function ChatRoomListScreen({
                   {room.room_type === 'direct' ? (
                     <Text style={styles.roomHint}>{buildTranslationHint(room.counterpart?.preferred_language, null)}</Text>
                   ) : null}
-                  <Text style={styles.roomPreview}>{room.last_message_preview || '메시지가 아직 없습니다.'}</Text>
+                  <Text style={styles.roomPreview}>{room.last_message_preview || getFeatureUiText('chat.list.noMessages')}</Text>
                   <Text style={styles.roomTime}>{formatRoomTime(room.last_message_at)}</Text>
                 </Pressable>
               );
@@ -595,11 +621,25 @@ const styles = StyleSheet.create({
   memberChipText: { color: '#3a4356', fontSize: 12, fontWeight: '700' },
   memberChipTextActive: { color: '#1e6fe0' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  friendRowBlock: { borderBottomWidth: 1, borderBottomColor: '#e3eaf5', paddingVertical: 4 },
+  friendRowHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  friendChevron: { color: '#8a93a3', fontSize: 18, fontWeight: '700', paddingLeft: 8 },
+  friendActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 10 },
+  friendActionDisabled: { opacity: 0.45 },
   friendTextWrap: { flex: 1, gap: 2 },
   friendTitle: { color: '#1a1f36', fontSize: 14, fontWeight: '700' },
   friendMeta: { color: '#5f6b80', fontSize: 12 },
   friendHint: { color: '#1e6fe0', fontSize: 11, lineHeight: 16 },
   friendActionColumn: { gap: 8, alignItems: 'stretch' },
+  friendVoipButton: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    borderRadius: 9,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+  },
+  friendVoipButtonText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   friendVoiceButton: {
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -608,12 +648,14 @@ const styles = StyleSheet.create({
   },
   friendVoiceButtonText: { color: '#d2f4de', fontWeight: '800' },
   friendChatButton: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#e3f0ff',
+    flexGrow: 1,
+    flexBasis: '47%',
+    borderRadius: 9,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: '#7c3aed',
   },
-  friendChatButtonText: { color: '#1e6fe0', fontWeight: '700' },
+  friendChatButtonText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   roomCard: {
     gap: 5,
     padding: 12,

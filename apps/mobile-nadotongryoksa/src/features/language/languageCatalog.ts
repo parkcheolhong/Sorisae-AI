@@ -2,11 +2,14 @@
 // 공유하는 언어 코드·라벨·감지/정규화·자동 타깃 결정 헬퍼. 부작용/React 상태 비의존(순수).
 // App.tsx 모놀리스에서 추출. song 언어 헬퍼는 이 모듈을 의존(순환 import 회피).
 
+import { resolveLangFromCountry } from '../country/countryLanguage';
+
 export const LANGS = [
     { label: '한국어', code: 'ko', tts: 'ko-KR' },
     { label: 'English', code: 'en', tts: 'en-US' },
     { label: '中文(简体)', code: 'zh', tts: 'zh-CN' },
-    { label: '繁體中文', code: 'zh-tw', tts: 'zh-TW' },
+    { label: '繁體中文(台灣)', code: 'zh-tw', tts: 'zh-TW' },
+    { label: '粵語(香港)', code: 'zh-hk', tts: 'zh-HK' },
     { label: '日本語', code: 'ja', tts: 'ja-JP' },
     { label: 'Español', code: 'es', tts: 'es-ES' },
     { label: 'Français', code: 'fr', tts: 'fr-FR' },
@@ -68,6 +71,9 @@ export function isSupportedLangCode(value: string): value is LangCode {
 
 export const WHISPER_LANG_MAP: Record<string, LangCode> = {
     chinese: 'zh', mandarin: 'zh', china: 'zh', chinese_language: 'zh', 중국: 'zh', 중국어: 'zh', 중문: 'zh', zh: 'zh',
+    cantonese: 'zh-hk', yue: 'zh-hk', hongkong: 'zh-hk', 'zh-hk': 'zh-hk', 'zh-hant-hk': 'zh-hk',
+    guangdong: 'zh-hk', 광둥: 'zh-hk', 粵語: 'zh-hk', 廣東話: 'zh-hk', 홍콩: 'zh-hk',
+    taiwan: 'zh-tw', 'zh-tw': 'zh-tw', 'zh-hant': 'zh-tw', 繁體: 'zh-tw', 대만: 'zh-tw',
     japanese: 'ja', japan: 'ja', 일본: 'ja', 일본어: 'ja', 일어: 'ja', ja: 'ja',
     korean: 'ko', korea: 'ko', southkorea: 'ko', 한국: 'ko', 한국어: 'ko', 한글: 'ko', ko: 'ko',
     english: 'en', american: 'en', america: 'en', usa: 'en', us: 'en', england: 'en', britain: 'en', 미국: 'en', 영국: 'en', 영어: 'en', 영문: 'en', en: 'en',
@@ -165,4 +171,43 @@ export function resolveAutoTargetLang(source: LangCode, currentTarget: LangCode)
     if (source === 'ko') return 'en';
     if (source === 'en') return 'ko';
     return 'ko';
+}
+
+/**
+ * 출력 언어 SSOT.
+ * preferred_language 는 항상 "출력 언어"로만 해석하고,
+ * 입력 세션 언어(fromLang)와는 독립적으로 유지한다.
+ */
+export function resolvePreferredOutputLang(
+    preferredLanguage: string | null | undefined,
+    fallbackOutput: LangCode,
+): LangCode {
+    const normalizedPreferred = String(preferredLanguage || '').trim().toLowerCase();
+    if (isSupportedLangCode(normalizedPreferred)) {
+        return normalizedPreferred;
+    }
+    return fallbackOutput;
+}
+
+/**
+ * VoIP 상대 타깃 언어 결정.
+ * 상대 지정언어가 내 언어와 같게 잘못 들어오면, 상대 국가코드의 대표 언어로 한 번 더 복구한다.
+ */
+export function resolveVoipPeerTargetLang(
+    localSource: LangCode,
+    currentTarget: LangCode,
+    remotePreferredLanguage?: string | null,
+    remoteCountryCode?: string | null,
+): LangCode {
+    const normalizedRemotePreferred = String(remotePreferredLanguage || '').trim().toLowerCase();
+    if (isSupportedLangCode(normalizedRemotePreferred) && normalizedRemotePreferred !== localSource) {
+        return normalizedRemotePreferred;
+    }
+
+    const countryFallback = resolveLangFromCountry(String(remoteCountryCode || '').trim().toUpperCase());
+    if (countryFallback && countryFallback !== localSource) {
+        return countryFallback;
+    }
+
+    return resolveAutoTargetLang(localSource, currentTarget);
 }

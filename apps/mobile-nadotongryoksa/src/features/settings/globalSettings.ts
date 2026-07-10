@@ -16,6 +16,8 @@ export interface GlobalSettings {
     autoListen: boolean;
     /** 홈 플로팅 소리새 버튼 표시. */
     sorisaeFab: boolean;
+    /** VoIP 통화 기본 오디오 출력(true=스피커, false=이어피스/이어폰 우선). */
+    voipSpeakerDefaultOn: boolean;
 }
 
 export const GLOBAL_SETTINGS_STORAGE_KEY = 'worldlinco.globalSettings.v1';
@@ -23,6 +25,7 @@ export const GLOBAL_SETTINGS_STORAGE_KEY = 'worldlinco.globalSettings.v1';
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     autoListen: false,
     sorisaeFab: true,
+    voipSpeakerDefaultOn: false,
 };
 
 let cache: GlobalSettings = { ...DEFAULT_GLOBAL_SETTINGS };

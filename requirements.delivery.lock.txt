@@ -8,7 +8,7 @@ uvicorn==0.48.0
 pytest==9.0.3
 pydantic==2.13.4
 httpx==0.28.1
-python-multipart==0.0.29
+python-multipart==0.0.31
 email-validator==2.3.0
 sqlalchemy==2.0.50
 psycopg2-binary==2.9.12

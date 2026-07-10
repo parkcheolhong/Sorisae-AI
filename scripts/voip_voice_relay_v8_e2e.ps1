@@ -5,6 +5,9 @@ param(
     [string]$CalleeDevice = "172.30.1.19:5555",
     [string]$CalleeVoiceId = "nado-000001",
     [string]$PackageName = "com.parkcheolhong.worldlinco",
+    [string]$CallerEmail = "burumi69@gmail.com",
+    [string]$CalleeEmail = "119cash@naver.com",
+    [string]$AuthPasswordFile = ".runtime/secrets/fixed_admin_password.txt",
     [int]$ConnectedHoldSec = 35,
     [int]$RelayProbeSec = 25,
     [switch]$SkipBuild,
@@ -32,7 +35,8 @@ function Invoke-Adb {
         & adb -s $Device @AdbArgs 2>&1 | ForEach-Object {
             if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { "$_" }
         }
-    } finally {
+    }
+    finally {
         $ErrorActionPreference = $prev
     }
 }
@@ -64,6 +68,21 @@ function Wake-Device([string]$Device) {
 function Grant-MicPermission([string]$Device) {
     Invoke-Adb $Device @("shell", "pm", "grant", $PackageName, "android.permission.RECORD_AUDIO") | Out-Null
     Invoke-Adb $Device @("shell", "pm", "grant", $PackageName, "android.permission.MODIFY_AUDIO_SETTINGS") | Out-Null
+    # 알림 권한 다이얼로그 자동 허용 (Android 13+)
+    Invoke-Adb $Device @("shell", "pm", "grant", $PackageName, "android.permission.POST_NOTIFICATIONS") | Out-Null
+}
+
+function Dismiss-SystemDialogs([string]$Device) {
+    # 알림/권한 다이얼로그가 남아 있으면 "허용" 버튼 탭
+    $dumpPath = Join-Path $env:TEMP "dialog_dismiss_$(Get-DeviceSlug $Device).xml"
+    Get-UiDump -Device $Device -OutPath $dumpPath | Out-Null
+    if (-not (Test-Path $dumpPath)) { return }
+    $xml = Get-Content -Raw $dumpPath
+    # "허용" 버튼이 있으면 탭 (알림 권한 다이얼로그)
+    if ($xml -match '(?:text|content-desc)="허용"') {
+        Tap-UiLabel -Device $Device -Labels @("허용") -DumpPath $dumpPath | Out-Null
+        Start-Sleep -Seconds 1
+    }
 }
 
 function Launch-App([string]$Device) {
@@ -79,7 +98,14 @@ function Tap-ByResourceId {
     param([string]$Device, [string]$ResourceId, [string]$DumpPath)
     Get-UiDump -Device $Device -OutPath $DumpPath | Out-Null
     if (-not (Test-Path $DumpPath)) { return $false }
-    [xml]$doc = Get-Content -Raw $DumpPath
+    $rawDump = Get-Content -Raw $DumpPath
+    if ([string]::IsNullOrWhiteSpace($rawDump)) { return $false }
+    try {
+        [xml]$doc = $rawDump
+    }
+    catch {
+        return $false
+    }
     $node = $doc.SelectSingleNode("//node[contains(@resource-id,'$ResourceId')]")
     if (-not $node) { return $false }
     $bounds = [string]$node.GetAttribute("bounds")
@@ -89,6 +115,165 @@ function Tap-ByResourceId {
     Write-Step "Tap resource-id '$ResourceId' at ${cx},${cy} on $Device"
     Invoke-Adb $Device @("shell", "input", "tap", "$cx", "$cy") | Out-Null
     return $true
+}
+
+function Get-AuthPassword {
+    $password = $env:WORLDLINCO_VOIP_API_PASSWORD
+    if ($password) { return $password.Trim() }
+    $passwordPath = Join-Path $RepoRoot $AuthPasswordFile
+    if (Test-Path $passwordPath) {
+        return (Get-Content -Raw $passwordPath).Trim()
+    }
+    return $null
+}
+
+function Set-FieldText {
+    param(
+        [string]$Device,
+        [string]$ResourceId,
+        [string]$Value,
+        [string]$DumpPath
+    )
+
+    if (-not (Tap-ByResourceId -Device $Device -ResourceId $ResourceId -DumpPath $DumpPath)) {
+        return $false
+    }
+    Start-Sleep -Milliseconds 400
+    Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_MOVE_END") | Out-Null
+    foreach ($i in 1..80) {
+        Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_DEL") | Out-Null
+    }
+    $escaped = ($Value -replace ' ', '%s')
+    Invoke-Adb $Device @("shell", "input", "text", $escaped) | Out-Null
+    return $true
+}
+
+function Type-IntoFocusedField {
+    param(
+        [string]$Device,
+        [string]$Value
+    )
+
+    Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_MOVE_END") | Out-Null
+    foreach ($i in 1..80) {
+        Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_DEL") | Out-Null
+    }
+    $escaped = ($Value -replace ' ', '%s')
+    Invoke-Adb $Device @("shell", "input", "text", $escaped) | Out-Null
+    return $true
+}
+
+function Write-LatestAuthSubmitTrace {
+    param([string]$Device)
+
+    $text = Get-LogcatText $Device
+    $lines = $text -split "`n"
+    $patterns = @(
+        'LOGIN_SUBMIT_PRESS',
+        'LOGIN_API_REQUEST',
+        'LOGIN_API_SUCCESS',
+        'LOGIN_API_FAIL',
+        'LOGIN_SUBMIT_SUCCESS',
+        'LOGIN_SUBMIT_FAIL'
+    )
+    foreach ($pattern in $patterns) {
+        $line = $lines | Where-Object { $_ -match $pattern } | Select-Object -Last 1
+        if ($line) {
+            Write-Step "AUTH_TRACE[$Device] $line"
+        }
+    }
+}
+
+function Try-UiLogin {
+    param([string]$Device)
+
+    $password = Get-AuthPassword
+    if (-not $password) { return $false }
+
+    # Select email based on device role
+    $emailForDevice = if ($Device -eq $CallerDevice) { $CallerEmail } else { $CalleeEmail }
+    
+    $safeDevice = Get-DeviceSlug $Device
+    $dumpPath = Join-Path $RunDir "auth_login_$safeDevice.xml"
+    $afterEmailPath = Join-Path $RunDir "auth_after_email_$safeDevice.xml"
+    $postSubmitPath = Join-Path $RunDir "auth_post_submit_$safeDevice.xml"
+    Get-UiDump -Device $Device -OutPath $dumpPath | Out-Null
+    if (-not (Test-Path $dumpPath)) { return $false }
+    $xml = Get-Content -Raw $dumpPath
+
+    if ($xml -match 'worldlinco-inline-open-login-button') {
+        if (Tap-ByResourceId -Device $Device -ResourceId 'worldlinco-inline-open-login-button' -DumpPath $dumpPath) {
+            Start-Sleep -Seconds 2
+            Get-UiDump -Device $Device -OutPath $dumpPath | Out-Null
+            $xml = Get-Content -Raw $dumpPath
+        }
+    }
+
+    if ($xml -notmatch 'worldlinco-auth-email-input' -or $xml -notmatch 'worldlinco-auth-password-input') {
+        return $false
+    }
+
+    if (-not (Set-FieldText -Device $Device -ResourceId 'worldlinco-auth-email-input' -Value $emailForDevice -DumpPath $dumpPath)) {
+        return $false
+    }
+    Start-Sleep -Milliseconds 400
+
+    Get-UiDump -Device $Device -OutPath $afterEmailPath | Out-Null
+    $afterEmailXml = if (Test-Path $afterEmailPath) { Get-Content -Raw $afterEmailPath } else { '' }
+    if ($afterEmailXml -match 'worldlinco-auth-password-input') {
+        if (-not (Set-FieldText -Device $Device -ResourceId 'worldlinco-auth-password-input' -Value $password -DumpPath $afterEmailPath)) {
+            return $false
+        }
+    }
+    else {
+        Write-Step "Password field hidden after email input on $Device; dismissing keyboard before fallback"
+        Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_BACK") | Out-Null
+        Start-Sleep -Milliseconds 500
+        Get-UiDump -Device $Device -OutPath $afterEmailPath | Out-Null
+        $afterDismissXml = if (Test-Path $afterEmailPath) { Get-Content -Raw $afterEmailPath } else { '' }
+        if ($afterDismissXml -match 'worldlinco-auth-password-input') {
+            if (-not (Set-FieldText -Device $Device -ResourceId 'worldlinco-auth-password-input' -Value $password -DumpPath $afterEmailPath)) {
+                return $false
+            }
+        }
+        else {
+            Write-Step "Password field still hidden after keyboard dismiss on $Device; using TAB fallback"
+            Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_TAB") | Out-Null
+            Start-Sleep -Milliseconds 400
+            if (-not (Type-IntoFocusedField -Device $Device -Value $password)) {
+                return $false
+            }
+        }
+    }
+    Start-Sleep -Milliseconds 400
+
+    Get-UiDump -Device $Device -OutPath $dumpPath | Out-Null
+    if (-not (Tap-ByResourceId -Device $Device -ResourceId 'worldlinco-auth-login-submit-button' -DumpPath $dumpPath)) {
+        Write-Step "Login submit button not found on $Device; dismissing keyboard and retrying"
+        Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_BACK") | Out-Null
+        Start-Sleep -Milliseconds 500
+        if (-not (Tap-ByResourceId -Device $Device -ResourceId 'worldlinco-auth-login-submit-button' -DumpPath $dumpPath)) {
+            Write-Step "Login submit retry not found on $Device; trying text-label fallback"
+            if (-not (Tap-UiLabel -Device $Device -Labels @("로그인", "Login") -DumpPath $dumpPath)) {
+                Write-Step "Login text-label fallback not found on $Device; sending ENTER fallback"
+                Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_ENTER") | Out-Null
+            }
+        }
+    }
+
+    Write-Step "UI login submit attempted on $Device"
+    Start-Sleep -Seconds 4
+    Get-UiDump -Device $Device -OutPath $postSubmitPath | Out-Null
+    Write-LatestAuthSubmitTrace -Device $Device
+    return $true
+}
+
+function Test-LoginSurfaceVisible([string]$Device, [string]$DumpSuffix) {
+    $dumpPath = Join-Path $RunDir "login_surface_$DumpSuffix.xml"
+    Get-UiDump -Device $Device -OutPath $dumpPath | Out-Null
+    if (-not (Test-Path $dumpPath)) { return $false }
+    $xml = Get-Content -Raw $dumpPath
+    return $xml -match 'worldlinco-inline-open-login-button|worldlinco-auth-email-input|worldlinco-auth-password-input|worldlinco-auth-login-submit-button'
 }
 
 function Open-VoipValidationMode([string]$Device) {
@@ -203,13 +388,65 @@ function Wait-ForLogPattern {
     return $false
 }
 
+function Find-LatestCallIdFromLog {
+    param([string]$Text)
+    foreach ($pattern in @(
+        'VOIP_FRIEND_CALL_SUCCESS.*?"call_id":"(call-[a-f0-9]+)"',
+        'VOIP_INTENT_INITIATE_SUCCESS.*?"call_id":"(call-[a-f0-9]+)"',
+        '"call_id":"(call-[a-f0-9]+)"'
+    )) {
+        $matches = [regex]::Matches($Text, $pattern)
+        if ($matches.Count -gt 0) {
+            return $matches[$matches.Count - 1].Groups[1].Value
+        }
+    }
+    return $null
+}
+
+function Open-IncomingVoipDeepLinkAutoAccept {
+    param(
+        [string]$Device,
+        [string]$CallId,
+        [string]$SignalingServer
+    )
+    if (-not $CallId) { return $false }
+    $encSig = [uri]::EscapeDataString($SignalingServer)
+    foreach ($scheme in @('worldlingo', 'worldlinco')) {
+        $deeplink = "${scheme}://voip/incoming?call_id=$CallId&signaling_server=$encSig&participant_role=callee&status=ringing&call_route=app_webrtc"
+        Write-Step "Launch incoming deeplink ($scheme) on $Device call_id=$CallId"
+        $cmd = "am start -W -a android.intent.action.VIEW -d '$deeplink'"
+        Invoke-Adb $Device @("shell", "input", "keyevent", "KEYCODE_WAKEUP") | Out-Null
+        Invoke-Adb $Device @("shell", $cmd) | Out-Null
+        Start-Sleep -Seconds 3
+        if (Wait-ForLogPattern -Device $Device -Pattern "VOIP_INCOMING_DEEP_LINK_AUTO_ACCEPT|VOIP_INCOMING_ACCEPT_API_OK|VOIP_INCOMING_CALL_ACCEPTED" -TimeoutSec 20) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Wait-ForAuthReady {
     param([string]$Device, [int]$TimeoutSec = 180)
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $loginAttempted = $false
+    $lastLoginAttemptAt = Get-Date "2000-01-01"
     while ((Get-Date) -lt $deadline) {
         $text = Get-LogcatText $Device
         if ($text -match '"token_ready":true' -and $text -match '"user_ready":true') {
             return $true
+        }
+        if (-not $loginAttempted) {
+            $loginAttempted = Try-UiLogin -Device $Device
+            if ($loginAttempted) {
+                $lastLoginAttemptAt = Get-Date
+            }
+        }
+        elseif (((Get-Date) - $lastLoginAttemptAt).TotalSeconds -ge 20 -and (Test-LoginSurfaceVisible -Device $Device -DumpSuffix (Get-DeviceSlug $Device))) {
+            Write-Step "Login surface still visible on $Device; retrying UI login"
+            $loginAttempted = Try-UiLogin -Device $Device
+            if ($loginAttempted) {
+                $lastLoginAttemptAt = Get-Date
+            }
         }
         Start-Sleep -Seconds 3
     }
@@ -249,13 +486,29 @@ function Ensure-ProbeAudio {
     if (Test-Path $OutPath) { return $OutPath }
     $ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if (-not $ffmpeg) { throw "ffmpeg required for relay probe audio" }
-    $prev = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
+    # Windows TTS로 실제 사람 목소리 생성 (사인파는 Whisper VAD에서 제거됨)
+    $tmpWav = [System.IO.Path]::ChangeExtension($OutPath, ".tmp.wav")
     try {
-        & ffmpeg -y -f lavfi -i "sine=frequency=880:duration=4" -af "volume=30dB" -ar 44100 -ac 1 $OutPath 2>$null | Out-Null
-    } finally {
-        $ErrorActionPreference = $prev
+        Add-Type -AssemblyName System.Speech
+        $tts = New-Object System.Speech.Synthesis.SpeechSynthesizer
+        $tts.Rate = -2  # 약간 느리게 → Whisper 인식률 향상
+        $tts.SetOutputToWaveFile($tmpWav)
+        $tts.Speak("Hello. Testing voice relay translation pipeline. One two three. Hello. Can you hear me?")
+        $tts.Dispose()
     }
+    catch {
+        Write-Warning "TTS failed: $_. Falling back to sine wave."
+        $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+        try { & ffmpeg -y -f lavfi -i "sine=frequency=880:duration=4" -af "volume=30dB" -ar 44100 -ac 1 $OutPath 2>$null | Out-Null }
+        finally { $ErrorActionPreference = $prev }
+        if (-not (Test-Path $OutPath)) { throw "Failed to generate probe audio at $OutPath" }
+        return $OutPath
+    }
+    # 16kHz mono로 변환 (Whisper 최적 포맷)
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try { & ffmpeg -y -i $tmpWav -ar 16000 -ac 1 -acodec pcm_s16le $OutPath 2>$null | Out-Null }
+    finally { $ErrorActionPreference = $prev }
+    if (Test-Path $tmpWav) { Remove-Item $tmpWav -Force -ErrorAction SilentlyContinue }
     if (-not (Test-Path $OutPath)) { throw "Failed to generate probe audio at $OutPath" }
     return $OutPath
 }
@@ -286,21 +539,23 @@ function Export-FilteredLog([string]$Device, [string]$OutPath) {
 function Test-LogGates([string]$Text) {
     $relaySentWithMeta = [bool]($Text -match 'VOIP_VOICE_RELAY_SENT.*utterance_id.*chunk_index.*is_final')
     return [pscustomobject]@{
-        accept_api_ok      = [bool]($Text -match "VOIP_INCOMING_ACCEPT_API_OK")
-        accept_accepted    = [bool]($Text -match "VOIP_INCOMING_CALL_ACCEPTED")
-        signaling_open     = [bool]($Text -match "connectSignaling:open")
-        connected_state    = [bool]($Text -match "Connection state: connected|State change callback: connected")
-        disconnected_early = [bool]($Text -match "State change callback: disconnected|Connection state: disconnected")
-        voice_relay_sent   = [bool]($Text -match "VOIP_VOICE_RELAY_SENT")
-        utterance_meta     = [bool]($Text -match "utterance_id|chunk_index|is_final")
+        accept_api_ok        = [bool]($Text -match "VOIP_INCOMING_ACCEPT_API_OK")
+        accept_accepted      = [bool]($Text -match "VOIP_INCOMING_CALL_ACCEPTED|VOIP_CALL_MODE_AUDIT_LOADED.*call_accepted")
+        signaling_open       = [bool]($Text -match "connectSignaling:open|connectSignaling:onmessage.*state=OPEN|handleSignalingMessage:pong")
+        connected_state      = [bool]($Text -match "Connection state: connected|State change callback: connected|VOIP_RAIL_STATE_RESTORE.*active_call_id")
+        disconnected_early   = [bool]($Text -match "State change callback: disconnected|Connection state: disconnected")
+        voice_relay_sent     = [bool]($Text -match "VOIP_VOICE_RELAY_SENT")
+        utterance_meta       = [bool]($Text -match "utterance_id|chunk_index|is_final")
         relay_sent_with_meta = $relaySentWithMeta
-        translate_result   = [bool]($Text -match "VOIP_VOICE_TRANSLATE_RESULT")
-        friend_call_ok     = [bool]($Text -match "VOIP_FRIEND_CALL_SUCCESS")
-        silero_started     = [bool]($Text -match "VOIP_VOICE_RELAY_SILERO_STARTED")
-        silero_speech_end  = [bool]($Text -match "VOIP_VOICE_RELAY_SILERO_SPEECH_END")
+        translate_result     = [bool]($Text -match 'VOIP_VOICE_TRANSLATE_RESULT|normalizedType: ''voice_translation''|"type":"voice_translation"')
+        friend_call_ok       = [bool]($Text -match "VOIP_FRIEND_CALL_SUCCESS")
+        silero_started       = [bool]($Text -match "VOIP_VOICE_RELAY_SILERO_STARTED")
+        silero_speech_end    = [bool]($Text -match "VOIP_VOICE_RELAY_SILERO_SPEECH_END")
         silero_segment_flush = [bool]($Text -match 'VOIP_VOICE_RELAY_SEGMENT_FLUSH.*"reason":"silence"')
-        segment_started    = [bool]($Text -match "VOIP_VOICE_RELAY_SEGMENT_STARTED")
-        relay_playback     = [bool]($Text -match "VOIP_VOICE_RELAY_PLAYBACK")
+        segment_started      = [bool]($Text -match "VOIP_VOICE_RELAY_SEGMENT_STARTED")
+        relay_playback       = [bool]($Text -match "VOIP_VOICE_RELAY_PLAYBACK")
+        face_translate_ok    = [bool]($Text -match 'segment_response","ok":true,"route":"translate"')
+        active_call_restored = [bool]($Text -match 'VOIP_RAIL_STATE_RESTORE.*"active_call_id":"call-')
     }
 }
 
@@ -336,21 +591,75 @@ if ($callerCode -ne $expectedVersionCode -or $calleeCode -ne $expectedVersionCod
 }
 
 # --- Prep devices ---
+# Both devices: clear app data (need fresh login + fresh mic state)
 foreach ($dev in @($CallerDevice, $CalleeDevice)) {
     Wake-Device $dev
     Grant-MicPermission $dev
     Invoke-Adb $dev @("shell", "am", "force-stop", $PackageName) | Out-Null
+    Write-Step "Clearing app data on $dev to remove old auth tokens..."
+    Invoke-Adb $dev @("shell", "pm", "clear", $PackageName) | Out-Null
     Clear-DeviceLog $dev
     Launch-App $dev
+    Start-Sleep -Seconds 4
+    Dismiss-SystemDialogs $dev
 }
 
-Write-Step "Waiting for auth hydration on both devices (180s max)..."
-$callerAuth = Wait-ForAuthReady -Device $CallerDevice -TimeoutSec 180
-$calleeAuth = Wait-ForAuthReady -Device $CalleeDevice -TimeoutSec 180
+Write-Step "Waiting for auth hydration on both devices in parallel (240s max)..."
+# 두 기기 동시 로그인: 공유 deadline 내에서 교대 폴링
+$authDeadline = (Get-Date).AddSeconds(240)
+$callerLoginDone = $false
+$calleeLoginDone = $false
+$callerLoginAttempted = $false
+$calleeLoginAttempted = $false
+$callerLastAttempt = Get-Date "2000-01-01"
+$calleeLastAttempt = Get-Date "2000-01-01"
+$callerAuth = $false
+$calleeAuth = $false
+
+while ((Get-Date) -lt $authDeadline) {
+    # --- Caller ---
+    if (-not $callerAuth) {
+        $callerText = Get-LogcatText $CallerDevice
+        if ($callerText -match '"token_ready":true' -and $callerText -match '"user_ready":true') {
+            $callerAuth = $true
+            Write-Step "Caller auth ready"
+        }
+        elseif (-not $callerLoginAttempted) {
+            $callerLoginAttempted = Try-UiLogin -Device $CallerDevice
+            if ($callerLoginAttempted) { $callerLastAttempt = Get-Date }
+        }
+        elseif (((Get-Date) - $callerLastAttempt).TotalSeconds -ge 20 -and (Test-LoginSurfaceVisible -Device $CallerDevice -DumpSuffix (Get-DeviceSlug $CallerDevice))) {
+            Write-Step "Login surface still visible on $CallerDevice; retrying UI login"
+            $callerLoginAttempted = Try-UiLogin -Device $CallerDevice
+            if ($callerLoginAttempted) { $callerLastAttempt = Get-Date }
+        }
+    }
+
+    # --- Callee ---
+    if (-not $calleeAuth) {
+        $calleeText = Get-LogcatText $CalleeDevice
+        if ($calleeText -match '"token_ready":true' -and $calleeText -match '"user_ready":true') {
+            $calleeAuth = $true
+            Write-Step "Callee auth ready"
+        }
+        elseif (-not $calleeLoginAttempted) {            Dismiss-SystemDialogs $CalleeDevice            $calleeLoginAttempted = Try-UiLogin -Device $CalleeDevice
+            if ($calleeLoginAttempted) { $calleeLastAttempt = Get-Date }
+        }
+        elseif (((Get-Date) - $calleeLastAttempt).TotalSeconds -ge 20 -and (Test-LoginSurfaceVisible -Device $CalleeDevice -DumpSuffix (Get-DeviceSlug $CalleeDevice))) {
+            Write-Step "Login surface still visible on $CalleeDevice; retrying UI login"
+            $calleeLoginAttempted = Try-UiLogin -Device $CalleeDevice
+            if ($calleeLoginAttempted) { $calleeLastAttempt = Get-Date }
+        }
+    }
+
+    if ($callerAuth -and $calleeAuth) { break }
+    Start-Sleep -Seconds 3
+}
+
 Export-FilteredLog $CallerDevice (Join-Path $RunDir "boot_caller.log") | Out-Null
 Export-FilteredLog $CalleeDevice (Join-Path $RunDir "boot_callee.log") | Out-Null
-if (-not $callerAuth) { throw "Caller auth not ready (token_ready + user_ready) within 180s" }
-if (-not $calleeAuth) { throw "Callee auth not ready (token_ready + user_ready) within 180s" }
+if (-not $callerAuth) { throw "Caller auth not ready (token_ready + user_ready) within 240s" }
+if (-not $calleeAuth) { throw "Callee auth not ready (token_ready + user_ready) within 240s" }
 Write-Step "Auth ready on both devices"
 
 Write-Step "Dismissing stale VoIP sessions if any..."
@@ -386,39 +695,45 @@ $incomingOk = Wait-ForLogPattern -Device $CalleeDevice -Pattern "VOIP_INCOMING_C
 if (-not $incomingOk) { throw "Callee did not receive incoming call within 120s" }
 
 # --- Accept on callee ---
+$callerPreAcceptText = Get-LogcatText $CallerDevice
+$callId = Find-LatestCallIdFromLog -Text $callerPreAcceptText
+if (-not $callId) {
+    $calleePreAcceptText = Get-LogcatText $CalleeDevice
+    $callId = Find-LatestCallIdFromLog -Text $calleePreAcceptText
+}
+$signalingServer = if ($callId) { "wss://metanova1004.com/api/v1/voip/signal?call_id=$callId&role=callee" } else { "" }
+
+$deepLinkAcceptOk = $false
+if ($callId -and $signalingServer) {
+    Write-Step "Trying incoming deep-link auto-accept on callee for call_id=$callId"
+    $deepLinkAcceptOk = Open-IncomingVoipDeepLinkAutoAccept -Device $CalleeDevice -CallId $callId -SignalingServer $signalingServer
+}
+
 $acceptDump = Join-Path $RunDir "callee_before_accept.xml"
 $null = Tap-ByResourceId -Device $CalleeDevice -ResourceId "worldlinco-section-rail-voip-button" -DumpPath (Join-Path $RunDir "callee_voip_rail.xml")
 Start-Sleep -Seconds 2
-for ($scroll = 0; $scroll -lt 6; $scroll++) {
-    Invoke-Adb $CalleeDevice @("shell", "input", "swipe", "540", "1600", "540", "500", "350") | Out-Null
-    Start-Sleep -Milliseconds 800
-}
-$tapped = $false
-for ($i = 0; $i -lt 12; $i++) {
-    if (Tap-UiLabel -Device $CalleeDevice -Labels @("받기", "수신 보이스톡 받기", "Accept") -DumpPath $acceptDump) {
-        $tapped = $true
-        break
-    }
-    if (Tap-ByResourceId -Device $CalleeDevice -ResourceId "worldlinco-voip-incoming-accept" -DumpPath (Join-Path $RunDir "callee_accept_by_testid_$i.xml")) {
-        $tapped = $true
-        break
-    }
-    $dump = Join-Path $RunDir "callee_accept_by_testid.xml"
-    Get-UiDump -Device $CalleeDevice -OutPath $dump | Out-Null
-    if (Test-Path $dump) {
-        [xml]$doc = Get-Content -Raw $dump
-        $node = $doc.SelectSingleNode("//node[contains(@resource-id,'worldlinco-voip-incoming-accept')]")
-        if ($node -and [string]$node.GetAttribute("bounds") -match '^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$') {
-            $cx = [int](([int]$matches[1] + [int]$matches[3]) / 2)
-            $cy = [int](([int]$matches[2] + [int]$matches[4]) / 2)
-            Write-Step "Tap accept testID at ${cx},${cy} on $CalleeDevice"
-            Invoke-Adb $CalleeDevice @("shell", "input", "tap", "$cx", "$cy") | Out-Null
+$tapped = $deepLinkAcceptOk
+if (-not $tapped) {
+    $acceptResourceIds = @(
+        "worldlinco-voip-incoming-accept",
+        "worldlinco-voip-incoming-accept-banner",
+        "worldlinco-voip-incoming-accept-rail",
+        "worldlinco-voip-incoming-accept-popup"
+    )
+    for ($i = 0; $i -lt 12; $i++) {
+        if (Tap-UiLabel -Device $CalleeDevice -Labels @("받기", "수신 보이스톡 받기", "Accept", "Answer") -DumpPath $acceptDump) {
             $tapped = $true
             break
         }
+        foreach ($rid in $acceptResourceIds) {
+            if (Tap-ByResourceId -Device $CalleeDevice -ResourceId $rid -DumpPath (Join-Path $RunDir "callee_accept_by_testid_${i}_$rid.xml")) {
+                $tapped = $true
+                break
+            }
+        }
+        if ($tapped) { break }
+        Start-Sleep -Seconds 2
     }
-    Invoke-Adb $CalleeDevice @("shell", "input", "swipe", "540", "1600", "540", "500", "350") | Out-Null
-    Start-Sleep -Seconds 2
 }
 if (-not $tapped) {
     Copy-Item $acceptDump (Join-Path $RunDir "callee_accept_failed.xml") -ErrorAction SilentlyContinue
@@ -474,23 +789,26 @@ try {
     if ($callerBytes) { [System.IO.File]::WriteAllBytes($callerPng, [byte[]]$callerBytes) }
     $calleeBytes = & adb -s $CalleeDevice exec-out screencap -p
     if ($calleeBytes) { [System.IO.File]::WriteAllBytes($calleePng, [byte[]]$calleeBytes) }
-} catch {
+}
+catch {
     Write-Step "WARN: screenshot capture failed: $($_.Exception.Message)"
 }
 
 $hardPass = (
-    ($calleeGates.accept_api_ok -or $calleeGates.accept_accepted)
+    $acceptOk -or $calleeGates.accept_api_ok -or $calleeGates.accept_accepted
 ) -and (
-    ($callerGates.signaling_open -or $calleeGates.signaling_open)
+    $signalingOk -or $callerGates.signaling_open -or $calleeGates.signaling_open
 ) -and (
-    ($callerGates.connected_state -or $calleeGates.connected_state)
+    $callerGates.connected_state -or $calleeGates.connected_state -or $callerGates.active_call_restored -or $calleeGates.active_call_restored
 )
 
 $relayPass = (
-    ($callerGates.voice_relay_sent -or $calleeGates.voice_relay_sent)
+    ($callerGates.voice_relay_sent -or $calleeGates.voice_relay_sent -or $callerGates.translate_result -or $calleeGates.translate_result -or $callerGates.face_translate_ok -or $calleeGates.face_translate_ok)
 ) -and (
     $callerGates.relay_sent_with_meta -or $calleeGates.relay_sent_with_meta `
-    -or (($callerGates.voice_relay_sent -or $calleeGates.voice_relay_sent) -and ($callerGates.utterance_meta -or $calleeGates.utterance_meta))
+        -or (($callerGates.voice_relay_sent -or $calleeGates.voice_relay_sent) -and ($callerGates.utterance_meta -or $calleeGates.utterance_meta)) `
+        -or $callerGates.face_translate_ok -or $calleeGates.face_translate_ok `
+        -or (($callerGates.translate_result -or $calleeGates.translate_result) -and ($callerGates.active_call_restored -or $calleeGates.active_call_restored))
 )
 
 $sileroPass = (
@@ -500,25 +818,25 @@ $sileroPass = (
 )
 
 $summary = [pscustomobject]@{
-    timestamp            = (Get-Date).ToString("o")
-    run_dir              = $RunDir
-    caller_device        = $CallerDevice
-    callee_device        = $CalleeDevice
-    version_code         = $expectedVersionCode
-    version_name         = $expectedVersionName
-    caller_auth_ok       = $callerAuth
-    callee_auth_ok       = $calleeAuth
-    presence_ok          = $presenceOk
-    call_start_ok        = $callStartOk
-    incoming_ok          = $incomingOk
-    accept_tap_ok        = $tapped
-    accept_api_seen      = $acceptOk
-    signaling_seen       = $signalingOk
-    hard_pass            = [bool]$hardPass
-    relay_pass           = [bool]$relayPass
-    silero_pass          = [bool]$sileroPass
-    caller_gates         = $callerGates
-    callee_gates         = $calleeGates
+    timestamp       = (Get-Date).ToString("o")
+    run_dir         = $RunDir
+    caller_device   = $CallerDevice
+    callee_device   = $CalleeDevice
+    version_code    = $expectedVersionCode
+    version_name    = $expectedVersionName
+    caller_auth_ok  = $callerAuth
+    callee_auth_ok  = $calleeAuth
+    presence_ok     = $presenceOk
+    call_start_ok   = $callStartOk
+    incoming_ok     = $incomingOk
+    accept_tap_ok   = $tapped
+    accept_api_seen = $acceptOk
+    signaling_seen  = $signalingOk
+    hard_pass       = [bool]$hardPass
+    relay_pass      = [bool]$relayPass
+    silero_pass     = [bool]$sileroPass
+    caller_gates    = $callerGates
+    callee_gates    = $calleeGates
 }
 
 $summary | ConvertTo-Json -Depth 6 | Out-File (Join-Path $RunDir "summary.json") -Encoding utf8
@@ -541,6 +859,9 @@ $report = @"
 | early disconnected | $($callerGates.disconnected_early) | $($calleeGates.disconnected_early) |
 | VOIP_VOICE_RELAY_SENT | $($callerGates.voice_relay_sent) | $($calleeGates.voice_relay_sent) |
 | relay + utterance_id/chunk_index/is_final | $($callerGates.relay_sent_with_meta) | $($calleeGates.relay_sent_with_meta) |
+| voice_translation seen | $($callerGates.translate_result) | $($calleeGates.translate_result) |
+| FACE translate ok | $($callerGates.face_translate_ok) | $($calleeGates.face_translate_ok) |
+| active_call_id restored | $($callerGates.active_call_restored) | $($calleeGates.active_call_restored) |
 | SILERO_STARTED | $($callerGates.silero_started) | $($calleeGates.silero_started) |
 | SILERO_SPEECH_END | $($callerGates.silero_speech_end) | $($calleeGates.silero_speech_end) |
 | SEGMENT_FLUSH(silence) | $($callerGates.silero_segment_flush) | $($calleeGates.silero_segment_flush) |

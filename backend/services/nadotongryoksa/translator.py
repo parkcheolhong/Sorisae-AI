@@ -18,13 +18,14 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger("nado.translator")
 
 # ──────────────────────────────────────────────
-# 50개국어 (모바일 App.tsx LANGS 와 동기화)
+# 51개국어 (모바일 languageCatalog.ts LANGS 와 동기화 — zh-hk 포함)
 # ──────────────────────────────────────────────
 SUPPORTED_LANGUAGES: Dict[str, str] = {
     "ko": "한국어",
     "en": "영어",
     "zh": "중국어(간체)",
-    "zh-tw": "중국어(번체)",
+    "zh-tw": "중국어(번체·台灣)",
+    "zh-hk": "중국어(粵語·香港)",
     "ja": "일본어",
     "es": "스페인어",
     "fr": "프랑스어",
@@ -78,7 +79,9 @@ MOBILE_SUPPORTED_LANGUAGE_CODES: Tuple[str, ...] = tuple(SUPPORTED_LANGUAGES.key
 
 SUPPORTED_DIALECT_COUNTRY_PROFILES: Dict[str, Dict[str, str]] = {
     "jeju": {"language": "ko", "label": "제주"},
-    "guangdong": {"language": "zh", "label": "광둥"},
+    "guangdong": {"language": "zh-hk", "label": "광둥"},
+    "hongkong": {"language": "zh-hk", "label": "香港"},
+    "taiwan": {"language": "zh-tw", "label": "台灣"},
     "kansai": {"language": "ja", "label": "간사이"},
     "bihar": {"language": "hi", "label": "비하르"},
     "naples": {"language": "it", "label": "나폴리"},
@@ -92,6 +95,16 @@ _DIALECT_REPLACEMENTS: Dict[Tuple[str, str], List[Tuple[re.Pattern[str], str]]] 
     ("zh", "guangdong"): [
         (re.compile(r"唔该"), "谢谢"),
         (re.compile(r"喺边度食饭"), "在哪里吃饭"),
+    ],
+    ("zh-hk", "guangdong"): [
+        (re.compile(r"唔该"), "多謝"),
+        (re.compile(r"喺边度食饭"), "喺邊度食飯"),
+        (re.compile(r"谢谢"), "多謝"),
+    ],
+    ("zh-hk", "hongkong"): [
+        (re.compile(r"谢谢"), "多謝"),
+        (re.compile(r"在哪里"), "喺邊度"),
+        (re.compile(r"医院"), "醫院"),
     ],
     ("ja", "kansai"): [
         (re.compile(r"ほんま"), "本当"),
@@ -114,6 +127,7 @@ _DIALECT_REPLACEMENTS: Dict[Tuple[str, str], List[Tuple[re.Pattern[str], str]]] 
 _GTRANS_LANG_MAP: Dict[str, str] = {
     "zh": "zh-cn",
     "zh-tw": "zh-tw",
+    "zh-hk": "zh-tw",
 }
 
 # ──────────────────────────────────────────────
@@ -226,7 +240,8 @@ _LLM_LANG_NAMES: Dict[str, str] = {
     "en": "English",
     "ja": "Japanese",
     "zh": "Chinese (Simplified)",
-    "zh-tw": "Chinese (Traditional)",
+    "zh-tw": "Chinese (Traditional, Taiwan)",
+    "zh-hk": "Chinese (Cantonese, Hong Kong)",
     "es": "Spanish",
     "fr": "French",
     "de": "German",
@@ -334,6 +349,9 @@ class NadoTranslator:
         from_lang = from_lang.lower().strip()
         to_lang = to_lang.lower().strip()
         text = self._normalize_dialect_text(text, from_lang, region_hint)
+        from backend.services.nadotongryoksa.glossary import normalize_source_terms
+
+        text = normalize_source_terms(text, from_lang, to_lang)
 
         # 동일 언어이면 그대로
         if from_lang == to_lang:
@@ -366,6 +384,14 @@ class NadoTranslator:
         # 원문을 캐시에 넣으면 그 문장이 영구히 미번역으로 고정되므로 캐시하지 않고,
         # 핫패스 계약(문자열 반환)을 지키기 위해 원문을 그대로 반환한다(다음 호출에서 재시도).
         if translated:
+            from backend.services.nadotongryoksa.glossary import polish_translation
+
+            translated = polish_translation(
+                translated,
+                original=text,
+                from_lang=from_lang,
+                to_lang=to_lang,
+            )
             # 맥락 주입 결과는 턴 특이적이라 캐시하지 않는다.
             if not use_context:
                 with self._cache_lock:
@@ -451,16 +477,25 @@ class NadoTranslator:
 
             src = _llm_lang_label(from_lang)
             tgt = _llm_lang_label(to_lang)
+            from backend.services.nadotongryoksa.glossary import build_llm_terminology_block, domain_hint
+
+            terminology = build_llm_terminology_block(from_lang, to_lang)
+            doc_hint = domain_hint()
             system = (
-                "You are a professional real-time speech interpreter. "
+                "You are a professional document and real-time speech interpreter. "
                 f"Translate the user's message from {src} to {tgt}. "
-                f"Output ONLY the {tgt} translation as natural spoken text. "
+                f"Output ONLY the {tgt} translation as natural but formal professional text "
+                f"suitable for business, medical, legal, tourism, and technical documents. "
                 f"Translate the ENTIRE message completely into {tgt}; never leave any "
                 f"{src} words untranslated and never mix scripts. "
                 "Do not add quotes, notes, romanization, pronunciation, or the original text. "
-                "Preserve meaning, proper nouns, numbers, and tone. "
+                "Preserve meaning, proper nouns, numbers, units, and tone. "
                 "If the input is not coherent speech in the source language, output nothing."
             )
+            if doc_hint:
+                system += f" {doc_hint}"
+            if terminology:
+                system += f"\n\n{terminology}"
             hint = (context_hint or "").strip()
             if hint:
                 # 맥락은 일관성 보조용으로만 사용. 절대 번역/출력 대상이 아님.

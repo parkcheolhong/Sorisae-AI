@@ -34,8 +34,8 @@ def test_image_translation_contract_returns_ocr_and_translated_text(monkeypatch)
         ) -> str:
             return f"{from_lang}->{to_lang}:{text}"
 
-    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes: ("서울역\n체크인", 2))
-    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes: ("서울역\n체크인", 2))
+    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes, **_kwargs: ("서울역\n체크인", 2))
+    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes, **_kwargs: ("서울역\n체크인", 2))
     monkeypatch.setattr(image_translation_service.NadoTranslator, "get_instance", classmethod(lambda cls: _FakeTranslator()))
 
     client = _build_test_client()
@@ -69,12 +69,12 @@ def test_image_translation_corrects_source_language_from_ocr_text(monkeypatch):
     monkeypatch.setattr(
         image_translation_service,
         "extract_text_from_image",
-        lambda _image_bytes: ("Welcome to Seoul Station", 1),
+        lambda _image_bytes, **_kwargs: ("Welcome to Seoul Station", 1),
     )
     monkeypatch.setattr(
         image_translation_router_module,
         "extract_text_from_image",
-        lambda _image_bytes: ("Welcome to Seoul Station", 1),
+        lambda _image_bytes, **_kwargs: ("Welcome to Seoul Station", 1),
     )
     monkeypatch.setattr(
         image_translation_service.NadoTranslator,
@@ -119,8 +119,8 @@ def test_image_translation_accepts_extended_50_language_codes(monkeypatch):
         ) -> str:
             return f"{from_lang}->{to_lang}:{text}"
 
-    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes: ("שלום", 1))
-    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes: ("שלום", 1))
+    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes, **_kwargs: ("שלום", 1))
+    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes, **_kwargs: ("שלום", 1))
     monkeypatch.setattr(image_translation_service.NadoTranslator, "get_instance", classmethod(lambda cls: _FakeTranslator()))
 
     client = _build_test_client()
@@ -153,8 +153,8 @@ def test_image_translation_smokes_every_supported_target_language(monkeypatch, t
         ) -> str:
             return f"{from_lang}->{to_lang}:{text}"
 
-    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes: (sample_text, 1))
-    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes: (sample_text, 1))
+    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes, **_kwargs: (sample_text, 1))
+    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes, **_kwargs: (sample_text, 1))
     monkeypatch.setattr(image_translation_service.NadoTranslator, "get_instance", classmethod(lambda cls: _FakeTranslator()))
 
     client = _build_test_client()
@@ -172,9 +172,33 @@ def test_image_translation_smokes_every_supported_target_language(monkeypatch, t
     assert payload["target_language"] == target_language
 
 
+def test_high_density_ocr_does_not_pass_broken_init_kwargs(monkeypatch):
+    """rapidocr 1.2.x: __init__(det_limit_side_len=...) raises KeyError model_path."""
+    captured: dict = {}
+
+    class _FakeRapidOCR:
+        def __init__(self, **kwargs):
+            captured["init_kwargs"] = kwargs
+
+        def __call__(self, _image_bytes, **kwargs):
+            captured["call_kwargs"] = kwargs
+            box = [[0, 0], [1, 0], [1, 1], [0, 1]]
+            return ([[box, "테스트", "0.9"]], None)
+
+    fake_module = type("rapidocr_onnxruntime", (), {"RapidOCR": _FakeRapidOCR})()
+    monkeypatch.setitem(__import__("sys").modules, "rapidocr_onnxruntime", fake_module)
+
+    text, line_count = image_translation_service.extract_text_from_image(b"jpeg-bytes", high_density=True)
+    assert text == "테스트"
+    assert line_count == 1
+    assert captured["init_kwargs"] == {}
+    assert captured["call_kwargs"]["text_score"] == 0.25
+    assert captured["call_kwargs"]["unclip_ratio"] == 1.8
+
+
 def test_image_translation_normalizes_supported_dialect_profile(monkeypatch):
-    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes: ("혼저 옵서예", 1))
-    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes: ("혼저 옵서예", 1))
+    monkeypatch.setattr(image_translation_service, "extract_text_from_image", lambda _image_bytes, **_kwargs: ("혼저 옵서예", 1))
+    monkeypatch.setattr(image_translation_router_module, "extract_text_from_image", lambda _image_bytes, **_kwargs: ("혼저 옵서예", 1))
     translator = image_translation_service.NadoTranslator.get_instance()
     translator._cache.clear()
     monkeypatch.setattr(
@@ -220,12 +244,12 @@ def test_image_translation_smokes_supported_country_dialect_samples(
     monkeypatch.setattr(
         image_translation_service,
         "extract_text_from_image",
-        lambda _image_bytes: (sample_text, 1),
+        lambda _image_bytes, **_kwargs: (sample_text, 1),
     )
     monkeypatch.setattr(
         image_translation_router_module,
         "extract_text_from_image",
-        lambda _image_bytes: (sample_text, 1),
+        lambda _image_bytes, **_kwargs: (sample_text, 1),
     )
     translator = image_translation_service.NadoTranslator.get_instance()
     translator._cache.clear()

@@ -25,15 +25,19 @@ env:
 
 jobs:
   sorisae-unit-gate:
+    name: sorisae-friend-chat-gate / sorisae-unit-gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect sorisae gate scope changes
         id: changes
         if: ${{ github.event_name == 'pull_request' }}
         uses: dorny/paths-filter@v4
         with:
+          token: ''
           filters: |
             sorisae_audio:
               - 'apps/mobile-nadotongryoksa/src/features/sorisae/**'
@@ -57,7 +61,10 @@ jobs:
       - name: Install probe dependencies
         if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
         run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev ffmpeg
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install pytest faster-whisper av
 
       - name: WorldLinco section SSOT lock (frozen baseline)

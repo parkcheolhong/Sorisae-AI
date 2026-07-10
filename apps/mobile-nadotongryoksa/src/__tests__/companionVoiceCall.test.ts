@@ -30,6 +30,11 @@ describe('companionVoiceCall wake-word matching', () => {
         expect(matchCompanionWakeWord('', '루나')).toBe(false);
     });
 
+    it('does not wake on partial-word containment false positives', () => {
+        expect(matchCompanionWakeWord('루나틱한 분위기네', '루나')).toBe(false);
+        expect(matchCompanionWakeWord('alunalpha', 'luna')).toBe(false);
+    });
+
     it('drops too-short candidates to avoid false positives', () => {
         // 한 글자 이름은 정규화 길이 미달로 후보에서 제외(기본 소리새만 후보).
         const candidates = resolveWakeCandidates('A');

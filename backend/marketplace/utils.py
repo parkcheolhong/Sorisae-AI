@@ -8,6 +8,7 @@ from typing import Tuple
 import boto3
 from botocore.client import Config
 import os
+from io import BytesIO
 
 from .models import Review
 from backend.secret_store import read_secret_env
@@ -49,14 +50,45 @@ async def upload_to_minio(file: UploadFile, prefix: str) -> str:
     
     # 파일명 생성
     filename = f"{prefix}/{file.filename}"
-    
+
     # 업로드
     content = await file.read()
+    content_type = file.content_type
+
+    # 이미지 업로드는 WebP 변환을 우선 적용해 저장/전송 크기를 줄인다.
+    if str(file.content_type or "").lower().startswith("image/"):
+        try:
+            from PIL import Image
+
+            image = Image.open(BytesIO(content))
+            if image.mode not in {"RGB", "RGBA"}:
+                image = image.convert("RGB")
+
+            quality = max(40, min(95, int(os.getenv("MARKETPLACE_IMAGE_WEBP_QUALITY", "82"))))
+            method = max(0, min(6, int(os.getenv("MARKETPLACE_IMAGE_WEBP_METHOD", "6"))))
+            optimized_buffer = BytesIO()
+            image.save(
+                optimized_buffer,
+                format="WEBP",
+                optimize=True,
+                quality=quality,
+                method=method,
+            )
+            content = optimized_buffer.getvalue()
+            content_type = "image/webp"
+            if "." in filename:
+                filename = filename.rsplit(".", 1)[0] + ".webp"
+            else:
+                filename = filename + ".webp"
+        except Exception:
+            # Pillow 미설치/변환 실패 시 원본 업로드로 폴백한다.
+            content_type = file.content_type
+
     client.put_object(
         Bucket=MINIO_BUCKET,
         Key=filename,
         Body=content,
-        ContentType=file.content_type
+        ContentType=content_type
     )
     
     return filename

@@ -44,27 +44,32 @@ async function openAdminLlmPage(page: import('@playwright/test').Page) {
     await expect(page.getByRole('heading', { name: 'AI 코드 제너레이터' })).toBeVisible({ timeout: 30_000 });
 }
 
-test('create admin storage state', async ({ page }) => {
+async function loginAndInjectAdminToken(
+    page: import('@playwright/test').Page,
+    request: import('@playwright/test').APIRequestContext,
+) {
+    const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_BASE_URL ?? 'http://127.0.0.1:8000';
+    const response = await request.post(`${backendBaseUrl}/api/auth/login`, {
+        timeout: 45_000,
+        form: {
+            username: ADMIN_USERNAME,
+            password: ADMIN_PASSWORD,
+        },
+    });
+    expect(response.ok()).toBeTruthy();
+    const payload = await response.json();
+    const token = String(payload?.access_token || '');
+    expect(token).not.toBe('');
+
+    await writeStorageStateWithToken(page, token);
+}
+
+test('create admin storage state', async ({ page, request }) => {
     test.setTimeout(ADMIN_ORCHESTRATOR_E2E ? 120_000 : 60_000);
     fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
 
     if (useCredentialLogin) {
-        await page.goto('/admin/login');
-        await page.getByTestId('admin-login-email').fill(ADMIN_USERNAME);
-        await page.getByTestId('admin-login-password').fill(ADMIN_PASSWORD);
-        await Promise.all([
-            page.waitForURL(/\/admin(?!\/login)(?:\/.*)?(?:\?.*)?$/, { timeout: 15_000 }),
-            page.getByTestId('admin-login-submit').click(),
-        ]);
-        await expect.poll(async () => {
-            try {
-                return await page.evaluate(() => window.localStorage.getItem('admin_token'));
-            } catch {
-                return null;
-            }
-        }, {
-            timeout: 15_000,
-        }).not.toBeNull();
+        await loginAndInjectAdminToken(page, request);
     } else {
         const seedToken = ADMIN_ORCHESTRATOR_E2E || ADMIN_REGRESSION_MOCK_BACKEND
             ? ADMIN_REGRESSION_MOCK_TOKEN

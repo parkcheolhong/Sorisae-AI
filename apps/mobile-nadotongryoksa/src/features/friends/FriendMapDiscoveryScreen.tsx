@@ -207,16 +207,10 @@ export function FriendMapDiscoveryScreen({
   return (
     <View style={[styles.container, isNarrowWidth && styles.containerCompact]}>
       <Text style={styles.title}>🗺 친구찾기</Text>
-      <Text style={styles.subtitle}>
-        {autoMode
-          ? 'GPS와 프로필 정보로 앱 사용자를 거리순으로 표시합니다. km 제한 없이 전체 노출되며, 백그라운드 알림도 동작합니다.'
-          : '내 위치를 올리고 앱 사용자를 거리순으로 확인한 뒤 좌표를 눌러 Google 지도에서 확인하고 친구 요청을 보낼 수 있습니다.'}
-      </Text>
 
       {autoMode ? (
         <View style={styles.autoDetectRow}>
           <Text style={styles.autoDetectBadge}>{loading ? '⏳ 자동 감지 중...' : '📍 주변 친구 자동 감지'}</Text>
-          <Text style={styles.autoDetectHint}>성별·위치는 프로필에서 자동 반영 · 90초마다 갱신</Text>
         </View>
       ) : null}
 

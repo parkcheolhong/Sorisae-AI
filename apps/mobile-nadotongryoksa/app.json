@@ -3,7 +3,7 @@
     "name": "WorldLinco",
     "slug": "nadotongryoksa",
     "scheme": "worldlingo",
-    "version": "1.0.190",
+    "version": "1.0.246",
     "runtimeVersion": "1.0.76",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -16,21 +16,19 @@
       "**/*"
     ],
     "icon": "./assets/icon.png",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#0b0f16"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.parkcheolhong.worldlinco",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성 통역을 위해 마이크 권한이 필요합니다.",
-        "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하기 위해 음성 인식 권한이 필요합니다."
+        "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하기 위해 음성 인식 권한이 필요합니다.",
+        "NSCameraUsageDescription": "메뉴판·표지판 OCR을 위해 카메라를 사용합니다.",
+        "NSPhotoLibraryUsageDescription": "갤러리 이미지 OCR을 위해 사진 접근이 필요합니다."
       }
     },
     "android": {
       "package": "com.parkcheolhong.worldlinco",
-      "versionCode": 242,
+      "versionCode": 331,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0f16"
@@ -43,7 +41,8 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.READ_CONTACTS",
-        "android.permission.REQUEST_INSTALL_PACKAGES"
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -81,8 +80,25 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 24
+            "minSdkVersion": 24,
+            "usesCleartextTraffic": true
           }
+        }
+      ],
+      "expo-splash-screen",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "갤러리 이미지 OCR을 위해 사진 접근이 필요합니다.",
+          "cameraPermission": "메뉴판·표지판 OCR을 위해 카메라를 사용합니다."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "고밀도 카메라 번역을 위해 카메라를 사용합니다.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ]
     ],

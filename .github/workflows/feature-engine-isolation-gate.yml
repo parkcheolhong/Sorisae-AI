@@ -12,6 +12,7 @@ env:
 
 jobs:
     feature-engine-isolation-gate:
+        name: feature-engine-isolation-gate / feature-engine-isolation-gate
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
