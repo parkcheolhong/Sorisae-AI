@@ -258,6 +258,7 @@ import {
 } from './src/features/voip/voipSignaling';
 import { translateUiSync, useUiI18nTick, getUiLang, getEffectiveUiLang, setUiLang, hydrateUiLangFromStorage, setProfileCountryCode as setGlobalProfileCountryCode } from './src/features/i18n/uiI18n';
 import { getDisplayUiText, normalizeDisplayLang, setProfileDisplayLangOverride, syncUiLang, syncUiLangFromCountry } from './src/features/i18n/displayLanguage';
+import { getSettingsText } from './src/features/settings/settingsUiText';
 import { getFeatureUiText, getTravelCategoryLabel } from './src/features/i18n/featureUiCatalog';
 import { formatCountryDisplay } from './src/features/i18n/countryDisplayCatalog';
 import { resolveProfileDisplayLang, pairFromCountry, pairFromLanguage } from './src/features/i18n/profileDisplayLocale';
@@ -2036,10 +2037,11 @@ function AppInner() {
     }, []);
 
     const handleSettingsChangeCountry = useCallback((code: string) => {
+        const settingsText = getSettingsText(getEffectiveUiLang());
         setSettingsProfileError('');
         setSettingsProfileSuccess('');
         if (!token || !userInfo) {
-            setSettingsProfileError('로그인 후 변경할 수 있습니다.');
+            setSettingsProfileError(settingsText.loginRequiredToChange);
             return;
         }
         const pair = applySyncedCountryLanguage({ countryCode: code });
@@ -2056,9 +2058,9 @@ function AppInner() {
                 const updated = await callUpdateMeApi(token, payload);
                 setUserInfo(updated);
                 await saveStoredAuthState(token, updated);
-                setSettingsProfileSuccess('국가가 저장되었습니다.');
+                setSettingsProfileSuccess(getSettingsText(getEffectiveUiLang()).countrySavedSuccess);
             } catch (error: any) {
-                setSettingsProfileError(error?.message || '국가 저장에 실패했습니다.');
+                setSettingsProfileError(error?.message || getSettingsText(getEffectiveUiLang()).countrySaveFailed);
             } finally {
                 setSettingsProfileSaving(false);
             }
@@ -2066,14 +2068,15 @@ function AppInner() {
     }, [applySyncedCountryLanguage, token, userInfo]);
 
     const handleSettingsChangeLanguage = useCallback((code: string) => {
+        const settingsText = getSettingsText(getEffectiveUiLang());
         setSettingsProfileError('');
         setSettingsProfileSuccess('');
         if (!token || !userInfo) {
-            setSettingsProfileError('로그인 후 변경할 수 있습니다.');
+            setSettingsProfileError(settingsText.loginRequiredToChange);
             return;
         }
         if (!isSupportedLangCode(code)) {
-            setSettingsProfileError('지원하지 않는 언어입니다.');
+            setSettingsProfileError(settingsText.unsupportedLanguage);
             return;
         }
         const pair = applySyncedCountryLanguage({ languageCode: code as LangCode });
@@ -2089,9 +2092,9 @@ function AppInner() {
                 });
                 setUserInfo(updated);
                 await saveStoredAuthState(token, updated);
-                setSettingsProfileSuccess('통역/번역 언어가 저장되었습니다.');
+                setSettingsProfileSuccess(getSettingsText(getEffectiveUiLang()).languageSavedSuccess);
             } catch (error: any) {
-                setSettingsProfileError(error?.message || '언어 저장에 실패했습니다.');
+                setSettingsProfileError(error?.message || getSettingsText(getEffectiveUiLang()).languageSaveFailed);
             } finally {
                 setSettingsProfileSaving(false);
             }
@@ -8819,7 +8822,7 @@ function AppInner() {
                         gpsCountryCode={gpsCountryCode}
                         latitude={lat}
                         longitude={lon}
-                        userLanguage={getUiLang()}
+                        userLanguage={getEffectiveUiLang()}
                     />
                 ) : null}
 

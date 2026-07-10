@@ -40,6 +40,7 @@ import { DOWNLOAD_LANGUAGE_OPTIONS, getDownloadLangChipLabel, getSignupGuideText
 import { formatCountryDisplay } from '../i18n/countryDisplayCatalog';
 import { getLanguageDisplayLabel } from '../i18n/languageDisplayCatalog';
 import { resolveProfileDisplayLang, resolveProfileBundledCatalogLang, isTier1DisplayLangActive, TIER1_COUNTRY_BY_DISPLAY_LANG } from '../i18n/profileDisplayLocale';
+import { getProfileCountryCode, useUiI18nTick } from '../i18n/uiI18n';
 import { OperatorLogSection, type OperatorLogSnapshot } from '../operator/OperatorLogSection';
 import { handleOperatorUnlockTap, loadOperatorSurfaceUnlock, setOperatorSurfaceUnlock } from '../operator/operatorAccess';
 import { formatSettingsText, getSettingsText } from './settingsUiText';
@@ -165,9 +166,11 @@ export function SettingsScreen({
     authToken,
     operatorLogSnapshot,
 }: Props) {
+    useUiI18nTick();
     const settings = useGlobalSettings();
-    const profileDisplayLang = resolveProfileDisplayLang(userCountryCode || 'KR');
-    const bundledLang = resolveProfileBundledCatalogLang(userCountryCode || 'KR');
+    const countryForCatalog = getProfileCountryCode() || userCountryCode || 'KR';
+    const profileDisplayLang = resolveProfileDisplayLang(countryForCatalog);
+    const bundledLang = resolveProfileBundledCatalogLang(countryForCatalog);
     const t = getSettingsText(bundledLang);
     const { requestPermissions } = usePermissionCheck();
     const [operatorUnlockTick, setOperatorUnlockTick] = useState(0);
@@ -560,7 +563,7 @@ export function SettingsScreen({
                             <Text wlLocalized style={styles.downloadLangHint}>{getSignupGuideText('downloadLangHint', bundledLang)}</Text>
                             <View style={styles.downloadLangRow}>
                                 {DOWNLOAD_LANGUAGE_OPTIONS.map((opt) => {
-                                    const active = isTier1DisplayLangActive(userCountryCode, opt.code);
+                                    const active = isTier1DisplayLangActive(countryForCatalog, opt.code);
                                     return (
                                         <Pressable
                                             key={`dl-lang-${opt.code}`}
@@ -582,13 +585,13 @@ export function SettingsScreen({
                             >
                                 <Text wlLocalized style={styles.profileRowLabel}>{t.country}</Text>
                                 <Text wlLocalized style={styles.profileRowValue}>
-                                    {formatCountryDisplay(userCountryCode || '', bundledLang) || t.notSet} ▾
+                                    {formatCountryDisplay(countryForCatalog || '', bundledLang) || t.notSet} ▾
                                 </Text>
                             </Pressable>
                             {countryPickerOpen ? (
                                 <ScrollView style={styles.profilePickerList} nestedScrollEnabled>
                                     {SIGNUP_COUNTRY_OPTIONS.map((c) => {
-                                        const active = c.code === userCountryCode;
+                                        const active = c.code === countryForCatalog;
                                         return (
                                             <Pressable
                                                 key={`settings-country-${c.code}`}

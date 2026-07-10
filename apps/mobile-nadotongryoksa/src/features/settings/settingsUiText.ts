@@ -89,6 +89,12 @@ export type SettingsUiText = {
     kwsPickPpnFailed: string;
     kwsPpnSelected: string;
     passwordChange: string;
+    loginRequiredToChange: string;
+    unsupportedLanguage: string;
+    countrySavedSuccess: string;
+    countrySaveFailed: string;
+    languageSavedSuccess: string;
+    languageSaveFailed: string;
 };
 
 const KO: SettingsUiText = {
@@ -175,6 +181,12 @@ const KO: SettingsUiText = {
     kwsPickPpnFailed: '호출어 파일 선택에 실패했습니다.',
     kwsPpnSelected: '{count}개 호출어 파일을 선택했습니다.',
     passwordChange: '비밀번호 변경',
+    loginRequiredToChange: '로그인 후 변경할 수 있습니다.',
+    unsupportedLanguage: '지원하지 않는 언어입니다.',
+    countrySavedSuccess: '국가가 저장되었습니다.',
+    countrySaveFailed: '국가 저장에 실패했습니다.',
+    languageSavedSuccess: '통역/번역 언어가 저장되었습니다.',
+    languageSaveFailed: '언어 저장에 실패했습니다.',
 };
 
 const EN: SettingsUiText = {
@@ -261,6 +273,12 @@ const EN: SettingsUiText = {
     kwsPickPpnFailed: 'Failed to pick wake-word files.',
     kwsPpnSelected: 'Selected {count} wake-word file(s).',
     passwordChange: 'Change password',
+    loginRequiredToChange: 'Sign in to change this.',
+    unsupportedLanguage: 'Unsupported language.',
+    countrySavedSuccess: 'Country saved.',
+    countrySaveFailed: 'Failed to save country.',
+    languageSavedSuccess: 'Interpretation language saved.',
+    languageSaveFailed: 'Failed to save language.',
 };
 
 const CATALOG: Record<string, SettingsUiText> = { ko: KO, en: EN, ja: SETTINGS_UI_JA, zh: SETTINGS_UI_ZH };

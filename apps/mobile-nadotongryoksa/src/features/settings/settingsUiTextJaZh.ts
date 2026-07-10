@@ -87,6 +87,12 @@ export const SETTINGS_UI_JA: SettingsUiText = {
     kwsPickPpnFailed: 'ウェイクワードファイルの選択に失敗しました。',
     kwsPpnSelected: 'ウェイクワードファイル {count} 件を選択しました。',
     passwordChange: 'パスワード変更',
+    loginRequiredToChange: '変更するにはログインしてください。',
+    unsupportedLanguage: 'サポートされていない言語です。',
+    countrySavedSuccess: '国を保存しました。',
+    countrySaveFailed: '国の保存に失敗しました。',
+    languageSavedSuccess: '通訳/翻訳言語を保存しました。',
+    languageSaveFailed: '言語の保存に失敗しました。',
 };
 
 export const SETTINGS_UI_ZH: SettingsUiText = {
@@ -173,4 +179,10 @@ export const SETTINGS_UI_ZH: SettingsUiText = {
     kwsPickPpnFailed: '选择唤醒词文件失败。',
     kwsPpnSelected: '已选择 {count} 个唤醒词文件。',
     passwordChange: '更改密码',
+    loginRequiredToChange: '请先登录后再更改。',
+    unsupportedLanguage: '不支持的语言。',
+    countrySavedSuccess: '国家已保存。',
+    countrySaveFailed: '国家保存失败。',
+    languageSavedSuccess: '口译/翻译语言已保存。',
+    languageSaveFailed: '语言保存失败。',
 };
