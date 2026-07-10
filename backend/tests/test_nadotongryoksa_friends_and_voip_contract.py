@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import queue
+import threading
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -23,7 +26,11 @@ from backend.marketplace.nadotongryoksa_friends_router import router as friends_
 from backend.marketplace.nadotongryoksa_voip_router import router as voip_router
 
 
-def _build_client():
+def _build_client(*, allow_unverified_friend_add: bool = True):
+    if allow_unverified_friend_add:
+        os.environ["ALLOW_UNVERIFIED_FRIEND_ADD"] = "1"
+    else:
+        os.environ.pop("ALLOW_UNVERIFIED_FRIEND_ADD", None)
     class _FakeTranslator:
         def translate(self, text: str, *, from_lang: str, to_lang: str) -> str:
             return f"[{from_lang}->{to_lang}] {text}"
@@ -87,6 +94,29 @@ def _build_client():
     return TestClient(app)
 
 
+def _receive_json_with_timeout(ws, *, timeout_sec: float = 5.0):
+    """Fail fast when websocket receive blocks indefinitely in tests."""
+    result_queue: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=1)
+
+    def _recv() -> None:
+        try:
+            result_queue.put(("ok", ws.receive_json()))
+        except BaseException as exc:  # pragma: no cover - helper wrapper
+            result_queue.put(("err", exc))
+
+    threading.Thread(target=_recv, daemon=True).start()
+    try:
+        status, payload = result_queue.get(timeout=timeout_sec)
+    except queue.Empty as exc:
+        raise AssertionError(
+            f"websocket receive timed out after {timeout_sec:.1f}s"
+        ) from exc
+
+    if status == "err":
+        raise payload  # type: ignore[misc]
+    return payload
+
+
 def test_friends_routes_support_app_user_and_external_phone_contact():
     client = _build_client()
 
@@ -117,6 +147,58 @@ def test_friends_routes_support_app_user_and_external_phone_contact():
 
     after_delete = client.get("/api/users/1/friends")
     assert after_delete.json()["total"] == 1
+
+
+def test_manual_friend_entry_stores_display_name_for_external_contact():
+    client = _build_client()
+
+    response = client.post(
+        "/api/friends",
+        json={
+            "targetEmail": "beta.tester@example.com",
+            "phoneNumber": "+82-10-5555-6666",
+            "displayName": "베타 테스터",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["friendUserId"] is None
+    assert payload["friendUsername"] == "베타 테스터"
+    assert payload["friendPhone"] == "+82-10-5555-6666"
+
+
+def test_friend_invite_requires_otp_in_production_mode():
+    client = _build_client(allow_unverified_friend_add=False)
+
+    blocked = client.post(
+        "/api/friends",
+        json={"targetEmail": "blocked@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert blocked.status_code == 428
+
+    start = client.post(
+        "/api/friends/invites/request-code",
+        json={
+            "targetEmail": "verified@example.com",
+            "phoneNumber": "+82-10-7777-8888",
+            "displayName": "인증 친구",
+            "verificationChannel": "email",
+        },
+    )
+    assert start.status_code == 200, start.text
+    start_payload = start.json()
+    assert start_payload.get("devOtpHint")
+
+    confirm = client.post(
+        "/api/friends/invites/confirm",
+        json={
+            "inviteSessionToken": start_payload["sessionToken"],
+            "verificationCode": start_payload["devOtpHint"],
+        },
+    )
+    assert confirm.status_code == 200, confirm.text
+    assert confirm.json()["friendEmail"] == "verified@example.com"
+    assert confirm.json()["friendUsername"] == "인증 친구"
 
 
 def test_friend_list_includes_discovery_country_and_gender_for_app_friends():
@@ -291,7 +373,138 @@ def test_voip_initiate_routes_to_online_friend_app_when_voice_target_is_availabl
         assert invite["type"] == "incoming_call"
         assert invite["participant_role"] == "callee"
         assert invite["caller_voice_id"] == "nado-000001"
+        assert invite["display_language"] == "ko"
         assert "/api/v1/voip/signal" in invite["signaling_server"]
+
+
+def test_voip_initiate_prefers_client_language_hints_over_stale_db_profiles():
+    client = _build_client()
+    token = create_access_token({"sub": "callee@example.com"})
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    with client.websocket_connect(f"/api/v1/voip/presence?token={token}") as presence_socket:
+        presence_message = presence_socket.receive_json()
+        assert presence_message["type"] == "presence_ready"
+
+        response = client.post(
+            "/api/v1/voip/calls/initiate",
+            json={
+                "friend_id": friend_id,
+                "caller_id": "caller",
+                "session_id": "friend-session-language-hints",
+                "mode": "voip_full_auto",
+                "caller_preferred_language": "ja",
+                "callee_preferred_language": "ko",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["display_language"] == "ko"
+
+        invite = presence_socket.receive_json()
+        assert invite["display_language"] == "ja"
+
+
+def test_voip_accept_prefers_invite_caller_language_over_stale_db():
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-session-accept-language",
+            "mode": "voip_full_auto",
+            "caller_preferred_language": "ja",
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+        preferred_language="en",
+    )
+
+    accept_response = client.post(
+        f"/api/v1/voip/calls/{call_id}/accept",
+        headers={"Authorization": f"Bearer {create_access_token({'sub': 'callee@example.com'})}"},
+    )
+    assert accept_response.status_code == 200
+    assert accept_response.json()["display_language"] == "ja"
+    assert accept_response.json()["participant_role"] == "callee"
+
+
+def test_voip_accept_does_not_dispatch_cancel_push_to_accepting_user(monkeypatch):
+    client = _build_client()
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    cancel_calls: list[tuple[str, str, int | None]] = []
+
+    async def fake_send_voip_call_cancel_push(
+        voice_id: str,
+        call_id: str,
+        *,
+        callee_user_id: int | None = None,
+    ) -> bool:
+        cancel_calls.append((voice_id, call_id, callee_user_id))
+        return True
+
+    monkeypatch.setattr(
+        voip_router_module,
+        "_send_voip_call_cancel_push",
+        fake_send_voip_call_cancel_push,
+    )
+
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "friend_id": friend_id,
+            "caller_id": "caller",
+            "session_id": "friend-session-accept-no-cancel-push",
+            "mode": "voip_full_auto",
+            "caller_preferred_language": "ko",
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+        preferred_language="ja",
+    )
+
+    accept_response = client.post(
+        f"/api/v1/voip/calls/{call_id}/accept",
+        headers={"Authorization": f"Bearer {create_access_token({'sub': 'callee@example.com'})}"},
+    )
+    assert accept_response.status_code == 200
+    assert cancel_calls == []
 
 
 def test_voip_initiate_rejects_self_app_call_targets():
@@ -677,6 +890,100 @@ def test_voip_audit_endpoint_returns_initiate_and_end_events(monkeypatch):
     assert events[1]["call_quality"] == "good"
 
 
+def test_voip_initiate_audit_records_client_network_context(monkeypatch):
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_ENABLED", raising=False)
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("SIP_TRUNK_URI", raising=False)
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_FROM_NUMBER", raising=False)
+
+    client = _build_client()
+    initiate_response = client.post(
+        "/api/v1/voip/calls/initiate",
+        json={
+            "callee_phone": "+82-10-1111-2222",
+            "caller_id": "caller",
+            "session_id": "audit-network-session",
+            "mode": "voip_full_auto",
+            "auto_relay": True,
+            "client_network_context": {
+                "transport": "cellular",
+                "cellular_generation": "5g",
+                "label": "LTE/5G (셀룰러)",
+                "is_accurate_voip_test_ready": True,
+            },
+        },
+    )
+    assert initiate_response.status_code == 200
+    call_id = initiate_response.json()["call_id"]
+
+    audit_response = client.get(f"/api/v1/voip/calls/{call_id}/audit")
+    assert audit_response.status_code == 200
+    events = audit_response.json()
+    assert events[0]["event_type"] == "call_initiated"
+    assert events[0]["metadata"]["client_network"]["transport"] == "cellular"
+    assert events[0]["metadata"]["client_network"]["cellular_generation"] == "5g"
+
+
+def test_voip_audit_endpoint_allows_callee_participant(monkeypatch):
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_ENABLED", raising=False)
+    monkeypatch.delenv("VOIP_PSTN_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("SIP_TRUNK_URI", raising=False)
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_FROM_NUMBER", raising=False)
+
+    client = _build_client()
+    callee_token = create_access_token({"sub": "callee@example.com"})
+    friend_response = client.post(
+        "/api/friends",
+        json={"targetEmail": "callee@example.com", "phoneNumber": "+82-10-1111-2222"},
+    )
+    assert friend_response.status_code == 200
+    friend_id = friend_response.json()["id"]
+
+    with client.websocket_connect(f"/api/v1/voip/presence?token={callee_token}") as presence_socket:
+        presence_socket.receive_json()
+
+        initiate_response = client.post(
+            "/api/v1/voip/calls/initiate",
+            json={
+                "friend_id": friend_id,
+                "caller_id": "caller",
+                "session_id": "audit-callee-session",
+                "mode": "voip_full_auto",
+                "auto_relay": True,
+            },
+        )
+        assert initiate_response.status_code == 200
+        call_id = initiate_response.json()["call_id"]
+        presence_socket.receive_json()
+
+    client.app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2,
+        email="callee@example.com",
+        username="callee",
+        is_active=True,
+        is_admin=False,
+    )
+    callee_audit_before_accept = client.get(f"/api/v1/voip/calls/{call_id}/audit")
+    assert callee_audit_before_accept.status_code == 200
+    assert [event["event_type"] for event in callee_audit_before_accept.json()] == [
+        "call_initiated",
+    ]
+
+    accept_response = client.post(f"/api/v1/voip/calls/{call_id}/accept")
+    assert accept_response.status_code == 200
+
+    callee_audit_after_accept = client.get(f"/api/v1/voip/calls/{call_id}/audit")
+    assert callee_audit_after_accept.status_code == 200
+    assert [event["event_type"] for event in callee_audit_after_accept.json()] == [
+        "call_initiated",
+        "call_accepted",
+    ]
+
+
 def test_voip_records_and_lists_recent_missed_calls_for_callee():
     client = _build_client()
     token = create_access_token({"sub": "callee@example.com"})
@@ -872,21 +1179,21 @@ def test_voip_signal_relays_realtime_chat_messages_between_app_participants():
 
                 callee_socket.send_json({
                     "type": "chat_message",
-                    "text": "네, 채팅도 확인됐어요.",
+                    "text": "Yes, chat is confirmed too.",
                     "sent_at": "2026-05-13T10:00:05Z",
                 })
 
-                callee_ack = callee_socket.receive_json()
-                reply_message = caller_socket.receive_json()
+                callee_ack = _receive_json_with_timeout(callee_socket)
+                reply_message = _receive_json_with_timeout(caller_socket)
                 assert callee_ack["type"] == "chat_message"
                 assert callee_ack["from_role"] == "callee"
-                assert callee_ack["text"] == "네, 채팅도 확인됐어요."
+                assert callee_ack["text"] == "Yes, chat is confirmed too."
                 assert callee_ack["client_sent_at"] == "2026-05-13T10:00:05Z"
                 assert callee_ack["room_id"]
                 assert callee_ack["message_id"]
                 assert reply_message["type"] == "chat_message"
                 assert reply_message["from_role"] == "callee"
-                assert reply_message["text"] == "네, 채팅도 확인됐어요."
+                assert reply_message["text"] == "Yes, chat is confirmed too."
                 assert reply_message["translated_text"]
                 assert reply_message["source_lang"] == "en"
                 assert reply_message["target_lang"] == "ko"

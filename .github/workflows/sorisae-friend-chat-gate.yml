@@ -1,0 +1,112 @@
+name: sorisae-friend-chat-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/mobile-nadotongryoksa/src/features/sorisae/**"
+      - "apps/mobile-nadotongryoksa/src/features/face-interpretation/**"
+      - "apps/mobile-nadotongryoksa/src/app/appFaceVoicePlayback.ts"
+      - "apps/mobile-nadotongryoksa/src/services/voipSessionGuard.ts"
+      - "apps/mobile-nadotongryoksa/src/services/worldlincoTuningConfig.ts"
+      - "backend/llm/voice_gateway.py"
+      - "backend/tests/test_sorisae_friend_chat_gate.py"
+      - "backend/tests/test_voice_gateway_companion_persona.py"
+      - "knowledge/worldlinco_section_freeze.json"
+      - "scripts/check_worldlinco_section_ssot_lock.py"
+      - "scripts/run_sorisae_friend_chat_probe.py"
+      - ".github/workflows/sorisae-friend-chat-gate.yml"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  sorisae-unit-gate:
+    name: sorisae-friend-chat-gate / sorisae-unit-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect sorisae gate scope changes
+        id: changes
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: dorny/paths-filter@v4
+        with:
+          token: ''
+          filters: |
+            sorisae_audio:
+              - 'apps/mobile-nadotongryoksa/src/features/sorisae/**'
+              - 'apps/mobile-nadotongryoksa/src/features/face-interpretation/**'
+              - 'apps/mobile-nadotongryoksa/src/app/appFaceVoicePlayback.ts'
+              - 'apps/mobile-nadotongryoksa/src/services/voipSessionGuard.ts'
+              - 'apps/mobile-nadotongryoksa/src/services/worldlincoTuningConfig.ts'
+              - 'backend/llm/voice_gateway.py'
+              - 'backend/tests/test_sorisae_friend_chat_gate.py'
+              - 'backend/tests/test_voice_gateway_companion_persona.py'
+              - 'knowledge/worldlinco_section_freeze.json'
+              - 'scripts/check_worldlinco_section_ssot_lock.py'
+              - 'scripts/run_sorisae_friend_chat_probe.py'
+              - '.github/workflows/sorisae-friend-chat-gate.yml'
+
+      - uses: actions/setup-python@v6
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
+        with:
+          python-version: "3.13"
+
+      - name: Install probe dependencies
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev ffmpeg
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest faster-whisper av
+
+      - name: WorldLinco section SSOT lock (frozen baseline)
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
+        run: python scripts/check_worldlinco_section_ssot_lock.py
+
+      - name: Sorisae regression lock (forbidden patterns)
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
+        run: python scripts/check_sorisae_regression_lock.py
+
+      - name: Sorisae friend-chat regression tests
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
+        run: |
+          python -m pytest backend/tests/test_sorisae_friend_chat_gate.py -q
+
+      - name: Mobile sorisae capture segment tests
+        if: ${{ github.event_name != 'pull_request' || steps.changes.outputs.sorisae_audio == 'true' }}
+        working-directory: apps/mobile-nadotongryoksa
+        run: |
+          npm ci
+          npm run test -- --testPathPattern=sorisaeCaptureSegment
+
+      - name: Sorisae gate skipped (no relevant PR changes)
+        if: ${{ github.event_name == 'pull_request' && steps.changes.outputs.sorisae_audio != 'true' }}
+        run: echo "No Sorisae audio-scoped changes detected; sorisae-unit-gate passes without test execution."
+
+  sorisae-http-probe-gate:
+    runs-on: ubuntu-latest
+    needs: sorisae-unit-gate
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install runtime deps for probe
+        run: |
+          pip install faster-whisper av
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Run Sorisae HTTP probe (manual / against live backend)
+        run: |
+          python scripts/run_sorisae_friend_chat_probe.py --base-url "${SORISAE_PROBE_BASE_URL:-http://127.0.0.1:8000}"

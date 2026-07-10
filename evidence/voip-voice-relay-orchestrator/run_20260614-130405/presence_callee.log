@@ -1,0 +1,219 @@
+﻿--------- beginning of main
+06-14 13:04:06.786 I/ReactNativeJS(25220): '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+06-14 13:04:06.786 I/ReactNativeJS(25220):   hasPeerConnection: true,
+06-14 13:04:06.786 I/ReactNativeJS(25220):   hasMediaDevices: true }
+06-14 13:04:06.787 I/ReactNativeJS(25220): Running "main"
+06-14 13:04:06.794 W/ReactNativeJS(25220): SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context
+06-14 13:04:06.829 I/ReactNativeJS(25220): [VoIPToneService] AudioContext not available (React Native environment)
+06-14 13:04:06.835 W/ReactNativeJS(25220): Method getInfoAsync imported from "expo-file-system" is deprecated.
+06-14 13:04:06.835 W/ReactNativeJS(25220): You can migrate to the new filesystem API using "File" and "Directory" classes or import the legacy API from "expo-file-system/legacy".
+06-14 13:04:06.835 W/ReactNativeJS(25220): API reference and examples are available in the filesystem docs: https://docs.expo.dev/versions/v54.0.0/sdk/filesystem/
+06-14 13:04:06.839 I/ReactNativeJS(25220): '[AUTH_FLOW]', '{"event":"AUTH_STORAGE_RESTORE_FOUND","user_id":226,"user_email":"burumi69@gmail.com"}'
+06-14 13:04:07.120 I/ReactNativeJS(25220): '[AUTH_FLOW]', '{"event":"AUTH_STORAGE_RESTORE_APPLIED","user_id":226,"user_email":"burumi69@gmail.com"}'
+06-14 13:04:07.151 W/ReactNativeJS(25220): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:04:07.151 W/ReactNativeJS(25220): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+06-14 13:04:07.152 I/ReactNativeJS(25220): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_initial","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 13:04:07.153 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-06-14T04:04:07.152Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start","api_base":"https://metanova1004.com"}'
+06-14 13:04:07.154 W/ReactNativeJS(25220): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:04:07.154 I/ReactNativeJS(25220): '[VoIPFCM] firebase bootstrap failed', [Error: Missing or invalid FirebaseOptions property 'databaseURL'.]
+06-14 13:04:07.243 I/ReactNativeJS(25220): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_initial","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 13:04:07.297 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESTORED","timestamp":"2026-06-14T04:04:07.297Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_launch_resume","call_id":"call-d17e81a314f7","participant_role":"callee","status":"active","restored_rail_section":"voip"}'
+06-14 13:04:07.366 I/ReactNativeJS(25220): '[VoIPScreen] Voice relay readiness:', { callId: 'call-d17e81a314f7',
+06-14 13:04:07.366 I/ReactNativeJS(25220):   requestedMode: 'voip_full_auto',
+06-14 13:04:07.366 I/ReactNativeJS(25220):   resolvedMode: 'voip_full_auto',
+06-14 13:04:07.366 I/ReactNativeJS(25220):   autoRelayRequested: true,
+06-14 13:04:07.366 I/ReactNativeJS(25220):   autoRelayApplied: true,
+06-14 13:04:07.366 I/ReactNativeJS(25220):   voiceRelayServerReady: true }
+06-14 13:04:07.376 I/ReactNativeJS(25220): rn-webrtc:pc:DEBUG 0 ctor +0ms
+06-14 13:04:07.379 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-d17e81a314f7","state":"connecting","timestamp":"2026-06-14T04:04:07.378Z"}'
+06-14 13:04:07.379 W/ReactNativeJS(25220): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:04:07.379 W/ReactNativeJS(25220): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+06-14 13:04:07.380 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-06-14T04:04:07.380Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"voip_full_auto","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start","api_base":"https://metanova1004.com"}'
+06-14 13:04:07.382 I/ReactNativeJS(25220): [VoIP][DiagLine] connectSignaling:start callId=call-d17e81a314f7 state=null
+06-14 13:04:07.382 I/ReactNativeJS(25220): '[VoIP][Diag] connectSignaling:start', { callId: 'call-d17e81a314f7',
+06-14 13:04:07.382 I/ReactNativeJS(25220):   signalingServerUrl: 'wss://metanova1004.com/api/v1/voip/signal?call_id=call-d17e81a314f7&role=callee',
+06-14 13:04:07.382 I/ReactNativeJS(25220):   socketState: 'null' }
+06-14 13:04:07.382 W/ReactNativeJS(25220): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:04:07.383 I/ReactNativeJS(25220): '[VoIPFCM] firebase bootstrap failed', [Error: Missing or invalid FirebaseOptions property 'databaseURL'.]
+06-14 13:04:07.423 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECTED","timestamp":"2026-06-14T04:04:07.422Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"voip_full_auto","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start"}'
+06-14 13:04:07.423 I/ReactNativeJS(25220): [VoIP] Signaling connected
+06-14 13:04:07.423 I/ReactNativeJS(25220): [VoIP][DiagLine] connectSignaling:open callId=call-d17e81a314f7 state=OPEN queuedIce=0
+06-14 13:04:07.423 I/ReactNativeJS(25220): '[VoIP][Diag] connectSignaling:open', { callId: 'call-d17e81a314f7',
+06-14 13:04:07.423 I/ReactNativeJS(25220):   socketState: 'OPEN',
+06-14 13:04:07.423 I/ReactNativeJS(25220):   queuedIceCandidates: 0 }
+06-14 13:04:07.423 I/ReactNativeJS(25220): [VoIP] Flushing 0 queued ICE candidates
+06-14 13:04:07.423 I/ReactNativeJS(25220): '[VoIP] Getting local stream with constraints:', { audio: 
+06-14 13:04:07.423 I/ReactNativeJS(25220):    { echoCancellation: true,
+06-14 13:04:07.423 I/ReactNativeJS(25220):      noiseSuppression: true,
+06-14 13:04:07.423 I/ReactNativeJS(25220):      autoGainControl: true },
+06-14 13:04:07.423 I/ReactNativeJS(25220):   video: false }
+06-14 13:04:07.423 I/ReactNativeJS(25220): '[VoIP] mediaDevices available:', true
+06-14 13:04:07.423 I/ReactNativeJS(25220): [VoIP] Calling getUserMedia...
+06-14 13:04:07.443 I/ReactNativeJS(25220): '[VoIP] Local stream acquired successfully', { tracks: 
+06-14 13:04:07.443 I/ReactNativeJS(25220):    [ { label: '',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _constraints: 
+06-14 13:04:07.443 I/ReactNativeJS(25220):         { echoCancellation: true,
+06-14 13:04:07.443 I/ReactNativeJS(25220):           noiseSuppression: true,
+06-14 13:04:07.443 I/ReactNativeJS(25220):           autoGainControl: true },
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _enabled: true,
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _settings: { groupId: '', deviceId: 'audio-1' },
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _muted: false,
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _peerConnectionId: undefined,
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _readyState: 'live',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        id: '953ebaca-643f-4e5e-8489-e3e2eef6b85f',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        kind: 'audio',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        remote: false } ],
+06-14 13:04:07.443 I/ReactNativeJS(25220):   audioTracks: 
+06-14 13:04:07.443 I/ReactNativeJS(25220):    [ { label: '',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _constraints: 
+06-14 13:04:07.443 I/ReactNativeJS(25220):         { echoCancellation: true,
+06-14 13:04:07.443 I/ReactNativeJS(25220):           noiseSuppression: true,
+06-14 13:04:07.443 I/ReactNativeJS(25220):           autoGainControl: true },
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _enabled: true,
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _settings: { groupId: '', deviceId: 'audio-1' },
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _muted: false,
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _peerConnectionId: undefined,
+06-14 13:04:07.443 I/ReactNativeJS(25220):        _readyState: 'live',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        id: '953ebaca-643f-4e5e-8489-e3e2eef6b85f',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        kind: 'audio',
+06-14 13:04:07.443 I/ReactNativeJS(25220):        remote: false } ],
+06-14 13:04:07.443 I/ReactNativeJS(25220):   trackCount: 1 }
+06-14 13:04:07.443 I/ReactNativeJS(25220): [VoIP] Adding local tracks to peer connection...
+06-14 13:04:07.443 I/ReactNativeJS(25220): rn-webrtc:pc:DEBUG 0 addTrack +68ms
+06-14 13:04:07.472 I/ReactNativeJS(25220): '[VoIP] Track added:', { kind: 'audio', enabled: true, sender: true }
+06-14 13:04:07.472 I/ReactNativeJS(25220): [VoIP] All tracks added to peer connection
+06-14 13:04:07.481 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-d17e81a314f7","state":"connected","timestamp":"2026-06-14T04:04:07.481Z"}'
+06-14 13:04:07.481 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_CONNECTED","call_id":"call-d17e81a314f7","state":"connected","timestamp":"2026-06-14T04:04:07.481Z"}'
+06-14 13:04:07.481 I/ReactNativeJS(25220): [VoIPScreen] Stopping tone - call accepted/connected
+06-14 13:04:07.863 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T04:04:07.863Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"voip_full_auto","source":"app_state_active_restore","active_call_id":"call-d17e81a314f7","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 13:04:08.007 I/ReactNativeJS(25220): [VoIPScreen] Stopping tone - call accepted/connected
+06-14 13:04:08.256 I/ReactNativeJS(25220): '[UI_PRESS_PROBE]', '{"event":"VOIP_VOICE_RELAY_START_BLOCKED","call_id":"call-d17e81a314f7","reason":"recording_in_progress","connection_state":"connected","has_remote_audio":true,"signaling":{"hasSocket":true,"socketState":"OPEN","connectionState":"connected","hasRemoteAudio":true},"timestamp":"2026-06-14T04:04:08.256Z"}'
+06-14 13:04:27.488 I/ReactNativeJS(25220): [VoIP][DiagLine] connectSignaling:onmessage callId=call-d17e81a314f7 state=OPEN rawLength=61
+06-14 13:04:27.489 I/ReactNativeJS(25220): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-d17e81a314f7',
+06-14 13:04:27.489 I/ReactNativeJS(25220):   socketState: 'OPEN',
+06-14 13:04:27.489 I/ReactNativeJS(25220):   rawLength: 61,
+06-14 13:04:27.489 I/ReactNativeJS(25220):   rawPreview: '{"type":"pong","call_id":"call-d17e81a314f7","role":"callee"}' }
+06-14 13:04:27.492 I/ReactNativeJS(25220): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-d17e81a314f7',
+06-14 13:04:27.492 I/ReactNativeJS(25220):   socketState: 'OPEN',
+06-14 13:04:27.492 I/ReactNativeJS(25220):   summary: 
+06-14 13:04:27.492 I/ReactNativeJS(25220):    { type: 'pong',
+06-14 13:04:27.492 I/ReactNativeJS(25220):      call_id: 'call-d17e81a314f7',
+06-14 13:04:27.492 I/ReactNativeJS(25220):      from_role: null,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      has_sdp: false,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      sdp_length: 0,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      has_candidate: false,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      candidate_length: 0,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      sdp_mid: null,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      sdp_Milne_index: null,
+06-14 13:04:27.492 I/ReactNativeJS(25220):      username_fragment: null },
+06-14 13:04:27.492 I/ReactNativeJS(25220):   normalizedType: 'pong' }
+06-14 13:04:27.492 I/ReactNativeJS(25220): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-d17e81a314f7', socketState: 'OPEN' }
+06-14 13:04:47.471 I/ReactNativeJS(25220): [VoIP][DiagLine] connectSignaling:onmessage callId=call-d17e81a314f7 state=OPEN rawLength=61
+06-14 13:04:47.472 I/ReactNativeJS(25220): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-d17e81a314f7',
+06-14 13:04:47.472 I/ReactNativeJS(25220):   socketState: 'OPEN',
+06-14 13:04:47.472 I/ReactNativeJS(25220):   rawLength: 61,
+06-14 13:04:47.472 I/ReactNativeJS(25220):   rawPreview: '{"type":"pong","call_id":"call-d17e81a314f7","role":"callee"}' }
+06-14 13:04:47.473 I/ReactNativeJS(25220): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-d17e81a314f7',
+06-14 13:04:47.473 I/ReactNativeJS(25220):   socketState: 'OPEN',
+06-14 13:04:47.473 I/ReactNativeJS(25220):   summary: 
+06-14 13:04:47.473 I/ReactNativeJS(25220):    { type: 'pong',
+06-14 13:04:47.473 I/ReactNativeJS(25220):      call_id: 'call-d17e81a314f7',
+06-14 13:04:47.473 I/ReactNativeJS(25220):      from_role: null,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      has_sdp: false,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      sdp_length: 0,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      has_candidate: false,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      candidate_length: 0,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      sdp_mid: null,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      sdp_Milne_index: null,
+06-14 13:04:47.473 I/ReactNativeJS(25220):      username_fragment: null },
+06-14 13:04:47.473 I/ReactNativeJS(25220):   normalizedType: 'pong' }
+06-14 13:04:47.473 I/ReactNativeJS(25220): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-d17e81a314f7', socketState: 'OPEN' }
+06-14 13:05:09.803 I/ReactNativeJS(25584): '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+06-14 13:05:09.803 I/ReactNativeJS(25584):   hasPeerConnection: true,
+06-14 13:05:09.803 I/ReactNativeJS(25584):   hasMediaDevices: true }
+06-14 13:05:09.804 I/ReactNativeJS(25584): Running "main"
+06-14 13:05:09.811 W/ReactNativeJS(25584): SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context
+06-14 13:05:09.850 I/ReactNativeJS(25584): [VoIPToneService] AudioContext not available (React Native environment)
+06-14 13:05:09.856 I/ReactNativeJS(25584): '[AUTH_FLOW]', '{"event":"AUTH_STORAGE_RESTORE_FOUND","user_id":226,"user_email":"burumi69@gmail.com"}'
+06-14 13:05:09.859 W/ReactNativeJS(25584): Method getInfoAsync imported from "expo-file-system" is deprecated.
+06-14 13:05:09.859 W/ReactNativeJS(25584): You can migrate to the new filesystem API using "File" and "Directory" classes or import the legacy API from "expo-file-system/legacy".
+06-14 13:05:09.859 W/ReactNativeJS(25584): API reference and examples are available in the filesystem docs: https://docs.expo.dev/versions/v54.0.0/sdk/filesystem/
+06-14 13:05:10.199 I/ReactNativeJS(25584): '[AUTH_FLOW]', '{"event":"AUTH_STORAGE_RESTORE_APPLIED","user_id":226,"user_email":"burumi69@gmail.com"}'
+06-14 13:05:10.230 W/ReactNativeJS(25584): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:05:10.231 W/ReactNativeJS(25584): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+06-14 13:05:10.231 I/ReactNativeJS(25584): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_initial","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"has_pending_call":false,"has_active_call":false}'
+06-14 13:05:10.232 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-06-14T04:05:10.232Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start","api_base":"https://metanova1004.com"}'
+06-14 13:05:10.233 W/ReactNativeJS(25584): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:05:10.233 I/ReactNativeJS(25584): '[VoIPFCM] firebase bootstrap failed', [Error: Missing or invalid FirebaseOptions property 'databaseURL'.]
+06-14 13:05:10.350 I/ReactNativeJS(25584): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_initial","token_summary":"len:141:eyJhbG...k5rjLY","user_id":226,"status":200,"ok":true}'
+06-14 13:05:10.372 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESTORED","timestamp":"2026-06-14T04:05:10.372Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_launch_resume","call_id":"call-d17e81a314f7","participant_role":"callee","status":"active","restored_rail_section":"voip"}'
+06-14 13:05:10.373 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECTED","timestamp":"2026-06-14T04:05:10.373Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start"}'
+06-14 13:05:10.428 I/ReactNativeJS(25584): '[VoIPScreen] Voice relay readiness:', { callId: 'call-d17e81a314f7',
+06-14 13:05:10.428 I/ReactNativeJS(25584):   requestedMode: 'voip_full_auto',
+06-14 13:05:10.428 I/ReactNativeJS(25584):   resolvedMode: 'voip_full_auto',
+06-14 13:05:10.428 I/ReactNativeJS(25584):   autoRelayRequested: true,
+06-14 13:05:10.428 I/ReactNativeJS(25584):   autoRelayApplied: true,
+06-14 13:05:10.428 I/ReactNativeJS(25584):   voiceRelayServerReady: true }
+06-14 13:05:10.438 I/ReactNativeJS(25584): rn-webrtc:pc:DEBUG 0 ctor +0ms
+06-14 13:05:10.439 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-d17e81a314f7","state":"connecting","timestamp":"2026-06-14T04:05:10.439Z"}'
+06-14 13:05:10.439 W/ReactNativeJS(25584): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:05:10.439 W/ReactNativeJS(25584): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+06-14 13:05:10.440 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-06-14T04:05:10.439Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"voip_full_auto","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start","api_base":"https://metanova1004.com"}'
+06-14 13:05:10.440 I/ReactNativeJS(25584): [VoIP][DiagLine] connectSignaling:start callId=call-d17e81a314f7 state=null
+06-14 13:05:10.440 I/ReactNativeJS(25584): '[VoIP][Diag] connectSignaling:start', { callId: 'call-d17e81a314f7',
+06-14 13:05:10.440 I/ReactNativeJS(25584):   signalingServerUrl: 'wss://metanova1004.com/api/v1/voip/signal?call_id=call-d17e81a314f7&role=callee',
+06-14 13:05:10.440 I/ReactNativeJS(25584):   socketState: 'null' }
+06-14 13:05:10.440 W/ReactNativeJS(25584): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+06-14 13:05:10.440 I/ReactNativeJS(25584): '[VoIPFCM] firebase bootstrap failed', [Error: Missing or invalid FirebaseOptions property 'databaseURL'.]
+06-14 13:05:10.524 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECTED","timestamp":"2026-06-14T04:05:10.524Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"voip_full_auto","voice_id":"nado-000226","token_summary":"len:141:eyJhbG...k5rjLY","reason":"effect_start"}'
+06-14 13:05:10.541 I/ReactNativeJS(25584): [VoIP] Signaling connected
+06-14 13:05:10.541 I/ReactNativeJS(25584): [VoIP][DiagLine] connectSignaling:open callId=call-d17e81a314f7 state=OPEN queuedIce=0
+06-14 13:05:10.541 I/ReactNativeJS(25584): '[VoIP][Diag] connectSignaling:open', { callId: 'call-d17e81a314f7',
+06-14 13:05:10.541 I/ReactNativeJS(25584):   socketState: 'OPEN',
+06-14 13:05:10.541 I/ReactNativeJS(25584):   queuedIceCandidates: 0 }
+06-14 13:05:10.541 I/ReactNativeJS(25584): [VoIP] Flushing 0 queued ICE candidates
+06-14 13:05:10.542 I/ReactNativeJS(25584): '[VoIP] Getting local stream with constraints:', { audio: 
+06-14 13:05:10.542 I/ReactNativeJS(25584):    { echoCancellation: true,
+06-14 13:05:10.542 I/ReactNativeJS(25584):      noiseSuppression: true,
+06-14 13:05:10.542 I/ReactNativeJS(25584):      autoGainControl: true },
+06-14 13:05:10.542 I/ReactNativeJS(25584):   video: false }
+06-14 13:05:10.542 I/ReactNativeJS(25584): '[VoIP] mediaDevices available:', true
+06-14 13:05:10.542 I/ReactNativeJS(25584): [VoIP] Calling getUserMedia...
+06-14 13:05:10.559 I/ReactNativeJS(25584): '[VoIP] Local stream acquired successfully', { tracks: 
+06-14 13:05:10.559 I/ReactNativeJS(25584):    [ { label: '',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _constraints: 
+06-14 13:05:10.559 I/ReactNativeJS(25584):         { echoCancellation: true,
+06-14 13:05:10.559 I/ReactNativeJS(25584):           noiseSuppression: true,
+06-14 13:05:10.559 I/ReactNativeJS(25584):           autoGainControl: true },
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _enabled: true,
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _settings: { groupId: '', deviceId: 'audio-1' },
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _muted: false,
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _peerConnectionId: undefined,
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _readyState: 'live',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        id: '8ca52e29-adae-4437-bfde-18611b8f8623',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        kind: 'audio',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        remote: false } ],
+06-14 13:05:10.559 I/ReactNativeJS(25584):   audioTracks: 
+06-14 13:05:10.559 I/ReactNativeJS(25584):    [ { label: '',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _constraints: 
+06-14 13:05:10.559 I/ReactNativeJS(25584):         { echoCancellation: true,
+06-14 13:05:10.559 I/ReactNativeJS(25584):           noiseSuppression: true,
+06-14 13:05:10.559 I/ReactNativeJS(25584):           autoGainControl: true },
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _enabled: true,
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _settings: { groupId: '', deviceId: 'audio-1' },
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _muted: false,
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _peerConnectionId: undefined,
+06-14 13:05:10.559 I/ReactNativeJS(25584):        _readyState: 'live',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        id: '8ca52e29-adae-4437-bfde-18611b8f8623',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        kind: 'audio',
+06-14 13:05:10.559 I/ReactNativeJS(25584):        remote: false } ],
+06-14 13:05:10.559 I/ReactNativeJS(25584):   trackCount: 1 }
+06-14 13:05:10.559 I/ReactNativeJS(25584): [VoIP] Adding local tracks to peer connection...
+06-14 13:05:10.559 I/ReactNativeJS(25584): rn-webrtc:pc:DEBUG 0 addTrack +121ms
+06-14 13:05:10.588 I/ReactNativeJS(25584): '[VoIP] Track added:', { kind: 'audio', enabled: true, sender: true }
+06-14 13:05:10.588 I/ReactNativeJS(25584): [VoIP] All tracks added to peer connection
+06-14 13:05:10.603 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_UPDATE","call_id":"call-d17e81a314f7","state":"connected","timestamp":"2026-06-14T04:05:10.603Z"}'
+06-14 13:05:10.603 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_CONNECTION_STATE_CONNECTED","call_id":"call-d17e81a314f7","state":"connected","timestamp":"2026-06-14T04:05:10.603Z"}'
+06-14 13:05:10.603 I/ReactNativeJS(25584): [VoIPScreen] Stopping tone - call accepted/connected
+06-14 13:05:10.953 I/ReactNativeJS(25584): '[UI_PRESS_PROBE]', '{"event":"VOIP_RAIL_STATE_RESTORE","timestamp":"2026-06-14T04:05:10.953Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":true,"selected_call_mode":"voip_full_auto","source":"app_state_active_restore","active_call_id":"call-d17e81a314f7","pending_call_id":null,"accepting_call_id":null,"active_section":"voip"}'
+06-14 13:05:11.117 I/ReactNativeJS(25584): [VoIPScreen] Stopping tone - call accepted/connected

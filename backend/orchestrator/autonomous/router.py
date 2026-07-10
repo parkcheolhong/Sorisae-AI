@@ -5,13 +5,24 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from backend.auth import get_current_user
+from backend.security_gates import require_llm_mutation_quota
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/llm/autonomous", tags=["autonomous-orchestrator"])
+
+_DEBUG_API_HEADERS = {
+    "X-Orchestrator-Api-Tier": "debug-internal",
+    "X-Orchestrator-Preferred-Endpoint": "/api/llm/orchestrate/chat",
+}
+
+
+def _apply_debug_api_headers(response: Response) -> None:
+    for key, value in _DEBUG_API_HEADERS.items():
+        response.headers[key] = value
 
 
 class AutonomousChatRequest(BaseModel):
@@ -35,6 +46,8 @@ class AutonomousChatResponse(BaseModel):
     agent_results: List[Dict[str, Any]] = []
     message_log: List[Dict[str, Any]] = []
     requires_approval: bool = False
+    llm_connected: bool = False
+    stages_remaining: int = 0
 
 
 class SessionStatusResponse(BaseModel):
@@ -47,42 +60,27 @@ class SessionStatusResponse(BaseModel):
     agent_result_count: int = 0
 
 
+def _resolve_model_routes_for_live_server(model_routes: Dict[str, str]) -> Dict[str, str]:
+    from .llm_setup import resolve_model_routes_for_live_server
+    return resolve_model_routes_for_live_server(model_routes)
+
+
 def _build_llm_call():
-    from backend.orchestrator.chat.llm_client import call_orchestrator_chat_llm
-    from backend.llm.model_config import get_configured_model_routes, build_ollama_options
-
-    ollama_base = os.getenv("OLLAMA_BASE", "http://host.docker.internal:8008/v1").strip()
-    timeout_sec = float(os.getenv("ORCHESTRATOR_CHAT_TIMEOUT_SEC", "120"))
-    model_routes = get_configured_model_routes()
-
-    async def llm_call(*, route_key: str, model: str, system_prompt: str, user_prompt: str) -> str:
-        resolved_model = model or model_routes.get(route_key, model_routes.get("default", ""))
-        return await call_orchestrator_chat_llm(
-            route_key=route_key,
-            model=resolved_model,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            max_tokens=4096,
-            ollama_base=ollama_base,
-            timeout_sec=timeout_sec,
-            build_ollama_options=build_ollama_options,
-        )
-
-    return llm_call, model_routes
+    from .llm_setup import build_llm_call
+    return build_llm_call()
 
 
 @router.post("/chat", response_model=AutonomousChatResponse)
 async def autonomous_chat(
     request: AutonomousChatRequest,
-    current_user=Depends(get_current_user),
+    response: Response,
+    current_user=Depends(require_llm_mutation_quota),
 ) -> AutonomousChatResponse:
-    """멀티 에이전트 자율대화 엔드포인트
+    """Raw TurnController HTTP — debug / regression scripts only.
 
-    에이전트들이 협업하여 사용자의 요청을 처리합니다.
-    - advisory 모드: 설계/분석만 (실행 없음)
-    - semi_auto 모드: 사용자 승인 후 코드 생성
-    - full_auto 모드: 자율 실행
+    Product UI and admin workbench should call ``POST /api/llm/orchestrate/chat``.
     """
+    _apply_debug_api_headers(response)
     from .turn_controller import TurnController
     from .session import AutonomousSession
 
@@ -103,7 +101,8 @@ async def autonomous_chat(
     try:
         llm_call, model_routes = _build_llm_call()
         session.model_routes = model_routes
-    except Exception:
+    except Exception as exc:
+        logger.warning("Autonomous orchestrator LLM call setup failed: %s", exc)
         llm_call = None
 
     controller = TurnController(llm_call=llm_call)
@@ -115,9 +114,11 @@ async def autonomous_chat(
 @router.get("/session/{session_id}", response_model=SessionStatusResponse)
 async def get_session_status(
     session_id: str,
+    response: Response,
     current_user=Depends(get_current_user),
 ) -> SessionStatusResponse:
-    """자율대화 세션 상태 조회"""
+    """자율대화 세션 상태 조회 (debug-internal)."""
+    _apply_debug_api_headers(response)
     from .session import AutonomousSession
 
     owner_id = str(getattr(current_user, "id", "unknown"))

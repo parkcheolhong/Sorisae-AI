@@ -6,23 +6,37 @@
 fastapi>=0.136.3
 uvicorn[standard]>=0.48.0
 pytest>=9.0.3
+pytest-asyncio>=1.0.0
 pydantic>=2.13.4
 httpx>=0.28.1
 python-multipart>=0.0.29
 email-validator>=2.3.0
 sqlalchemy>=2.0.50
+# DB 스키마 버전 관리(기동 시 create_all + ad-hoc ALTER 대체용 베이스라인 도입).
+alembic>=1.13,<2.0
 psycopg2-binary>=2.9.12
 redis>=5.3.1,<6.0
 python-jose>=3.5.0
 bcrypt>=4.1,<5.0
+# PII(위치·검색 등) 저장 시 AES-256-GCM 암호화(backend/services/pii_crypto.py).
+cryptography>=42.0
 boto3>=1.43.18
 minio>=7.2.20,<8.0
 qdrant-client>=1.18.0
+# 관광 KB(소리새 AI) 임베딩 — ONNX 기반(torch 불필요)으로 적재·질의 임베딩 일관 처리.
+fastembed>=0.8.0
 Pillow>=12.2,<13.0
+qrcode[pil]>=7.4.2
 prometheus-client>=0.25.0
 requests>=2.34.2
 webauthn>=2.7.1
 faster-whisper>=1.2.1
+edge-tts>=7.0.0
+# 서버 미디어 브리지(MCU): 2-레그 WebRTC 종단 + MediaRelay 포워딩 + AI 탭(STT/번역/TTS).
+# 체크리스트 §13. lazy import 가드(미설치 시 P2P 경로로 폴백)로 보호되나 운영 배포엔 필수.
+aiortc>=1.9.0
+av>=12.0.0
+numpy>=1.24.0
 mpmath>=1.1,<1.4
 setuptools>=75,<83
 slowapi>=0.1.9
@@ -37,5 +51,7 @@ aiofiles>=25.1,<26.0
 opencv-python-headless>=4.13,<5.0
 paho-mqtt>=2.1,<3.0
 googletrans>=4.0.2,<5.0
+rapidocr-onnxruntime==1.2.3
 pygame>=2.6.1,<3.0
 PyAudio>=0.2.14,<0.3
+google-auth>=2.30.0

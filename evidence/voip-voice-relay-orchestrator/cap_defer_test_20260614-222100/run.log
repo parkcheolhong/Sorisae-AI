@@ -1,0 +1,8 @@
+[22:21:00] Cap/defer test dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-222100
+[22:21:00] Expected build 1.0.39 code 64
+[22:21:01] Using existing connected call
+[22:21:01] Waiting for S10 voice relay segment...
+[22:21:14] === Phase A (45s): S10 짧은 1~2음절 2~3회 (defer 유도) ===
+[22:21:14] >>> S10에서 지금 1~2음절만 짧게 2~3회 말씀해 주세요 (예: '네', '음') <<<
+[22:21:59] Defer phase: flush_false=0 silero_end=1 defer= PASS=False
+[22:21:59] Artifacts: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-222100

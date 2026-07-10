@@ -1,0 +1,10 @@
+out_dir=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_112452
+ui_total=3
+ui_ok=2
+ui_fail=1
+ui_console_errors=0
+ui_page_errors=1
+ui_request_failed=1
+ui_request_failed_ignored=20
+ui_api_http_errors=0
+ui_report=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_112452\ui_smoke_report.json

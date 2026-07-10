@@ -1,0 +1,24 @@
+[13:58:02] Audit+Relay diag dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\audit_relay_diag_20260614-135802
+[13:58:02] Backend restarted with callee audit fix — starting dual-device call
+[13:58:08] Waiting auth on both devices...
+[13:58:10] Stale VoIP on R83W70QY11H — hangup attempt 1
+[13:58:16] Stale VoIP on R83W70QY11H — hangup attempt 2
+[13:58:22] Stale VoIP on R83W70QY11H — hangup attempt 3
+[13:58:27] Stale VoIP on R83W70QY11H — hangup attempt 4
+[13:58:32] Force-stop R83W70QY11H
+[13:58:45] Stale VoIP on 172.30.1.19:5555 — hangup attempt 1
+[13:58:51] Stale VoIP on 172.30.1.19:5555 — hangup attempt 2
+[13:58:57] Stale VoIP on 172.30.1.19:5555 — hangup attempt 3
+[13:59:02] Stale VoIP on 172.30.1.19:5555 — hangup attempt 4
+[13:59:07] Force-stop 172.30.1.19:5555
+[13:59:22] Starting auto-call from caller...
+[13:59:28] Waiting incoming on callee...
+[13:59:48] Tap '받기' at 188,1154 on 172.30.1.19:5555 (text='받기')
+[13:59:48] Waiting accept + signaling...
+[13:59:48] Accept=True Signaling=True
+[13:59:48] Connected hold 12s...
+[14:00:00] Scrolling callee to VoIPCallScreen audit section + refresh
+[14:00:47] Audit logcat loaded=True initiated=False accepted=False 403=False
+[14:00:47] Mic relay window 8s — speak 2-3s on S10 microphone now
+[14:00:56] Report: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\audit_relay_diag_20260614-135802\DIAG_REPORT.md
+[14:00:56] Audit pass: True | Relay pass: False

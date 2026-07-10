@@ -5,6 +5,11 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
+from ..stage_coder_scope import (
+    build_stage_patch_task_suffix,
+    get_stage_patch_scope,
+    is_incremental_stage_patch,
+)
 from .base import BaseAgent, AgentContext, AgentResult
 
 logger = logging.getLogger(__name__)
@@ -50,6 +55,7 @@ class CoderAgent(BaseAgent):
                 "written_files": written_files,
                 "output_dir": str(output_dir),
                 "file_count": len(written_files),
+                "stage_patch_mode": bool(context.stage_id),
             },
         )
 
@@ -58,6 +64,7 @@ class CoderAgent(BaseAgent):
             _run_b_brain_multi_generator,
             _compat_manifest_for_request,
             _compat_write_manifest,
+            _default_required_files_for_mode,
         )
 
         output_path = Path(context.output_dir)
@@ -69,24 +76,43 @@ class CoderAgent(BaseAgent):
         if revision_hint:
             enriched_task += revision_hint
 
-        b_result = _run_b_brain_multi_generator(
-            project_name=context.project_name,
-            validation_profile=context.validation_profile,
-            task=enriched_task,
-            output_dir=output_path,
-        )
+        stage_scope = get_stage_patch_scope(context.stage_id, context.validation_profile)
+        incremental = is_incremental_stage_patch(context.stage_id, context.output_dir)
+
+        if context.stage_id and stage_scope:
+            enriched_task += build_stage_patch_task_suffix(context.stage_id, stage_scope)
+            compat_required_files = stage_scope
+        elif stage_scope:
+            enriched_task += build_stage_patch_task_suffix(context.stage_id or "", stage_scope)
+            compat_required_files = stage_scope
+        else:
+            compat_required_files = _default_required_files_for_mode(enriched_task, "code")
+
+        b_result: Dict[str, Any] = {"written_files": []}
+        if not incremental and not context.stage_id and not stage_scope:
+            b_result = _run_b_brain_multi_generator(
+                project_name=context.project_name,
+                validation_profile=context.validation_profile,
+                task=enriched_task,
+                output_dir=output_path,
+            )
 
         anchor_path, manifest, _ = _compat_manifest_for_request(
-            project_name=context.project_name,
-            validation_profile=context.validation_profile,
-            task=enriched_task,
-            output_dir=output_path,
-            b_brain_result=b_result,
+            enriched_task,
+            context.project_name,
+            context.validation_profile,
+            compat_required_files,
         )
 
         written_files = _compat_write_manifest(output_path, manifest)
+        for generated_file in b_result.get("written_files", []):
+            if generated_file not in written_files:
+                written_files.append(generated_file)
         return written_files
 
     async def fix(self, context: AgentContext, errors: List[str]) -> AgentResult:
-        context.user_feedback = f"검증 에이전트가 다음 오류를 발견했습니다:\n" + "\n".join(f"- {e}" for e in errors)
+        context.user_feedback = (
+            "검증/리뷰 에이전트가 다음 이슈를 발견했습니다:\n"
+            + "\n".join(f"- {e}" for e in errors)
+        )
         return await self.execute(context)

@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-06-14T23:03:15.4995442+09:00",
+  "run_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\voip-voice-relay-orchestrator\\cap_defer_test_20260614-230216",
+  "version": "1.0.39",
+  "version_code": 64,
+  "safety_cap_ms": 14000,
+  "mode": "cap_only",
+  "defer_phase_sec": 0,
+  "cap_phase_sec": 60,
+  "defer_phase_s10": null,
+  "defer_phase_tab": null,
+  "cap_phase": {
+    "device": "S10-cap",
+    "silero_end": 1,
+    "flush_true": 1,
+    "flush_false": 0,
+    "defer_reasons": "",
+    "max_duration_count": 0,
+    "max_duration_elapsed_ms": "",
+    "fixed_interval": 0,
+    "relay_sent": 1
+  },
+  "defer_repro_pass": null,
+  "cap_14s_pass": false
+}

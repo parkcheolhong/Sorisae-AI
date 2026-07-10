@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AgentResult:
     agent: str
-    status: str  # success, error, needs_review, needs_revision
+    status: str  # success, stub, error, needs_review, needs_revision
     output: str
     artifacts: Dict[str, Any] = field(default_factory=dict)
     next_agents: List[str] = field(default_factory=list)
@@ -72,16 +72,39 @@ class BaseAgent:
         context.user_feedback = feedback
         return await self.execute(context)
 
-    async def _call_llm(self, system_prompt: str, user_prompt: str, context: AgentContext) -> str:
+    async def _call_llm_tracked(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        context: AgentContext,
+    ) -> tuple[str, bool]:
+        """Returns (output, llm_connected). GPU/Ollama 미연결 시 stub 텍스트와 False."""
         if self._llm_call is None:
-            return f"[{self.agent_id}] LLM 미연결 — 시스템: {system_prompt[:100]}..."
+            stub = (
+                f"[{self.agent_id}] LLM 미연결 — GPU/Ollama 서버 연결 후 품질 검증 필요. "
+                f"(프롬프트 미리보기: {system_prompt[:80]}...)"
+            )
+            return stub, False
         model = context.model_routes.get(self.agent_role, context.model_routes.get("default", ""))
-        return await self._llm_call(
-            route_key=self.agent_role,
-            model=model,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-        )
+        try:
+            output = await self._llm_call(
+                route_key=self.agent_role,
+                model=model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+            )
+            return output, True
+        except Exception as exc:
+            logger.warning("[%s] LLM call failed, using stub: %s", self.agent_id, exc)
+            stub = (
+                f"[{self.agent_id}] LLM 호출 실패 — {exc}. "
+                f"(프롬프트 미리보기: {system_prompt[:80]}...)"
+            )
+            return stub, False
+
+    async def _call_llm(self, system_prompt: str, user_prompt: str, context: AgentContext) -> str:
+        output, _ = await self._call_llm_tracked(system_prompt, user_prompt, context)
+        return output
 
     def _format_previous_results(self, context: AgentContext) -> str:
         if not context.previous_results:

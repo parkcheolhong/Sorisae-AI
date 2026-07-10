@@ -263,6 +263,22 @@ export type CapabilityPanelDetailResponse = {
     target_patch_entries?: CapabilityPanelTargetPatchEntry[];
     validation_findings: CapabilityPanelValidationFinding[];
     improvement_code_examples: CapabilityPanelCodeExample[];
+    expansion_experiment?: {
+        work_document_title?: string;
+        work_document?: string;
+        focus_path?: string;
+        proposal_id?: string;
+        tower_crane_options?: Array<Record<string, unknown>>;
+        web_research?: Array<{ title?: string; url?: string; snippet?: string }>;
+        recommended_self_run?: {
+            mode?: string;
+            execution_mode?: string;
+            directive_template?: string;
+            directive_scope?: string;
+            directive_request?: string;
+            endpoint?: string;
+        };
+    } | null;
 };
 
 export type CapabilityPanelExecutionComparison = {
@@ -447,6 +463,8 @@ export default function CapabilityPanel({
         ? `${capabilityLastLiveRefreshElapsedSec}초 전`
         : '방금';
     const serverSnapshotLabel = String(capabilitySummaryGeneratedAt || '').trim() || '-';
+    const expansionExperiment = capabilityDetail?.expansion_experiment || null;
+    const showExpansionExperimentPanel = detailCapabilityAction?.id === 'code-generator' && Boolean(expansionExperiment?.work_document);
 
     return (
         <div className="mb-4 rounded-xl border border-[#30363d] bg-[#161b22] p-5">
@@ -621,6 +639,47 @@ export default function CapabilityPanel({
                         )}
                         {capabilityDetail ? (
                             <div className="mt-4 space-y-4">
+                                {showExpansionExperimentPanel && detailCapabilityAction && (
+                                    <div className="rounded-lg border border-[#1f6feb] bg-[rgba(31,111,235,0.08)] p-4">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-[#9ecbff]">
+                                                    {expansionExperiment?.work_document_title || '확장 실험 작업문'}
+                                                </p>
+                                                <p className="mt-1 text-xs text-[#8b949e]">
+                                                    PowerShell 명령이 아닙니다. 아래 버튼으로 API(self-expansion / full)를 호출합니다.
+                                                </p>
+                                                <p className="mt-2 text-xs text-[#c9d1d9]">
+                                                    focus: {expansionExperiment?.focus_path || '-'}
+                                                    {' · '}
+                                                    Tower {(expansionExperiment?.tower_crane_options || []).length}옵션
+                                                    {' · '}
+                                                    웹 {(expansionExperiment?.web_research || []).length}건
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void onApplyCapabilityAction(detailCapabilityAction, 'prepare')}
+                                                    className="rounded-lg border border-[#30363d] bg-[#161b22] px-3 py-2 text-xs font-semibold text-[#e6edf3]"
+                                                >
+                                                    작업문만 적용
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void onApplyCapabilityAction(detailCapabilityAction, 'run')}
+                                                    disabled={loading || selfRunBusy}
+                                                    className={`rounded-lg px-3 py-2 text-xs font-semibold text-white ${(loading || selfRunBusy) ? 'bg-[#21262d]' : 'bg-[#1f6feb]'}`}
+                                                >
+                                                    {(loading || selfRunBusy) ? 'self-expansion 실행 중...' : '확장 실험 self-expansion 실행'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-[#30363d] bg-[#0d1117] p-3 text-[11px] leading-5 text-[#c9d1d9]">
+                                            {String(expansionExperiment?.work_document || '').slice(0, 2400)}
+                                        </pre>
+                                    </div>
+                                )}
                                 {pythonSecurityFindings.length > 0 && (
                                     <div className="rounded-lg border border-[#f78166] bg-[#2d1412] p-4">
                                         <div className="flex flex-wrap items-center justify-between gap-3">

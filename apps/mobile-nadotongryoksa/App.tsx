@@ -1,27 +1,29 @@
 import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
+import { Audio, type AudioSound, type AudioRecording } from './src/compat/expoAvAudio';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
-import * as Contacts from 'expo-contacts';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import firebase from '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
     AppState,
     BackHandler,
+    Dimensions,
+    Image,
+    ImageBackground,
     Linking,
     Modal,
+    PanResponder,
     PermissionsAndroid,
     Platform,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -30,15 +32,97 @@ import {
     Vibration,
     View,
 } from 'react-native';
+import * as ReactNativeExports from 'react-native';
+import { SafeAreaView, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
-import { translateImage, translateText, type TranslateOptions } from './src/api/translate';
-import { CallModePolicyBanner } from './src/features/call-mode/CallModePolicyBanner';
+import { translateImage, translateText, synthesizeSpeech, type TranslateOptions } from './src/api/translate';
+import { isTravelItineraryIntent } from './src/api/tourismAnswer';
+import { FEATURE_IDS, newCorrelationId } from './src/features/correlation/correlationId';
+import {
+    SECTION_RAIL_ITEMS,
+    buildSectionRailSelector,
+    getSectionRailTabLabel,
+    parseSectionRailKey,
+    type SectionRailKey,
+} from './src/features/navigation/sectionRegistry';
+import {
+    fetchLatestApkMetadata,
+    isRemoteApkNewer as isRemoteApkBuildNewer,
+    downloadAndInstallLatestApk,
+} from './src/features/app-update/appUpdate';
 import type { CallMode } from './src/features/call-mode/types';
 import { useCallModeController } from './src/features/call-mode/useCallModeController';
 import { ChatRoomListScreen } from './src/features/chat/screens/ChatRoomListScreen';
 import { ChatRoomScreen } from './src/features/chat/screens/ChatRoomScreen';
-import { createDirectChatRoom, ensureSelfChatRoom, listChatRooms, sendChatRoomMessage } from './src/features/chat/api';
+import { createDirectChatRoom, ensureSelfChatRoom, getChatRoomDetail, listChatRooms, sendChatRoomMessage } from './src/features/chat/api';
+import { getFriends } from './src/api/friends';
+import { buildFriendPhoneIndex, resolveContactChatAction } from './src/features/contacts/contactFriendMatch';
+import { ContactsDirectoryModal } from './src/features/contacts/ContactsDirectoryModal';
+import { DialpadSection } from './src/features/contacts/DialpadSection';
+import { RecentCallsSection } from './src/features/contacts/RecentCallsSection';
+import { VoipPhoneWorkspaceSection, type VoipWorkspaceTab } from './src/features/contacts/VoipPhoneWorkspaceSection';
+import { VoipFriendsDirectoryModal } from './src/features/friends/VoipFriendsDirectoryModal';
+import { clearCallHistory, loadCallHistory, recordCall, type CallHistoryEntry } from './src/services/callHistory';
+import { loadDeviceContacts, type DeviceContact } from './src/services/deviceContacts';
+import { shareChatInvite } from './src/features/sns-share/snsShare';
 import type { ChatRoomSummary } from './src/features/chat/types';
+import TravelItineraryPanel from './src/features/travel-itinerary/TravelItineraryPanel';
+import TourismPromoSection from './src/features/tourism/TourismPromoSection';
+import { normalizeLyricLine, isLikelyLyricLine, isRepeatedLyricSegment, formatSongFileTime } from './src/features/song/songText';
+import { normalizeSongFileLang, resolveSongFileTargetLang } from './src/features/song/songLang';
+import {
+    LANGS,
+    type LangCode,
+    SUPPORTED_LANGUAGE_COUNT,
+    getLangLabelText,
+    isSupportedLangCode,
+    WHISPER_LANG_MAP,
+    normalizeDetectedLangCode,
+    inferSpeechLangCode,
+    resolveAutoTargetLang,
+} from './src/features/language/languageCatalog';
+import { normalizeEchoText, echoOverlapRatio } from './src/features/sorisae/sorisaeEcho';
+import { buildPersonaBrief, createEmptyPersona, setPreferredName, type CompanionPersona } from './src/features/sorisae/companionMemory';
+import { loadPersona, recordTurn, resetPersona, savePersona } from './src/features/sorisae/companionPersonaStore';
+import { parseCompanionCommand } from './src/features/sorisae/companionCommands';
+import {
+    COMPANION_VOICE_CALL_IDLE_MS,
+    armCompanionVoiceCall,
+    createCompanionVoiceCallState,
+    disarmCompanionVoiceCall,
+    matchCompanionWakeWord,
+    markCompanionVoiceCallActivity,
+    shouldCompanionVoiceCallSleep,
+    sleepCompanionVoiceCall,
+    wakeCompanionVoiceCall,
+    type CompanionVoiceCallState,
+} from './src/features/sorisae/companionVoiceCall';
+import {
+    DEFAULT_AI_DISPLAY_NAME,
+    isValidAiName,
+    loadAiDisplayName,
+    resolveAiDisplayName,
+    saveAiName,
+} from './src/features/sorisae/companionIdentity';
+import {
+    FACE_CONVERSATION_RESTART_MS,
+    FACE_CONVERSATION_PLAYBACK_CAP_MS,
+    FACE_CONVERSATION_PERMISSION_RETRY_MS,
+    FACE_CONVERSATION_ECHO_GUARD_MS,
+    FACE_CONVERSATION_SPOKEN_HISTORY,
+    FACE_CONVERSATION_PLAYBACK_DRAIN_MS,
+    FACE_OUTPUT_ECHO_GUARD_MS,
+} from './src/features/face-interpretation/faceConversationTiming';
+import type { SearchCategory, NearbyPlace, BookingResponse } from './src/features/travel-booking/types';
+import { formatDistance, escapeMapLabel, buildNearbyMapHtml, todayPlus } from './src/features/travel-booking/travelBooking';
+import { SettingsScreen } from './src/features/settings/SettingsScreen';
+import { loadGlobalSettings, useGlobalSettings } from './src/features/settings/globalSettings';
+import {
+    loadCompanionKwsSettings,
+    persistCompanionKwsSettings,
+    type CompanionKwsSettings,
+    DEFAULT_COMPANION_KWS_SETTINGS,
+} from './src/features/settings/companionKwsSettingsStorage';
 import { FriendFolderScreen } from './src/features/friends/FriendFolderScreen';
 import { FriendMapDiscoveryScreen } from './src/features/friends/FriendMapDiscoveryScreen';
 import { useAutoNearbyFriendDiscovery } from './src/features/friends/useAutoNearbyFriendDiscovery';
@@ -46,11 +130,48 @@ import type { AcceptedFriendActionPayload, DiscoveryGender, Friend } from './src
 import { usePstnAssistController } from './src/features/pstn-assist/usePstnAssistController';
 import { useVoipAutoController } from './src/features/voip-auto/useVoipAutoController';
 import { usePermissionCheck } from './src/hooks/usePermissionCheck';
+import { useNetworkDiagnostics } from './src/hooks/useNetworkDiagnostics';
 import { PhoneDialer } from './src/components/PhoneDialer';
+import { PasswordSecurityModal } from './src/components/PasswordSecurityModal';
+import { DataSourcesModal } from './src/components/DataSourcesModal';
+import {
+    authenticateWithBiometric,
+    isBiometricAvailable,
+    isBiometricLoginEnabled,
+    loadBiometricCredentials,
+    saveBiometricCredentials,
+    setBiometricLoginEnabled,
+} from './src/auth/biometricGate';
 import { VoipCallErrorBoundary } from './src/components/VoipCallErrorBoundary';
 import { VoIPCallScreen } from './src/screens/VoIPCallScreen';
+import { useVoipIncomingCalls } from './src/features/voip-auto/useVoipIncomingCalls';
+import { registerVoipDevice, unregisterVoipDevice, fetchRecentMissedCalls } from './src/services/voipPresence';
+import { announceServerVoice, buildAnnouncement } from './src/utils/voiceAnnounce';
+import { createVoipMessagingAdapter } from './src/services/voipMessagingAdapter';
+import { dismissIncomingVoipLocalNotification, ensureVoipIncomingNotificationChannel, showIncomingVoipLocalNotification } from './src/services/voipIncomingNotifications';
+import { ensureChatMessageNotificationChannel } from './src/services/chatIncomingNotifications';
+import {
+    areVoipNotificationsEnabled,
+    isVoipIncomingAlertNativeAvailable,
+    openVoipNotificationSettings,
+    startNativeIncomingVoipAlert,
+    stopNativeIncomingVoipAlert,
+    type IncomingAlertSoundMode,
+} from './src/native/voipIncomingAlert';
+import { acceptIncomingCall } from './src/services/voipPresence';
+import { enableVoipAudio, disableVoipAudio } from './src/native/voipAudio';
 import { CallInitResponse, type TURNServer } from './src/services/voipCallClient';
 import { getVoIPToneService } from './src/services/voipToneService';
+import { acquireVoiceCapture, revokeCurrentVoiceCapture, type VoiceCaptureFeatureId } from './src/services/voiceCaptureLease';
+import {
+    clearVoipAudioSession,
+    quiesceBeforePstnDial,
+    quiesceNonVoipAudioForVoipSession,
+    registerVoipSessionProbe,
+    type QuiesceNonVoipAudioOptions,
+} from './src/services/voipSessionGuard';
+import { clearActiveAudioEngine } from './src/services/audioEngineKernel';
+import { deactivateFeatureExclusive } from './src/features/isolation/fourFeatureRuntime';
 import { parsePersistedGpsSnapshot, serializePersistedGpsSnapshot } from './src/utils/hybridGpsCache';
 import { detectHybridGpsMode, scoreLocationQuality, type HybridGpsMode } from './src/utils/hybridGps';
 import {
@@ -58,159 +179,278 @@ import {
     WORLDLINGO_ENGINE_LABEL,
     matchesWorldLincoProjectTitle,
 } from './src/constants/worldlincoBrand';
+import { normalizeSpeakText, inferTtsLanguage } from './src/features/tts/ttsText';
+import { playFaceTranslationOutput, stopFaceVoicePlayback } from './src/app/appFaceVoicePlayback';
+import { useAppVoiceCaptureLoop } from './src/app/useAppVoiceCaptureLoop';
+import type { AppVoiceCaptureLoopContext } from './src/app/useAppVoiceCaptureLoop';
 import { resolveWorldLincoProjectId } from './src/utils/worldlincoProject';
+import {
+    isIncomingRingVoipStatus,
+    isResumableIncomingVoipStatus,
+    shouldDeferCalleeResumeToIncomingAccept,
+} from './src/utils/voipIncomingCallStatus';
+import { toClientNetworkContext } from './src/utils/networkDiagnostics';
+import { createFaceConversationVadController } from './src/features/face-conversation/faceConversationVadController';
+import { shouldSkipSilentVoiceRelayStt } from './src/features/voip-voice-relay/voiceRelayAudioMetrics';
+import {
+    beginVoiceRelaySileroCapture,
+    endVoiceRelaySileroCapture,
+    isVoiceRelaySileroCaptureAvailable,
+    probeVoiceRelaySileroVadSupport,
+    startVoiceRelaySileroVadMonitor,
+    stopVoiceRelaySileroVadMonitor,
+    subscribeVoiceRelaySileroVadEvents,
+} from './src/native/voiceRelaySileroVad';
+import {
+    isLikelyVoiceRelayEcho,
+    isLikelyRepetitionHallucination,
+    isLikelySilenceHallucination,
+    relayTextsSimilar,
+    normalizeRelayText,
+    formatAutoRelayDelayLabel,
+} from './src/features/voip-voice-relay/voiceRelayOrchestrator';
+import { getWorldlincoTuning, hydrateWorldlincoTuningFromStorage, refreshWorldlincoTuning } from './src/services/worldlincoTuningConfig';
+import {
+    MONETIZATION_PLAN_CONFIG,
+    collectOwnedPlanKeys,
+    type MonetizationPlanKey,
+} from './src/features/monetization/monetization';
+import {
+    resolveCountryFlag,
+    resolveLocaleCountryCode,
+    resolveLanguageLabel,
+    formatVoipGenderLabel,
+    formatDiscoveryGenderLabel,
+    resolveDiscoveryGenderFromProfile,
+    type VoipGenderOption,
+} from './src/features/profile/profileFormatters';
+import {
+    normalizeCallModeCandidate,
+    resolveCallModeFromPayload,
+    formatUnifiedCallModeText,
+    formatUnifiedTranslationStatus,
+    isTerminalVoipStatus,
+    type TranslationStatusRoute,
+    type TranslationStatusPhase,
+} from './src/features/call-mode/callModeHelpers';
+import { resolveLangFromCountry, resolveLangFromCountryOrEnglish } from './src/features/country/countryLanguage';
+import {
+    SIGNUP_COUNTRY_OPTIONS,
+    SIGNUP_COUNTRY_OPTION_CODES,
+    COUNTRY_NAME_MAP,
+    normalizeSignupCountryCode,
+    resolveSignupCountryFromLang,
+    resolveCountryName,
+    type SignupCountryCode,
+} from './src/features/country/countryCatalog';
+import {
+    resolveGpsDialectRegionHint,
+    resolveGpsCoordinateFallback,
+    resolveRegionHintForSourceLanguage,
+} from './src/features/country/regionHints';
+import { formatStatusText, extractApiErrorMessage, summarizeAuthToken } from './src/features/shared/textFormat';
+import {
+    buildVoiceId,
+    buildVoipTopic,
+    buildVoipWebSocketUrl,
+    getDefaultVoipTurnServers,
+    normalizeTurnServers,
+} from './src/features/voip/voipSignaling';
+import { translateUiSync, useUiI18nTick, getUiLang, getEffectiveUiLang, setUiLang, hydrateUiLangFromStorage, setProfileCountryCode as setGlobalProfileCountryCode } from './src/features/i18n/uiI18n';
+import { getDisplayUiText, normalizeDisplayLang, setProfileDisplayLangOverride, syncUiLang, syncUiLangFromCountry } from './src/features/i18n/displayLanguage';
+import { getSettingsText } from './src/features/settings/settingsUiText';
+import { getFeatureUiText, getTravelCategoryLabel } from './src/features/i18n/featureUiCatalog';
+import { formatCountryDisplay } from './src/features/i18n/countryDisplayCatalog';
+import { resolveProfileDisplayLang, pairFromCountry, pairFromLanguage } from './src/features/i18n/profileDisplayLocale';
+import { formatFlagPrefixedName, resolveUserCountryFlag } from './src/features/i18n/userDisplayIdentity';
+import { BidirectionalLanguagePairBadge } from './src/features/i18n/BidirectionalLanguagePairBadge';
+import { resolveBootstrapUiLang } from './src/features/i18n/bootstrapUiLang';
+import { getSignupGuideText } from './src/features/i18n/signupGuideCatalog';
+import { installGlobalAlertI18n } from './src/features/i18n/globalAlertI18n';
+import { installGlobalToastI18n } from './src/features/i18n/globalToastI18n';
+import { C, SECTION_TAB_COLORS } from './src/app/appTheme';
+import { styles } from './App.styles';
+import { parseAppEntryDeepLink, parseIncomingVoipDeepLink } from './src/app/appDeepLinks';
+import type {
+    VoipParticipantProfile,
+    DevicePhoneContact,
+    PurchaseResult,
+    StoredActiveVoipSession,
+    CallModeAuditEvent,
+    UserInfo,
+    SignupPayload,
+    UserProfileUpdatePayload,
+    AuthModalMode,
+    AppEntryDeepLinkTarget,
+    SignupRequestCodeResponse,
+    SignupSelectionModal,
+    HybridGpsResult,
+    SongSubtitleEntry,
+    SongFileJobStatus,
+    SongFileTimelineSegment,
+    SongFileTimeline,
+    VoiceLicenseMode,
+    VoiceOutputScope,
+    VoiceConsentResponse,
+    VoiceProfileResponse,
+    VoicePreviewResponse,
+} from './src/app/appTypes';
+import {
+    API_BASE,
+    WORLDLINGO_APP_NAME,
+    APP_VERSION_NUMBER,
+    APP_BUILD_NUMBER,
+    APP_VERSION_LABEL,
+    APP_FOOTER_BRAND,
+    APP_FOOTER_BRAND_KO,
+    VERSION_CHECK_KEY,
+    VERSION_IGNORE_KEY,
+    AUTH_STORAGE_KEY,
+    WORLDLINCO_SETTINGS_STORAGE_KEY,
+    ACTIVE_VOIP_CALL_STORAGE_KEY,
+    VOIP_VALIDATION_FRIEND_CALL_BYPASS_KEY,
+    RELEASE_CHANNEL,
+    ENABLE_IN_APP_UPDATE_PROMPT,
+    VERSION_SNOOZE_BUILD_KEY,
+    VOIP_DEFAULT_PHONE_PREFIX,
+    VOIP_INCOMING_LINK_SCHEMES,
+    VOIP_INCOMING_LINK_PATH,
+    APP_ENTRY_RAIL_LINK_PATH,
+    APP_ENTRY_VOIP_LINK_PATH,
+    APP_ENTRY_CHAT_LINK_PATH,
+    DEMO_SESSION_EMAIL_DOMAIN,
+    AUTH_DEBUG_MARKER_ENABLED,
+    OCR_DEBUG_IMAGE_URI,
+    OCR_DEBUG_IMAGE_NAME,
+    CATEGORY_OPTIONS,
+    RADIUS_OPTIONS,
+    VOIP_GENDER_OPTIONS,
+    VOICE_LICENSE_OPTIONS,
+    VOICE_OUTPUT_SCOPE_OPTIONS,
+} from './src/app/appConstants';
 
-type MonetizationPlanKey = 'voip_lite' | 'voip_pro' | 'song_pass';
-
-type SectionRailKey = 'chat' | 'voip' | 'song-mode' | 'travel-booking';
-type VoipGenderOption = 'male' | 'female' | 'unknown';
-type VoipParticipantProfile = {
-    nickname: string;
-    genderLabel: string;
-    countryCode: string;
-    countryName: string;
-    voiceId: string;
-    countryFlag: string;
-    preferredLanguage?: string;
-};
-
-type DevicePhoneContact = {
-    id: string;
-    name: string;
-    phone: string;
-    label: string;
-};
-
-type SearchCategory = 'all' | 'hotel' | 'airport' | 'restaurant' | 'attraction';
-
-type NearbyPlace = {
-    id: string;
-    category: 'hotel' | 'airport' | 'restaurant' | 'attraction';
-    category_label: string;
-    name: string;
-    address: string;
-    distance_m: number;
-    rating: number;
-    price_tier: string;
-    booking_supported: boolean;
-    phone: string;
-    summary: string;
-    latitude: number;
-    longitude: number;
-    google_maps_url: string;
-}
-
-type BookingResponse = {
-    confirmation_id: string;
-    booking_message: string;
-    translated_message: string;
-    place_name: string;
-    support_phone: string;
-    google_maps_url: string;
-};
-
-type PurchaseResult = {
-    id: number;
-    project_id: number;
-    buyer_id: number;
-    amount: number;
-    status: string;
-    payment_method: string;
-};
-
-type StoredActiveVoipSession = {
-    callId: string;
-    railSection?: SectionRailKey | null;
-    acceptedParticipantRole?: 'caller' | 'callee' | null;
-    acceptedAt?: string | null;
-};
-
-type CallModeAuditEvent = {
-    id: number | string;
-    event_type: string;
-    requested_mode: string | null;
-    resolved_mode: string | null;
-    call_route?: string | null;
-    status?: string | null;
-    error_code?: string | null;
-    created_at: string;
-};
-
-const TERMINAL_VOIP_STATUSES = new Set([
-    'cancelled',
-    'canceled',
-    'completed',
-    'ended',
-    'failed',
-    'no_answer',
-    'rejected',
-    'busy',
-    'callee_offline',
-    'timeout',
-]);
-
-const SECTION_RAIL_ITEMS: Array<{ key: SectionRailKey; label: string; icon: string }> = [
-    { key: 'chat', label: '채팅', icon: '💬' },
-    { key: 'voip', label: '통화', icon: '📞' },
-    { key: 'song-mode', label: '노래', icon: '🎵' },
-    { key: 'travel-booking', label: '예약', icon: '🧭' },
-];
-
-function buildSectionRailSelector(section: SectionRailKey): string {
-    return `worldlinco-section-rail-${section}-button`;
-}
-
-function normalizeCallModeCandidate(mode?: string | null): CallMode | null {
-    if (mode === 'pstn_assist' || mode === 'voip_full_auto') {
-        return mode;
+// [전역 글꼴 확대] "대체적으로 글씨가 작다"는 피드백 반영. 화면마다 하드코딩된 수백 개의
+// fontSize 를 일괄 키우는 대신, Text/TextInput 의 render 를 한 번만 패치해 명시적으로
+// fontSize 가 지정된 경우에만 일정 배율로 확대한다. (fontSize 미지정 Text 는 부모 상속을
+// 유지해 중첩 Text 레이아웃이 깨지지 않도록 건드리지 않음.) 배율(GLOBAL_FONT_SCALE)만
+// 바꾸면 전역으로 조정된다.
+const GLOBAL_FONT_SCALE = 1.18;
+// [전역 다국어] 한글 문자열 children 을 지정 언어로 치환(uiLang !== 'ko'). 캐시에 없으면 원문을
+// 보여주고 백그라운드 번역 후 tick 으로 다시 그린다. TextInput 은 사용자 입력값이라 번역하지 않는다.
+const translateChildrenDeep = (children: any): any => {
+    if (typeof children === 'string') {
+        return translateUiSync(children);
     }
-    return null;
-}
-
-function resolveCallModeFromPayload(payload: Partial<CallInitResponse>): CallMode {
-    const resolvedMode = normalizeCallModeCandidate(payload.resolved_mode);
-    if (resolvedMode) {
-        return resolvedMode;
+    if (Array.isArray(children)) {
+        let changed = false;
+        const next = children.map((child) => {
+            if (typeof child === 'string') {
+                const t = translateUiSync(child);
+                if (t !== child) changed = true;
+                return t;
+            }
+            return child;
+        });
+        return changed ? next : children;
     }
+    return children;
+};
+// 이 RN/React 버전에서 Text/TextInput 은 .render 가 없는 "일반 함수 컴포넌트"라 .render monkeypatch 가
+// 무시된다(글꼴 패치도 무효였음). 그래서 react-native 모듈의 Text/TextInput export 자체를 래퍼 함수
+// 컴포넌트로 교체한다. 모든 파일의 `import { Text } from 'react-native'` 는 동일한 모듈 객체의 프로퍼티를
+// 지연 참조하므로, 여기서 한 번 교체하면 앱 전역에 적용된다. 래퍼는 진짜 컴포넌트라 useUiI18nTick() 훅으로
+// 번역 도착 시 자동 리렌더가 가능하다.
+(() => {
+    const installWrapper = (key: 'Text' | 'TextInput', mode: 'text' | 'input') => {
+        const ns: any = ReactNativeExports as any;
+        const Orig: any = ns[key];
+        if (typeof Orig !== 'function' || Orig.__wlWrapped) return;
+        const Wrapped: any = function WlTextWrapper(props: any) {
+            useUiI18nTick();
+            const skipI18n = Boolean(props.wlLocalized || props.noI18n);
+            const { wlLocalized: _wlLocalized, noI18n: _noI18n, ...restProps } = props;
+            let children = restProps.children;
+            let placeholder = restProps.placeholder;
+            let accessibilityLabel = restProps.accessibilityLabel;
+            const uiLang = getEffectiveUiLang();
+            if (!skipI18n && uiLang !== 'ko') {
+                if (mode === 'text' && children != null) {
+                    children = translateChildrenDeep(children);
+                }
+                if (mode === 'input') {
+                    if (typeof placeholder === 'string') {
+                        placeholder = translateUiSync(placeholder);
+                    }
+                }
+                if (typeof accessibilityLabel === 'string') {
+                    accessibilityLabel = translateUiSync(accessibilityLabel);
+                }
+            }
+            const flat = StyleSheet.flatten(restProps.style) as { fontSize?: number } | undefined;
+            const nextStyle = flat && typeof flat.fontSize === 'number'
+                ? [restProps.style, { fontSize: Math.round(flat.fontSize * GLOBAL_FONT_SCALE) }]
+                : restProps.style;
+            return React.createElement(Orig, {
+                ...restProps,
+                style: nextStyle,
+                children,
+                placeholder,
+                accessibilityLabel,
+            });
+        };
+        Wrapped.__wlWrapped = true;
+        Wrapped.displayName = `Wl(${key})`;
+        const assign = (target: any) => {
+            if (!target) return;
+            try {
+                target[key] = Wrapped;
+                if (target[key] === Wrapped) return;
+            } catch { /* fall through to defineProperty */ }
+            try { Object.defineProperty(target, key, { configurable: true, get: () => Wrapped }); } catch { /* no-op */ }
+        };
+        assign(ns);
+        try { assign(require('react-native')); } catch { /* no-op */ }
+    };
+    installWrapper('Text', 'text');
+    installWrapper('TextInput', 'input');
+    installGlobalAlertI18n();
+    installGlobalToastI18n();
+    void hydrateUiLangFromStorage();
+})();
 
-    const requestedMode = normalizeCallModeCandidate(payload.requested_mode);
-    if (requestedMode) {
-        return requestedMode;
-    }
+// [기능 분리 Phase5.7] SectionRailKey/SECTION_RAIL_ITEMS/buildSectionRailSelector/
+// parseSectionRailKey 는 src/features/navigation/sectionRegistry.ts 단일 레지스트리에서
+// 파생(자동 넘버링 + 자동 연결, 상단 import 참조).
 
-    if (payload.call_route === 'app_webrtc' || payload.phone_dialer_required === false || payload.auto_relay_applied) {
-        return 'voip_full_auto';
-    }
+// [기능 분리 Phase5.4] SearchCategory/NearbyPlace/BookingResponse 타입은
+// src/features/travel-booking/types.ts 로 추출(상단 import 참조).
 
-    return 'pstn_assist';
-}
-
-type TranslationStatusRoute = 'PSTN' | 'VOIP';
-type TranslationStatusPhase = 'READY' | 'LISTEN' | 'TRANSLATE' | 'SPEAK' | 'ERROR' | 'INFO';
-
-function formatUnifiedCallModeText(requestedMode?: string | null, resolvedMode?: string | null): string {
-    return `[통번역 모드] ${requestedMode || 'null'} -> ${resolvedMode || 'null'}`;
-}
-
-function formatUnifiedTranslationStatus(route: TranslationStatusRoute, phase: TranslationStatusPhase, detail: string): string {
-    return `[통번역 ${route}/${phase}] ${detail}`;
-}
-
-function isTerminalVoipStatus(status?: string | null): boolean {
-    return Boolean(status && TERMINAL_VOIP_STATUSES.has(status));
-}
+// [기능 분리 Phase5.6d] TERMINAL_VOIP_STATUSES + 콜모드/통번역 상태 헬퍼는
+// src/features/call-mode/callModeHelpers.ts 로 추출(상단 import 참조).
 
 const PENDING_INCOMING_RING_MAX_MS = 65_000;
-const RESUMABLE_INCOMING_VOIP_STATUSES = new Set([
-    'initiated',
-    'ringing',
-    'callee_offline',
-    'connecting',
-    'active',
-]);
 
-function isResumableIncomingVoipStatus(status?: string | null): boolean {
-    return Boolean(status && RESUMABLE_INCOMING_VOIP_STATUSES.has(status));
+async function requestEndVoipCall(
+    apiBase: string,
+    token: string,
+    callId: string,
+    callQuality: string,
+): Promise<void> {
+    try {
+        await fetch(`${apiBase}/api/v1/voip/calls/${callId}/end`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                duration_sec: 0,
+                call_quality: callQuality,
+            }),
+        });
+    } catch (error) {
+        console.warn('[VoIP] Failed to end stale call cleanly', error);
+    }
 }
 
 async function fetchVoipCallResumeSnapshot(
@@ -236,127 +476,6 @@ async function fetchVoipCallResumeSnapshot(
     }
 }
 
-const MONETIZATION_PLAN_CONFIG: Record<MonetizationPlanKey, {
-    amount: number;
-    title: string;
-    shortLabel: string;
-    billingLabel: string;
-    usageLabel: string;
-    formulaLabel: string;
-    description: string;
-}> = {
-    voip_lite: {
-        amount: 9900,
-        title: 'VoIP Premium Lite',
-        shortLabel: 'Lite',
-        billingLabel: '월 9,900원',
-        usageLabel: '월 60분 통역 통화 권장',
-        formulaLabel: '기준 원가식: (월 고정비 + 통역분당변동비 x 60분) / 60분',
-        description: '가벼운 여행/상담용 실시간 통역 통화를 위한 월정액입니다.',
-    },
-    voip_pro: {
-        amount: 19900,
-        title: 'VoIP Premium Pro',
-        shortLabel: 'Pro',
-        billingLabel: '월 19,900원',
-        usageLabel: '월 300분 통역 통화 권장',
-        formulaLabel: '기준 원가식: (월 고정비 + 통역분당변동비 x 300분) / 300분',
-        description: '상시 통화가 필요한 고객 상담/업무형 통역 사용자를 위한 월정액입니다.',
-    },
-    song_pass: {
-        amount: 2900,
-        title: 'Song Translation Pass',
-        shortLabel: '1곡',
-        billingLabel: '건당 2,900원',
-        usageLabel: '노래 파일 1건 처리',
-        formulaLabel: '기준 원가식: 업로드/자막처리/검수 계산량을 1곡 기준으로 회수',
-        description: '노래 번역은 사용 편차가 커서 건당 과금으로 분리합니다.',
-    },
-};
-
-const PREMIUM_PURCHASE_STATUSES = new Set(['paid', 'completed', 'success', 'succeeded', 'approved']);
-
-function isPurchaseSettled(status: string | null | undefined): boolean {
-    return PREMIUM_PURCHASE_STATUSES.has(String(status || '').trim().toLowerCase());
-}
-
-function resolvePlanKeyFromPurchase(amount: number): MonetizationPlanKey | null {
-    const planEntries = Object.entries(MONETIZATION_PLAN_CONFIG) as Array<[MonetizationPlanKey, typeof MONETIZATION_PLAN_CONFIG[MonetizationPlanKey]]>;
-    const matchedEntry = planEntries.find(([, config]) => config.amount === amount);
-    return matchedEntry ? matchedEntry[0] : null;
-}
-
-function collectOwnedPlanKeys(purchases: Array<{ id: number; amount: number; status: string; payment_method: string }> | null): Set<MonetizationPlanKey> {
-    const ownedPlans = new Set<MonetizationPlanKey>();
-    if (!purchases) {
-        return ownedPlans;
-    }
-    for (const purchase of purchases) {
-        if (!isPurchaseSettled(purchase.status)) {
-            continue;
-        }
-        const planKey = resolvePlanKeyFromPurchase(Number(purchase.amount));
-        if (planKey) {
-            ownedPlans.add(planKey);
-        }
-    }
-    return ownedPlans;
-}
-
-type UserInfo = {
-    id: number;
-    email: string;
-    username?: string;
-    preferred_language?: string;
-    country_code?: string | null;
-};
-
-type SignupPayload = {
-    username: string;
-    email: string;
-    password: string;
-    preferred_language: string;
-    country_code?: string | null;
-    full_name?: string;
-    member_type: 'individual';
-};
-
-type UserProfileUpdatePayload = {
-    preferred_language: string;
-    country_code?: string | null;
-};
-
-type AuthModalMode = 'login' | 'signup';
-
-const API_BASE: string =
-    (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
-    'http://10.0.2.2:8000';
-
-const WORLDLINGO_APP_NAME = WORLDLINGO_BRAND_NAME;
-const APP_VERSION_NUMBER = String(Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.13');
-const APP_BUILD_NUMBER = String(Constants.nativeBuildVersion ?? Constants.expoConfig?.android?.versionCode ?? '14');
-const APP_VERSION_LABEL = `v${APP_VERSION_NUMBER} · build ${APP_BUILD_NUMBER}`;
-const APP_FOOTER_BRAND = `${WORLDLINGO_BRAND_NAME} v${APP_VERSION_NUMBER} · ${WORLDLINGO_ENGINE_LABEL}`;
-const APP_FOOTER_BRAND_KO = `${WORLDLINGO_BRAND_NAME} v${APP_VERSION_NUMBER} · ${WORLDLINGO_ENGINE_LABEL}`;
-const LATEST_APK_METADATA_PATH = '/api/marketplace/latest-apk-metadata';
-const VERSION_CHECK_KEY = 'app_latest_version_check';
-const VERSION_IGNORE_KEY = 'app_version_ignore';
-const AUTH_STORAGE_KEY = 'nadot_auth_state';
-const ACTIVE_VOIP_CALL_STORAGE_KEY = 'nadot_active_voip_call_v1';
-const VOIP_VALIDATION_FRIEND_CALL_BYPASS_KEY = 'nadot_voip_validation_friend_call_bypass_v1';
-const RELEASE_CHANNEL = (process.env.EXPO_PUBLIC_RELEASE_CHANNEL || '').trim().toLowerCase();
-const ENABLE_IN_APP_UPDATE_PROMPT = RELEASE_CHANNEL === 'production';
-const VOIP_DEFAULT_PHONE_PREFIX = '+82-';
-const VOIP_INCOMING_LINK_SCHEMES = ['worldlingo', 'worldlinco', 'com.parkcheolhong.worldlinco'];
-const VOIP_INCOMING_LINK_PATH = 'voip/incoming';
-const APP_ENTRY_RAIL_LINK_PATH = 'rail/open';
-const APP_ENTRY_VOIP_LINK_PATH = 'voip/open';
-const DEMO_SESSION_EMAIL_DOMAIN = 'instant-demo.worldlinco.dev';
-const AUTH_DEBUG_MARKER_ENABLED = __DEV__ || (process.env.EXPO_PUBLIC_AUTH_DEBUG_MARKER || '').trim() === '1';
-const OCR_DEBUG_IMAGE_URI =
-    (process.env.EXPO_PUBLIC_OCR_DEBUG_IMAGE_URI || '').trim() ||
-    (String(Constants.expoConfig?.extra?.ocrDebugImageUri || '')).trim();
-const OCR_DEBUG_IMAGE_NAME = (process.env.EXPO_PUBLIC_OCR_DEBUG_IMAGE_NAME || '').trim();
 const FIREBASE_ANDROID_OPTIONS = {
     apiKey: 'AIzaSyA90Rs93geo1Sz94HmdHL94X34r7eH8wGo',
     appId: '1:409873234227:android:094e3ebdb0001592b0a646',
@@ -364,11 +483,6 @@ const FIREBASE_ANDROID_OPTIONS = {
     projectId: 'studio-9080238625-9cec3',
     storageBucket: 'studio-9080238625-9cec3.firebasestorage.app',
 };
-const buildVoiceId = (userId: number) => `nado-${String(userId).padStart(6, '0')}`;
-
-const buildVoipTopic = (voiceId: string) =>
-    `worldlingo_voip_${voiceId.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
-
 const ensureFirebaseDefaultApp = async (): Promise<boolean> => {
     if (firebase.apps.length > 0) {
         return true;
@@ -387,68 +501,12 @@ const ensureFirebaseDefaultApp = async (): Promise<boolean> => {
     return firebase.apps.length > 0;
 };
 
-const parseVersionTriplet = (value: string): number[] => {
-    const raw = String(value || '').trim();
-    const match = raw.match(/^(\d+)\.(\d+)\.(\d+)$/);
-    if (!match) {
-        return [0, 0, 0];
-    }
-    return match.slice(1).map((item) => Number.parseInt(item, 10));
-};
+const voipMessagingAdapter = createVoipMessagingAdapter(ensureFirebaseDefaultApp);
 
-const parseBuildNumber = (value: string): number => {
-    const parsed = Number.parseInt(String(value || '').trim(), 10);
-    return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const compareSemanticVersions = (left: string, right: string): number => {
-    const leftParts = parseVersionTriplet(left);
-    const rightParts = parseVersionTriplet(right);
-    for (let index = 0; index < 3; index += 1) {
-        if (leftParts[index] > rightParts[index]) {
-            return 1;
-        }
-        if (leftParts[index] < rightParts[index]) {
-            return -1;
-        }
-    }
-    return 0;
-};
-
-const isRemoteApkNewer = (
-    currentVersion: string,
-    currentBuild: string,
-    remoteVersion?: string | null,
-    remoteBuild?: string | null,
-): boolean => {
-    const normalizedRemoteVersion = String(remoteVersion || '').trim();
-    if (!normalizedRemoteVersion) {
-        return false;
-    }
-    const versionComparison = compareSemanticVersions(normalizedRemoteVersion, currentVersion);
-    if (versionComparison > 0) {
-        return true;
-    }
-    if (versionComparison < 0) {
-        return false;
-    }
-    return parseBuildNumber(remoteBuild || '') > parseBuildNumber(currentBuild);
-};
-
-const resolveLatestApkMetadataUrl = (updateUrl: string): string => {
-    if (/\/latest\.apk(?:[?#].*)?$/i.test(updateUrl)) {
-        return updateUrl.replace(/\/latest\.apk(?:[?#].*)?$/i, '/latest-apk-metadata');
-    }
-    return `${API_BASE.replace(/\/$/, '')}${LATEST_APK_METADATA_PATH}`;
-};
-
-const buildVoipWebSocketUrl = (apiBase: string, path: string, query: Record<string, string> = {}) => {
-    const normalizedBase = apiBase.replace(/\/$/, '');
-    const wsBase = normalizedBase.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
-    const searchParams = new URLSearchParams(query);
-    const queryString = searchParams.toString();
-    return `${wsBase}${path}${queryString ? `?${queryString}` : ''}`;
-};
+// [기능 분리 정리] 인앱 업데이트 버전 비교/메타 URL 헬퍼는 `src/features/app-update/appUpdate.ts`
+// (메타데이터 기반 isRemoteApkNewer + LATEST_APK_METADATA_PATH) 로 단일화됨.
+// App.tsx 로컬 중복본(parseVersionTriplet/parseBuildNumber/compareSemanticVersions/
+// isRemoteApkNewer(string)/resolveLatestApkMetadataUrl)은 호출처가 없어 제거(SSOT 통합).
 
 function buildInstantDemoCredentials(seed: string) {
     const normalizedSeed = seed.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 10) || 'guestdemo';
@@ -458,414 +516,58 @@ function buildInstantDemoCredentials(seed: string) {
         password: `WorldLinco!${normalizedSeed}A1`,
     };
 }
-function parseSectionRailKey(value: string | null | undefined): SectionRailKey | null {
-    switch (String(value || '').trim().toLowerCase()) {
-        case 'chat':
-            return 'chat';
-        case 'voip':
-            return 'voip';
-        case 'song':
-        case 'song-mode':
-            return 'song-mode';
-        case 'travel':
-        case 'travel-booking':
-            return 'travel-booking';
-        default:
-            return null;
-    }
-}
-
-type AppEntryDeepLinkTarget =
-    | { type: 'rail'; section: SectionRailKey }
-    | { type: 'voip'; action: 'open' | 'validation' | 'demo'; calleeVoiceId?: string };
-
-function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | null {
-    try {
-        const parsed = new URL(url);
-        const scheme = parsed.protocol.replace(':', '').toLowerCase();
-        if (!VOIP_INCOMING_LINK_SCHEMES.includes(scheme)) {
-            return null;
-        }
-
-        const resolvedPath = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+/, '').toLowerCase();
-        if (resolvedPath === APP_ENTRY_RAIL_LINK_PATH) {
-            const section = parseSectionRailKey(parsed.searchParams.get('section'));
-            return section ? { type: 'rail', section } : null;
-        }
-
-        if (resolvedPath !== APP_ENTRY_VOIP_LINK_PATH) {
-            return null;
-        }
-
-        const action = String(parsed.searchParams.get('action') || 'open').trim().toLowerCase();
-        const calleeVoiceId = String(parsed.searchParams.get('callee_voice_id') || '').trim() || undefined;
-        if (action === 'validation') {
-            return { type: 'voip', action: 'validation', calleeVoiceId };
-        }
-        if (action === 'demo') {
-            return { type: 'voip', action: 'demo' };
-        }
-        return { type: 'voip', action: 'open', calleeVoiceId };
-    } catch {
-        return null;
-    }
-}
-
-const CATEGORY_OPTIONS: Array<{ label: string; value: SearchCategory }> = [
-    { label: '전체', value: 'all' },
-    { label: '호텔', value: 'hotel' },
-    { label: '공항', value: 'airport' },
-    { label: '식당', value: 'restaurant' },
-    { label: '관광명소', value: 'attraction' },
-];
-
-const RADIUS_OPTIONS: Array<{ label: string; value: number }> = [
-    { label: '5km', value: 5000 },
-    { label: '30km', value: 30000 },
-    { label: '50km', value: 50000 },
-    { label: '70km', value: 70000 },
-    { label: '100km', value: 100000 },
-];
 
 const AUTO_RELAY_DELAY_OPTIONS_MS = [2000, 2500, 3000] as const;
 const DEFAULT_AUTO_RELAY_DELAY_MS = 2500;
+// [기능 분리 Phase5.1a] 대면통역 타이밍 상수(FACE_CONVERSATION_*/FACE_OUTPUT_ECHO_GUARD_MS)는
+// src/features/face-interpretation/faceConversationTiming.ts 로 추출(상단 import 참조).
 const TRANSLATION_REQUEST_TIMEOUT_MS = 30_000;
 const AUTO_RELAY_DUPLICATE_GUARD_MS = 8000;
-const VOIP_GENDER_OPTIONS: Array<{ value: VoipGenderOption; label: string }> = [
-    { value: 'male', label: '남성' },
-    { value: 'female', label: '여성' },
-    { value: 'unknown', label: '미설정' },
-];
 
-function formatVoipGenderLabel(gender: VoipGenderOption): string {
-    switch (gender) {
-        case 'male':
-            return '남성';
-        case 'female':
-            return '여성';
-        default:
-            return '미설정';
+// [기능 분리 Phase5.6c] 국기/로케일/언어 라벨 + 성별 라벨 헬퍼는
+// src/features/profile/profileFormatters.ts 로 추출(상단 import 참조).
+// [기능 분리 Phase5.6e-2] resolveCountryName 은 country 카탈로그로 추출
+// (src/features/country/countryCatalog.ts, 상단 import 참조).
+
+// [기능 분리 Phase5.6g] buildVoiceId/buildVoipTopic/buildVoipWebSocketUrl/
+// getDefaultVoipTurnServers/normalizeTurnServers 는 src/features/voip/voipSignaling.ts 로 추출(상단 import 참조).
+
+// [기능 분리 Phase5.1a] formatAutoRelayDelayLabel/normalizeRelayText 는 음성릴레이 공용 유틸로
+// src/features/voip-voice-relay/voiceRelayOrchestrator.ts 로 통합(상단 import 참조).
+// [기능 분리 Phase5.2] normalizeEchoText/echoOverlapRatio 는
+// src/features/sorisae/sorisaeEcho.ts 로 추출(상단 import 참조).
+
+// [기능 분리 Phase5.4] formatDistance/escapeMapLabel/buildNearbyMapHtml/todayPlus 는
+// src/features/travel-booking/travelBooking.ts 로 추출(상단 import 참조).
+// 인앱 자동 업데이트: 마켓에 올린 빌드를 단말이 스스로 감지 → "업그레이드"를 누르면
+// 곧장 새 APK 를 내려받아 시스템 설치 화면으로 연결한다. (브라우저로 빠지지 않음)
+async function runApkInAppInstall() {
+    const showProgress = (label: string) => {
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(label, ToastAndroid.SHORT);
+        }
+    };
+    showProgress('업데이트를 내려받는 중…');
+    let lastShown = 0;
+    const result = await downloadAndInstallLatestApk(API_BASE, {
+        onProgress: (ratio) => {
+            const pct = Math.round(ratio * 100);
+            // 25% 단위로만 토스트 → 과도한 알림 방지
+            if (pct >= lastShown + 25 && pct < 100) {
+                lastShown = pct;
+                showProgress(`업데이트 다운로드 ${pct}%`);
+            }
+        },
+    });
+    if (!result.ok) {
+        Alert.alert(
+            `${WORLDLINGO_APP_NAME} 업데이트`,
+            `업데이트 설치를 시작하지 못했습니다.\n${result.error ?? ''}\n\n잠시 후 다시 시도해주세요.`,
+            [{ text: '확인', style: 'default' }],
+        );
+    } else {
+        showProgress('설치 화면을 엽니다…');
     }
-}
-
-function formatDiscoveryGenderLabel(gender?: DiscoveryGender | VoipGenderOption): string {
-    switch (gender) {
-        case 'male':
-            return '남성';
-        case 'female':
-            return '여성';
-        case 'other':
-            return '기타';
-        default:
-            return '미설정';
-    }
-}
-
-function resolveDiscoveryGenderFromProfile(gender: VoipGenderOption): DiscoveryGender {
-    if (gender === 'male' || gender === 'female') {
-        return gender;
-    }
-    return 'unknown';
-}
-
-function resolveLocaleCountryCode(): string {
-    const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'ko-KR';
-    const localeSegments = locale.split(/[-_]/);
-    const rawRegion = localeSegments[localeSegments.length - 1] || 'KR';
-    return rawRegion.toUpperCase();
-}
-
-function resolveCountryName(countryCode: string): string {
-    return COUNTRY_NAME_MAP[countryCode.toUpperCase()] ?? countryCode.toUpperCase();
-}
-
-function resolveCountryFlag(countryCode: string): string {
-    const code = countryCode.toUpperCase();
-    if (!/^[A-Z]{2}$/.test(code)) {
-        return '🌐';
-    }
-    return String.fromCodePoint(...Array.from(code).map((char) => 127397 + char.charCodeAt(0)));
-}
-
-function resolveLanguageLabel(languageCode?: string | null): string {
-    const normalized = String(languageCode || '').trim().toLowerCase();
-    if (!normalized) {
-        return '미설정';
-    }
-    const match = LANGS.find((item) => item.code === normalized);
-    return match ? `${match.label} (${match.code.toUpperCase()})` : normalized.toUpperCase();
-}
-
-function getDefaultVoipTurnServers(): TURNServer[] {
-    return [
-        { urls: ['stun:stun.l.google.com:19302'] },
-        { urls: ['stun:stun1.l.google.com:19302'] },
-        { urls: ['stun:stun.cloudflare.com:3478'] },
-    ];
-}
-
-function normalizeTurnServers(rawValue: unknown): TURNServer[] {
-    if (!Array.isArray(rawValue)) {
-        return getDefaultVoipTurnServers();
-    }
-    const normalized = rawValue
-        .map((entry): TURNServer | null => {
-            if (!entry || typeof entry !== 'object') {
-                return null;
-            }
-            const candidate = entry as { urls?: unknown; username?: unknown; credential?: unknown };
-            const urls = Array.isArray(candidate.urls)
-                ? candidate.urls.filter((url): url is string => typeof url === 'string' && Boolean(url.trim()))
-                : [];
-            if (!urls.length) {
-                return null;
-            }
-            return {
-                urls,
-                username: typeof candidate.username === 'string' ? candidate.username : undefined,
-                credential: typeof candidate.credential === 'string' ? candidate.credential : undefined,
-            };
-        })
-        .filter((entry): entry is TURNServer => entry !== null);
-
-    return normalized.length ? normalized : getDefaultVoipTurnServers();
-}
-
-function parseIncomingVoipDeepLink(url: string): (CallInitResponse & { caller_label?: string; caller_voice_id?: string }) | null {
-    try {
-        const parsed = new URL(url);
-        const scheme = parsed.protocol.replace(':', '').toLowerCase();
-        if (!VOIP_INCOMING_LINK_SCHEMES.includes(scheme)) {
-            return null;
-        }
-
-        const resolvedPath = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+/, '').toLowerCase();
-        if (resolvedPath !== VOIP_INCOMING_LINK_PATH) {
-            return null;
-        }
-
-        const callId = parsed.searchParams.get('call_id') || '';
-        const signalingServer = parsed.searchParams.get('signaling_server') || '';
-        if (!callId || !signalingServer) {
-            return null;
-        }
-
-        const explicitParticipantRole = parsed.searchParams.get('participant_role');
-        let inferredParticipantRole: 'caller' | 'callee' = explicitParticipantRole === 'callee' ? 'callee' : 'caller';
-        if (explicitParticipantRole !== 'callee') {
-            try {
-                const signalingUrl = new URL(signalingServer);
-                inferredParticipantRole = signalingUrl.searchParams.get('role') === 'callee' ? 'callee' : 'caller';
-            } catch {
-                inferredParticipantRole = 'caller';
-            }
-        }
-
-        let turnServers: unknown = getDefaultVoipTurnServers();
-        const encodedTurnServers = parsed.searchParams.get('turn_servers');
-        if (encodedTurnServers) {
-            try {
-                turnServers = JSON.parse(encodedTurnServers);
-            } catch {
-                turnServers = getDefaultVoipTurnServers();
-            }
-        }
-
-        return {
-            call_id: callId,
-            signaling_server: signalingServer,
-            turn_servers: normalizeTurnServers(turnServers),
-            call_route: parsed.searchParams.get('call_route') || 'app_webrtc',
-            user_message: parsed.searchParams.get('user_message') || undefined,
-            callee_app_online: parsed.searchParams.get('callee_app_online') === 'true',
-            caller_voice_id: parsed.searchParams.get('caller_voice_id') || undefined,
-            callee_voice_id: parsed.searchParams.get('callee_voice_id') || undefined,
-            participant_role: inferredParticipantRole,
-            display_label: parsed.searchParams.get('display_label') || undefined,
-            status: parsed.searchParams.get('status') || undefined,
-            caller_label: parsed.searchParams.get('caller_label') || undefined,
-        };
-    } catch {
-        return null;
-    }
-}
-
-function formatAutoRelayDelayLabel(ms: number): string {
-    return Number.isInteger(ms / 1000) ? `${ms / 1000}초` : `${(ms / 1000).toFixed(1)}초`;
-}
-
-function normalizeRelayText(text: string): string {
-    return text
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, ' ');
-}
-
-function formatStatusText(template: string, values: Record<string, string>): string {
-    return template.replace(/\{(\w+)\}/g, (_whole, key: string) => values[key] ?? '');
-}
-
-function formatDistance(distanceM: number): string {
-    return distanceM >= 1000 ? `${(distanceM / 1000).toFixed(1)}km` : `${distanceM}m`;
-}
-
-function escapeMapLabel(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function buildNearbyMapHtml(params: {
-    centerLat: number;
-    centerLon: number;
-    places: NearbyPlace[];
-    selectedPlaceId: string;
-}): string {
-    const places = params.places.map((place) => ({
-        id: place.id,
-        name: escapeMapLabel(place.name),
-        address: escapeMapLabel(place.address),
-        categoryLabel: escapeMapLabel(place.category_label),
-        distanceLabel: formatDistance(place.distance_m),
-        lat: place.latitude,
-        lon: place.longitude,
-        googleMapsUrl: place.google_maps_url,
-        bookingSupported: place.booking_supported,
-        reservable: place.booking_supported && (place.category === 'hotel' || place.category === 'airport'),
-    }));
-
-    return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        html, body, #map { height: 100%; margin: 0; padding: 0; background: #08111b; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        .leaflet-container { background: linear-gradient(180deg, #0b1622 0%, #071018 100%); }
-        .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #0f1b2a; color: #e6edf3; }
-        .leaflet-popup-content { margin: 10px 12px; line-height: 1.4; }
-        .map-popup-title { font-weight: 700; font-size: 13px; }
-        .map-popup-meta { font-size: 11px; color: #8fd3ff; margin-top: 4px; }
-        .map-popup-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-        .map-popup-btn {
-            border: 0;
-            border-radius: 999px;
-            padding: 7px 10px;
-            font-size: 11px;
-            font-weight: 700;
-            color: #e6edf3;
-            background: #1d4ed8;
-        }
-        .map-popup-btn.secondary { background: #0d2a4a; color: #79c0ff; border: 1px solid #35506c; }
-    </style>
-</head>
-<body>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const postToApp = (payload) => {
-            if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
-                window.ReactNativeWebView.postMessage(JSON.stringify(payload));
-            }
-        };
-        const center = [${JSON.stringify(params.centerLat)}, ${JSON.stringify(params.centerLon)}];
-        const places = ${JSON.stringify(places)};
-        const selectedPlaceId = ${JSON.stringify(params.selectedPlaceId)};
-        const map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false,
-        }).setView(center, places.length ? 12 : 11);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
-
-        const bounds = [];
-        const selectedMarkerStyle = { radius: 10, color: '#ffd166', weight: 3, fillColor: '#ff7b00', fillOpacity: 0.95 };
-        const defaultMarkerStyle = { radius: 8, color: '#7dd3fc', weight: 2, fillColor: '#1d4ed8', fillOpacity: 0.92 };
-
-        const userMarker = L.circleMarker(center, {
-            radius: 9,
-            color: '#9be8b3',
-            weight: 3,
-            fillColor: '#22c55e',
-            fillOpacity: 0.9,
-        }).addTo(map).bindPopup('<div class="map-popup-title">현재 위치</div>');
-        bounds.push(center);
-
-        document.addEventListener('click', (event) => {
-            const target = event.target;
-            if (!(target instanceof HTMLElement)) {
-                return;
-            }
-            const button = target.closest('.map-popup-btn');
-            if (!button) {
-                return;
-            }
-            const action = button.getAttribute('data-action');
-            const placeId = button.getAttribute('data-place-id');
-            const googleMapsUrl = button.getAttribute('data-google-maps-url');
-            if (!action || !placeId) {
-                return;
-            }
-            postToApp({
-                type: 'nearby-map-action',
-                action,
-                placeId,
-                googleMapsUrl,
-            });
-        });
-
-        let selectedMarker = null;
-        places.forEach((place) => {
-            const point = [place.lat, place.lon];
-                                accessibilityRole="button"
-                                accessibilityLabel={buildSectionRailSelector(item.key)}
-                                testID={buildSectionRailSelector(item.key)}
-            bounds.push(point);
-            const popupHtml = '<div class="map-popup-title">' + place.name + '</div>'
-                + '<div class="map-popup-meta">' + place.categoryLabel + ' · ' + place.distanceLabel + '<br/>' + place.address + '</div>'
-                + '<div class="map-popup-actions">'
-                + '<button type="button" class="map-popup-btn secondary" data-action="focus" data-place-id="' + place.id + '">선택</button>'
-                + '<button type="button" class="map-popup-btn" data-action="route" data-place-id="' + place.id + '" data-google-maps-url="' + place.googleMapsUrl + '">길찾기</button>'
-                + (place.reservable
-                    ? '<button type="button" class="map-popup-btn secondary" data-action="book" data-place-id="' + place.id + '">예약 선택</button>'
-                    : '')
-                + '</div>';
-            const marker = L.circleMarker(point, place.id === selectedPlaceId ? selectedMarkerStyle : defaultMarkerStyle)
-                .addTo(map)
-                .bindPopup(popupHtml);
-            marker.on('click', () => {
-                postToApp({ type: 'nearby-map-action', action: 'focus', placeId: place.id, googleMapsUrl: place.googleMapsUrl });
-            });
-            if (place.id === selectedPlaceId) {
-                selectedMarker = marker;
-            }
-        });
-
-        if (bounds.length > 1) {
-            map.fitBounds(bounds, { padding: [26, 26] });
-        }
-
-        if (selectedMarker) {
-            selectedMarker.openPopup();
-        } else {
-            userMarker.openPopup();
-        }
-    </script>
-</body>
-</html>`;
-}
-
-function todayPlus(days: number): string {
-    const now = new Date();
-    now.setDate(now.getDate() + days);
-    return now.toISOString().slice(0, 10);
 }
 
 async function checkForAppUpdate() {
@@ -875,61 +577,53 @@ async function checkForAppUpdate() {
         }
 
         const ignored = await AsyncStorage.getItem(VERSION_IGNORE_KEY);
-        if (ignored) {
-            return; // 사용자가 업데이트 확인을 비활성화했음
+        if (ignored === '1') {
+            return; // 사용자가 업데이트 확인을 영구 비활성화했음
         }
 
-        const lastCheck = await AsyncStorage.getItem(VERSION_CHECK_KEY);
-        if (lastCheck && Date.now() - parseInt(lastCheck, 10) <= 86400000) {
+        // 마켓플레이스 SSOT 메타데이터를 직접 조회 (projects/demo_url 의존 제거).
+        const metadata = await fetchLatestApkMetadata(API_BASE);
+        if (!metadata) {
+            return;
+        }
+        const currentBuild = Number.parseInt(APP_BUILD_NUMBER, 10) || 0;
+        if (!isRemoteApkBuildNewer(APP_VERSION_NUMBER, currentBuild, metadata)) {
             return;
         }
 
-        const response = await fetch(`${API_BASE}/api/marketplace/projects?skip=0&limit=50`);
-        if (!response.ok) return;
-
-        const data = await response.json();
-        const nadoProject = data.projects?.find(
-            (p: any) => matchesWorldLincoProjectTitle(p.title) || matchesWorldLincoProjectTitle(p.description),
-        );
-
-        if (nadoProject?.demo_url) {
-            const rawDemoUrl = String(nadoProject.demo_url).trim();
-            const updateUrl = /^https?:\/\//i.test(rawDemoUrl)
-                ? rawDemoUrl
-                : `${API_BASE.replace(/\/$/, '')}/${rawDemoUrl.replace(/^\//, '')}`;
-            const metadataUrl = resolveLatestApkMetadataUrl(updateUrl);
-            const metadataResponse = await fetch(metadataUrl);
-            if (!metadataResponse.ok) {
-                return;
-            }
-            const metadata = await metadataResponse.json().catch(() => null);
-            if (!isRemoteApkNewer(APP_VERSION_NUMBER, APP_BUILD_NUMBER, metadata?.version_name, metadata?.build_number)) {
-                return;
-            }
-
-            await AsyncStorage.setItem(VERSION_CHECK_KEY, Date.now().toString());
-            const remoteVersionLabel = `v${String(metadata?.version_name ?? '').trim()} · build ${String(metadata?.build_number ?? '').trim()}`;
-            Alert.alert(
-                `${WORLDLINGO_APP_NAME} 업데이트`,
-                `새 버전 ${remoteVersionLabel}이 사용 가능합니다. 현재 버전은 ${APP_VERSION_LABEL}입니다. 지금 다운로드하시겠어요?`,
-                [
-                    {
-                        text: '나중에',
-                        onPress: () => { },
-                        style: 'cancel',
-                    },
-                    {
-                        text: '다운로드',
-                        onPress: () => {
-                            Linking.openURL(updateUrl).catch((err) =>
-                                console.error('APK 다운로드 실패:', err)
-                            );
-                        },
-                        style: 'default',
-                    },
-                ]
-            );
+        // 같은 빌드를 이미 "나중에"로 스누즈했으면 재알림하지 않는다.
+        const snoozed = await AsyncStorage.getItem(VERSION_SNOOZE_BUILD_KEY);
+        if (snoozed && metadata.buildNumber != null && Number.parseInt(snoozed, 10) === metadata.buildNumber) {
+            return;
         }
+
+        const remoteVersionLabel = `v${String(metadata.versionName ?? '').trim()} · build ${String(metadata.buildNumber ?? '').trim()}`;
+        Alert.alert(
+            `${WORLDLINGO_APP_NAME} 업데이트`,
+            `새 버전 ${remoteVersionLabel} 이(가) 준비되었습니다.\n현재 버전: ${APP_VERSION_LABEL}\n\n지금 업그레이드하시겠어요? (앱 안에서 바로 설치됩니다)`,
+            [
+                {
+                    text: '나중에',
+                    style: 'cancel',
+                    onPress: () => {
+                        if (metadata.buildNumber != null) {
+                            AsyncStorage.setItem(VERSION_SNOOZE_BUILD_KEY, String(metadata.buildNumber)).catch(
+                                () => { /* no-op */ },
+                            );
+                        }
+                    },
+                },
+                {
+                    text: '업그레이드',
+                    style: 'default',
+                    onPress: () => {
+                        runApkInAppInstall().catch((err) =>
+                            console.error('인앱 업데이트 실패:', err),
+                        );
+                    },
+                },
+            ],
+        );
     } catch (err) {
         // 버전 체크 실패는 무시
         console.error('버전 체크 오류:', err);
@@ -959,42 +653,6 @@ async function callLoginApi(email: string, password: string): Promise<string> {
     return data.access_token as string;
 }
 
-function extractApiErrorMessage(detail: unknown, fallback: string): string {
-    if (typeof detail === 'string' && detail.trim()) {
-        return detail.trim();
-    }
-    if (Array.isArray(detail)) {
-        const messages = detail
-            .map((item) => {
-                if (typeof item === 'string') {
-                    return item.trim();
-                }
-                if (item && typeof item === 'object') {
-                    const { msg } = item as { msg?: unknown };
-                    if (typeof msg === 'string' && msg.trim()) {
-                        return msg.trim();
-                    }
-                }
-                return '';
-            })
-            .filter(Boolean);
-        if (messages.length > 0) {
-            return messages.join(', ');
-        }
-    }
-    if (detail && typeof detail === 'object') {
-        const candidate =
-            (detail as { detail?: unknown; message?: unknown; error?: unknown; msg?: unknown }).detail ??
-            (detail as { detail?: unknown; message?: unknown; error?: unknown; msg?: unknown }).message ??
-            (detail as { detail?: unknown; message?: unknown; error?: unknown; msg?: unknown }).error ??
-            (detail as { detail?: unknown; message?: unknown; error?: unknown; msg?: unknown }).msg;
-        if (typeof candidate === 'string' && candidate.trim()) {
-            return candidate.trim();
-        }
-    }
-    return fallback;
-}
-
 async function callSignupApi(payload: SignupPayload): Promise<UserInfo> {
     const res = await fetch(`${API_BASE}/api/auth/signup`, {
         method: 'POST',
@@ -1003,6 +661,41 @@ async function callSignupApi(payload: SignupPayload): Promise<UserInfo> {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `회원가입 실패 (HTTP ${res.status})`));
+    return data as UserInfo;
+}
+
+async function callSignupRequestCodeApi(payload: SignupPayload): Promise<SignupRequestCodeResponse> {
+    const res = await fetch(`${API_BASE}/api/auth/signup/request-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            ...payload,
+            verificationChannel: payload.verificationChannel || 'email',
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `인증 코드 요청 실패 (HTTP ${res.status})`));
+    return data as SignupRequestCodeResponse;
+}
+
+async function callSignupConfirmApi(
+    signupSessionToken: string,
+    verificationCode: string,
+    profile: Pick<SignupPayload, 'preferred_language' | 'country_code' | 'full_name'>,
+): Promise<UserInfo> {
+    const res = await fetch(`${API_BASE}/api/auth/signup/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            signupSessionToken,
+            verificationCode,
+            preferred_language: profile.preferred_language,
+            country_code: profile.country_code,
+            full_name: profile.full_name,
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `이메일 인증 확인 실패 (HTTP ${res.status})`));
     return data as UserInfo;
 }
 
@@ -1054,19 +747,6 @@ async function saveStoredAuthState(token: string, userInfo: UserInfo): Promise<v
 
 async function clearStoredAuthState(): Promise<void> {
     await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
-}
-
-function summarizeAuthToken(token: string): string {
-    const normalized = token.trim();
-    if (!normalized) {
-        return 'empty';
-    }
-
-    if (normalized.length <= 12) {
-        return `len:${normalized.length}:${normalized}`;
-    }
-
-    return `len:${normalized.length}:${normalized.slice(0, 6)}...${normalized.slice(-6)}`;
 }
 
 async function loadStoredActiveVoipSession(): Promise<StoredActiveVoipSession | null> {
@@ -1149,7 +829,7 @@ async function callNearbyPlacesApi(params: {
         category: params.category,
         radius_m: String(params.radiusM),
         target_lang: params.targetLang,
-        limit: '8',
+        limit: '12',
     });
     const requestUrl = `${API_BASE}/api/marketplace/nadotongryoksa/lbs/nearby?${query.toString()}`;
     console.log('[TRAVEL_NEARBY_PROBE]', JSON.stringify({
@@ -1260,533 +940,34 @@ async function callMyPurchasesApi(token: string): Promise<Array<{ id: number; am
 // ─────────────────────────────────────────────
 // 지원 언어 목록 (50개국어)
 // ─────────────────────────────────────────────
-const LANGS = [
-    { label: '한국어', code: 'ko', tts: 'ko-KR' },
-    { label: 'English', code: 'en', tts: 'en-US' },
-    { label: '中文(简体)', code: 'zh', tts: 'zh-CN' },
-    { label: '繁體中文', code: 'zh-tw', tts: 'zh-TW' },
-    { label: '日本語', code: 'ja', tts: 'ja-JP' },
-    { label: 'Español', code: 'es', tts: 'es-ES' },
-    { label: 'Français', code: 'fr', tts: 'fr-FR' },
-    { label: 'Deutsch', code: 'de', tts: 'de-DE' },
-    { label: 'Português', code: 'pt', tts: 'pt-BR' },
-    { label: 'Русский', code: 'ru', tts: 'ru-RU' },
-    { label: 'العربية', code: 'ar', tts: 'ar-SA' },
-    { label: 'हिन्दी', code: 'hi', tts: 'hi-IN' },
-    { label: 'Italiano', code: 'it', tts: 'it-IT' },
-    { label: 'Türkçe', code: 'tr', tts: 'tr-TR' },
-    { label: 'Tiếng Việt', code: 'vi', tts: 'vi-VN' },
-    { label: 'ภาษาไทย', code: 'th', tts: 'th-TH' },
-    { label: 'Bahasa Indonesia', code: 'id', tts: 'id-ID' },
-    { label: 'Bahasa Melayu', code: 'ms', tts: 'ms-MY' },
-    { label: 'Nederlands', code: 'nl', tts: 'nl-NL' },
-    { label: 'Polski', code: 'pl', tts: 'pl-PL' },
-    { label: 'Українська', code: 'uk', tts: 'uk-UA' },
-    { label: 'Svenska', code: 'sv', tts: 'sv-SE' },
-    { label: 'Norsk', code: 'no', tts: 'nb-NO' },
-    { label: 'Dansk', code: 'da', tts: 'da-DK' },
-    { label: 'Suomi', code: 'fi', tts: 'fi-FI' },
-    { label: 'Čeština', code: 'cs', tts: 'cs-CZ' },
-    { label: 'Română', code: 'ro', tts: 'ro-RO' },
-    { label: 'Magyar', code: 'hu', tts: 'hu-HU' },
-    { label: 'Ελληνικά', code: 'el', tts: 'el-GR' },
-    { label: 'עברית', code: 'he', tts: 'he-IL' },
-    { label: 'Български', code: 'bg', tts: 'bg-BG' },
-    { label: 'Hrvatski', code: 'hr', tts: 'hr-HR' },
-    { label: 'Srpski', code: 'sr', tts: 'sr-RS' },
-    { label: 'Slovenčina', code: 'sk', tts: 'sk-SK' },
-    { label: 'Slovenščina', code: 'sl', tts: 'sl-SI' },
-    { label: 'Lietuvių', code: 'lt', tts: 'lt-LT' },
-    { label: 'Latviešu', code: 'lv', tts: 'lv-LV' },
-    { label: 'Eesti', code: 'et', tts: 'et-EE' },
-    { label: 'فارسی', code: 'fa', tts: 'fa-IR' },
-    { label: 'اردو', code: 'ur', tts: 'ur-PK' },
-    { label: 'বাংলা', code: 'bn', tts: 'bn-BD' },
-    { label: 'தமிழ்', code: 'ta', tts: 'ta-IN' },
-    { label: 'తెలుగు', code: 'te', tts: 'te-IN' },
-    { label: 'മലയാളം', code: 'ml', tts: 'ml-IN' },
-    { label: 'ગુજરાતી', code: 'gu', tts: 'gu-IN' },
-    { label: 'मराठी', code: 'mr', tts: 'mr-IN' },
-    { label: 'Filipino', code: 'fil', tts: 'fil-PH' },
-    { label: 'Kiswahili', code: 'sw', tts: 'sw-KE' },
-    { label: 'Català', code: 'ca', tts: 'ca-ES' },
-    { label: 'አማርኛ', code: 'am', tts: 'am-ET' },
-] as const;
+// [기능 분리 Phase5.5 선행] LANGS/LangCode/SUPPORTED_LANGUAGE_COUNT 는
+// src/features/language/languageCatalog.ts 로 추출(상단 import 참조).
+// [기능 분리 Phase5.6e-2] 가입/프로필 국가 카탈로그(SIGNUP_COUNTRY_OPTIONS/SignupCountryCode/
+// SIGNUP_COUNTRY_OPTION_CODES/COUNTRY_NAME_MAP + isSupportedSignupCountryCode/
+// normalizeSignupCountryCode/resolveSignupCountryFromLang/resolveCountryName)는
+// src/features/country/countryCatalog.ts 로 추출(상단 import 참조).
 
-type LangCode = (typeof LANGS)[number]['code'];
-const SUPPORTED_LANGUAGE_COUNT = LANGS.length;
-const SIGNUP_COUNTRY_OPTIONS = [
-    { code: 'KR', label: '대한민국' },
-    { code: 'US', label: '미국' },
-    { code: 'JP', label: '일본' },
-    { code: 'CN', label: '중국' },
-    { code: 'TW', label: '대만' },
-    { code: 'HK', label: '홍콩' },
-    { code: 'VN', label: '베트남' },
-    { code: 'TH', label: '태국' },
-    { code: 'PH', label: '필리핀' },
-    { code: 'ID', label: '인도네시아' },
-    { code: 'MY', label: '말레이시아' },
-    { code: 'SG', label: '싱가포르' },
-    { code: 'FR', label: '프랑스' },
-    { code: 'DE', label: '독일' },
-    { code: 'GB', label: '영국' },
-    { code: 'CA', label: '캐나다' },
-    { code: 'AU', label: '호주' },
-    { code: 'NZ', label: '뉴질랜드' },
-    { code: 'IE', label: '아일랜드' },
-    { code: 'IT', label: '이탈리아' },
-    { code: 'ES', label: '스페인' },
-    { code: 'MX', label: '멕시코' },
-    { code: 'AR', label: '아르헨티나' },
-    { code: 'CL', label: '칠레' },
-    { code: 'CO', label: '콜롬비아' },
-    { code: 'PE', label: '페루' },
-    { code: 'PT', label: '포르투갈' },
-    { code: 'BR', label: '브라질' },
-    { code: 'RU', label: '러시아' },
-    { code: 'SA', label: '사우디아라비아' },
-    { code: 'AE', label: '아랍에미리트' },
-    { code: 'EG', label: '이집트' },
-    { code: 'QA', label: '카타르' },
-    { code: 'KW', label: '쿠웨이트' },
-    { code: 'IN', label: '인도' },
-    { code: 'PK', label: '파키스탄' },
-    { code: 'BD', label: '방글라데시' },
-    { code: 'TR', label: '튀르키예' },
-    { code: 'NL', label: '네덜란드' },
-    { code: 'PL', label: '폴란드' },
-    { code: 'UA', label: '우크라이나' },
-    { code: 'SE', label: '스웨덴' },
-    { code: 'NO', label: '노르웨이' },
-    { code: 'DK', label: '덴마크' },
-    { code: 'FI', label: '핀란드' },
-    { code: 'CZ', label: '체코' },
-    { code: 'RO', label: '루마니아' },
-    { code: 'HU', label: '헝가리' },
-    { code: 'GR', label: '그리스' },
-    { code: 'IL', label: '이스라엘' },
-] as const;
-type SignupCountryCode = (typeof SIGNUP_COUNTRY_OPTIONS)[number]['code'];
-type SignupSelectionModal = 'language' | 'country' | null;
-const SIGNUP_COUNTRY_OPTION_CODES: SignupCountryCode[] = SIGNUP_COUNTRY_OPTIONS.map((item) => item.code);
-const COUNTRY_NAME_MAP: Record<string, string> = {
-    ...(Object.fromEntries(SIGNUP_COUNTRY_OPTIONS.map((item) => [item.code, item.label])) as Record<string, string>),
-    BE: '벨기에',
-    CH: '스위스',
-    AT: '오스트리아',
-    MO: '마카오',
-    CY: '키프로스',
-    BA: '보스니아 헤르체고비나',
-    ME: '몬테네그로',
-    SK: '슬로바키아',
-    SI: '슬로베니아',
-    LT: '리투아니아',
-    LV: '라트비아',
-    EE: '에스토니아',
-    IR: '이란',
-    AF: '아프가니스탄',
-    LK: '스리랑카',
-    ET: '에티오피아',
-    KE: '케냐',
-    TZ: '탄자니아',
-    UG: '우간다',
-    MD: '몰도바',
-    RS: '세르비아',
-};
-
-function isSupportedSignupCountryCode(value: string): value is SignupCountryCode {
-    return SIGNUP_COUNTRY_OPTIONS.some((item) => item.code === value);
-}
-
-function normalizeSignupCountryCode(value: string | null | undefined): SignupCountryCode {
-    const normalized = String(value || '').trim().toUpperCase();
-    return isSupportedSignupCountryCode(normalized) ? normalized : 'KR';
-}
-
-function resolveSignupCountryFromLang(languageCode: LangCode): SignupCountryCode {
-    const matchedCountry = SIGNUP_COUNTRY_OPTIONS.find((item) => resolveLangFromCountry(item.code) === languageCode);
-    return matchedCountry?.code ?? 'KR';
-}
-
-function getLangLabelText(code: LangCode): string {
-    return LANGS.find((item) => item.code === code)?.label ?? code;
-}
-
-function isSupportedLangCode(value: string): value is LangCode {
-    return LANGS.some((item) => item.code === value);
-}
-
-type HybridGpsResult = {
-    latitude: number;
-    longitude: number;
-    accuracy: number | null;
-    mode: HybridGpsMode;
-    qualityScore: number;
-    source: 'gps_high' | 'gps_balanced' | 'gps_low' | 'last_known' | 'adb_override' | 'persisted_last_success';
-    servicesEnabled: boolean;
-    overrideCountryCode?: string;
-    overrideRegionHint?: string;
-};
+// [기능 분리 Phase5.5 선행] getLangLabelText/isSupportedLangCode 는
+// src/features/language/languageCatalog.ts 로 추출(상단 import 참조).
 
 const ADB_GPS_OVERRIDE_PATH = 'file:///storage/emulated/0/Android/media/com.parkcheolhong.worldlinco/worldlingo_mock_location.json';
 const GPS_DEBUG_TRACE_FILE_PATH = `${FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? 'file:///data/user/0/com.parkcheolhong.worldlinco/files/'}gps-fallback-debug.log`;
 const GPS_PERSISTED_FALLBACK_KEY = 'gps_fallback_last_success_v1';
 
-const GPS_REGION_COORDINATE_FALLBACKS = [
-    { countryCode: 'KR', regionHint: 'jeju', latitude: 33.4996, longitude: 126.5312 },
-    { countryCode: 'CN', regionHint: 'guangdong', latitude: 23.1291, longitude: 113.2644 },
-    { countryCode: 'JP', regionHint: 'kansai', latitude: 34.6937, longitude: 135.5023 },
-    { countryCode: 'IN', regionHint: 'bihar', latitude: 25.5941, longitude: 85.1376 },
-    { countryCode: 'IT', regionHint: 'naples', latitude: 40.8518, longitude: 14.2681 },
-] as const;
+// [기능 분리 Phase5.6e-3] GPS/방언 리전 힌트(GPS_REGION_COORDINATE_FALLBACKS/
+// DIALECT_REGION_HINT_KEYWORDS + resolveGpsDialectRegionHint/resolveGpsCoordinateFallback/
+// resolveRegionHintForSourceLanguage)는 src/features/country/regionHints.ts 로 추출(상단 import 참조).
 
-const COUNTRY_LANG_MAP: Partial<Record<string, LangCode>> = {
-    KR: 'ko',
-    US: 'en', GB: 'en', AU: 'en', CA: 'en', NZ: 'en', IE: 'en', SG: 'en', PH: 'en',
-    CN: 'zh',
-    TW: 'zh-tw', HK: 'zh-tw', MO: 'zh-tw',
-    JP: 'ja',
-    ES: 'es', MX: 'es', AR: 'es', CL: 'es', CO: 'es', PE: 'es',
-    FR: 'fr', BE: 'fr', CH: 'fr',
-    DE: 'de', AT: 'de',
-    PT: 'pt', BR: 'pt',
-    RU: 'ru',
-    SA: 'ar', AE: 'ar', EG: 'ar', QA: 'ar', KW: 'ar',
-    IN: 'hi',
-    IT: 'it',
-    TR: 'tr',
-    VN: 'vi',
-    TH: 'th',
-    ID: 'id',
-    MY: 'ms',
-    NL: 'nl',
-    PL: 'pl',
-    UA: 'uk',
-    SE: 'sv',
-    NO: 'no',
-    DK: 'da',
-    FI: 'fi',
-    CZ: 'cs',
-    RO: 'ro', MD: 'ro',
-    HU: 'hu',
-    GR: 'el', CY: 'el',
-    IL: 'he',
-    BG: 'bg',
-    HR: 'hr',
-    RS: 'sr', BA: 'sr', ME: 'sr',
-    SK: 'sk',
-    SI: 'sl',
-    LT: 'lt',
-    LV: 'lv',
-    EE: 'et',
-    IR: 'fa', AF: 'fa',
-    PK: 'ur',
-    BD: 'bn',
-    LK: 'ta',
-    ET: 'am',
-    KE: 'sw', TZ: 'sw', UG: 'sw',
-};
-
-function resolveLangFromCountry(countryCode: string): LangCode | null {
-    return COUNTRY_LANG_MAP[countryCode.toUpperCase()] ?? null;
-}
-
-const DIALECT_REGION_HINT_KEYWORDS: Record<string, Array<{ hint: string; keywords: string[] }>> = {
-    KR: [
-        { hint: 'jeju', keywords: ['jeju', '제주'] },
-        { hint: 'busan', keywords: ['busan', '부산'] },
-        { hint: 'gyeongsang', keywords: ['daegu', '울산', 'gyeongsang', '경상', '포항', '창원'] },
-        { hint: 'jeolla', keywords: ['gwangju', '전주', 'jeolla', '전라', '목포', '순천'] },
-        { hint: 'seoul', keywords: ['seoul', '서울', 'incheon', '인천', 'gyeonggi', '경기', 'suwon', '수원'] },
-    ],
-    CN: [
-        { hint: 'guangdong', keywords: ['guangzhou', 'shenzhen', 'dongguan', 'foshan', 'guangdong', '광동', '广东', '廣東'] },
-        { hint: 'sichuan', keywords: ['chengdu', 'mianyang', 'sichuan', '사천', '四川'] },
-        { hint: 'dongbei', keywords: ['liaoning', 'jilin', 'heilongjiang', 'dongbei', '东北', '瀋陽', 'shenyang', 'harbin'] },
-        { hint: 'shanghai', keywords: ['shanghai', '상하이', '上海'] },
-        { hint: 'beijing', keywords: ['beijing', '베이징', '北京', 'tianjin', '天津'] },
-    ],
-    JP: [
-        { hint: 'kansai', keywords: ['osaka', 'kyoto', 'nara', 'kobe', 'wakayama', 'kansai', '간사이', '関西', '大阪', '京都'] },
-        { hint: 'hakata', keywords: ['fukuoka', 'hakata', '후쿠오카', '博多', '福岡'] },
-        { hint: 'tohoku', keywords: ['sendai', 'aomori', 'akita', 'iwate', 'yamagata', 'tohoku', '도호쿠', '東北', '仙台'] },
-        { hint: 'okinawa', keywords: ['okinawa', '오키나와', '沖縄', 'naha', '나하'] },
-        { hint: 'tokyo', keywords: ['tokyo', '도쿄', '東京', 'yokohama', '요코하마', 'kanagawa', '가나가와'] },
-    ],
-    IN: [
-        { hint: 'delhi', keywords: ['delhi', 'new delhi', 'ncr', 'दिल्ली'] },
-        { hint: 'mumbai', keywords: ['mumbai', 'bombay', 'maharashtra', 'मुंबई', 'pune', 'पुणे'] },
-        { hint: 'bihar', keywords: ['bihar', 'patna', 'पटना', 'बिहार'] },
-        { hint: 'punjab', keywords: ['punjab', 'amritsar', 'ludhiana', 'पंजाब'] },
-        { hint: 'uttar-pradesh', keywords: ['uttar pradesh', 'uttar-pradesh', 'lucknow', 'kanpur', 'वाराणसी', 'varanasi'] },
-    ],
-    IT: [
-        { hint: 'rome', keywords: ['rome', 'roma', 'lazio'] },
-        { hint: 'milan', keywords: ['milan', 'milano', 'lombardy', 'lombardia'] },
-        { hint: 'naples', keywords: ['naples', 'napoli', 'campania'] },
-        { hint: 'sicily', keywords: ['sicily', 'sicilia', 'palermo', 'catania'] },
-        { hint: 'venice', keywords: ['venice', 'venezia', 'veneto', 'padova'] },
-    ],
-};
-
-function resolveGpsDialectRegionHint(
-    countryCode: string,
-    geocoded: Partial<Location.LocationGeocodedAddress> | null,
-): string | null {
-    const regionProfiles = DIALECT_REGION_HINT_KEYWORDS[countryCode.toUpperCase()];
-    if (!regionProfiles?.length || !geocoded) {
-        return null;
-    }
-
-    const haystack = [
-        geocoded.region,
-        geocoded.city,
-        geocoded.district,
-        geocoded.subregion,
-        geocoded.street,
-        geocoded.name,
-    ]
-        .map((value) => String(value || '').trim().toLowerCase())
-        .filter(Boolean)
-        .join(' | ');
-
-    if (!haystack) {
-        return null;
-    }
-
-    const matchedRegion = regionProfiles.find(({ keywords }) => keywords.some((keyword) => haystack.includes(keyword.toLowerCase())));
-    return matchedRegion?.hint ?? null;
-}
-
-function resolveGpsCoordinateFallback(latitude: number, longitude: number): { countryCode: string; regionHint: string } | null {
-    const matched = GPS_REGION_COORDINATE_FALLBACKS.find((candidate) => {
-        const latitudeDelta = Math.abs(candidate.latitude - latitude);
-        const longitudeDelta = Math.abs(candidate.longitude - longitude);
-        return latitudeDelta <= 0.35 && longitudeDelta <= 0.35;
-    });
-
-    return matched
-        ? {
-            countryCode: matched.countryCode,
-            regionHint: matched.regionHint,
-        }
-        : null;
-}
-
-function resolveRegionHintForSourceLanguage(
-    sourceLang: LangCode,
-    countryCode: string,
-    regionHint: string,
-): string | undefined {
-    if (!countryCode || !regionHint) {
-        return undefined;
-    }
-    return resolveLangFromCountry(countryCode) === sourceLang ? regionHint : undefined;
-}
-
-type SongSubtitleEntry = {
-    id: string;
-    original: string;
-    translated: string;
-    source: LangCode;
-    target: LangCode;
-    repeatCount: number;
-    detectedBy: 'voice' | 'script' | 'manual' | 'seed';
-};
-
-type SongFileJobStatus = {
-    job_id: string;
-    status: 'queued' | 'processing' | 'completed' | 'failed';
-    stage: string;
-    progress: number;
-    message: string;
-    source_language: string;
-    target_language: string;
-    segment_count: number;
-    quality_score: number;
-    error_message?: string | null;
-};
-
-type SongFileTimelineSegment = {
-    id: string;
-    index: number;
-    start_ms: number;
-    end_ms: number;
-    original: string;
-    translated: string;
-    source_language: string;
-    target_language: string;
-    confidence: number;
-    detected_by: 'voice' | 'script' | 'manual' | 'seed';
-    edited_by_user?: boolean;
-    quality_flags?: string[];
-};
-
-type SongFileTimeline = {
-    job_id: string;
-    source_language: string;
-    target_language: string;
-    duration_ms: number;
-    segment_count: number;
-    quality_score: number;
-    segments: SongFileTimelineSegment[];
-};
-
-type VoiceLicenseMode = 'self_created' | 'licensed' | 'public_domain' | 'private_preview_unverified' | 'policy_approved_distribution';
-type VoiceOutputScope = 'private_preview' | 'user_saved_preview' | 'policy_review_export' | 'policy_approved_export';
-
-type VoiceConsentResponse = {
-    consent_id: string;
-    user_id: string;
-    consent_version: string;
-    allow_private_preview: boolean;
-    allow_export_for_licensed_audio: boolean;
-    status: 'active' | 'revoked';
-    created_at: string;
-};
-
-type VoiceProfileResponse = {
-    voice_profile_id: string;
-    profile_label: string;
-    sample_duration_ms: number;
-    sample_quality_score: number;
-    encrypted: boolean;
-    status: 'active' | 'revoked' | 'deleted';
-};
-
-type VoicePreviewResponse = {
-    preview_id: string;
-    gate_status: 'allowed' | 'review_required' | 'blocked';
-    policy_allowed: boolean;
-    effective_output_scope: VoiceOutputScope;
-    message: string;
-    segment_count: number;
-    duration_ms: number;
-    preview_text: string;
-    preview_audio_base64?: string | null;
-    preview_audio_format?: string | null;
-    preview_audio_available?: boolean;
-};
-
-const WHISPER_LANG_MAP: Record<string, LangCode> = {
-    chinese: 'zh', mandarin: 'zh', china: 'zh', chinese_language: 'zh', 중국: 'zh', 중국어: 'zh', 중문: 'zh', zh: 'zh',
-    japanese: 'ja', japan: 'ja', 일본: 'ja', 일본어: 'ja', 일어: 'ja', ja: 'ja',
-    korean: 'ko', korea: 'ko', southkorea: 'ko', 한국: 'ko', 한국어: 'ko', 한글: 'ko', ko: 'ko',
-    english: 'en', american: 'en', america: 'en', usa: 'en', us: 'en', england: 'en', britain: 'en', 미국: 'en', 영국: 'en', 영어: 'en', 영문: 'en', en: 'en',
-    spanish: 'es', spain: 'es', 스페인: 'es', 스페인어: 'es', es: 'es',
-    french: 'fr', france: 'fr', 프랑스: 'fr', 프랑스어: 'fr', fr: 'fr',
-    german: 'de', germany: 'de', 독일: 'de', 독일어: 'de', de: 'de',
-    portuguese: 'pt', portugal: 'pt', brazil: 'pt', 포르투갈: 'pt', 브라질: 'pt', 포르투갈어: 'pt', pt: 'pt',
-    russian: 'ru', russia: 'ru', 러시아: 'ru', 러시아어: 'ru', ru: 'ru',
-    arabic: 'ar', saudi: 'ar', 사우디: 'ar', 아랍: 'ar', 아랍어: 'ar', ar: 'ar',
-    hindi: 'hi', india: 'hi', 인도: 'hi', 힌디어: 'hi', hi: 'hi',
-    italian: 'it', italy: 'it', 이탈리아: 'it', 이탈리아어: 'it', it: 'it',
-    turkish: 'tr', turkey: 'tr', 터키: 'tr', 터키어: 'tr', tr: 'tr',
-    thai: 'th', thailand: 'th', 태국: 'th', 태국어: 'th', th: 'th',
-    vietnamese: 'vi', vietnam: 'vi', 베트남: 'vi', 베트남어: 'vi', vi: 'vi',
-    indonesian: 'id', indonesia: 'id', 인도네시아: 'id', 인도네시아어: 'id', id: 'id',
-    malay: 'ms', malaysia: 'ms', 말레이시아: 'ms', 말레이어: 'ms', ms: 'ms',
-    dutch: 'nl', netherlands: 'nl', 네덜란드: 'nl', 네덜란드어: 'nl', nl: 'nl',
-    polish: 'pl', poland: 'pl', 폴란드: 'pl', 폴란드어: 'pl', pl: 'pl',
-    ukrainian: 'uk', ukraine: 'uk', 우크라이나: 'uk', 우크라이나어: 'uk', uk: 'uk',
-    swedish: 'sv', sweden: 'sv', 스웨덴: 'sv', 스웨덴어: 'sv', sv: 'sv',
-    norwegian: 'no', norway: 'no', 노르웨이: 'no', 노르웨이어: 'no', no: 'no',
-    danish: 'da', denmark: 'da', 덴마크: 'da', 덴마크어: 'da', da: 'da',
-    finnish: 'fi', finland: 'fi', 핀란드: 'fi', 핀란드어: 'fi', fi: 'fi',
-    czech: 'cs', czechia: 'cs', cesky: 'cs', 체코: 'cs', 체코어: 'cs', cs: 'cs',
-    romanian: 'ro', romania: 'ro', 루마니아: 'ro', 루마니아어: 'ro', ro: 'ro',
-    hungarian: 'hu', hungary: 'hu', 헝가리: 'hu', 헝가리어: 'hu', hu: 'hu',
-    greek: 'el', greece: 'el', 그리스: 'el', 그리스어: 'el', el: 'el',
-    hebrew: 'he', israel: 'he', 이스라엘: 'he', 히브리어: 'he', he: 'he',
-    bulgarian: 'bg', bulgaria: 'bg', 불가리아: 'bg', 불가리아어: 'bg', bg: 'bg',
-    croatian: 'hr', croatia: 'hr', 크로아티아: 'hr', 크로아티아어: 'hr', hr: 'hr',
-    serbian: 'sr', serbia: 'sr', 세르비아: 'sr', 세르비아어: 'sr', sr: 'sr',
-    slovak: 'sk', slovakia: 'sk', 슬로바키아: 'sk', 슬로바키아어: 'sk', sk: 'sk',
-    slovenian: 'sl', slovenia: 'sl', 슬로베니아: 'sl', 슬로베니아어: 'sl', sl: 'sl',
-    lithuanian: 'lt', lithuania: 'lt', 리투아니아: 'lt', 리투아니아어: 'lt', lt: 'lt',
-    latvian: 'lv', latvia: 'lv', 라트비아: 'lv', 라트비아어: 'lv', lv: 'lv',
-    estonian: 'et', estonia: 'et', 에스토니아: 'et', 에스토니아어: 'et', et: 'et',
-    persian: 'fa', farsi: 'fa', iran: 'fa', 페르시아어: 'fa', 이란: 'fa', fa: 'fa',
-    urdu: 'ur', pakistan: 'ur', 파키스탄: 'ur', 우르두어: 'ur', ur: 'ur',
-    bengali: 'bn', bangla: 'bn', bangladesh: 'bn', 벵골어: 'bn', 방글라데시: 'bn', bn: 'bn',
-    tamil: 'ta', tamilnadu: 'ta', 타밀어: 'ta', ta: 'ta',
-    telugu: 'te', 텔루구어: 'te', te: 'te',
-    malayalam: 'ml', 말라얄람어: 'ml', ml: 'ml',
-    gujarati: 'gu', 구자라트어: 'gu', gu: 'gu',
-    marathi: 'mr', 마라티어: 'mr', mr: 'mr',
-    filipino: 'fil', tagalog: 'fil', 필리핀어: 'fil', 타갈로그어: 'fil', fil: 'fil',
-    swahili: 'sw', kiswahili: 'sw', 케냐: 'sw', 스와힐리어: 'sw', sw: 'sw',
-    catalan: 'ca', catalonia: 'ca', 카탈루냐어: 'ca', ca: 'ca',
-    amharic: 'am', ethiopia: 'am', 에티오피아: 'am', 암하라어: 'am', am: 'am',
-};
+// [기능 분리 Phase5.5 선행] WHISPER_LANG_MAP 은
+// src/features/language/languageCatalog.ts 로 추출(상단 import 참조).
 
 const SONG_FILE_JOB_POLL_INTERVAL_MS = 1500;
 const SONG_FILE_JOB_MAX_WAIT_MS = 6 * 60 * 1000;
-const VOICE_LICENSE_OPTIONS: Array<{ value: VoiceLicenseMode; label: string }> = [
-    { value: 'private_preview_unverified', label: '권리 확인 전' },
-    { value: 'self_created', label: '직접 만든 곡' },
-    { value: 'licensed', label: '라이선스 보유' },
-    { value: 'public_domain', label: '공개 허용' },
-    { value: 'policy_approved_distribution', label: '운영 승인' },
-];
-const VOICE_OUTPUT_SCOPE_OPTIONS: Array<{ value: VoiceOutputScope; label: string }> = [
-    { value: 'private_preview', label: '개인 preview' },
-    { value: 'user_saved_preview', label: '내 보관함' },
-    { value: 'policy_review_export', label: 'export 심사' },
-    { value: 'policy_approved_export', label: '승인 export' },
-];
 
-function normalizeDetectedLangCode(value: unknown): LangCode | null {
-    const raw = String(value ?? '').trim().toLowerCase().replace('_', '-');
-    if (!raw) return null;
-    const compact = raw.split(/[\s,;/]+/)[0];
-    const base = compact.split('-')[0];
-    const normalizedCompact = compact.replace(/[^\p{L}-]/gu, '');
-    const strippedCompact = normalizedCompact.replace(/(language|lang|나라|국가|언어|국어|말|어|으로|로)$/u, '');
-    const strippedBase = base.replace(/(language|lang|나라|국가|언어|국어|말|어|으로|로)$/u, '');
-    return WHISPER_LANG_MAP[compact]
-        ?? WHISPER_LANG_MAP[base]
-        ?? WHISPER_LANG_MAP[normalizedCompact]
-        ?? WHISPER_LANG_MAP[strippedCompact]
-        ?? WHISPER_LANG_MAP[strippedBase]
-        ?? null;
-}
-
-function normalizeLyricLine(text: string): string {
-    return text
-        .replace(/\[[^\]]*\]/g, ' ')
-        .replace(/\([^\)]*\)/g, ' ')
-        .replace(/[♪♫♬]/g, ' ')
-        .replace(/\s*\/\s*/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function isLikelyLyricLine(text: string): boolean {
-    const value = normalizeLyricLine(text);
-    if (value.length < 2) return false;
-    if (/^\d+$/.test(value)) return false;
-    return /[A-Za-z\uac00-\ud7a3\u3040-\u30ff\u4e00-\u9fff\u0600-\u06ff\u0900-\u097f\u0400-\u04ff\u0e00-\u0e7f]/.test(value);
-}
-
-function isRepeatedLyricSegment(current: string, previous: string): boolean {
-    const a = normalizeLyricLine(current).toLowerCase();
-    const b = normalizeLyricLine(previous).toLowerCase();
-    if (!a || !b) return false;
-    return a === b || a.includes(b) || b.includes(a);
-}
-
-function normalizeSongFileLang(value: string, fallback: LangCode): LangCode {
-    return normalizeDetectedLangCode(value) ?? fallback;
-}
-
-function formatSongFileTime(ms: number): string {
-    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
+// [기능 분리 Phase5.5 선행] normalizeDetectedLangCode 는
+// src/features/language/languageCatalog.ts 로 추출(상단 import 참조).
+// [기능 분리 Phase5] 노래 번역 순수 텍스트 헬퍼는 src/features/song/songText.ts,
+// 언어 헬퍼(normalizeSongFileLang / resolveSongFileTargetLang)는 src/features/song/songLang.ts 로 추출됨.
 
 function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -1932,159 +1113,34 @@ async function callCreateVoicePreview(params: {
     return parseApiResponse<VoicePreviewResponse>(response);
 }
 
-function normalizeSpeakText(text: string): string {
-    return text
-        .replace(/\(offline\)/gi, '')
-        .replace(/\[offline\]/gi, '')
-        .trim();
+// [기능 분리 Phase5.5] playFaceTranslationOutput/stopFaceVoicePlayback → appFaceVoicePlayback.ts (SSOT).
+
+// [기능 분리 Phase5.5 선행] inferSpeechLangCode/resolveAutoTargetLang 는
+// src/features/language/languageCatalog.ts 로 추출(상단 import 참조).
+
+const MANUAL_PEER_LANG_STORAGE_KEY = 'worldlinco.manualPeerLang.v1';
+
+function resolveVoipRemoteLanguageHint(...values: Array<string | null | undefined>): LangCode | null {
+    for (const value of values) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (isSupportedLangCode(normalized)) {
+            return normalized;
+        }
+    }
+    return null;
 }
 
-function inferTtsLanguage(text: string, fallback: string): string {
-    if (/[\uac00-\ud7a3]/.test(text)) return 'ko-KR';
-    if (/[\u3040-\u30ff]/.test(text)) return 'ja-JP';
-    if (/[\u4e00-\u9fff]/.test(text)) return fallback === 'zh-TW' ? 'zh-TW' : 'zh-CN';
-    if (/[\u0600-\u06ff]/.test(text)) return 'ar-SA';
-    if (/[\u0900-\u097f]/.test(text)) return 'hi-IN';
-    if (/[\u0400-\u04ff]/.test(text)) return 'ru-RU';
-    if (/[\u0e00-\u0e7f]/.test(text)) return 'th-TH';
-    if (/[A-Za-z]/.test(text)) return 'en-US';
-    return fallback;
-}
-
-function inferSpeechLangCode(text: string, fallback: LangCode = 'en'): LangCode {
-    const value = text.trim();
-    if (!value) return fallback;
-
-    if (/[\uac00-\ud7a3]/.test(value)) return 'ko';
-    if (/[\u3040-\u30ff]/.test(value)) return 'ja';
-    if (/[\u4e00-\u9fff]/.test(value)) return 'zh';
-    if (/[\u0600-\u06ff]/.test(value)) return 'ar';
-    if (/[\u0900-\u097f]/.test(value)) return 'hi';
-    if (/[\u0400-\u04ff]/.test(value)) return 'ru';
-    if (/[\u0e00-\u0e7f]/.test(value)) return 'th';
-
-    const lower = value.toLowerCase();
-    if (/[¿¡ñ]/.test(lower)) return 'es';
-    if (/[äöüß]/.test(lower)) return 'de';
-    if (/[ğşıİıç]/.test(value)) return 'tr';
-    if (/[àâçéèêëîïôûùüÿœæ]/.test(lower)) return 'fr';
-    if (/[ãõ]/.test(lower)) return 'pt';
-    if (/[a-z]/.test(lower)) return 'en';
-
-    return fallback;
-}
-
-function resolveAutoTargetLang(source: LangCode, currentTarget: LangCode): LangCode {
-    if (currentTarget !== source) return currentTarget;
-    if (source === 'ko') return 'en';
-    if (source === 'en') return 'ko';
-    return 'ko';
-}
-
-function resolveSongFileTargetLang(currentSource: LangCode, currentTarget: LangCode): LangCode {
-    if (currentSource === 'ko') return 'ko';
-    if (currentTarget !== currentSource) return currentTarget;
-    return resolveAutoTargetLang(currentSource, currentTarget);
-}
+// [기능 분리 Phase5.3/5.5] resolveSongFileTargetLang 는
+// src/features/song/songLang.ts 로 추출(상단 import 참조).
 
 // ─────────────────────────────────────────────
-// UI 텍스트 다국어 사전 (기본 번역 UI 사전 + 나머지 언어는 영어 fallback)
+// 전역 배경 — 소리새 하늘색 그라데이션 (assets/sky-bg.png)
 // ─────────────────────────────────────────────
-const UI_TEXT: Record<string, {
-    sourceLang: string; targetLang: string; inputPlaceholder: string;
-    swap: string; translate: string; resultPlaceholder: string;
-    inputRequired: string; inputRequiredMsg: string; errorMsg: string;
-    offlineMsg: string; subtitle: string; footer: string; offlineBadge: string;
-    ocrTitle?: string;
-    ocrSubtitle?: string;
-    ocrPickImage?: string;
-    ocrLoading?: string;
-    ocrExtractedTitle?: string;
-    ocrTranslatedTitle?: string;
-    ocrSelectedFile?: string;
-    ocrErrorMsg?: string;
-    autoVoiceSegmentStatus?: string;
-    autoVoiceDuplicateSkipped?: string;
-    autoVoiceDetected?: string;
-    autoVoiceModeStopped?: string;
-    autoVoiceModeStarted?: string;
-    manualVoiceOnlyNotice?: string;
-    manualLanguageHint?: string;
-    interAutoRelayDuplicateSkipped?: string;
-    interAutoRelayPending?: string;
-}> = {
-    ko: { sourceLang: '원본 언어', targetLang: '번역 언어', inputPlaceholder: '번역할 텍스트를 입력하세요', swap: '⇄ 언어 스왑', translate: '번역', resultPlaceholder: '번역 결과가 여기에 표시됩니다', inputRequired: '입력 필요', inputRequiredMsg: '번역할 텍스트를 입력하세요.', errorMsg: '[오류] 번역에 실패했습니다. 잠시 후 다시 시도하세요.', offlineMsg: '📡 오프라인 모드 — 인터넷 연결 시 전체 통역 가능', subtitle: '여행 통번역 · 24개국어', footer: `${APP_FOOTER_BRAND_KO}\n24개국어 지원`, offlineBadge: '🔴 오프라인', ocrTitle: '이미지 OCR 번역', ocrSubtitle: '메뉴판, 표지판, 영수증 이미지를 선택하면 텍스트를 추출해 바로 번역합니다.', ocrPickImage: '🖼️ 이미지 선택', ocrLoading: 'OCR 추출 중...', ocrExtractedTitle: 'OCR 추출 텍스트', ocrTranslatedTitle: 'OCR 번역 결과', ocrSelectedFile: '선택 파일: {file}', ocrErrorMsg: '이미지 OCR 처리에 실패했습니다. 잠시 후 다시 시도하세요.', autoVoiceSegmentStatus: '🎙️ 자동 음성 번역: {delay} 구간으로 처리합니다.', autoVoiceDuplicateSkipped: '↺ 같은 문장 자동 번역은 중복 전송을 방지하기 위해 생략했습니다.', autoVoiceDetected: '🎙️ 자동 감지: {from} → {to}', autoVoiceModeStopped: '🎙️ 자동 음성 번역 모드를 종료했습니다.', autoVoiceModeStarted: '🎙️ 자동 음성 번역 모드 시작 ({delay} 간격)', manualVoiceOnlyNotice: '🎤 마이크는 눌렀을 때만 녹음합니다. 듣는 사람의 번역 언어는 직접 선택하세요.', manualLanguageHint: '수동 선택', interAutoRelayDuplicateSkipped: '↺ 같은 문장 자동 중계는 중복 전송을 방지하기 위해 생략했습니다.', interAutoRelayPending: '⏱️ {delay} 무입력 시 자동 중계 전송' },
-    en: { sourceLang: 'Source Language', targetLang: 'Target Language', inputPlaceholder: 'Enter text to translate', swap: '⇄ Swap', translate: 'Translate', resultPlaceholder: 'Translation will appear here', inputRequired: 'Input required', inputRequiredMsg: 'Please enter text to translate.', errorMsg: '[Error] Translation failed. Please try again.', offlineMsg: '📡 Offline mode — Full translation available with internet', subtitle: 'Travel Interpreter · 24 Languages', footer: `${APP_FOOTER_BRAND}\n24 Languages Supported`, offlineBadge: '🔴 Offline', ocrTitle: 'Image OCR Translation', ocrSubtitle: 'Pick a menu, sign, or receipt image to extract text and translate it immediately.', ocrPickImage: '🖼️ Pick image', ocrLoading: 'Running OCR...', ocrExtractedTitle: 'OCR Extracted Text', ocrTranslatedTitle: 'OCR Translation Result', ocrSelectedFile: 'Selected file: {file}', ocrErrorMsg: 'Image OCR failed. Please try again.', autoVoiceSegmentStatus: '🎙️ Auto voice translation: processing in {delay} chunks.', autoVoiceDuplicateSkipped: '↺ Duplicate sentence skipped to prevent repeated auto translation.', autoVoiceDetected: '🎙️ Auto-detected: {from} → {to}', autoVoiceModeStopped: '🎙️ Auto voice translation mode has stopped.', autoVoiceModeStarted: '🎙️ Auto voice translation mode started ({delay} interval)', manualVoiceOnlyNotice: '🎤 Recording starts only when you press the mic. Choose the listener target language manually.', manualLanguageHint: 'Manual selection', interAutoRelayDuplicateSkipped: '↺ Duplicate sentence skipped to prevent repeated auto relay.', interAutoRelayPending: '⏱️ Auto relay after {delay} of no input' },
-    zh: { sourceLang: '源语言', targetLang: '目标语言', inputPlaceholder: '请输入要翻译的文本', swap: '⇄ 切换语言', translate: '翻译', resultPlaceholder: '翻译结果将显示在这里', inputRequired: '需要输入', inputRequiredMsg: '请输入要翻译的文本。', errorMsg: '[错误] 翻译失败，请稍后重试。', offlineMsg: '📡 离线模式 — 联网后可使用完整翻译', subtitle: 'AI 翻译 · 24种语言', footer: `${APP_FOOTER_BRAND}\n支持24种语言`, offlineBadge: '🔴 离线' },
-    'zh-tw': { sourceLang: '來源語言', targetLang: '目標語言', inputPlaceholder: '請輸入要翻譯的文字', swap: '⇄ 切換語言', translate: '翻譯', resultPlaceholder: '翻譯結果將顯示在這裡', inputRequired: '需要輸入', inputRequiredMsg: '請輸入要翻譯的文字。', errorMsg: '[錯誤] 翻譯失敗，請稍後再試。', offlineMsg: '📡 離線模式 — 連網後可使用完整翻譯', subtitle: 'AI 翻譯 · 24種語言', footer: `${APP_FOOTER_BRAND}\n支援24種語言`, offlineBadge: '🔴 離線' },
-    ja: { sourceLang: '翻訳元言語', targetLang: '翻訳先言語', inputPlaceholder: '翻訳するテキストを入力してください', swap: '⇄ 言語スワップ', translate: '翻訳', resultPlaceholder: '翻訳結果がここに表示されます', inputRequired: '入力が必要です', inputRequiredMsg: '翻訳するテキストを入力してください。', errorMsg: '[エラー] 翻訳に失敗しました。後でもう一度お試しください。', offlineMsg: '📡 オフラインモード — インターネット接続後に完全翻訳可能', subtitle: 'AI 通訳 · 24言語', footer: `${APP_FOOTER_BRAND}\n24言語対応`, offlineBadge: '🔴 オフライン' },
-    es: { sourceLang: 'Idioma de origen', targetLang: 'Idioma de destino', inputPlaceholder: 'Ingrese el texto a traducir', swap: '⇄ Cambiar', translate: 'Traducir', resultPlaceholder: 'La traducción aparecerá aquí', inputRequired: 'Entrada requerida', inputRequiredMsg: 'Por favor ingrese el texto a traducir.', errorMsg: '[Error] La traducción falló. Inténtelo de nuevo.', offlineMsg: '📡 Modo sin conexión — Traducción completa disponible con internet', subtitle: 'Intérprete AI · 24 Idiomas', footer: `${APP_FOOTER_BRAND}\n24 Idiomas`, offlineBadge: '🔴 Sin conexión' },
-    fr: { sourceLang: 'Langue source', targetLang: 'Langue cible', inputPlaceholder: 'Entrez le texte à traduire', swap: '⇄ Permuter', translate: 'Traduire', resultPlaceholder: 'La traduction apparaîtra ici', inputRequired: 'Saisie requise', inputRequiredMsg: 'Veuillez entrer le texte à traduire.', errorMsg: '[Erreur] La traduction a échoué. Veuillez réessayer.', offlineMsg: '📡 Mode hors ligne — Traduction complète disponible avec internet', subtitle: 'Interprète AI · 24 Langues', footer: `${APP_FOOTER_BRAND}\n24 Langues`, offlineBadge: '🔴 Hors ligne' },
-    de: { sourceLang: 'Quellsprache', targetLang: 'Zielsprache', inputPlaceholder: 'Text zum Übersetzen eingeben', swap: '⇄ Tauschen', translate: 'Übersetzen', resultPlaceholder: 'Übersetzung erscheint hier', inputRequired: 'Eingabe erforderlich', inputRequiredMsg: 'Bitte geben Sie den zu übersetzenden Text ein.', errorMsg: '[Fehler] Übersetzung fehlgeschlagen. Bitte versuchen Sie es erneut.', offlineMsg: '📡 Offline-Modus — Vollständige Übersetzung mit Internet verfügbar', subtitle: 'KI-Dolmetscher · 24 Sprachen', footer: `${APP_FOOTER_BRAND}\n24 Sprachen`, offlineBadge: '🔴 Offline' },
-    pt: { sourceLang: 'Idioma de origem', targetLang: 'Idioma de destino', inputPlaceholder: 'Digite o texto para traduzir', swap: '⇄ Trocar', translate: 'Traduzir', resultPlaceholder: 'A tradução aparecerá aqui', inputRequired: 'Entrada necessária', inputRequiredMsg: 'Por favor, insira o texto para traduzir.', errorMsg: '[Erro] A tradução falhou. Por favor, tente novamente.', offlineMsg: '📡 Modo offline — Tradução completa disponível com internet', subtitle: 'Intérprete AI · 24 Idiomas', footer: `${APP_FOOTER_BRAND}\n24 Idiomas`, offlineBadge: '🔴 Offline' },
-    ru: { sourceLang: 'Исходный язык', targetLang: 'Целевой язык', inputPlaceholder: 'Введите текст для перевода', swap: '⇄ Поменять', translate: 'Перевести', resultPlaceholder: 'Перевод появится здесь', inputRequired: 'Ввод обязателен', inputRequiredMsg: 'Пожалуйста, введите текст для перевода.', errorMsg: '[Ошибка] Перевод не удался. Попробуйте ещё раз.', offlineMsg: '📡 Офлайн-режим — Полный перевод доступен при наличии интернета', subtitle: 'AI Переводчик · 24 Языка', footer: `${APP_FOOTER_BRAND}\n24 языка`, offlineBadge: '🔴 Офлайн' },
-    ar: { sourceLang: 'اللغة المصدر', targetLang: 'اللغة الهدف', inputPlaceholder: 'أدخل النص للترجمة', swap: '⇄ تبديل', translate: 'ترجمة', resultPlaceholder: 'ستظهر الترجمة هنا', inputRequired: 'مطلوب إدخال', inputRequiredMsg: 'الرجاء إدخال النص للترجمة.', errorMsg: '[خطأ] فشلت الترجمة. يرجى المحاولة مرة أخرى.', offlineMsg: '📡 وضع عدم الاتصال — الترجمة الكاملة متاحة مع الإنترنت', subtitle: 'مترجم AI · 24 لغة', footer: `${APP_FOOTER_BRAND}\n24 لغة مدعومة`, offlineBadge: '🔴 غير متصل' },
-    hi: { sourceLang: 'स्रोत भाषा', targetLang: 'लक्ष्य भाषा', inputPlaceholder: 'अनुवाद के लिए पाठ दर्ज करें', swap: '⇄ स्वैप', translate: 'अनुवाद करें', resultPlaceholder: 'अनुवाद यहाँ दिखाई देगा', inputRequired: 'इनपुट आवश्यक', inputRequiredMsg: 'कृपया अनुवाद के लिए पाठ दर्ज करें।', errorMsg: '[त्रुटि] अनुवाद विफल हुआ। कृपया पुनः प्रयास करें।', offlineMsg: '📡 ऑफ़लाइन मोड — इंटरनेट के साथ पूर्ण अनुवाद उपलब्ध', subtitle: 'AI दुभाषिया · 24 भाषाएँ', footer: `${APP_FOOTER_BRAND}\n24 भाषाएँ समर्थित`, offlineBadge: '🔴 ऑफ़लाइन' },
-    it: { sourceLang: 'Lingua di origine', targetLang: 'Lingua di destinazione', inputPlaceholder: 'Inserisci il testo da tradurre', swap: '⇄ Scambia', translate: 'Traduci', resultPlaceholder: 'La traduzione apparirà qui', inputRequired: 'Input richiesto', inputRequiredMsg: 'Inserisci il testo da tradurre.', errorMsg: '[Errore] Traduzione fallita. Riprovare.', offlineMsg: '📡 Modalità offline — Traduzione completa disponibile con internet', subtitle: 'Interprete AI · 24 Lingue', footer: `${APP_FOOTER_BRAND}\n24 Lingue`, offlineBadge: '🔴 Offline' },
-    tr: { sourceLang: 'Kaynak Dil', targetLang: 'Hedef Dil', inputPlaceholder: 'Çevrilecek metni girin', swap: '⇄ Değiştir', translate: 'Çevir', resultPlaceholder: 'Çeviri burada görünecek', inputRequired: 'Giriş gerekli', inputRequiredMsg: 'Lütfen çevrilecek metni girin.', errorMsg: '[Hata] Çeviri başarısız. Lütfen tekrar deneyin.', offlineMsg: '📡 Çevrimdışı mod — İnternet ile tam çeviri mevcut', subtitle: 'AI Tercüman · 24 Dil', footer: `${APP_FOOTER_BRAND}\n24 Dil Destekleniyor`, offlineBadge: '🔴 Çevrimdışı' },
-    vi: { sourceLang: 'Ngôn ngữ nguồn', targetLang: 'Ngôn ngữ đích', inputPlaceholder: 'Nhập văn bản cần dịch', swap: '⇄ Hoán đổi', translate: 'Dịch', resultPlaceholder: 'Bản dịch sẽ hiển thị ở đây', inputRequired: 'Cần nhập liệu', inputRequiredMsg: 'Vui lòng nhập văn bản cần dịch.', errorMsg: '[Lỗi] Dịch thất bại. Vui lòng thử lại.', offlineMsg: '📡 Chế độ ngoại tuyến — Dịch đầy đủ khi có internet', subtitle: 'Phiên dịch AI · 24 Ngôn ngữ', footer: `${APP_FOOTER_BRAND}\n24 Ngôn ngữ`, offlineBadge: '🔴 Ngoại tuyến' },
-    th: { sourceLang: 'ภาษาต้นทาง', targetLang: 'ภาษาปลายทาง', inputPlaceholder: 'ป้อนข้อความที่ต้องการแปล', swap: '⇄ สลับ', translate: 'แปล', resultPlaceholder: 'ผลการแปลจะแสดงที่นี่', inputRequired: 'ต้องการข้อมูล', inputRequiredMsg: 'กรุณาป้อนข้อความที่ต้องการแปล', errorMsg: '[ข้อผิดพลาด] การแปลล้มเหลว โปรดลองอีกครั้ง', offlineMsg: '📡 โหมดออฟไลน์ — แปลเต็มรูปแบบเมื่อมีอินเทอร์เน็ต', subtitle: 'AI ล่าม · 24 ภาษา', footer: `${APP_FOOTER_BRAND}\n24 ภาษา`, offlineBadge: '🔴 ออฟไลน์' },
-    id: { sourceLang: 'Bahasa Sumber', targetLang: 'Bahasa Tujuan', inputPlaceholder: 'Masukkan teks untuk diterjemahkan', swap: '⇄ Tukar', translate: 'Terjemahkan', resultPlaceholder: 'Terjemahan akan muncul di sini', inputRequired: 'Input diperlukan', inputRequiredMsg: 'Silakan masukkan teks untuk diterjemahkan.', errorMsg: '[Kesalahan] Terjemahan gagal. Silakan coba lagi.', offlineMsg: '📡 Mode offline — Terjemahan lengkap tersedia dengan internet', subtitle: 'Penerjemah AI · 24 Bahasa', footer: `${APP_FOOTER_BRAND}\n24 Bahasa`, offlineBadge: '🔴 Offline' },
-    ms: { sourceLang: 'Bahasa Sumber', targetLang: 'Bahasa Sasaran', inputPlaceholder: 'Masukkan teks untuk diterjemah', swap: '⇄ Tukar', translate: 'Terjemah', resultPlaceholder: 'Terjemahan akan muncul di sini', inputRequired: 'Input diperlukan', inputRequiredMsg: 'Sila masukkan teks untuk diterjemah.', errorMsg: '[Ralat] Terjemahan gagal. Sila cuba lagi.', offlineMsg: '📡 Mod luar talian — Terjemahan penuh tersedia dengan internet', subtitle: 'Penterjemah AI · 24 Bahasa', footer: `${APP_FOOTER_BRAND}\n24 Bahasa`, offlineBadge: '🔴 Luar Talian' },
-    nl: { sourceLang: 'Brontaal', targetLang: 'Doeltaal', inputPlaceholder: 'Voer tekst in om te vertalen', swap: '⇄ Wisselen', translate: 'Vertalen', resultPlaceholder: 'Vertaling verschijnt hier', inputRequired: 'Invoer vereist', inputRequiredMsg: 'Voer de te vertalen tekst in.', errorMsg: '[Fout] Vertaling mislukt. Probeer opnieuw.', offlineMsg: '📡 Offlinemodus — Volledige vertaling beschikbaar met internet', subtitle: 'AI Tolk · 24 Talen', footer: `${APP_FOOTER_BRAND}\n24 Talen`, offlineBadge: '🔴 Offline' },
-    pl: { sourceLang: 'Język źródłowy', targetLang: 'Język docelowy', inputPlaceholder: 'Wprowadź tekst do tłumaczenia', swap: '⇄ Zamień', translate: 'Tłumacz', resultPlaceholder: 'Tłumaczenie pojawi się tutaj', inputRequired: 'Wymagane wprowadzenie', inputRequiredMsg: 'Wprowadź tekst do tłumaczenia.', errorMsg: '[Błąd] Tłumaczenie nie powiodło się. Spróbuj ponownie.', offlineMsg: '📡 Tryb offline — Pełne tłumaczenie dostępne z internetem', subtitle: 'Tłumacz AI · 24 Języki', footer: `${APP_FOOTER_BRAND}\n24 Języki`, offlineBadge: '🔴 Offline' },
-    uk: { sourceLang: 'Вихідна мова', targetLang: 'Цільова мова', inputPlaceholder: 'Введіть текст для перекладу', swap: '⇄ Замінити', translate: 'Перекласти', resultPlaceholder: "Переклад з'явиться тут", inputRequired: 'Потрібне введення', inputRequiredMsg: 'Будь ласка, введіть текст для перекладу.', errorMsg: '[Помилка] Переклад не вдався. Спробуйте ще раз.', offlineMsg: '📡 Офлайн-режим — Повний переклад доступний при наявності інтернету', subtitle: 'AI Перекладач · 24 Мови', footer: `${APP_FOOTER_BRAND}\n24 мови`, offlineBadge: '🔴 Офлайн' },
-    sv: { sourceLang: 'Källspråk', targetLang: 'Målspråk', inputPlaceholder: 'Ange text att översätta', swap: '⇄ Byt', translate: 'Översätt', resultPlaceholder: 'Översättning visas här', inputRequired: 'Inmatning krävs', inputRequiredMsg: 'Ange texten som ska översättas.', errorMsg: '[Fel] Översättning misslyckades. Försök igen.', offlineMsg: '📡 Offlineläge — Full översättning tillgänglig med internet', subtitle: 'AI Tolk · 24 Språk', footer: `${APP_FOOTER_BRAND}\n24 Språk`, offlineBadge: '🔴 Offline' },
-    no: { sourceLang: 'Kildespråk', targetLang: 'Målspråk', inputPlaceholder: 'Skriv inn tekst å oversette', swap: '⇄ Bytt', translate: 'Oversett', resultPlaceholder: 'Oversettelse vises her', inputRequired: 'Inndata kreves', inputRequiredMsg: 'Skriv inn tekst å oversette.', errorMsg: '[Feil] Oversettelse mislyktes. Prøv igjen.', offlineMsg: '📡 Frakoblet modus — Full oversettelse tilgengelig med internett', subtitle: 'AI Tolk · 24 Språk', footer: `${APP_FOOTER_BRAND}\n24 Språk`, offlineBadge: '🔴 Frakoblet' },
-    da: { sourceLang: 'Kildesprog', targetLang: 'Målsprog', inputPlaceholder: 'Indtast tekst til oversættelse', swap: '⇄ Skift', translate: 'Oversæt', resultPlaceholder: 'Oversættelse vises her', inputRequired: 'Indtastning påkrævet', inputRequiredMsg: 'Indtast tekst til oversættelse.', errorMsg: '[Fejl] Oversættelse mislykkedes. Prøv igen.', offlineMsg: '📡 Offlinetilstand — Fuld oversættelse tilgængelig med internet', subtitle: 'AI Tolk · 24 Sprog', footer: `${APP_FOOTER_BRAND}\n24 Sprog`, offlineBadge: '🔴 Offline' },
-};
+const SKY_BG = require('./assets/sky-bg.png');
+const LOGIN_MASCOT = require('./assets/login-mascot.png');
 
-function getUiText(lang: string) {
-    const fallback = UI_TEXT['en'];
-    const selected = UI_TEXT[lang] ?? fallback;
-    const applyLanguageCount = (value: string) => value.replace(/24/g, String(SUPPORTED_LANGUAGE_COUNT));
-    return {
-        ...selected,
-        subtitle: applyLanguageCount(selected.subtitle),
-        footer: applyLanguageCount(selected.footer),
-        ocrTitle: selected.ocrTitle ?? fallback.ocrTitle ?? 'Image OCR Translation',
-        ocrSubtitle: selected.ocrSubtitle ?? fallback.ocrSubtitle ?? 'Pick an image to extract text and translate it.',
-        ocrPickImage: selected.ocrPickImage ?? fallback.ocrPickImage ?? '🖼️ Pick image',
-        ocrLoading: selected.ocrLoading ?? fallback.ocrLoading ?? 'Running OCR...',
-        ocrExtractedTitle: selected.ocrExtractedTitle ?? fallback.ocrExtractedTitle ?? 'OCR Extracted Text',
-        ocrTranslatedTitle: selected.ocrTranslatedTitle ?? fallback.ocrTranslatedTitle ?? 'OCR Translation Result',
-        ocrSelectedFile: selected.ocrSelectedFile ?? fallback.ocrSelectedFile ?? 'Selected file: {file}',
-        ocrErrorMsg: selected.ocrErrorMsg ?? fallback.ocrErrorMsg ?? 'Image OCR failed. Please try again.',
-        autoVoiceSegmentStatus: selected.autoVoiceSegmentStatus ?? fallback.autoVoiceSegmentStatus ?? '🎙️ Auto voice translation: processing in {delay} chunks.',
-        autoVoiceDuplicateSkipped: selected.autoVoiceDuplicateSkipped ?? fallback.autoVoiceDuplicateSkipped ?? '↺ Duplicate sentence skipped to prevent repeated auto translation.',
-        autoVoiceDetected: selected.autoVoiceDetected ?? fallback.autoVoiceDetected ?? '🎙️ Auto-detected: {from} → {to}',
-        autoVoiceModeStopped: selected.autoVoiceModeStopped ?? fallback.autoVoiceModeStopped ?? '🎙️ Auto voice translation mode has stopped.',
-        autoVoiceModeStarted: selected.autoVoiceModeStarted ?? fallback.autoVoiceModeStarted ?? '🎙️ Auto voice translation mode started ({delay} interval)',
-        manualVoiceOnlyNotice: selected.manualVoiceOnlyNotice ?? fallback.manualVoiceOnlyNotice ?? '🎤 Recording starts only when you press the mic. Select both source and target languages manually.',
-        manualLanguageHint: selected.manualLanguageHint ?? fallback.manualLanguageHint ?? 'Manual selection',
-        interAutoRelayDuplicateSkipped: selected.interAutoRelayDuplicateSkipped ?? fallback.interAutoRelayDuplicateSkipped ?? '↺ Duplicate sentence skipped to prevent repeated auto relay.',
-        interAutoRelayPending: selected.interAutoRelayPending ?? fallback.interAutoRelayPending ?? '⏱️ Auto relay after {delay} of no input',
-    };
-}
-
-// ─────────────────────────────────────────────
-// 색상 팔레트 (WorldLinco 다크 테마)
-// ─────────────────────────────────────────────
-const C = {
-    bg: '#0b0f16',
-    surface: '#151b23',
-    border: '#21262d',
-    accent: '#2a7cff',
-    green: '#31c45d',
-    text: '#e6edf3',
-    sub: '#8b949e',
-    badge: '#1a2535',
-};
-
-// ─────────────────────────────────────────────
-// 컴포넌트
-// ─────────────────────────────────────────────
-export default function App() {
+function AppInner() {
+    const insets = useSafeAreaInsets();
     const [fromLang, setFromLang] = useState<LangCode>('ko');
     const [toLang, setToLang] = useState<LangCode>('en');
     const [gpsCountryCode, setGpsCountryCode] = useState('');
@@ -2101,6 +1157,15 @@ export default function App() {
     const [offline, setOffline] = useState(false);
     const [engine, setEngine] = useState('');
     const [langPickerFor, setLangPickerFor] = useState<'from' | 'to' | null>(null);
+    const [peerLangManual, setPeerLangManual] = useState(false);
+    const peerLangManualRef = useRef(false);
+    useEffect(() => {
+        peerLangManualRef.current = peerLangManual;
+    }, [peerLangManual]);
+    const toLangRef = useRef<LangCode>(toLang);
+    useEffect(() => {
+        toLangRef.current = toLang;
+    }, [toLang]);
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const {
         selectedCallMode,
@@ -2152,17 +1217,37 @@ export default function App() {
 
     // 로그인/내정보
     const [token, setToken] = useState('');
+    const tokenRef = useRef('');
+    useEffect(() => {
+        tokenRef.current = token;
+    }, [token]);
+    // 단일 세션: 다른 단말/웹에서 로그인되면 이 단말은 401 → 자동 로그아웃 처리에 사용.
+    const handleLogoutRef = useRef<null | (() => void)>(null);
+    const sessionSupersededHandledRef = useRef(false);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [authHydrated, setAuthHydrated] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
     const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPw, setLoginPw] = useState('');
+    const [showLoginPw, setShowLoginPw] = useState(false);
     const [signupUsername, setSignupUsername] = useState('');
     const [signupFullName, setSignupFullName] = useState('');
-    const [signupPreferredLanguage, setSignupPreferredLanguage] = useState<LangCode>('ko');
-    const [signupCountryCode, setSignupCountryCode] = useState<SignupCountryCode>('KR');
+    // [Phase6.0] 가입 필수: 나의 AI 이름 → "OOOO AI" 표시명으로 자동 치환(온디바이스 SSOT).
+    const [signupAiName, setSignupAiName] = useState('');
+    const [aiDisplayName, setAiDisplayName] = useState<string>(DEFAULT_AI_DISPLAY_NAME);
+    const [signupPreferredLanguage, setSignupPreferredLanguage] = useState<LangCode>(() => resolveBootstrapUiLang());
+    const [signupCountryCode, setSignupCountryCode] = useState<SignupCountryCode>(() => {
+        const boot = resolveBootstrapUiLang();
+        return resolveSignupCountryFromLang(boot) as SignupCountryCode;
+    });
     const [signupSelectionModal, setSignupSelectionModal] = useState<SignupSelectionModal>(null);
+    const [signupStep, setSignupStep] = useState<'form' | 'verify'>('form');
+    const [signupSessionToken, setSignupSessionToken] = useState('');
+    const [signupMaskedTarget, setSignupMaskedTarget] = useState('');
+    const [signupOtpCode, setSignupOtpCode] = useState('');
+    const [signupVerificationChannel, setSignupVerificationChannel] = useState<'email' | 'phone'>('email');
+    const [signupPhone, setSignupPhone] = useState('');
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginError, setLoginError] = useState('');
     const [demoSessionLoading, setDemoSessionLoading] = useState(false);
@@ -2174,10 +1259,14 @@ export default function App() {
     const [authDebugSubmitPressed, setAuthDebugSubmitPressed] = useState(false);
     const [authDebugFocusField, setAuthDebugFocusField] = useState<'NONE' | 'EMAIL' | 'PASSWORD'>('NONE');
     const [authDebugLastInputEvent, setAuthDebugLastInputEvent] = useState('APP_BOOT');
+    const [showPasswordSecurity, setShowPasswordSecurity] = useState(false);
+    const [passwordSecurityMode, setPasswordSecurityMode] = useState<'recover' | 'change'>('recover');
+    const [biometricLoginReady, setBiometricLoginReady] = useState(false);
+    const [biometricLoginEnabled, setBiometricLoginEnabledState] = useState(false);
+    const [biometricLoginBusy, setBiometricLoginBusy] = useState(false);
     const [showMyInfo, setShowMyInfo] = useState(false);
     const [profilePreferredLanguage, setProfilePreferredLanguage] = useState<LangCode>('ko');
     const [profileCountryCode, setProfileCountryCode] = useState<SignupCountryCode>('KR');
-    const [profileSelectionModal, setProfileSelectionModal] = useState<SignupSelectionModal>(null);
     const [profileSaving, setProfileSaving] = useState(false);
     const [profileMessage, setProfileMessage] = useState('');
     const [myPurchases, setMyPurchases] = useState<Array<{ id: number; amount: number; status: string; payment_method: string }> | null>(null);
@@ -2212,6 +1301,12 @@ export default function App() {
         setSignupCountryCode(nextCountryCode);
         setSignupPreferredLanguage(deriveSignupPreferredLanguage(nextCountryCode));
         setSignupSelectionModal(null);
+        setSignupStep('form');
+        setSignupSessionToken('');
+        setSignupMaskedTarget('');
+        setSignupOtpCode('');
+        setSignupVerificationChannel('email');
+        setSignupPhone('');
     }, [deriveSignupCountryCode, deriveSignupPreferredLanguage]);
     useEffect(() => {
         if (!showMyInfo || !userInfo) {
@@ -2224,13 +1319,42 @@ export default function App() {
             : deriveSignupPreferredLanguage(nextCountryCode);
         setProfileCountryCode(nextCountryCode);
         setProfilePreferredLanguage(nextPreferredLanguage);
-        setProfileSelectionModal(null);
         setProfileMessage('');
     }, [deriveSignupPreferredLanguage, showMyInfo, userInfo]);
+
+    /** 국가↔언어 1:1 동기화 — UI 표시·통역·fromLang 동시 반영. */
+    const applySyncedCountryLanguage = useCallback((input: { countryCode?: string; languageCode?: LangCode }) => {
+        const pair = input.countryCode
+            ? pairFromCountry(input.countryCode)
+            : input.languageCode
+                ? pairFromLanguage(input.languageCode)
+                : null;
+        if (!pair) {
+            return null;
+        }
+        void syncUiLangFromCountry(pair.countryCode);
+        setFromLang(pair.languageCode);
+        setChatRefreshKey((prev) => prev + 1);
+        return pair;
+    }, []);
+
+    // [전역 다국어] 번역 캐시가 갱신되거나 uiLang 이 바뀌면 tick 이 올라간다. 모놀리식 루트가 이를
+    // 구독해 인라인 Text 트리를 한꺼번에 다시 그린다 → 전역 Text 패치가 최신 uiLang/캐시로 치환.
+    useUiI18nTick();
+    // [전역 다국어 — 국가↔언어 SSOT] country_code 와 preferred_language 는 항상 1:1(국가→대표언어).
+    useEffect(() => {
+        const country = String(
+            userInfo?.country_code || gpsCountryCode || resolveLocaleCountryCode() || 'KR',
+        ).trim();
+        applySyncedCountryLanguage({ countryCode: country });
+    }, [applySyncedCountryLanguage, userInfo?.country_code, gpsCountryCode]);
+
     const [showFriendMapDiscovery, setShowFriendMapDiscovery] = useState(false);
     const [voipAutoCallVoiceId, setVoipAutoCallVoiceId] = useState<string | null>(null);
     const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoomSummary | null>(null);
     const [chatRefreshKey, setChatRefreshKey] = useState(0);
+
+    const [groupComposerSignal, setGroupComposerSignal] = useState(0);
     const [chatShareLoading, setChatShareLoading] = useState(false);
     const [shareTargetVisible, setShareTargetVisible] = useState(false);
     const [shareTargetOptions, setShareTargetOptions] = useState<ChatRoomSummary[]>([]);
@@ -2245,6 +1369,13 @@ export default function App() {
     } | null>(null);
     const [voipPhone, setVoipPhone] = useState(VOIP_DEFAULT_PHONE_PREFIX);
     const [showPhoneDialerModal, setShowPhoneDialerModal] = useState(false);
+    // [Phase5.12] 단말 전화번호부 디렉터리(일반전화통역/VoIP/채팅 연동) 표시 여부.
+    const [contactsDirectoryVisible, setContactsDirectoryVisible] = useState(false);
+    const [voipWorkspaceTab, setVoipWorkspaceTab] = useState<VoipWorkspaceTab>('contacts');
+    const [voipFriendsDirectoryVisible, setVoipFriendsDirectoryVisible] = useState(false);
+    const [callHistoryEntries, setCallHistoryEntries] = useState<CallHistoryEntry[]>([]);
+    const [callHistoryLoading, setCallHistoryLoading] = useState(false);
+    const [showDataSources, setShowDataSources] = useState(false);
     const [voipInitLoading, setVoipInitLoading] = useState(false);
     const [voipInitError, setVoipInitError] = useState('');
     const [voipStatusMessage, setVoipStatusMessage] = useState('');
@@ -2252,6 +1383,7 @@ export default function App() {
     const voipPresenceSocketRef = useRef<WebSocket | null>(null);
     const voipTopicRef = useRef<string | null>(null);
     const pendingIncomingPollInFlightRef = useRef(false);
+    const voipAuditFetchInFlightRef = useRef(false);
     const acceptedIncomingVoipCallIdRef = useRef<string | null>(null);
     const acceptingIncomingVoipCallRef = useRef(false);
     const acceptingIncomingVoipCallIdRef = useRef<string | null>(null);
@@ -2259,10 +1391,26 @@ export default function App() {
     const voipCallInitResponseRef = useRef<CallInitResponse | null>(null);
     const activeRailSectionRef = useRef<SectionRailKey | null>(null);
     const voipCallInitiatingRef = useRef(false);
+    const friendCallDispatchKeyRef = useRef<string | null>(null);
+    const friendCallDispatchAtRef = useRef(0);
     const voipValidationFriendCallBypassRef = useRef(false);
+    useEffect(() => {
+        registerVoipSessionProbe(() =>
+            Boolean(voipCallInitResponseRef.current)
+            || Boolean(pendingIncomingVoipCallRef.current),
+        );
+        return () => {
+            registerVoipSessionProbe(() => false);
+        };
+    }, []);
+    const consumedAppEntryDeepLinkUrlRef = useRef('');
+    const notificationDisabledPromptShownRef = useRef(false);
+    const consumedValidationAutoCallKeyRef = useRef('');
+    const voipAutoCallCalleeLanguageRef = useRef<LangCode | null>(null);
     const canUseFullAutoVoipWithoutPurchasePrompt = Boolean(effectiveVoipPlan || voipValidationOverride || isInstantDemoSession);
     const [acceptingIncomingVoipCallId, setAcceptingIncomingVoipCallId] = useState<string | null>(null);
     const { initiateVoipCall, validatePhoneNumber } = useVoipAutoController(API_BASE, token);
+    const networkDiagnostics = useNetworkDiagnostics(Boolean(token));
     const { requestPermissions } = usePermissionCheck();
     const { openDialPad, startPstnAssistDialFlow } = usePstnAssistController();
 
@@ -2282,6 +1430,20 @@ export default function App() {
         console.log('[UI_PRESS_PROBE]', JSON.stringify(payload));
     }, [selectedCallMode, showLogin, showVoipTester, token, userInfo]);
 
+    const lastNetworkLabelRef = useRef<string | null>(null);
+    useEffect(() => {
+        const nextLabel = networkDiagnostics.label;
+        if (lastNetworkLabelRef.current === nextLabel) {
+            return;
+        }
+        const previousLabel = lastNetworkLabelRef.current;
+        lastNetworkLabelRef.current = nextLabel;
+        logUiPressProbe('NETWORK_TRANSPORT_CHANGED', {
+            ...toClientNetworkContext(networkDiagnostics),
+            previous_label: previousLabel,
+        });
+    }, [logUiPressProbe, networkDiagnostics]);
+
     const emitUnifiedTranslationStatus = useCallback((
         target: 'pstn' | 'voip',
         phase: TranslationStatusPhase,
@@ -2289,18 +1451,19 @@ export default function App() {
         details: Record<string, unknown> = {},
     ) => {
         const route: TranslationStatusRoute = target === 'pstn' ? 'PSTN' : 'VOIP';
-        const message = formatUnifiedTranslationStatus(route, phase, detail);
+        const operatorMessage = formatUnifiedTranslationStatus(route, phase, detail);
         if (target === 'pstn') {
-            setInterCallStatus(message);
+            setInterCallStatus(detail);
         } else {
-            setVoipStatusMessage(message);
+            setVoipStatusMessage(detail);
         }
         logUiPressProbe('TRANSLATION_STATUS', {
             target,
             route,
             phase,
             detail,
-            message,
+            message: operatorMessage,
+            user_message: detail,
             ...details,
         });
         console.log('[TRANSLATION_STATUS]', JSON.stringify({
@@ -2308,7 +1471,8 @@ export default function App() {
             route,
             phase,
             detail,
-            message,
+            message: operatorMessage,
+            user_message: detail,
             ...details,
         }));
     }, [logUiPressProbe]);
@@ -2377,12 +1541,14 @@ export default function App() {
         setLoginPw('');
         setLoginError('');
         setDemoSessionError('');
-        const preferred = nextUserInfo.preferred_language?.trim().toLowerCase();
-        if (preferred && isSupportedLangCode(preferred)) {
-            setFromLang(preferred);
-            setToLang((currentTarget) => resolveAutoTargetLang(preferred, currentTarget));
+        const pair = pairFromCountry(
+            nextUserInfo.country_code || gpsCountryCode || resolveLocaleCountryCode() || 'KR',
+        );
+        applySyncedCountryLanguage({ countryCode: pair.countryCode });
+        if (!peerLangManualRef.current) {
+            setToLang((currentTarget) => resolveAutoTargetLang(pair.languageCode, currentTarget));
         }
-    }, []);
+    }, [applySyncedCountryLanguage, gpsCountryCode]);
 
     const openVoipTesterPanel = useCallback(() => {
         setVoipInitError('');
@@ -2402,6 +1568,66 @@ export default function App() {
         setShowLogin(true);
     }, [logUiPressProbe]);
 
+    const openPasswordRecovery = useCallback(() => {
+        setPasswordSecurityMode('recover');
+        setShowPasswordSecurity(true);
+        setShowLogin(false);
+    }, []);
+
+    const openPasswordChange = useCallback(() => {
+        setPasswordSecurityMode('change');
+        setShowPasswordSecurity(true);
+    }, []);
+
+    const handleBiometricLogin = useCallback(async () => {
+        setBiometricLoginBusy(true);
+        setLoginError('');
+        try {
+            const credentials = await loadBiometricCredentials();
+            if (!credentials) {
+                setLoginError('저장된 지문 로그인 정보가 없습니다. 이메일/비밀번호로 로그인 후 설정해 주세요.');
+                return;
+            }
+            const tk = await callLoginApi(credentials.email, credentials.password);
+            const me = await callMeApi(tk);
+            applyAuthenticatedSession(tk, me);
+        } catch (e: any) {
+            setLoginError(e?.message || '지문 로그인에 실패했습니다.');
+        } finally {
+            setBiometricLoginBusy(false);
+        }
+    }, [applyAuthenticatedSession]);
+
+    const handleToggleBiometricLogin = useCallback(async () => {
+        if (biometricLoginEnabled) {
+            await setBiometricLoginEnabled(false);
+            setBiometricLoginEnabledState(false);
+            setProfileMessage('지문 빠른 로그인을 해제했습니다.');
+            return;
+        }
+        if (!loginEmail.trim() && !userInfo?.email) {
+            Alert.alert('지문 로그인', '먼저 이메일/비밀번호로 로그인한 뒤 설정할 수 있습니다.');
+            return;
+        }
+        const email = userInfo?.email || loginEmail.trim();
+        const password = loginPw.trim();
+        if (!password) {
+            Alert.alert('지문 로그인', '비밀번호를 입력한 상태에서 다시 시도해 주세요.');
+            return;
+        }
+        const ok = await authenticateWithBiometric('지문 빠른 로그인을 설정합니다');
+        if (!ok) {
+            return;
+        }
+        try {
+            await saveBiometricCredentials({ email, password });
+            setBiometricLoginEnabledState(true);
+            setProfileMessage('지문으로 빠른 로그인을 사용할 수 있습니다.');
+        } catch (e: any) {
+            Alert.alert('지문 로그인', e?.message || '저장에 실패했습니다.');
+        }
+    }, [biometricLoginEnabled, loginEmail, loginPw, userInfo?.email]);
+
     const toggleAuthModalMode = useCallback(() => {
         setAuthModalMode((prev) => {
             const nextMode = prev === 'login' ? 'signup' : 'login';
@@ -2410,6 +1636,10 @@ export default function App() {
             }
             return nextMode;
         });
+        setSignupStep('form');
+        setSignupSessionToken('');
+        setSignupMaskedTarget('');
+        setSignupOtpCode('');
         setLoginError('');
     }, [resetSignupProfileDraft]);
 
@@ -2527,8 +1757,10 @@ export default function App() {
     // 주변 검색
     const [lat, setLat] = useState('37.5665');
     const [lon, setLon] = useState('126.9780');
+    // 소리새 AI 친구 모드 G-3: 현재 GPS 정확도(m). 너무 거칠면 서버가 '근처' 그라운딩에서 좌표를 제외.
+    const [gpsAccuracyM, setGpsAccuracyM] = useState<number | null>(null);
     const [nearbyCategory, setNearbyCategory] = useState<SearchCategory>('all');
-    const [radiusM, setRadiusM] = useState(5000);
+    const [radiusM, setRadiusM] = useState(100000);
     const [nearbyLoading, setNearbyLoading] = useState(false);
     const [nearbyError, setNearbyError] = useState('');
     const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
@@ -2569,15 +1801,164 @@ export default function App() {
     const [autoVoiceModeEnabled, setAutoVoiceModeEnabled] = useState(false);
     const [isVoiceRecording, setIsVoiceRecording] = useState(false);
     const [voiceSttLoading, setVoiceSttLoading] = useState(false);
-    const recordingRef = useRef<Audio.Recording | null>(null);
+    // [자동 듣기 워치독] 인터벌 콜백에서 STT 처리 중 여부를 ref로 읽기 위해 state를 미러링.
+    const voiceSttLoadingRef = useRef(false);
+    const recordingRef = useRef<AudioRecording | null>(null);
     const voiceInputTargetRef = useRef<'main' | 'inter_call'>('main');
     const voiceInputStartInFlightRef = useRef(false);
     const voiceInputStopInFlightRef = useRef(false);
     const webSpeechRecognitionRef = useRef<any>(null);
     const autoVoiceStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const autoVoiceRestartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autoVoiceModeEnabledRef = useRef(false);
+    const scheduleFaceConversationRestartRef = useRef<(afterPlayback?: Promise<void> | null) => void>(() => { /* no-op */ });
     const stopVoiceInputRef = useRef<((options?: { suppressAutoRestart?: boolean }) => Promise<void>) | null>(null);
+    const prepareForVoipSessionRef = useRef<(reason: string) => Promise<void>>(async () => { });
+    const prepareForPstnDialRef = useRef<(reason: string) => Promise<void>>(async () => { });
+    const openDialPadWithQuiesceRef = useRef<(phone: string, reason: string) => Promise<boolean>>(
+        async (phone) => openDialPad(phone),
+    );
+    const endPstnAssistSessionRef = useRef<(reason: string) => void>(() => { });
+    const faceVadControllerRef = useRef(createFaceConversationVadController());
+    // [Silero 근본 무음 게이트] 단말 진폭 미터가 죽은 기기(meter_unavailable)에서 file-growth VAD는
+    // 무음과 발화를 구분하지 못해 Whisper 환각이 발화로 누수된다. VoIP 경로처럼 Silero 네이티브 VAD를
+    // 대면/소리새 AI capture에 병행 가동해, 실제 음성(speech_start) 발생 + 네이티브 PCM 실제 RMS로
+    // 무음 세그먼트를 전송 전에 차단한다. 네이티브 모듈 미가용/실패 시 기존 expo 경로로 폴백한다.
+    const faceSileroSupportedRef = useRef<boolean>(false);
+    const faceSileroActiveRef = useRef<boolean>(false);
+    const faceSileroCaptureActiveRef = useRef<boolean>(false);
+    const faceSileroCaptureUriRef = useRef<string | null>(null);
+    const faceSileroFirstSpeechAtMsRef = useRef<number | null>(null);
     const mainLastAutoVoiceRelayRef = useRef<{ key: string; sentAt: number } | null>(null);
+    /** 최근 기기가 발화한 통역문/원문 이력. 마이크로 되돌아온 TTS(지연 도착 포함)를 재번역하는 핑퐁 에코를 차단한다. */
+    const faceSpokenHistoryRef = useRef<Array<{ transcript: string; translated: string; toLang: LangCode; spokenAtMs: number }>>([]);
+    /**
+     * 반이중(half-duplex) 게이트: 통역 음성을 출력(TTS)하는 동안 true.
+     * true인 동안에는 절대 듣기(녹음)를 시작하지 않아 발화와 듣기가 겹치지 않는다.
+     * 재생 완료 후 잔향이 가라앉도록 drain 지연을 둔 뒤 false로 해제한다.
+     */
+    const faceSpeakingRef = useRef(false);
+    // [2-5 AEC/NS] 대면 통역 capture가 통신 오디오 모드(MODE_IN_COMMUNICATION)를 직접 켰는지 추적.
+    // 우리가 켠 경우에만 해제해, VoIP 통화 화면이 설정한 통화 오디오 모드를 망가뜨리지 않는다.
+    const faceVoipAudioEnabledRef = useRef(false);
+    /** 직전에 발화(TTS)한 통역문. 동일 출력이 가드창 안에서 반복 발화되는 것을 차단한다. */
+    const lastFaceSpokenOutputRef = useRef<{ text: string; at: number } | null>(null);
+    /**
+     * 대면 화면 사용 용도: 'translate'(통역 — 상대 언어로 번역) | 'gpt'(친구 모드 — 자연스러운 AI 친구 대화).
+     * 기본은 통역. 친구 모드는 음성을 전용 친구 채팅 경로(/voice/friend-chat)로 보내
+     * 따뜻하고 자연스러운 답변을 받아 화면 표시 + 음성(TTS)으로 읽어준다(번역/에코 로직을 타지 않음).
+     */
+    const [faceAiMode, setFaceAiMode] = useState<'translate' | 'gpt'>('translate');
+    const faceAiModeRef = useRef<'translate' | 'gpt'>('translate');
+    // [대면통역 전용 화면(mockup #2)] 상단 상대언어(180° 회전) + 하단 내언어 + 중앙 펄스 마이크.
+    const [faceScreenOpen, setFaceScreenOpen] = useState(false);
+    const faceScreenOpenRef = useRef(false);
+    /** 친구 모드 멀티턴 메모리 — 최근 대화(role/content)를 누적해 자연스러운 맥락 유지. */
+    const faceGptConversationRef = useRef<Array<{ role: string; content: string }>>([]);
+    /**
+     * [Phase5.8] 진화형 동반자 페르소나(온디바이스). 세션을 넘는 성격·습관·관심 기억을
+     * 보관하고, 친구챗 요청 시 압축 브리프를 주입한다(서버 영속화 0). 마운트 시 1회 로드.
+     */
+    const companionPersonaRef = useRef<CompanionPersona>(createEmptyPersona());
+    useEffect(() => {
+        let alive = true;
+        loadPersona().then((p) => { if (alive) companionPersonaRef.current = p; }).catch(() => {});
+        // [Phase6.0] 저장된 "나의 AI 이름" → "OOOO AI" 표시명 복원(없으면 기본 "소리새 AI").
+        loadAiDisplayName().then((name) => { if (alive) setAiDisplayName(name); }).catch(() => {});
+        return () => { alive = false; };
+    }, []);
+    // 캡처 루프 콜백이 최신 AI 이름을 웨이크워드 후보 산출에 쓰도록 ref 미러 유지.
+    useEffect(() => { aiDisplayNameRef.current = aiDisplayName; }, [aiDisplayName]);
+    /**
+     * 친구 모드 자기에코 차단 — 방금 소리새 AI가 발화(TTS)한 답변 텍스트를 보관한다.
+     * 다음 전사(STT)가 이 답변과 충분히 겹치면 '마이크가 자기 음성을 다시 주워담은 것'으로 보고
+     * 그 턴을 버려, 혼자 묻고 혼자 답하는 무한 루프를 끊는다.
+     */
+    const faceGptSpokenEchoRef = useRef<Array<{ text: string; atMs: number }>>([]);
+    /** 소리새 AI 질문/답변 표출 로그(좌=질문/입력언어, 우=답변/출력언어). */
+    const [sorisaeQaLog, setSorisaeQaLog] = useState<Array<{
+        id: number; question: string; questionLang: string; answer: string; answerLang: string; atMs: number;
+    }>>([]);
+    const sorisaeQaSeqRef = useRef(0);
+    /** 소리새 AI 전용 창(대면 통역창과 분리) — 움직이는 플로팅 심볼로 열고 닫는다. */
+    const [sorisaeWindowOpen, setSorisaeWindowOpen] = useState(false);
+    /**
+     * 소리새 창 활성 ref(처리 분기의 단일 진실원천).
+     * 음성 세그먼트를 '소리새(질문/관광/대화)'로 보낼지 '대면 통역'으로 보낼지는
+     * faceAiMode 상태(비동기·레이스 위험) 가 아니라 **이 ref(창 열림 여부)** 로만 판정한다.
+     * → 소리새 창이 열려있으면 항상 friend-chat, 닫혀있으면 항상 voice-translate(완전 분리).
+     */
+    const sorisaeWindowOpenRef = useRef(false);
+    /**
+     * [기능 분리 Phase1] 소리새↔대면통역 완전 격리용 전용 자원.
+     * - mainSorisaeRouteRef: 이 세그먼트를 소리새로 보낼지의 **캡처 시작 시점 스냅샷**.
+     *   처리 시점에 라이브 ref(sorisaeWindowOpenRef)를 다시 읽으면 창 개폐 레이스로 경로가 뒤바뀐다.
+     * - sorisaeSpeakingRef: 소리새 전용 반이중 게이트(대면 faceSpeakingRef와 분리).
+     * - sorisaeVoicePlaybackSoundRef: 소리새 전용 TTS 재생 핸들(대면 faceVoicePlaybackSoundRef와 분리).
+     */
+    const mainSorisaeRouteRef = useRef(false);
+    const sorisaeSpeakingRef = useRef(false);
+    const sorisaeVoicePlaybackSoundRef = useRef<AudioSound | null>(null);
+    const lastVoiceDrivenInputRef = useRef<{ text: string; atMs: number } | null>(null);
+    const companionKwsActiveRef = useRef(false);
+    const faceSegmentCaptureStartedAtMsRef = useRef(0);
+    const companionDormantSilent422StreakRef = useRef(0);
+    const companionDormantRecoverBlockedUntilRef = useRef(0);
+    const companionWakeRearmAtRef = useRef(0);
+    const companionTripSessionIdRef = useRef<string | null>(null);
+    /**
+     * [Phase6.1] 소리새 음성 호출형(웨이크워드) — 로그인 상태에서 이름을 부르면 깨어나고,
+     * 3분 무활동이면 자동으로 잠든다. dormant(웨이크워드 대기) 동안엔 통역 캡처 루프의
+     * 전사를 가로채 이름 호명만 감시하고, awake 진입 시 소리새 창을 연다(SSOT는 순수 상태기계).
+     */
+    const [companionVoiceCallArmed, setCompanionVoiceCallArmed] = useState(false);
+    const companionVoiceCallRef = useRef<CompanionVoiceCallState>(createCompanionVoiceCallState());
+    const companionVoiceCallArmedRef = useRef(false);
+    useEffect(() => { companionVoiceCallArmedRef.current = companionVoiceCallArmed; }, [companionVoiceCallArmed]);
+    /** true = 사용자가 대면 통역 ON(음성 호출 대기 스캔과 분리). */
+    const faceConversationSessionRef = useRef(false);
+    /** 캡처 루프 콜백에서 최신 AI 표시명을 읽기 위한 ref 미러. */
+    const aiDisplayNameRef = useRef(DEFAULT_AI_DISPLAY_NAME);
+    /** 웨이크워드 감지 시 호출할 '깨우기' 루틴(나중에 정의되는 콜백을 ref 로 가리켜 캡처 루프에서 호출). */
+    const wakeCompanionVoiceCallNowRef = useRef<() => void>(() => {});
+    /** 플로팅 심볼 위치(드래그 이동) — 화면 우측 상단 1/3 지점 기본값(아래로 너무 가지 않게). */
+    const sorisaeBtnPos = useRef(new Animated.ValueXY({
+        x: Dimensions.get('window').width - 74,
+        y: Math.round(Dimensions.get('window').height * 0.32),
+    })).current;
+    /** 이번 제스처가 '드래그'였는지(이동량 임계 초과). false면 '탭'으로 보고 창을 연다. */
+    const sorisaeDragMovedRef = useRef(false);
+    const sorisaePanResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
+            onPanResponderGrant: () => {
+                sorisaeDragMovedRef.current = false;
+                sorisaeBtnPos.extractOffset();
+            },
+            onPanResponderMove: (e, g) => {
+                if (Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4) {
+                    sorisaeDragMovedRef.current = true;
+                }
+                Animated.event(
+                    [null, { dx: sorisaeBtnPos.x, dy: sorisaeBtnPos.y }],
+                    { useNativeDriver: false },
+                )(e, g);
+            },
+            onPanResponderRelease: () => {
+                sorisaeBtnPos.flattenOffset();
+                // 거의 안 움직였으면 '탭' → 소리새 AI 전용 창 열기.
+                if (!sorisaeDragMovedRef.current) {
+                    sorisaeWindowOpenRef.current = true;
+                    setSorisaeWindowOpen(true);
+                }
+            },
+        }),
+    ).current;
+    /** 소리새 AI 음성 인식 결과 → AI 여행 일정 패널 입력 자동 연결(seed). nonce 로 동일 발화 재주입도 트리거. */
+    const [itinerarySeedQuery, setItinerarySeedQuery] = useState('');
+    const [itinerarySeedNonce, setItinerarySeedNonce] = useState(0);
+    const [, setTourismSafetyBanner] = useState<{ message: string; highRiskBlocked: boolean } | null>(null);
     const [songModeEnabled, setSongModeEnabled] = useState(false);
     const [songModeStatus, setSongModeStatus] = useState('');
     const [songSubtitles, setSongSubtitles] = useState<SongSubtitleEntry[]>([]);
@@ -2589,11 +1970,141 @@ export default function App() {
     const [songFilePlaybackMs, setSongFilePlaybackMs] = useState(0);
     const [songFilePlaying, setSongFilePlaying] = useState(false);
     const [songFileExportPreview, setSongFileExportPreview] = useState('');
-    const songFileSoundRef = useRef<Audio.Sound | null>(null);
-    const voicePreviewSoundRef = useRef<Audio.Sound | null>(null);
+    const songFileSoundRef = useRef<AudioSound | null>(null);
+    const voicePreviewSoundRef = useRef<AudioSound | null>(null);
+    const faceVoicePlaybackSoundRef = useRef<AudioSound | null>(null);
     const incomingVoipAlertActiveRef = useRef(false);
+    const incomingVoipAlertCallIdRef = useRef<string | null>(null);
     const incomingVoipVibrationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const incomingVoipVibrationMaxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // 월드링코 설정: 수신 알림 소리/진동/무음. ref 는 startIncomingVoipAlert 콜백에서 최신값을 읽기 위함.
+    const [incomingAlertSoundMode, setIncomingAlertSoundMode] = useState<IncomingAlertSoundMode>('sound');
+    const incomingAlertSoundModeRef = useRef<IncomingAlertSoundMode>('sound');
+    const [settingsTabOpen, setSettingsTabOpen] = useState(false);
+    const globalSettings = useGlobalSettings();
+    const [companionKwsSettings, setCompanionKwsSettings] = useState<CompanionKwsSettings>(DEFAULT_COMPANION_KWS_SETTINGS);
+
+    useEffect(() => {
+        void loadCompanionKwsSettings().then(setCompanionKwsSettings).catch(() => { /* 기본값 유지 */ });
+    }, []);
+
+    const handleSaveCompanionKwsSettings = useCallback(async (params: {
+        provider: CompanionKwsSettings['provider'];
+        modelPath: string;
+        porcupineAccessKey: string;
+        porcupineKeywordPaths: string[];
+    }) => {
+        const saved = await persistCompanionKwsSettings(params);
+        setCompanionKwsSettings(saved);
+    }, []);
+
+    useEffect(() => {
+        // 설정값을 단말에서 1회 로드(소리/진동/무음).
+        void (async () => {
+            try {
+                const raw = await AsyncStorage.getItem(WORLDLINCO_SETTINGS_STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw) as { incomingAlertSoundMode?: IncomingAlertSoundMode };
+                const mode = parsed?.incomingAlertSoundMode;
+                if (mode === 'sound' || mode === 'vibrate' || mode === 'silent') {
+                    setIncomingAlertSoundMode(mode);
+                    incomingAlertSoundModeRef.current = mode;
+                }
+            } catch {
+                // 손상된 설정은 기본값(sound)으로 무시.
+            }
+        })();
+    }, []);
+
+    const updateIncomingAlertSoundMode = useCallback((mode: IncomingAlertSoundMode) => {
+        setIncomingAlertSoundMode(mode);
+        incomingAlertSoundModeRef.current = mode;
+        void AsyncStorage.setItem(
+            WORLDLINCO_SETTINGS_STORAGE_KEY,
+            JSON.stringify({ incomingAlertSoundMode: mode }),
+        ).catch(() => { /* best-effort 저장 */ });
+    }, []);
+
+    // ── 설정 모달: 내정보(국가·언어) ──
+    const [settingsProfileSaving, setSettingsProfileSaving] = useState(false);
+    const [settingsProfileError, setSettingsProfileError] = useState('');
+    const [settingsProfileSuccess, setSettingsProfileSuccess] = useState('');
+
+    const openSettingsModal = useCallback(() => {
+        setSettingsProfileError('');
+        setSettingsProfileSuccess('');
+        setSettingsTabOpen(true);
+    }, []);
+
+    const handleSettingsChangeCountry = useCallback((code: string) => {
+        const settingsText = getSettingsText(getEffectiveUiLang());
+        setSettingsProfileError('');
+        setSettingsProfileSuccess('');
+        if (!token || !userInfo) {
+            setSettingsProfileError(settingsText.loginRequiredToChange);
+            return;
+        }
+        const pair = applySyncedCountryLanguage({ countryCode: code });
+        if (!pair) {
+            return;
+        }
+        setSettingsProfileSaving(true);
+        void (async () => {
+            try {
+                const payload: UserProfileUpdatePayload = {
+                    country_code: pair.countryCode,
+                    preferred_language: pair.languageCode,
+                };
+                const updated = await callUpdateMeApi(token, payload);
+                setUserInfo(updated);
+                await saveStoredAuthState(token, updated);
+                setSettingsProfileSuccess(getSettingsText(getEffectiveUiLang()).countrySavedSuccess);
+            } catch (error: any) {
+                setSettingsProfileError(error?.message || getSettingsText(getEffectiveUiLang()).countrySaveFailed);
+            } finally {
+                setSettingsProfileSaving(false);
+            }
+        })();
+    }, [applySyncedCountryLanguage, token, userInfo]);
+
+    const handleSettingsChangeLanguage = useCallback((code: string) => {
+        const settingsText = getSettingsText(getEffectiveUiLang());
+        setSettingsProfileError('');
+        setSettingsProfileSuccess('');
+        if (!token || !userInfo) {
+            setSettingsProfileError(settingsText.loginRequiredToChange);
+            return;
+        }
+        if (!isSupportedLangCode(code)) {
+            setSettingsProfileError(settingsText.unsupportedLanguage);
+            return;
+        }
+        const pair = applySyncedCountryLanguage({ languageCode: code as LangCode });
+        if (!pair) {
+            return;
+        }
+        setSettingsProfileSaving(true);
+        void (async () => {
+            try {
+                const updated = await callUpdateMeApi(token, {
+                    preferred_language: pair.languageCode,
+                    country_code: pair.countryCode,
+                });
+                setUserInfo(updated);
+                await saveStoredAuthState(token, updated);
+                setSettingsProfileSuccess(getSettingsText(getEffectiveUiLang()).languageSavedSuccess);
+            } catch (error: any) {
+                setSettingsProfileError(error?.message || getSettingsText(getEffectiveUiLang()).languageSaveFailed);
+            } finally {
+                setSettingsProfileSaving(false);
+            }
+        })();
+    }, [applySyncedCountryLanguage, token, userInfo]);
+
+    const handleOpenPasswordChangeFromSettings = useCallback(() => {
+        setSettingsTabOpen(false);
+        openPasswordChange();
+    }, [openPasswordChange]);
     const [voiceConsent, setVoiceConsent] = useState<VoiceConsentResponse | null>(null);
     const [voiceProfile, setVoiceProfile] = useState<VoiceProfileResponse | null>(null);
     const [voiceProfileLoading, setVoiceProfileLoading] = useState(false);
@@ -2603,10 +2114,37 @@ export default function App() {
     const [voiceLicenseMode, setVoiceLicenseMode] = useState<VoiceLicenseMode>('private_preview_unverified');
     const [voiceOutputScope, setVoiceOutputScope] = useState<VoiceOutputScope>('private_preview');
     const [voiceRightsAcknowledged, setVoiceRightsAcknowledged] = useState(false);
-    const voiceProfileRecordingRef = useRef<Audio.Recording | null>(null);
+    const voiceProfileRecordingRef = useRef<AudioRecording | null>(null);
+    // 통화 입력란 예약처 전화 자동삽입의 직전 값(사용자 수동 입력 보존 판단용).
+    const lastAutoFilledPhoneRef = useRef('');
 
     const selectedNearbyPlace = nearbyPlaces.find((item) => item.id === selectedNearbyPlaceId) ?? nearbyPlaces[0] ?? null;
     const selectedBookingPlace = nearbyPlaces.find((item) => item.id === selectedBookingPlaceId) ?? null;
+    // [예약처 자동삽입] 통화 입력란에 채울 전화번호(구조화 예약 선택과 분리).
+    // 우선순위: 선택된 예약 호텔 전화 → 주변검색 결과 중 전화 있는 첫 장소 → 예약 확정 지원전화.
+    // 식당/명소 등 예약불가 장소여도 '전화 연결'은 가능해야 하므로 전화 자동삽입은 카테고리를 가리지 않는다.
+    const bookingAutoFillPhone = String(
+        selectedBookingPlace?.phone
+        || nearbyPlaces.find((place) => String(place.phone || '').trim().length > 0)?.phone
+        || bookingResult?.support_phone
+        || '',
+    ).trim();
+    useEffect(() => {
+        if (!bookingAutoFillPhone) {
+            return;
+        }
+        const current = String(interCallPhone || '').trim();
+        // 사용자가 직접 입력/수정한 번호는 덮어쓰지 않는다. (비어있거나 직전 자동삽입값과 동일할 때만 갱신)
+        if (current && current !== lastAutoFilledPhoneRef.current) {
+            return;
+        }
+        if (current === bookingAutoFillPhone) {
+            lastAutoFilledPhoneRef.current = bookingAutoFillPhone;
+            return;
+        }
+        lastAutoFilledPhoneRef.current = bookingAutoFillPhone;
+        setInterCallPhone(bookingAutoFillPhone);
+    }, [bookingAutoFillPhone, interCallPhone, setInterCallPhone]);
     const nearbyCenterLat = Number.parseFloat(lat);
     const nearbyCenterLon = Number.parseFloat(lon);
     const nearbyMapHtml = nearbyPlaces.length > 0 && Number.isFinite(nearbyCenterLat) && Number.isFinite(nearbyCenterLon)
@@ -2621,10 +2159,7 @@ export default function App() {
     const translationRequestSeqRef = useRef(0);
     const latestTranslationMetaRef = useRef<{ source: LangCode; target: LangCode; translated: string } | null>(null);
     const [translationEpoch, setTranslationEpoch] = useState(0);
-    const currentVoipPreferredLanguage = (() => {
-        const normalized = String(userInfo?.preferred_language || '').trim().toLowerCase();
-        return isSupportedLangCode(normalized) ? normalized : fromLang;
-    })();
+    const currentVoipPreferredLanguage: LangCode = fromLang;
     const currentVoipCountryCode = String(userInfo?.country_code || '').trim().toUpperCase() || resolveLocaleCountryCode();
     const currentVoipProfile: VoipParticipantProfile = {
         nickname: userInfo?.username || userInfo?.email.split('@')[0] || '게스트',
@@ -2723,13 +2258,21 @@ export default function App() {
         setShowVoipTester(true);
     }, [buildVoipRemoteProfile]);
 
-    const activateAcceptedIncomingVoipCall = useCallback((
+    const activateAcceptedIncomingVoipCall = useCallback(async (
         acceptedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string },
         source: string,
     ) => {
-        populateIncomingVoipPresentation(acceptedPayload, acceptedPayload);
+        await prepareForVoipSessionRef.current(`voip_incoming_accept:${source}`);
+        const callerLanguageHint = resolveVoipRemoteLanguageHint(
+            acceptedPayload.display_language,
+            pendingIncomingVoipCallRef.current?.display_language,
+        );
+        const normalizedAcceptedPayload = callerLanguageHint
+            ? { ...acceptedPayload, display_language: callerLanguageHint }
+            : acceptedPayload;
+        populateIncomingVoipPresentation(normalizedAcceptedPayload, normalizedAcceptedPayload);
         const calleePayload: CallInitResponse = {
-            ...acceptedPayload,
+            ...normalizedAcceptedPayload,
             participant_role: 'callee',
         };
         logUiPressProbe('VOIP_INCOMING_CALL_ACCEPTED', {
@@ -2763,6 +2306,11 @@ export default function App() {
         }
         const wasActive = incomingVoipAlertActiveRef.current;
         incomingVoipAlertActiveRef.current = false;
+        incomingVoipAlertCallIdRef.current = null;
+        void stopNativeIncomingVoipAlert();
+        // Expo 로컬 착신 알림도 반드시 내린다 — 안 내리면 systemui 가 알림 링톤을 계속 재생해
+        // 받기/끊기 후에도 수신 벨이 멈추지 않는다(누적된 과거 알림까지 채널 기준 정리).
+        void dismissIncomingVoipLocalNotification();
         getVoIPToneService().stopAll();
         if (Platform.OS !== 'web') {
             Vibration.cancel();
@@ -2775,48 +2323,127 @@ export default function App() {
         }
     }, [logUiPressProbe]);
 
-    const startIncomingVoipAlert = useCallback((callId: string, callerVoiceId?: string | null) => {
+    const postIncomingVoipLocalNotification = useCallback(async (
+        callId: string,
+        callerVoiceId?: string | null,
+        callerLabel?: string | null,
+        probeEvent: 'VOIP_INCOMING_ALERT_NOTIFICATION_POSTED' | 'VOIP_INCOMING_ALERT_NOTIFICATION_REASSERTED' = 'VOIP_INCOMING_ALERT_NOTIFICATION_POSTED',
+    ) => {
+        if (Platform.OS !== 'android') {
+            return;
+        }
+        try {
+            await showIncomingVoipLocalNotification({
+                type: 'incoming_call',
+                call_id: callId,
+                caller_voice_id: callerVoiceId ?? undefined,
+                caller_label: callerLabel ?? callerVoiceId ?? '친구',
+                status: 'ringing',
+            });
+            logUiPressProbe(probeEvent, { call_id: callId, app_state: AppState.currentState });
+        } catch (error: any) {
+            logUiPressProbe('VOIP_INCOMING_ALERT_NOTIFICATION_FAILED', {
+                call_id: callId,
+                error_message: error?.message || 'unknown',
+                app_state: AppState.currentState,
+            });
+        }
+    }, [logUiPressProbe]);
+
+    const startIncomingVoipAlert = useCallback((
+        callId: string,
+        callerVoiceId?: string | null,
+        callerLabel?: string | null,
+        options?: { reassert?: boolean },
+    ) => {
         if (incomingVoipAlertActiveRef.current) {
+            if (options?.reassert || incomingVoipAlertCallIdRef.current === callId) {
+                logUiPressProbe('VOIP_INCOMING_ALERT_REASSERT', {
+                    call_id: callId,
+                    caller_voice_id: callerVoiceId ?? null,
+                    app_state: AppState.currentState,
+                });
+                // reassert 시에는 Expo 로컬 알림을 다시 게시하지 않는다.
+                // 최초 1회 게시한 알림(고정 식별자)이 그대로 유지되며, 재게시하면 MAX 채널에서
+                // 링톤이 매번 재생되어 "0.5~2.5초마다 따라 우는" 영구 벨의 원인이 된다.
+                // 네이티브 착신 알림은 startNativeIncomingVoipAlert(멱등)가 유지한다.
+                if (isVoipIncomingAlertNativeAvailable()) {
+                    void startNativeIncomingVoipAlert(callId, callerLabel ?? callerVoiceId ?? '친구', incomingAlertSoundModeRef.current);
+                } else if (Platform.OS !== 'web' && incomingAlertSoundModeRef.current !== 'silent') {
+                    try {
+                        Vibration.vibrate(800);
+                    } catch {
+                        // no-op
+                    }
+                }
+            }
             return;
         }
         incomingVoipAlertActiveRef.current = true;
+        incomingVoipAlertCallIdRef.current = callId;
         logUiPressProbe('VOIP_INCOMING_ALERT_STARTED', {
             call_id: callId,
             caller_voice_id: callerVoiceId ?? null,
+            app_state: AppState.currentState,
         });
 
-        try {
-            getVoIPToneService().playRingingTone();
-            logUiPressProbe('VOIP_INCOMING_ALERT_TONE_REQUESTED', { call_id: callId });
-        } catch (error: any) {
-            logUiPressProbe('VOIP_INCOMING_ALERT_TONE_FAILED', {
-                call_id: callId,
-                error_message: error?.message || 'unknown',
-            });
-        }
+        void postIncomingVoipLocalNotification(callId, callerVoiceId, callerLabel);
 
-        if (Platform.OS !== 'web') {
-            try {
-                const pulseIncomingVibration = () => {
-                    if (!incomingVoipAlertActiveRef.current) {
-                        return;
-                    }
-                    Vibration.vibrate(800);
-                };
-                pulseIncomingVibration();
-                incomingVoipVibrationIntervalRef.current = setInterval(pulseIncomingVibration, 3000);
-                incomingVoipVibrationMaxTimerRef.current = setTimeout(() => {
-                    stopIncomingVoipAlert('incoming_vibration_max_duration');
-                }, PENDING_INCOMING_RING_MAX_MS);
-                logUiPressProbe('VOIP_INCOMING_ALERT_VIBRATION_REQUESTED', { call_id: callId });
-            } catch (error: any) {
-                logUiPressProbe('VOIP_INCOMING_ALERT_VIBRATION_FAILED', {
-                    call_id: callId,
-                    error_message: error?.message || 'unknown',
-                });
+        const playJsIncomingAlertFallback = () => {
+            const alertMode = incomingAlertSoundModeRef.current;
+            if (alertMode === 'sound') {
+                try {
+                    getVoIPToneService().playRingingTone();
+                    logUiPressProbe('VOIP_INCOMING_ALERT_TONE_REQUESTED', { call_id: callId });
+                } catch (error: any) {
+                    logUiPressProbe('VOIP_INCOMING_ALERT_TONE_FAILED', {
+                        call_id: callId,
+                        error_message: error?.message || 'unknown',
+                    });
+                }
             }
+
+            if (Platform.OS !== 'web' && alertMode !== 'silent') {
+                try {
+                    const pulseIncomingVibration = () => {
+                        if (!incomingVoipAlertActiveRef.current) {
+                            return;
+                        }
+                        Vibration.vibrate(800);
+                    };
+                    pulseIncomingVibration();
+                    incomingVoipVibrationIntervalRef.current = setInterval(pulseIncomingVibration, 3000);
+                    incomingVoipVibrationMaxTimerRef.current = setTimeout(() => {
+                        stopIncomingVoipAlert('incoming_vibration_max_duration');
+                    }, PENDING_INCOMING_RING_MAX_MS);
+                    logUiPressProbe('VOIP_INCOMING_ALERT_VIBRATION_REQUESTED', { call_id: callId });
+                } catch (error: any) {
+                    logUiPressProbe('VOIP_INCOMING_ALERT_VIBRATION_FAILED', {
+                        call_id: callId,
+                        error_message: error?.message || 'unknown',
+                    });
+                }
+            }
+        };
+
+        const callerLabelText = callerLabel ?? callerVoiceId ?? '친구';
+        if (isVoipIncomingAlertNativeAvailable()) {
+            void (async () => {
+                const nativeStarted = await startNativeIncomingVoipAlert(callId, callerLabelText, incomingAlertSoundModeRef.current);
+                logUiPressProbe(nativeStarted
+                    ? 'VOIP_INCOMING_ALERT_NATIVE_STARTED'
+                    : 'VOIP_INCOMING_ALERT_NATIVE_FAILED', {
+                    call_id: callId,
+                    app_state: AppState.currentState,
+                });
+                if (!nativeStarted) {
+                    playJsIncomingAlertFallback();
+                }
+            })();
+        } else {
+            playJsIncomingAlertFallback();
         }
-    }, [logUiPressProbe, stopIncomingVoipAlert]);
+    }, [logUiPressProbe, postIncomingVoipLocalNotification, stopIncomingVoipAlert]);
 
     const applyIncomingVoipPayload = useCallback((payload: Partial<CallInitResponse> & { caller_label?: string; caller_voice_id?: string }, source: string) => {
         const fallbackCallMode = resolveCallModeFromPayload(payload);
@@ -2859,6 +2486,47 @@ export default function App() {
             return;
         }
 
+        // 자기가 건 통화를 수신 통화로 오인하지 않는다. 발신 직후 세션이 등록되기 전(active session
+        // 억제 이전) 타이밍에 발신자의 수신 폴링이 자기 통화를 되받아 발신측에서도 신호음이 울리는
+        // 회귀를 차단한다. 발신자 식별은 user_id(숫자) 우선, voice_id(nado-XXXXXX) 보조로 비교한다.
+        const myUserId = userInfo?.id ?? null;
+        const myVoiceId = myUserId != null ? buildVoiceId(myUserId) : null;
+        const payloadCallerUserId = payload.caller_user_id ?? normalizedPayload.caller_user_id ?? null;
+        const payloadCallerVoiceId = (payload.caller_voice_id ?? normalizedPayload.caller_voice_id ?? null);
+        const selfOriginated = (
+            (myUserId != null && payloadCallerUserId != null && Number(payloadCallerUserId) === Number(myUserId))
+            || (!!myVoiceId && !!payloadCallerVoiceId && payloadCallerVoiceId === myVoiceId)
+        );
+        if (selfOriginated) {
+            stopIncomingVoipAlert('self_originated_outgoing_call');
+            setPendingIncomingVoipCall(null);
+            logUiPressProbe('VOIP_INCOMING_CALL_IGNORED', {
+                source,
+                reason: 'self_originated_outgoing_call',
+                call_id: normalizedPayload.call_id,
+                caller_user_id: payloadCallerUserId ?? null,
+                caller_voice_id: payloadCallerVoiceId ?? null,
+            });
+            return;
+        }
+
+        const activeCallId = voipCallInitResponseRef.current?.call_id ?? null;
+        const acceptedCallId = acceptedIncomingVoipCallIdRef.current;
+        if (
+            activeCallId === normalizedPayload.call_id
+            || acceptedCallId === normalizedPayload.call_id
+        ) {
+            logUiPressProbe('VOIP_INCOMING_CALL_SUPPRESSED_ACTIVE_SESSION', {
+                source,
+                call_id: normalizedPayload.call_id,
+                active_call_id: activeCallId,
+                accepted_call_id: acceptedCallId,
+                status: normalizedPayload.status ?? null,
+                caller_voice_id: payload.caller_voice_id ?? null,
+            });
+            return;
+        }
+
         const existingPendingCall = pendingIncomingVoipCallRef.current;
         if (
             existingPendingCall?.call_id === normalizedPayload.call_id
@@ -2867,7 +2535,7 @@ export default function App() {
             && (existingPendingCall.caller_voice_id ?? null) === (payload.caller_voice_id ?? null)
             && !voipCallInitResponseRef.current
         ) {
-            if (isResumableIncomingVoipStatus(normalizedPayload.status)) {
+            if (isIncomingRingVoipStatus(normalizedPayload.status)) {
                 logUiPressProbe('VOIP_INCOMING_CALL_DUPLICATE_REAPPLIED', {
                     source,
                     call_id: normalizedPayload.call_id,
@@ -2881,6 +2549,12 @@ export default function App() {
                     caller_label: payload.caller_label,
                     caller_voice_id: payload.caller_voice_id,
                 });
+                startIncomingVoipAlert(
+                    normalizedPayload.call_id,
+                    payload.caller_voice_id ?? null,
+                    payload.caller_label ?? null,
+                    { reassert: true },
+                );
                 return;
             }
 
@@ -2890,6 +2564,28 @@ export default function App() {
                 status: normalizedPayload.status ?? null,
                 caller_voice_id: payload.caller_voice_id ?? null,
             });
+            return;
+        }
+
+        if (
+            inferredParticipantRole === 'callee'
+            && !isIncomingRingVoipStatus(normalizedPayload.status)
+        ) {
+            stopIncomingVoipAlert('non_ring_incoming_payload');
+            logUiPressProbe('VOIP_INCOMING_CALL_IGNORED', {
+                source,
+                reason: 'non_ring_incoming_status',
+                call_id: normalizedPayload.call_id,
+                status: normalizedPayload.status ?? null,
+                caller_voice_id: payload.caller_voice_id ?? null,
+            });
+            if (
+                token
+                && normalizedPayload.status === 'connecting'
+                && acceptedIncomingVoipCallIdRef.current !== normalizedPayload.call_id
+            ) {
+                void requestEndVoipCall(API_BASE, token, normalizedPayload.call_id, 'stale_non_ring_session');
+            }
             return;
         }
 
@@ -2932,7 +2628,66 @@ export default function App() {
             caller_label: payload.caller_label,
             caller_voice_id: payload.caller_voice_id,
         });
-    }, [logUiPressProbe, populateIncomingVoipPresentation, stopIncomingVoipAlert, summarizeIncomingVoipPayload, userInfo]);
+    }, [API_BASE, logUiPressProbe, populateIncomingVoipPresentation, startIncomingVoipAlert, stopIncomingVoipAlert, summarizeIncomingVoipPayload, token, userInfo]);
+
+    const handleFcmIncomingCall = useCallback(
+        (callInit: CallInitResponse, callerLabel: string) => {
+            applyIncomingVoipPayload(
+                { ...callInit, caller_label: callerLabel },
+                'fcm_push',
+            );
+        },
+        [applyIncomingVoipPayload],
+    );
+
+    const handleOpenChatRoom = useCallback((room: ChatRoomSummary) => {
+        setSelectedChatRoom(room);
+        setActiveRailSection('chat');
+        setShowFriendFolder(false);
+        setShowFriendMapDiscovery(false);
+    }, []);
+
+    const handleOpenChatRoomById = useCallback(async (roomId: string, source: string) => {
+        if (!token || !userInfo) {
+            Alert.alert('로그인 필요', '채팅을 열려면 먼저 로그인해 주세요.');
+            return;
+        }
+        try {
+            const detail = await getChatRoomDetail(API_BASE, token, roomId);
+            const summary: ChatRoomSummary = {
+                room_id: detail.room_id,
+                room_type: detail.room_type as ChatRoomSummary['room_type'],
+                title: detail.title,
+                member_count: detail.members.length,
+                member_limit: detail.member_limit,
+                allow_member_invites: detail.allow_member_invites,
+                can_invite_members: detail.can_invite_members,
+                unread_count: 0,
+                last_message_preview: '',
+                last_message_at: new Date().toISOString(),
+                counterpart: detail.counterpart,
+            };
+            handleOpenChatRoom(summary);
+            setChatRefreshKey((prev) => prev + 1);
+            logUiPressProbe('CHAT_DEEP_LINK_OPEN', { source, room_id: roomId });
+        } catch (error: unknown) {
+            Alert.alert('채팅 열기 실패', error instanceof Error ? error.message : '채팅방을 열지 못했습니다.');
+            logUiPressProbe('CHAT_DEEP_LINK_OPEN_FAILED', {
+                source,
+                room_id: roomId,
+                error_message: error instanceof Error ? error.message : 'unknown',
+            });
+        }
+    }, [API_BASE, handleOpenChatRoom, logUiPressProbe, token, userInfo]);
+
+    useVoipIncomingCalls({
+        apiBaseUrl: API_BASE,
+        authToken: token || '',
+        messaging: Platform.OS === 'android' ? voipMessagingAdapter : null,
+        onIncomingCall: handleFcmIncomingCall,
+        onIncomingCallPayload: applyIncomingVoipPayload,
+        onChatMessageOpened: handleOpenChatRoomById,
+    });
 
     const autoAcceptIncomingVoipDeepLink = useCallback(async (
         payload: CallInitResponse & { caller_label?: string; caller_voice_id?: string },
@@ -2978,8 +2733,62 @@ export default function App() {
             caller_voice_id: payload.caller_voice_id ?? null,
         });
 
-        activateAcceptedIncomingVoipCall(payload, `${source}_deep_link_auto_accept`);
-    }, [activateAcceptedIncomingVoipCall, applyIncomingVoipPayload, logUiPressProbe, requestPermissions, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert]);
+        let mergedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string } = {
+            ...payload,
+            participant_role: 'callee',
+        };
+        if (token) {
+            try {
+                const acceptedFromServer = await acceptIncomingCall(API_BASE, token, payload.call_id);
+                const callerLanguageHint = resolveVoipRemoteLanguageHint(
+                    payload.display_language,
+                    pendingIncomingVoipCallRef.current?.display_language,
+                    acceptedFromServer.display_language,
+                );
+                mergedPayload = {
+                    ...payload,
+                    ...acceptedFromServer,
+                    participant_role: 'callee',
+                    caller_label: payload.caller_label,
+                    caller_voice_id: payload.caller_voice_id ?? acceptedFromServer.caller_voice_id,
+                    display_language: callerLanguageHint ?? acceptedFromServer.display_language,
+                };
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_OK', {
+                    source: `${source}_deep_link_auto_accept`,
+                    call_id: mergedPayload.call_id,
+                    display_language: mergedPayload.display_language ?? null,
+                    signaling_server: mergedPayload.signaling_server ?? null,
+                    status: mergedPayload.status ?? null,
+                });
+            } catch (acceptError: any) {
+                const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, payload.call_id);
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_FAIL', {
+                    source: `${source}_deep_link_auto_accept`,
+                    call_id: payload.call_id,
+                    error_message: acceptError?.message || 'unknown',
+                    snapshot_call_id: snapshot?.call_id ?? null,
+                    snapshot_display_language: snapshot?.display_language ?? null,
+                });
+                if (snapshot?.call_id) {
+                    const callerLanguageHint = resolveVoipRemoteLanguageHint(
+                        payload.display_language,
+                        pendingIncomingVoipCallRef.current?.display_language,
+                        snapshot.display_language,
+                    );
+                    mergedPayload = {
+                        ...payload,
+                        ...snapshot,
+                        participant_role: 'callee',
+                        caller_label: payload.caller_label,
+                        caller_voice_id: payload.caller_voice_id ?? snapshot.caller_voice_id,
+                        display_language: callerLanguageHint ?? snapshot.display_language,
+                    };
+                }
+            }
+        }
+
+        activateAcceptedIncomingVoipCall(mergedPayload, `${source}_deep_link_auto_accept`);
+    }, [API_BASE, activateAcceptedIncomingVoipCall, applyIncomingVoipPayload, logUiPressProbe, requestPermissions, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert, token]);
 
     const dismissPendingIncomingAsMissed = useCallback((
         source: string,
@@ -3005,6 +2814,7 @@ export default function App() {
         });
         acceptedIncomingVoipCallIdRef.current = null;
         setIncomingVoipAcceptInFlight(null);
+        clearVoipAudioSession(`dismiss_pending:${source}:${reason}`);
         void clearStoredActiveVoipSession();
         setPendingIncomingVoipCall(null);
         if (Platform.OS === 'android') {
@@ -3024,10 +2834,10 @@ export default function App() {
         }
 
         const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, localPending.call_id);
-        if (snapshot?.call_id === localPending.call_id && isResumableIncomingVoipStatus(snapshot.status)) {
+        if (snapshot?.call_id === localPending.call_id && isIncomingRingVoipStatus(snapshot.status)) {
             logUiPressProbe('VOIP_PENDING_CALL_CLEAR_SKIPPED', {
                 source,
-                reason: 'server_still_resumable',
+                reason: 'server_still_ringing',
                 call_id: localPending.call_id,
                 status: snapshot.status ?? null,
                 caller_voice_id: localPending.caller_voice_id ?? null,
@@ -3035,9 +2845,23 @@ export default function App() {
             return false;
         }
 
+        if (snapshot?.call_id === localPending.call_id && snapshot.status === 'connecting') {
+            await requestEndVoipCall(API_BASE, token, localPending.call_id, 'stale_pending_connecting');
+            stopIncomingVoipAlert(`${source}:${reason}`);
+            setPendingIncomingVoipCall(null);
+            logUiPressProbe('VOIP_PENDING_CALL_CLEARED_STALE_CONNECTING', {
+                source,
+                reason,
+                call_id: localPending.call_id,
+                status: snapshot.status ?? null,
+                caller_voice_id: localPending.caller_voice_id ?? null,
+            });
+            return true;
+        }
+
         dismissPendingIncomingAsMissed(source, reason, localPending);
         return true;
-    }, [API_BASE, dismissPendingIncomingAsMissed, logUiPressProbe, token]);
+    }, [API_BASE, dismissPendingIncomingAsMissed, logUiPressProbe, stopIncomingVoipAlert, token]);
 
     const fetchPendingIncomingVoipCall = useCallback(async (source: string) => {
         if (!token || !userInfo) {
@@ -3046,7 +2870,7 @@ export default function App() {
         if (pendingIncomingPollInFlightRef.current) {
             return;
         }
-        if (voipCallInitResponse) {
+        if (voipCallInitResponseRef.current?.call_id) {
             return;
         }
 
@@ -3078,6 +2902,21 @@ export default function App() {
                 if (response.status !== 404) {
                     console.log('[VoIPPendingIncoming] fetch failed', response.status);
                 }
+                if (response.status === 401) {
+                    // 다른 단말/웹에서 로그인 → 이 세션 만료. 한 번만 로그아웃 처리.
+                    const superseded = response.headers.get('X-Session-Superseded') === '1';
+                    if (superseded && !sessionSupersededHandledRef.current) {
+                        sessionSupersededHandledRef.current = true;
+                        console.log('[VoIPPendingIncoming] session superseded → logout');
+                        try {
+                            Alert.alert('다른 기기에서 로그인됨', '다른 기기에서 로그인되어 이 기기는 로그아웃됩니다.');
+                        } catch {
+                            // no-op
+                        }
+                        handleLogoutRef.current?.();
+                    }
+                    return;
+                }
                 if (response.status === 404 && pendingIncomingVoipCallRef.current?.call_id) {
                     await resolveStalePendingIncomingCall(source, 'pending_call_missing');
                 }
@@ -3088,6 +2927,10 @@ export default function App() {
             if (!payload?.call_id || !payload.signaling_server) {
                 if (pendingIncomingVoipCallRef.current?.call_id) {
                     await resolveStalePendingIncomingCall(source, 'empty_pending_payload');
+                } else if (incomingVoipAlertActiveRef.current) {
+                    // 워치독: 백엔드에 대기 통화가 없고(=빈 페이로드) 활성 통화도 없는데(상단 early-return 보장)
+                    // 착신 벨/톤이 아직 살아있으면 고아 링(orphan ring)이다. 강제 정지한다.
+                    stopIncomingVoipAlert('watchdog_no_pending_no_active');
                 }
                 return;
             }
@@ -3214,14 +3057,22 @@ export default function App() {
         }
     }, [API_BASE, applyIncomingVoipPayload, buildVoipRemoteProfile, dismissPendingIncomingAsMissed, logUiPressProbe, resolveStalePendingIncomingCall, token, userInfo, voipCallInitResponse]);
 
-    const refreshVoipAudit = useCallback(async (callId: string) => {
+    const refreshVoipAudit = useCallback(async (callId: string, options?: { showLoading?: boolean; force?: boolean }) => {
+        const showLoading = options?.showLoading ?? true;
+        const force = options?.force ?? false;
         if (!token) {
             setVoipAuditEvents([]);
             setVoipAuditError('');
             return [] as CallModeAuditEvent[];
         }
+        if (voipAuditFetchInFlightRef.current && !force) {
+            return [] as CallModeAuditEvent[];
+        }
 
-        setVoipAuditLoading(true);
+        voipAuditFetchInFlightRef.current = true;
+        if (showLoading) {
+            setVoipAuditLoading(true);
+        }
         setVoipAuditError('');
         try {
             const response = await fetch(`${API_BASE}/api/v1/voip/calls/${callId}/audit`, {
@@ -3240,11 +3091,14 @@ export default function App() {
         } catch (error: any) {
             const message = error?.message || 'VoIP 감사 로그 조회 실패';
             setVoipAuditError(message);
-            return voipAuditEvents;
+            return [] as CallModeAuditEvent[];
         } finally {
-            setVoipAuditLoading(false);
+            voipAuditFetchInFlightRef.current = false;
+            if (showLoading) {
+                setVoipAuditLoading(false);
+            }
         }
-    }, [token, voipAuditEvents]);
+    }, [token]);
 
     const resolveActiveRegionHint = useCallback((source: LangCode) => {
         return resolveRegionHintForSourceLanguage(source, gpsCountryCode, gpsRegionHint);
@@ -3289,7 +3143,7 @@ export default function App() {
             if (requestId !== translationRequestSeqRef.current) {
                 return;
             }
-            const ui = getUiText(source);
+            const ui = getDisplayUiText();
             const timedOut = error instanceof Error && error.message === 'translation_timeout';
             setResultText(timedOut ? '[오류] 번역 응답 시간이 초과되었습니다.' : ui.errorMsg);
             latestTranslationMetaRef.current = null;
@@ -3301,9 +3155,41 @@ export default function App() {
         }
     }, [translateTextWithRegion]);
 
-    // 앱 시작 시 버전 체크
+    // [설정 SSOT] 앱 시작 시 전역 설정을 1회 로드 → 각 화면이 getGlobalSettings()로 기본값을 읽는다.
+    useEffect(() => {
+        loadGlobalSettings().catch(() => { /* 기본값 사용 */ });
+    }, []);
+
+    // 앱 시작 시 + 포그라운드 복귀 시 버전 체크.
+    // (마켓에 새 빌드를 올린 뒤 앱을 다시 켜지 않아도, 앱으로 돌아오면 스스로 감지해 업그레이드를 띄운다.)
     useEffect(() => {
         checkForAppUpdate().catch((err) => console.error('앱 버전 체크 오류:', err));
+        let lastCheckedAt = Date.now();
+        const sub = AppState.addEventListener('change', (state) => {
+            if (state !== 'active') {
+                return;
+            }
+            // 과도한 호출 방지: 포그라운드 복귀가 잦아도 30초 내 재확인은 생략.
+            if (Date.now() - lastCheckedAt < 30_000) {
+                return;
+            }
+            lastCheckedAt = Date.now();
+            checkForAppUpdate().catch((err) => console.error('앱 버전 체크 오류(foreground):', err));
+        });
+        return () => sub.remove();
+    }, []);
+
+    useEffect(() => {
+        console.log('[WORLDLINGCO_API] base_url', API_BASE);
+        void hydrateWorldlincoTuningFromStorage()
+            .then(() => refreshWorldlincoTuning(API_BASE))
+            .catch((err) => console.error('[WORLDLINGCO_TUNING] bootstrap failed', err));
+        const sub = AppState.addEventListener('change', (state) => {
+            if (state === 'active') {
+                void refreshWorldlincoTuning(API_BASE);
+            }
+        });
+        return () => sub.remove();
     }, []);
 
     useEffect(() => {
@@ -3367,6 +3253,29 @@ export default function App() {
     }, [authHydrated, token, userInfo]);
 
     useEffect(() => {
+        void (async () => {
+            setBiometricLoginReady(await isBiometricAvailable());
+            setBiometricLoginEnabledState(await isBiometricLoginEnabled());
+        })();
+    }, [authHydrated, userInfo?.id]);
+
+    // 착신/채팅 알림 채널은 **로그인 여부와 무관**하게 앱 시작 시 무조건 생성한다.
+    // (미로그인 상태에서 푸시가 도착해도 high-importance 채널이 있어야 벨/전체화면 알림이 정상 동작.)
+    useEffect(() => {
+        if (Platform.OS !== 'android') {
+            return;
+        }
+        void (async () => {
+            try {
+                await ensureVoipIncomingNotificationChannel();
+                await ensureChatMessageNotificationChannel();
+            } catch (error) {
+                console.log('[VoIPFCM] startup notification channel failed', error);
+            }
+        })();
+    }, []);
+
+    useEffect(() => {
         if (!authHydrated) {
             return;
         }
@@ -3406,8 +3315,18 @@ export default function App() {
             }
 
             try {
+                await ensureVoipIncomingNotificationChannel();
+                await ensureChatMessageNotificationChannel();
+            } catch (error) {
+                console.log('[VoIPFCM] notification channel failed', error);
+            }
+
+            try {
                 await messaging().subscribeToTopic(nextTopic);
                 const pushToken = await messaging().getToken().catch(() => '');
+                if (pushToken && token) {
+                    await registerVoipDevice(API_BASE, token, pushToken);
+                }
                 if (!cancelled) {
                     voipTopicRef.current = nextTopic;
                     logUiPressProbe('VOIP_FCM_TOPIC_READY', {
@@ -3425,7 +3344,115 @@ export default function App() {
         return () => {
             cancelled = true;
         };
-    }, [authHydrated, logUiPressProbe, userInfo]);
+    }, [authHydrated, logUiPressProbe, token, userInfo]);
+
+    // 부재중 전화 음성 안내: 로그인 상태에서 앱이 활성화될 때 최근 부재중 통화를 조회해
+    // 아직 안내하지 않은 신규 건만 음성으로 알린다. 안내한 id는 AsyncStorage에 저장해 중복 안내를 막는다.
+    useEffect(() => {
+        if (!authHydrated || !token || !userInfo) {
+            return;
+        }
+        let cancelled = false;
+        const ANNOUNCED_KEY = 'worldlinco_announced_missed_calls_v1';
+
+        const announceMissedCalls = async () => {
+            try {
+                const missed = await fetchRecentMissedCalls(API_BASE, token);
+                console.log('[MISSED_CALL]', JSON.stringify({ event: 'fetch', count: missed.length }));
+                if (cancelled || missed.length === 0) {
+                    return;
+                }
+                let announcedIds: number[] = [];
+                try {
+                    const raw = await AsyncStorage.getItem(ANNOUNCED_KEY);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) {
+                            announcedIds = parsed
+                                .map((v: unknown) => Number(v))
+                                .filter((v) => Number.isFinite(v));
+                        }
+                    }
+                } catch {
+                    // no-op
+                }
+                const announcedSet = new Set(announcedIds);
+                const nowMs = Date.now();
+                // 아직 안내 안 했고 최근 24시간 이내인 건만 안내(오래된 부재중 누적 스팸 방지).
+                const fresh = missed.filter((m) => {
+                    if (announcedSet.has(m.id)) {
+                        return false;
+                    }
+                    const t = Date.parse(m.createdAt);
+                    return !Number.isFinite(t) || (nowMs - t) < 24 * 60 * 60 * 1000;
+                });
+                // 조회된 모든 id를 안내완료로 기록(다음 활성화 때 재안내 방지). 최근 200건만 유지.
+                const nextAnnounced = Array.from(
+                    new Set([...announcedIds, ...missed.map((m) => m.id)]),
+                ).slice(-200);
+                await AsyncStorage.setItem(ANNOUNCED_KEY, JSON.stringify(nextAnnounced));
+                if (cancelled || fresh.length === 0) {
+                    return;
+                }
+                const latest = fresh[0];
+                // 수신자 지정 언어(preferred_language)로 안내. 서버 뉴럴 TTS(폴백 단말 TTS).
+                const prefLang = String(userInfo?.preferred_language || 'ko').trim().toLowerCase() || 'ko';
+                const announceText = await buildAnnouncement(
+                    fresh.length === 1 ? 'missedCall' : 'missedCallMulti',
+                    prefLang,
+                    latest.callerLabel,
+                );
+                console.log('[MISSED_CALL]', JSON.stringify({ event: 'announce', fresh: fresh.length, lang: prefLang }));
+                await announceServerVoice(announceText, prefLang);
+            } catch (err) {
+                console.warn('[VoIP] 부재중 전화 안내 실패', err);
+            }
+        };
+
+        void announceMissedCalls();
+        const subscription = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'active') {
+                void announceMissedCalls();
+            }
+        });
+        return () => {
+            cancelled = true;
+            subscription.remove();
+        };
+    }, [authHydrated, token, userInfo]);
+
+    useEffect(() => {
+        if (!authHydrated || !token || !userInfo) {
+            return;
+        }
+        void (async () => {
+            const enabled = await areVoipNotificationsEnabled();
+            logUiPressProbe('VOIP_NOTIFICATION_PERMISSION_STATUS', {
+                notifications_enabled: enabled,
+            });
+            if (!enabled) {
+                logUiPressProbe('VOIP_NOTIFICATION_PERMISSION_DISABLED', {
+                    action: 'open_settings_recommended',
+                });
+                if (!notificationDisabledPromptShownRef.current) {
+                    notificationDisabledPromptShownRef.current = true;
+                    Alert.alert(
+                        '알림이 꺼져 있습니다',
+                        '보이스톡·채팅 알림을 받으려면 설정에서 "알림 표시"를 켜 주세요.',
+                        [
+                            { text: '나중에', style: 'cancel' },
+                            {
+                                text: '설정 열기',
+                                onPress: () => {
+                                    void openVoipNotificationSettings();
+                                },
+                            },
+                        ],
+                    );
+                }
+            }
+        })();
+    }, [authHydrated, logUiPressProbe, token, userInfo]);
 
     useEffect(() => {
         return () => {
@@ -3440,18 +3467,22 @@ export default function App() {
 
     useEffect(() => {
         const pendingCallId = pendingIncomingVoipCall?.call_id;
-        if (!pendingCallId || voipCallInitResponse?.call_id) {
+        const pendingStatus = pendingIncomingVoipCall?.status;
+        if (!pendingCallId || voipCallInitResponse?.call_id || !isIncomingRingVoipStatus(pendingStatus)) {
             stopIncomingVoipAlert('no_pending_or_active_call');
             return;
         }
 
-        startIncomingVoipAlert(pendingCallId, pendingIncomingVoipCall.caller_voice_id ?? null);
-        return () => {
-            stopIncomingVoipAlert('pending_incoming_effect_cleanup');
-        };
+        startIncomingVoipAlert(
+            pendingCallId,
+            pendingIncomingVoipCall.caller_voice_id ?? null,
+            pendingIncomingVoipCall.caller_label ?? null,
+        );
     }, [
         pendingIncomingVoipCall?.call_id,
+        pendingIncomingVoipCall?.caller_label,
         pendingIncomingVoipCall?.caller_voice_id,
+        pendingIncomingVoipCall?.status,
         startIncomingVoipAlert,
         stopIncomingVoipAlert,
         voipCallInitResponse?.call_id,
@@ -3499,13 +3530,14 @@ export default function App() {
         }
 
         void fetchPendingIncomingVoipCall('pending_call_initial');
-        const pendingPollMs = pendingIncomingVoipCall ? 800 : 2500;
         const pollTimer = setInterval(() => {
             void fetchPendingIncomingVoipCall('pending_call_poll');
-        }, pendingPollMs);
+        }, pendingIncomingVoipCallRef.current?.call_id ? 800 : 2500);
         const appStateSubscription = AppState.addEventListener('change', (nextState) => {
             if (nextState === 'active') {
                 void fetchPendingIncomingVoipCall('pending_call_active');
+            } else if (nextState === 'background' || nextState === 'inactive') {
+                void fetchPendingIncomingVoipCall('pending_call_background');
             }
         });
 
@@ -3513,7 +3545,7 @@ export default function App() {
             clearInterval(pollTimer);
             appStateSubscription.remove();
         };
-    }, [fetchPendingIncomingVoipCall, pendingIncomingVoipCall, token, userInfo, voipCallInitResponse]);
+    }, [fetchPendingIncomingVoipCall, token, userInfo, voipCallInitResponse]);
 
     // ===== AUTO TRANSLATE: inputText → Auto Translation After Delay =====
     const autoTranslateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -3649,6 +3681,13 @@ export default function App() {
                         }
                     }
                 } else {
+                    // 대면 자동음성(bilingual) 모드에서는 playFaceTranslationOutput가 서버 뉴럴 TTS로
+                    // 발화를 전담한다. 이 일반 자동발화(디바이스 Expo TTS)가 함께 돌면 같은 문장을
+                    // 두 번 발화(1차 디바이스 + 2차 서버 오디오)하므로 대면 모드에서는 건너뛴다.
+                    // 수동 번역(autoVoiceMode=false)·노래 미리듣기(voice preview 분기)는 영향 없음.
+                    if (autoVoiceModeEnabledRef.current) {
+                        return;
+                    }
                     // Default mode: speak translated text directly via Expo TTS.
                     const speakText = normalizeSpeakText(resultText);
                     if (speakText) {
@@ -3685,7 +3724,7 @@ export default function App() {
 
     // ── 번역 실행 ──
     const handleTranslate = useCallback(async () => {
-        const ui = getUiText(fromLang);
+        const ui = getDisplayUiText();
         const trimmed = inputText.trim();
         if (!trimmed) {
             Alert.alert(ui.inputRequired, ui.inputRequiredMsg);
@@ -3695,7 +3734,7 @@ export default function App() {
     }, [inputText, fromLang, toLang, runTranslation]);
 
     const runImageOcrWithAsset = useCallback(async (asset: { uri: string; name?: string | null; mimeType?: string | null }) => {
-        const ui = getUiText(fromLang);
+        const ui = getDisplayUiText();
         setOcrError('');
         setOcrTranslatedText('');
         try {
@@ -3716,9 +3755,6 @@ export default function App() {
             setEngine(result.engine);
             setOcrExtractedText(result.original_text);
             setOcrTranslatedText(result.translated);
-            if (effectiveSource !== fromLang) {
-                setFromLang(effectiveSource);
-            }
             if (effectiveTarget !== toLang) {
                 setToLang(effectiveTarget);
             }
@@ -3884,8 +3920,6 @@ export default function App() {
             setSongFileSegments(timeline.segments);
             const detectedSource = normalizeSongFileLang(timeline.source_language, fromLang);
             const detectedTarget = normalizeSongFileLang(timeline.target_language, toLang);
-            setFromLang(detectedSource);
-            setToLang(detectedTarget);
             setSongModeStatus(`🎵 파일 자막 준비: ${getLangLabelText(detectedSource)} → ${getLangLabelText(detectedTarget)} · ${timeline.segment_count}개 구간 · 품질 ${(timeline.quality_score * 100).toFixed(0)}%`);
         } catch (error) {
             const message = error instanceof Error ? error.message : '노래 파일 처리에 실패했습니다.';
@@ -4135,14 +4169,6 @@ export default function App() {
         Speech.speak(speakText, { language: inferTtsLanguage(speakText, fallbackTts), rate: 0.9 });
     }, [toLang, voicePreview]);
 
-    // ── 언어 스왑 ──
-    const handleSwap = () => {
-        setFromLang(toLang);
-        setToLang(fromLang);
-        setInputText(resultText);
-        setResultText(inputText);
-    };
-
     // ── TTS 읽기 ──
     const handleSpeak = (text: string, langCode: LangCode) => {
         const speakText = normalizeSpeakText(text);
@@ -4189,14 +4215,14 @@ export default function App() {
         }
     }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw]);
 
-    const handleSignup = useCallback(async () => {
+    const handleSignupRequestCode = useCallback(async () => {
         const normalizedUsername = signupUsername.trim();
         const normalizedEmail = loginEmail.trim();
         const normalizedPassword = loginPw.trim();
         const normalizedCountryCode = signupCountryCode.trim().toUpperCase();
         const preferredLanguage = signupPreferredLanguage;
 
-        logUiPressProbe('SIGNUP_SUBMIT_PRESS', {
+        logUiPressProbe('SIGNUP_REQUEST_CODE_PRESS', {
             username_filled: Boolean(normalizedUsername),
             email_filled: Boolean(normalizedEmail),
             password_filled: Boolean(normalizedPassword),
@@ -4208,25 +4234,109 @@ export default function App() {
             setLoginError('사용자명, 이메일, 비밀번호를 입력하세요.');
             return;
         }
+        // [Phase6.0] 나의 AI 이름은 가입 필수 — 이후 "OOOO AI" 표시명으로 자동 치환된다.
+        if (!isValidAiName(signupAiName)) {
+            setLoginError('나의 AI 이름을 입력하세요. (예: 토토 → "토토 AI")');
+            return;
+        }
+        if (!normalizedEmail.includes('@')) {
+            setLoginError('올바른 이메일 형식을 입력하세요.');
+            return;
+        }
+        if (normalizedPassword.length < 8) {
+            setLoginError('비밀번호는 8자 이상이어야 합니다.');
+            return;
+        }
+        const trimmedPhone = signupPhone.trim();
+        if (signupVerificationChannel === 'phone') {
+            if (!trimmedPhone) {
+                setLoginError('전화 인증을 선택한 경우 +국가번호 형식 연락처를 입력하세요.');
+                return;
+            }
+            if (!trimmedPhone.startsWith('+')) {
+                setLoginError('전화번호는 +82-10-1234-5678 형식으로 입력하세요.');
+                return;
+            }
+        }
 
         setLoginLoading(true);
         setLoginError('');
         try {
-            await callSignupApi({
+            const response = await callSignupRequestCodeApi({
                 username: normalizedUsername,
                 email: normalizedEmail,
                 password: normalizedPassword,
                 full_name: signupFullName.trim() || undefined,
                 preferred_language: preferredLanguage,
                 country_code: normalizedCountryCode || undefined,
+                phone_number: trimmedPhone || undefined,
+                verificationChannel: signupVerificationChannel,
                 member_type: 'individual',
+            });
+            setSignupSessionToken(response.signupSessionToken);
+            setSignupMaskedTarget(response.maskedTarget);
+            if (response.devOtpHint) {
+                setSignupOtpCode(response.devOtpHint);
+            }
+            setSignupStep('verify');
+            setLoginError('');
+            logUiPressProbe('SIGNUP_REQUEST_CODE_SUCCESS', {
+                masked_target: response.maskedTarget,
+                verification_channel: response.verificationChannel,
+            });
+        } catch (e: any) {
+            setLoginError(e?.message || '인증 코드 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+            logUiPressProbe('SIGNUP_REQUEST_CODE_FAIL', {
+                error: e?.message || '이메일 인증 요청 실패',
+            });
+        } finally {
+            setLoginLoading(false);
+        }
+    }, [logUiPressProbe, loginEmail, loginPw, signupAiName, signupCountryCode, signupFullName, signupPhone, signupPreferredLanguage, signupUsername, signupVerificationChannel]);
+
+    const handleSignupConfirm = useCallback(async () => {
+        const normalizedEmail = loginEmail.trim();
+        const normalizedPassword = loginPw.trim();
+        const preferredLanguage = signupPreferredLanguage;
+        const normalizedCountryCode = signupCountryCode.trim().toUpperCase();
+        const trimmedOtp = signupOtpCode.trim();
+
+        logUiPressProbe('SIGNUP_CONFIRM_PRESS', {
+            otp_filled: trimmedOtp.length >= 6,
+            email_filled: Boolean(normalizedEmail),
+        });
+
+        if (!signupSessionToken || trimmedOtp.length < 6) {
+            setLoginError('6자리 인증 코드를 입력하세요.');
+            return;
+        }
+
+        setLoginLoading(true);
+        setLoginError('');
+        try {
+            const signedUpUser = await callSignupConfirmApi(signupSessionToken, trimmedOtp, {
+                preferred_language: preferredLanguage,
+                country_code: normalizedCountryCode || undefined,
+                full_name: signupFullName.trim() || undefined,
             });
             const tk = await callLoginApi(normalizedEmail, normalizedPassword);
             const me = await callMeApi(tk);
-            applyAuthenticatedSession(tk, me);
+            const mergedUserInfo: UserInfo = {
+                ...me,
+                preferred_language: me.preferred_language || signedUpUser.preferred_language || preferredLanguage,
+                country_code: me.country_code || signedUpUser.country_code || normalizedCountryCode || null,
+            };
+            applyAuthenticatedSession(tk, mergedUserInfo);
+            await saveStoredAuthState(tk, mergedUserInfo);
+            // [Phase6.0] 가입 시 등록한 "나의 AI 이름" 영속 → 즉시 "OOOO AI" 표시명으로 치환.
+            if (isValidAiName(signupAiName)) {
+                await saveAiName(signupAiName);
+                setAiDisplayName(resolveAiDisplayName(signupAiName));
+            }
             setAuthModalMode('login');
             setSignupUsername('');
             setSignupFullName('');
+            setSignupAiName('');
             resetSignupProfileDraft();
             setDemoSessionMessage('');
             logUiPressProbe('SIGNUP_SUBMIT_SUCCESS', {
@@ -4241,78 +4351,40 @@ export default function App() {
         } finally {
             setLoginLoading(false);
         }
-    }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw, resetSignupProfileDraft, signupCountryCode, signupFullName, signupPreferredLanguage, signupUsername]);
+    }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw, resetSignupProfileDraft, signupAiName, signupCountryCode, signupFullName, signupOtpCode, signupPreferredLanguage, signupSessionToken]);
 
-    const handleSelectSignupLanguage = useCallback((code: LangCode) => {
-        setSignupPreferredLanguage(code);
-        setSignupCountryCode(resolveSignupCountryFromLang(code));
-        setSignupSelectionModal(null);
-    }, []);
-
-    const handleSelectSignupCountry = useCallback((code: SignupCountryCode) => {
-        setSignupCountryCode(code);
-        const mappedLanguage = resolveLangFromCountry(code);
-        if (mappedLanguage) {
-            setSignupPreferredLanguage(mappedLanguage);
-        }
-        setSignupSelectionModal(null);
-    }, []);
-
-    const handleSelectProfileLanguage = useCallback((code: LangCode) => {
-        setProfilePreferredLanguage(code);
-        setProfileCountryCode(resolveSignupCountryFromLang(code));
-        setProfileSelectionModal(null);
-    }, []);
-
-    const handleSelectProfileCountry = useCallback((code: SignupCountryCode) => {
-        setProfileCountryCode(code);
-        const mappedLanguage = resolveLangFromCountry(code);
-        if (mappedLanguage) {
-            setProfilePreferredLanguage(mappedLanguage);
-        }
-        setProfileSelectionModal(null);
-    }, []);
-
-    const handleSaveMyProfile = useCallback(async () => {
-        if (!token || !userInfo) {
-            setProfileMessage('로그인 후 프로필 기본값을 저장할 수 있습니다.');
+    const handleSignupSubmit = useCallback(async () => {
+        if (signupStep === 'verify') {
+            await handleSignupConfirm();
             return;
         }
+        await handleSignupRequestCode();
+    }, [handleSignupConfirm, handleSignupRequestCode, signupStep]);
 
-        setProfileSaving(true);
-        setProfileMessage('');
-        try {
-            const updatedUserInfo = await callUpdateMeApi(token, {
-                preferred_language: profilePreferredLanguage,
-                country_code: profileCountryCode,
-            });
-            setUserInfo(updatedUserInfo);
-            await saveStoredAuthState(token, updatedUserInfo);
-            setProfileMessage('프로필 기본값 저장됨. 이후 채팅/VoIP 기본 언어 계산에 바로 반영됩니다.');
-            setChatRefreshKey((prev) => prev + 1);
-        } catch (error: any) {
-            setProfileMessage(error?.message || '프로필 기본값 저장 실패');
-        } finally {
-            setProfileSaving(false);
-        }
-    }, [profileCountryCode, profilePreferredLanguage, token, userInfo]);
+    const signupSubmitLabel = authModalMode === 'login'
+        ? '로그인'
+        : signupStep === 'verify'
+            ? '인증 후 가입 완료'
+            : signupVerificationChannel === 'phone'
+                ? '전화 인증 코드 받기'
+                : '이메일 인증 코드 받기';
+
+    const handleSelectSignupCountry = useCallback((code: SignupCountryCode) => {
+        const pair = pairFromCountry(code);
+        setSignupCountryCode(pair.countryCode);
+        setSignupPreferredLanguage(pair.languageCode);
+        setFromLang(pair.languageCode);
+        void syncUiLangFromCountry(pair.countryCode);
+        setSignupSelectionModal(null);
+    }, []);
 
     const renderSignupProfileSelectors = useCallback(() => (
         <>
-            <Text style={styles.signupProfileLabel}>회원 기본 언어</Text>
-            <Pressable
-                style={styles.signupPickerTrigger}
-                onPress={() => setSignupSelectionModal('language')}
-                accessibilityLabel="worldlinco-signup-language-picker-trigger"
-                testID="worldlinco-signup-language-picker-trigger"
-            >
-                <View>
-                    <Text style={styles.signupPickerValue}>{getLangLabelText(signupPreferredLanguage)}</Text>
-                    <Text style={styles.signupPickerMeta}>50개 언어 전체에서 선택</Text>
-                </View>
-                <Text style={styles.signupPickerHint}>열기</Text>
-            </Pressable>
-            <Text style={styles.signupProfileLabel}>프로필 국가</Text>
+            <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupGuideTitle', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine1', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine2', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileHint}>{getSignupGuideText('signupGuideLine3', signupPreferredLanguage)}</Text>
+            <Text style={styles.signupProfileLabel}>{getSignupGuideText('signupCountryLabel', signupPreferredLanguage)}</Text>
             <Pressable
                 style={styles.signupPickerTrigger}
                 onPress={() => setSignupSelectionModal('country')}
@@ -4321,13 +4393,14 @@ export default function App() {
             >
                 <View>
                     <Text style={styles.signupPickerValue}>{resolveCountryFlag(signupCountryCode)} {resolveCountryName(signupCountryCode)}</Text>
-                    <Text style={styles.signupPickerMeta}>50개국 서비스 프로필에서 선택</Text>
+                    <Text style={styles.signupPickerMeta}>{getSignupGuideText('signupCountryMeta', signupPreferredLanguage)}</Text>
                 </View>
                 <Text style={styles.signupPickerHint}>열기</Text>
             </Pressable>
             <Text style={styles.signupProfileHint}>
-                가입 후 채팅 자동 번역과 VoIP 통역 기본값은 현재 선택한 {getLangLabelText(signupPreferredLanguage)} / {signupCountryCode} 프로필을 기준으로 사용합니다.
+                {getSignupGuideText('signupProfileHint', signupPreferredLanguage)}
             </Text>
+            <Text style={styles.signupProfileHint}>통역 언어: {getLangLabelText(signupPreferredLanguage)} (국가에 따라 자동)</Text>
             <Modal
                 visible={signupSelectionModal !== null}
                 transparent
@@ -4336,50 +4409,28 @@ export default function App() {
             >
                 <Pressable style={styles.langModalOverlay} onPress={() => setSignupSelectionModal(null)}>
                     <Pressable style={styles.langModalCard} onPress={() => { }} testID="worldlinco-signup-selection-modal">
-                        <Text style={styles.langModalTitle}>
-                            {signupSelectionModal === 'language' ? '회원 기본 언어 선택' : '프로필 국가 선택'}
-                        </Text>
+                        <Text style={styles.langModalTitle}>프로필 국가 선택</Text>
                         <Text style={styles.signupModalSub}>
-                            {signupSelectionModal === 'language'
-                                ? `지원 언어 ${SUPPORTED_LANGUAGE_COUNT}개 전체를 열어서 선택합니다.`
-                                : `서비스 국가 ${SIGNUP_COUNTRY_OPTION_CODES.length}개 전체를 열어서 선택합니다.`}
+                            {`서비스 국가 ${SIGNUP_COUNTRY_OPTION_CODES.length}개 · 통역 언어는 국가에 따라 자동 설정됩니다.`}
                         </Text>
                         <ScrollView style={styles.langModalList}>
-                            {signupSelectionModal === 'language'
-                                ? LANGS.map((language) => {
-                                    const active = signupPreferredLanguage === language.code;
-                                    return (
-                                        <Pressable
-                                            key={`signup-language-option-${language.code}`}
-                                            style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                            onPress={() => handleSelectSignupLanguage(language.code)}
-                                            accessibilityLabel={`worldlinco-signup-language-${language.code}`}
-                                            testID={`worldlinco-signup-language-${language.code}`}
-                                        >
-                                            <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
-                                                {language.label}
-                                            </Text>
-                                            {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                        </Pressable>
-                                    );
-                                })
-                                : SIGNUP_COUNTRY_OPTIONS.map((country) => {
-                                    const active = signupCountryCode === country.code;
-                                    return (
-                                        <Pressable
-                                            key={`signup-country-option-${country.code}`}
-                                            style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                            onPress={() => handleSelectSignupCountry(country.code)}
-                                            accessibilityLabel={`worldlinco-signup-country-${country.code}`}
-                                            testID={`worldlinco-signup-country-${country.code}`}
-                                        >
-                                            <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
-                                                {resolveCountryFlag(country.code)} {country.label}
-                                            </Text>
-                                            {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                        </Pressable>
-                                    );
-                                })}
+                            {SIGNUP_COUNTRY_OPTIONS.map((country) => {
+                                const active = signupCountryCode === country.code;
+                                return (
+                                    <Pressable
+                                        key={`signup-country-option-${country.code}`}
+                                        style={[styles.langModalOption, active && styles.langModalOptionActive]}
+                                        onPress={() => handleSelectSignupCountry(country.code)}
+                                        accessibilityLabel={`worldlinco-signup-country-${country.code}`}
+                                        testID={`worldlinco-signup-country-${country.code}`}
+                                    >
+                                        <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>
+                                            {resolveCountryFlag(country.code)} {country.label}
+                                        </Text>
+                                        {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
+                                    </Pressable>
+                                );
+                            })}
                         </ScrollView>
                         <Pressable
                             style={styles.langModalCloseBtn}
@@ -4392,7 +4443,108 @@ export default function App() {
                 </Pressable>
             </Modal>
         </>
-    ), [handleSelectSignupCountry, handleSelectSignupLanguage, signupCountryCode, signupPreferredLanguage, signupSelectionModal]);
+    ), [handleSelectSignupCountry, signupCountryCode, signupPreferredLanguage, signupSelectionModal]);
+
+    const renderSignupAuthFields = useCallback(() => {
+        return (
+            <>
+                {signupStep === 'form' ? (
+                    <>
+                        <View style={styles.signupChannelRow}>
+                            <Pressable
+                                style={[styles.signupChannelBtn, signupVerificationChannel === 'email' && styles.signupChannelBtnActive]}
+                                onPress={() => setSignupVerificationChannel('email')}
+                                testID="worldlinco-signup-channel-email"
+                            >
+                                <Text style={styles.signupChannelBtnText}>이메일 인증</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.signupChannelBtn, signupVerificationChannel === 'phone' && styles.signupChannelBtnActive]}
+                                onPress={() => setSignupVerificationChannel('phone')}
+                                testID="worldlinco-signup-channel-phone"
+                            >
+                                <Text style={styles.signupChannelBtnText}>전화 인증</Text>
+                            </Pressable>
+                        </View>
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder="사용자명"
+                            placeholderTextColor={C.sub}
+                            autoCapitalize="none"
+                            showSoftInputOnFocus
+                            value={signupUsername}
+                            onChangeText={setSignupUsername}
+                        />
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder="이름(선택)"
+                            placeholderTextColor={C.sub}
+                            showSoftInputOnFocus
+                            value={signupFullName}
+                            onChangeText={setSignupFullName}
+                        />
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder='나의 AI 이름 (필수, 예: 토토)'
+                            placeholderTextColor={C.sub}
+                            showSoftInputOnFocus
+                            maxLength={20}
+                            value={signupAiName}
+                            onChangeText={setSignupAiName}
+                            accessibilityLabel="worldlinco-signup-ai-name-input"
+                            testID="worldlinco-signup-ai-name-input"
+                        />
+                        <Text style={styles.inlineAuthHint}>
+                            {isValidAiName(signupAiName)
+                                ? `이 AI를 "${resolveAiDisplayName(signupAiName)}"(으)로 부릅니다.`
+                                : '나의 AI 이름을 등록하면 소리새 AI가 "OOOO AI"로 바뀝니다.'}
+                        </Text>
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder={signupVerificationChannel === 'phone' ? '연락처 (+82-10-1234-5678, 필수)' : '연락처 (+82, VoIP·친구용 권장)'}
+                            placeholderTextColor={C.sub}
+                            keyboardType="phone-pad"
+                            showSoftInputOnFocus
+                            value={signupPhone}
+                            onChangeText={setSignupPhone}
+                            testID="worldlinco-signup-phone-input"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <Text style={styles.inlineAuthHint}>
+                            {signupMaskedTarget || loginEmail.trim()} 으로 인증 코드를 보냈습니다. 아래 프로필 언어·국가를 확인한 뒤 6자리 코드를 입력해 주세요.
+                        </Text>
+                        <TextInput
+                            style={styles.compactInput}
+                            placeholder="6자리 인증 코드"
+                            placeholderTextColor={C.sub}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                            showSoftInputOnFocus
+                            value={signupOtpCode}
+                            onChangeText={setSignupOtpCode}
+                            accessibilityLabel="worldlinco-signup-otp-input"
+                            testID="worldlinco-signup-otp-input"
+                        />
+                        <Pressable
+                            style={styles.authModeToggleBtn}
+                            onPress={() => {
+                                setSignupStep('form');
+                                setSignupOtpCode('');
+                                setLoginError('');
+                            }}
+                            accessibilityLabel="worldlinco-signup-back-to-form"
+                            testID="worldlinco-signup-back-to-form"
+                        >
+                            <Text style={styles.authModeToggleText}>입력 다시하기</Text>
+                        </Pressable>
+                    </>
+                )}
+                {renderSignupProfileSelectors()}
+            </>
+        );
+    }, [loginEmail, renderSignupProfileSelectors, signupAiName, signupFullName, signupMaskedTarget, signupOtpCode, signupPhone, signupStep, signupUsername, signupVerificationChannel]);
 
     const handlePressLoginButton = useCallback(() => {
         openLoginModalForSource('header_account_row');
@@ -4428,12 +4580,16 @@ export default function App() {
         });
     }, [logUiPressProbe, userInfo]);
 
-    const handleOpenChatRoom = useCallback((room: ChatRoomSummary) => {
-        setSelectedChatRoom(room);
+    const handleOpenFriendMapFromFolder = useCallback(() => {
+        if (!userInfo) {
+            Alert.alert('로그인 필요', '근처 친구 찾기를 사용하려면 먼저 로그인해 주세요.');
+            return;
+        }
         setActiveRailSection('chat');
         setShowFriendFolder(false);
-        setShowFriendMapDiscovery(false);
-    }, []);
+        setShowFriendMapDiscovery(true);
+        logUiPressProbe('FRIEND_ADD_MAP_DISCOVERY', { source: 'friend_folder_hub' });
+    }, [logUiPressProbe, userInfo]);
 
     const handleDispatchChatShare = useCallback(async (room: ChatRoomSummary, params: {
         messageType: string;
@@ -4591,10 +4747,32 @@ export default function App() {
     }, [fromLang, handleShareMessageToChat, songFileExportPreview, songFileJob, songFileName, songFileSegments, toLang, voicePreview?.preview_text]);
 
     const handleLogout = useCallback(() => {
+        // 이 단말의 착신 푸시 구독/토큰을 해제 → 로그아웃한 단말이 더 이상 착신 벨을 울리지 않게 한다.
+        // (다기기 로그인 시 'A폰에서 로그아웃했는데 A가 계속 울림' 방지)
+        const logoutToken = tokenRef.current;
+        const logoutTopic = voipTopicRef.current;
+        void (async () => {
+            try {
+                const pushToken = await messaging().getToken().catch(() => '');
+                if (pushToken && logoutToken) {
+                    await unregisterVoipDevice(API_BASE, logoutToken, pushToken);
+                }
+                if (logoutTopic) {
+                    await messaging().unsubscribeFromTopic(logoutTopic).catch(() => undefined);
+                }
+            } catch (error) {
+                console.log('[VoIPFCM] logout unregister failed', error);
+            } finally {
+                voipTopicRef.current = null;
+            }
+        })();
         voipPresenceSocketRef.current?.close();
         voipPresenceSocketRef.current = null;
         setToken('');
         setUserInfo(null);
+        setGlobalProfileCountryCode(null);
+        setProfileDisplayLangOverride(null);
+        void syncUiLang('ko');
         setLoginEmail('');
         setLoginPw('');
         setLoginError('');
@@ -4605,7 +4783,6 @@ export default function App() {
         setSignupFullName('');
         setVoipIdentity('');
         setShowMyInfo(false);
-        setProfileSelectionModal(null);
         setProfileMessage('');
         setShowFriendFolder(false);
         setShowFriendMapDiscovery(false);
@@ -4615,6 +4792,30 @@ export default function App() {
             console.log('[AuthStorage] clear failed', error);
         });
     }, []);
+
+    useEffect(() => {
+        handleLogoutRef.current = handleLogout;
+    }, [handleLogout]);
+
+    // 로그인되면 세션-만료 1회성 가드를 초기화(다음 supersede 감지 가능하도록).
+    useEffect(() => {
+        if (token) {
+            sessionSupersededHandledRef.current = false;
+        }
+    }, [token]);
+
+    const handlePasswordSecurityCompleted = useCallback(async (payload: { email: string; newPassword?: string; mustRelogin?: boolean }) => {
+        if (!payload.mustRelogin || !payload.newPassword) {
+            return;
+        }
+        handleLogout();
+        setLoginEmail(payload.email);
+        setLoginPw(payload.newPassword);
+        setAuthModalMode('login');
+        setShowLogin(true);
+        setLoginError('');
+        Alert.alert('비밀번호 변경 완료', '새 비밀번호로 다시 로그인해 주세요.');
+    }, [handleLogout]);
 
     useEffect(() => {
         if (!token || !userInfo) {
@@ -5007,11 +5208,73 @@ export default function App() {
             return;
         }
 
+        if (target.type === 'chat') {
+            void handleOpenChatRoomById(target.roomId, source);
+            return;
+        }
+
+        if (target.type === 'invite' || target.type === 'sales') {
+            return;
+        }
+
+        if (target.action === 'incoming') {
+            logUiPressProbe('APP_ENTRY_DEEP_LINK_VOIP_INCOMING', {
+                source,
+                call_id: target.callId ?? null,
+            });
+            setActiveRailSection('voip');
+            void fetchPendingIncomingVoipCall(`deeplink_${source}`);
+            return;
+        }
+
         logUiPressProbe('APP_ENTRY_DEEP_LINK_VOIP_OPEN', { source, action: target.action });
         setActiveRailSection('voip');
 
         if (target.action === 'validation') {
             if (target.calleeVoiceId) {
+                const normalizedCalleeVoiceId = target.calleeVoiceId.trim().toLowerCase();
+                const validationAutoCallKey = `validation:${normalizedCalleeVoiceId}`;
+                if (!target.forceRetry && consumedValidationAutoCallKeyRef.current === validationAutoCallKey) {
+                    logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_SKIPPED_ALREADY_CONSUMED', {
+                        source,
+                        callee_voice_id: target.calleeVoiceId,
+                        active_call_id: voipCallInitResponseRef.current?.call_id ?? null,
+                    });
+                    if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
+                        setShowFriendFolder(false);
+                        setVoipAutoCallVoiceId(null);
+                        setActiveRailSection('voip');
+                        setShowVoipTester(true);
+                    }
+                    return;
+                }
+                if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
+                    consumedValidationAutoCallKeyRef.current = validationAutoCallKey;
+                    logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_SKIPPED_ACTIVE_CALL', {
+                        source,
+                        callee_voice_id: target.calleeVoiceId,
+                        active_call_id: voipCallInitResponseRef.current?.call_id ?? null,
+                        pending_call_id: pendingIncomingVoipCallRef.current?.call_id ?? null,
+                    });
+                    setShowFriendFolder(false);
+                    setVoipAutoCallVoiceId(null);
+                    setActiveRailSection('voip');
+                    setShowVoipTester(true);
+                    return;
+                }
+
+                const ownVoiceId = userInfo ? buildVoiceId(userInfo.id) : null;
+                if (ownVoiceId && normalizedCalleeVoiceId === ownVoiceId.toLowerCase()) {
+                    setVoipInitError('자기 자신의 보이스 ID로는 통화할 수 없습니다. 친구 보이스 ID를 지정해 주세요.');
+                    logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_REJECTED_SELF', {
+                        source,
+                        callee_voice_id: target.calleeVoiceId,
+                        own_voice_id: ownVoiceId,
+                        auth_ready: Boolean(token && userInfo),
+                    });
+                    return;
+                }
+
                 setVoipValidationOverride(true);
                 voipValidationFriendCallBypassRef.current = true;
                 void persistVoipValidationFriendCallBypass(true);
@@ -5024,8 +5287,13 @@ export default function App() {
                 logUiPressProbe('VOIP_VALIDATION_AUTO_CALL_DEEPLINK', {
                     source,
                     callee_voice_id: target.calleeVoiceId,
+                    callee_preferred_language: target.calleePreferredLanguage ?? null,
                     auth_ready: Boolean(token && userInfo),
                 });
+                consumedValidationAutoCallKeyRef.current = validationAutoCallKey;
+                voipAutoCallCalleeLanguageRef.current = isSupportedLangCode(String(target.calleePreferredLanguage || '').trim().toLowerCase())
+                    ? String(target.calleePreferredLanguage).trim().toLowerCase() as LangCode
+                    : null;
                 setVoipAutoCallVoiceId(target.calleeVoiceId);
                 setSelectedChatRoom(null);
                 setShowVoipTester(false);
@@ -5045,19 +5313,17 @@ export default function App() {
         }
 
         handleOpenVoipTester();
-    }, [handleOpenServiceRail, handleOpenVoipTester, handleStartInstantDemoSession, handleVoipValidationOpenPress, logUiPressProbe, persistVoipValidationFriendCallBypass, setShowFriendFolder, setShowFriendMapDiscovery, token, userInfo]);
+    }, [handleOpenChatRoomById, handleOpenServiceRail, handleOpenVoipTester, handleStartInstantDemoSession, handleVoipValidationOpenPress, fetchPendingIncomingVoipCall, logUiPressProbe, persistVoipValidationFriendCallBypass, setShowFriendFolder, setShowFriendMapDiscovery, token, userInfo]);
 
     useEffect(() => {
         let active = true;
-        let lastConsumedUrl = '';
 
         const consumeIncomingUrl = (url: string | null, source: string) => {
-            if (!url || url === lastConsumedUrl) {
+            if (!url) {
                 return;
             }
             const payload = parseIncomingVoipDeepLink(url);
             if (payload) {
-                lastConsumedUrl = url;
                 void autoAcceptIncomingVoipDeepLink(payload, source);
                 return;
             }
@@ -5067,7 +5333,16 @@ export default function App() {
                 return;
             }
 
-            lastConsumedUrl = url;
+            if (url === consumedAppEntryDeepLinkUrlRef.current) {
+                const allowRetry = entryTarget.type === 'voip' && Boolean(entryTarget.forceRetry);
+                if (!allowRetry) {
+                    logUiPressProbe('APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED', { source, url });
+                    return;
+                }
+                logUiPressProbe('APP_ENTRY_DEEP_LINK_FORCE_RETRY', { source, url });
+            }
+
+            consumedAppEntryDeepLinkUrlRef.current = url;
             handleAppEntryDeepLink(entryTarget, source);
         };
 
@@ -5104,7 +5379,7 @@ export default function App() {
 
     const handlePhoneOnlyDialFallback = useCallback(async (phone: string, source: string, reason?: string) => {
         logUiPressProbe('VOIP_PHONE_ONLY_DIAL_FALLBACK_START', { phone, source, reason: reason || null });
-        const dialOpened = await openDialPad(phone);
+        const dialOpened = await openDialPadWithQuiesceRef.current(phone, `voip_phone_only_fallback:${source}`);
         logUiPressProbe('VOIP_PHONE_ONLY_DIAL_FALLBACK_RESULT', { phone, source, dial_opened: dialOpened });
         setVoipCallInitResponse(null);
         setVoipAuditCallId('');
@@ -5117,7 +5392,7 @@ export default function App() {
         }
         setVoipInitError(reason || '전화번호 전용 통화는 시스템 전화앱 연결이 필요하지만 다이얼러를 열지 못했습니다.');
         return false;
-    }, [logUiPressProbe, openDialPad]);
+    }, [logUiPressProbe]);
 
     const handleStartVoipCall = useCallback(async () => {
         logUiPressProbe('VOIP_START_CALL_PRESS', {
@@ -5151,6 +5426,8 @@ export default function App() {
             return;
         }
 
+        await prepareForVoipSessionRef.current('voip_tester_call');
+
         setVoipInitLoading(true);
         setVoipInitError('');
         emitUnifiedTranslationStatus('voip', 'READY', 'VoIP 통번역 통화 세션을 준비합니다.', {
@@ -5158,12 +5435,18 @@ export default function App() {
             phone,
         });
         try {
+            logUiPressProbe('VOIP_NETWORK_SNAPSHOT', {
+                ...toClientNetworkContext(networkDiagnostics),
+                source: 'handleStartVoipCall',
+            });
             const payload = await initiateVoipCall({
                 callee_phone: phone,
                 caller_id: userInfo.username || userInfo.email || 'mobile-demo',
                 session_id: bookingResult?.confirmation_id || 'mobile-voip-test-session',
                 mode: 'voip_full_auto',
                 auto_relay: true,
+                caller_preferred_language: currentVoipPreferredLanguage,
+                client_network_context: toClientNetworkContext(networkDiagnostics),
             });
             if ((payload as any)?.phone_dialer_required) {
                 await handlePhoneOnlyDialFallback(
@@ -5205,9 +5488,10 @@ export default function App() {
         } finally {
             setVoipInitLoading(false);
         }
-    }, [bookingResult?.confirmation_id, buildVoipRemoteProfile, emitUnifiedTranslationStatus, ensureVoipPremiumAccess, handlePhoneOnlyDialFallback, initiateVoipCall, logUiPressProbe, requestPermissions, selectedCallMode, token, userInfo, validatePhoneNumber, voipPhone, voipValidationOverride]);
+    }, [bookingResult?.confirmation_id, buildVoipRemoteProfile, currentVoipPreferredLanguage, emitUnifiedTranslationStatus, ensureVoipPremiumAccess, handlePhoneOnlyDialFallback, initiateVoipCall, logUiPressProbe, networkDiagnostics, requestPermissions, selectedCallMode, token, userInfo, validatePhoneNumber, voipPhone, voipValidationOverride]);
 
     const handleCloseVoipTester = useCallback(() => {
+        clearVoipAudioSession('close_voip_tester');
         setPendingIncomingVoipCall(null);
         setVoipCallInitResponse(null);
         setVoipInitError('');
@@ -5222,6 +5506,7 @@ export default function App() {
     }, []);
 
     const handleReturnToVoipDialer = useCallback((auditEvents?: CallModeAuditEvent[]) => {
+        clearVoipAudioSession('return_to_voip_dialer');
         if (auditEvents) {
             setVoipAuditEvents(auditEvents);
             setVoipAuditError('');
@@ -5249,6 +5534,15 @@ export default function App() {
 
     const handleAcceptIncomingVoipCall = useCallback(async (sourceVariant: string = 'unknown') => {
         if (!pendingIncomingVoipCall) {
+            return;
+        }
+
+        if (acceptingIncomingVoipCallRef.current) {
+            logUiPressProbe('VOIP_INCOMING_ACCEPT_SKIPPED_IN_FLIGHT', {
+                source_variant: sourceVariant,
+                pending_call_id: pendingIncomingVoipCall.call_id,
+                accepting_call_id: acceptingIncomingVoipCallIdRef.current,
+            });
             return;
         }
 
@@ -5281,6 +5575,8 @@ export default function App() {
         });
         if (!hasPermission) {
             setIncomingVoipAcceptInFlight(null);
+            acceptedIncomingVoipCallIdRef.current = null;
+            clearVoipAudioSession('incoming_accept_permission_denied');
             return;
         }
 
@@ -5289,27 +5585,64 @@ export default function App() {
             caller_voice_id: acceptedPayload.caller_voice_id ?? null,
         });
 
+        let mergedAcceptedPayload: CallInitResponse & { caller_label?: string; caller_voice_id?: string } = {
+            ...acceptedPayload,
+            participant_role: 'callee',
+        };
+
         if (token) {
-            const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, acceptedPayload.call_id);
-            logUiPressProbe('VOIP_INCOMING_ACCEPT_RESUME_SNAPSHOT', {
-                call_id: acceptedPayload.call_id,
-                snapshot_call_id: snapshot?.call_id ?? null,
-                snapshot_status: snapshot?.status ?? null,
-                caller_voice_id: acceptedPayload.caller_voice_id ?? null,
-            });
-            if (!snapshot?.call_id || !isResumableIncomingVoipStatus(snapshot.status)) {
-                setIncomingVoipAcceptInFlight(null);
-                dismissPendingIncomingAsMissed('manual_accept', 'call_no_longer_active', acceptedPayload);
-                return;
+            try {
+                const acceptedFromServer = await acceptIncomingCall(API_BASE, token, acceptedPayload.call_id);
+                const callerLanguageHint = resolveVoipRemoteLanguageHint(
+                    acceptedPayload.display_language,
+                    pendingIncomingVoipCallRef.current?.display_language,
+                    acceptedFromServer.display_language,
+                );
+                mergedAcceptedPayload = {
+                    ...acceptedPayload,
+                    ...acceptedFromServer,
+                    participant_role: 'callee',
+                    caller_label: acceptedPayload.caller_label,
+                    caller_voice_id: acceptedPayload.caller_voice_id ?? acceptedFromServer.caller_voice_id,
+                    display_language: callerLanguageHint ?? acceptedFromServer.display_language,
+                };
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_OK', {
+                    call_id: mergedAcceptedPayload.call_id,
+                    display_language: mergedAcceptedPayload.display_language ?? null,
+                    signaling_server: mergedAcceptedPayload.signaling_server ?? null,
+                    status: mergedAcceptedPayload.status ?? null,
+                });
+            } catch (acceptError: any) {
+                const snapshot = await fetchVoipCallResumeSnapshot(API_BASE, token, acceptedPayload.call_id);
+                logUiPressProbe('VOIP_INCOMING_ACCEPT_API_FAIL', {
+                    call_id: acceptedPayload.call_id,
+                    error_message: acceptError?.message || 'unknown',
+                    snapshot_call_id: snapshot?.call_id ?? null,
+                    snapshot_status: snapshot?.status ?? null,
+                });
+                if (!snapshot?.call_id || !isResumableIncomingVoipStatus(snapshot.status)) {
+                    setIncomingVoipAcceptInFlight(null);
+                    acceptedIncomingVoipCallIdRef.current = null;
+                    setVoipInitError(acceptError?.message || '수신 연결에 실패했습니다.');
+                    dismissPendingIncomingAsMissed('manual_accept', 'accept_api_failed', acceptedPayload);
+                    return;
+                }
+                mergedAcceptedPayload = {
+                    ...acceptedPayload,
+                    ...snapshot,
+                    participant_role: 'callee',
+                    caller_label: acceptedPayload.caller_label,
+                    caller_voice_id: acceptedPayload.caller_voice_id ?? snapshot.caller_voice_id,
+                };
             }
         }
 
         logUiPressProbe('VOIP_INCOMING_ALERT_STOPPED_ON_ACCEPT', {
-            call_id: acceptedPayload.call_id,
-            caller_voice_id: acceptedPayload.caller_voice_id ?? null,
+            call_id: mergedAcceptedPayload.call_id,
+            caller_voice_id: mergedAcceptedPayload.caller_voice_id ?? null,
         });
 
-        activateAcceptedIncomingVoipCall(acceptedPayload, 'manual_accept');
+        activateAcceptedIncomingVoipCall(mergedAcceptedPayload, 'manual_accept');
     }, [API_BASE, activateAcceptedIncomingVoipCall, dismissPendingIncomingAsMissed, logUiPressProbe, pendingIncomingVoipCall, requestPermissions, setIncomingVoipAcceptInFlight, stopIncomingVoipAlert, token]);
 
     const handleIncomingAcceptPress = useCallback((sourceVariant: string) => {
@@ -5332,6 +5665,7 @@ export default function App() {
         });
 
         stopIncomingVoipAlert('manual_reject');
+        clearVoipAudioSession('incoming_reject');
         if (token) {
             try {
                 await fetch(`${API_BASE}/api/v1/voip/calls/${pendingIncomingVoipCall.call_id}/end`, {
@@ -5418,8 +5752,27 @@ export default function App() {
                 ? isRuntimeAcceptedCalleeVoipSession(storedSession, payload.call_id, acceptedIncomingVoipCallIdRef.current)
                 : storedSession?.callId === payload.call_id;
             const shouldDeferActiveResumeToAccept = payload.participant_role === 'callee'
-                && payload.status !== 'active'
-                && !isStoredAcceptedSession;
+                && shouldDeferCalleeResumeToIncomingAccept(payload.status, isStoredAcceptedSession);
+            // 이 단말이 명시적으로 '받기'한 적 없는 callee 통화가 connecting/active 로 복구되려 하면
+            // 자동 응답(손 안 댔는데 받아짐)의 원인이 된다. 단, 여기서 서버에 종료(requestEndVoipCall)를
+            // 호출하면 '실제로 걸려오는 통화'까지 끊어버려 받기/거절 팝업이 안 뜨고 못 받는 회귀가 난다.
+            // 그러므로 **로컬 복구만 건너뛰고(자동응답 차단)** 통화 자체는 살려둔다. 실제 착신이면
+            // pending 폴링/푸시가 ringing 으로 받기/거절 UI를 띄우고, 발신자 종료 시엔 취소푸시/폴링이
+            // 벨을 멈추고 부재중 처리한다.
+            if (
+                payload.participant_role === 'callee'
+                && !isStoredAcceptedSession
+                && (payload.status === 'connecting' || payload.status === 'active')
+            ) {
+                await clearStoredActiveVoipSession();
+                logUiPressProbe('VOIP_ACTIVE_CALL_RESUME_SKIPPED_UNACCEPTED', {
+                    source,
+                    call_id: payload.call_id,
+                    participant_role: payload.participant_role ?? null,
+                    status: payload.status ?? null,
+                });
+                return;
+            }
             if (shouldDeferActiveResumeToAccept) {
                 await clearStoredActiveVoipSession();
                 logUiPressProbe('VOIP_ACTIVE_CALL_RESUME_DEFERRED_TO_ACCEPT', {
@@ -5474,10 +5827,25 @@ export default function App() {
             accepting_call_id: acceptingIncomingVoipCallIdRef.current,
             active_section: restoredRailSection,
         });
+        setShowFriendFolder(false);
+        setShowFriendMapDiscovery(false);
+        setVoipAutoCallVoiceId(null);
         setActiveRailSection('voip');
         setIsRailMenuOpen(false);
         setShowVoipTester(true);
     }, [logUiPressProbe, pendingIncomingVoipCall, voipCallInitResponse]);
+
+    const handleCloseFriendFolder = useCallback((source: string) => {
+        setShowFriendFolder(false);
+        setVoipAutoCallVoiceId(null);
+        setVoipValidationOverride(false);
+        voipValidationFriendCallBypassRef.current = false;
+        void persistVoipValidationFriendCallBypass(false);
+        logUiPressProbe('FRIEND_FOLDER_CLOSE', { source });
+        if (voipCallInitResponseRef.current || pendingIncomingVoipCallRef.current) {
+            restoreVoipRailState(`friend_folder_close_${source}`);
+        }
+    }, [logUiPressProbe, persistVoipValidationFriendCallBypass, restoreVoipRailState]);
 
     const handleStartFriendVoiceCall = useCallback(async (friend: Friend) => {
         if (!token || !userInfo) {
@@ -5516,8 +5884,33 @@ export default function App() {
             logUiPressProbe('VOIP_FRIEND_CALL_BLOCKED_PERMISSION', { permission: 'RECORD_AUDIO' });
         });
         if (!hasPermission) {
+            logUiPressProbe('VOIP_FRIEND_CALL_BLOCKED_PERMISSION', {
+                permission: 'RECORD_AUDIO',
+                reason: 'request_returned_false',
+            });
             return;
         }
+
+        if (recordingRef.current) {
+            await stopVoiceInputRef.current?.({ suppressAutoRestart: true });
+        }
+        await prepareForVoipSessionRef.current('voip_friend_call');
+
+        const dispatchKey = `${friend.id}:${friend.friendVoiceId ?? friend.friendUserId ?? 'unknown'}`;
+        const dispatchNow = Date.now();
+        if (
+            friendCallDispatchKeyRef.current === dispatchKey
+            && dispatchNow - friendCallDispatchAtRef.current < 8000
+        ) {
+            logUiPressProbe('VOIP_FRIEND_CALL_DISPATCH_SUPPRESSED', {
+                friend_id: friend.id,
+                friend_voice_id: friend.friendVoiceId ?? null,
+                dispatch_key: dispatchKey,
+            });
+            return;
+        }
+        friendCallDispatchKeyRef.current = dispatchKey;
+        friendCallDispatchAtRef.current = dispatchNow;
 
         setVoipInitLoading(true);
         setVoipInitError('');
@@ -5533,10 +5926,23 @@ export default function App() {
             countryName: friend.friendCountryCode ? resolveCountryName(friend.friendCountryCode) : '국가 미상',
             voiceId: friend.friendVoiceId || `friend-${friend.id}`,
             countryFlag: friend.friendCountryFlag || (friend.friendCountryCode ? resolveCountryFlag(friend.friendCountryCode) : '🌐'),
-            preferredLanguage: friend.friendPreferredLanguage || undefined,
+            preferredLanguage: friend.friendPreferredLanguage || voipAutoCallCalleeLanguageRef.current || undefined,
         });
+        void recordCall({
+            kind: 'voip',
+            direction: 'out',
+            label: friend.friendUsername || friend.friendVoiceId || '친구',
+            phone: friend.friendPhone ?? null,
+            voiceId: friend.friendVoiceId ?? null,
+            friendUserId: friend.friendUserId ?? null,
+        }).then((rows) => setCallHistoryEntries(rows));
 
         try {
+            logUiPressProbe('VOIP_NETWORK_SNAPSHOT', {
+                ...toClientNetworkContext(networkDiagnostics),
+                source: 'handleStartFriendVoiceCall',
+                friend_id: friend.id,
+            });
             const payload = await initiateVoipCall({
                 callee_phone: friend.friendPhone,
                 callee_user_id: friend.friendUserId ?? undefined,
@@ -5546,6 +5952,9 @@ export default function App() {
                 session_id: bookingResult?.confirmation_id || `friend-voice-${friend.id}`,
                 mode: 'voip_full_auto',
                 auto_relay: true,
+                caller_preferred_language: currentVoipPreferredLanguage,
+                callee_preferred_language: friend.friendPreferredLanguage || voipAutoCallCalleeLanguageRef.current || undefined,
+                client_network_context: toClientNetworkContext(networkDiagnostics),
             });
             if ((payload as any)?.phone_dialer_required) {
                 setVoipInitError((payload as any)?.user_message || '보이스톡은 더 이상 전화번호 다이얼 패드를 사용하지 않습니다.');
@@ -5562,6 +5971,18 @@ export default function App() {
                 });
             }
             setVoipCallInitResponse(payload as CallInitResponse);
+            const resolvedCalleeLanguage = String(
+                (payload as any)?.display_language
+                || friend.friendPreferredLanguage
+                || voipAutoCallCalleeLanguageRef.current
+                || '',
+            ).trim().toLowerCase();
+            if (resolvedCalleeLanguage) {
+                setVoipActiveProfile((prev) => (prev ? {
+                    ...prev,
+                    preferredLanguage: resolvedCalleeLanguage,
+                } : prev));
+            }
             if ((payload as any)?.call_id) {
                 setVoipAuditCallId((payload as any).call_id);
                 await refreshVoipAudit((payload as any).call_id);
@@ -5571,6 +5992,12 @@ export default function App() {
                 call_id: (payload as any)?.call_id ?? null,
                 callee_voice_id: friend.friendVoiceId ?? null,
             });
+            setVoipAutoCallVoiceId(null);
+            voipAutoCallCalleeLanguageRef.current = null;
+            setVoipValidationOverride(false);
+            if (friend.friendVoiceId) {
+                consumedValidationAutoCallKeyRef.current = `validation:${friend.friendVoiceId.trim().toLowerCase()}`;
+            }
         } catch (error: any) {
             setVoipInitError(error?.message || '친구 보이스톡 시작 실패');
             setShowVoipTester(false);
@@ -5584,7 +6011,7 @@ export default function App() {
             voipCallInitiatingRef.current = false;
             setVoipInitLoading(false);
         }
-    }, [bookingResult?.confirmation_id, ensureVoipPremiumAccess, initiateVoipCall, logUiPressProbe, persistVoipValidationFriendCallBypass, refreshVoipAudit, requestPermissions, showFriendFolder, showVoipTester, token, userInfo, voipAutoCallVoiceId, voipValidationOverride]);
+    }, [bookingResult?.confirmation_id, currentVoipPreferredLanguage, ensureVoipPremiumAccess, initiateVoipCall, logUiPressProbe, networkDiagnostics, persistVoipValidationFriendCallBypass, refreshVoipAudit, requestPermissions, showFriendFolder, showVoipTester, token, userInfo, voipAutoCallVoiceId, voipValidationOverride]);
 
     const handleFriendAcceptedFromDiscovery = useCallback(async (payload?: AcceptedFriendActionPayload) => {
         setShowFriendMapDiscovery(false);
@@ -5707,10 +6134,14 @@ export default function App() {
             });
             setNearbyPlaces(places);
             setSelectedNearbyPlaceId(places[0]?.id || '');
-            const firstBookablePlace =
-                places.find((place) => place.category === 'hotel' && place.booking_supported)
-                ?? places.find((place) => place.category === 'airport' && place.booking_supported);
-            setSelectedBookingPlaceId(firstBookablePlace?.id || '');
+            // [버그 수정] 구조화 예약(POST /bookings)은 호텔 카테고리만 백엔드가 허용한다.
+            // 과거엔 '전화번호 있는 첫 장소'(식당/명소/공항)까지 예약 장소로 지정해 제출 시 항상 400 이 났다.
+            // → 구조화 예약 선택은 '예약 가능 호텔'만 지정한다(없으면 미선택 → 예약 폼/배너 비활성).
+            //   주변검색만으로 통화 입력란에 번호를 채우는 동작은 아래 bookingAutoFillPhone 효과가 별도로 담당한다.
+            const firstBookableHotel = places.find(
+                (place) => place.category === 'hotel' && place.booking_supported,
+            );
+            setSelectedBookingPlaceId(firstBookableHotel?.id || '');
             if (!places.length) {
                 setNearbyError('현재 반경에서 찾은 장소가 없습니다. 반경을 넓혀 보세요.');
             }
@@ -6337,7 +6768,7 @@ export default function App() {
 
     const handleDetectLangByGPS = useCallback(async (silent = false) => {
         setGpsLangLoading(true);
-        if (!silent) setGpsStatus('위치 권한 확인 중...');
+        if (!silent) setGpsStatus(getFeatureUiText('gps.checkingPermission'));
         try {
             const currentPermission = await Location.getForegroundPermissionsAsync();
             let finalPermission = currentPermission;
@@ -6348,22 +6779,23 @@ export default function App() {
 
             if (finalPermission.status !== 'granted') {
                 const deniedMessage = finalPermission.canAskAgain === false
-                    ? `위치 권한이 차단되어 있습니다. Android 설정에서 ${WORLDLINGO_APP_NAME} 위치 권한을 허용해 주세요.`
-                    : '현재 위치 확인과 주변 서비스 검색을 위해 위치 권한이 필요합니다.';
-                setGpsStatus(`위치 권한 미허용 · ${deniedMessage}`);
+                    ? getFeatureUiText('gps.permissionBlocked', { appName: WORLDLINGO_APP_NAME })
+                    : getFeatureUiText('gps.permissionNeeded');
+                setGpsStatus(getFeatureUiText('gps.deniedStatus', { message: deniedMessage }));
                 if (!silent) {
-                    Alert.alert('위치 권한 필요', deniedMessage, [
-                        ...(finalPermission.canAskAgain === false ? [{ text: '설정 열기', onPress: () => Linking.openSettings() }] : []),
-                        { text: '확인', style: 'cancel' },
+                    Alert.alert(getFeatureUiText('gps.permissionTitle'), deniedMessage, [
+                        ...(finalPermission.canAskAgain === false ? [{ text: getFeatureUiText('gps.openSettings'), onPress: () => Linking.openSettings() }] : []),
+                        { text: getFeatureUiText('common.ok'), style: 'cancel' },
                     ]);
                 }
                 return;
             }
 
-            setGpsStatus('GPS/Wi-Fi/기지국 위치 확인 중...');
+            setGpsStatus(getFeatureUiText('gps.resolving'));
             const resolved = await resolveHybridLocation();
             setLat(resolved.latitude.toFixed(6));
             setLon(resolved.longitude.toFixed(6));
+            setGpsAccuracyM(Number.isFinite(Number(resolved.accuracy)) ? Number(resolved.accuracy) : null);
             const coordinateFallback = resolveGpsCoordinateFallback(resolved.latitude, resolved.longitude);
             let countryCode = resolved.overrideCountryCode ?? coordinateFallback?.countryCode ?? '';
             let regionHint = resolved.overrideRegionHint ?? coordinateFallback?.regionHint ?? '';
@@ -6400,43 +6832,95 @@ export default function App() {
             setGpsCountryCode(countryCode);
             setGpsRegionHint(regionHint);
             const detectedLang = countryCode ? resolveLangFromCountry(countryCode) : null;
+            if (
+                detectedLang
+                && isSupportedLangCode(detectedLang)
+                && detectedLang !== fromLang
+            ) {
+                if (!peerLangManualRef.current) {
+                    setToLang(detectedLang);
+                }
+            }
             const modeLabel =
                 resolved.mode === 'satellite'
-                    ? 'Satellite GPS'
+                    ? getFeatureUiText('gps.modeSatellite')
                     : resolved.mode === 'hybrid'
-                        ? 'Hybrid GPS/Wi-Fi'
+                        ? getFeatureUiText('gps.modeHybrid')
                         : resolved.mode === 'wifi_fallback'
-                            ? 'WF Fallback'
+                            ? getFeatureUiText('gps.modeWifiFallback')
                             : resolved.source === 'adb_override'
-                                ? 'ADB Mock GPS'
-                                : 'Cached Wi-Fi/Cell';
+                                ? getFeatureUiText('gps.modeAdbMock')
+                                : getFeatureUiText('gps.modeCached');
             const accText = resolved.accuracy !== null ? `${resolved.accuracy.toFixed(0)}m` : 'N/A';
-            const langText = detectedLang ? ` · 추천 ${getLangLabel(detectedLang)}` : '';
-            const regionText = regionHint ? ` · 지역 ${regionHint}` : '';
+            const langText = detectedLang ? getFeatureUiText('gps.langRecommend', { lang: getLangLabel(detectedLang) }) : '';
+            const regionText = regionHint ? getFeatureUiText('gps.regionSuffix', { region: regionHint }) : '';
 
-            setGpsStatus(`${modeLabel} · 품질 ${resolved.qualityScore}점 · 정확도 ${accText} · 좌표 ${resolved.latitude.toFixed(5)}, ${resolved.longitude.toFixed(5)} · 국가 ${countryCode || 'UNKNOWN'}${langText}${regionText}`);
+            setGpsStatus(getFeatureUiText('gps.resolvedStatus', {
+                mode: modeLabel,
+                score: String(resolved.qualityScore),
+                acc: accText,
+                lat: resolved.latitude.toFixed(5),
+                lng: resolved.longitude.toFixed(5),
+                country: countryCode || 'UNKNOWN',
+                lang: langText,
+                region: regionText,
+            }));
         } catch (error: any) {
             setGpsCountryCode('');
             setGpsRegionHint('');
             const reason = error?.message === 'gps-services-disabled'
-                ? '단말 위치 서비스가 꺼져 있고 저장된 마지막 위치도 없습니다.'
+                ? getFeatureUiText('gps.reasonServicesDisabled')
                 : error?.message === 'gps-unavailable'
-                    ? 'GPS/Wi-Fi/기지국 제공자에서 현재 위치와 마지막 위치를 모두 받지 못했습니다.'
-                    : '위치 제공자 응답 시간이 초과되었거나 단말 위치 제공자가 응답하지 않았습니다.';
-            setGpsStatus(`위치 확인 실패 · ${reason}`);
+                    ? getFeatureUiText('gps.reasonUnavailable')
+                    : getFeatureUiText('gps.reasonTimeout');
+            setGpsStatus(getFeatureUiText('gps.failedStatus', { reason }));
             if (!silent) {
-                Alert.alert('위치 확인 실패', `${reason}\n\nAndroid 위치 서비스와 앱 위치 권한을 확인한 뒤 다시 눌러 주세요.`);
+                Alert.alert(
+                    getFeatureUiText('gps.failedTitle'),
+                    getFeatureUiText('gps.failedBody', { reason }),
+                );
             }
         } finally {
             setGpsLangLoading(false);
         }
-    }, [getLangLabel, resolveHybridLocation]);
+    }, [fromLang, getLangLabel, resolveHybridLocation]);
+
+    const peerLangBootstrappedRef = useRef(false);
+    useEffect(() => {
+        if (Platform.OS === 'web' || !authHydrated || peerLangBootstrappedRef.current) {
+            return;
+        }
+        peerLangBootstrappedRef.current = true;
+        void (async () => {
+            try {
+                const raw = await AsyncStorage.getItem(MANUAL_PEER_LANG_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw) as { lang?: string; manual?: boolean };
+                    const normalized = String(parsed.lang || '').trim().toLowerCase();
+                    if (parsed.manual && isSupportedLangCode(normalized) && normalized !== fromLang) {
+                        peerLangManualRef.current = true;
+                        setPeerLangManual(true);
+                        setToLang(normalized as LangCode);
+                    }
+                }
+            } catch {
+                // ignore corrupt storage
+            }
+            if (!peerLangManualRef.current) {
+                setToLang((currentTarget) => resolveAutoTargetLang(fromLang, currentTarget));
+                await handleDetectLangByGPS(true);
+            }
+        })();
+    }, [authHydrated, fromLang, handleDetectLangByGPS]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web') {
-            void handleDetectLangByGPS(true);
+        if (peerLangManual) {
+            return;
         }
-    }, [handleDetectLangByGPS]);
+        setToLang((currentTarget) => (
+            currentTarget !== fromLang ? currentTarget : resolveAutoTargetLang(fromLang, currentTarget)
+        ));
+    }, [fromLang, peerLangManual]);
 
     const speakWithLang = useCallback((text: string, langCode: LangCode) => {
         const speakText = normalizeSpeakText(text);
@@ -6455,6 +6939,7 @@ export default function App() {
             clearTimeout(autoVoiceRestartTimerRef.current);
             autoVoiceRestartTimerRef.current = null;
         }
+        void faceVadControllerRef.current.stop();
     }, []);
 
     const resolveInterCallDirection = useCallback((turn: 'from' | 'to') => {
@@ -6472,7 +6957,7 @@ export default function App() {
         const { translateTo, translateLabel } = resolveInterCallDirection(turn);
         const relayKey = `${turn}:${normalizeRelayText(spokenText)}`;
         setInterCallLog((prev) => [...prev.slice(-19), { turn, text: spokenText, translated: translatedText }]);
-        emitUnifiedTranslationStatus('pstn', 'SPEAK', `${translateLabel} 송출`, {
+        emitUnifiedTranslationStatus('pstn', 'SPEAK', getFeatureUiText('user.speaking'), {
             turn,
             translate_to: translateTo,
             auto_relay: Boolean(options.isAutoRelay),
@@ -6485,347 +6970,243 @@ export default function App() {
         }
     }, [emitUnifiedTranslationStatus, resolveInterCallDirection, speakWithLang]);
 
-    // ── BT 하이브리드 음성 입력 ──
-    // BT 이어폰 연결 시 → Android MODE_IN_COMMUNICATION → SCO 자동 활성화 → 이어폰 MIC 사용
-    // BT 이어폰 미연결 시 → 폰 내장 MIC 사용 (현재 동작 그대로 유지)
-    const startVoiceInput = useCallback(async (options: { autoMode?: boolean; target?: 'main' | 'inter_call' } = {}) => {
-        if (voiceInputStartInFlightRef.current || voiceInputStopInFlightRef.current || recordingRef.current) {
-            return;
+    // [기능 분리 Phase7.4] 음성 캡처 루프 SSOT — useVoiceCaptureLoop (App 인라인 복제본 제거).
+    const voiceCaptureLoopCtx = useMemo((): AppVoiceCaptureLoopContext => ({
+        autoRelayDelayMs,
+        fromLang,
+        toLang,
+        autoVoiceModeEnabled,
+        faceAiMode,
+        voiceSttLoading,
+        interCallTurn,
+        interCallVoiceAssistEnabled,
+        songModeEnabled,
+        aiDisplayName,
+        aiDisplayNameRef,
+        userInfo,
+        gpsRegionHint,
+        gpsCountryCode,
+        lat,
+        lon,
+        gpsAccuracyM,
+        API_BASE,
+        LANGS,
+        AUTO_RELAY_DUPLICATE_GUARD_MS,
+        setIsVoiceRecording,
+        setVoiceSttLoading,
+        setInputText,
+        setGpsStatus,
+        setInterCallStatus,
+        setInterCallVoiceAssistEnabled,
+        setSongModeEnabled,
+        setAutoVoiceModeEnabled,
+        setResultText,
+        setOffline,
+        setEngine,
+        setInterCallTurn,
+        setInterManualText,
+        setSongModeStatus,
+        setTourismSafetyBanner,
+        setItinerarySeedQuery,
+        setItinerarySeedNonce,
+        setSorisaeQaLog,
+        getLangLabel,
+        requestPermissions,
+        runTranslation,
+        clearAutoVoiceTimers,
+        commitInterCallRelay,
+        resolveInterCallDirection,
+        resolveSongHybridSource,
+        resolveSongHybridTarget,
+        translateTextWithRegion,
+        appendSongSubtitle,
+        recordTurn,
+        resetPersona,
+        savePersona,
+        normalizeDetectedLangCode,
+        inferSpeechLangCode,
+        isSupportedLangCode,
+        normalizeSpeakText,
+        isTravelItineraryIntent,
+        normalizeLyricLine,
+        isLikelyLyricLine,
+        normalizeRelayText,
+        formatAutoRelayDelayLabel,
+        formatStatusText: (template, vars) => formatStatusText(template ?? '', vars),
+        wakeCompanionVoiceCallNowRef,
+        scheduleFaceConversationRestartRef,
+        stopVoiceInputRef,
+        faceVadControllerRef,
+        recordingRef,
+        voiceInputStartInFlightRef,
+        voiceInputStopInFlightRef,
+        voiceInputTargetRef,
+        autoVoiceModeEnabledRef,
+        autoVoiceStopTimerRef,
+        autoVoiceRestartTimerRef,
+        webSpeechRecognitionRef,
+        faceConversationAudioEnabledRef: faceVoipAudioEnabledRef,
+        faceSegmentCaptureStartedAtMsRef,
+        mainSorisaeRouteRef,
+        sorisaeWindowOpenRef,
+        companionKwsActiveRef,
+        companionVoiceCallArmedRef,
+        companionVoiceCallRef,
+        companionDormantSilent422StreakRef,
+        companionDormantRecoverBlockedUntilRef,
+        companionWakeRearmAtRef,
+        companionTripSessionIdRef,
+        companionPersonaRef,
+        faceGptConversationRef,
+        faceGptSpokenEchoRef,
+        faceSileroSupportedRef,
+        faceSileroActiveRef,
+        faceSileroCaptureActiveRef,
+        faceSileroCaptureUriRef,
+        faceSileroFirstSpeechAtMsRef,
+        faceSpeakingRef,
+        sorisaeSpeakingRef,
+        sorisaeQaSeqRef,
+        sorisaeVoicePlaybackSoundRef,
+        faceVoicePlaybackSoundRef,
+        faceSpokenHistoryRef,
+        mainLastAutoVoiceRelayRef,
+        interLastAutoRelayRef,
+        interCallActiveRef,
+        lastVoiceDrivenInputRef,
+        lastFaceSpokenOutputRef,
+        voiceSttLoadingRef,
+        faceAiModeRef,
+        faceScreenOpenRef,
+    }), [
+        autoRelayDelayMs,
+        fromLang,
+        toLang,
+        autoVoiceModeEnabled,
+        faceAiMode,
+        voiceSttLoading,
+        interCallTurn,
+        interCallVoiceAssistEnabled,
+        songModeEnabled,
+        aiDisplayName,
+        userInfo,
+        gpsRegionHint,
+        gpsCountryCode,
+        lat,
+        lon,
+        gpsAccuracyM,
+        getLangLabel,
+        requestPermissions,
+        runTranslation,
+        clearAutoVoiceTimers,
+        commitInterCallRelay,
+        resolveInterCallDirection,
+        resolveSongHybridSource,
+        resolveSongHybridTarget,
+        translateTextWithRegion,
+        appendSongSubtitle,
+    ]);
+
+    const { startVoiceInput, stopVoiceInput } = useAppVoiceCaptureLoop(voiceCaptureLoopCtx);
+
+    const buildAudioQuiesceOptions = useCallback((reason: string): QuiesceNonVoipAudioOptions => ({
+        reason,
+        stopVoiceInput: async (options) => {
+            await stopVoiceInputRef.current?.(options);
+        },
+        stopCompanionKws: async () => {
+            if (companionVoiceCallArmedRef.current) {
+                companionVoiceCallRef.current = disarmCompanionVoiceCall(companionVoiceCallRef.current);
+                companionVoiceCallArmedRef.current = false;
+                setCompanionVoiceCallArmed(false);
+            }
+        },
+        stopSorisaePlayback: async () => {
+            await stopFaceVoicePlayback(sorisaeVoicePlaybackSoundRef);
+            sorisaeSpeakingRef.current = false;
+        },
+        stopFacePlayback: async () => {
+            await stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            faceSpeakingRef.current = false;
+        },
+        disarmCompanion: async () => {
+            if (companionVoiceCallArmedRef.current) {
+                companionVoiceCallRef.current = disarmCompanionVoiceCall(companionVoiceCallRef.current);
+                companionVoiceCallArmedRef.current = false;
+                setCompanionVoiceCallArmed(false);
+            }
+        },
+        clearSpeakingFlags: () => {
+            faceSpeakingRef.current = false;
+            sorisaeSpeakingRef.current = false;
+        },
+        stopDeviceTts: () => {
+            Speech.stop();
+        },
+    }), []);
+
+    const prepareForVoipSession = useCallback(async (reason: string) => {
+        await quiesceNonVoipAudioForVoipSession(buildAudioQuiesceOptions(reason));
+        faceConversationSessionRef.current = false;
+        if (autoVoiceModeEnabledRef.current) {
+            setAutoVoiceModeEnabled(false);
         }
-        voiceInputStartInFlightRef.current = true;
-        try {
-            const effectiveAutoMode = Boolean(options.autoMode);
-            const inputTarget = options.target ?? 'main';
-            voiceInputTargetRef.current = inputTarget;
-            if (Platform.OS === 'web') {
-                const webAny = globalThis as any;
-                const speechCtor = webAny.window?.SpeechRecognition || webAny.window?.webkitSpeechRecognition;
-                if (!speechCtor) {
-                    Alert.alert('마이크 지원 불가', '현재 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge 최신 버전을 사용해 주세요.');
-                    return;
-                }
+        revokeCurrentVoiceCapture(reason);
+    }, [buildAudioQuiesceOptions]);
 
-                const recognizer = new speechCtor();
-                const listenTts = LANGS.find((l) => l.code === fromLang)?.tts ?? 'en-US';
-                recognizer.lang = listenTts;
-                recognizer.interimResults = false;
-                recognizer.maxAlternatives = 1;
-
-                webSpeechRecognitionRef.current = recognizer;
-                setIsVoiceRecording(true);
-                setVoiceSttLoading(true);
-
-                recognizer.onresult = async (event: any) => {
-                    const transcript = String(event?.results?.[0]?.[0]?.transcript ?? '').trim();
-                    setVoiceSttLoading(false);
-                    setIsVoiceRecording(false);
-                    webSpeechRecognitionRef.current = null;
-                    if (!transcript) return;
-
-                    const detectedFrom = inferSpeechLangCode(transcript, fromLang);
-                    setFromLang(detectedFrom);
-                    setInputText(transcript);
-                    await runTranslation(transcript, detectedFrom, toLang);
-                };
-
-                recognizer.onerror = (event: any) => {
-                    const detail = event?.error ? `브라우저 음성 인식 오류(${event.error})` : '브라우저 음성 인식 오류';
-                    console.error('[VOICE_INPUT_START_ERROR_WEB]', event);
-                    setVoiceSttLoading(false);
-                    setIsVoiceRecording(false);
-                    webSpeechRecognitionRef.current = null;
-                    setGpsStatus(`🎤 음성 입력 실패: ${detail}`);
-                    Alert.alert('녹음 오류', detail);
-                };
-
-                recognizer.onend = () => {
-                    setVoiceSttLoading(false);
-                    setIsVoiceRecording(false);
-                    webSpeechRecognitionRef.current = null;
-                };
-
-                recognizer.start();
-                return;
-            }
-
-            // Per-feature 권한 체크: 마이크 (음성 입력)
-            const hasPermission = await requestPermissions(['RECORD_AUDIO'], '음성 입력', (msg) => {
-                setGpsStatus(`🎤 음성 입력 실패: ${msg}`);
-            });
-            if (!hasPermission) {
-                return;
-            }
-
-            // Android: playThroughEarpieceAndroid: false → STREAM_VOICE_CALL 경로 → BT HFP SCO 자동 활성화
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                shouldDuckAndroid: false,
-                playThroughEarpieceAndroid: false,
-            });
-            const { recording } = await Audio.Recording.createAsync({
-                android: {
-                    extension: '.m4a',
-                    outputFormat: 2,     // MPEG_4
-                    audioEncoder: 3,     // AAC
-                    sampleRate: 16000,
-                    numberOfChannels: 1,
-                    bitRate: 64000,
-                },
-                ios: {
-                    extension: '.wav',
-                    audioQuality: 127,   // HIGH
-                    sampleRate: 16000,
-                    numberOfChannels: 1,
-                    bitRate: 128000,
-                    linearPCMBitDepth: 16,
-                    linearPCMIsBigEndian: false,
-                    linearPCMIsFloat: false,
-                },
-                web: { mimeType: 'audio/webm', bitsPerSecond: 128000 },
-                isMeteringEnabled: false,
-                keepAudioActiveHint: false,
-            });
-            recordingRef.current = recording;
-            setIsVoiceRecording(true);
-            if (effectiveAutoMode) {
-                clearAutoVoiceTimers();
-                if (inputTarget === 'inter_call') {
-                    setInterCallStatus(`🎙️ 스피커폰 통역 보조 수신 중... ${formatAutoRelayDelayLabel(autoRelayDelayMs)} 후 자동 처리합니다.`);
-                } else {
-                    setGpsStatus(formatStatusText(getUiText(fromLang).autoVoiceSegmentStatus, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
-                }
-                autoVoiceStopTimerRef.current = setTimeout(() => {
-                    void stopVoiceInputRef.current?.();
-                }, autoRelayDelayMs);
-            }
-        } catch (error: any) {
-            const rawMessage = typeof error?.message === 'string' ? error.message : '';
-            const normalized = rawMessage.toLowerCase();
-            let detail = rawMessage || '원인 불명';
-            if (Platform.OS === 'web') {
-                if (normalized.includes('permission') || normalized.includes('denied') || normalized.includes('notallowed')) {
-                    detail = '브라우저 마이크 권한이 차단되어 있습니다. 주소창의 사이트 권한에서 마이크를 허용해 주세요.';
-                } else if (normalized.includes('notfound') || normalized.includes('device')) {
-                    detail = '마이크 장치를 찾지 못했습니다. 입력 장치 연결 상태를 확인해 주세요.';
-                } else if (normalized.includes('secure') || normalized.includes('https')) {
-                    detail = '보안 컨텍스트가 필요합니다. localhost 또는 HTTPS 환경에서 실행해 주세요.';
-                }
-            }
-            console.error('[VOICE_INPUT_START_ERROR]', error);
-            setIsVoiceRecording(false);
-            setVoiceSttLoading(false);
-            setGpsStatus(`🎤 음성 입력 실패: ${detail}`);
-            Alert.alert('녹음 오류', detail);
-        } finally {
-            voiceInputStartInFlightRef.current = false;
+    const prepareForPstnDial = useCallback(async (reason: string) => {
+        await quiesceBeforePstnDial(buildAudioQuiesceOptions(reason));
+        faceConversationSessionRef.current = false;
+        if (autoVoiceModeEnabledRef.current) {
+            setAutoVoiceModeEnabled(false);
         }
-    }, [autoRelayDelayMs, clearAutoVoiceTimers, fromLang, getUiText, requestPermissions, runTranslation, toLang]);
+        revokeCurrentVoiceCapture(reason);
+    }, [buildAudioQuiesceOptions]);
 
-    const stopVoiceInput = useCallback(async (options: { suppressAutoRestart?: boolean } = {}) => {
-        if (Platform.OS === 'web') {
-            const recognizer = webSpeechRecognitionRef.current;
-            if (recognizer) {
-                try {
-                    recognizer.stop();
-                } catch {
-                    // no-op
-                }
-            }
-            webSpeechRecognitionRef.current = null;
-            setIsVoiceRecording(false);
-            setVoiceSttLoading(false);
-            return;
-        }
-
-        if (voiceInputStopInFlightRef.current || !recordingRef.current) return;
-        voiceInputStopInFlightRef.current = true;
-        clearAutoVoiceTimers();
-        setIsVoiceRecording(false);
-        const activeVoiceInputTarget = voiceInputTargetRef.current;
-        const shouldAutoRestart = !options.suppressAutoRestart && (
-            activeVoiceInputTarget === 'inter_call'
-                ? interCallActiveRef.current && interCallVoiceAssistEnabled
-                : autoVoiceModeEnabled
-        );
-        const rec = recordingRef.current;
-        recordingRef.current = null;
-        try {
-            await rec.stopAndUnloadAsync();
-            // 오디오 모드 원상복구
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
-            });
-            const uri = rec.getURI();
-            if (!uri) return;
-            setVoiceSttLoading(true);
-            try {
-                const audioBase64 = await FileSystem.readAsStringAsync(uri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
-                const voiceEndpoint = songModeEnabled
-                    ? `${API_BASE}/api/llm/voice/orchestrate`
-                    : `${API_BASE}/api/llm/voice-translate`;
-                const voicePayload = songModeEnabled
-                    ? { audio_base64: audioBase64, agent_key: 'reasoner', tts: false }
-                    : {
-                        audio_base64: audioBase64,
-                        from_lang: fromLang,
-                        to_lang: toLang,
-                        region_hint: gpsRegionHint || undefined,
-                        language: 'auto',
-                    };
-                const res = await fetch(voiceEndpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(voicePayload),
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const transcript = String(data.transcript ?? data.original_text ?? '').trim();
-                    if (transcript) {
-                        if (songModeEnabled) {
-                            const filteredLyric = normalizeLyricLine(transcript);
-                            if (!isLikelyLyricLine(filteredLyric)) {
-                                setSongModeStatus('🎵 가사 구간이 아니거나 배경 노이즈가 커서 이번 구간은 건너뛰었습니다.');
-                            } else {
-                                const rawDetected = data.detected_language ? String(data.detected_language) : '';
-                                const sourceInfo = resolveSongHybridSource(rawDetected, filteredLyric);
-                                const targetLang = resolveSongHybridTarget(sourceInfo.lang);
-                                const translated = await translateTextWithRegion(
-                                    filteredLyric,
-                                    sourceInfo.lang,
-                                    targetLang,
-                                    12000,
-                                    { serviceMode: 'lyrics' },
-                                );
-                                setInputText(filteredLyric);
-                                setResultText(translated.translated);
-                                setOffline(translated.offline);
-                                setEngine(translated.engine);
-                                setSongModeStatus(`🎵 가사 자막: ${getLangLabel(sourceInfo.lang)} → ${getLangLabel(targetLang)} · ${sourceInfo.detectedBy === 'voice' ? '음성감지' : sourceInfo.detectedBy === 'script' ? '문자패턴' : '기본값'} 하이브리드`);
-                                appendSongSubtitle({
-                                    original: filteredLyric,
-                                    translated: translated.translated,
-                                    source: sourceInfo.lang,
-                                    target: targetLang,
-                                    repeatCount: 1,
-                                    detectedBy: sourceInfo.detectedBy,
-                                });
-                            }
-                        } else if (activeVoiceInputTarget === 'inter_call') {
-                            const relayTurn = interCallTurn;
-                            const dedupeKey = `${relayTurn}:${normalizeRelayText(transcript)}`;
-                            const translatedText = String(data.translated ?? '').trim();
-                            if (interLastAutoRelayRef.current && interLastAutoRelayRef.current.key === dedupeKey && Date.now() - interLastAutoRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-                                setInterCallStatus(getUiText(fromLang).interAutoRelayDuplicateSkipped);
-                            } else if (translatedText) {
-                                commitInterCallRelay(relayTurn, transcript, translatedText, { isAutoRelay: true });
-                            } else {
-                                const { listenLang, translateTo } = resolveInterCallDirection(relayTurn);
-                                const translated = await translateTextWithRegion(
-                                    transcript,
-                                    listenLang,
-                                    translateTo,
-                                );
-                                commitInterCallRelay(relayTurn, transcript, translated.translated, { isAutoRelay: true });
-                            }
-                        } else {
-                            const translatedText = String(data.translated ?? '').trim();
-                            const detectedFrom: LangCode = normalizeDetectedLangCode(data.detected_language)
-                                ?? inferSpeechLangCode(transcript, fromLang);
-                            const manualFrom = detectedFrom;
-                            const manualTo = toLang;
-                            const relayKey = `${manualFrom}:${manualTo}:${normalizeRelayText(transcript)}`;
-                            setFromLang(detectedFrom);
-                            setInputText(transcript);
-                            if (autoVoiceModeEnabled && mainLastAutoVoiceRelayRef.current && mainLastAutoVoiceRelayRef.current.key === relayKey && Date.now() - mainLastAutoVoiceRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-                                setGpsStatus(getUiText(fromLang).autoVoiceDuplicateSkipped);
-                            } else if (autoVoiceModeEnabled && translatedText) {
-                                setGpsStatus(formatStatusText(getUiText(fromLang).autoVoiceDetected, {
-                                    from: getLangLabel(manualFrom),
-                                    to: getLangLabel(manualTo),
-                                }));
-                                setResultText(translatedText);
-                                setOffline(false);
-                                setEngine(String(data.engine ?? 'nado-voice'));
-                                mainLastAutoVoiceRelayRef.current = { key: relayKey, sentAt: Date.now() };
-                                speakWithLang(translatedText, manualTo);
-                            } else if (autoVoiceModeEnabled) {
-                                setGpsStatus(formatStatusText(getUiText(fromLang).autoVoiceDetected, {
-                                    from: getLangLabel(manualFrom),
-                                    to: getLangLabel(manualTo),
-                                }));
-                                setLoading(true);
-                                setResultText('');
-                                try {
-                                    const translated = await translateTextWithRegion(
-                                        transcript,
-                                        manualFrom,
-                                        manualTo,
-                                    );
-                                    setResultText(translated.translated);
-                                    setOffline(translated.offline);
-                                    setEngine(translated.engine);
-                                    mainLastAutoVoiceRelayRef.current = { key: relayKey, sentAt: Date.now() };
-                                    speakWithLang(translated.translated, manualTo);
-                                } catch {
-                                    Alert.alert(getUiText(fromLang).errorMsg);
-                                } finally {
-                                    setLoading(false);
-                                }
-                            } else if (translatedText) {
-                                setGpsStatus(`🎯 수동 언어 ${getLangLabel(manualFrom)} → ${getLangLabel(manualTo)}`);
-                                setResultText(translatedText);
-                                setOffline(false);
-                                setEngine(String(data.engine ?? 'nado-voice'));
-                            } else {
-                                setGpsStatus(`🎯 수동 언어 ${getLangLabel(manualFrom)} → ${getLangLabel(manualTo)}`);
-                                await runTranslation(transcript, manualFrom, manualTo);
-                            }
-                        }
-                    }
-                } else {
-                    const errorText = await res.text();
-                    throw new Error(errorText || `voice request failed (${res.status})`);
-                }
-            } finally {
-                setVoiceSttLoading(false);
-                // 임시 파일 삭제
-                FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => { /* no-op */ });
-                if (shouldAutoRestart && !recordingRef.current) {
-                    autoVoiceRestartTimerRef.current = setTimeout(() => {
-                        if (!recordingRef.current) {
-                            if (activeVoiceInputTarget === 'inter_call' && interCallActiveRef.current && interCallVoiceAssistEnabled) {
-                                void startVoiceInput({ autoMode: true, target: 'inter_call' });
-                            } else if (activeVoiceInputTarget === 'main' && autoVoiceModeEnabled) {
-                                void startVoiceInput({ autoMode: true });
-                            }
-                        }
-                    }, 300);
-                }
-            }
-        } catch {
-            setVoiceSttLoading(false);
-        } finally {
-            if (!shouldAutoRestart) {
-                voiceInputTargetRef.current = 'main';
-            }
-            voiceInputStopInFlightRef.current = false;
-        }
-    }, [appendSongSubtitle, autoVoiceModeEnabled, clearAutoVoiceTimers, commitInterCallRelay, fromLang, getLangLabel, getUiText, interCallTurn, interCallVoiceAssistEnabled, resolveInterCallDirection, resolveSongHybridSource, resolveSongHybridTarget, runTranslation, songModeEnabled, speakWithLang, startVoiceInput, toLang, translateTextWithRegion]);
+    const endPstnAssistSession = useCallback((reason: string) => {
+        deactivateFeatureExclusive('pstn-assist', reason, 'system');
+        clearActiveAudioEngine('inter_call', reason);
+    }, []);
 
     useEffect(() => {
-        stopVoiceInputRef.current = stopVoiceInput;
-    }, [stopVoiceInput]);
+        prepareForVoipSessionRef.current = prepareForVoipSession;
+    }, [prepareForVoipSession]);
+
+    useEffect(() => {
+        prepareForPstnDialRef.current = prepareForPstnDial;
+        openDialPadWithQuiesceRef.current = async (phone, reason) => {
+            await prepareForPstnDial(reason);
+            return openDialPad(phone);
+        };
+    }, [openDialPad, prepareForPstnDial]);
+
+    useEffect(() => {
+        endPstnAssistSessionRef.current = endPstnAssistSession;
+    }, [endPstnAssistSession]);
 
     useEffect(() => {
         if (!autoVoiceModeEnabled) {
             clearAutoVoiceTimers();
+            void stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            faceSpokenHistoryRef.current = [];
+            faceGptSpokenEchoRef.current = [];
+            mainLastAutoVoiceRelayRef.current = null;
+            faceSpeakingRef.current = false;
+            lastFaceSpokenOutputRef.current = null;
+            // [Silero] 자동음성 종료 시 네이티브 VAD 모니터도 정리(마이크 점유 해제).
+            if (faceSileroActiveRef.current) {
+                faceSileroActiveRef.current = false;
+                faceSileroCaptureActiveRef.current = false;
+                faceSileroCaptureUriRef.current = null;
+                faceSileroFirstSpeechAtMsRef.current = null;
+                void stopVoiceRelaySileroVadMonitor();
+            }
+            // [2-5 AEC/NS] 대면 통역이 직접 켠 경우에만 통신 모드를 해제한다.
+            // (VoIP 통화 화면이 설정한 통화 오디오 모드를 가로채 끊지 않도록 ref로 가드)
+            if (faceVoipAudioEnabledRef.current) {
+                faceVoipAudioEnabledRef.current = false;
+                void disableVoipAudio();
+            }
         }
     }, [autoVoiceModeEnabled, clearAutoVoiceTimers]);
 
@@ -6835,13 +7216,197 @@ export default function App() {
         };
     }, [clearAutoVoiceTimers]);
 
-    const handleToggleAutoVoiceMode = useCallback(async () => {
-        if (recordingRef.current) {
+    const handleToggleFaceConversation = useCallback(async () => {
+        const profileLangRaw = String(userInfo?.preferred_language || fromLang).trim().toLowerCase();
+        const profileLang: LangCode = isSupportedLangCode(profileLangRaw) ? profileLangRaw as LangCode : fromLang;
+        if (autoVoiceModeEnabled) {
+            faceConversationSessionRef.current = false;
+            if (recordingRef.current) {
+                await stopVoiceInput({ suppressAutoRestart: true });
+            }
+            await stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            setAutoVoiceModeEnabled(false);
+            setGpsStatus(getDisplayUiText().autoVoiceModeStopped ?? '🎙️ 대화 통역을 종료했습니다.');
+            return;
+        }
+        if (Platform.OS === 'web') {
+            Alert.alert(getFeatureUiText('face.webOnlyTitle'), getFeatureUiText('face.webOnlyBody'));
+            return;
+        }
+        if (toLang === profileLang) {
+            Alert.alert(getFeatureUiText('face.peerLangTitle'), getDisplayUiText().faceConversationPeerRequired ?? getFeatureUiText('face.peerLangTitle'));
+            return;
+        }
+        // 대면 통역 화면은 '통역' 단일 모드 — 소리새(gpt) 모드가 메인 캡처 루프로 새지 않게 강제.
+        faceAiModeRef.current = 'translate';
+        setFaceAiMode('translate');
+        if (companionVoiceCallArmedRef.current) {
+            companionVoiceCallRef.current = disarmCompanionVoiceCall(companionVoiceCallRef.current);
+            companionVoiceCallArmedRef.current = false;
+            setCompanionVoiceCallArmed(false);
+        }
+        faceConversationSessionRef.current = true;
+        autoVoiceModeEnabledRef.current = true;
+        setAutoVoiceModeEnabled(true);
+        setGpsStatus(getDisplayUiText().autoVoiceModeStarted ?? '🎙️ 대화 통역 시작 · 말 끝날 때까지 듣습니다');
+        voiceInputTargetRef.current = 'main';
+        void startVoiceInput({ autoMode: true });
+    }, [autoVoiceModeEnabled, getDisplayUiText, startVoiceInput, stopVoiceInput, toLang, userInfo?.preferred_language]);
+
+    /**
+     * 소리새 AI 전용 대화 토글(통역창과 분리). 통역모드의 '상대 언어 필요' 제약을 받지 않고
+     * 항상 친구(gpt) 경로로 동작하며, 반이중·자기에코 가드는 공용 캡처 루프 로직을 그대로 재사용한다.
+     */
+    const handleToggleSorisaeConversation = useCallback(async () => {
+        if (Platform.OS === 'web') {
+            Alert.alert(aiDisplayName, getFeatureUiText('sorisae.webChatOnly', { name: aiDisplayName }));
+            return;
+        }
+        // 소리새 모드 강제(통역 경로로 새지 않게).
+        faceAiModeRef.current = 'gpt';
+        setFaceAiMode('gpt');
+        if (autoVoiceModeEnabled) {
+            if (recordingRef.current) {
+                await stopVoiceInput({ suppressAutoRestart: true });
+            }
+            await stopFaceVoicePlayback(sorisaeVoicePlaybackSoundRef);
+            sorisaeSpeakingRef.current = false;
+            setAutoVoiceModeEnabled(false);
+            setGpsStatus(getFeatureUiText('sorisae.convEnded', { name: aiDisplayName }));
+            return;
+        }
+        setAutoVoiceModeEnabled(true);
+        setGpsStatus(getFeatureUiText('sorisae.convStarted', { name: aiDisplayName }));
+        voiceInputTargetRef.current = 'main';
+        void startVoiceInput({ autoMode: true });
+    }, [autoVoiceModeEnabled, startVoiceInput, stopVoiceInput]);
+
+    /** 소리새 AI 전용 창 닫기 — 진행 중인 대화/재생을 정리하고 닫는다. */
+    const closeSorisaeWindow = useCallback(async () => {
+        if (recordingRef.current && voiceInputTargetRef.current === 'main') {
             await stopVoiceInput({ suppressAutoRestart: true });
         }
-        setAutoVoiceModeEnabled(false);
-        setGpsStatus(getUiText(fromLang).manualVoiceOnlyNotice);
-    }, [fromLang, stopVoiceInput]);
+        // [기능 분리 Phase1] 소리새 전용 재생/발화 게이트도 함께 정리.
+        await stopFaceVoicePlayback(sorisaeVoicePlaybackSoundRef);
+        sorisaeSpeakingRef.current = false;
+        if (autoVoiceModeEnabled) {
+            await stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            setAutoVoiceModeEnabled(false);
+        }
+        // 대면 통역 화면은 '통역' 단일 모드로 복귀(소리새 모드가 메인 캡처 루프로 새지 않게).
+        sorisaeWindowOpenRef.current = false;
+        faceAiModeRef.current = 'translate';
+        setFaceAiMode('translate');
+        setSorisaeWindowOpen(false);
+    }, [autoVoiceModeEnabled, stopVoiceInput]);
+
+    // 소리새 전용 창 열림/닫힘을 ref(처리 분기 SSOT)에 즉시 반영 + gpt 모드 고정.
+    // 창이 열리면 진행 중이던 대면 통역 캡처를 멈춰 두 경로가 겹치지 않게 한다(완전 분리).
+    useEffect(() => {
+        sorisaeWindowOpenRef.current = sorisaeWindowOpen;
+        if (sorisaeWindowOpen) {
+            faceAiModeRef.current = 'gpt';
+            setFaceAiMode('gpt');
+            if (companionVoiceCallRef.current.phase === 'awake') {
+                // [Phase6.1] 음성 호출로 깨어난 경우: 사용자가 창 안 마이크를 누르지 않아도
+                // 곧바로 대화하도록 gpt 모드로 듣기를 이어간다(통역 스캔 캡처 → 소리새 대화 캡처 전환).
+                voiceInputTargetRef.current = 'main';
+                if (!autoVoiceModeEnabledRef.current) {
+                    setAutoVoiceModeEnabled(true);
+                }
+                if (!recordingRef.current) {
+                    void startVoiceInput({ autoMode: true });
+                }
+                void stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            } else {
+                // [기능 분리 Phase1] 단일-활성 강제: 창을 열면 진행 중이던 대면 통역 세션을 **완전히** 정지한다.
+                // autoVoiceMode를 끄지 않으면 재시작 루프가 메인 캡처를 되살려, 대면 발화가 소리새 경로로 새거나
+                // 그 반대로 엉킨다. 소리새 듣기는 창 안의 마이크 버튼(handleToggleSorisaeConversation)으로 따로 시작한다.
+                if (recordingRef.current) {
+                    void stopVoiceInput({ suppressAutoRestart: true });
+                }
+                if (autoVoiceModeEnabledRef.current) {
+                    setAutoVoiceModeEnabled(false);
+                }
+                void stopFaceVoicePlayback(faceVoicePlaybackSoundRef);
+            }
+        }
+    }, [sorisaeWindowOpen, startVoiceInput, stopVoiceInput]);
+
+    /**
+     * [Phase6.1] 음성 호출형 — 웨이크워드 감지 시 깨우기 루틴.
+     * 소리새 창을 열고 gpt 대화 모드로 전환한다(실제 듣기 재개는 위 창-오픈 이펙트가 처리).
+     */
+    const wakeCompanionVoiceCallNow = useCallback(() => {
+        companionVoiceCallRef.current = wakeCompanionVoiceCall(companionVoiceCallRef.current, Date.now());
+        faceAiModeRef.current = 'gpt';
+        sorisaeWindowOpenRef.current = true;
+        setFaceAiMode('gpt');
+        setSorisaeWindowOpen(true);
+        setGpsStatus(getFeatureUiText('sorisae.wakeSuccess', { name: aiDisplayName }));
+    }, [aiDisplayName]);
+    useEffect(() => { wakeCompanionVoiceCallNowRef.current = wakeCompanionVoiceCallNow; }, [wakeCompanionVoiceCallNow]);
+
+    /**
+     * [Phase6.1] 음성 호출 대기 토글 — armed(dormant) 동안 통역 캡처 루프를 웨이크워드 스캐너로 가동한다.
+     * (소리새 창이 닫혀 있어야 전사가 통역 경로로 흘러 웨이크워드를 감지할 수 있다.)
+     */
+    const handleToggleCompanionVoiceCall = useCallback(async () => {
+        if (Platform.OS === 'web') {
+            Alert.alert(aiDisplayName, getFeatureUiText('sorisae.webWakeOnly', { name: aiDisplayName }));
+            return;
+        }
+        if (companionVoiceCallArmedRef.current) {
+            companionVoiceCallRef.current = disarmCompanionVoiceCall(companionVoiceCallRef.current);
+            companionVoiceCallArmedRef.current = false;
+            setCompanionVoiceCallArmed(false);
+            if (recordingRef.current && voiceInputTargetRef.current === 'main' && !sorisaeWindowOpenRef.current) {
+                await stopVoiceInput({ suppressAutoRestart: true });
+                setAutoVoiceModeEnabled(false);
+            }
+            setGpsStatus(getFeatureUiText('sorisae.wakeEnded', { name: aiDisplayName }));
+            return;
+        }
+        // 무장: 통역 단일 모드(스캔)로 듣기 시작.
+        faceConversationSessionRef.current = false;
+        companionVoiceCallRef.current = armCompanionVoiceCall(companionVoiceCallRef.current);
+        companionVoiceCallArmedRef.current = true;
+        setCompanionVoiceCallArmed(true);
+        faceAiModeRef.current = 'translate';
+        setFaceAiMode('translate');
+        voiceInputTargetRef.current = 'main';
+        setAutoVoiceModeEnabled(true);
+        if (!recordingRef.current) {
+            void startVoiceInput({ autoMode: true });
+        }
+        setGpsStatus(getFeatureUiText('sorisae.wakeArmedStatus', { name: aiDisplayName }));
+    }, [aiDisplayName, startVoiceInput, stopVoiceInput]);
+
+    /**
+     * [Phase6.1] 3분 무활동 자동 종료 — awake 인 동안 주기적으로 검사해, 마지막 활동 후
+     * COMPANION_VOICE_CALL_IDLE_MS(3분) 경과 시 소리새 창을 닫고 dormant(다시 부르면 깨어남)로 복귀한다.
+     */
+    useEffect(() => {
+        if (!sorisaeWindowOpen || !companionVoiceCallArmed) return undefined;
+        const timer = setInterval(() => {
+            if (!shouldCompanionVoiceCallSleep(companionVoiceCallRef.current, Date.now())) return;
+            companionVoiceCallRef.current = sleepCompanionVoiceCall(companionVoiceCallRef.current);
+            setGpsStatus(getFeatureUiText('sorisae.dormant', { name: aiDisplayName }));
+            void (async () => {
+                // 창/캡처를 완전히 정리한 뒤, 음성 호출 대기(통역 스캔 캡처)를 재가동한다(stop↔start 레이스 차단).
+                await closeSorisaeWindow();
+                if (!companionVoiceCallArmedRef.current) return;
+                faceAiModeRef.current = 'translate';
+                setFaceAiMode('translate');
+                voiceInputTargetRef.current = 'main';
+                setAutoVoiceModeEnabled(true);
+                if (!recordingRef.current) {
+                    void startVoiceInput({ autoMode: true });
+                }
+            })();
+        }, 15_000);
+        return () => clearInterval(timer);
+    }, [sorisaeWindowOpen, companionVoiceCallArmed, aiDisplayName, closeSorisaeWindow, startVoiceInput]);
 
     const handleToggleInterCallVoiceAssist = useCallback(async () => {
         const isInterCallRecording = voiceInputTargetRef.current === 'inter_call' && (recordingRef.current || isVoiceRecording || voiceSttLoading);
@@ -6850,11 +7415,11 @@ export default function App() {
             if (recordingRef.current && voiceInputTargetRef.current === 'inter_call') {
                 await stopVoiceInput({ suppressAutoRestart: true });
             }
-            emitUnifiedTranslationStatus('pstn', 'INFO', '스피커폰 통역 보조를 종료했습니다. 필요하면 텍스트 입력으로 이어가세요.');
+            emitUnifiedTranslationStatus('pstn', 'INFO', getFeatureUiText('pstn.speakerAssistStopped'));
             return;
         }
         setInterCallVoiceAssistEnabled(true);
-        emitUnifiedTranslationStatus('pstn', 'READY', `스피커폰 통역 보조 준비 중 (${formatAutoRelayDelayLabel(autoRelayDelayMs)} 간격)`);
+        emitUnifiedTranslationStatus('pstn', 'READY', getFeatureUiText('pstn.speakerAssistReady', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
     }, [autoRelayDelayMs, emitUnifiedTranslationStatus, interCallVoiceAssistEnabled, isVoiceRecording, stopVoiceInput, voiceSttLoading]);
 
     const relayInterCallManual = useCallback(async (turn: 'from' | 'to', spokenText: string, options: { isAutoRelay?: boolean } = {}) => {
@@ -6862,12 +7427,12 @@ export default function App() {
         if (!trimmedText) return;
         const dedupeKey = `${turn}:${normalizeRelayText(trimmedText)}`;
         if (options.isAutoRelay && interLastAutoRelayRef.current && interLastAutoRelayRef.current.key === dedupeKey && Date.now() - interLastAutoRelayRef.current.sentAt < AUTO_RELAY_DUPLICATE_GUARD_MS) {
-            setInterCallStatus(getUiText(fromLang).interAutoRelayDuplicateSkipped);
+            setInterCallStatus(getDisplayUiText().interAutoRelayDuplicateSkipped ?? '↺ 중복 자동 통역을 건너뛰었습니다.');
             setInterManualText('');
             return;
         }
         const { listenLang, translateTo } = resolveInterCallDirection(turn);
-        emitUnifiedTranslationStatus('pstn', 'TRANSLATE', `${getLangLabel(listenLang)} -> ${getLangLabel(translateTo)}`, {
+        emitUnifiedTranslationStatus('pstn', 'TRANSLATE', getFeatureUiText('user.translating'), {
             turn,
             auto_relay: Boolean(options.isAutoRelay),
         });
@@ -6879,9 +7444,9 @@ export default function App() {
             );
             commitInterCallRelay(turn, trimmedText, translated.translated, options);
         } catch {
-            emitUnifiedTranslationStatus('pstn', 'ERROR', '통역 통화 처리 중 오류가 발생했습니다.', { turn });
+            emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.translationError'), { turn });
         }
-    }, [commitInterCallRelay, emitUnifiedTranslationStatus, fromLang, getLangLabel, getUiText, resolveInterCallDirection, translateTextWithRegion]);
+    }, [commitInterCallRelay, emitUnifiedTranslationStatus, getLangLabel, getDisplayUiText, resolveInterCallDirection, translateTextWithRegion]);
 
     const clearInterManualAutoRelayTimer = useCallback(() => {
         if (interManualAutoRelayTimerRef.current) {
@@ -6908,7 +7473,7 @@ export default function App() {
             return;
         }
 
-        setInterCallStatus(formatStatusText(getUiText(fromLang).interAutoRelayPending, { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
+        setInterCallStatus(formatStatusText(getDisplayUiText().interAutoRelayPending ?? '자동 전송 대기 · {delay}', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) }));
         clearInterManualAutoRelayTimer();
         interManualAutoRelayTimerRef.current = setTimeout(() => {
             void relayInterCallManual(interCallTurn, pendingText, { isAutoRelay: true });
@@ -6934,11 +7499,11 @@ export default function App() {
         const { listenLang, translateTo, listenLabel, translateLabel } = resolveInterCallDirection(turn);
         const listenTts = LANGS.find((l) => l.code === listenLang)?.tts ?? 'en-US';
         setInterCallTurn(turn);
-        emitUnifiedTranslationStatus('pstn', 'LISTEN', `${listenLabel} 입력 대기`, { turn });
+        emitUnifiedTranslationStatus('pstn', 'LISTEN', getFeatureUiText(turn === 'from' ? 'user.mySpeechInput' : 'user.peerSpeechInput'), { turn });
 
         const SpeechRecognitionCtor = webAny.window.SpeechRecognition || webAny.window.webkitSpeechRecognition;
         if (!SpeechRecognitionCtor) {
-            setInterCallStatus('이 환경은 음성 인식을 지원하지 않아 수동 통역 모드로 전환됩니다.');
+            setInterCallStatus(getFeatureUiText('pstn.manualModeFallback'));
             return;
         }
         const recognizer = new SpeechRecognitionCtor();
@@ -6947,7 +7512,7 @@ export default function App() {
         recognizer.onresult = async (event: any) => {
             const spokenText = event.results?.[0]?.[0]?.transcript ?? '';
             if (!interCallActiveRef.current) return;
-            emitUnifiedTranslationStatus('pstn', 'TRANSLATE', `${listenLabel} -> ${translateLabel}`, { turn });
+            emitUnifiedTranslationStatus('pstn', 'TRANSLATE', getFeatureUiText('user.translating'), { turn });
             try {
                 const translated = await translateTextWithRegion(
                     spokenText,
@@ -6955,11 +7520,11 @@ export default function App() {
                     translateTo,
                 );
                 setInterCallLog((prev) => [...prev.slice(-19), { turn, text: spokenText, translated: translated.translated }]);
-                emitUnifiedTranslationStatus('pstn', 'SPEAK', `${translateLabel} 송출`, { turn });
+                emitUnifiedTranslationStatus('pstn', 'SPEAK', getFeatureUiText('user.speaking'), { turn });
                 const targetTts = LANGS.find((l) => l.code === translateTo)?.tts ?? 'en-US';
                 const UtteranceCtor = webAny.window.SpeechSynthesisUtterance;
                 if (!UtteranceCtor) {
-                    emitUnifiedTranslationStatus('pstn', 'ERROR', '브라우저 TTS를 사용할 수 없습니다.', { turn });
+                    emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.browserTtsUnavailable'), { turn });
                     return;
                 }
                 const utter = new UtteranceCtor(translated.translated);
@@ -6973,12 +7538,12 @@ export default function App() {
                 webAny.window.speechSynthesis.cancel();
                 webAny.window.speechSynthesis.speak(utter);
             } catch {
-                emitUnifiedTranslationStatus('pstn', 'ERROR', '통역 통화 처리 중 오류가 발생했습니다.', { turn });
+                emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.translationError'), { turn });
             }
         };
         recognizer.onerror = () => {
             if (interCallActiveRef.current) {
-                emitUnifiedTranslationStatus('pstn', 'ERROR', '음성 인식 오류. 다시 시도하세요.', { turn });
+                emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.speechError'), { turn });
             }
         };
         recognizer.start();
@@ -6994,8 +7559,10 @@ export default function App() {
             setInterCallActive(false);
             setInterCallStatus('');
             setInterManualText('');
+            endPstnAssistSessionRef.current('inter_call_toggle_off');
             return;
         }
+        await prepareForPstnDialRef.current('inter_call_toggle_on');
         interCallActiveRef.current = true;
         setInterCallActive(true);
         setInterCallLog([]);
@@ -7010,11 +7577,14 @@ export default function App() {
             });
             if (dialOpened) {
                 setInterCallVoiceAssistEnabled(true);
-                emitUnifiedTranslationStatus('pstn', 'READY', `${SUPPORTED_LANGUAGE_COUNT}개국어 자동 전달 모드 시작`, {
+                emitUnifiedTranslationStatus('pstn', 'READY', getFeatureUiText('pstn.autoModeStart', { count: SUPPORTED_LANGUAGE_COUNT }), {
                     dial_opened: true,
                 });
             } else {
-                emitUnifiedTranslationStatus('pstn', 'ERROR', '전화번호를 입력하거나 호텔을 선택하면 다이얼패드를 열 수 있습니다.', {
+                interCallActiveRef.current = false;
+                setInterCallActive(false);
+                endPstnAssistSessionRef.current('inter_call_dial_failed');
+                emitUnifiedTranslationStatus('pstn', 'ERROR', getFeatureUiText('pstn.dialPadHint'), {
                     dial_opened: false,
                 });
             }
@@ -7031,8 +7601,227 @@ export default function App() {
     const handleSelectInterCallContact = useCallback((contact: DevicePhoneContact) => {
         setInterCallPhone(contact.phone);
         setInterCallContactPickerVisible(false);
-        setInterCallStatus(`📇 ${contact.name} 번호를 단말 전화번호 저장소에서 선택했습니다. 통역 통화 시작을 누르면 시스템 전화앱으로 이어집니다.`);
+        setInterCallStatus(getFeatureUiText('pstn.contactPicked', { name: contact.name }));
     }, []);
+
+    // [Phase5.11] 연락처에서 직접 채팅 시작/초대 — 번호가 앱 친구면 채팅방을 열고,
+    // 미가입이면 SNS(카카오톡/라인/문자) 공유로 초대한다. 일반통화/번호 채우기는 기존 흐름 유지.
+    const handleOpenChatFromContact = useCallback(async (contact: DevicePhoneContact) => {
+        const inviterName = userInfo?.username || userInfo?.email?.split('@')[0] || '';
+        if (!token || !userInfo?.id) {
+            void shareChatInvite({ apiBase: API_BASE, contactName: contact.name, inviterName });
+            return;
+        }
+        try {
+            const { friends } = await getFriends(userInfo.id, token);
+            const index = buildFriendPhoneIndex(friends);
+            const action = resolveContactChatAction(index, [contact.phone]);
+            if (action.kind === 'chat' && action.friend.friendUserId != null) {
+                const room = await createDirectChatRoom(API_BASE, token, action.friend.friendUserId);
+                setSelectedChatRoom(room);
+                setShowFriendFolder(false);
+                setInterCallStatus(getFeatureUiText('pstn.chatOpened', { name: contact.name }));
+                logUiPressProbe('CONTACT_CHAT_OPENED', {
+                    friend_user_id: action.friend.friendUserId,
+                    room_id: room.room_id,
+                });
+                return;
+            }
+            const { shared } = await shareChatInvite({ apiBase: API_BASE, contactName: contact.name, inviterName });
+            setInterCallStatus(
+                shared
+                    ? getFeatureUiText('pstn.contactInviteSent', { name: contact.name })
+                    : getFeatureUiText('pstn.contactNotRegistered', { name: contact.name }),
+            );
+            logUiPressProbe('CONTACT_CHAT_INVITE_SHARED', { shared });
+        } catch (error: any) {
+            Alert.alert(getFeatureUiText('pstn.chatStartFailedTitle'), error?.message || getFeatureUiText('pstn.chatStartFailedBody'));
+        }
+    }, [logUiPressProbe, token, userInfo?.email, userInfo?.id, userInfo?.username]);
+
+    // 연락처 선택 후 무엇을 할지(채팅/초대 · 일반통화 번호 채우기) 묻는다.
+    const presentContactActionChooser = useCallback((contact: DevicePhoneContact) => {
+        Alert.alert(
+            contact.name,
+            `${contact.phone}\n${getFeatureUiText('pstn.contactChooserPrompt')}`,
+            [
+                { text: getFeatureUiText('pstn.contactChatInvite'), onPress: () => { void handleOpenChatFromContact(contact); } },
+                { text: getFeatureUiText('pstn.contactInterCall'), onPress: () => { handleSelectInterCallContact(contact); } },
+                { text: getFeatureUiText('pstn.cancel'), style: 'cancel' },
+            ],
+            { cancelable: true },
+        );
+    }, [handleOpenChatFromContact, handleSelectInterCallContact]);
+
+    // [Phase5.12] 연락처 디렉터리 — 친구(가입자) 목록 로더(미로그인/실패 시 빈 배열).
+    const loadFriendsForDirectory = useCallback(async (): Promise<Friend[]> => {
+        if (!token || !userInfo?.id) {
+            return [];
+        }
+        try {
+            const { friends } = await getFriends(userInfo.id, token);
+            return friends;
+        } catch {
+            return [];
+        }
+    }, [token, userInfo?.id]);
+
+    // [Phase5.12] 📞 일반전화 통역 — 단말 전화앱 발신 + 자동 통역 보조 시작(가입 여부 무관).
+    const handleRegularCallContact = useCallback(async (contact: DeviceContact) => {
+        setContactsDirectoryVisible(false);
+        setInterCallPhone(contact.phone);
+        logUiPressProbe('CONTACT_DIRECTORY_REGULAR_CALL', { phone: contact.phone });
+        void recordCall({
+            kind: 'pstn',
+            direction: 'out',
+            label: contact.name || contact.phone,
+            phone: contact.phone,
+        }).then((rows) => setCallHistoryEntries(rows));
+        if (Platform.OS === 'web') {
+            await prepareForPstnDialRef.current('contact_directory_regular_call_web');
+            interCallActiveRef.current = true;
+            setInterCallActive(true);
+            setInterCallLog([]);
+            setInterCallTurn('from');
+            startInterCallCycleWeb('from');
+            return;
+        }
+        await prepareForPstnDialRef.current('contact_directory_regular_call');
+        interCallActiveRef.current = true;
+        setInterCallActive(true);
+        setInterCallLog([]);
+        setInterCallTurn('from');
+        const { dialOpened } = await startPstnAssistDialFlow({
+            interCallPhone: contact.phone,
+            bookingSupportPhone: bookingResult?.support_phone,
+            selectedBookingPhone: selectedBookingPlace?.phone,
+        });
+        if (dialOpened) {
+            setInterCallVoiceAssistEnabled(true);
+            setInterCallStatus(getFeatureUiText('pstn.callOutgoing', { name: contact.name }));
+        } else {
+            interCallActiveRef.current = false;
+            setInterCallActive(false);
+            endPstnAssistSessionRef.current('contact_directory_dial_failed');
+            setInterCallStatus(getFeatureUiText('pstn.dialFailed'));
+        }
+    }, [bookingResult?.support_phone, logUiPressProbe, selectedBookingPlace?.phone, startInterCallCycleWeb, startPstnAssistDialFlow]);
+
+    // [Phase5.12] 📡 VoIP — 앱 친구일 때 친구 보이스톡으로 발신.
+    const handleVoipCallContact = useCallback((contact: DeviceContact, friend: Friend) => {
+        setContactsDirectoryVisible(false);
+        logUiPressProbe('CONTACT_DIRECTORY_VOIP_CALL', { friend_user_id: friend.friendUserId ?? null });
+        void handleStartFriendVoiceCall(friend);
+    }, [handleStartFriendVoiceCall, logUiPressProbe]);
+
+    // [Phase5.12] 💬 채팅 — 친구면 채팅방을 열고, 미가입이면 SNS 초대.
+    const handleChatContact = useCallback(async (contact: DeviceContact, friend: Friend | null) => {
+        setContactsDirectoryVisible(false);
+        const inviterName = userInfo?.username || userInfo?.email?.split('@')[0] || '';
+        if (friend && friend.friendUserId != null && token) {
+            try {
+                const room = await createDirectChatRoom(API_BASE, token, friend.friendUserId);
+                setSelectedChatRoom(room);
+                setShowFriendFolder(false);
+                setActiveRailSection('chat');
+                setInterCallStatus(getFeatureUiText('pstn.chatOpened', { name: contact.name }));
+                logUiPressProbe('CONTACT_DIRECTORY_CHAT_OPENED', {
+                    friend_user_id: friend.friendUserId,
+                    room_id: room.room_id,
+                });
+                return;
+            } catch (error: any) {
+                Alert.alert(getFeatureUiText('pstn.chatStartFailedTitle'), error?.message || getFeatureUiText('pstn.chatStartFailedBody'));
+                return;
+            }
+        }
+        const { shared } = await shareChatInvite({ apiBase: API_BASE, contactName: contact.name, inviterName });
+        setInterCallStatus(
+            shared
+                ? getFeatureUiText('pstn.contactInviteSent', { name: contact.name })
+                : getFeatureUiText('pstn.contactNotRegistered', { name: contact.name }),
+        );
+        logUiPressProbe('CONTACT_DIRECTORY_CHAT_INVITE_SHARED', { shared });
+    }, [logUiPressProbe, token, userInfo?.email, userInfo?.username]);
+
+    const refreshCallHistory = useCallback(async () => {
+        setCallHistoryLoading(true);
+        try {
+            setCallHistoryEntries(await loadCallHistory());
+        } finally {
+            setCallHistoryLoading(false);
+        }
+    }, []);
+
+    const handleOpenFriendChatFromDirectory = useCallback(async (friend: Friend) => {
+        if (!token || friend.friendUserId == null) {
+            return;
+        }
+        try {
+            const room = await createDirectChatRoom(API_BASE, token, friend.friendUserId);
+            setSelectedChatRoom(room);
+            setShowFriendFolder(false);
+            setActiveRailSection('chat');
+            setVoipFriendsDirectoryVisible(false);
+            logUiPressProbe('VOIP_FRIENDS_DIRECTORY_CHAT_OPENED', {
+                friend_user_id: friend.friendUserId,
+                room_id: room.room_id,
+            });
+        } catch (error: any) {
+            Alert.alert(getFeatureUiText('pstn.chatStartFailedTitle'), error?.message || getFeatureUiText('pstn.friendChatStartFailedBody'));
+        }
+    }, [logUiPressProbe, token]);
+
+    const handleRecentCallAgain = useCallback(async (entry: CallHistoryEntry) => {
+        if (entry.kind === 'voip') {
+            const friends = await loadFriendsForDirectory();
+            const matched = entry.friendUserId != null
+                ? friends.find((friend) => friend.friendUserId === entry.friendUserId)
+                : null;
+            if (matched) {
+                void handleStartFriendVoiceCall(matched);
+                return;
+            }
+            if (entry.voiceId) {
+                void handleStartFriendVoiceCall({
+                    id: 0,
+                    userId: userInfo?.id ?? 0,
+                    friendUserId: entry.friendUserId,
+                    friendUsername: entry.label,
+                    friendEmail: '',
+                    friendPhone: entry.phone ?? undefined,
+                    friendVoiceId: entry.voiceId,
+                    addedAt: entry.at,
+                } as Friend);
+                return;
+            }
+            Alert.alert(getFeatureUiText('voip.recentsPeerMissing'), getFeatureUiText('voip.recentsNotFoundBody'));
+            return;
+        }
+        if (!entry.phone) {
+            Alert.alert(getFeatureUiText('voip.redialNoNumber'), getFeatureUiText('voip.redialNoNumberBody'));
+            return;
+        }
+        await handleRegularCallContact({
+            id: entry.id,
+            name: entry.label,
+            phone: entry.phone,
+            keys: [],
+        });
+    }, [handleRegularCallContact, handleStartFriendVoiceCall, loadFriendsForDirectory, userInfo?.id]);
+
+    const handleDialpadPstnCall = useCallback(async (phoneNumber: string) => {
+        const normalized = phoneNumber.trim();
+        if (!normalized) {
+            return;
+        }
+        await handleRegularCallContact({
+            id: 'dialpad',
+            name: normalized,
+            phone: normalized,
+            keys: [],
+        });
+    }, [handleRegularCallContact]);
 
     const handlePhoneDialerInitiated = useCallback(async (phone: string) => {
         const normalized = phone.trim();
@@ -7044,20 +7833,20 @@ export default function App() {
             call_mode: selectedCallMode,
         });
         if (Platform.OS === 'web') {
-            Alert.alert('다이얼패드', '웹에서는 시스템 전화앱 연동을 사용할 수 없습니다.');
+            Alert.alert(getFeatureUiText('pstn.dialPadWebTitle'), getFeatureUiText('pstn.dialPadWebBody'));
             return;
         }
-        const dialOpened = await openDialPad(normalized);
+        const dialOpened = await openDialPadWithQuiesceRef.current(normalized, 'phone_dialer_initiated');
         if (dialOpened) {
-            setInterCallStatus('📞 다이얼패드 번호로 시스템 전화앱을 열었습니다. 통화 후 수동 통역 모드를 사용하세요.');
+            setInterCallStatus(getFeatureUiText('pstn.dialPadOpened'));
         } else {
-            setInterCallContactError('다이얼패드에서 선택한 번호로 전화앱을 열지 못했습니다.');
+            setInterCallContactError(getFeatureUiText('pstn.dialPadOpenFailed'));
         }
-    }, [logUiPressProbe, openDialPad, selectedCallMode, setInterCallPhone, setInterCallContactError, setInterCallStatus, setVoipPhone]);
+    }, [logUiPressProbe, selectedCallMode, setInterCallPhone, setInterCallContactError, setInterCallStatus, setVoipPhone]);
 
     const handleOpenInterCallContactPicker = useCallback(async () => {
         if (Platform.OS === 'web') {
-            Alert.alert('전화번호 저장소 열기', '웹에서는 단말 전화번호 저장소를 직접 열 수 없습니다. 모바일 앱에서 사용하세요.');
+            Alert.alert(getFeatureUiText('pstn.contactsWebTitle'), getFeatureUiText('pstn.contactsWebBody'));
             return;
         }
 
@@ -7065,6 +7854,7 @@ export default function App() {
         setInterCallContactError('');
 
         try {
+            const Contacts = await import('expo-contacts');
             const permission = await Contacts.requestPermissionsAsync();
             if (permission.status !== 'granted') {
                 setInterCallContactError('연락처 권한이 없어 단말 전화번호 저장소를 열 수 없습니다.');
@@ -7073,7 +7863,7 @@ export default function App() {
 
             const pickedContact = await Contacts.presentContactPickerAsync();
             if (!pickedContact) {
-                setInterCallStatus('📇 단말 전화번호 저장소 열기를 취소했습니다.');
+                setInterCallStatus(getFeatureUiText('pstn.contactsCancelled'));
                 return;
             }
 
@@ -7092,21 +7882,58 @@ export default function App() {
 
             setInterCallContactOptions([]);
             setInterCallContactPickerVisible(false);
-            handleSelectInterCallContact(resolvedContact);
+            presentContactActionChooser(resolvedContact);
         } catch (error: any) {
             setInterCallContactError(error?.message || '단말 전화번호 저장소를 열지 못했습니다.');
         } finally {
             setInterCallContactLoading(false);
         }
-    }, [handleSelectInterCallContact]);
+    }, [presentContactActionChooser]);
 
     const currentFromLabel = getLangLabel(fromLang);
     const currentToLabel = getLangLabel(toLang);
+    const userMeSideLabel = getFeatureUiText('user.meSide');
+    const userPeerSideLabel = getFeatureUiText('user.peerSide');
+    const userFlag = resolveUserCountryFlag(profileCountryCode, profilePreferredLanguage);
+    const peerFlag = resolveUserCountryFlag(null, toLang);
+    const userFlagDisplayName = formatFlagPrefixedName(
+        userFlag,
+        userInfo?.username || userInfo?.email?.split('@')[0] || userMeSideLabel,
+    );
+    const peerFlagDisplayName = formatFlagPrefixedName(peerFlag, userPeerSideLabel);
+    // [홈 런처] 대면통역 히어로 카드의 국기 표시용 언어→국기 매핑(목업 #1).
+    const langFlag = (code: string): string => {
+        const m: Record<string, string> = {
+            ko: '🇰🇷', en: '🇺🇸', ja: '🇯🇵', zh: '🇨🇳', 'zh-cn': '🇨🇳', 'zh-tw': '🇹🇼',
+            es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', pt: '🇵🇹', ru: '🇷🇺', ar: '🇸🇦',
+            hi: '🇮🇳', th: '🇹🇭', vi: '🇻🇳', id: '🇮🇩', tr: '🇹🇷', nl: '🇳🇱', pl: '🇵🇱',
+            uk: '🇺🇦', ms: '🇲🇾', tl: '🇵🇭', mn: '🇲🇳', km: '🇰🇭', ne: '🇳🇵',
+        };
+        return m[(code || '').toLowerCase()] ?? '🌐';
+    };
+    const homeFromFlag = langFlag(fromLang);
+    const homeToFlag = langFlag(toLang);
+    // [홈 런처] 정밀 번역 도구(직접 입력/OCR) 접힘 상태 — 기본 접힘으로 홈을 깔끔한 런처로 유지.
+    const [homeToolsExpanded, setHomeToolsExpanded] = useState(false);
+    useEffect(() => { faceScreenOpenRef.current = faceScreenOpen; }, [faceScreenOpen]);
+
     const [activeRailSection, setActiveRailSection] = useState<SectionRailKey | null>(null);
     const [isRailMenuOpen, setIsRailMenuOpen] = useState(false);
-    const isChatRailSectionVisible = activeRailSection === 'chat';
     const hasPendingIncomingVoip = !!pendingIncomingVoipCall && !voipCallInitResponse;
+    const isChatRailSectionVisible = activeRailSection === 'chat';
     const isVoipRailSectionVisible = activeRailSection === 'voip' || hasPendingIncomingVoip;
+    const recentMissedCallCount = useMemo(
+        () => callHistoryEntries.filter((entry) => entry.direction === 'missed').length,
+        [callHistoryEntries],
+    );
+
+    useEffect(() => {
+        if (!isVoipRailSectionVisible) {
+            return;
+        }
+        void refreshCallHistory();
+    }, [isVoipRailSectionVisible, refreshCallHistory, chatRefreshKey, voipCallInitResponse?.call_id]);
+    const isTourismPromoRailSectionVisible = activeRailSection === 'tourism-promo';
     const isSongRailSectionVisible = activeRailSection === 'song-mode';
     const isTravelRailSectionVisible = activeRailSection === 'travel-booking';
     const scrollViewRef = useRef<ScrollView | null>(null);
@@ -7114,18 +7941,21 @@ export default function App() {
         chat: 0,
         voip: 0,
         'song-mode': 0,
+        'tourism-promo': 0,
         'travel-booking': 0,
     });
-    const isVoipRailLobbyVisible = isVoipRailSectionVisible && showVoipTester && !voipCallInitResponse && !pendingIncomingVoipCall;
-    const isVoipRailActiveCallVisible = isVoipRailSectionVisible && !!voipCallInitResponse;
     const isVoipDockAttentionVisible = !!voipCallInitResponse || hasPendingIncomingVoip;
-    const showIncomingVoipRailCard = hasPendingIncomingVoip;
-    const showIncomingVoipFixedPanel = false;
-    const showIncomingVoipBanner = false;
     const showAuthDebugFloating = AUTH_DEBUG_MARKER_ENABLED && !isVoipDockAttentionVisible && !isVoipRailSectionVisible;
 
     useEffect(() => {
         activeRailSectionRef.current = activeRailSection;
+    }, [activeRailSection]);
+
+    // [기능 분리 Phase4] 단일-활성 강제: 기능(레일)이 바뀌면 직전 음성 기능의 마이크 캡처를
+    // 정지(quiesce)시킨다. 비활성 기능이 백그라운드에서 계속 듣는 것을 막아 기능 간 간섭을 차단한다.
+    // (대면통역/소리새/일반전화/노래만 lease 대상 — VOIP 통화는 WebRTC 자체 경로라 무관.)
+    useEffect(() => {
+        revokeCurrentVoiceCapture(`rail:${activeRailSection ?? 'home'}`);
     }, [activeRailSection]);
 
     useEffect(() => {
@@ -7161,15 +7991,34 @@ export default function App() {
         return () => cancelAnimationFrame(frameId);
     }, [activeRailSection, scrollToRailSection]);
 
-    const handleSelectLanguage = useCallback((code: LangCode) => {
-        if (langPickerFor === 'from') {
-            setFromLang(code);
+    const handleSelectLanguage = useCallback(async (code: LangCode) => {
+        const peerPickerAllowed = faceScreenOpen || activeRailSection === 'travel-booking' || interCallActive;
+        if (!peerPickerAllowed || langPickerFor !== 'to') {
+            setLangPickerFor(null);
+            return;
         }
-        if (langPickerFor === 'to') {
-            setToLang(code);
+        if (code === fromLang) {
+            Alert.alert('상대 언어', '상대 언어는 내 언어(설정 탭)와 달라야 합니다.');
+            setLangPickerFor(null);
+            return;
         }
+        try {
+            await AsyncStorage.setItem(MANUAL_PEER_LANG_STORAGE_KEY, JSON.stringify({ manual: true, lang: code }));
+        } catch {
+            // storage failure should not block in-memory selection
+        }
+        peerLangManualRef.current = true;
+        setPeerLangManual(true);
+        setToLang(code);
         setLangPickerFor(null);
-    }, [langPickerFor]);
+    }, [activeRailSection, faceScreenOpen, fromLang, interCallActive, langPickerFor]);
+
+    const openPeerLangPicker = useCallback(() => {
+        if (!faceScreenOpen && activeRailSection !== 'travel-booking' && !interCallActive) {
+            return;
+        }
+        setLangPickerFor('to');
+    }, [activeRailSection, faceScreenOpen, interCallActive]);
 
     const handlePressSectionRail = useCallback((key: SectionRailKey) => {
         const previousSection = activeRailSectionRef.current;
@@ -7183,7 +8032,11 @@ export default function App() {
         });
         setActiveRailSection(nextSection);
         setIsRailMenuOpen(false);
-    }, [logUiPressProbe]);
+        if (nextSection === 'voip') {
+            setVoipWorkspaceTab('contacts');
+            openVoipTesterPanel();
+        }
+    }, [logUiPressProbe, openVoipTesterPanel]);
 
     const isLoggedIn = Boolean(userInfo);
     const isLobbyVisible = !isLoggedIn;
@@ -7200,30 +8053,44 @@ export default function App() {
     });
 
     useEffect(() => {
-        if (autoVoiceModeEnabled) {
-            setAutoVoiceModeEnabled(false);
+        if (!autoVoiceModeEnabled || toLang !== fromLang) {
+            return;
         }
-    }, [autoVoiceModeEnabled]);
+        void stopVoiceInput({ suppressAutoRestart: true });
+        setAutoVoiceModeEnabled(false);
+        setGpsStatus(getDisplayUiText().faceConversationPeerRequired ?? '상대 언어를 GPS 또는 수동 선택으로 지정해 주세요.');
+    }, [autoVoiceModeEnabled, faceScreenOpen, fromLang, getDisplayUiText, stopVoiceInput, toLang]);
 
     useEffect(() => {
-        if (!isTranslateWorkspaceVisible || !autoVoiceModeEnabled || Platform.OS === 'web' || recordingRef.current) {
+        if ((!isTranslateWorkspaceVisible && !faceScreenOpen) && autoVoiceModeEnabled) {
+            void stopVoiceInput({ suppressAutoRestart: true });
+            setAutoVoiceModeEnabled(false);
+        }
+    }, [autoVoiceModeEnabled, faceScreenOpen, isTranslateWorkspaceVisible, stopVoiceInput]);
+
+    useEffect(() => {
+        if (!isTranslateWorkspaceVisible && !faceScreenOpen) {
+            return;
+        }
+        if (!autoVoiceModeEnabled || Platform.OS === 'web' || recordingRef.current) {
             return;
         }
         void startVoiceInput({ autoMode: true });
-    }, [autoVoiceModeEnabled, isTranslateWorkspaceVisible, startVoiceInput]);
+    }, [autoVoiceModeEnabled, faceScreenOpen, isTranslateWorkspaceVisible, startVoiceInput]);
 
     return (
-        <SafeAreaView style={styles.root}>
-            <StatusBar style="light" />
+        <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.skyBg}>
+        <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
+            <StatusBar style="dark" />
             <ScrollView
                 ref={scrollViewRef}
-                contentContainerStyle={styles.scroll}
+                contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 96 }]}
                 keyboardShouldPersistTaps="handled"
             >
                 {/* ── 헤더 + 로그인(내정보) ── */}
                 <View style={styles.header}>
                     <Text style={styles.title}>{WORLDLINGO_APP_NAME}</Text>
-                    <Text style={styles.subtitle}>{getUiText(fromLang).subtitle}</Text>
+                    <Text style={styles.subtitle}>{getDisplayUiText().subtitle}</Text>
                     <View style={styles.versionPillRow}>
                         <View style={styles.versionPill}>
                             <Text style={styles.versionPillText}>{APP_VERSION_LABEL}</Text>
@@ -7239,18 +8106,18 @@ export default function App() {
                                 accessibilityLabel="worldlinco-translate-home-button"
                                 testID="worldlinco-translate-home-button"
                             >
-                                <Text style={styles.voipLaunchBtnText}>번역 홈</Text>
+                                <Text wlLocalized style={styles.voipLaunchBtnText}>{getFeatureUiText('home.translateHome')}</Text>
                             </Pressable>
                         ) : (
                             <Pressable style={styles.voipLaunchBtn} onPress={handlePressLoginButton}>
-                                <Text style={styles.voipLaunchBtnText}>로그인 / 회원가입</Text>
+                                <Text wlLocalized style={styles.voipLaunchBtnText}>{getFeatureUiText('home.loginSignup')}</Text>
                             </Pressable>
                         )}
                     </View>
                     {engine ? (
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>
-                                {offline ? getUiText(fromLang).offlineBadge : `🟢 ${engine}`}
+                                {offline ? getDisplayUiText().offlineBadge : `🟢 ${engine}`}
                             </Text>
                         </View>
                     ) : null}
@@ -7267,7 +8134,7 @@ export default function App() {
                                     <Text style={styles.myInfoBtnText}>👤 {userInfo.username || userInfo.email.split('@')[0]}</Text>
                                 </Pressable>
                                 <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-                                    <Text style={styles.logoutBtnText}>로그아웃</Text>
+                                    <Text wlLocalized style={styles.logoutBtnText}>{getFeatureUiText('home.logout')}</Text>
                                 </Pressable>
                             </>
                         ) : (
@@ -7308,70 +8175,10 @@ export default function App() {
                     ) : null}
                     {!userInfo ? (
                         <View style={styles.inlineAuthPanel} accessibilityLabel="worldlinco-inline-auth-panel" testID="worldlinco-inline-auth-panel">
-                            <View style={styles.inlineAuthHeaderRow}>
-                                <Text style={styles.inlineAuthTitle}>상단 빠른 로그인</Text>
-                                <Pressable
-                                    style={styles.inlineAuthModeChip}
-                                    onPress={toggleAuthModalMode}
-                                    accessibilityLabel="worldlinco-inline-auth-mode-toggle"
-                                    testID="worldlinco-inline-auth-mode-toggle"
-                                >
-                                    <Text style={styles.inlineAuthModeChipText}>{authModalMode === 'login' ? '회원가입 전환' : '로그인 전환'}</Text>
-                                </Pressable>
-                            </View>
+                            <Text style={styles.inlineAuthTitle}>로그인이 필요해요</Text>
                             <Text style={styles.inlineAuthHint}>
-                                여행 통번역과 레일 서비스 사용을 위해 여기서 바로 로그인합니다.
+                                여행 통번역·레일 서비스를 쓰려면 로그인하세요. 로그인·회원가입은 전용 화면에서 한 번에 진행됩니다.
                             </Text>
-                            {authModalMode === 'signup' ? (
-                                <>
-                                    <TextInput
-                                        style={styles.compactInput}
-                                        placeholder="사용자명"
-                                        placeholderTextColor={C.sub}
-                                        autoCapitalize="none"
-                                        showSoftInputOnFocus
-                                        value={signupUsername}
-                                        onChangeText={setSignupUsername}
-                                    />
-                                    <TextInput
-                                        style={styles.compactInput}
-                                        placeholder="이름(선택)"
-                                        placeholderTextColor={C.sub}
-                                        showSoftInputOnFocus
-                                        value={signupFullName}
-                                        onChangeText={setSignupFullName}
-                                    />
-                                    {renderSignupProfileSelectors()}
-                                </>
-                            ) : null}
-                            <TextInput
-                                style={styles.compactInput}
-                                placeholder="이메일"
-                                placeholderTextColor={C.sub}
-                                autoCapitalize="none"
-                                keyboardType="email-address"
-                                showSoftInputOnFocus
-                                accessibilityLabel="worldlinco-auth-email-input"
-                                testID="worldlinco-auth-email-input"
-                                value={loginEmail}
-                                onFocus={handleLoginEmailFocus}
-                                onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
-                                onChangeText={handleLoginEmailChange}
-                            />
-                            <TextInput
-                                style={styles.compactInput}
-                                placeholder="비밀번호"
-                                placeholderTextColor={C.sub}
-                                secureTextEntry
-                                showSoftInputOnFocus
-                                accessibilityLabel="worldlinco-auth-password-input"
-                                testID="worldlinco-auth-password-input"
-                                value={loginPw}
-                                onFocus={handleLoginPasswordFocus}
-                                onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
-                                onChangeText={handleLoginPasswordChange}
-                            />
-                            {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
                             {demoSessionMessage ? <Text style={styles.inlineAuthStatus}>{demoSessionMessage}</Text> : null}
                             <View style={styles.inlineAuthActionRow}>
                                 <Pressable
@@ -7379,24 +8186,19 @@ export default function App() {
                                     onPress={() => { void handleStartInstantDemoSession('chat'); }}
                                     disabled={demoSessionLoading || loginLoading}
                                     accessibilityRole="button"
-                                    accessibilityLabel="worldlinco-demo-session-start-button"
-                                    testID="worldlinco-demo-session-start-button"
+                                    accessibilityLabel="worldlinco-demo-session-start-button-inline"
+                                    testID="worldlinco-demo-session-start-button-inline"
                                 >
                                     <Text style={styles.inlineActionBtnText}>{demoSessionLoading ? '데모 연결 중...' : '데모 세션 시작'}</Text>
                                 </Pressable>
                                 <Pressable
-                                    style={[styles.translateBtn, loginLoading && styles.translateBtnDisabled, styles.inlineAuthSubmitBtn]}
-                                    onPress={authModalMode === 'login' ? handleLogin : handleSignup}
-                                    disabled={loginLoading}
+                                    style={[styles.translateBtn, styles.inlineAuthSubmitBtn]}
+                                    onPress={() => { setAuthModalMode('login'); setLoginError(''); setShowLogin(true); }}
                                     accessibilityRole="button"
-                                    accessibilityLabel={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
-                                    testID={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
+                                    accessibilityLabel="worldlinco-inline-open-login-button"
+                                    testID="worldlinco-inline-open-login-button"
                                 >
-                                    {loginLoading ? (
-                                        <ActivityIndicator color="#fff" size="small" />
-                                    ) : (
-                                        <Text style={styles.translateBtnText}>{authModalMode === 'login' ? '로그인' : '회원가입'}</Text>
-                                    )}
+                                    <Text style={styles.translateBtnText}>로그인 / 회원가입</Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -7407,114 +8209,29 @@ export default function App() {
                             <Text style={styles.myInfoText}>이메일: {userInfo.email}</Text>
                             <Text style={styles.myInfoText}>ID: {userInfo.id}</Text>
                             <Text style={styles.myInfoText}>보이스 ID: {voipIdentity || buildVoiceId(userInfo.id)}</Text>
-                            <Text style={styles.myInfoText}>기본 언어: {getLangLabelText(profilePreferredLanguage)} ({profilePreferredLanguage.toUpperCase()})</Text>
-                            <Text style={styles.myInfoText}>기본 국가: {resolveCountryFlag(profileCountryCode)} {resolveCountryName(profileCountryCode)} ({profileCountryCode})</Text>
-                            <Text style={styles.signupProfileLabel}>로그인 후 프로필 기본 언어</Text>
+                            <Text style={styles.myInfoText}>기본 언어: {getLangLabelText(profilePreferredLanguage)}</Text>
+                            <Text wlLocalized style={styles.myInfoText}>기본 국가: {formatCountryDisplay(profileCountryCode, resolveProfileDisplayLang(profileCountryCode))}</Text>
+                            <Text style={styles.signupProfileHint}>언어·국가 변경은 설정 탭에서만 가능합니다.</Text>
                             <Pressable
-                                style={styles.signupPickerTrigger}
-                                onPress={() => setProfileSelectionModal('language')}
-                                accessibilityLabel="worldlinco-myinfo-language-picker-trigger"
-                                testID="worldlinco-myinfo-language-picker-trigger"
+                                style={styles.inlineGhostBtn}
+                                onPress={() => { setShowMyInfo(false); setSettingsTabOpen(true); }}
+                                testID="worldlinco-myinfo-open-settings"
                             >
-                                <View>
-                                    <Text style={styles.signupPickerValue}>{getLangLabelText(profilePreferredLanguage)}</Text>
-                                    <Text style={styles.signupPickerMeta}>채팅/VoIP 기본 언어로 사용</Text>
-                                </View>
-                                <Text style={styles.signupPickerHint}>열기</Text>
+                                <Text style={styles.inlineGhostBtnText}>⚙️ 설정에서 국가·언어 변경</Text>
                             </Pressable>
-                            <Text style={styles.signupProfileLabel}>로그인 후 프로필 국가</Text>
-                            <Pressable
-                                style={styles.signupPickerTrigger}
-                                onPress={() => setProfileSelectionModal('country')}
-                                accessibilityLabel="worldlinco-myinfo-country-picker-trigger"
-                                testID="worldlinco-myinfo-country-picker-trigger"
-                            >
-                                <View>
-                                    <Text style={styles.signupPickerValue}>{resolveCountryFlag(profileCountryCode)} {resolveCountryName(profileCountryCode)}</Text>
-                                    <Text style={styles.signupPickerMeta}>국가 프로필과 지역 힌트에 사용</Text>
-                                </View>
-                                <Text style={styles.signupPickerHint}>열기</Text>
-                            </Pressable>
-                            <Text style={styles.signupProfileHint}>
-                                로그인 후에도 프로필 언어/국가를 바꿀 수 있어야 채팅 자동 번역과 VoIP 통역 기본값이 실제 사용자 상태를 따라갑니다.
-                            </Text>
-                            <Pressable
-                                style={[styles.inlineActionBtn, profileSaving && { opacity: 0.7 }]}
-                                onPress={() => { void handleSaveMyProfile(); }}
-                                disabled={profileSaving}
-                                accessibilityRole="button"
-                                accessibilityLabel="worldlinco-myinfo-save-button"
-                                testID="worldlinco-myinfo-save-button"
-                            >
-                                <Text style={styles.inlineActionBtnText}>{profileSaving ? '저장 중...' : '프로필 기본값 저장'}</Text>
-                            </Pressable>
-                            {profileMessage ? (
-                                <Text style={styles.myInfoText}>{profileMessage}</Text>
-                            ) : null}
+                            <View style={styles.myInfoActionRow}>
+                                <Pressable style={styles.inlineGhostBtn} onPress={openPasswordChange} testID="worldlinco-password-change-open">
+                                    <Text style={styles.inlineGhostBtnText}>🔒 비밀번호 변경</Text>
+                                </Pressable>
+                                {biometricLoginReady ? (
+                                    <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleToggleBiometricLogin(); }} testID="worldlinco-biometric-login-toggle">
+                                        <Text style={styles.inlineGhostBtnText}>{biometricLoginEnabled ? '👆 지문 로그인 해제' : '👆 지문 빠른 로그인 설정'}</Text>
+                                    </Pressable>
+                                ) : null}
+                            </View>
                             <Pressable style={styles.inlineActionBtn} onPress={handleShowPurchases}>
                                 <Text style={styles.inlineActionBtnText}>{myPurchasesLoading ? '⏳ 불러오는 중...' : myPurchases !== null ? '📋 내역 닫기' : '📋 구매/예약 내역'}</Text>
                             </Pressable>
-                            <Modal
-                                visible={profileSelectionModal !== null}
-                                transparent
-                                animationType="fade"
-                                onRequestClose={() => setProfileSelectionModal(null)}
-                            >
-                                <Pressable style={styles.langModalOverlay} onPress={() => setProfileSelectionModal(null)}>
-                                    <Pressable style={styles.langModalCard} onPress={() => { }} testID="worldlinco-myinfo-selection-modal">
-                                        <Text style={styles.langModalTitle}>
-                                            {profileSelectionModal === 'language' ? '프로필 기본 언어 선택' : '프로필 국가 선택'}
-                                        </Text>
-                                        <Text style={styles.signupModalSub}>
-                                            {profileSelectionModal === 'language'
-                                                ? `지원 언어 ${SUPPORTED_LANGUAGE_COUNT}개 전체를 열어서 선택합니다.`
-                                                : `서비스 국가 ${SIGNUP_COUNTRY_OPTION_CODES.length}개 전체를 열어서 선택합니다.`}
-                                        </Text>
-                                        <ScrollView style={styles.langModalList}>
-                                            {profileSelectionModal === 'language'
-                                                ? LANGS.map((lang) => (
-                                                    (() => {
-                                                        const active = lang.code === profilePreferredLanguage;
-                                                        return (
-                                                            <Pressable
-                                                                key={`myinfo-lang-${lang.code}`}
-                                                                style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                                                onPress={() => handleSelectProfileLanguage(lang.code)}
-                                                                testID={`worldlinco-myinfo-language-${lang.code}`}
-                                                            >
-                                                                <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>{lang.label}</Text>
-                                                                {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                                            </Pressable>
-                                                        );
-                                                    })()
-                                                ))
-                                                : SIGNUP_COUNTRY_OPTION_CODES.map((countryCode) => (
-                                                    (() => {
-                                                        const active = countryCode === profileCountryCode;
-                                                        return (
-                                                            <Pressable
-                                                                key={`myinfo-country-${countryCode}`}
-                                                                style={[styles.langModalOption, active && styles.langModalOptionActive]}
-                                                                onPress={() => handleSelectProfileCountry(countryCode)}
-                                                                testID={`worldlinco-myinfo-country-${countryCode}`}
-                                                            >
-                                                                <Text style={[styles.langModalOptionText, active && styles.langModalOptionTextActive]}>{resolveCountryFlag(countryCode)} {resolveCountryName(countryCode)}</Text>
-                                                                {active ? <Text style={styles.langModalCheck}>✓</Text> : null}
-                                                            </Pressable>
-                                                        );
-                                                    })()
-                                                ))}
-                                        </ScrollView>
-                                        <Pressable
-                                            style={styles.langModalCloseBtn}
-                                            onPress={() => setProfileSelectionModal(null)}
-                                            testID="worldlinco-myinfo-selection-close"
-                                        >
-                                            <Text style={styles.langModalCloseText}>닫기</Text>
-                                        </Pressable>
-                                    </Pressable>
-                                </Pressable>
-                            </Modal>
                             {myPurchases !== null && (
                                 <View style={styles.purchaseListWrap}>
                                     {myPurchases.length === 0 ? (
@@ -7562,140 +8279,46 @@ export default function App() {
                             </View>
                         </View>
                     </View>
-                ) : (
-                    <View style={styles.workspaceShell}>
-                        <View style={styles.workspaceHeaderCard}>
-                            <Text style={styles.workspaceHeaderTitle}>단일 작업창</Text>
-                            <Text style={styles.workspaceHeaderBody}>
-                                현재 화면에는 번역 홈 또는 선택한 레일 하나만 표시합니다. 모든 진입 버튼은 아래 상단 바에 고정합니다.
-                            </Text>
-                            <View style={styles.workspaceRailGrid}>
-                                <Pressable
-                                    style={[styles.workspaceRailCard, activeRailSection === null && styles.workspaceRailCardActive]}
-                                    onPress={() => {
-                                        setActiveRailSection(null);
-                                        setIsRailMenuOpen(false);
-                                    }}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="worldlinco-translate-home-button"
-                                    testID="worldlinco-translate-home-button"
-                                >
-                                    <Text style={styles.workspaceRailIcon}>🏠</Text>
-                                    <Text style={styles.workspaceRailTitle}>번역 홈</Text>
-                                    <Text style={styles.workspaceRailMeta} numberOfLines={1}>대면 통역</Text>
-                                </Pressable>
-                                {SECTION_RAIL_ITEMS.map((item) => (
-                                    <Pressable
-                                        key={`workspace-${item.key}`}
-                                        style={[styles.workspaceRailCard, activeRailSection === item.key && styles.workspaceRailCardActive]}
-                                        onPress={() => handlePressSectionRail(item.key)}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={buildSectionRailSelector(item.key)}
-                                        testID={buildSectionRailSelector(item.key)}
-                                    >
-                                        <Text style={styles.workspaceRailIcon}>{item.icon}</Text>
-                                        <Text style={styles.workspaceRailTitle}>{item.key === 'voip' ? '📞 VoIP 테스트' : item.label}</Text>
-                                        <Text style={styles.workspaceRailMeta} numberOfLines={1}>
-                                            {item.key === 'chat'
-                                                ? '채팅/친구'
-                                                : item.key === 'voip'
-                                                    ? '통역 통화'
-                                                    : item.key === 'song-mode'
-                                                        ? '노래 번역'
-                                                        : '주변/예약'}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        </View>
-                    </View>
-                )}
-
-                {showIncomingVoipBanner && pendingIncomingVoipCall ? (
-                    <View style={styles.voipIncomingBanner}>
-                        <View style={styles.voipIncomingBannerHeader}>
-                            <Text style={styles.voipIncomingBannerTitle}>수신 보이스톡 대기</Text>
-                            <Pressable onPress={() => restoreVoipRailState('incoming_banner_open')} style={styles.inlineGhostBtn}>
-                                <Text style={styles.inlineGhostBtnText}>VoIP 레일 열기</Text>
-                            </Pressable>
-                        </View>
-                        <Text style={styles.voipIncomingBannerBody}>
-                            {pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '상대방'} 님이 통화를 요청했습니다. 앱을 다시 열거나 다른 레일에 있어도 이 배너와 VoIP 레일에서 바로 이어받을 수 있습니다.
-                        </Text>
-                        <View style={styles.voipIncomingBannerMetaRow}>
-                            <Text style={styles.voipIncomingBannerMeta}>call_id: {pendingIncomingVoipCall.call_id}</Text>
-                            <Text style={styles.voipIncomingBannerMeta}>{formatUnifiedCallModeText(pendingIncomingVoipCall.requested_mode, pendingIncomingVoipCall.resolved_mode)}</Text>
-                        </View>
-                        {voipStatusMessage ? <Text style={styles.songModeMetaText}>{voipStatusMessage}</Text> : null}
-                        {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
-                        <View style={styles.voipLobbyActionRow}>
-                            <Pressable
-                                style={styles.inlineActionBtn}
-                                onPressIn={() => {
-                                    logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_IN', {
-                                        source_variant: 'incoming_banner',
-                                        pending_call_id: pendingIncomingVoipCall.call_id,
-                                    });
-                                }}
-                                onPressOut={() => {
-                                    logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_OUT', {
-                                        source_variant: 'incoming_banner',
-                                        pending_call_id: pendingIncomingVoipCall.call_id,
-                                    });
-                                }}
-                                onPress={() => handleIncomingAcceptPress('incoming_banner')}
-                                testID="worldlinco-voip-incoming-accept"
-                                accessibilityLabel="수신 보이스톡 받기"
-                            >
-                                <Text style={styles.inlineActionBtnText}>받기</Text>
-                            </Pressable>
-                            <Pressable
-                                style={styles.inlineGhostBtn}
-                                onPress={() => { void handleRejectIncomingVoipCall(); }}
-                                testID="worldlinco-voip-incoming-reject"
-                                accessibilityLabel="수신 보이스톡 거절"
-                            >
-                                <Text style={styles.inlineGhostBtnText}>거절</Text>
-                            </Pressable>
-                        </View>
-                    </View>
                 ) : null}
 
                 <Modal
                     visible={showFriendFolder}
                     transparent
                     animationType="slide"
-                    onRequestClose={() => setShowFriendFolder(false)}
+                    onRequestClose={() => handleCloseFriendFolder('modal_request_close')}
                 >
-                    <View style={styles.voipModalOverlay}>
+                    <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.voipModalOverlay}>
                         <View style={[styles.voipModalCard, { paddingTop: 0 }]}>
                             <View style={styles.modalCloseRow}>
-                                <Pressable onPress={() => setShowFriendFolder(false)} style={styles.friendModalCloseBtn}>
+                                <Pressable onPress={() => handleCloseFriendFolder('modal_close_button')} style={styles.friendModalCloseBtn}>
                                     <Text style={styles.friendModalCloseBtnText}>✕ 닫기</Text>
                                 </Pressable>
                             </View>
                             {userInfo ? (
-                                <FriendFolderScreen
-                                    userId={userInfo.id}
-                                    token={token ?? ''}
-                                    currentUserEmail={userInfo.email}
-                                    visible={showFriendFolder}
-                                    autoCallVoiceId={voipAutoCallVoiceId}
-                                    onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
-                                    onFriendSelected={(friend) => {
-                                        setVoipAutoCallVoiceId(null);
-                                        logUiPressProbe('VOIP_FRIEND_SELECTED', {
-                                            friend_id: friend.id,
-                                            friend_name: friend.friendUsername,
-                                            friend_phone: friend.friendPhone ?? null,
-                                            friend_voice_id: friend.friendVoiceId ?? null,
-                                        });
-                                        void handleStartFriendVoiceCall(friend);
-                                    }}
-                                />
+                                <View style={styles.friendModalBody}>
+                                    <FriendFolderScreen
+                                        userId={userInfo.id}
+                                        token={token ?? ''}
+                                        currentUserEmail={userInfo.email}
+                                        visible={showFriendFolder}
+                                        autoCallVoiceId={voipAutoCallVoiceId}
+                                        onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
+                                        onOpenMapDiscovery={handleOpenFriendMapFromFolder}
+                                        onFriendSelected={(friend) => {
+                                            setVoipAutoCallVoiceId(null);
+                                            logUiPressProbe('VOIP_FRIEND_SELECTED', {
+                                                friend_id: friend.id,
+                                                friend_name: friend.friendUsername,
+                                                friend_phone: friend.friendPhone ?? null,
+                                                friend_voice_id: friend.friendVoiceId ?? null,
+                                            });
+                                            void handleStartFriendVoiceCall(friend);
+                                        }}
+                                    />
+                                </View>
                             ) : null}
                         </View>
-                    </View>
+                    </ImageBackground>
                 </Modal>
 
                 <Modal
@@ -7716,7 +8339,7 @@ export default function App() {
                     animationType="slide"
                     onRequestClose={() => setShowFriendMapDiscovery(false)}
                 >
-                    <View style={styles.voipModalOverlay}>
+                    <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.voipModalOverlay}>
                         <View style={[styles.voipModalCard, { paddingTop: 0 }]}>
                             <View style={styles.modalCloseRow}>
                                 <Pressable onPress={() => setShowFriendMapDiscovery(false)} style={styles.friendModalCloseBtn}>
@@ -7733,86 +8356,157 @@ export default function App() {
                                 />
                             ) : null}
                         </View>
-                    </View>
+                    </ImageBackground>
                 </Modal>
 
                 {isTranslateWorkspaceVisible ? (
                     <>
-                        <View style={styles.travelModeBanner}>
-                            <Text style={styles.travelModeTitle}>여행 대면 통역 전용 화면</Text>
-                            <Text style={styles.travelModeBody}>
-                                이 홈 화면은 여행 중 서로 마주 보고 대화하는 번역 작업만 다룹니다. 채팅, VoIP, 노래, 예약은 상단 고정 레일에서 각각 독립 창으로 이동합니다.
-                            </Text>
+                        {/* ── 홈 런처 (mockup #1) ── */}
+                        <View style={styles.homeGreetingWrap}>
+                            <Text wlLocalized style={styles.homeGreeting}>{getFeatureUiText('home.greeting')}</Text>
+                            <Text wlLocalized style={styles.homeGreetingSub}>{getFeatureUiText('home.greetingSub')}</Text>
+                            <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
                         </View>
 
+                        <Pressable
+                            style={styles.faceHeroCard}
+                            onPress={() => setFaceScreenOpen(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-home-face-hero"
+                            testID="worldlinco-home-face-hero"
+                        >
+                            <Text wlLocalized style={styles.faceHeroTitle}>{getFeatureUiText('home.faceTitle')}</Text>
+                            <Text wlLocalized style={styles.faceHeroSub}>{getFeatureUiText('home.faceSub')}</Text>
+                            <View style={styles.faceHeroFlagRow}>
+                                <View style={styles.faceHeroLangCol}>
+                                    <Text style={styles.faceHeroFlag}>{homeFromFlag}</Text>
+                                    <Text style={styles.faceHeroLangLabel}>{currentFromLabel}</Text>
+                                </View>
+                                <Text style={styles.faceHeroSwap}>⇄</Text>
+                                <View style={styles.faceHeroLangCol}>
+                                    <Text style={styles.faceHeroFlag}>{homeToFlag}</Text>
+                                    <Text style={styles.faceHeroLangLabel}>{currentToLabel}</Text>
+                                </View>
+                            </View>
+                            <View style={[styles.faceHeroMic, autoVoiceModeEnabled && styles.faceHeroMicActive]}>
+                                <Text style={styles.faceHeroMicIcon}>🎙️</Text>
+                            </View>
+                            <Text wlLocalized style={styles.faceHeroCta}>
+                                {autoVoiceModeEnabled ? getFeatureUiText('home.faceCtaOn') : getFeatureUiText('home.faceCtaOff')}
+                            </Text>
+                        </Pressable>
+
+                        <View style={styles.homeQuickRow}>
+                            <Pressable
+                                style={styles.homeQuickBtn}
+                                onPress={() => setActiveRailSection('voip')}
+                                accessibilityRole="button"
+                                accessibilityLabel="worldlinco-home-quick-voip"
+                                testID="worldlinco-home-quick-voip"
+                            >
+                                <Text style={styles.homeQuickIcon}>📞</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text wlLocalized style={styles.homeQuickTitle}>{getFeatureUiText('home.quickVoip')}</Text>
+                                    <Text wlLocalized style={styles.homeQuickSub}>{getFeatureUiText('home.quickVoipSub')}</Text>
+                                </View>
+                            </Pressable>
+                            <Pressable
+                                style={styles.homeQuickBtn}
+                                onPress={() => setActiveRailSection('chat')}
+                                accessibilityRole="button"
+                                accessibilityLabel="worldlinco-home-quick-chat"
+                                testID="worldlinco-home-quick-chat"
+                            >
+                                <Text style={styles.homeQuickIcon}>💬</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text wlLocalized style={styles.homeQuickTitle}>{getFeatureUiText('home.quickChat')}</Text>
+                                    <Text wlLocalized style={styles.homeQuickSub}>{getFeatureUiText('home.quickChatSub')}</Text>
+                                </View>
+                            </Pressable>
+                        </View>
+
+                        <Pressable
+                            style={styles.homeFavRow}
+                            onPress={() => setHomeToolsExpanded((v) => !v)}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-home-tools-toggle"
+                            testID="worldlinco-home-tools-toggle"
+                        >
+                            <Text style={styles.homeFavIcon}>⭐</Text>
+                            <View style={{ flex: 1 }}>
+                                <Text wlLocalized style={styles.homeFavTitle}>{getFeatureUiText('home.toolsTitle')}</Text>
+                                <Text wlLocalized style={styles.homeFavSub}>{getFeatureUiText('home.toolsSub')}</Text>
+                            </View>
+                            <Text style={styles.homeFavChevron}>{homeToolsExpanded ? '∧' : '〉'}</Text>
+                        </Pressable>
+
+                        {homeToolsExpanded ? (
+                        <>
                         <View style={styles.translationHub}>
-                            {/* ── 원본 언어 ── */}
+                            {Platform.OS !== 'web' ? (
+                                <Pressable
+                                    style={[styles.faceConversationToggleBtn, autoVoiceModeEnabled && styles.faceConversationToggleBtnActive]}
+                                    onPress={() => { void handleToggleFaceConversation(); }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="worldlinco-face-conversation-toggle"
+                                    testID="worldlinco-face-conversation-toggle"
+                                >
+                                    <Text style={[styles.faceConversationToggleText, autoVoiceModeEnabled && styles.faceConversationToggleTextActive]}>
+                                        {autoVoiceModeEnabled
+                                            ? (getDisplayUiText().faceConversationOn ?? '🎙️ 대화 통역 ON')
+                                            : (getDisplayUiText().faceConversationOff ?? '대화 통역 OFF')}
+                                    </Text>
+                                </Pressable>
+                            ) : null}
+
+                            {Platform.OS !== 'web' && autoVoiceModeEnabled ? (
+                                <Text style={styles.faceVadHintText}>
+                                    {getDisplayUiText().faceVadHint ?? 'VoIP와 같이 말이 끝날 때까지 마이크가 켜져 있습니다.'}
+                                </Text>
+                            ) : null}
+
                             <View style={styles.labelRow}>
-                                <Text style={styles.label}>{getUiText(fromLang).sourceLang}</Text>
-                                <Text style={styles.gpsAutoBadge}>{gpsLangLoading ? '📍 위치 확인 중' : '🎤 음성 감지/수동'}</Text>
+                                <Text style={styles.label}>{getDisplayUiText().profileLanguageLabel ?? '내 언어 (프로필)'}</Text>
+                                <Text style={styles.gpsAutoBadge}>{gpsLangLoading ? '📍 위치 확인 중' : '🎙️ 자동 감지'}</Text>
                             </View>
                             {gpsStatus ? <Text style={styles.gpsStatusText}>{gpsStatus}</Text> : null}
-                            <Pressable style={styles.langAutoChip} onPress={() => setLangPickerFor('from')}>
+                            <View style={styles.langAutoChip}>
                                 <Text style={styles.langAutoChipValue}>{currentFromLabel}</Text>
-                                <Text style={styles.langAutoChipHint}>음성 감지/수동</Text>
-                            </Pressable>
+                                <Text style={styles.langAutoChipHint}>{getDisplayUiText().profileLanguageHint ?? '프로필 저장값'}</Text>
+                            </View>
 
                             {/* ── 입력 영역 ── */}
                             <View style={styles.inputBox}>
                                 <TextInput
                                     style={styles.textInput}
                                     multiline
-                                    placeholder={getUiText(fromLang).inputPlaceholder}
+                                    placeholder={getDisplayUiText().inputPlaceholder}
                                     placeholderTextColor={C.sub}
                                     showSoftInputOnFocus
                                     value={inputText}
                                     onChangeText={setInputText}
                                 />
-                                <View style={styles.inputBtnRow}>
-                                    {/* 음성 입력 버튼: 모바일/웹 공통 */}
-                                    <Pressable
-                                        style={[styles.voiceMicBtn, isVoiceRecording && styles.voiceMicBtnActive]}
-                                        onPress={isVoiceRecording ? () => { void stopVoiceInput({ suppressAutoRestart: true }); } : () => { void startVoiceInput(); }}
-                                        disabled={voiceSttLoading}
-                                    >
-                                        <Text style={styles.speakIcon}>
-                                            {voiceSttLoading ? '⏳' : isVoiceRecording ? '⏹️' : '🎤'}
-                                        </Text>
-                                    </Pressable>
-                                    {inputText.length > 0 && (
+                                {inputText.length > 0 ? (
+                                    <View style={styles.inputBtnRow}>
                                         <Pressable style={styles.speakBtn} onPress={() => handleSpeak(inputText, fromLang)}>
                                             <Text style={styles.speakIcon}>🔊</Text>
                                         </Pressable>
-                                    )}
-                                </View>
+                                    </View>
+                                ) : null}
                             </View>
 
-                            {/* ── 스왑 버튼(수동 번역 버튼 숨김) ── */}
-                            <View style={styles.actionRow}>
-                                <Pressable style={styles.swapBtn} onPress={handleSwap}>
-                                    <Text style={styles.swapText}>{getUiText(fromLang).swap}</Text>
-                                </Pressable>
-                            </View>
-
-                            {Platform.OS !== 'web' && (
+                            {Platform.OS !== 'web' && !autoVoiceModeEnabled ? (
                                 <View style={styles.autoVoiceModeWrap}>
-                                    <Text style={styles.autoVoiceModeStatus}>{getUiText(fromLang).manualVoiceOnlyNotice}</Text>
+                                    <Text style={styles.autoVoiceModeStatus}>{getDisplayUiText().manualVoiceOnlyNotice}</Text>
                                 </View>
-                            )}
+                            ) : null}
                         </View>
 
                         <View>
-                            {/* ── 번역 언어 ── */}
-                            <Text style={styles.label}>{getUiText(fromLang).targetLang}</Text>
-                            <Pressable style={styles.langAutoChip} onPress={() => setLangPickerFor('to')}>
-                                <Text style={styles.langAutoChipValue}>{currentToLabel}</Text>
-                                <Text style={styles.langAutoChipHint}>{getUiText(fromLang).manualLanguageHint}</Text>
-                            </Pressable>
-
                             {/* ── 결과 영역 ── */}
                             <View style={[styles.inputBox, styles.resultBox]}>
                                 <Text style={resultText ? styles.resultText : styles.resultPlaceholder}>
-                                    {resultText || getUiText(fromLang).resultPlaceholder}
+                                    {resultText || getDisplayUiText().resultPlaceholder}
                                 </Text>
                                 {resultText.length > 0 && (
                                     <Pressable style={styles.speakBtn} onPress={() => handleSpeak(resultText, toLang)}>
@@ -7821,14 +8515,14 @@ export default function App() {
                                 )}
                             </View>
                             <View style={styles.ocrCard}>
-                                <Text style={styles.ocrTitle}>{getUiText(fromLang).ocrTitle}</Text>
-                                <Text style={styles.ocrSubtitle}>{getUiText(fromLang).ocrSubtitle}</Text>
+                                <Text style={styles.ocrTitle}>{getDisplayUiText().ocrTitle}</Text>
+                                <Text style={styles.ocrSubtitle}>{getDisplayUiText().ocrSubtitle}</Text>
                                 <Pressable
                                     style={[styles.inlineActionBtn, ocrLoading && styles.inlineGhostBtnDisabled]}
                                     onPress={handlePickImageOcr}
                                     disabled={ocrLoading}
                                 >
-                                    {ocrLoading ? <ActivityIndicator color="#79c0ff" size="small" /> : <Text style={styles.inlineActionBtnText}>{getUiText(fromLang).ocrPickImage}</Text>}
+                                    {ocrLoading ? <ActivityIndicator color="#79c0ff" size="small" /> : <Text style={styles.inlineActionBtnText}>{getDisplayUiText().ocrPickImage}</Text>}
                                 </Pressable>
                                 {ocrImageName ? (
                                     <View style={styles.mediaMetaCard}>
@@ -7839,24 +8533,22 @@ export default function App() {
                                         <View style={styles.mediaMetaBody}>
                                             <Text style={styles.mediaMetaTitle}>{ocrImageName}</Text>
                                             <View style={styles.mediaBadgeRow}>
-                                                <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>{getLangLabel(fromLang)}</Text></View>
-                                                <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>{getLangLabel(toLang)}</Text></View>
                                                 <View style={styles.mediaBadge}><Text style={styles.mediaBadgeText}>OCR</Text></View>
                                             </View>
-                                            <Text style={styles.songModeMetaText}>{getUiText(fromLang).ocrSelectedFile.replace('{file}', ocrImageName)}</Text>
+                                            <Text style={styles.songModeMetaText}>{(getDisplayUiText().ocrSelectedFile ?? '선택 파일: {file}').replace('{file}', ocrImageName ?? '')}</Text>
                                         </View>
                                     </View>
                                 ) : null}
                                 {ocrError ? <Text style={styles.errorText}>{ocrError}</Text> : null}
                                 {ocrExtractedText ? (
                                     <View style={styles.ocrPreviewBox}>
-                                        <Text style={styles.successTitle}>{getUiText(fromLang).ocrExtractedTitle}</Text>
+                                        <Text style={styles.successTitle}>{getDisplayUiText().ocrExtractedTitle}</Text>
                                         <Text style={styles.successText}>{ocrExtractedText}</Text>
                                     </View>
                                 ) : null}
                                 {ocrTranslatedText ? (
                                     <View style={styles.ocrPreviewBox}>
-                                        <Text style={styles.successTitle}>{getUiText(fromLang).ocrTranslatedTitle}</Text>
+                                        <Text style={styles.successTitle}>{getDisplayUiText().ocrTranslatedTitle}</Text>
                                         <Text style={styles.successText}>{ocrTranslatedText}</Text>
                                     </View>
                                 ) : null}
@@ -7866,12 +8558,14 @@ export default function App() {
                             {offline && (
                                 <View style={styles.offlineBanner}>
                                     <Text style={styles.offlineText}>
-                                        {getUiText(fromLang).offlineMsg}
+                                        {getDisplayUiText().offlineMsg}
                                     </Text>
                                 </View>
                             )}
 
                         </View>
+                        </>
+                        ) : null}
                     </>
                 ) : null}
 
@@ -7887,86 +8581,63 @@ export default function App() {
                         }}
                         style={[styles.sectionCard, activeRailSection === 'chat' && styles.sectionCardActive]}
                     >
-                        <Text style={styles.sectionTitle}>💬 채팅 + 친구 허브</Text>
-                        <Text style={styles.sectionSub}>채팅방, 친구 목록, 친구 찾기를 채팅 레일 안에서 독립적으로 여는 허브입니다.</Text>
                         {token && userInfo ? (
-                            selectedChatRoom ? (
-                                <ChatRoomScreen
-                                    apiBaseUrl={API_BASE}
-                                    token={token}
-                                    userId={userInfo.id}
-                                    room={selectedChatRoom}
-                                    visible={isChatRailSectionVisible}
-                                    refreshKey={chatRefreshKey}
-                                    onBack={() => {
-                                        setSelectedChatRoom(null);
-                                        setChatRefreshKey((prev) => prev + 1);
-                                    }}
-                                    onRoomChanged={() => setChatRefreshKey((prev) => prev + 1)}
-                                />
-                            ) : (
                                 <>
-                                    <ChatRoomListScreen
-                                        apiBaseUrl={API_BASE}
-                                        token={token}
-                                        userId={userInfo.id}
-                                        visible={isChatRailSectionVisible}
-                                        refreshKey={chatRefreshKey}
-                                        onOpenRoom={handleOpenChatRoom}
-                                        autoCallVoiceId={voipAutoCallVoiceId}
-                                        onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
-                                        onStartFriendVoiceCall={(friend) => void handleStartFriendVoiceCall(friend)}
-                                    />
-                                    <View style={styles.sectionCard}>
-                                        <Text style={styles.sectionTitle}>👥 친구 / 친구 찾기</Text>
-                                        <Text style={styles.sectionSub}>채팅 흐름을 끊지 않고 같은 레일에서 친구 목록과 주변 친구 찾기를 엽니다.</Text>
-                                        <View style={styles.socialHubRow}>
+                                    <Text wlLocalized style={[styles.sectionTitle, { color: '#1E6FE0' }]}>{getFeatureUiText('chat.hubTitle')}</Text>
+                                    <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
+                                        <View style={styles.actionTileGrid2}>
                                             <Pressable
-                                                style={[styles.socialHubBtn, showFriendFolder && styles.socialHubBtnActive]}
-                                                onPress={() => handlePressFriendEntry('friend-folder')}
+                                                style={styles.gridTile}
+                                                onPress={() => setVoipFriendsDirectoryVisible(true)}
                                                 accessibilityRole="button"
-                                                accessibilityLabel="친구 목록 열기"
-                                                testID="worldlinco-chat-friend-folder-open"
+                                                accessibilityLabel={getFeatureUiText('chat.hubVoipFriends')}
+                                                testID="worldlinco-chat-action-voip-friends"
                                             >
-                                                <Text style={styles.socialHubIcon}>👥</Text>
-                                                <Text style={styles.socialHubTitle}>친구</Text>
-                                                <Text style={styles.socialHubMeta}>친구 목록과 보이스톡 대상을 확인합니다.</Text>
+                                                <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>📡</Text></View>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubVoipFriends')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubVoipFriendsSub')}</Text>
                                             </Pressable>
-                                            <View style={styles.socialHubBtnPassive}>
-                                                <Text style={styles.socialHubIcon}>🗺️</Text>
-                                                <Text style={styles.socialHubTitle}>주변 친구 자동 감지</Text>
-                                                <Text style={styles.socialHubMeta}>앱 사용자를 거리순으로 표시합니다. km 제한 없이 백그라운드에서 감지·알림합니다.</Text>
-                                            </View>
+                                            <Pressable
+                                                style={styles.gridTile}
+                                                onPress={() => setContactsDirectoryVisible(true)}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={getFeatureUiText('chat.hubPhoneFind')}
+                                                testID="worldlinco-chat-action-phone"
+                                            >
+                                                <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>📇</Text></View>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubPhoneFind')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubPhoneFindSub')}</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                style={styles.gridTile}
+                                                onPress={() => handleOpenFriendMapFromFolder()}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={getFeatureUiText('chat.hubMapFind')}
+                                                testID="worldlinco-chat-action-map"
+                                            >
+                                                <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>🗺️</Text></View>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubMapFind')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubMapFindSub')}</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                style={styles.gridTile}
+                                                onPress={() => {
+                                                    setShowFriendFolder(false);
+                                                    setGroupComposerSignal((n) => n + 1);
+                                                }}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={getFeatureUiText('chat.hubGroup')}
+                                                testID="worldlinco-chat-action-group"
+                                            >
+                                                <View style={[styles.gridTileIcon, { backgroundColor: '#1E6FE0' }]}><Text style={styles.gridTileEmoji}>👥</Text></View>
+                                                <Text wlLocalized style={styles.gridTileLabel}>{getFeatureUiText('chat.hubGroup')}</Text>
+                                                <Text wlLocalized style={styles.gridTileSub}>{getFeatureUiText('chat.hubGroupSub')}</Text>
+                                            </Pressable>
                                         </View>
-                                        {showFriendFolder && userInfo ? (
-                                            <View style={styles.sectionCard}>
-                                                <Text style={styles.sectionTitle}>👥 친구 목록</Text>
-                                                <Text style={styles.sectionSub}>채팅 레일 안에서 바로 친구를 선택하고 보이스톡으로 이어집니다.</Text>
-                                                <FriendFolderScreen
-                                                    userId={userInfo.id}
-                                                    token={token}
-                                                    currentUserEmail={userInfo.email}
-                                                    visible={isChatRailSectionVisible && showFriendFolder}
-                                                    embeddedInScrollView
-                                                    autoCallVoiceId={voipAutoCallVoiceId}
-                                                    onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
-                                                    onFriendSelected={(friend) => {
-                                                        setVoipAutoCallVoiceId(null);
-                                                        logUiPressProbe('VOIP_FRIEND_SELECTED', {
-                                                            friend_id: friend.id,
-                                                            friend_name: friend.friendUsername,
-                                                            friend_phone: friend.friendPhone ?? null,
-                                                            friend_voice_id: friend.friendVoiceId ?? null,
-                                                        });
-                                                        void handleStartFriendVoiceCall(friend);
-                                                    }}
-                                                />
-                                            </View>
-                                        ) : null}
                                         {showFriendMapDiscovery && userInfo ? (
                                             <View style={styles.sectionCard}>
-                                                <Text style={styles.sectionTitle}>🗺️ 주변 친구 찾기</Text>
-                                                <Text style={styles.sectionSub}>근처 사용자 탐색과 친구 수락 흐름을 채팅 레일 안에서 이어갑니다.</Text>
+                                                <Text wlLocalized style={styles.sectionTitle}>{getFeatureUiText('chat.hubNearbyTitle')}</Text>
+                                                <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('chat.hubNearbySub')}</Text>
                                                 <FriendMapDiscoveryScreen
                                                     token={token}
                                                     nickname={userInfo.username || userInfo.email.split('@')[0]}
@@ -7976,9 +8647,21 @@ export default function App() {
                                                 />
                                             </View>
                                         ) : null}
-                                    </View>
+                                    <ChatRoomListScreen
+                                        apiBaseUrl={API_BASE}
+                                        token={token}
+                                        userId={userInfo.id}
+                                        fromLang={fromLang}
+                                        toLang={toLang}
+                                        visible={isChatRailSectionVisible}
+                                        refreshKey={chatRefreshKey}
+                                        onOpenRoom={handleOpenChatRoom}
+                                        autoCallVoiceId={showFriendFolder ? null : voipAutoCallVoiceId}
+                                        onAutoCallConsumed={() => setVoipAutoCallVoiceId(null)}
+                                        onStartFriendVoiceCall={(friend) => void handleStartFriendVoiceCall(friend)}
+                                        openGroupSignal={groupComposerSignal}
+                                    />
                                 </>
-                            )
                         ) : (
                             renderSectionConnectionCard({
                                 sectionKey: 'chat',
@@ -7991,62 +8674,7 @@ export default function App() {
                     </View>
                 ) : null}
 
-                {voipCallInitResponse && !isVoipRailSectionVisible ? (
-                    <View style={styles.voipActiveCallBanner}>
-                        <View style={styles.voipIncomingBannerHeader}>
-                            <Text style={styles.voipIncomingBannerTitle}>실시간 VoIP 통화 유지 중</Text>
-                            <Pressable onPress={() => restoreVoipRailState('active_call_banner_return')} style={styles.inlineActionBtn}>
-                                <Text style={styles.inlineActionBtnText}>통화 화면 복귀</Text>
-                            </Pressable>
-                        </View>
-                        <Text style={styles.voipIncomingBannerBody}>
-                            현재 통화는 백그라운드로 유지되고 있습니다. 다른 레일을 보다가도 VoIP 레일로 돌아오면 같은 통화 화면 상태를 이어서 확인할 수 있습니다.
-                        </Text>
-                        <View style={styles.voipIncomingBannerMetaRow}>
-                            <Text style={styles.voipIncomingBannerMeta}>call_id: {voipCallInitResponse.call_id}</Text>
-                            <Text style={styles.voipIncomingBannerMeta}>{formatUnifiedCallModeText(voipCallInitResponse.requested_mode, voipCallInitResponse.resolved_mode)}</Text>
-                        </View>
-                    </View>
-                ) : null}
-
-                {voipCallInitResponse ? (
-                    <View
-                        onLayout={(event) => {
-                            if (isVoipRailSectionVisible) {
-                                railSectionOffsetRef.current.voip = event.nativeEvent.layout.y;
-                            }
-                        }}
-                        style={isVoipRailSectionVisible ? styles.voipRailLiveScreenWrap : styles.voipPersistentCallHiddenHost}
-                        pointerEvents={isVoipRailSectionVisible ? 'auto' : 'none'}
-                    >
-                        {isVoipRailSectionVisible ? (
-                            <>
-                                <Text style={styles.sectionTitle}>📞 실시간 VoIP 통화</Text>
-                                <Text style={styles.sectionSub}>활성 통화 화면을 유지한 채 다른 레일로 이동했다가 다시 돌아와도 같은 세션을 이어서 보여줍니다.</Text>
-                            </>
-                        ) : null}
-                        <View style={isVoipRailSectionVisible ? styles.voipModalScreenWrap : styles.voipPersistentCallHiddenScreenWrap}>
-                            <VoipCallErrorBoundary
-                                key={voipCallInitResponse.call_id}
-                                onRecover={handleReturnToVoipDialer}
-                            >
-                                <VoIPCallScreen
-                                    callInitResponse={voipCallInitResponse}
-                                    calleePhone={voipActiveProfile?.nickname || voipCallInitResponse.display_label || voipPhone.trim() || '보이스톡 연결'}
-                                    participantProfile={voipActiveProfile ?? undefined}
-                                    apiBaseUrl={API_BASE}
-                                    authToken={token}
-                                    localSourceLang={effectiveVoipSourceLang}
-                                    localTargetLang={effectiveVoipTargetLang}
-                                    regionHint={resolveActiveRegionHint(effectiveVoipSourceLang)}
-                                    onHangup={handleReturnToVoipDialer}
-                                />
-                            </VoipCallErrorBoundary>
-                        </View>
-                    </View>
-                ) : null}
-
-                {isVoipRailSectionVisible ? (
+                {isVoipRailSectionVisible && !voipCallInitResponse ? (
                     <View
                         onLayout={(event) => {
                             if (!voipCallInitResponse) {
@@ -8058,201 +8686,144 @@ export default function App() {
                         }}
                         style={[styles.sectionCard, activeRailSection === 'voip' && styles.sectionCardActive]}
                     >
-                        <Text style={styles.sectionTitle}>💬 채팅 중심 통역 허브</Text>
-                        <Text style={styles.sectionSub}>기본 사용은 채팅/번역채팅으로 두고, 실시간 VoIP 통역 통화는 프리미엄 구독으로 분리합니다.</Text>
-                        <CallModePolicyBanner />
-                        <Text style={styles.songModeMetaText}>현재 통화 모드: {callModeLabel}</Text>
-                        <View style={styles.voipQuickMetaRow}>
-                            <Text style={styles.voipQuickMetaText}>현재 버전: {APP_VERSION_LABEL}</Text>
-                            <Text style={styles.voipQuickMetaText}>상태: {token ? '로그인 완료' : '로그인 필요'}</Text>
-                            <Text style={styles.voipQuickMetaText}>VoIP 플랜: {effectiveVoipPlan ? (isInstantDemoSession && !activeVoipPlan ? '데모 세션' : MONETIZATION_PLAN_CONFIG[effectiveVoipPlan].shortLabel) : '미가입'}</Text>
-                        </View>
-                        {showIncomingVoipRailCard ? (
-                            <View style={styles.voipIncomingRailCard}>
-                                <Text style={styles.sectionTitle}>📲 수신 보이스톡</Text>
-                                <Text style={styles.sectionSub}>수신 프롬프트를 모달 대신 VoIP 레일 상단 카드로 고정했습니다. 여기서 바로 수락하거나 거절할 수 있습니다.</Text>
-                                <View style={styles.voipProfileCard}>
-                                    <Text style={styles.voipProfileTitle}>{voipActiveProfile?.countryFlag || '🌐'} {voipActiveProfile?.nickname || pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '수신 통화'}</Text>
-                                    <Text style={styles.voipProfileMeta}>발신자: {pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '알 수 없음'}</Text>
-                                    <Text style={styles.voipProfileMeta}>보이스 ID: {pendingIncomingVoipCall.caller_voice_id || pendingIncomingVoipCall.display_label || 'unknown-voice-id'}</Text>
-                                    <Text style={styles.voipProfileMeta}>call_id: {pendingIncomingVoipCall.call_id}</Text>
-                                    <Text style={styles.voipProfileMeta}>{formatUnifiedCallModeText(pendingIncomingVoipCall.requested_mode, pendingIncomingVoipCall.resolved_mode)}</Text>
-                                    <Text style={styles.voipProfileMeta}>relay: {pendingIncomingVoipCall.auto_relay_requested ? '1' : '0'}/{pendingIncomingVoipCall.auto_relay_applied ? '1' : '0'}</Text>
-                                </View>
-                                {voipStatusMessage ? <Text style={styles.songModeMetaText}>{voipStatusMessage}</Text> : null}
-                                {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
-                                <View style={styles.voipLobbyActionRow}>
+                        {token && userInfo ? (
+                            <>
+                                <BidirectionalLanguagePairBadge
+                                    fromLang={effectiveVoipSourceLang}
+                                    toLang={effectiveVoipTargetLang}
+                                />
+                            <VoipPhoneWorkspaceSection
+                                activeTab={voipWorkspaceTab}
+                                onTabChange={setVoipWorkspaceTab}
+                                recentMissedCount={recentMissedCallCount}
+                                contactsPane={(
+                                    <>
+                                        <ContactsDirectoryModal
+                                            visible={isVoipRailSectionVisible && voipWorkspaceTab === 'contacts'}
+                                            embedded
+                                            onClose={() => { }}
+                                            apiBase={API_BASE}
+                                            inviterName={userInfo.username || userInfo.email?.split('@')[0] || ''}
+                                            loadFriends={loadFriendsForDirectory}
+                                            onRegularCall={(contact) => { void handleRegularCallContact(contact); }}
+                                            onVoipCall={handleVoipCallContact}
+                                            onChat={(contact, friend) => { void handleChatContact(contact, friend); }}
+                                        />
+                                        <VoipFriendsDirectoryModal
+                                            embedded
+                                            visible={isVoipRailSectionVisible && voipWorkspaceTab === 'contacts'}
+                                            onClose={() => { }}
+                                            userId={userInfo.id}
+                                            token={token}
+                                            onVoipCall={(friend) => { void handleStartFriendVoiceCall(friend); }}
+                                            onChat={(friend) => { void handleOpenFriendChatFromDirectory(friend); }}
+                                        />
+                                    </>
+                                )}
+                                recentsPane={(
+                                    <RecentCallsSection
+                                        entries={callHistoryEntries}
+                                        loading={callHistoryLoading}
+                                        onRefresh={() => { void refreshCallHistory(); }}
+                                        onCallAgain={(entry) => { void handleRecentCallAgain(entry); }}
+                                        onClear={() => { void clearCallHistory().then(() => setCallHistoryEntries([])); }}
+                                    />
+                                )}
+                                keypadPane={(
+                                    <DialpadSection
+                                        initialNumber={voipPhone}
+                                        onCall={(phoneNumber) => { void handleDialpadPstnCall(phoneNumber); }}
+                                    />
+                                )}
+                            />
+                            </>
+                        ) : null}
+                        {token && userInfo && !effectiveVoipPlan ? (
+                            <View style={styles.voipValidationExitCard}>
+                                <Text style={styles.voipValidationExitTitle}>
+                                    {voipValidationOverride
+                                        ? '🧪 검증 모드 ON — 구독 없이 통역통화 테스트'
+                                        : '통역통화 테스트 출구'}
+                                </Text>
+                                {voipValidationOverride ? (
+                                    <Text style={styles.voipValidationExitSub}>
+                                        친구에게 📡 통역통화를 누르면 월정액 없이 발신됩니다. Phase7 오디오 격리 검증용입니다.
+                                    </Text>
+                                ) : (
+                                    <Text style={styles.voipValidationExitSub}>
+                                        Lite/Pro 없이도 정합성·오디오 격리(7.6) 검증용 발신을 허용합니다.
+                                    </Text>
+                                )}
+                                <BidirectionalLanguagePairBadge fromLang={effectiveVoipSourceLang} toLang={effectiveVoipTargetLang} />
+                                {voipValidationOverride ? (
                                     <Pressable
-                                        style={styles.inlineActionBtn}
-                                        onPressIn={() => {
-                                            logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_IN', {
-                                                source_variant: 'rail_card',
-                                                pending_call_id: pendingIncomingVoipCall.call_id,
-                                            });
+                                        style={styles.voipValidationExitOffBtn}
+                                        onPress={() => {
+                                            setVoipValidationOverride(false);
+                                            voipValidationFriendCallBypassRef.current = false;
+                                            void persistVoipValidationFriendCallBypass(false);
+                                            setPremiumStatusMessage('');
+                                            setVoipInitError('');
                                         }}
-                                        onPressOut={() => {
-                                            logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_OUT', {
-                                                source_variant: 'rail_card',
-                                                pending_call_id: pendingIncomingVoipCall.call_id,
-                                            });
-                                        }}
-                                        onPress={() => handleIncomingAcceptPress('rail_card')}
-                                        testID="worldlinco-voip-incoming-accept"
-                                        accessibilityLabel="수신 보이스톡 받기"
+                                        testID="worldlinco-voip-validation-test-off"
                                     >
-                                        <Text style={styles.inlineActionBtnText}>받기</Text>
+                                        <Text style={styles.voipValidationExitOffBtnText}>검증 모드 끄기</Text>
                                     </Pressable>
+                                ) : (
                                     <Pressable
-                                        style={styles.inlineGhostBtn}
-                                        onPress={() => { void handleRejectIncomingVoipCall(); }}
-                                        testID="worldlinco-voip-incoming-reject"
-                                        accessibilityLabel="수신 보이스톡 거절"
+                                        style={styles.voipValidationBypassBtn}
+                                        onPress={handleVoipValidationOpenPress}
+                                        testID="worldlinco-voip-validation-test-open"
                                     >
-                                        <Text style={styles.inlineGhostBtnText}>거절</Text>
+                                        <Text style={styles.voipValidationBypassBtnText}>검증용 통역통화 테스트 열기</Text>
                                     </Pressable>
-                                </View>
+                                )}
                             </View>
                         ) : null}
-                        {isVoipRailLobbyVisible ? (
-                            <View style={styles.voipRailWorkspaceCard}>
-                                <Text style={styles.sectionTitle}>📞 VoIP 준비 화면</Text>
-                                <Text style={styles.sectionSub}>통화 시작 전 설정, 친구 진입, 최근 감사 로그를 이 레일 안에서 확인합니다.</Text>
-                                <Text style={styles.voipLobbyModeText}>현재 통화 모드: {callModeLabel}</Text>
-                                <Text style={styles.voipLobbyFlowHint}>순서: 채팅 레일에서 친구 등록 또는 수락 → 친구 목록 선택 → 보이스톡 시작</Text>
-                                <View style={styles.voipLobbyActionRow}>
-                                    <Pressable
-                                        style={styles.inlineActionBtn}
-                                        onPress={() => {
-                                            setActiveRailSection('chat');
-                                            setShowFriendFolder(true);
-                                            setShowFriendMapDiscovery(false);
-                                        }}
-                                        testID="worldlinco-voip-lobby-friend-folder-open"
-                                        accessibilityLabel="친구 목록 열기"
-                                    >
-                                        <Text style={styles.inlineActionBtnText}>친구 목록 열기</Text>
-                                    </Pressable>
-                                    <Pressable
-                                        style={styles.inlineGhostBtn}
-                                        onPress={() => {
-                                            setActiveRailSection('chat');
-                                            setShowFriendFolder(false);
-                                            setShowFriendMapDiscovery(true);
-                                        }}
-                                    >
-                                        <Text style={styles.inlineGhostBtnText}>친구 찾기 열기</Text>
-                                    </Pressable>
-                                    <Pressable
-                                        style={styles.inlineGhostBtn}
-                                        onPress={handleCloseVoipTester}
-                                        testID="worldlinco-voip-lobby-close"
-                                        accessibilityLabel="준비 화면 닫기"
-                                    >
-                                        <Text style={styles.inlineGhostBtnText}>준비 화면 닫기</Text>
-                                    </Pressable>
-                                </View>
-                                <View style={styles.voipProfileCard}>
-                                    <Text style={styles.voipProfileTitle}>{currentVoipProfile.countryFlag} {currentVoipProfile.nickname}</Text>
-                                    <Text style={styles.voipProfileMeta}>닉네임: {currentVoipProfile.nickname}</Text>
-                                    <Text style={styles.voipProfileMeta}>기본 언어: {resolveLanguageLabel(currentVoipProfile.preferredLanguage)}</Text>
-                                    <Text style={styles.voipProfileMeta}>보이스 ID: {currentVoipProfile.voiceId}</Text>
-                                </View>
+                        {token && userInfo && (voipInitError || premiumStatusMessage || voipInitLoading) ? (
+                            <View style={styles.voipStatusBanner}>
+                                {premiumStatusMessage ? (
+                                    <Text style={styles.voipStatusBannerText}>{premiumStatusMessage}</Text>
+                                ) : null}
                                 {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
-                                {voipInitLoading ? <ActivityIndicator color="#58c9ff" size="small" style={styles.voipLobbyLoading} /> : null}
-                                {voipAuditCallId || voipAuditEvents.length ? (
-                                    <View style={styles.voipAuditCard}>
-                                        <View style={styles.voipAuditHeaderRow}>
-                                            <Text style={styles.voipAuditTitle}>최근 통화 감사 로그</Text>
-                                            {voipAuditCallId ? (
-                                                <Pressable
-                                                    style={styles.inlineGhostBtn}
-                                                    onPress={() => {
-                                                        void refreshVoipAudit(voipAuditCallId);
-                                                    }}
-                                                >
-                                                    <Text style={styles.inlineGhostBtnText}>{voipAuditLoading ? '갱신 중...' : '새로고침'}</Text>
-                                                </Pressable>
-                                            ) : null}
-                                        </View>
-                                        {voipAuditError ? <Text style={styles.errorText}>{voipAuditError}</Text> : null}
-                                        {voipAuditEvents.length ? voipAuditEvents.map((event) => (
-                                            <View key={`rail-audit-${event.id}-${event.created_at}`} style={styles.voipAuditEventRow}>
-                                                <Text style={styles.voipAuditEventTitle}>{event.event_type}</Text>
-                                                <Text style={styles.voipAuditEventMeta}>{formatUnifiedCallModeText(event.requested_mode, event.resolved_mode)}{event.call_route ? ` · ${event.call_route}` : ''}</Text>
-                                                <Text style={styles.voipAuditEventMeta}>{event.created_at}{event.status ? ` · 상태 ${event.status}` : ''}{event.error_code ? ` · 오류 ${event.error_code}` : ''}</Text>
-                                            </View>
-                                        )) : (
-                                            <Text style={styles.voipAuditEmptyText}>{voipAuditLoading ? '감사 로그를 불러오는 중입니다.' : '통화를 시작하면 감사 로그가 여기에 표시됩니다.'}</Text>
-                                        )}
-                                    </View>
+                                {!voipValidationOverride && (voipInitError.includes('월정액') || voipInitError.includes('Lite') || voipInitError.includes('Pro')) ? (
+                                    <Pressable
+                                        style={styles.voipValidationBypassBtn}
+                                        onPress={handleVoipValidationOpenPress}
+                                        testID="worldlinco-voip-validation-from-error"
+                                    >
+                                        <Text style={styles.voipValidationBypassBtnText}>검증 모드로 다시 시도</Text>
+                                    </Pressable>
+                                ) : null}
+                                {voipInitLoading ? (
+                                    <ActivityIndicator color="#1e6fe0" size="small" style={styles.voipLobbyLoading} />
                                 ) : null}
                             </View>
                         ) : null}
+                        {/* VoIP 언어 지정 UI 비노출 — 회원가입·설정 프로필 언어가 SSOT(양방향 자동). */}
                         {!token || !userInfo ? renderSectionConnectionCard({
                             sectionKey: 'voip',
-                            title: '로그인 없이도 데모 세션으로 VoIP 진입을 열 수 있습니다',
-                            body: '비로그인 상태에서는 VoIP tester가 막혀 데드엔드처럼 보입니다. 데모 세션을 시작하면 실제 인증 토큰을 연결하고, UI 검증용으로 VoIP tester를 임시 개방합니다.',
-                            bullets: ['VoIP tester 모달 즉시 오픈', '통화 모드 카드와 다이얼 입력 검증', '예약/채팅과 같은 계정으로 연속 확인'],
+                            title: '로그인 후 통역 통화를 이용할 수 있습니다',
+                            body: '통역통화 걸기·일반전화(PSTN)는 로그인 후 친구 선택 또는 번호 입력으로 바로 시작할 수 있습니다.',
+                            bullets: ['통역통화 — 친구 선택 후 실시간 통역', '일반전화 — 번호로 바로 걸기', '채팅 레일에서 친구 추가·수락'],
                             loginSource: 'voip_section_gate',
                         }) : null}
-                        <View style={styles.premiumHubRow}>
-                            <View style={[styles.monetizationCard, styles.monetizationCardPrimary]}>
-                                <Text style={styles.monetizationBadge}>기본 중심</Text>
-                                <Text style={styles.monetizationTitle}>번역 채팅</Text>
-                                <Text style={styles.monetizationBody}>운영비가 가장 낮고, 사용자를 가장 오래 붙잡을 수 있는 기본 상품입니다.</Text>
-                                <View style={styles.monetizationMetricRow}>
-                                    <Text style={styles.monetizationMetric}>원가 우선순위 1</Text>
-                                    <Text style={styles.monetizationMetric}>문자 번역 호출 중심</Text>
-                                </View>
-                                <Pressable style={styles.inlineActionBtn} onPress={() => setActiveRailSection(null)}>
-                                    <Text style={styles.inlineActionBtnText}>현재 번역 화면으로 돌아가기</Text>
-                                </Pressable>
-                            </View>
-                            <View style={styles.monetizationCard}>
-                                <Text style={styles.monetizationBadge}>프리미엄</Text>
-                                <Text style={styles.monetizationTitle}>VoIP 통역 통화</Text>
-                                <Text style={styles.monetizationBody}>TURN, 세션 유지, 음성 통역 비용이 커서 Lite/Pro 월정액에서만 열어줍니다.</Text>
-                                <View style={styles.planGrid}>
-                                    {(['voip_lite', 'voip_pro'] as MonetizationPlanKey[]).map((planKey) => {
-                                        const plan = MONETIZATION_PLAN_CONFIG[planKey];
-                                        const owned = ownedPlanKeys.has(planKey);
-                                        return (
-                                            <View key={`plan-${planKey}`} style={[styles.planCard, owned && styles.planCardOwned]}>
-                                                <Text style={styles.planTitle}>{plan.title}</Text>
-                                                <Text style={styles.planPrice}>{plan.billingLabel}</Text>
-                                                <Text style={styles.planUsage}>{plan.usageLabel}</Text>
-                                                <Text style={styles.planFormula}>{plan.formulaLabel}</Text>
-                                                <Pressable
-                                                    style={[styles.inlineActionBtn, owned && styles.inlineActionBtnActive]}
-                                                    onPress={owned ? handleInlineVoipOpenPress : () => { void handlePremiumPurchase(planKey); }}
-                                                >
-                                                    <Text style={[styles.inlineActionBtnText, owned && styles.inlineActionBtnTextActive]}>{owned ? 'VoIP 열기' : `${plan.shortLabel} 결제`}</Text>
-                                                </Pressable>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                                {token && userInfo && !activeVoipPlan ? (
-                                    <Pressable
-                                        style={styles.inlineGhostBtn}
-                                        onPress={handleVoipValidationOpenPress}
-                                        testID="worldlinco-voip-validation-open"
-                                        accessibilityLabel="정합성 테스트 열기"
-                                    >
-                                        <Text style={styles.inlineGhostBtnText}>정합성 테스트 열기</Text>
-                                    </Pressable>
-                                ) : null}
-                            </View>
-                        </View>
-                        {premiumStatusMessage ? <Text style={styles.premiumStatusText}>{premiumStatusMessage}</Text> : null}
-                        {voipStatusMessage ? <Text style={styles.songModeMetaText}>{voipStatusMessage}</Text> : null}
-                        {payError ? <Text style={styles.errorText}>{payError}</Text> : null}
-                        {payUrl ? (
-                            <Pressable style={styles.inlineGhostBtn} onPress={() => Linking.openURL(payUrl)}>
-                                <Text style={styles.inlineGhostBtnText}>결제 링크 열기</Text>
-                            </Pressable>
-                        ) : null}
                     </View>
+                ) : null}
+
+                {isTourismPromoRailSectionVisible ? (
+                    <TourismPromoSection
+                        apiBaseUrl={API_BASE}
+                        authToken={token}
+                        onRequireLogin={() => setShowLogin(true)}
+                        railSectionOffsetRef={railSectionOffsetRef}
+                        activeRailSection={activeRailSection}
+                        scrollToRailSection={scrollToRailSection}
+                        gpsCountryCode={gpsCountryCode}
+                        latitude={lat}
+                        longitude={lon}
+                        userLanguage={getEffectiveUiLang()}
+                    />
                 ) : null}
 
                 {isSongRailSectionVisible ? (
@@ -8265,8 +8836,34 @@ export default function App() {
                         }}
                         style={[styles.sectionCard, activeRailSection === 'song-mode' && styles.sectionCardActive]}
                     >
-                        <Text style={styles.sectionTitle}>🎵 노래 전용 모드</Text>
-                        <Text style={styles.sectionSub}>{`가사 필터링 · 구간 반복 감지 · ${SUPPORTED_LANGUAGE_COUNT}개국 양방 가사번역 자막 · 음성/문자 기반 언어 자동 감지`}</Text>
+                        <View style={styles.hubHeroRow}>
+                            <View style={[styles.hubHeroIcon, { backgroundColor: '#7C5CFC' }]}><Text style={styles.hubHeroEmoji}>🎵</Text></View>
+                            <Text style={styles.hubHeroTitle}>노래 가사를 번역해서 함께 불러요</Text>
+                        </View>
+                        <View style={styles.actionTileGrid2}>
+                            <Pressable
+                                style={[styles.gridTile, songModeEnabled && styles.gridTileActive]}
+                                onPress={() => setSongModeEnabled((prev) => !prev)}
+                                accessibilityRole="button"
+                                accessibilityLabel="노래 모드 토글"
+                                testID="worldlinco-song-action-toggle"
+                            >
+                                <View style={[styles.gridTileIcon, { backgroundColor: '#7C5CFC' }]}><Text style={styles.gridTileEmoji}>🎵</Text></View>
+                                <Text style={styles.gridTileLabel}>노래 모드 {songModeEnabled ? 'ON' : 'OFF'}</Text>
+                                <Text style={styles.gridTileSub}>{songModeEnabled ? '가사 번역 자막 켜짐' : '탭하면 가사 번역 시작'}</Text>
+                            </Pressable>
+                            <Pressable
+                                style={styles.gridTile}
+                                onPress={hasSongPass ? handlePickSongFile : () => { void handlePremiumPurchase('song_pass'); }}
+                                accessibilityRole="button"
+                                accessibilityLabel="노래 파일 선택"
+                                testID="worldlinco-song-action-file"
+                            >
+                                <View style={[styles.gridTileIcon, { backgroundColor: '#7C5CFC' }]}><Text style={styles.gridTileEmoji}>📂</Text></View>
+                                <Text style={styles.gridTileLabel}>노래 파일 선택</Text>
+                                <Text style={styles.gridTileSub}>{hasSongPass ? '파일에서 가사 번역' : '1곡 결제 후 이용'}</Text>
+                            </Pressable>
+                        </View>
                         <View style={[styles.monetizationCard, styles.songPayCard]}>
                             <Text style={styles.monetizationBadge}>건당 과금</Text>
                             <Text style={styles.monetizationTitle}>{MONETIZATION_PLAN_CONFIG.song_pass.title}</Text>
@@ -8295,15 +8892,19 @@ export default function App() {
                                 <Text style={styles.inlineGhostBtnText}>자막 초기화</Text>
                             </Pressable>
                         </View>
-                        <Text style={styles.songModeMetaText}>
-                            소스: 음성인식 + 문자패턴 자동 판정
-                        </Text>
-                        <Text style={styles.songModeMetaText}>
-                            마이크 타겟: 현재 번역 언어 우선, 소스와 같으면 자동 추천 ({getLangLabel(toLang)})
-                        </Text>
-                        <Text style={styles.songModeMetaText}>
-                            파일 타겟: 자국어 자막 우선 ({getLangLabel(resolveSongFileTargetLang(fromLang, toLang))})
-                        </Text>
+                        {__DEV__ ? (
+                            <>
+                                <Text style={styles.songModeMetaText}>
+                                    소스: 음성인식 + 문자패턴 자동 판정
+                                </Text>
+                                <Text style={styles.songModeMetaText}>
+                                    마이크 타겟: 현재 번역 언어 우선, 소스와 같으면 자동 추천 ({getLangLabel(toLang)})
+                                </Text>
+                                <Text style={styles.songModeMetaText}>
+                                    파일 타겟: 자국어 자막 우선 ({getLangLabel(resolveSongFileTargetLang(fromLang, toLang))})
+                                </Text>
+                            </>
+                        ) : null}
                         {songModeStatus ? <Text style={styles.songModeStatusText}>{songModeStatus}</Text> : null}
                         {songFileJob ? (
                             <View style={styles.songFileJobBox}>
@@ -8489,12 +9090,76 @@ export default function App() {
                                 }}
                                 style={styles.sectionCard}
                             >
-                                <Text style={styles.sectionTitle}>📍 주변 검색</Text>
-                                <Text style={styles.sectionSub}>좌표/카테고리/반경을 선택해 주변 장소를 조회합니다.</Text>
+                                <View style={styles.hubHeroRow}>
+                                    <View style={[styles.hubHeroIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.hubHeroEmoji}>🧭</Text></View>
+                                    <Text wlLocalized style={styles.hubHeroTitle}>{getFeatureUiText('travel.hubHero')}</Text>
+                                </View>
+                                <View style={styles.bookingTileGrid}>
+                                    <Pressable
+                                        style={styles.bookingTile}
+                                        onPress={() => setNearbyCategory('airport')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="항공권"
+                                        testID="worldlinco-booking-action-flight"
+                                    >
+                                        <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>✈️</Text></View>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.flight')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.flightSub')}</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={styles.bookingTile}
+                                        onPress={() => setNearbyCategory('hotel')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="호텔"
+                                        testID="worldlinco-booking-action-hotel"
+                                    >
+                                        <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>🏨</Text></View>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.hotel')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.hotelSub')}</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={styles.bookingTile}
+                                        onPress={() => setNearbyCategory('all')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="주변 검색"
+                                        testID="worldlinco-booking-action-nearby"
+                                    >
+                                        <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>📍</Text></View>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.nearby')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.nearbySub')}</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={styles.bookingTile}
+                                        onPress={() => setNearbyCategory('attraction')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="일정"
+                                        testID="worldlinco-booking-action-itinerary"
+                                    >
+                                        <View style={[styles.bookingTileIcon, { backgroundColor: '#19C37D' }]}><Text style={styles.bookingTileEmoji}>📅</Text></View>
+                                        <Text wlLocalized style={styles.bookingTileLabel}>{getFeatureUiText('travel.itinerary')}</Text>
+                                        <Text wlLocalized style={styles.bookingTileSub}>{getFeatureUiText('travel.itinerarySub')}</Text>
+                                    </Pressable>
+                                </View>
+                                <Pressable
+                                    style={styles.bookingNearbyCard}
+                                    onPress={handleSearchNearby}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="주변 추천"
+                                    testID="worldlinco-booking-nearby-recommend"
+                                >
+                                    <View style={styles.bookingNearbyThumb}><Text style={styles.bookingNearbyThumbEmoji}>🗺️</Text></View>
+                                    <View style={styles.bookingNearbyBody}>
+                                        <Text wlLocalized style={styles.bookingNearbyTitle}>{getFeatureUiText('travel.nearbyRecommend')}</Text>
+                                        <Text wlLocalized style={styles.bookingNearbySub}>{getFeatureUiText('travel.nearbyRecommendSub')}</Text>
+                                    </View>
+                                    <Text style={styles.voipTileChevron}>›</Text>
+                                </Pressable>
+                                <Text wlLocalized style={[styles.sectionTitle, { color: '#19C37D', marginTop: 18 }]}>{getFeatureUiText('travel.searchSectionTitle')}</Text>
+                                <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('travel.searchSectionSub')}</Text>
 
                                 <View style={styles.coordRow}>
                                     <View style={styles.coordField}>
-                                        <Text style={styles.coordLabel}>위도</Text>
+                                        <Text wlLocalized style={styles.coordLabel}>{getFeatureUiText('travel.latLabel')}</Text>
                                         <TextInput
                                             style={styles.compactInput}
                                             value={lat}
@@ -8504,7 +9169,7 @@ export default function App() {
                                         />
                                     </View>
                                     <View style={styles.coordField}>
-                                        <Text style={styles.coordLabel}>경도</Text>
+                                        <Text wlLocalized style={styles.coordLabel}>{getFeatureUiText('travel.lonLabel')}</Text>
                                         <TextInput
                                             style={styles.compactInput}
                                             value={lon}
@@ -8515,7 +9180,7 @@ export default function App() {
                                     </View>
                                 </View>
 
-                                <Text style={styles.label}>카테고리</Text>
+                                <Text wlLocalized style={styles.label}>{getFeatureUiText('travel.categoryLabel')}</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railRow}>
                                     {CATEGORY_OPTIONS.map((item) => (
                                         <Pressable
@@ -8525,12 +9190,12 @@ export default function App() {
                                             accessibilityLabel={`worldlinco-travel-category-${item.value}`}
                                             testID={`worldlinco-travel-category-${item.value}`}
                                         >
-                                            <Text style={[styles.railBtnText, nearbyCategory === item.value && styles.railBtnTextActive]}>{item.label}</Text>
+                                            <Text wlLocalized style={[styles.railBtnText, nearbyCategory === item.value && styles.railBtnTextActive]}>{getTravelCategoryLabel(item.value)}</Text>
                                         </Pressable>
                                     ))}
                                 </ScrollView>
 
-                                <Text style={styles.label}>검색 반경</Text>
+                                <Text wlLocalized style={styles.label}>{getFeatureUiText('travel.radiusLabel')}</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railRow}>
                                     {RADIUS_OPTIONS.map((item) => (
                                         <Pressable
@@ -8552,19 +9217,33 @@ export default function App() {
                                     accessibilityLabel="worldlinco-travel-search-button"
                                     testID="worldlinco-travel-search-button"
                                 >
-                                    {nearbyLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.translateBtnText}>주변 장소 찾기</Text>}
+                                    {nearbyLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text wlLocalized style={styles.translateBtnText}>{getFeatureUiText('travel.searchBtn')}</Text>}
                                 </Pressable>
+
+                                <TravelItineraryPanel
+                                    latitude={Number.parseFloat(lat)}
+                                    longitude={Number.parseFloat(lon)}
+                                    language={toLang}
+                                    regionHint={gpsRegionHint || resolveActiveRegionHint(fromLang)}
+                                    countryCode={gpsCountryCode}
+                                    apiBase={API_BASE}
+                                    seedQuery={itinerarySeedQuery}
+                                    seedNonce={itinerarySeedNonce}
+                                />
 
                                 {nearbyError ? <Text style={styles.errorText}>{nearbyError}</Text> : null}
 
                                 {selectedBookingPlace ? (
                                     <View style={styles.bookingSelectionBanner}>
-                                        <Text style={styles.bookingSelectionBannerTitle}>선택된 예약 장소</Text>
+                                        <Text wlLocalized style={styles.bookingSelectionBannerTitle}>{getFeatureUiText('travel.selectedPlace')}</Text>
                                         <Text style={styles.bookingSelectionBannerPlace}>{selectedBookingPlace.name}</Text>
-                                        <Text style={styles.bookingSelectionBannerMeta}>
-                                            {selectedBookingPlace.category_label} · {formatDistance(selectedBookingPlace.distance_m)} · 아래 예약 카드에 즉시 반영됩니다.
+                                        <Text wlLocalized style={styles.bookingSelectionBannerMeta}>
+                                            {getFeatureUiText('travel.selectedPlaceMeta', {
+                                                category: selectedBookingPlace.category_label,
+                                                distance: formatDistance(selectedBookingPlace.distance_m),
+                                            })}
                                         </Text>
-                                        <Text style={styles.bookingSelectionBannerStatic}>예약 선택 완료 · 예약 폼에 반영됨</Text>
+                                        <Text wlLocalized style={styles.bookingSelectionBannerStatic}>{getFeatureUiText('travel.selectedPlaceDone')}</Text>
                                         {bookingSelectionNotice ? (
                                             <Text style={styles.bookingSelectionBannerNotice}>{bookingSelectionNotice}</Text>
                                         ) : null}
@@ -8574,8 +9253,8 @@ export default function App() {
                                 {nearbyPlaces.length > 0 && (
                                     <View style={styles.nearbyMapWrap} pointerEvents="none">
                                         <View style={styles.nearbyMapHeaderRow}>
-                                            <Text style={styles.nearbyMapTitle}>지도 미리보기</Text>
-                                            <Text style={styles.nearbyMapSubtitle}>{selectedNearbyPlace?.name || '검색 결과'}</Text>
+                                            <Text wlLocalized style={styles.nearbyMapTitle}>{getFeatureUiText('travel.mapPreview')}</Text>
+                                            <Text wlLocalized style={styles.nearbyMapSubtitle}>{selectedNearbyPlace?.name || getFeatureUiText('travel.searchResults')}</Text>
                                         </View>
                                         {nearbyMapHtml ? (
                                             <WebView
@@ -8608,13 +9287,13 @@ export default function App() {
                                                         style={[styles.inlineActionBtn, selectedNearbyPlace?.id === place.id && styles.inlineActionBtnActive]}
                                                         onPress={() => setSelectedNearbyPlaceId(place.id)}
                                                     >
-                                                        <Text style={[styles.inlineActionBtnText, selectedNearbyPlace?.id === place.id && styles.inlineActionBtnTextActive]}>지도에서 보기</Text>
+                                                        <Text wlLocalized style={[styles.inlineActionBtnText, selectedNearbyPlace?.id === place.id && styles.inlineActionBtnTextActive]}>{getFeatureUiText('travel.viewOnMap')}</Text>
                                                     </Pressable>
                                                     <Pressable style={styles.inlineActionBtn} onPress={() => {
                                                         setSelectedNearbyPlaceId(place.id);
                                                         Linking.openURL(place.google_maps_url);
                                                     }}>
-                                                        <Text style={styles.inlineActionBtnText}>Google 지도</Text>
+                                                        <Text wlLocalized style={styles.inlineActionBtnText}>{getFeatureUiText('travel.googleMaps')}</Text>
                                                     </Pressable>
                                                     {place.booking_supported && (place.category === 'hotel' || place.category === 'airport') && (
                                                         <Pressable
@@ -8623,7 +9302,7 @@ export default function App() {
                                                             accessibilityLabel={`worldlinco-travel-booking-select-${place.id}`}
                                                             testID={`worldlinco-travel-booking-select-${place.id}`}
                                                         >
-                                                            <Text style={[styles.inlineActionBtnText, selectedBookingPlaceId === place.id && styles.inlineActionBtnTextActive]}>예약 선택</Text>
+                                                            <Text wlLocalized style={[styles.inlineActionBtnText, selectedBookingPlaceId === place.id && styles.inlineActionBtnTextActive]}>{getFeatureUiText('travel.bookingSelect')}</Text>
                                                         </Pressable>
                                                     )}
                                                 </View>
@@ -8637,36 +9316,61 @@ export default function App() {
                             <View
                                 style={[styles.sectionCard, activeRailSection === 'travel-booking' && styles.sectionCardActive]}
                             >
-                                <Text style={styles.sectionTitle}>🧳 여행 예약</Text>
-                                <Text style={styles.sectionSub}>예약 가능한 호텔/공항을 선택해 예약 요청을 진행합니다.</Text>
+                                <Text wlLocalized style={styles.sectionTitle}>{getFeatureUiText('travel.bookingSection')}</Text>
+                                <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('travel.bookingSectionSub')}</Text>
                                 <View style={styles.sectionCard}>
                                     <Text style={styles.sectionTitle}>☎ 예약 섹션 일반 통화 모드</Text>
-                                    <Text style={styles.sectionSub}>{getLangLabel(fromLang)} ⇄ {getLangLabel(toLang)} · {SUPPORTED_LANGUAGE_COUNT}개국어 자동 전달</Text>
+                                    <Text style={styles.sectionSub}>{getFeatureUiText('user.bidirectionalMode')}</Text>
+                                    <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} />
+                                    <Text wlLocalized style={styles.sectionSub}>{getFeatureUiText('pstn.peerLanguageLabel')}</Text>
+                                    <Pressable
+                                        style={styles.langAutoChip}
+                                        onPress={() => openPeerLangPicker()}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="worldlinco-pstn-peer-lang"
+                                        testID="worldlinco-pstn-peer-lang"
+                                    >
+                                        <Text style={styles.langAutoChipValue}>{homeToFlag} {currentToLabel} ▾</Text>
+                                        <Text style={styles.langAutoChipHint}>
+                                            {peerLangManual
+                                                ? getFeatureUiText('pstn.peerLanguageHint')
+                                                : (getDisplayUiText().peerLanguageHint ?? getFeatureUiText('pstn.peerLanguageHint'))}
+                                        </Text>
+                                    </Pressable>
+                                    {Platform.OS !== 'web' ? (
+                                        <Pressable
+                                            style={styles.inlineGhostBtn}
+                                            onPress={() => { void handleDetectLangByGPS(false); }}
+                                            accessibilityLabel="worldlinco-pstn-gps-detect"
+                                            testID="worldlinco-pstn-gps-detect"
+                                        >
+                                            <Text wlLocalized style={styles.inlineGhostBtnText}>
+                                                {gpsLangLoading ? getFeatureUiText('gps.checkingPermission') : `📍 ${getFeatureUiText('gps.resolving')}`}
+                                            </Text>
+                                        </Pressable>
+                                    ) : null}
                                     <Pressable style={[styles.interToggleBtn, interCallActive && styles.interToggleBtnActive]} onPress={handleInterCallToggle}>
                                         <Text style={[styles.interToggleText, interCallActive && styles.interToggleTextActive]}>
-                                            {interCallActive ? '📵 일반 통화 종료' : '📞 일반 통화 + 자동 전달 시작'}
+                                            {interCallActive ? getFeatureUiText('pstn.interToggleEnd') : getFeatureUiText('pstn.interToggleStart')}
                                         </Text>
                                     </Pressable>
 
                                     <TextInput
                                         style={styles.compactInput}
-                                        placeholder="통역 통화 전화번호 (예: 01012345678)"
+                                        placeholder={getFeatureUiText('travel.interCallPlaceholder')}
                                         placeholderTextColor={C.sub}
                                         keyboardType="phone-pad"
                                         value={interCallPhone}
                                         onChangeText={setInterCallPhone}
                                     />
                                     <View style={styles.interCallQuickRow}>
-                                        <Pressable style={styles.inlineGhostBtn} onPress={() => { void handleOpenInterCallContactPicker(); }}>
-                                            <Text style={styles.inlineGhostBtnText}>{interCallContactLoading ? '전화번호 저장소 여는 중...' : '전화번호 저장소 열기'}</Text>
-                                        </Pressable>
                                         <Pressable
                                             style={styles.inlineGhostBtn}
                                             onPress={() => setShowPhoneDialerModal(true)}
                                             accessibilityLabel="다이얼패드 열기"
                                             testID="worldlinco-phone-dialer-open"
                                         >
-                                            <Text style={styles.inlineGhostBtnText}>다이얼패드 열기</Text>
+                                            <Text wlLocalized style={styles.inlineGhostBtnText}>{getFeatureUiText('travel.openDialpad')}</Text>
                                         </Pressable>
                                         {interCallPhone ? (
                                             <Pressable style={styles.inlineGhostBtn} onPress={() => setInterCallPhone('')}>
@@ -8674,17 +9378,18 @@ export default function App() {
                                             </Pressable>
                                         ) : null}
                                     </View>
-                                    <Text style={styles.interCallHint}>일반통화는 여행 예약 섹션에서 관리하며, 통화가 열리면 {SUPPORTED_LANGUAGE_COUNT}개국어 자동 전달 보조가 시작됩니다. 단말 전화번호 저장소에서 선택한 번호 또는 직접 입력한 번호를 시스템 전화앱으로 넘겨 통역을 이어갑니다.</Text>
+                                    <Text style={styles.interCallHint}>{getFeatureUiText('pstn.interCallHint', { count: SUPPORTED_LANGUAGE_COUNT })}</Text>
 
                                     {interCallActive && (
                                         <View style={styles.interPanel}>
-                                            <Text style={styles.interStatus}>{interCallStatus || '통화 대기 중...'}</Text>
+                                            <BidirectionalLanguagePairBadge fromLang={fromLang} toLang={toLang} compact />
+                                            <Text style={styles.interStatus}>{interCallStatus || getFeatureUiText('pstn.callWaiting')}</Text>
                                             {Platform.OS !== 'web' && (
                                                 <>
                                                     <Text style={styles.sectionSub}>
                                                         {interCallTurn === 'from'
-                                                            ? `👤 ${getLangLabel(fromLang)} 발화 입력`
-                                                            : `🤝 ${getLangLabel(toLang)} 발화 입력`}
+                                                            ? `👤 ${getFeatureUiText('user.mySpeechInput')}`
+                                                            : `🤝 ${getFeatureUiText('user.peerSpeechInput')}`}
                                                     </Text>
                                                     <Pressable
                                                         style={styles.inlineActionBtn}
@@ -8694,14 +9399,14 @@ export default function App() {
                                                     >
                                                         <Text style={styles.inlineActionBtnText}>
                                                             {voiceInputTargetRef.current === 'inter_call' && (isVoiceRecording || voiceSttLoading)
-                                                                ? '⏹️ 스피커폰 통역 보조 중지'
+                                                                ? getFeatureUiText('pstn.voiceAssistStop')
                                                                 : interCallVoiceAssistEnabled
-                                                                    ? '⏳ 스피커폰 통역 보조 준비 중'
-                                                                    : '🎙️ 스피커폰 통역 보조 시작'}
+                                                                    ? getFeatureUiText('pstn.voiceAssistPreparing')
+                                                                    : getFeatureUiText('pstn.voiceAssistStart')}
                                                         </Text>
                                                     </Pressable>
-                                                    <Text style={styles.sectionSub}>스피커폰으로 상대 음성을 들리게 한 뒤 이 보조를 켜면 주변 음성을 구간별로 받아 번역 후 TTS로 재송출합니다.</Text>
-                                                    <Text style={styles.sectionSub}>자동 전송 간격: {formatAutoRelayDelayLabel(autoRelayDelayMs)}</Text>
+                                                    <Text style={styles.sectionSub}>{getFeatureUiText('pstn.speakerAssistHint')}</Text>
+                                                    <Text style={styles.sectionSub}>{getFeatureUiText('pstn.autoRelayInterval', { delay: formatAutoRelayDelayLabel(autoRelayDelayMs) })}</Text>
                                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railRow}>
                                                         {AUTO_RELAY_DELAY_OPTIONS_MS.map((optionMs) => (
                                                             <Pressable
@@ -8718,7 +9423,7 @@ export default function App() {
                                                     <TextInput
                                                         style={[styles.compactInput, styles.noteInput]}
                                                         multiline
-                                                        placeholder="들린 내용을 입력하세요"
+                                                        placeholder={getFeatureUiText('pstn.manualInputPlaceholder')}
                                                         placeholderTextColor={C.sub}
                                                         value={interManualText}
                                                         onChangeText={setInterManualText}
@@ -8727,7 +9432,7 @@ export default function App() {
                                                         style={styles.inlineActionBtn}
                                                         onPress={() => relayInterCallManual(interCallTurn, interManualText)}
                                                     >
-                                                        <Text style={styles.inlineActionBtnText}>즉시 전송</Text>
+                                                        <Text style={styles.inlineActionBtnText}>{getFeatureUiText('pstn.sendNow')}</Text>
                                                     </Pressable>
                                                 </>
                                             )}
@@ -8737,7 +9442,7 @@ export default function App() {
                                                     {[...interCallLog].reverse().map((entry, idx) => (
                                                         <View key={`inter-${idx}`} style={styles.placeItem}>
                                                             <Text style={styles.placeMeta}>
-                                                                {entry.turn === 'from' ? getLangLabel(fromLang) : getLangLabel(toLang)}
+                                                                {entry.turn === 'from' ? userFlagDisplayName : peerFlagDisplayName}
                                                             </Text>
                                                             <Text style={styles.placeName}>{entry.text}</Text>
                                                             <Text style={styles.successText}>→ {entry.translated}</Text>
@@ -8789,7 +9494,7 @@ export default function App() {
                                         {selectedBookingPlace.phone ? (
                                             <Pressable
                                                 style={styles.inlineActionBtn}
-                                                onPress={() => { void openDialPad(selectedBookingPlace.phone); }}
+                                                onPress={() => { void openDialPadWithQuiesceRef.current(selectedBookingPlace.phone, 'travel_booking_place_call'); }}
                                                 accessibilityLabel={selectedBookingPlace.category === 'airport'
                                                     ? 'worldlinco-travel-booking-airport-call-button'
                                                     : 'worldlinco-travel-booking-hotel-call-button'}
@@ -8797,7 +9502,13 @@ export default function App() {
                                                     ? 'worldlinco-travel-booking-airport-call-button'
                                                     : 'worldlinco-travel-booking-hotel-call-button'}
                                             >
-                                                <Text style={styles.inlineActionBtnText}>📞 {selectedBookingPlace.category === 'airport' ? '공항 예약센터' : '호텔'} 전화 예약</Text>
+                                                <Text wlLocalized style={styles.inlineActionBtnText}>
+                                                    {getFeatureUiText(
+                                                        selectedBookingPlace.category === 'airport'
+                                                            ? 'travel.bookingCallAirport'
+                                                            : 'travel.bookingCallHotel',
+                                                    )}
+                                                </Text>
                                             </Pressable>
                                         ) : null}
                                     </View>
@@ -8895,11 +9606,11 @@ export default function App() {
                                         {bookingResult.support_phone ? (
                                             <Pressable
                                                 style={styles.inlineActionBtn}
-                                                onPress={() => { void openDialPad(bookingResult.support_phone); }}
+                                                onPress={() => { void openDialPadWithQuiesceRef.current(bookingResult.support_phone, 'travel_booking_support_call'); }}
                                                 accessibilityLabel="worldlinco-travel-booking-support-call-button"
                                                 testID="worldlinco-travel-booking-support-call-button"
                                             >
-                                                <Text style={styles.inlineActionBtnText}>📞 예약센터 통화</Text>
+                                                <Text wlLocalized style={styles.inlineActionBtnText}>{getFeatureUiText('travel.bookingSupportCall')}</Text>
                                             </Pressable>
                                         ) : null}
                                     </View>
@@ -8961,56 +9672,452 @@ export default function App() {
                         {/* ── 앱 정보 ── */}
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>
-                                {getUiText(fromLang).footer.replace('\\n', '\n')}
+                                {getDisplayUiText().footer.replace('\\n', '\n')}
                             </Text>
+                            <Pressable
+                                onPress={() => setShowDataSources(true)}
+                                accessibilityLabel="worldlinco-open-data-sources"
+                                testID="worldlinco-open-data-sources"
+                                style={styles.dataSourcesLink}
+                            >
+                                <Text style={styles.dataSourcesLinkText}>데이터 출처 · 라이선스</Text>
+                            </Pressable>
                         </View>
 
                     </>
                 ) : null}
             </ScrollView>
 
-            {showIncomingVoipFixedPanel && pendingIncomingVoipCall ? (
-                <View style={styles.voipIncomingFixedPanel} pointerEvents="box-none">
-                    <View style={styles.voipIncomingFixedCard}>
-                        <Text style={styles.voipIncomingFixedTitle}>수신 보이스톡</Text>
-                        <Text style={styles.voipIncomingFixedCaller} numberOfLines={2}>
-                            {pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '상대방'}
-                        </Text>
-                        {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
-                        <View style={styles.voipIncomingFixedActions}>
+            {/* 하단 고정 탭바(APP_DESIGN 1-2) — 채팅/통화/노래/예약/설정. 화면 전환 시 고정되어 맥락 유지. */}
+            {!!userInfo && !showLogin ? (
+                <View style={[styles.bottomTabBar, { paddingBottom: insets.bottom, height: 58 + insets.bottom }]}>
+                    {SECTION_RAIL_ITEMS.map((item) => {
+                        const active = activeRailSection === item.key;
+                        const color = SECTION_TAB_COLORS[item.key] || '#1E6FE0';
+                        return (
                             <Pressable
-                                style={styles.voipIncomingAcceptBtn}
-                                onPressIn={() => {
-                                    logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_IN', {
-                                        source_variant: 'fixed_panel',
-                                        pending_call_id: pendingIncomingVoipCall.call_id,
-                                    });
-                                }}
-                                onPressOut={() => {
-                                    logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_OUT', {
-                                        source_variant: 'fixed_panel',
-                                        pending_call_id: pendingIncomingVoipCall.call_id,
-                                    });
-                                }}
-                                onPress={() => handleIncomingAcceptPress('fixed_panel')}
+                                key={`tab-${item.key}`}
+                                style={styles.bottomTabItem}
+                                onPress={() => handlePressSectionRail(item.key)}
                                 accessibilityRole="button"
-                                accessibilityLabel="수신 보이스톡 받기"
-                                testID="worldlinco-voip-incoming-accept"
+                                accessibilityLabel={buildSectionRailSelector(item.key)}
+                                testID={buildSectionRailSelector(item.key)}
                             >
-                                <Text style={styles.voipIncomingAcceptBtnText}>받기</Text>
+                                <Text style={[styles.bottomTabIcon, active ? { color } : null]}>{item.icon}</Text>
+                                <Text style={[styles.bottomTabLabel, active ? { color, fontWeight: '800' } : null]}>{getSectionRailTabLabel(item.key)}</Text>
                             </Pressable>
+                        );
+                    })}
+                    <Pressable
+                        style={styles.bottomTabItem}
+                        onPress={() => setSettingsTabOpen(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel="worldlinco-bottom-tab-settings"
+                        testID="worldlinco-bottom-tab-settings"
+                    >
+                        <Text style={[styles.bottomTabIcon, settingsTabOpen ? { color: '#41506b' } : null]}>⚙️</Text>
+                        <Text style={[styles.bottomTabLabel, settingsTabOpen ? { color: '#41506b', fontWeight: '800' } : null]}>{getFeatureUiText('nav.tabSettings')}</Text>
+                    </Pressable>
+                </View>
+            ) : null}
+
+            {/* 소리새 AI 플로팅 심볼(드래그 이동) — 대면 통역창과 분리된 진입점.
+                탭하면 소리새 AI 전용 창이 열린다. 로그인 상태·비통화 중에만 표시. */}
+            {Platform.OS !== 'web' && !!userInfo && !showLogin && !voipCallInitResponse
+                && !hasPendingIncomingVoip && !sorisaeWindowOpen && globalSettings.sorisaeFab ? (
+                <Animated.View
+                    {...sorisaePanResponder.panHandlers}
+                    style={[
+                        styles.sorisaeFab,
+                        { transform: sorisaeBtnPos.getTranslateTransform() },
+                    ]}
+                >
+                    <Text style={styles.sorisaeFabIcon}>🐦</Text>
+                </Animated.View>
+            ) : null}
+
+            {/* [Phase6.1] 소리새 음성 호출 대기 토글 — 켜두면 이름("OOOO"/"소리새")을 부르는 것만으로
+                소리새가 깨어나 대화하고, 3분 무응답이면 자동으로 잠든다. 로그인·비통화 중에만 노출. */}
+            {Platform.OS !== 'web' && !!userInfo && !showLogin && !voipCallInitResponse
+                && !hasPendingIncomingVoip && !sorisaeWindowOpen ? (
+                <Pressable
+                    onPress={() => { void handleToggleCompanionVoiceCall(); }}
+                    accessibilityRole="button"
+                    accessibilityLabel="worldlinco-companion-voicecall-toggle"
+                    testID="worldlinco-companion-voicecall-toggle"
+                    style={[styles.sorisaeCallChip, { bottom: insets.bottom + 72 }, companionVoiceCallArmed ? styles.sorisaeCallChipOn : null]}
+                >
+                    <Text wlLocalized style={styles.sorisaeCallChipText}>
+                        {companionVoiceCallArmed ? getFeatureUiText('sorisae.voiceCallArmOff', { name: aiDisplayName }) : getFeatureUiText('sorisae.voiceCallArmOn')}
+                    </Text>
+                </Pressable>
+            ) : null}
+
+            {/* VoIP 실통화 전체화면(mockup #3 · sky) — 스크롤 임베드 구버전 UI 대신 신규 통화 화면 */}
+            <Modal
+                visible={!!voipCallInitResponse}
+                animationType="slide"
+                statusBarTranslucent
+                onRequestClose={() => {
+                    // 통화 중 시스템 뒤로가기는 종료 버튼으로만 처리(실수 종료 방지).
+                }}
+            >
+                <ImageBackground source={SKY_BG} resizeMode="cover" style={{ flex: 1 }}>
+                    {voipCallInitResponse ? (
+                        <VoipCallErrorBoundary
+                            key={voipCallInitResponse.call_id}
+                            onRecover={handleReturnToVoipDialer}
+                        >
+                            <VoIPCallScreen
+                                callInitResponse={voipCallInitResponse}
+                                calleePhone={voipActiveProfile?.nickname || voipCallInitResponse.display_label || voipPhone.trim() || '보이스톡 연결'}
+                                participantProfile={voipActiveProfile ?? undefined}
+                                localParticipantProfile={{
+                                    nickname: currentVoipProfile.nickname,
+                                    countryFlag: currentVoipProfile.countryFlag,
+                                }}
+                                apiBaseUrl={API_BASE}
+                                authToken={token}
+                                localSourceLang={effectiveVoipSourceLang}
+                                localTargetLang={effectiveVoipTargetLang}
+                                regionHint={resolveActiveRegionHint(effectiveVoipSourceLang)}
+                                onHangup={handleReturnToVoipDialer}
+                            />
+                        </VoipCallErrorBoundary>
+                    ) : null}
+                </ImageBackground>
+            </Modal>
+
+            {/* 채팅방 전체화면(mockup #4) — 하늘 배경 + flex 레이아웃 */}
+            <Modal
+                visible={!!selectedChatRoom}
+                animationType="slide"
+                statusBarTranslucent
+                onRequestClose={() => {
+                    setSelectedChatRoom(null);
+                    setChatRefreshKey((prev) => prev + 1);
+                }}
+            >
+                <ImageBackground source={SKY_BG} resizeMode="cover" style={{ flex: 1 }}>
+                    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'left', 'right', 'bottom']}>
+                        <StatusBar style="dark" />
+                        {selectedChatRoom ? (
+                            <ChatRoomScreen
+                                apiBaseUrl={API_BASE}
+                                token={token}
+                                userId={userInfo!.id}
+                                room={selectedChatRoom}
+                                visible={!!selectedChatRoom}
+                                refreshKey={chatRefreshKey}
+                                userCountryCode={userInfo?.country_code || ''}
+                                userPreferredLanguage={userInfo?.preferred_language || ''}
+                                userDisplayName={userInfo?.username || userInfo?.email?.split('@')[0] || ''}
+                                onBack={() => {
+                                    setSelectedChatRoom(null);
+                                    setChatRefreshKey((prev) => prev + 1);
+                                }}
+                                onRoomChanged={() => setChatRefreshKey((prev) => prev + 1)}
+                            />
+                        ) : null}
+                    </SafeAreaView>
+                </ImageBackground>
+            </Modal>
+
+            {/* 설정 탭(⚙️) 전체화면(APP_DESIGN 2-6) — 전역 토글 + 기능별 사용설명서 */}
+            <Modal
+                visible={settingsTabOpen}
+                animationType="slide"
+                statusBarTranslucent
+                onRequestClose={() => setSettingsTabOpen(false)}
+            >
+                <ImageBackground source={SKY_BG} resizeMode="cover" style={{ flex: 1 }}>
+                    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'left', 'right', 'bottom']}>
+                        <StatusBar style="dark" />
+                        <SettingsScreen
+                            onClose={() => setSettingsTabOpen(false)}
+                            appVersion={APP_VERSION_NUMBER}
+                            buildNumber={APP_BUILD_NUMBER}
+                            userLang={resolveProfileDisplayLang(userInfo?.country_code || 'KR')}
+                            authToken={token}
+                            userEmail={userInfo?.email}
+                            userCountryCode={userInfo?.country_code || ''}
+                            userPreferredLanguage={userInfo?.preferred_language || ''}
+                            onChangeCountry={token && userInfo ? handleSettingsChangeCountry : undefined}
+                            onChangeLanguage={token && userInfo ? handleSettingsChangeLanguage : undefined}
+                            profileSaving={settingsProfileSaving}
+                            profileError={settingsProfileError}
+                            profileSuccess={settingsProfileSuccess}
+                            incomingAlertSoundMode={incomingAlertSoundMode}
+                            onIncomingAlertSoundModeChange={updateIncomingAlertSoundMode}
+                            onOpenPasswordChange={token && userInfo ? handleOpenPasswordChangeFromSettings : undefined}
+                            kwsProvider={companionKwsSettings.provider}
+                            kwsModelPath={companionKwsSettings.modelPath}
+                            kwsPorcupineAccessKey={companionKwsSettings.porcupineAccessKey}
+                            kwsPorcupineKeywordPaths={companionKwsSettings.porcupineKeywordPaths}
+                            onSaveKws={handleSaveCompanionKwsSettings}
+                            operatorLogSnapshot={{
+                                userId: userInfo?.id,
+                                email: userInfo?.email,
+                                preferredLanguage: userInfo?.preferred_language,
+                                countryCode: userInfo?.country_code,
+                                fromLang,
+                                toLang,
+                                voipAuditEvents,
+                                lastTranslationLog: interCallStatus || undefined,
+                            }}
+                        />
+                    </SafeAreaView>
+                </ImageBackground>
+            </Modal>
+
+            {/* 대면통역 전용 화면(mockup #2): 상단 상대언어(180° 회전) + 중앙 펄스 마이크 + 하단 내언어 */}
+            <Modal
+                visible={faceScreenOpen}
+                animationType="slide"
+                statusBarTranslucent
+                onRequestClose={() => {
+                    setLangPickerFor(null);
+                    setFaceScreenOpen(false);
+                    if (autoVoiceModeEnabled && Platform.OS !== 'web') { void handleToggleFaceConversation(); }
+                }}
+            >
+                <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.skyBg}>
+                <SafeAreaView style={styles.faceScreenRoot} edges={['top', 'left', 'right']}>
+                    <View style={styles.faceScreenHeader}>
+                        <Text style={styles.faceScreenLogo}>🎙️ WorldLinco</Text>
+                        <Pressable
+                            style={styles.faceScreenLangPill}
+                            onPress={() => openPeerLangPicker()}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-face-screen-lang"
+                            testID="worldlinco-face-screen-lang"
+                        >
+                            <Text style={styles.faceScreenLangPillText}>{currentFromLabel} ⇄ {currentToLabel}</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => {
+                                setLangPickerFor(null);
+                                setFaceScreenOpen(false);
+                                if (autoVoiceModeEnabled && Platform.OS !== 'web') { void handleToggleFaceConversation(); }
+                            }}
+                            style={styles.faceScreenClose}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-face-screen-close"
+                            testID="worldlinco-face-screen-close"
+                        >
+                            <Text style={styles.faceScreenCloseText}>✕</Text>
+                        </Pressable>
+                    </View>
+
+                    <View style={styles.faceScreenBody}>
+                        {/* 상단: 상대 언어 (180° 회전, 마주 앉은 상대가 읽음) */}
+                        <View style={styles.facePeerHalf}>
+                            <View style={styles.faceRotated}>
+                                <Pressable
+                                    onPress={() => openPeerLangPicker()}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="worldlinco-face-peer-lang"
+                                    testID="worldlinco-face-peer-lang"
+                                >
+                                    <Text style={styles.facePeerLangLabel}>{homeToFlag} {currentToLabel} ▾</Text>
+                                    <Text style={styles.langAutoChipHint}>
+                                        {peerLangManual
+                                            ? '수동 선택 · GPS 자동 변경 안 함'
+                                            : (getDisplayUiText().peerLanguageHint ?? 'GPS 우선 · 필요 시 수동')}
+                                    </Text>
+                                </Pressable>
+                                <Text wlLocalized style={styles.facePeerText}>
+                                    {resultText || getFeatureUiText('face.peerPlaceholder')}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* 하단: 내 언어 (정방향) */}
+                        <View style={styles.faceMeHalf}>
+                            <View style={styles.faceTapHint}>
+                                <Text wlLocalized style={styles.faceTapHintText}>
+                                    {autoVoiceModeEnabled ? getFeatureUiText('face.tapListening') : getFeatureUiText('face.tapToSpeak')}
+                                </Text>
+                            </View>
+                            <Text wlLocalized style={styles.faceMeText}>
+                                {inputText || getFeatureUiText('face.mePlaceholder')}
+                            </Text>
+                            <Text style={styles.faceMeLangLabel}>{currentFromLabel}</Text>
+                        </View>
+
+                        {/* 중앙: 펄스 코랄 마이크 (경계선에 겹침) */}
+                        <View style={styles.faceMicWrap} pointerEvents="box-none">
                             <Pressable
-                                style={styles.voipIncomingRejectBtn}
-                                onPress={() => { void handleRejectIncomingVoipCall(); }}
+                                onPress={() => { if (Platform.OS !== 'web') { void handleToggleFaceConversation(); } }}
+                                style={[styles.faceMicBtn, autoVoiceModeEnabled && styles.faceMicBtnActive]}
                                 accessibilityRole="button"
-                                accessibilityLabel="수신 보이스톡 거절"
+                                accessibilityLabel="worldlinco-face-screen-mic"
+                                testID="worldlinco-face-screen-mic"
                             >
-                                <Text style={styles.voipIncomingRejectBtnText}>거절</Text>
+                                <Text style={styles.faceMicIconBig}>🎙️</Text>
                             </Pressable>
                         </View>
                     </View>
-                </View>
-            ) : null}
+
+                    <View style={[styles.faceTabBar, { paddingBottom: 8 + insets.bottom }]}>
+                        <View style={styles.faceTabItem}><Text style={styles.faceTabIcon}>🧑‍🤝‍🧑</Text><Text style={styles.faceTabLabelActive}>{getFeatureUiText('nav.tabFaceInterpret')}</Text></View>
+                        <Pressable style={styles.faceTabItem} onPress={() => { setFaceScreenOpen(false); setActiveRailSection('chat'); }}>
+                            <Text style={styles.faceTabIcon}>💬</Text><Text style={styles.faceTabLabel}>{getFeatureUiText('nav.tabChatMode')}</Text>
+                        </Pressable>
+                        <Pressable style={styles.faceTabItem} onPress={() => { setFaceScreenOpen(false); setHomeToolsExpanded(true); }}>
+                            <Text style={styles.faceTabIcon}>📖</Text><Text style={styles.faceTabLabel}>{getFeatureUiText('nav.tabPhraseBook')}</Text>
+                        </Pressable>
+                        <Pressable style={styles.faceTabItem} onPress={() => { setFaceScreenOpen(false); setSettingsTabOpen(true); }}>
+                            <Text style={styles.faceTabIcon}>⚙️</Text><Text style={styles.faceTabLabel}>{getFeatureUiText('nav.tabSettings')}</Text>
+                        </Pressable>
+                    </View>
+                </SafeAreaView>
+                </ImageBackground>
+            </Modal>
+
+            {/* 소리새 AI 전용 창(대면 통역과 완전 분리) — 질문/답변 좌우 구분 + 마이크 토글. */}
+            <Modal
+                visible={sorisaeWindowOpen}
+                animationType="slide"
+                statusBarTranslucent
+                onRequestClose={() => { void closeSorisaeWindow(); }}
+            >
+                <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.skyBg}>
+                <SafeAreaView style={styles.sorisaeWindowRoot}>
+                    <View style={styles.sorisaeWindowHeader}>
+                        <Text style={styles.sorisaeWindowTitle}>🐦 {aiDisplayName}</Text>
+                        <Pressable
+                            onPress={() => { void closeSorisaeWindow(); }}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-sorisae-window-close"
+                            testID="worldlinco-sorisae-window-close"
+                            style={styles.sorisaeWindowCloseBtn}
+                        >
+                            <Text style={styles.sorisaeWindowCloseText}>✕ 닫기</Text>
+                        </Pressable>
+                    </View>
+                    <Text style={styles.sorisaeWindowHint}>
+                        대면 통역창과 분리된 {aiDisplayName} 대화 창입니다. 마이크를 켜고 말하면 답해줍니다(발화 중에는 듣기가 멈춥니다).
+                    </Text>
+                    {gpsStatus ? <Text style={styles.sorisaeWindowStatus}>{gpsStatus}</Text> : null}
+                    <ScrollView style={styles.sorisaeWindowScroll} contentContainerStyle={{ paddingBottom: 16 }}>
+                        {sorisaeQaLog.length === 0 ? (
+                            <Text style={styles.sorisaeWindowEmpty}>아직 대화가 없습니다. 아래 마이크를 켜고 말씀해 보세요.</Text>
+                        ) : (
+                            sorisaeQaLog.map((qa) => (
+                                <View key={qa.id} style={styles.sorisaeQaTurn}>
+                                    <View style={styles.sorisaeQaQuestionRow}>
+                                        <View style={styles.sorisaeQaBubbleQuestion}>
+                                            <Text style={styles.sorisaeQaRoleLabel}>🙋</Text>
+                                            <Text style={styles.sorisaeQaQuestionText}>{qa.question}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.sorisaeQaAnswerRow}>
+                                        <View style={styles.sorisaeQaBubbleAnswer}>
+                                            <Text style={styles.sorisaeQaRoleLabelAnswer}>🐦</Text>
+                                            <Text style={styles.sorisaeQaAnswerText}>{qa.answer}</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            ))
+                        )}
+                    </ScrollView>
+                    <View style={styles.sorisaeWindowFooter}>
+                        {sorisaeQaLog.length > 0 ? (
+                            <Pressable
+                                onPress={() => setSorisaeQaLog([])}
+                                accessibilityRole="button"
+                                accessibilityLabel="worldlinco-sorisae-window-clear"
+                                style={styles.sorisaeWindowClearBtn}
+                            >
+                                <Text style={styles.sorisaeWindowClearText}>대화 지우기</Text>
+                            </Pressable>
+                        ) : null}
+                        <Pressable
+                            onPress={() => { void handleToggleSorisaeConversation(); }}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-sorisae-window-mic"
+                            testID="worldlinco-sorisae-window-mic"
+                            style={[styles.sorisaeWindowMicBtn, autoVoiceModeEnabled && styles.sorisaeWindowMicBtnActive]}
+                        >
+                            <Text style={[styles.sorisaeWindowMicText, autoVoiceModeEnabled && styles.sorisaeWindowMicTextActive]}>
+                                {autoVoiceModeEnabled ? '🎧 자동 듣는 중 · 끄기' : `🎙️ ${aiDisplayName} 대화 시작`}
+                            </Text>
+                        </Pressable>
+                    </View>
+                </SafeAreaView>
+                </ImageBackground>
+            </Modal>
+
+            {/* 수신 팝업 모달(앱 전역): 수신 통화가 있고 통화가 아직 활성화되지 않았을 때 팝업으로
+                뜨고, 받기/거절을 누르면 사라진다. 어느 레일/화면에 있어도 항상 위에 표시된다. */}
+            <Modal
+                visible={hasPendingIncomingVoip}
+                transparent
+                animationType="fade"
+                statusBarTranslucent
+                onRequestClose={() => { void handleRejectIncomingVoipCall(); }}
+            >
+                {pendingIncomingVoipCall ? (
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                        <View style={styles.voipIncomingFixedCard}>
+                            <Text style={styles.voipIncomingFixedTitle}>{getDisplayUiText().voipIncomingTitle ?? '📞 수신 보이스톡'}</Text>
+                            <Text style={styles.voipIncomingFixedCaller} numberOfLines={2}>
+                                {pendingIncomingVoipCall.caller_label || pendingIncomingVoipCall.display_label || pendingIncomingVoipCall.caller_voice_id || '상대방'}
+                            </Text>
+                            {acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id ? (
+                                <View style={styles.voipIncomingConnectingRow}>
+                                    <ActivityIndicator color="#1E6FE0" size="small" />
+                                    <Text style={styles.voipIncomingConnectingText}>
+                                        {getDisplayUiText().voipIncomingConnecting ?? '서버 연결 중… 잠시만 기다려 주세요'}
+                                    </Text>
+                                </View>
+                            ) : null}
+                            {voipInitError ? <Text style={styles.errorText}>{voipInitError}</Text> : null}
+                            <View style={styles.voipIncomingFixedActions}>
+                                <Pressable
+                                    style={[
+                                        styles.voipIncomingAcceptBtn,
+                                        acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id && styles.voipIncomingActionDisabled,
+                                    ]}
+                                    disabled={acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id}
+                                    onPressIn={() => {
+                                        logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_IN', {
+                                            source_variant: 'popup_modal',
+                                            pending_call_id: pendingIncomingVoipCall.call_id,
+                                        });
+                                    }}
+                                    onPressOut={() => {
+                                        logUiPressProbe('VOIP_INCOMING_ACCEPT_PRESS_OUT', {
+                                            source_variant: 'popup_modal',
+                                            pending_call_id: pendingIncomingVoipCall.call_id,
+                                        });
+                                    }}
+                                    onPress={() => handleIncomingAcceptPress('popup_modal')}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="수신 보이스톡 받기"
+                                    testID="worldlinco-voip-incoming-accept-popup"
+                                >
+                                    <Text style={styles.voipIncomingAcceptBtnText}>{getDisplayUiText().voipIncomingAccept ?? '받기'}</Text>
+                                </Pressable>
+                                <Pressable
+                                    style={[
+                                        styles.voipIncomingRejectBtn,
+                                        acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id && styles.voipIncomingActionDisabled,
+                                    ]}
+                                    disabled={acceptingIncomingVoipCallId === pendingIncomingVoipCall.call_id}
+                                    onPress={() => { void handleRejectIncomingVoipCall(); }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="수신 보이스톡 거절"
+                                    testID="worldlinco-voip-incoming-reject-popup"
+                                >
+                                    <Text style={styles.voipIncomingRejectBtnText}>{getDisplayUiText().voipIncomingReject ?? '거절'}</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                ) : null}
+            </Modal>
 
             {showAuthDebugFloating ? (
                 <View
@@ -9114,15 +10221,38 @@ export default function App() {
                 </View>
             </Modal>
 
-            <Modal visible={showLogin} transparent animationType="fade" onRequestClose={() => setShowLogin(false)}>
-                <View style={styles.loginOverlay}>
-                    <View style={styles.loginModal} accessibilityLabel="worldlinco-login-modal" testID="worldlinco-login-modal">
-                        <Text style={styles.loginModalTitle}>{authModalMode === 'login' ? '🔐 로그인' : '🆕 회원가입'}</Text>
-                        <Text style={styles.loginModeHint}>
-                            {authModalMode === 'login'
-                                ? '기존 계정으로 바로 로그인합니다.'
-                                : `가입 시 기본 언어 ${getLangLabelText(signupPreferredLanguage)} / 국가 ${signupCountryCode} 가 프로필 기준으로 저장됩니다.`}
-                        </Text>
+            <Modal visible={showLogin} animationType="slide" onRequestClose={() => { setAuthModalMode('login'); setLoginError(''); setShowLogin(false); }}>
+                <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.loginScreen}>
+                    <View style={styles.loginScreenHeader}>
+                        <View style={{ flex: 1 }} />
+                        <Pressable
+                            style={styles.loginScreenClose}
+                            onPress={() => { setAuthModalMode('login'); setLoginError(''); setShowLogin(false); }}
+                            accessibilityLabel="worldlinco-login-close"
+                            testID="worldlinco-login-close"
+                        >
+                            <Text style={styles.loginScreenCloseText}>✕</Text>
+                        </Pressable>
+                    </View>
+                    <ScrollView contentContainerStyle={styles.loginScreenBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                        {authModalMode === 'login' ? (
+                            <View style={styles.loginHero}>
+                                <Image source={LOGIN_MASCOT} style={styles.loginHeroMascot} resizeMode="contain" />
+                                <Text style={styles.loginHeroBrand}>WorldLinco</Text>
+                                <Text style={styles.loginHeroTagline}>언어의 벽을 넘어, 세상을 연결합니다</Text>
+                            </View>
+                        ) : null}
+                        <View style={styles.loginCard} accessibilityLabel="worldlinco-login-modal" testID="worldlinco-login-modal">
+                        {authModalMode === 'signup' ? (
+                            <>
+                                <Text style={styles.loginModalTitle}>🆕 회원가입</Text>
+                                <Text style={styles.loginModeHint}>
+                                    {signupStep === 'verify'
+                                        ? `${signupMaskedTarget || loginEmail.trim()}으로 인증 코드를 보냈습니다. 6자리 코드 입력 후 가입이 완료됩니다.`
+                                        : `이메일 또는 전화로 본인 확인 후 가입합니다. 프로필 ${getLangLabelText(signupPreferredLanguage)} / ${resolveCountryFlag(signupCountryCode)} ${signupCountryCode} 는 VoIP·채팅 통역 기준으로 저장됩니다.`}
+                                </Text>
+                            </>
+                        ) : null}
                         {showAuthDebugFloating ? (
                             <View style={styles.authDebugPanel} accessibilityLabel={`AUTH_DEBUG_STATE:${authDebugState}`} testID="auth-debug-modal-panel">
                                 <Text style={styles.authDebugTitle}>AUTH DEBUG</Text>
@@ -9142,108 +10272,110 @@ export default function App() {
                                 <Text style={styles.authDebugLine}>AUTH_DEBUG_SUBMIT_PRESSED:{authDebugSubmitPressedLabel}</Text>
                             </View>
                         ) : null}
-                        {authModalMode === 'signup' ? (
+                        {authModalMode === 'signup' ? renderSignupAuthFields() : null}
+                        {authModalMode !== 'signup' || signupStep === 'form' ? (
                             <>
-                                <TextInput
-                                    style={styles.compactInput}
-                                    placeholder="사용자명"
-                                    placeholderTextColor={C.sub}
-                                    autoCapitalize="none"
-                                    showSoftInputOnFocus
-                                    value={signupUsername}
-                                    onChangeText={setSignupUsername}
-                                />
-                                <TextInput
-                                    style={styles.compactInput}
-                                    placeholder="이름(선택)"
-                                    placeholderTextColor={C.sub}
-                                    showSoftInputOnFocus
-                                    value={signupFullName}
-                                    onChangeText={setSignupFullName}
-                                />
-                                {renderSignupProfileSelectors()}
+                                <Text style={styles.loginFieldLabel}>이메일</Text>
+                                <View style={styles.loginInputRow}>
+                                    <Text style={styles.loginInputIcon}>✉️</Text>
+                                    <TextInput
+                                        style={styles.loginInput}
+                                        placeholder="이메일을 입력하세요"
+                                        placeholderTextColor={C.sub}
+                                        autoCapitalize="none"
+                                        keyboardType="email-address"
+                                        showSoftInputOnFocus
+                                        accessibilityLabel="worldlinco-auth-email-input"
+                                        testID="worldlinco-auth-email-input"
+                                        value={loginEmail}
+                                        onFocus={handleLoginEmailFocus}
+                                        onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
+                                        onChangeText={handleLoginEmailChange}
+                                    />
+                                </View>
+                                <Text style={styles.loginFieldLabel}>비밀번호</Text>
+                                <View style={styles.loginInputRow}>
+                                    <Text style={styles.loginInputIcon}>🔒</Text>
+                                    <TextInput
+                                        style={styles.loginInput}
+                                        placeholder="비밀번호를 입력하세요"
+                                        placeholderTextColor={C.sub}
+                                        secureTextEntry={!showLoginPw}
+                                        showSoftInputOnFocus
+                                        accessibilityLabel="worldlinco-auth-password-input"
+                                        testID="worldlinco-auth-password-input"
+                                        value={loginPw}
+                                        onFocus={handleLoginPasswordFocus}
+                                        onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
+                                        onChangeText={handleLoginPasswordChange}
+                                    />
+                                    <Pressable
+                                        onPress={() => setShowLoginPw((v) => !v)}
+                                        style={styles.loginInputEye}
+                                        accessibilityLabel="worldlinco-auth-password-visibility"
+                                        testID="worldlinco-auth-password-visibility"
+                                    >
+                                        <Text style={styles.loginInputEyeText}>{showLoginPw ? '🙈' : '👁'}</Text>
+                                    </Pressable>
+                                </View>
                             </>
                         ) : null}
-                        <TextInput
-                            style={styles.compactInput}
-                            placeholder="이메일"
-                            placeholderTextColor={C.sub}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                            showSoftInputOnFocus
-                            accessibilityLabel="worldlinco-auth-email-input"
-                            testID="worldlinco-auth-email-input"
-                            value={loginEmail}
-                            onFocus={handleLoginEmailFocus}
-                            onBlur={() => { handleLoginFieldBlur('EMAIL'); }}
-                            onChangeText={handleLoginEmailChange}
-                        />
-                        <TextInput
-                            style={styles.compactInput}
-                            placeholder="비밀번호"
-                            placeholderTextColor={C.sub}
-                            secureTextEntry
-                            showSoftInputOnFocus
-                            accessibilityLabel="worldlinco-auth-password-input"
-                            testID="worldlinco-auth-password-input"
-                            value={loginPw}
-                            onFocus={handleLoginPasswordFocus}
-                            onBlur={() => { handleLoginFieldBlur('PASSWORD'); }}
-                            onChangeText={handleLoginPasswordChange}
-                        />
                         {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
                         <Pressable
-                            style={styles.authModeToggleBtn}
-                            onPress={toggleAuthModalMode}
-                            accessibilityLabel="worldlinco-modal-auth-mode-toggle"
-                            testID="worldlinco-modal-auth-mode-toggle"
+                            style={[styles.loginPrimaryBtn, loginLoading && styles.translateBtnDisabled]}
+                            onPress={authModalMode === 'login' ? handleLogin : handleSignupSubmit}
+                            disabled={loginLoading}
+                            accessibilityRole="button"
+                            accessibilityLabel={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
+                            testID={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
                         >
-                            <Text style={styles.authModeToggleText}>
-                                {authModalMode === 'login' ? '계정이 없으면 회원가입' : '이미 계정이 있으면 로그인'}
-                            </Text>
+                            {loginLoading ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <Text style={styles.loginPrimaryBtnText}>{signupSubmitLabel}</Text>
+                            )}
                         </Pressable>
-                        <View style={styles.modalActionRow}>
+                        {authModalMode === 'login' ? (
+                            <View style={styles.loginUtilityRow}>
+                                {biometricLoginReady && biometricLoginEnabled ? (
+                                    <Pressable style={styles.loginUtilityItem} onPress={() => { void handleBiometricLogin(); }} disabled={biometricLoginBusy} testID="worldlinco-auth-biometric-login-modal">
+                                        <Text style={styles.loginUtilityIcon}>👆</Text>
+                                        <Text style={styles.authUtilityLinkText}>{biometricLoginBusy ? '지문 확인 중...' : '생체인증'}</Text>
+                                    </Pressable>
+                                ) : <View />}
+                                <Pressable onPress={openPasswordRecovery} testID="worldlinco-auth-forgot-password-modal">
+                                    <Text style={styles.authUtilityLinkText}>비밀번호 찾기</Text>
+                                </Pressable>
+                            </View>
+                        ) : null}
+                        <View style={styles.loginDivider} />
+                        <View style={styles.loginSignupRow}>
+                            <Text style={styles.loginSignupHint}>{authModalMode === 'login' ? '계정이 없으신가요?' : '이미 계정이 있으신가요?'}</Text>
                             <Pressable
-                                style={[styles.inlineActionBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}
-                                onPress={() => { void handleStartInstantDemoSession('chat'); }}
-                                disabled={demoSessionLoading || loginLoading}
-                                accessibilityRole="button"
-                                accessibilityLabel="worldlinco-demo-session-start-button"
-                                testID="worldlinco-demo-session-start-button"
+                                onPress={toggleAuthModalMode}
+                                accessibilityLabel="worldlinco-modal-auth-mode-toggle"
+                                testID="worldlinco-modal-auth-mode-toggle"
                             >
-                                <Text style={styles.inlineActionBtnText}>{demoSessionLoading ? '데모 연결 중...' : '데모 세션 시작'}</Text>
-                            </Pressable>
-                            <Pressable
-                                style={[styles.translateBtn, loginLoading && styles.translateBtnDisabled, styles.modalMainBtn]}
-                                onPress={authModalMode === 'login' ? handleLogin : handleSignup}
-                                disabled={loginLoading}
-                                accessibilityRole="button"
-                                accessibilityLabel={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
-                                testID={authModalMode === 'login' ? 'worldlinco-auth-login-submit-button' : 'worldlinco-auth-signup-submit-button'}
-                            >
-                                {loginLoading ? (
-                                    <ActivityIndicator color="#fff" size="small" />
-                                ) : (
-                                    <Text style={styles.translateBtnText}>{authModalMode === 'login' ? '로그인' : '회원가입'}</Text>
-                                )}
-                            </Pressable>
-                            <Pressable
-                                style={styles.modalCloseBtn}
-                                onPress={() => {
-                                    setAuthModalMode('login');
-                                    setLoginError('');
-                                    setShowLogin(false);
-                                }}
-                            >
-                                <Text style={styles.logoutBtnText}>닫기</Text>
+                                <Text style={styles.loginSignupLink}>{authModalMode === 'login' ? '회원가입' : '로그인'}</Text>
                             </Pressable>
                         </View>
-                    </View>
-                </View>
+                        <Pressable
+                            style={[styles.loginDemoBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}
+                            onPress={() => { void handleStartInstantDemoSession('chat'); }}
+                            disabled={demoSessionLoading || loginLoading}
+                            accessibilityRole="button"
+                            accessibilityLabel="worldlinco-demo-session-start-button"
+                            testID="worldlinco-demo-session-start-button"
+                        >
+                            <Text style={styles.loginDemoBtnText}>{demoSessionLoading ? '데모 연결 중...' : '데모 세션 둘러보기'}</Text>
+                        </Pressable>
+                        </View>
+                    </ScrollView>
+                </ImageBackground>
             </Modal>
 
             <Modal
-                visible={langPickerFor !== null}
+                visible={(faceScreenOpen || activeRailSection === 'travel-booking' || interCallActive) && langPickerFor === 'to'}
                 transparent
                 animationType="fade"
                 onRequestClose={() => setLangPickerFor(null)}
@@ -9251,15 +10383,17 @@ export default function App() {
                 <View style={styles.loginOverlay}>
                     <View style={styles.loginModal}>
                         <Text style={styles.loginModalTitle}>
-                            {langPickerFor === 'from' ? `${getUiText(fromLang).sourceLang} 선택` : `${getUiText(fromLang).targetLang} 선택`}
+                            {getDisplayUiText().peerLanguageLabel ?? '상대 언어 (GPS/수동)'}
                         </Text>
-                        <Text style={styles.loginModeHint}>{getUiText(fromLang).manualVoiceOnlyNotice}</Text>
+                        <Text style={styles.loginModeHint}>
+                            {getDisplayUiText().peerLanguageHint ?? 'GPS 우선 · 필요 시 수동 선택'}
+                        </Text>
                         <ScrollView style={styles.contactPickerList} contentContainerStyle={styles.contactPickerListBody}>
-                            {LANGS.map((lang) => {
-                                const active = (langPickerFor === 'from' ? fromLang : toLang) === lang.code;
+                            {LANGS.filter((lang) => lang.code !== fromLang).map((lang) => {
+                                const active = toLang === lang.code;
                                 return (
                                     <Pressable
-                                        key={`travel-lang-${langPickerFor}-${lang.code}`}
+                                        key={`face-peer-lang-${lang.code}`}
                                         style={[styles.langModalOption, active && styles.langModalOptionActive]}
                                         onPress={() => handleSelectLanguage(lang.code)}
                                     >
@@ -9285,15 +10419,15 @@ export default function App() {
             >
                 <View style={styles.loginOverlay}>
                     <View style={styles.loginModal}>
-                        <Text style={styles.loginModalTitle}>📇 일반통화 연락처</Text>
-                        <Text style={styles.loginModeHint}>기기 연락처에서 번호를 불러와 일반 통역 통화 입력칸에 바로 채웁니다.</Text>
+                        <Text style={styles.loginModalTitle}>📇 연락처 연동</Text>
+                        <Text style={styles.loginModeHint}>기기 연락처를 불러와 채팅·VoIP·일반통화에 연결합니다. 연락처 선택 후 채팅/초대 또는 일반통화를 고르세요.</Text>
                         {interCallContactError ? <Text style={styles.errorText}>{interCallContactError}</Text> : null}
                         <ScrollView style={styles.contactPickerList} contentContainerStyle={styles.contactPickerListBody}>
-                            {interCallContactOptions.map((contact) => (
+                            {(interCallContactOptions ?? []).map((contact) => (
                                 <Pressable
                                     key={`inter-contact-${contact.id}`}
                                     style={styles.contactPickerRow}
-                                    onPress={() => handleSelectInterCallContact(contact)}
+                                    onPress={() => presentContactActionChooser(contact)}
                                 >
                                     <Text style={styles.contactPickerName}>{contact.name}</Text>
                                     <Text style={styles.contactPickerMeta}>{contact.label} · {contact.phone}</Text>
@@ -9314,1308 +10448,65 @@ export default function App() {
                     </View>
                 </View>
             </Modal>
+
+            <ContactsDirectoryModal
+                visible={contactsDirectoryVisible}
+                onClose={() => setContactsDirectoryVisible(false)}
+                apiBase={API_BASE}
+                inviterName={userInfo?.username || userInfo?.email?.split('@')[0] || ''}
+                loadFriends={loadFriendsForDirectory}
+                onRegularCall={(contact) => { void handleRegularCallContact(contact); }}
+                onVoipCall={handleVoipCallContact}
+                onChat={(contact, friend) => { void handleChatContact(contact, friend); }}
+            />
+
+            {userInfo && token ? (
+                <VoipFriendsDirectoryModal
+                    visible={voipFriendsDirectoryVisible}
+                    onClose={() => setVoipFriendsDirectoryVisible(false)}
+                    userId={userInfo.id}
+                    token={token}
+                    onVoipCall={(friend) => {
+                        setVoipFriendsDirectoryVisible(false);
+                        void handleStartFriendVoiceCall(friend);
+                    }}
+                    onChat={(friend) => { void handleOpenFriendChatFromDirectory(friend); }}
+                />
+            ) : null}
+
+            {userInfo ? (
+                <Pressable
+                    style={styles.settingsGearButton}
+                    onPress={openSettingsModal}
+                    accessibilityRole="button"
+                    accessibilityLabel="월드링코 설정 열기"
+                    testID="worldlinco-settings-gear"
+                    hitSlop={8}
+                >
+                    <Text style={styles.settingsGearIcon}>⚙️</Text>
+                </Pressable>
+            ) : null}
+
+            <PasswordSecurityModal
+                visible={showPasswordSecurity}
+                mode={passwordSecurityMode}
+                apiBase={API_BASE}
+                authToken={token || undefined}
+                defaultEmail={userInfo?.email || loginEmail}
+                onClose={() => setShowPasswordSecurity(false)}
+                onCompleted={(payload) => { void handlePasswordSecurityCompleted(payload); }}
+            />
+
+            <DataSourcesModal visible={showDataSources} onClose={() => setShowDataSources(false)} />
         </SafeAreaView>
+        </ImageBackground>
     );
 }
 
-const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: C.bg },
-    scroll: { padding: 10, paddingBottom: 108 },
-    lobbyShell: { gap: 14, marginBottom: 18 },
-    lobbyHeroCard: {
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: '#2a4e70',
-        borderRadius: 18,
-        padding: 16,
-        gap: 8,
-    },
-    lobbyHeroEyebrow: { color: '#8fd5ff', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-    lobbyHeroTitle: { color: '#eef7ff', fontSize: 21, fontWeight: '900', lineHeight: 29 },
-    lobbyHeroBody: { color: '#a9bfd4', fontSize: 13, lineHeight: 20 },
-    lobbyPreviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    lobbyPreviewCard: {
-        width: '48%',
-        minHeight: 108,
-        backgroundColor: '#101a26',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        borderRadius: 14,
-        padding: 10,
-        gap: 4,
-    },
-    lobbyPreviewIcon: { fontSize: 18 },
-    lobbyPreviewTitle: { color: '#eef7ff', fontSize: 13, fontWeight: '800' },
-    lobbyPreviewBody: { color: '#9eb3c9', fontSize: 11, lineHeight: 16 },
-    workspaceShell: { marginBottom: 12 },
-    workspaceHeaderCard: {
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: '#34526f',
-        borderRadius: 12,
-        padding: 8,
-        gap: 6,
-    },
-    workspaceHeaderTitle: { color: '#eef7ff', fontSize: 11, fontWeight: '900' },
-    workspaceHeaderBody: { color: '#a9bfd4', fontSize: 8, lineHeight: 11 },
-    workspaceRailGrid: { flexDirection: 'row', flexWrap: 'nowrap', gap: 4, justifyContent: 'space-between' },
-    workspaceRailCard: {
-        width: '19%',
-        minHeight: 38,
-        backgroundColor: '#111927',
-        borderWidth: 1,
-        borderColor: '#2a3a52',
-        borderRadius: 10,
-        paddingHorizontal: 4,
-        paddingVertical: 5,
-        gap: 2,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    workspaceRailCardActive: { backgroundColor: '#163452', borderColor: '#58c9ff' },
-    workspaceRailIcon: { fontSize: 8 },
-    workspaceRailTitle: { color: '#eef7ff', fontSize: 7, fontWeight: '800', textAlign: 'center' },
-    workspaceRailMeta: { color: '#9eb3c9', fontSize: 6, lineHeight: 7, textAlign: 'center' },
-    translationHub: { position: 'relative', marginBottom: 14 },
-    header: { alignItems: 'center', marginBottom: 14, paddingTop: 6 },
-    title: { fontSize: 24, fontWeight: '800', color: '#58c9ff', letterSpacing: 0.3 },
-    subtitle: { fontSize: 12, color: C.sub, marginTop: 2 },
-    travelModeBanner: {
-        marginBottom: 16,
-        backgroundColor: '#101a26',
-        borderWidth: 1,
-        borderColor: '#2a4e70',
-        borderRadius: 18,
-        padding: 14,
-        gap: 10,
-    },
-    travelModeTitle: { color: '#eaf6ff', fontSize: 16, fontWeight: '800' },
-    travelModeBody: { color: '#a9bfd4', fontSize: 13, lineHeight: 19 },
-    travelModeActionRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-    versionPillRow: { marginTop: 10, flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' },
-    versionPill: {
-        backgroundColor: '#10263a',
-        borderWidth: 1,
-        borderColor: '#2c6ea6',
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-    },
-    versionPillText: { color: '#a9dbff', fontSize: 12, fontWeight: '800' },
-    voipLaunchBtn: {
-        backgroundColor: '#153020',
-        borderWidth: 1,
-        borderColor: '#2d6b43',
-        borderRadius: 999,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-    },
-    voipLaunchBtnText: { color: '#dff7e7', fontSize: 11, fontWeight: '800' },
-    badge: {
-        marginTop: 8,
-        backgroundColor: C.badge,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        borderRadius: 12,
-    },
-    badgeText: { fontSize: 12, color: C.sub },
-    accountRow: {
-        marginTop: 10,
-        flexDirection: 'row',
-        gap: 8,
-    },
-    inlineAuthPanel: {
-        marginTop: 12,
-        width: '100%',
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        borderRadius: 14,
-        padding: 12,
-    },
-    inlineAuthHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 6,
-    },
-    inlineAuthTitle: { color: '#eaf6ff', fontSize: 15, fontWeight: '800' },
-    inlineAuthHint: { color: C.sub, fontSize: 12, lineHeight: 18, marginBottom: 10 },
-    inlineAuthModeChip: {
-        backgroundColor: '#152638',
-        borderWidth: 1,
-        borderColor: '#35506d',
-        borderRadius: 999,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-    },
-    inlineAuthModeChipText: { color: '#8fd5ff', fontSize: 11, fontWeight: '700' },
-    inlineAuthStatus: {
-        color: '#79c0ff',
-        fontSize: 12,
-        lineHeight: 18,
-        marginBottom: 8,
-    },
-    authDebugPanel: {
-        width: '100%',
-        marginTop: 10,
-        padding: 10,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#5c4b18',
-        backgroundColor: '#1f1a0c',
-        gap: 3,
-    },
-    authDebugTitle: {
-        color: '#ffd76b',
-        fontSize: 11,
-        fontWeight: '800',
-    },
-    authDebugLine: {
-        color: '#f7e7b1',
-        fontSize: 11,
-        lineHeight: 16,
-    },
-    authDebugFloating: {
-        position: 'absolute',
-        top: 18,
-        right: 16,
-        width: 280,
-        padding: 10,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#5c4b18',
-        backgroundColor: 'rgba(31, 26, 12, 0.92)',
-        zIndex: 30,
-    },
-    authDebugActionBtn: {
-        marginTop: 8,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#9a7a1a',
-        backgroundColor: '#35270a',
-        paddingHorizontal: 10,
-        paddingVertical: 9,
-        alignItems: 'center',
-    },
-    authDebugActionBtnText: {
-        color: '#ffe08c',
-        fontSize: 12,
-        fontWeight: '800',
-    },
-    inlineAuthActionRow: {
-        flexDirection: 'row',
-        gap: 8,
-        flexWrap: 'wrap',
-        alignItems: 'center',
-    },
-    inlineAuthSubmitBtn: {
-        flex: 1,
-        minWidth: 120,
-    },
-    sectionRailDock: {
-        position: 'absolute',
-        left: 16,
-        right: 16,
-        bottom: 14,
-        alignItems: 'center',
-        gap: 8,
-    },
-    sectionRail: {
-        backgroundColor: 'rgba(8, 12, 20, 0.92)',
-        position: 'relative',
-        borderWidth: 1,
-        borderColor: '#263041',
-        borderRadius: 18,
-        paddingVertical: 8,
-        paddingHorizontal: 10,
-        gap: 10,
-    },
-    sectionRailBadge: {
-        position: 'absolute',
-        top: 6,
-        right: 6,
-        borderRadius: 999,
-        backgroundColor: '#c2410c',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderWidth: 1,
-        borderColor: '#fdba74',
-        zIndex: 2,
-    },
-    sectionRailBadgeText: { color: '#fff7ed', fontSize: 9, fontWeight: '900' },
-    sectionRailToggleBtn: {
-        minWidth: 118,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        backgroundColor: 'rgba(8, 12, 20, 0.96)',
-        borderWidth: 1,
-        borderColor: '#2f4d72',
-        borderRadius: 999,
-        paddingHorizontal: 14,
-        paddingVertical: 9,
-    },
-    sectionRailToggleBtnActive: { borderColor: '#58c9ff', backgroundColor: '#10263a' },
-    sectionRailToggleIcon: { color: '#dbeaff', fontSize: 13, fontWeight: '800' },
-    sectionRailToggleText: { color: '#dbeaff', fontSize: 12, fontWeight: '800' },
-    sectionRailBtn: {
-        width: 54,
-        minHeight: 50,
-        borderRadius: 12,
-        backgroundColor: '#121a27',
-        borderWidth: 1,
-        borderColor: '#2a3a52',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 6,
-        gap: 3,
-    },
-    sectionRailBtnActive: { backgroundColor: '#163452', borderColor: '#58c9ff' },
-    sectionRailIcon: { fontSize: 15 },
-    sectionRailLabel: { color: '#dbeaff', fontSize: 9, fontWeight: '700' },
-    sectionCardActive: { borderColor: '#58c9ff', shadowColor: '#58c9ff', shadowOpacity: 0.18, shadowRadius: 12 },
-    railOverlayScrim: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(5, 10, 18, 0.44)',
-        borderRadius: 22,
-        paddingHorizontal: 14,
-        paddingTop: 92,
-        paddingBottom: 18,
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-    },
-    railOverlayCard: {
-        width: '92%',
-        minHeight: 248,
-        backgroundColor: 'rgba(15, 24, 37, 0.96)',
-        borderWidth: 1,
-        borderColor: '#3c5979',
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        gap: 10,
-        shadowColor: '#000',
-        shadowOpacity: 0.24,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 10 },
-    },
-    railOverlayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-    railOverlayTitle: { color: '#eef7ff', fontSize: 18, fontWeight: '800', flex: 1 },
-    railOverlayCloseBtn: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: '#182434',
-        borderWidth: 1,
-        borderColor: '#35506d',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    railOverlayCloseText: { color: '#dbeaff', fontSize: 22, fontWeight: '800' },
-    railOverlayBodyText: { color: '#a9bfd6', fontSize: 14, lineHeight: 22 },
-    railOverlayActionRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 4 },
-    railOverlayActionBtn: {
-        backgroundColor: '#1f7ae0',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        minHeight: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    railOverlayActionText: { color: '#f7fbff', fontSize: 13, fontWeight: '800' },
-    railOverlayGhostBtn: {
-        backgroundColor: '#182434',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#35506d',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        minHeight: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    railOverlayGhostText: { color: '#dbeaff', fontSize: 13, fontWeight: '700' },
-    socialHubRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-    interCallQuickRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8 },
-    interCallHint: { color: '#8b949e', fontSize: 12, lineHeight: 18, marginTop: 6 },
-    socialHubBtn: {
-        flex: 1,
-        minHeight: 112,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#2a3a52',
-        backgroundColor: '#111927',
-        paddingHorizontal: 10,
-        paddingVertical: 10,
-        gap: 4,
-    },
-    socialHubBtnActive: { borderColor: '#58c9ff', backgroundColor: '#13283c' },
-    socialHubIcon: { fontSize: 19 },
-    socialHubTitle: { color: '#eef7ff', fontSize: 14, fontWeight: '800' },
-    socialHubMeta: { color: '#9eb3c9', fontSize: 11, lineHeight: 16 },
-    loginBtn: {
-        backgroundColor: '#0d2a4a',
-        borderWidth: 1,
-        borderColor: '#2a7cff',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    loginBtnText: { color: '#79c0ff', fontWeight: '700', fontSize: 13 },
-    myInfoBtn: {
-        backgroundColor: '#153020',
-        borderWidth: 1,
-        borderColor: '#2d6b43',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-    },
-    myInfoBtnText: { color: '#effff3', fontWeight: '700', fontSize: 12 },
-    logoutBtn: {
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-    },
-    logoutBtnText: { color: C.sub, fontWeight: '700', fontSize: 12 },
-    myInfoPanel: {
-        marginTop: 10,
-        width: '100%',
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 10,
-    },
-    myInfoTitle: { color: '#f8fbff', fontWeight: '800', marginBottom: 6 },
-    myInfoText: { color: C.sub, fontSize: 12, marginBottom: 4 },
-    purchaseListWrap: {
-        marginTop: 8,
-        backgroundColor: '#0d1117',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: C.border,
-        padding: 8,
-        gap: 4,
-    },
-    purchaseItemText: { color: C.sub, fontSize: 12 },
-    labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
-    label: { fontSize: 12, color: C.sub, marginBottom: 8 },
-    gpsStatusText: { color: '#79c0ff', fontSize: 12, marginTop: 2, marginBottom: 8 },
-    gpsBtn: {
-        backgroundColor: '#0d2a4a',
-        borderWidth: 1,
-        borderColor: '#35506c',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-    },
-    gpsBtnText: { color: '#79c0ff', fontSize: 12, fontWeight: '700' },
-    gpsAutoBadge: { color: '#79c0ff', fontSize: 11, fontWeight: '700' },
-    langAutoChip: {
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 9,
-        marginBottom: 4,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    langAutoChipValue: { color: C.text, fontSize: 13, fontWeight: '700' },
-    langAutoChipHint: { color: '#6ee7b7', fontSize: 11, fontWeight: '700' },
-    autoVoiceModeStatus: { color: C.sub, fontSize: 12, lineHeight: 18 },
-    socialHubBtnPassive: {
-        flex: 1,
-        backgroundColor: '#101826',
-        borderWidth: 1,
-        borderColor: '#2a3444',
-        borderRadius: 12,
-        padding: 12,
-        minHeight: 92,
-    },
-    langPickerValue: { color: C.text, fontSize: 13, fontWeight: '700' },
-    langPickerHint: { color: C.sub, fontSize: 11 },
-    langModalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        justifyContent: 'center',
-        paddingHorizontal: 20,
-    },
-    langModalCard: {
-        backgroundColor: '#111927',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: C.border,
-        padding: 12,
-        maxHeight: '78%',
-    },
-    langModalTitle: { color: '#f8fbff', fontSize: 16, fontWeight: '800', marginBottom: 10 },
-    langModalList: { maxHeight: 380 },
-    langModalOption: {
-        paddingVertical: 11,
-        paddingHorizontal: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: C.border,
-        marginBottom: 8,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#0f1623',
-    },
-    langModalOptionActive: {
-        borderColor: C.accent,
-        backgroundColor: '#16253a',
-    },
-    langModalOptionText: { color: C.text, fontSize: 14 },
-    langModalOptionTextActive: { color: '#79c0ff', fontWeight: '800' },
-    langModalCheck: { color: '#79c0ff', fontWeight: '800', fontSize: 16 },
-    langModalCloseBtn: {
-        alignSelf: 'flex-end',
-        marginTop: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-    },
-    langModalCloseText: { color: C.sub, fontWeight: '700' },
-    inputBox: {
-        backgroundColor: C.surface,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: C.border,
-        padding: 10,
-        marginTop: 6,
-        minHeight: 96,
-    },
-    resultBox: { minHeight: 96 },
-    resultActionRow: { marginTop: 8, flexDirection: 'row', justifyContent: 'flex-end' },
-    ocrCard: {
-        marginTop: 12,
-        backgroundColor: '#0f1623',
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: C.border,
-        padding: 12,
-        gap: 8,
-    },
-    ocrTitle: { color: '#f8fbff', fontSize: 15, fontWeight: '800' },
-    ocrSubtitle: { color: C.sub, fontSize: 12, lineHeight: 18 },
-    ocrPreviewBox: {
-        marginTop: 4,
-        backgroundColor: '#101b2c',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        borderRadius: 8,
-        padding: 10,
-        gap: 6,
-    },
-    textInput: { flex: 1, color: C.text, fontSize: 14, minHeight: 68, textAlignVertical: 'top' },
-    resultText: { color: C.text, fontSize: 14 },
-    resultPlaceholder: { color: C.sub, fontSize: 14 },
-    speakBtn: { alignSelf: 'flex-end', marginTop: 6 },
-    speakIcon: { fontSize: 20 },
-    inputBtnRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-    voiceMicBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: C.badge },
-    voiceMicBtnActive: { backgroundColor: '#7c1d1d' },
-    actionRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-    swapBtn: {
-        flex: 1,
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        paddingVertical: 10,
-        alignItems: 'center',
-    },
-    swapText: { color: C.sub, fontSize: 12, fontWeight: '600' },
-    translateBtn: {
-        flex: 2,
-        backgroundColor: C.green,
-        borderRadius: 10,
-        paddingVertical: 10,
-        alignItems: 'center',
-    },
-    translateBtnDisabled: { opacity: 0.6 },
-    translateBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
-    offlineBanner: {
-        backgroundColor: '#2a1a00',
-        borderRadius: 8,
-        padding: 10,
-        marginTop: 10,
-        borderWidth: 1,
-        borderColor: '#5a3a00',
-    },
-    offlineText: { color: '#f0b050', fontSize: 12 },
-    sectionCard: {
-        marginTop: 12,
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 10,
-    },
-    voipRailWorkspaceCard: {
-        marginTop: 10,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        borderRadius: 12,
-        padding: 10,
-        gap: 6,
-    },
-    voipIncomingBanner: {
-        marginTop: 14,
-        backgroundColor: '#102033',
-        borderWidth: 1,
-        borderColor: '#3a6a93',
-        borderRadius: 14,
-        padding: 14,
-        gap: 8,
-    },
-    voipActiveCallBanner: {
-        marginTop: 14,
-        backgroundColor: '#112616',
-        borderWidth: 1,
-        borderColor: '#2f7d46',
-        borderRadius: 14,
-        padding: 14,
-        gap: 8,
-    },
-    voipIncomingBannerHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 10,
-        flexWrap: 'wrap',
-    },
-    voipIncomingBannerTitle: { color: '#f8fbff', fontSize: 16, fontWeight: '900' },
-    voipIncomingBannerBody: { color: '#dbeaff', fontSize: 12, lineHeight: 18 },
-    voipIncomingBannerMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    voipIncomingBannerMeta: { color: '#9fc3e6', fontSize: 11, fontWeight: '700' },
-    voipIncomingFixedPanel: {
-        position: 'absolute',
-        top: 70,
-        left: 14,
-        right: 14,
-        zIndex: 80,
-        elevation: 20,
-    },
-    voipIncomingFixedCard: {
-        backgroundColor: '#102033',
-        borderWidth: 2,
-        borderColor: '#58c9ff',
-        borderRadius: 12,
-        padding: 14,
-        gap: 8,
-        shadowColor: '#000',
-        shadowOpacity: 0.35,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 6 },
-    },
-    voipIncomingFixedTitle: { color: '#f8fbff', fontSize: 18, fontWeight: '900' },
-    voipIncomingFixedCaller: { color: '#dbeaff', fontSize: 14, fontWeight: '700', lineHeight: 20 },
-    voipIncomingFixedActions: { flexDirection: 'row', gap: 10 },
-    voipIncomingAcceptBtn: {
-        flex: 1,
-        backgroundColor: '#1d7f45',
-        borderRadius: 10,
-        paddingVertical: 13,
-        alignItems: 'center',
-    },
-    voipIncomingRejectBtn: {
-        flex: 1,
-        backgroundColor: '#3f1f1f',
-        borderRadius: 10,
-        paddingVertical: 13,
-        alignItems: 'center',
-    },
-    voipIncomingAcceptBtnText: { color: '#eafff1', fontSize: 16, fontWeight: '900' },
-    voipIncomingRejectBtnText: { color: '#fecaca', fontSize: 16, fontWeight: '900' },
-    voipIncomingRailCard: {
-        marginTop: 12,
-        backgroundColor: '#0f1d30',
-        borderWidth: 1,
-        borderColor: '#3b658d',
-        borderRadius: 14,
-        padding: 14,
-        gap: 8,
-    },
-    voipRailLiveScreenWrap: {
-        marginTop: 10,
-        backgroundColor: '#0b1320',
-        borderWidth: 1,
-        borderColor: '#2a415e',
-        borderRadius: 14,
-        padding: 8,
-        gap: 6,
-        overflow: 'hidden',
-        minHeight: 500,
-    },
-    voipPersistentCallHiddenHost: {
-        height: 1,
-        opacity: 0.01,
-        overflow: 'hidden',
-        marginTop: 0,
-    },
-    voipPersistentCallHiddenScreenWrap: {
-        height: 1,
-        overflow: 'hidden',
-    },
-    sectionTitle: { color: '#f8fbff', fontSize: 15, fontWeight: '800' },
-    sectionSub: { color: C.sub, fontSize: 11, marginTop: 3, marginBottom: 8, lineHeight: 16 },
-    voipQuickMetaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 8 },
-    voipQuickMetaText: { color: '#91f2b3', fontSize: 12, fontWeight: '700' },
-    premiumHubRow: { gap: 10 },
-    monetizationCard: {
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        borderRadius: 14,
-        padding: 14,
-        gap: 8,
-        marginBottom: 10,
-    },
-    monetizationCardPrimary: {
-        borderColor: '#2d8cff',
-        backgroundColor: '#101b2c',
-    },
-    connectionStateCard: {
-        borderColor: '#365777',
-        backgroundColor: '#0d1726',
-    },
-    connectionStateTitle: {
-        color: '#f5fbff',
-        fontSize: 16,
-        fontWeight: '800',
-    },
-    connectionStateBody: {
-        color: '#bfd6ea',
-        fontSize: 13,
-        lineHeight: 20,
-    },
-    connectionStateHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 8,
-    },
-    connectionStateBadge: {
-        color: '#ffd28f',
-        backgroundColor: '#3b2c12',
-        borderWidth: 1,
-        borderColor: '#7c5b22',
-        borderRadius: 999,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        overflow: 'hidden',
-        fontSize: 11,
-        fontWeight: '800',
-    },
-    connectionStateBadgeReady: {
-        color: '#9be8b3',
-        backgroundColor: '#14301d',
-        borderColor: '#2d6b43',
-    },
-    connectionStateBulletList: {
-        gap: 4,
-    },
-    connectionStateBullet: {
-        color: '#d7e7f7',
-        fontSize: 12,
-        lineHeight: 18,
-    },
-    connectionStateActionRow: {
-        flexDirection: 'row',
-        gap: 8,
-        flexWrap: 'wrap',
-        alignItems: 'center',
-    },
-    monetizationBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: '#183453',
-        color: '#d8ecff',
-        fontSize: 11,
-        fontWeight: '800',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 999,
-        overflow: 'hidden',
-    },
-    monetizationTitle: { color: '#f8fbff', fontSize: 18, fontWeight: '800' },
-    monetizationBody: { color: '#b3c6db', fontSize: 13, lineHeight: 20 },
-    monetizationMetricRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-    monetizationMetric: {
-        color: '#9be7b0',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    planGrid: { gap: 10 },
-    planCard: {
-        backgroundColor: '#111927',
-        borderWidth: 1,
-        borderColor: '#31465f',
-        borderRadius: 12,
-        padding: 12,
-        gap: 6,
-    },
-    planCardOwned: {
-        borderColor: '#2dd4bf',
-        backgroundColor: '#0f2a29',
-    },
-    planTitle: { color: '#eef7ff', fontSize: 15, fontWeight: '800' },
-    planPrice: { color: '#91f2b3', fontSize: 14, fontWeight: '800' },
-    planUsage: { color: '#dbeaff', fontSize: 12, lineHeight: 18 },
-    planFormula: { color: '#8fb2d1', fontSize: 11, lineHeight: 17 },
-    premiumStatusText: {
-        color: '#79c0ff',
-        fontSize: 12,
-        lineHeight: 18,
-        marginBottom: 8,
-    },
-    songPayCard: {
-        borderColor: '#4b6b2e',
-        backgroundColor: '#151d14',
-    },
-    songModeActionRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' },
-    inlineGhostBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: 10,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-    },
-    inlineGhostBtnDisabled: { opacity: 0.55 },
-    inlineGhostBtnText: { color: C.sub, fontWeight: '700', fontSize: 12 },
-    songModeMetaText: { color: C.sub, fontSize: 12, lineHeight: 18, marginBottom: 4 },
-    songModeStatusText: {
-        marginTop: 4,
-        marginBottom: 8,
-        color: '#79c0ff',
-        fontSize: 12,
-        lineHeight: 18,
-    },
-    songSubtitleWrap: {
-        marginTop: 6,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 10,
-        gap: 8,
-    },
-    songSubtitlePlaceholder: { color: C.sub, fontSize: 12, lineHeight: 18 },
-    songSubtitleItem: {
-        backgroundColor: '#131d2c',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#22344f',
-        padding: 10,
-        gap: 4,
-    },
-    songSubtitleOriginal: { color: '#f8fbff', fontSize: 14, fontWeight: '700' },
-    songSubtitleTranslated: { color: '#91f2b3', fontSize: 14, lineHeight: 20 },
-    songSubtitleMeta: { color: '#79c0ff', fontSize: 11 },
-    songFileJobBox: {
-        marginTop: 8,
-        marginBottom: 8,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: '#22344f',
-        borderRadius: 10,
-        padding: 10,
-        gap: 8,
-    },
-    songFileJobHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-    songFileNameText: { color: '#f8fbff', fontSize: 13, fontWeight: '800', flex: 1 },
-    songFileProgressText: { color: '#91f2b3', fontSize: 12, fontWeight: '800' },
-    songFileProgressTrack: { height: 6, borderRadius: 999, backgroundColor: '#1b2940', overflow: 'hidden' },
-    songFileProgressFill: { height: 6, borderRadius: 999, backgroundColor: '#2dd4bf' },
-    songFileControlRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-    voicePreviewPanel: {
-        marginTop: 8,
-        marginBottom: 8,
-        backgroundColor: '#0b1422',
-        borderWidth: 1,
-        borderColor: '#2a415e',
-        borderRadius: 10,
-        padding: 10,
-        gap: 8,
-    },
-    voicePreviewHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    voiceAckRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 9,
-    },
-    voiceAckMark: {
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: '#79c0ff',
-        color: '#91f2b3',
-        textAlign: 'center',
-        lineHeight: 18,
-        fontWeight: '800',
-    },
-    voiceAckText: { color: C.sub, fontSize: 12, lineHeight: 17, flex: 1 },
-    voicePreviewResultBox: {
-        backgroundColor: '#101b2c',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        borderRadius: 8,
-        padding: 8,
-        gap: 6,
-    },
-    songFileTimelineWrap: {
-        marginTop: 8,
-        marginBottom: 8,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 10,
-        gap: 8,
-    },
-    songFileTimelineTitle: { color: '#f8fbff', fontSize: 14, fontWeight: '800' },
-    songFileExportRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-    songFileExportBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 7,
-        borderRadius: 8,
-        backgroundColor: '#132033',
-        borderWidth: 1,
-        borderColor: '#27405f',
-    },
-    songFileExportText: { color: '#91f2b3', fontSize: 11, fontWeight: '800' },
-    songFileSegmentItem: {
-        backgroundColor: '#131d2c',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#22344f',
-        padding: 10,
-        gap: 6,
-    },
-    songFileSegmentItemActive: { borderColor: '#91f2b3', backgroundColor: '#13251d' },
-    songFileSegmentInput: {
-        minHeight: 52,
-        backgroundColor: '#0b1220',
-        borderWidth: 1,
-        borderColor: '#27405f',
-        color: '#91f2b3',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        fontSize: 14,
-        lineHeight: 20,
-        textAlignVertical: 'top',
-    },
-    songFileSegmentFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    songFileSaveBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 7,
-        borderRadius: 8,
-        backgroundColor: '#123524',
-        borderWidth: 1,
-        borderColor: '#1f6f48',
-    },
-    songFileSaveText: { color: '#91f2b3', fontSize: 11, fontWeight: '800' },
-    songFileExportPreview: {
-        color: C.sub,
-        fontSize: 11,
-        lineHeight: 16,
-        backgroundColor: '#0b1220',
-        borderRadius: 8,
-        padding: 10,
-    },
-    coordRow: { flexDirection: 'row', gap: 10 },
-    coordField: { flex: 1 },
-    coordLabel: { color: C.sub, fontSize: 11, marginBottom: 5 },
-    compactInput: {
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        color: C.text,
-        borderRadius: 10,
-        paddingHorizontal: 9,
-        paddingVertical: 7,
-        marginBottom: 8,
-        fontSize: 12,
-    },
-    noteInput: { minHeight: 64, textAlignVertical: 'top' },
-    railRow: { gap: 8, paddingRight: 8, marginBottom: 8 },
-    railBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-    },
-    railBtnActive: { backgroundColor: '#2a7cff', borderColor: '#2a7cff' },
-    railBtnText: { color: C.sub, fontSize: 13, fontWeight: '600' },
-    railBtnTextActive: { color: '#fff' },
-    bookingSelectionBanner: {
-        marginTop: 8,
-        backgroundColor: '#102416',
-        borderWidth: 1,
-        borderColor: '#215c36',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        gap: 4,
-    },
-    bookingSelectionBannerTitle: { color: '#9be8b3', fontSize: 11, fontWeight: '800' },
-    bookingSelectionBannerPlace: { color: '#dff7e7', fontSize: 13, fontWeight: '800' },
-    bookingSelectionBannerMeta: { color: '#b9d9c5', fontSize: 11, lineHeight: 15 },
-    bookingSelectionBannerStatic: { color: '#b8f1c2', fontSize: 12, fontWeight: '800', marginTop: 2 },
-    bookingSelectionBannerNotice: { color: '#79c0ff', fontSize: 12, fontWeight: '700' },
-    nearbyMapWrap: {
-        marginTop: 8,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        overflow: 'hidden',
-    },
-    nearbyMapHeaderRow: {
-        paddingHorizontal: 12,
-        paddingTop: 10,
-        paddingBottom: 8,
-        gap: 3,
-        backgroundColor: '#0b1320',
-        borderBottomWidth: 1,
-        borderBottomColor: C.border,
-    },
-    nearbyMapTitle: { color: '#e6edf3', fontWeight: '800', fontSize: 13 },
-    nearbyMapSubtitle: { color: '#79c0ff', fontSize: 12 },
-    nearbyMapWebView: {
-        height: 140,
-        backgroundColor: '#08111b',
-    },
-    nearbyListWrap: { marginTop: 6, gap: 8 },
-    placeItem: {
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 8,
-    },
-    placeItemActive: { borderColor: '#58c9ff', backgroundColor: '#0f1d2c' },
-    placeName: { color: '#e6edf3', fontWeight: '800', fontSize: 13 },
-    placeMeta: { color: '#79c0ff', fontSize: 11, marginTop: 3 },
-    placeAddr: { color: C.sub, fontSize: 11, marginTop: 3, lineHeight: 15 },
-    placeActionRow: { flexDirection: 'row', gap: 6, marginTop: 6 },
-    inlineActionBtn: {
-        backgroundColor: '#0d2a4a',
-        borderWidth: 1,
-        borderColor: '#35506c',
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 6,
-    },
-    inlineActionBtnActive: { backgroundColor: '#153020', borderColor: '#2d6b43' },
-    inlineActionBtnText: { color: '#79c0ff', fontSize: 11, fontWeight: '700' },
-    inlineActionBtnTextActive: { color: '#9be8b3' },
-    autoVoiceModeWrap: { marginBottom: 10, gap: 6 },
-    hotelRailBtn: {
-        width: 170,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 10,
-    },
-    hotelRailBtnActive: { borderColor: '#31c45d', backgroundColor: '#12261a' },
-    hotelRailName: { color: '#e6edf3', fontWeight: '800', fontSize: 13 },
-    hotelRailMeta: { color: '#8b949e', fontSize: 11, marginTop: 4 },
-    selectedHotelBox: {
-        backgroundColor: '#102416',
-        borderWidth: 1,
-        borderColor: '#215c36',
-        borderRadius: 10,
-        padding: 10,
-        marginBottom: 10,
-    },
-    selectedHotelName: { color: '#dff7e7', fontWeight: '800', marginBottom: 4 },
-    selectedHotelStatic: { color: '#b8f1c2', fontSize: 12, fontWeight: '800', marginTop: 2 },
-    selectedHotelNotice: { color: '#79c0ff', fontSize: 12, fontWeight: '700', marginTop: 6, marginBottom: 6 },
-    successBox: {
-        marginTop: 10,
-        backgroundColor: '#102416',
-        borderWidth: 1,
-        borderColor: '#215c36',
-        borderRadius: 10,
-        padding: 10,
-        gap: 6,
-    },
-    successTitle: { color: '#9be8b3', fontWeight: '800', fontSize: 13 },
-    successText: { color: '#dff7e7', fontSize: 12, lineHeight: 17 },
-    errorText: {
-        marginTop: 8,
-        backgroundColor: '#2a1616',
-        borderWidth: 1,
-        borderColor: '#5e2727',
-        borderRadius: 8,
-        color: '#ffb4b4',
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        fontSize: 12,
-    },
-    interToggleBtn: {
-        backgroundColor: '#0d2a4a',
-        borderWidth: 1,
-        borderColor: '#35506c',
-        borderRadius: 10,
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    interToggleBtnActive: {
-        backgroundColor: '#3a1020',
-        borderColor: '#c43131',
-    },
-    interToggleText: { color: '#79c0ff', fontWeight: '800', fontSize: 15 },
-    interToggleTextActive: { color: '#ffb4b4' },
-    interPanel: {
-        marginTop: 10,
-        backgroundColor: '#0f1623',
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        padding: 10,
-    },
-    interStatus: {
-        color: '#79c0ff',
-        fontSize: 13,
-        marginBottom: 8,
-    },
-    loginOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#0009',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 16,
-    },
-    loginModal: {
-        width: '100%',
-        maxWidth: 420,
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 14,
-        padding: 14,
-    },
-    shareTargetModal: {
-        width: '88%',
-        maxWidth: 400,
-        backgroundColor: '#0f1724',
-        borderRadius: 22,
-        padding: 18,
-        borderWidth: 1,
-        borderColor: '#21486a',
-        gap: 12,
-    },
-    shareTargetHint: { color: C.sub, fontSize: 13, lineHeight: 19 },
-    shareTargetList: { gap: 10 },
-    shareTargetBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    shareTargetCard: {
-        gap: 4,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#28425f',
-        backgroundColor: '#111b28',
-        padding: 14,
-    },
-    shareTargetTitle: { color: '#f8fbff', fontSize: 14, fontWeight: '800' },
-    shareTargetMeta: { color: '#79c0ff', fontSize: 12, fontWeight: '700' },
-    shareTargetPreview: { color: '#c9d1d9', fontSize: 12, lineHeight: 18 },
-    mediaMetaCard: {
-        flexDirection: 'row',
-        gap: 12,
-        alignItems: 'center',
-        marginTop: 8,
-        marginBottom: 8,
-        padding: 12,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#243244',
-        backgroundColor: '#0f1723',
-    },
-    mediaThumbBox: {
-        width: 64,
-        height: 64,
-        borderRadius: 14,
-        backgroundColor: '#10263a',
-        borderWidth: 1,
-        borderColor: '#2f4d72',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-    },
-    mediaThumbEmoji: { fontSize: 24 },
-    mediaThumbCaption: { color: '#dbeaff', fontSize: 10, fontWeight: '800' },
-    mediaMetaBody: { flex: 1, gap: 6 },
-    mediaMetaTitle: { color: '#f8fbff', fontSize: 13, fontWeight: '800' },
-    mediaBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    mediaBadge: {
-        borderRadius: 999,
-        backgroundColor: '#17324d',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-    },
-    mediaBadgeText: { color: '#79c0ff', fontSize: 11, fontWeight: '800' },
-    loginModalTitle: { color: '#58c9ff', fontSize: 17, fontWeight: '800', marginBottom: 10 },
-    loginModeHint: { color: C.sub, fontSize: 12, lineHeight: 18, marginBottom: 10 },
-    signupProfileLabel: { color: '#dbeaff', fontSize: 12, fontWeight: '800', marginBottom: 6 },
-    signupPickerTrigger: {
-        minHeight: 58,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#31445f',
-        backgroundColor: '#0d1623',
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginBottom: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    signupPickerValue: { color: '#f8fbff', fontSize: 14, fontWeight: '800' },
-    signupPickerMeta: { color: '#89a2c1', fontSize: 11, marginTop: 4 },
-    signupPickerHint: { color: '#58c9ff', fontSize: 12, fontWeight: '800' },
-    signupModalSub: { color: '#89a2c1', fontSize: 12, lineHeight: 18, marginTop: -4, marginBottom: 12 },
-    signupProfileHint: { color: '#9fb0c8', fontSize: 12, lineHeight: 18, marginTop: -2, marginBottom: 8 },
-    authModeToggleBtn: {
-        alignSelf: 'flex-start',
-        marginTop: 2,
-        marginBottom: 4,
-        paddingVertical: 6,
-    },
-    authModeToggleText: { color: '#8fd5ff', fontSize: 13, fontWeight: '700' },
-    modalActionRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
-    contactPickerList: { maxHeight: 320, marginTop: 8 },
-    contactPickerListBody: { gap: 8, paddingBottom: 4 },
-    contactPickerRow: {
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#28405d',
-        backgroundColor: '#111a28',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        gap: 4,
-    },
-    contactPickerName: { color: '#eef7ff', fontSize: 14, fontWeight: '800' },
-    contactPickerMeta: { color: '#9fb8d1', fontSize: 12 },
-    contactPickerEmpty: { color: '#8b949e', fontSize: 12, paddingVertical: 12 },
-    modalMainBtn: { flex: 1 },
-    modalCloseBtn: {
-        flex: 1,
-        backgroundColor: C.surface,
-        borderWidth: 1,
-        borderColor: C.border,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    voipModalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(4, 8, 16, 0.92)',
-        padding: 12,
-        justifyContent: 'center',
-    },
-    voipModalCard: {
-        flex: 1,
-        borderRadius: 18,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#2a415e',
-        backgroundColor: '#0b1320',
-    },
-    voipModalScreenWrap: { flex: 1, minHeight: 520 },
-    voipLobbyWrap: { flex: 1 },
-    voipLobbyScroll: { flex: 1 },
-    voipLobbyBody: { paddingHorizontal: 18, paddingBottom: 22 },
-    voipProfileCard: {
-        borderWidth: 1,
-        borderColor: '#2a415e',
-        backgroundColor: '#101a2a',
-        borderRadius: 14,
-        padding: 16,
-        marginBottom: 14,
-    },
-    voipProfileTitle: { color: '#f8fbff', fontSize: 22, fontWeight: '900', marginBottom: 10 },
-    voipProfileMeta: { color: '#dbeaff', fontSize: 14, lineHeight: 22, marginBottom: 4 },
-    voipLobbySectionLabel: { color: '#9fb0c8', fontSize: 12, fontWeight: '800', marginBottom: 8 },
-    voipGenderRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-    voipGenderChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: '#28415c',
-        backgroundColor: '#101a2a',
-    },
-    voipGenderChipActive: { borderColor: '#58c9ff', backgroundColor: '#13304b' },
-    voipGenderChipText: { color: '#dbeaff', fontSize: 12, fontWeight: '700' },
-    voipGenderChipTextActive: { color: '#f8fbff' },
-    voipLobbyActionRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 8 },
-    voipLobbyLoading: { marginTop: 8 },
-    voipLobbyModeText: { color: '#9fb0c8', fontSize: 12, fontWeight: '700', marginTop: 6, marginBottom: 12 },
-    voipLobbyFlowHint: { color: '#c9d1d9', fontSize: 12, lineHeight: 18, marginBottom: 8 },
-    voipLobbyPstnHint: { color: '#9fb0c8', fontSize: 12, lineHeight: 18, maxWidth: 560 },
-    voipAuditCard: {
-        marginTop: 16,
-        borderWidth: 1,
-        borderColor: '#2a415e',
-        backgroundColor: '#101a2a',
-        borderRadius: 14,
-        padding: 14,
-        gap: 8,
-    },
-    voipAuditHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    voipAuditTitle: { color: '#f8fbff', fontSize: 15, fontWeight: '800' },
-    voipAuditHint: { color: '#9fb0c8', fontSize: 11, lineHeight: 16 },
-    voipAuditEventRow: {
-        backgroundColor: '#0b1320',
-        borderWidth: 1,
-        borderColor: '#22344f',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        gap: 3,
-    },
-    voipAuditEventTitle: { color: '#dbeaff', fontSize: 12, fontWeight: '800' },
-    voipAuditEventMeta: { color: '#9fb0c8', fontSize: 11, lineHeight: 16 },
-    voipAuditEmptyText: { color: '#9fb0c8', fontSize: 12, lineHeight: 18 },
-    voipModalTitle: { color: '#f8fbff', fontSize: 20, fontWeight: '900', marginBottom: 8 },
-    voipModalSub: { color: C.sub, fontSize: 13, lineHeight: 18, marginBottom: 12 },
-    footer: { marginTop: 30, alignItems: 'center' },
-    footerText: { color: C.sub, fontSize: 11, textAlign: 'center', lineHeight: 18 },
-    modalCloseRow: { flexDirection: 'row', justifyContent: 'flex-end', padding: 10 },
-    friendModalCloseBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1e2533', borderRadius: 8 },
-    friendModalCloseBtnText: { color: '#94a3b8', fontSize: 13 },
-});
+export default function App() {
+    return (
+        <SafeAreaProvider>
+            <AppInner />
+        </SafeAreaProvider>
+    );
+}

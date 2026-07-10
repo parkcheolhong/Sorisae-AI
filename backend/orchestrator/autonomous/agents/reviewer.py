@@ -36,7 +36,17 @@ class ReviewerAgent(BaseAgent):
             f"\n{previous}"
         )
 
-        output = await self._call_llm(system_prompt, user_prompt, context)
+        output, llm_connected = await self._call_llm_tracked(system_prompt, user_prompt, context)
+
+        if not llm_connected:
+            return AgentResult(
+                agent=self.agent_id,
+                status="stub",
+                output=output,
+                next_agents=[],
+                artifacts={"llm_connected": False},
+                metadata={"llm_connected": False},
+            )
 
         approved = "approved: true" in output.lower() or "approved:true" in output.lower()
         needs_revision = not approved and ("approved: false" in output.lower() or "문제" in output)
@@ -49,5 +59,7 @@ class ReviewerAgent(BaseAgent):
             artifacts={
                 "approved": approved,
                 "needs_revision": needs_revision,
+                "llm_connected": True,
             },
+            metadata={"llm_connected": True},
         )

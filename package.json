@@ -27,6 +27,9 @@
         "e2e:marketplace-liveview:sheet": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_MARKETPLACE_BASE_URL=http://127.0.0.1:3000&& npm run e2e:marketplace-liveview:sheet\"",
         "e2e:marketplace-liveview:launcher": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3011&& npm run e2e:marketplace-liveview:launcher\"",
         "e2e:marketplace-liveview:all": "cmd /c \"cd /d frontend\\frontend && set PLAYWRIGHT_ADMIN_BASE_URL=http://127.0.0.1:3011&& npm run e2e:marketplace-liveview:all\"",
+        "e2e:orchestrator-live-flow-rail": "npm --prefix frontend/frontend run e2e:orchestrator-live-flow-rail",
+        "e2e:orchestrator-live-flow-rail:fresh": "npm --prefix frontend/frontend run e2e:orchestrator-live-flow-rail:fresh",
+        "e2e:orchestrator-discuss4": "npm --prefix frontend/frontend run e2e:orchestrator-discuss4",
         "start:platform": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_all_in_one.ps1",
         "stop:platform": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_all_in_one.ps1",
         "start:backend": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_backend_stack.ps1",
@@ -36,7 +39,13 @@
         "stop:all": "npm run stop:platform",
         "start": "npm run start:platform",
         "stop": "npm run stop:platform",
-        "health:ops": "npm run health:platform"
+        "health:ops": "npm run health:platform",
+        "smoke:ui-api-split": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run_ui_api_failure_split_smoke.ps1",
+        "smoke:ui-api-split:schedule:register": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\register_ui_api_smoke_task.ps1",
+        "smoke:ui-api-split:schedule:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\register_ui_api_smoke_task.ps1 -Remove",
+        "verify:flow-adm-dash": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_flow_adm_dash_playwright_once.ps1",
+        "smoke:ui-api-split:cron:install": "bash ./scripts/install_ui_api_smoke_cron.sh",
+        "smoke:ui-api-split:cron:remove": "bash ./scripts/uninstall_ui_api_smoke_cron.sh"
     },
     "dependencies": {
         "eslint-config-next": "^16.2.6",

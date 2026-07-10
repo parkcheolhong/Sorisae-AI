@@ -1,3 +1,8 @@
+"""Legacy ② chat_service dialogue mode tests.
+
+Dual-path note (G-2-3-3): `reverse_question` / reciprocal flows remain on ②.
+① autonomous session restore · owner scoping → `test_orchestrator_dialogue_mode_autonomous.py`.
+"""
 from __future__ import annotations
 
 import json
@@ -50,6 +55,7 @@ class _User:
         self.id = user_id
 
 
+@pytest.mark.legacy_chat_service
 @pytest.mark.asyncio
 async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
@@ -69,7 +75,7 @@ async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp
                 }
             ],
             session_id="dialogue-test-1",
-            conversation_mode="auto",
+            conversation_mode="reverse_question",
             reverse_question_mode="implementation",
             project_memory={"reverse_question_mode": "implementation"},
         )
@@ -82,6 +88,7 @@ async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp
     assert response.technology_recommendations
 
 
+@pytest.mark.legacy_chat_service
 @pytest.mark.asyncio
 async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
@@ -115,6 +122,7 @@ async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     assert "이전 결정을 이어서 기술 후보" in joined
 
 
+@pytest.mark.legacy_chat_service
 def test_session_snapshot_owner_mismatch_is_ignored(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
     session_store.save_chat_session_snapshot(
@@ -132,6 +140,7 @@ def test_session_snapshot_owner_mismatch_is_ignored(monkeypatch, tmp_path):
     assert loaded == {}
 
 
+@pytest.mark.legacy_chat_service
 @pytest.mark.asyncio
 async def test_session_id_is_scoped_by_current_user(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))

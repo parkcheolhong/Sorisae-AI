@@ -78,7 +78,7 @@ class AutonomousSession:
     ) -> "AutonomousSession":
         return cls(
             session_id=uuid.uuid4().hex[:16],
-            owner_id=owner_id,
+            owner_id=str(owner_id).strip(),
             mode=mode if mode in EXECUTION_MODES else "semi_auto",
             project_name=project_name,
             validation_profile=validation_profile,
@@ -109,7 +109,11 @@ class AutonomousSession:
     def advance_stage(self) -> Optional[StageState]:
         if self.current_stage_index < len(self.stages) - 1:
             self.current_stage_index += 1
-            return self.get_current_stage()
+            next_stage = self.get_current_stage()
+            if next_stage and next_stage.status == "pending":
+                next_stage.status = "in_progress"
+            return next_stage
+        self.current_stage_index = len(self.stages)
         return None
 
     def requires_approval(self) -> bool:
@@ -122,7 +126,7 @@ class AutonomousSession:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "session_id": self.session_id,
-            "owner_id": self.owner_id,
+            "owner_id": str(self.owner_id).strip(),
             "mode": self.mode,
             "project_name": self.project_name,
             "validation_profile": self.validation_profile,
@@ -133,6 +137,8 @@ class AutonomousSession:
             "current_stage_index": self.current_stage_index,
             "execution_state": self.execution_state,
             "approval_state": self.approval_state,
+            "pending_approval_data": self.pending_approval_data,
+            "model_routes": self.model_routes,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "output_dir": self.output_dir,
@@ -154,11 +160,11 @@ class AutonomousSession:
             return None
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            if data.get("owner_id") != owner_id:
+            if str(data.get("owner_id", "")).strip() != str(owner_id).strip():
                 return None
             session = cls(
                 session_id=data["session_id"],
-                owner_id=data["owner_id"],
+                owner_id=str(data["owner_id"]).strip(),
                 mode=data.get("mode", "semi_auto"),
                 project_name=data.get("project_name", ""),
                 validation_profile=data.get("validation_profile", "python_fastapi"),
@@ -166,6 +172,8 @@ class AutonomousSession:
                 current_stage_index=data.get("current_stage_index", 0),
                 execution_state=data.get("execution_state", "idle"),
                 approval_state=data.get("approval_state", "none"),
+                pending_approval_data=data.get("pending_approval_data"),
+                model_routes=data.get("model_routes", {}),
                 created_at=data.get("created_at", time.time()),
                 updated_at=data.get("updated_at", time.time()),
                 output_dir=data.get("output_dir"),
@@ -173,6 +181,14 @@ class AutonomousSession:
             for turn_data in data.get("conversation", []):
                 session.conversation.append(ConversationTurn(**{
                     k: v for k, v in turn_data.items() if k in ConversationTurn.__dataclass_fields__
+                }))
+            for stage_data in data.get("stages", []):
+                session.stages.append(StageState(**{
+                    k: v for k, v in stage_data.items() if k in StageState.__dataclass_fields__
+                }))
+            for result_data in data.get("agent_results", []):
+                session.agent_results.append(AgentResult(**{
+                    k: v for k, v in result_data.items() if k in AgentResult.__dataclass_fields__
                 }))
             return session
         except Exception as exc:

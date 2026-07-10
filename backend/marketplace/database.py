@@ -160,10 +160,14 @@ DATABASE_URL = _resolve_database_url()
 
 
 def _build_engine_kwargs(database_url: str) -> tuple[str, dict]:
+    pool_size = max(5, int(os.getenv("POSTGRES_POOL_SIZE", "20")))
+    max_overflow = max(0, int(os.getenv("POSTGRES_MAX_OVERFLOW", "30")))
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 1800,
-        "pool_timeout": 10,
+        "pool_timeout": max(10, int(os.getenv("POSTGRES_POOL_TIMEOUT", "30"))),
+        "pool_size": pool_size,
+        "max_overflow": max_overflow,
     }
 
     try:
@@ -240,6 +244,14 @@ def init_db():
     from . import subscription_models  # noqa: F401
 
     Base.metadata.create_all(bind=_get_or_create_engine())
+
+    # 재시작 후에도 단말 FCM 토큰(착신/취소 푸시 대상)이 유지되도록 인메모리 레지스트리 적재.
+    try:
+        from .fcm_push import hydrate_device_registrations_from_db
+
+        hydrate_device_registrations_from_db()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def check_database_availability() -> tuple[bool, str]:

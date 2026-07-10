@@ -16,6 +16,27 @@ export interface Friend {
 export interface AddFriendPayload {
   targetEmail: string;
   phoneNumber?: string;
+  displayName?: string;
+}
+
+export interface FriendInviteRequestPayload {
+  targetEmail: string;
+  phoneNumber?: string;
+  displayName?: string;
+  verificationChannel?: 'email' | 'phone';
+}
+
+export interface FriendInviteRequestResponse {
+  sessionToken: string;
+  verificationChannel: string;
+  maskedTarget: string;
+  expiresAt: string;
+  devOtpHint?: string;
+}
+
+export interface FriendInviteConfirmPayload {
+  inviteSessionToken: string;
+  verificationCode: string;
 }
 
 export interface FriendListResponse {

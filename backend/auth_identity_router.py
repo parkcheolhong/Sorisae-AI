@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime
+
+from backend.time_utils import utcnow
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
@@ -95,7 +97,7 @@ def complete_identity_verification(payload: IdentityCompleteRequest):
         raise HTTPException(status_code=404, detail="본인확인 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= utcnow():
         _identity_session_store.pop(payload.session_token, None)
         raise HTTPException(status_code=410, detail="본인확인 세션이 만료되었습니다")
 

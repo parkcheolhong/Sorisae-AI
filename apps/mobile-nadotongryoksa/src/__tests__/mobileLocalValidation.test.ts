@@ -8,6 +8,14 @@ jest.mock('expo-constants', () => ({
     },
 }));
 
+jest.mock('expo-file-system/legacy', () => ({
+    FileSystemUploadType: { MULTIPART: 1, BINARY_CONTENT: 0 },
+    cacheDirectory: 'file:///cache/',
+    documentDirectory: 'file:///docs/',
+    copyAsync: jest.fn(async () => undefined),
+    uploadAsync: jest.fn(async () => ({ status: 200, body: '{}' })),
+}));
+
 import { translateImage, translateText, voiceTranslate } from '../api/translate';
 import { parsePersistedGpsSnapshot, serializePersistedGpsSnapshot } from '../utils/hybridGpsCache';
 import { detectHybridGpsMode, scoreLocationQuality } from '../utils/hybridGps';
@@ -110,23 +118,41 @@ describe('Local mobile validation guards', () => {
         await voiceTranslate('base64-audio', 'en', 'ko', 'kansai');
 
         expect(global.fetch).toHaveBeenCalledWith(
-            'http://127.0.0.1:8000/api/llm/voice-translate',
+            'http://127.0.0.1:8000/api/llm/voip/voice-translate',
             expect.objectContaining({
                 method: 'POST',
-                body: JSON.stringify({
-                    audio_base64: 'base64-audio',
-                    from_lang: 'en',
-                    to_lang: 'ko',
-                    region_hint: 'kansai',
-                }),
+                body: expect.stringContaining('"device_tts":true'),
             }),
         );
     });
 
-    it('uses effective OCR source and target languages returned by the server', async () => {
-        fetchMock.mockResolvedValueOnce({
+    it('forwards session_id only when provided (V2 Session Core)', async () => {
+        fetchMock.mockResolvedValue({
             ok: true,
-            json: async () => ({
+            json: async () => ({ original_text: 'hi', translated: '안녕', engine: 'nado-voice' }),
+        } as Response);
+
+        // 미지정 시 session_id 미포함(하위호환).
+        await voiceTranslate('aud', 'ko', 'ja');
+        let body = ((global.fetch as jest.Mock).mock.calls.at(-1)?.[1] as { body?: string } | undefined)?.body as string;
+        expect(body).not.toContain('session_id');
+
+        // 지정 시 session_id 포함.
+        await voiceTranslate('aud', 'ko', 'ja', undefined, 'auto', { sessionId: 'call-abc123' });
+        body = ((global.fetch as jest.Mock).mock.calls.at(-1)?.[1] as { body?: string } | undefined)?.body as string;
+        expect(body).toContain('"session_id":"call-abc123"');
+    });
+
+    it('uses effective OCR source and target languages returned by the server', async () => {
+        const fileSystem = jest.requireMock('expo-file-system/legacy') as {
+            copyAsync: jest.Mock;
+            uploadAsync: jest.Mock;
+            cacheDirectory: string;
+        };
+        fileSystem.copyAsync.mockImplementation(async () => undefined);
+        fileSystem.uploadAsync.mockImplementationOnce(async () => ({
+            status: 200,
+            body: JSON.stringify({
                 original_text: 'Welcome to Seoul Station',
                 translated: '서울역에 오신 것을 환영합니다',
                 source_language: 'en',
@@ -137,7 +163,7 @@ describe('Local mobile validation guards', () => {
                 content_type: 'image/png',
                 line_count: 1,
             }),
-        } as Response);
+        }));
 
         const result = await translateImage(
             { uri: 'file:///station.png', name: 'station.png', mimeType: 'image/png' },

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+
+from backend.time_utils import utcnow
 import logging
 from typing import Any, Optional
 from uuid import uuid4
@@ -23,7 +25,12 @@ from backend.auth import (
     resolve_token_subject,
 )
 from backend.database import get_db
+from backend.designated_language import (
+    DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+    text_matches_designated_language,
+)
 from backend.marketplace import models
+from backend.marketplace.fcm_push import send_push_to_user
 from backend.services.nadotongryoksa.translator import (
     NadoTranslator,
     SUPPORTED_LANGUAGES,
@@ -88,6 +95,12 @@ class ChatRoomWebSocketHub:
             except Exception:
                 self.disconnect(room_id, user_id, websocket)
 
+    def is_user_connected(self, room_id: str, user_id: int) -> bool:
+        room_connections = self._connections.get(room_id)
+        if room_connections is None:
+            return False
+        return bool(room_connections.get(user_id))
+
 
 chat_room_ws_hub = ChatRoomWebSocketHub()
 
@@ -139,7 +152,21 @@ class ReadUpdateRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    return utcnow()
+
+
+def _iso_utc_z(value: Optional[datetime]) -> str:
+    """datetime → ISO8601 UTC 문자열(말미 'Z').
+
+    저장 datetime 은 naive UTC(SSOT: backend.time_utils.utcnow)이므로 'Z' 를 붙여
+    클라이언트(JS new Date)가 로컬시간으로 오해(KST ~9h 오프셋)하지 않도록 한다.
+    tz-aware 가 들어오면 UTC 로 변환 후 'Z' 표기. 빈 값은 빈 문자열.
+    """
+    if value is None:
+        return ""
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value.isoformat() + "Z"
 
 
 def _normalize_text(
@@ -300,6 +327,7 @@ def _serialize_user_summary(
         "nickname": nickname,
         "voice_id": _build_voice_id(user.id),
         "preferred_language": getattr(user, "preferred_language", None),
+        "country_code": getattr(user, "country_code", None),
     }
 
 
@@ -462,6 +490,18 @@ def _resolve_message_translation(
         request_translation,
     )
     resolved_source = plan.source_lang
+    if (
+        resolved_source
+        and message_type == "text"
+        and not text_matches_designated_language(body, resolved_source)
+    ):
+        logger.info(
+            "chat designated-language mismatch room=%s sender=%s designated=%s",
+            room.room_uuid,
+            sender_user_id,
+            resolved_source,
+        )
+        return None, resolved_source, plan.primary_target_lang, None
     if plan.scope == "group" and room.title != SELF_ROOM_TITLE:
         return None, resolved_source, None, None
     resolved_target = plan.primary_target_lang
@@ -775,12 +815,19 @@ def _serialize_message(
         viewer_translation_payload = _serialize_viewer_translation(
             viewer_translation_row
         )
+        # [버그 수정] 늦참여자 번역 폴백이 사실상 '죽은 코드'였던 문제 수정.
+        # 그룹 메시지는 message.translated_body/body_target_lang 를 항상 None 으로 저장하므로
+        # (아래 _append_message 의 group 분기 참조), 과거의 'translated_body 가 있을 때만' 가드는
+        # 그룹에서 절대 참이 될 수 없어 폴백이 한 번도 실행되지 않았다.
+        # → 올바른 신호는 '이 메시지에 번역이 요청됐는가' = 수신자 번역행(translation_rows)의 존재다.
+        #   • 번역행이 하나도 없음 → 번역 미요청 메시지 → 폴백 안 함(명시적 요청 계약 준수).
+        #   • 번역행은 있으나 '나' 행이 없음 → 팬아웃 이후 합류한 늦참여자 → 온더플라이 폴백 번역.
+        #   • 발신자 본인 → 자기 팬아웃 전송 상태(partial_failed/done)를 봐야 하므로 폴백 제외.
+        # (폴백 내부에서 비텍스트=None / 동일언어=skipped / 실패=failed 로 안전 분기한다.)
         if (
             viewer_translation_payload is None
-            and (
-                message.translated_body is not None
-                or message.body_target_lang is not None
-            )
+            and translation_rows
+            and message.sender_user_id != current_user_id
         ):
             viewer_translation_payload = (
                 _build_group_viewer_translation_fallback(
@@ -818,7 +865,7 @@ def _serialize_message(
             if viewer_translation_payload is not None
             else message.translation_status
         ),
-        "created_at": created_at.isoformat() if created_at else "",
+        "created_at": _iso_utc_z(created_at),
         "mine": (sender_user_id or 0) == current_user_id,
     }
     if room.room_type == "group" and room.title != SELF_ROOM_TITLE:
@@ -1058,11 +1105,7 @@ def _serialize_room_summary(
         ),
         "last_message_preview": preview,
         "last_message_type": message_type,
-        "last_message_at": (
-            display_last_message_at.isoformat()
-            if display_last_message_at
-            else ""
-        ),
+        "last_message_at": _iso_utc_z(display_last_message_at),
         "counterpart": counterpart,
     }
 
@@ -1123,6 +1166,7 @@ def _create_room_member(
         role=role,
         membership_status=ACTIVE_MEMBERSHIP,
         joined_at=_utcnow(),
+        mute_notifications=False,
     )
 
 
@@ -1357,17 +1401,19 @@ def create_or_get_direct_room(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="친구 관계가 확인되지 않았습니다",
         )
-    _resolve_user(db, friend_user_id)
+    friend_user = _resolve_user(db, friend_user_id)
     room = _find_direct_room(db, current_user_id, friend_user_id)
     created_now = room is None
+    owner_language = _resolve_user_language(current_user)
+    friend_language = _resolve_user_language(friend_user)
     if room is None:
         now = _utcnow()
         room = models.ChatRoom(
             room_uuid=str(uuid4()),
             room_type="direct",
             owner_user_id=current_user_id,
-            default_source_lang=None,
-            default_target_lang=None,
+            default_source_lang=owner_language,
+            default_target_lang=friend_language,
             translation_mode="direct_auto",
             last_message_at=now,
             created_at=now,
@@ -1774,6 +1820,21 @@ async def create_chat_message(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="메시지 본문을 입력해야 합니다",
         )
+    sender = (
+        db.query(models.User)
+        .filter(models.User.id == current_user_id)
+        .first()
+    )
+    designated_language = _resolve_user_language(sender)
+    if (
+        designated_language
+        and (request.message_type or "text") == "text"
+        and not text_matches_designated_language(body, designated_language)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
+        )
     message = _append_message(
         db,
         room=room,
@@ -1790,18 +1851,40 @@ async def create_chat_message(
     db.refresh(room)
     db.refresh(message)
     active_members = _get_room_members(db, room.id)
+    serialized_sender = _serialize_message(db, room, message, current_user_id)
+    sender_label = str(serialized_sender.get("sender_label") or "친구")
+    body_preview = _normalize_text(body, max_length=80)
     for member in active_members:
+        member_user_id = int(member.user_id)
         await chat_room_ws_hub.send_to_user(
             room.room_uuid,
-            int(member.user_id),
+            member_user_id,
             _serialize_message_created_event(
                 db,
                 room,
                 message,
-                int(member.user_id),
+                member_user_id,
             ),
         )
-    return _serialize_message(db, room, message, current_user_id)
+        if member_user_id == current_user_id:
+            continue
+        if chat_room_ws_hub.is_user_connected(room.room_uuid, member_user_id):
+            continue
+        await send_push_to_user(
+            member_user_id,
+            data_payload={
+                "type": "chat_message",
+                "room_id": room.room_uuid,
+                "message_id": message.message_uuid,
+                "sender_label": sender_label,
+                "body_preview": body_preview,
+                "alert_phrase": "친구야~",
+            },
+            title="(월드링코) 채팅",
+            body=f"{sender_label}: 친구야~ {body_preview}",
+            channel_id="worldlinco_chat_message",
+        )
+    return serialized_sender
 
 
 @router.post("/rooms/{room_id}/read")
