@@ -13,7 +13,7 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta, timezone
 
@@ -30,11 +30,14 @@ import os
 import time
 import urllib.error
 import urllib.request
+import ipaddress
+from urllib.parse import urlsplit
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 
 from backend.database import SessionLocal, get_db
-from backend.auth import get_current_user, SECRET_KEY, ALGORITHM
+from backend.auth import get_current_user, SECRET_KEY, ALGORITHM, resolve_ws_token
+from backend.security_gates import require_voip_call_quota
 from backend.designated_language import (
     DESIGNATED_LANGUAGE_MISMATCH_DETAIL,
     text_matches_designated_language,
@@ -57,12 +60,14 @@ from backend.marketplace.nadotongryoksa_chat_router import (
 )
 from backend.marketplace.services.call_mode_audit_service import (
     _deserialize_metadata,
+    list_call_mode_events_by_filter,
     list_call_mode_events,
     record_call_mode_event,
 )
 from backend.marketplace.fcm_push import (
     device_registrations as voip_device_registrations,
     register_device_token,
+    remove_device_token,
 )
 
 try:
@@ -96,6 +101,19 @@ except Exception:  # pragma: no cover - optional runtime dependency
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/voip", tags=["voip"])
+
+
+def _force_relay_enabled() -> bool:
+    """VOIP_FORCE_RELAY=1 → 모든 통화가 TURN 릴레이만 사용(iceTransportPolicy=relay).
+
+    같은 와이파이/같은 방에서 테스트해도 셀룰러 장거리와 **동일한 미디어 경로**(릴레이)를
+    타게 만들어, '지정된 폰(같은 LAN)만 되고 원거리는 먹통'인 거짓 통과를 제거한다.
+    → 지역과 무관하게 항상 같은 결과를 측정하기 위한 스위치(장거리 기준 고정)."""
+    return os.getenv("VOIP_FORCE_RELAY", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ice_transport_policy_default() -> Optional[str]:
+    return "relay" if _force_relay_enabled() else None
 
 # ============================================================================
 # Data Models
@@ -141,6 +159,8 @@ class CallInitiateResponse(BaseModel):
     call_id: str
     signaling_server: str
     turn_servers: List[TURNServer]
+    # 장거리 기준 고정: VOIP_FORCE_RELAY=1 이면 "relay" → 단말이 릴레이 경로만 사용.
+    ice_transport_policy: Optional[str] = Field(default_factory=_ice_transport_policy_default)
     call_route: str = "app_webrtc"
     pstn_gateway_configured: bool = False
     phone_dialer_required: bool = False
@@ -178,6 +198,36 @@ def _stun_servers_from_env() -> List[TURNServer]:
     ]
 
 
+def _turn_relay_domain() -> str:
+    """TURN 릴레이 공개 도메인(URL 자동 유도용). 운영 기본값은 서비스 도메인."""
+    return (
+        os.getenv("TURN_DOMAIN", "")
+        or os.getenv("TURN_REALM", "")
+        or "metanova1004.com"
+    ).strip()
+
+
+def _resolved_turn_urls() -> List[str]:
+    """클라이언트에 내려줄 TURN URL 목록(SSOT).
+
+    한-노브(one-knob) 정책: TURN_URLS 를 직접 지정하지 않아도 **TURN_SECRET 만 설정하면**
+    공개 도메인(TURN_DOMAIN/TURN_REALM)에서 udp+tcp URL 을 자동 유도한다. 운영자가
+    설정해야 할 값을 'coturn 배포 + 비밀키 1개'로 줄여 지역 무관 장거리 통화를 기본화한다.
+    """
+    raw_urls = os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")
+    urls = [u.strip() for u in raw_urls.split(",") if u.strip()]
+    if urls:
+        return urls
+    if os.getenv("TURN_SECRET", "").strip():
+        port = os.getenv("TURN_PORT", "3478").strip() or "3478"
+        domain = _turn_relay_domain()
+        return [
+            f"turn:{domain}:{port}?transport=udp",
+            f"turn:{domain}:{port}?transport=tcp",
+        ]
+    return []
+
+
 def _build_turn_server_from_env() -> Optional[TURNServer]:
     """env 기반 TURN 릴레이 서버.
 
@@ -186,10 +236,10 @@ def _build_turn_server_from_env() -> Optional[TURNServer]:
       1) 시간제한(coturn `use-auth-secret`): TURN_SECRET 설정 시 매 통화마다
          username=`<expiry>:<tag>`, credential=base64(HMAC-SHA1(secret, username)) 생성.
       2) 장기 자격증명: TURN_USERNAME/TURN_CREDENTIAL 사용.
-    TURN_URLS(또는 TURN_URL) 미설정 시 None(=STUN만, 기존 동작 유지).
+    URL 은 TURN_URLS(또는 TURN_URL) 명시값, 없으면 TURN_SECRET+도메인에서 자동 유도.
+    둘 다 없으면 None(=STUN만).
     """
-    raw_urls = os.getenv("TURN_URLS", "") or os.getenv("TURN_URL", "")
-    urls = [u.strip() for u in raw_urls.split(",") if u.strip()]
+    urls = _resolved_turn_urls()
     if not urls:
         return None
 
@@ -209,12 +259,51 @@ def _build_turn_server_from_env() -> Optional[TURNServer]:
     return TURNServer(urls=urls, username=username, credential=credential)
 
 
+def turn_relay_configured() -> bool:
+    """TURN 릴레이가 환경에 설정돼 있는지(지역 무관 통화의 전제 조건).
+
+    LTE/5G·타 네트워크(대칭 NAT)에서 음성 미디어가 흐르려면 TURN 릴레이가 필수다.
+    미설정이면 STUN-only → **LAN/같은 네트워크에서만** 통화가 되고 원거리는 먹통이 된다."""
+    return bool(_resolved_turn_urls())
+
+
+_TURN_MISCONFIG_WARNED = False
+
+
 def _default_turn_servers() -> List[TURNServer]:
-    """앱에 내려줄 ICE 서버 목록(SSOT). STUN + (설정 시) TURN 릴레이."""
+    """앱에 내려줄 ICE 서버 목록(SSOT). STUN + (설정 시) TURN 릴레이.
+
+    TURN 미설정 시 **조용히 STUN-only 로 강등하지 않고 경고를 남긴다** — 그렇지 않으면
+    '같은 네트워크에선 통화되는데 원거리는 먹통'인 상태가 표시 없이 지속되어, 지역 간
+    일관성이 깨진 채로 방치된다(coturn 미배포/미연동 신호)."""
     servers = _stun_servers_from_env()
     turn = _build_turn_server_from_env()
+    global _TURN_MISCONFIG_WARNED
     if turn is not None:
         servers.append(turn)
+        if not _TURN_MISCONFIG_WARNED:
+            logger.info(
+                "[voip][TURN] 릴레이 활성: %s (force_relay=%s) — 지역 무관 장거리 통화 가능.",
+                ",".join(turn.urls),
+                _force_relay_enabled(),
+            )
+            _TURN_MISCONFIG_WARNED = True
+    else:
+        if _force_relay_enabled():
+            # 릴레이 강제인데 릴레이가 없음 → 모든 통화가 실패한다. 조용히 넘기면 '원거리 먹통'이
+            # 원인 불명으로 반복되므로, 매 호출 큰 소리로 알린다.
+            logger.error(
+                "[voip][TURN] VOIP_FORCE_RELAY=1 인데 TURN 릴레이 미설정 → 모든 통화 실패. "
+                "coturn 배포 + TURN_SECRET 설정 필요(coturn/README.md · scripts/verify_turn_relay.py)."
+            )
+        elif not _TURN_MISCONFIG_WARNED:
+            logger.warning(
+                "[voip][TURN] TURN_SECRET/TURN_URLS 미설정 → STUN-only. "
+                "LTE/5G·타 네트워크(대칭 NAT) 원거리 통화는 음성 미디어가 막힙니다. "
+                "지역 무관 일관 통화를 위해 coturn 배포 후 TURN_SECRET 를 설정하세요"
+                "(coturn/README.md · scripts/verify_turn_relay.py 로 검증)."
+            )
+            _TURN_MISCONFIG_WARNED = True
     return servers
 
 
@@ -251,6 +340,8 @@ class CallState:
         auto_relay_requested: bool = False,
         auto_relay_applied: bool = False,
         error_code: Optional[str] = None,
+        caller_language_hint: Optional[str] = None,
+        callee_language_hint: Optional[str] = None,
     ):
         self.call_id = call_id
         self.callee_phone = callee_phone
@@ -266,6 +357,12 @@ class CallState:
         self.auto_relay_requested = auto_relay_requested
         self.auto_relay_applied = auto_relay_applied
         self.error_code = error_code
+        self.caller_language_hint = _resolve_call_language_hint(
+            caller_language_hint
+        )
+        self.callee_language_hint = _resolve_call_language_hint(
+            callee_language_hint
+        )
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         self.created_at = now
         self.updated_at = now
@@ -287,7 +384,18 @@ STALE_RESUMABLE_CALL_TTL_SECONDS = max(
     30,
     int(os.getenv("VOIP_STALE_RESUMABLE_CALL_TTL_SECONDS", "120")),
 )
+# 수락 전(ringing/initiated/callee_offline) '벨 타임아웃'. 발신자만 브리지에 연결돼 있고
+# 콜리가 응답하지 않으면 이 시간 후 통화를 자동 종료해 발신음/수신벨이 무한정 울리지 않게 한다.
+VOIP_RING_TIMEOUT_SECONDS = max(
+    20,
+    int(os.getenv("VOIP_RING_TIMEOUT_SECONDS", "60")),
+)
+PRE_ACCEPT_VOIP_STATUSES = {"initiated", "ringing", "callee_offline"}
 RESUMABLE_VOIP_STATUSES = {"initiated", "ringing", "callee_offline", "connecting", "active"}
+VOIP_LEG_DISCONNECT_GRACE_SECONDS = max(
+    10,
+    int(os.getenv("VOIP_LEG_DISCONNECT_GRACE_SECONDS", "20")),
+)
 
 
 def _utc_now_naive() -> datetime:
@@ -440,24 +548,33 @@ online_voice_clients: Dict[str, WebSocket] = {}
 pending_signal_messages: Dict[str, Dict[str, List[dict]]] = {}
 signal_queue_alert_last_len: Dict[str, Dict[str, int]] = {}
 webrtc_peers: Dict[str, Any] = {}
+# 서버 미디어 브리지(MCU) 인스턴스 — 플래그 VOIP_SERVER_MEDIA_BRIDGE 시에만 사용(체크리스트 §13).
+call_media_bridges: Dict[str, Any] = {}
 
 
 def _maybe_prune_stale_resumable_call(call_state: CallState, db: Session) -> bool:
     if call_state.status not in RESUMABLE_VOIP_STATUSES:
         return False
     age_seconds = _resumable_call_age_seconds(call_state)
-    if age_seconds <= STALE_RESUMABLE_CALL_TTL_SECONDS:
-        return False
-
     participants = call_participants.get(call_state.call_id, {})
-    if call_state.status == "active":
-        if participants:
+
+    if call_state.status in PRE_ACCEPT_VOIP_STATUSES:
+        # 수락 전 상태는 '벨 타임아웃'으로 판정한다. 발신자만 브리지에 연결돼 있어도
+        # (콜리 미수락) 타임아웃이 지나면 자동 종료해 발신음/수신벨 무한 울림을 막는다.
+        # 콜리가 합류하면 connecting/active 로 바뀌므로 여기 분기에 오지 않는다.
+        if age_seconds <= VOIP_RING_TIMEOUT_SECONDS:
             return False
-    elif call_state.status == "connecting":
-        if participants.get("caller") and participants.get("callee"):
+    else:
+        if age_seconds <= STALE_RESUMABLE_CALL_TTL_SECONDS:
             return False
-    elif participants:
-        return False
+        if call_state.status == "active":
+            if participants:
+                return False
+        elif call_state.status == "connecting":
+            if participants.get("caller") and participants.get("callee"):
+                return False
+        elif participants:
+            return False
 
     previous_status = call_state.status
     call_state.set_status("ended")
@@ -593,6 +710,43 @@ def _build_voip_topic(voice_id: str) -> str:
     )
     normalized = "_".join(part for part in normalized.split("_") if part)
     return f"worldlingo_voip_{normalized}" if normalized else ""
+
+
+def _incoming_push_topic_enabled() -> bool:
+    """기본값은 topic fan-out 비활성화(실사용 단말 토큰 1개만 착신)."""
+    return os.getenv("VOIP_INCOMING_PUSH_USE_TOPIC", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _select_latest_registered_tokens(
+    rows: List[Dict[str, Any]],
+    *,
+    limit: int = 1,
+) -> list[str]:
+    """등록 시각 기준 최신 토큰만 반환해 동시 링을 방지한다."""
+    candidates: list[tuple[datetime, str]] = []
+    seen: set[str] = set()
+
+    for row in rows:
+        token = str((row or {}).get("fcm_token") or "").strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        raw_registered = str((row or {}).get("registered_at") or "").strip()
+        try:
+            registered_at = datetime.fromisoformat(raw_registered)
+            if registered_at.tzinfo is None:
+                registered_at = registered_at.replace(tzinfo=timezone.utc)
+        except Exception:
+            registered_at = datetime.min.replace(tzinfo=timezone.utc)
+        candidates.append((registered_at, token))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return [token for _registered_at, token in candidates[: max(limit, 1)]]
 
 
 def _stringify_push_value(value: Any) -> str:
@@ -735,7 +889,7 @@ def _resolve_app_callee(
         if (
             friend.user_id != int(current_user.id)
             and not getattr(current_user, "is_admin", False)
-        ):
+        ): # pyright: ignore[reportGeneralTypeIssues]
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="해당 친구에게 통화할 권한이 없습니다",
@@ -807,6 +961,32 @@ def _build_signaling_server_url(request: Request, call_id: str) -> str:
 
     proto = forwarded_proto or request.url.scheme or "http"
     host = forwarded_host or request_host or "127.0.0.1:8000"
+
+    def _host_is_loopback_or_private(host_value: str) -> bool:
+        candidate = (host_value or "").strip()
+        if not candidate:
+            return True
+        # Split host:port safely, including bracketed IPv6 hostnames.
+        parsed = urlsplit(f"//{candidate}")
+        hostname = (parsed.hostname or "").strip().lower()
+        if not hostname:
+            return True
+        if hostname == "localhost":
+            return True
+        try:
+            ip = ipaddress.ip_address(hostname)
+            return bool(ip.is_loopback or ip.is_private)
+        except ValueError:
+            return False
+
+    public_base = os.getenv("VOIP_SIGNALING_PUBLIC_BASE_URL", "").strip()
+    if public_base and _host_is_loopback_or_private(host):
+        parsed_public = urlsplit(public_base)
+        if parsed_public.netloc:
+            host = parsed_public.netloc
+            if not forwarded_proto:
+                proto = (parsed_public.scheme or proto or "http").lower()
+
     ws_proto = "wss" if proto == "https" else "ws"
     return f"{ws_proto}://{host}/api/v1/voip/signal?call_id={call_id}"
 
@@ -849,6 +1029,32 @@ def _serialize_voip_payload(payload: Dict[str, Any]) -> str:
         separators=(",", ":"),
         default=str,
     )
+
+
+def _should_send_incoming_push_invite(
+    *,
+    callee_app_online: bool,
+    invite_sent: bool,
+) -> bool:
+    """Decide whether to send FCM incoming-call push.
+
+    Default policy: when the callee already has an online presence socket and
+    the websocket invite was delivered, skip push fan-out to avoid ringing
+    multiple devices logged into the same account.
+
+    Set VOIP_ALWAYS_PUSH_INVITE=1 to force push even when online.
+    """
+    force_push = os.getenv("VOIP_ALWAYS_PUSH_INVITE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if force_push:
+        return True
+    if callee_app_online and invite_sent:
+        return False
+    return True
 
 
 async def _send_incoming_call_invite(
@@ -901,11 +1107,12 @@ async def _send_incoming_call_push_invite(
     server_key = os.getenv("FCM_SERVER_KEY", "").strip()
     service_account_info = _load_fcm_service_account_info()
     topic = _build_voip_topic(callee_voice_id)
+    use_topic = _incoming_push_topic_enabled()
     project_id = (
         os.getenv("FCM_PROJECT_ID", "").strip()
         or str((service_account_info or {}).get("project_id") or "").strip()
     )
-    if not topic and not callee_user_id:
+    if callee_user_id is None and not (use_topic and topic):
         return False
 
     caller_label = (
@@ -947,17 +1154,17 @@ async def _send_incoming_call_push_invite(
 
     token_targets: list[str] = []
     if callee_user_id is not None:
-        for row in voip_device_registrations.get(int(callee_user_id), []):
-            token = str(row.get("fcm_token") or "").strip()
-            if token and token not in token_targets:
-                token_targets.append(token)
+        token_targets = _select_latest_registered_tokens(
+            voip_device_registrations.get(int(callee_user_id), []),
+            limit=1,
+        )
 
     any_success = False
     errors: list[str] = []
 
     try:
         if server_key:
-            if topic:
+            if use_topic and topic:
                 legacy_payload = {
                     "to": f"/topics/{topic}",
                     "priority": "high",
@@ -996,7 +1203,7 @@ async def _send_incoming_call_push_invite(
                 if not token_ok:
                     errors.append(f"token:{status_code}:{response_body[:120]}")
         elif service_account_info and project_id:
-            if topic:
+            if use_topic and topic:
                 status_code, response_body = await asyncio.to_thread(
                     _post_fcm_v1,
                     service_account_info,
@@ -1034,10 +1241,10 @@ async def _send_incoming_call_push_invite(
             )
         else:
             logger.info(
-                "[VoIP] FCM push invite sent | voice_id=%s | user_id=%s | topic=%s | tokens=%s",
+                "[VoIP] FCM push invite sent | voice_id=%s | user_id=%s | topic_used=%s | tokens=%s",
                 callee_voice_id,
                 callee_user_id,
-                bool(topic),
+                bool(use_topic and topic),
                 len(token_targets),
             )
         return any_success
@@ -1055,6 +1262,101 @@ async def _send_incoming_call_push_invite(
             exc,
         )
         return False
+
+
+async def _send_voip_call_cancel_push(
+    callee_voice_id: str,
+    call_id: str,
+    callee_user_id: Optional[int] = None,
+) -> bool:
+    """발신자가 통화를 종료/취소했을 때 콜리 단말의 착신 벨(네이티브 풀스크린 알림)을
+    즉시 멈추게 하는 data-only 취소 푸시. 백그라운드/잠금화면에서도 JS 백그라운드
+    핸들러가 `type=voip_call_cancelled` 를 받아 네이티브 알림을 stop 한다.
+    (이게 없으면 콜리 벨이 45초 자동정지 타이머까지 계속 울린다.)"""
+    server_key = os.getenv("FCM_SERVER_KEY", "").strip()
+    service_account_info = _load_fcm_service_account_info()
+    topic = _build_voip_topic(callee_voice_id)
+    project_id = (
+        os.getenv("FCM_PROJECT_ID", "").strip()
+        or str((service_account_info or {}).get("project_id") or "").strip()
+    )
+    if not topic and not callee_user_id:
+        return False
+
+    data_payload = {
+        "type": "voip_call_cancelled",
+        "call_id": _stringify_push_value(call_id),
+    }
+
+    def _build_v1_message(target: dict) -> dict:
+        return {
+            "message": {
+                **target,
+                "data": data_payload,
+                "android": {"priority": "HIGH"},
+            }
+        }
+
+    token_targets: list[str] = []
+    if callee_user_id is not None:
+        for row in voip_device_registrations.get(int(callee_user_id), []):
+            token = str(row.get("fcm_token") or "").strip()
+            if token and token not in token_targets:
+                token_targets.append(token)
+
+    # 온라인 시그널링 WS 가 열려 있으면 즉시 통지(가장 빠른 경로).
+    ws = online_voice_clients.get(callee_voice_id)
+    if ws is not None:
+        try:
+            await ws.send_json({"type": "voip_call_cancelled", "call_id": call_id})
+        except Exception:  # noqa: BLE001
+            online_voice_clients.pop(callee_voice_id, None)
+
+    any_success = False
+    try:
+        if server_key:
+            targets = ([f"/topics/{topic}"] if topic else []) + token_targets
+            for to in targets:
+                status_code, response_body = await asyncio.to_thread(
+                    _post_fcm_legacy,
+                    server_key,
+                    {"to": to, "priority": "high", "data": data_payload},
+                )
+                any_success = any_success or (
+                    200 <= status_code < 300
+                    and ('"message_id"' in response_body or '"success":1' in response_body)
+                )
+        elif service_account_info and project_id:
+            messages = ([{"topic": topic}] if topic else []) + [
+                {"token": tok} for tok in token_targets
+            ]
+            for target in messages:
+                status_code, response_body = await asyncio.to_thread(
+                    _post_fcm_v1,
+                    service_account_info,
+                    project_id,
+                    _build_v1_message(target),
+                )
+                any_success = any_success or (
+                    200 <= status_code < 300 and '"name"' in response_body
+                )
+        logger.info(
+            "[VoIP] Call cancel push sent | voice_id=%s | call_id=%s | ws=%s | tokens=%d | ok=%s",
+            callee_voice_id,
+            call_id,
+            ws is not None,
+            len(token_targets),
+            any_success,
+        )
+        return any_success or ws is not None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[VoIP] Call cancel push failed | voice_id=%s | call_id=%s | error=%s",
+            callee_voice_id,
+            call_id,
+            exc,
+        )
+        return ws is not None
 
 
 def _build_pending_incoming_call_response(
@@ -1207,12 +1509,33 @@ async def register_voip_device(
     }
 
 
+@router.post("/devices/unregister")
+async def unregister_voip_device(
+    payload: VoipDeviceRegisterRequest,
+    current_user=Depends(get_current_user),
+) -> dict:
+    """로그아웃 등으로 단말 FCM 토큰을 해제한다. 해제한 단말은 더 이상 착신 벨을 울리지 않는다."""
+    token = str(payload.fcm_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="fcm_token이 필요합니다.")
+    removed = remove_device_token(token)
+    logger.info(
+        "[VoIP] Device unregistered | user_id=%s | removed=%s",
+        getattr(current_user, "id", None),
+        removed,
+    )
+    return {"ok": True, "removed": removed}
+
+
 @router.post("/calls/initiate", response_model=CallInitiateResponse)
 async def initiate_voip_call(
     http_request: Request,
     request: CallInitiateRequest,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
+    # [보안 수정][MED] initiate 는 통화방 생성 + 착신자 FCM 푸시를 유발하므로 남용 시 푸시 스팸/방 고갈
+    # (STRIDE-D)이 가능하다. 문서화돼 있으나 미사용이던 per-user 쿼터 게이트를 실제로 연결한다(429+Retry-After).
+    _voip_quota: Any = Depends(require_voip_call_quota),
 ) -> CallInitiateResponse:
     """
     Initiate a VoIP call to a reservation center.
@@ -1235,6 +1558,11 @@ async def initiate_voip_call(
     """
 
     started_at = time.perf_counter()
+    caller_profile = (
+        db.query(models.User)
+        .filter(models.User.id == int(current_user.id))
+        .first()
+    )
     app_callee = _resolve_app_callee(db, current_user, request)
     caller_voice_id = _build_voice_id(current_user)
     callee_voice_id = (
@@ -1248,7 +1576,7 @@ async def initiate_voip_call(
     if (
         requested_app_call
         and app_callee is not None
-        and int(app_callee.id) == int(current_user.id)
+        and int(app_callee.id) == int(current_user.id) # pyright: ignore[reportArgumentType]
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1262,7 +1590,11 @@ async def initiate_voip_call(
         has_app_target=requested_app_call,
     )
     resolved_mode = requested_mode
-    auto_relay_requested = bool(request.auto_relay)
+    auto_relay_requested = (
+        bool(request.auto_relay)
+        if request.auto_relay is not None
+        else bool(requested_mode == "voip_full_auto" and requested_app_call)
+    )
     auto_relay_applied = False
     error_code: Optional[str] = None
 
@@ -1314,7 +1646,7 @@ async def initiate_voip_call(
         caller_id=request.caller_id,
         session_id=request.session_id,
         caller_user_id=int(current_user.id),
-        callee_user_id=int(app_callee.id) if app_callee is not None else None,
+        callee_user_id=int(app_callee.id) if app_callee is not None else None, # pyright: ignore[reportArgumentType]
         caller_voice_id=caller_voice_id,
         callee_voice_id=callee_voice_id,
         call_route=(
@@ -1325,6 +1657,8 @@ async def initiate_voip_call(
         auto_relay_requested=auto_relay_requested,
         auto_relay_applied=auto_relay_applied,
         error_code=error_code,
+        caller_language_hint=request.caller_preferred_language,
+        callee_language_hint=request.callee_preferred_language,
     )
     call_states[call_id] = call_state
 
@@ -1379,11 +1713,13 @@ async def initiate_voip_call(
             "display_language": _resolve_call_language_hint(
                 request.caller_preferred_language,
                 getattr(current_user, "preferred_language", None),
+                getattr(caller_profile, "preferred_language", None),
             ),
             "display_country_code": getattr(
                 current_user, "country_code", None
-            ),
-            "callee_user_id": int(app_callee.id),
+            )
+            or getattr(caller_profile, "country_code", None),
+            "callee_user_id": int(app_callee.id), # pyright: ignore[reportArgumentType]
             "callee_voice_id": callee_voice_id,
             "participant_role": "callee",
             "display_label": (
@@ -1421,11 +1757,36 @@ async def initiate_voip_call(
                 callee_voice_id or "",
                 incoming_payload,
             )
-        push_sent = await _send_incoming_call_push_invite(
-            callee_voice_id or "",
-            incoming_payload,
-            callee_user_id=int(app_callee.id) if app_callee is not None else None,
-        )
+        push_sent = False
+        if _should_send_incoming_push_invite(
+            callee_app_online=callee_app_online,
+            invite_sent=invite_sent,
+        ):
+            try:
+                push_sent = await _send_incoming_call_push_invite(
+                    callee_voice_id or "",
+                    incoming_payload,
+                    callee_user_id=(
+                        int(app_callee.id)
+                        if app_callee is not None
+                        else None
+                    ),  # type: ignore
+                )
+            except TypeError:
+                # Test doubles may monkeypatch the helper with a legacy 2-arg signature.
+                push_sent = await _send_incoming_call_push_invite(
+                    callee_voice_id or "",
+                    incoming_payload,
+                )
+        else:
+            logger.info(
+                (
+                    "[VoIP] Skip incoming push invite; online callee already "
+                    "received websocket invite | call_id=%s | voice_id=%s"
+                ),
+                call_id,
+                callee_voice_id,
+            )
         if not invite_sent and not push_sent:
             call_state.set_status("callee_offline")
             callee_app_online = False
@@ -1441,7 +1802,7 @@ async def initiate_voip_call(
             auto_relay_applied=auto_relay_applied,
             call_route="app_webrtc",
             caller_user_id=int(current_user.id),
-            callee_user_id=int(app_callee.id),
+            callee_user_id=int(app_callee.id), # pyright: ignore[reportArgumentType]
             callee_phone=request.callee_phone,
             status=call_state.status,
             error_code=error_code,
@@ -1467,7 +1828,7 @@ async def initiate_voip_call(
             callee_app_online=callee_app_online,
             caller_voice_id=caller_voice_id,
             callee_voice_id=callee_voice_id,
-            callee_user_id=int(app_callee.id),
+            callee_user_id=int(app_callee.id), # pyright: ignore[reportArgumentType]
             participant_role="caller",
             display_label=(
                 getattr(app_callee, "username", None)
@@ -1546,7 +1907,7 @@ async def initiate_voip_call(
             else "pstn_gateway"
         ),
         caller_user_id=int(current_user.id),
-        callee_user_id=int(app_callee.id) if app_callee is not None else None,
+        callee_user_id=int(app_callee.id) if app_callee is not None else None, # pyright: ignore[reportArgumentType]
         callee_phone=request.callee_phone,
         status=call_state.status,
         error_code=error_code,
@@ -1692,6 +2053,13 @@ async def accept_voip_call(
         metadata={"accepted_by_user_id": int(current_user.id)},
     )
 
+    # NOTE:
+    # Cancel pushes are currently routed per user/topic, not per device. Dispatching
+    # an answered-elsewhere cancel here can race the accepting device and tear down
+    # the just-accepted UI on the same account. Non-ringing devices recover through
+    # the existing pending-call polling/status transition path, so skip the extra
+    # cancel push on accept.
+
     logger.info(
         "[VoIP] Call accepted | call_id=%s | callee_user_id=%s | display_language=%s",
         call_id,
@@ -1777,6 +2145,19 @@ async def end_voip_call(
         )
 
     call_state = call_states[call_id]
+    # [보안 수정][HIGH] 통화 종료에도 소유자 검증을 적용한다. accept 경로(위 1867)는 착신자를 검증하지만
+    # end 는 call_id 만 있으면 누구나 호출 가능해, 임의의 사용자가 call_id 만 알면 타인의 활성 통화를
+    # 강제 종료(통화 탈취/DoS)할 수 있었다. → 발신자/착신자 당사자만 종료 가능하게 한다.
+    participant_ids = {
+        int(call_state.caller_user_id or 0),
+        int(call_state.callee_user_id or 0),
+    }
+    participant_ids.discard(0)
+    if participant_ids and int(current_user.id) not in participant_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 통화의 당사자가 아닙니다.",
+        )
     previous_status = call_state.status
     call_state.set_status("ended")
     call_state.duration_sec = request.duration_sec
@@ -1841,6 +2222,49 @@ async def end_voip_call(
             },
         )
 
+    # 종료 통지 — 시그널링 소켓 단절/hangup 누락에도 **양측** 벨·톤이 확실히 멈추도록:
+    #  (1) 양 레그의 시그널링 WS 로 hangup 중계 → 상대 클라가 통화화면 종료 + 톤(ringback) 정지.
+    #  (2) 양측 사용자 단말로 voip_call_cancelled 취소 푸시 → WS 가 죽어 있어도 네이티브
+    #      착신벨/백그라운드 톤이 즉시 멈춘다.
+    # (이전: callee·ring 단계 한정 → 발신측이 끊어도 상대에게 종료 통지가 안 가, 수신 벨/발신
+    #  ringback 이 영구 재생되던 핵심 버그. 종료는 멱등이므로 양측 over-notify 가 안전하다.)
+    if call_state.call_route == "app_webrtc":
+        teardown_signal = {
+            "type": "hangup",
+            "reason": "call_ended",
+            "call_id": call_id,
+        }
+        for role in ("caller", "callee"):
+            try:
+                await _send_app_signal_to_role(call_id, role, dict(teardown_signal))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[VoIP] teardown relay error | call_id=%s | role=%s | error=%s",
+                    call_id,
+                    role,
+                    exc,
+                )
+        for voice_id, party_user_id in (
+            (call_state.callee_voice_id, call_state.callee_user_id),
+            (call_state.caller_voice_id, call_state.caller_user_id),
+        ):
+            if party_user_id is None and not voice_id:
+                continue
+            try:
+                await _send_voip_call_cancel_push(
+                    voice_id or "",
+                    call_id,
+                    callee_user_id=(
+                        int(party_user_id) if party_user_id is not None else None
+                    ),
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[VoIP] cancel push dispatch error | call_id=%s | error=%s",
+                    call_id,
+                    exc,
+                )
+
     # TODO: Store call log in database
     # await db.add(CallLog(...))
 
@@ -1885,21 +2309,16 @@ async def get_recent_missed_calls(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
-    rows = (
-        db.query(models.CallModeAuditLog)
-        .filter(models.CallModeAuditLog.event_type == "call_missed")
-        .filter(models.CallModeAuditLog.callee_user_id == int(current_user.id))
-        .order_by(
-            models.CallModeAuditLog.created_at.desc(),
-            models.CallModeAuditLog.id.desc(),
-        )
-        .limit(20)
-        .all()
+    rows = list_call_mode_events_by_filter(
+        db,
+        event_type="call_missed",
+        callee_user_id=int(current_user.id),
+        limit=20,
     )
 
     payload: list[dict[str, Any]] = []
     for row in rows:
-        metadata = _deserialize_metadata(row.metadata_json)
+        metadata = _deserialize_metadata(row.metadata)
         caller = None
         if row.caller_user_id is not None:
             caller = (
@@ -1942,17 +2361,19 @@ async def get_recent_missed_calls(
 @router.websocket("/presence")
 async def websocket_presence(
     websocket: WebSocket,
-    token: str,
+    token: str = "",
     db: Session = Depends(get_db),
 ):
     """Keep a logged-in user available for incoming app-to-app voice calls."""
-    user = _resolve_authenticated_user_from_token(db, token)
+    # [#6] Sec-WebSocket-Protocol 우선, ?token= 폴백(점진 전환·무중단).
+    resolved_token, accept_subprotocol = resolve_ws_token(websocket, token)
+    user = _resolve_authenticated_user_from_token(db, resolved_token)
     if user is None or not getattr(user, "is_active", False):
         await websocket.close(code=4401)
         return
 
     voice_id = _build_voice_id(user)
-    await websocket.accept()
+    await websocket.accept(subprotocol=accept_subprotocol)
     online_voice_clients[voice_id] = websocket
     logger.info(
         "[VoIP] Presence connected | voice_id=%s | user_id=%s",
@@ -1964,7 +2385,7 @@ async def websocket_presence(
             {
                 "type": "presence_ready",
                 "voice_id": voice_id,
-                "user_id": int(user.id),
+                "user_id": int(user.id), # pyright: ignore[reportArgumentType]
             }
         )
         while True:
@@ -1985,6 +2406,95 @@ async def websocket_presence(
     finally:
         if online_voice_clients.get(voice_id) is websocket:
             online_voice_clients.pop(voice_id, None)
+
+
+def _server_bridge_active() -> bool:
+    """서버 미디어 브리지 모드 활성 여부(플래그 + aiortc/av/numpy 가용)."""
+    try:
+        from backend.voip import media_bridge
+        return media_bridge.server_bridge_enabled()
+    except Exception:
+        return False
+
+
+async def _bridge_emit_subtitle(call_id: str, target_role: str, payload: dict) -> None:
+    """AI 탭이 생성한 통역 자막을 상대 레그(폰)로 전달."""
+    await _send_app_signal_to_role(
+        call_id, target_role, payload, queue_if_missing=True
+    )
+
+
+def _resolve_leg_languages(call_state: "CallState") -> Dict[str, str]:
+    """caller/callee 화자 지정 언어(없으면 비움 → STT auto)."""
+    langs: Dict[str, str] = {}
+    caller_hint = _resolve_call_language_hint(
+        getattr(call_state, "caller_language_hint", None),
+        (call_state.incoming_payload or {}).get("display_language"),
+    )
+    callee_hint = _resolve_call_language_hint(
+        getattr(call_state, "callee_language_hint", None),
+    )
+    if caller_hint:
+        langs["caller"] = caller_hint
+    if callee_hint:
+        langs["callee"] = callee_hint
+
+    unresolved_roles: list[tuple[str, Optional[int]]] = []
+    if "caller" not in langs:
+        unresolved_roles.append(("caller", call_state.caller_user_id))
+    if "callee" not in langs:
+        unresolved_roles.append(("callee", call_state.callee_user_id))
+    if not unresolved_roles:
+        return langs
+
+    db = SessionLocal()
+    try:
+        for role, user_id in unresolved_roles:
+            if user_id is None:
+                continue
+            user = (
+                db.query(models.User)
+                .filter(models.User.id == user_id)
+                .first()
+            )
+            lang = _resolve_user_language(user) if user is not None else None
+            if lang:
+                langs[role] = lang
+    except Exception:
+        pass
+    finally:
+        db.close()
+    return langs
+
+
+def _get_or_create_bridge(call_id: str, call_state: "CallState"):
+    """call_id 의 서버 미디어 브리지 인스턴스를 반환(없으면 생성)."""
+    bridge = call_media_bridges.get(call_id)
+    if bridge is not None:
+        # 자가 종료(레그 끊김 시 teardown)된 stale 브리지면 버리고 새로 만든다(재연결 대비).
+        if getattr(bridge, "_closed", False):
+            call_media_bridges.pop(call_id, None)
+        else:
+            return bridge
+    from backend.voip.media_bridge import CallMediaBridge
+    bridge = CallMediaBridge(
+        call_id,
+        _bridge_emit_subtitle,
+        ice_servers=_default_turn_servers(),
+        leg_languages=_resolve_leg_languages(call_state),
+    )
+    call_media_bridges[call_id] = bridge
+    logger.info("[VoIP] Server media bridge created | call_id=%s", call_id)
+    return bridge
+
+
+async def _close_bridge(call_id: str) -> None:
+    bridge = call_media_bridges.pop(call_id, None)
+    if bridge is not None:
+        try:
+            await bridge.close()
+        except Exception:
+            logger.debug("[VoIP] bridge close error | call_id=%s", call_id, exc_info=True)
 
 
 async def _relay_app_signal(
@@ -2038,6 +2548,67 @@ async def _relay_app_signal(
         message_type,
         sender_role,
     )
+
+
+async def _grace_teardown_on_leg_disconnect(
+    call_id: str, disconnected_role: str
+) -> None:
+    """레그 시그널링 WS 가 끊긴 뒤 유예시간 내 재연결되지 않으면, 상대 레그에 hangup 을
+    중계하고 양측 단말에 취소 푸시를 보낸다. 끊김 누락(클라가 /end 도 못 부른 경우)에도
+    벨·톤이 영구 재생되지 않게 하는 서버 측 안전망. 재연결되면 통화를 유지한다."""
+    call_state = call_states.get(call_id)
+    # 연결 수립 전 상태(initiated/ringing/callee_offline/connecting)는
+    # 서버 강제 teardown 대신 기존 벨 타임아웃/클라이언트 재시도로 수습한다.
+    # 여기서 강제 종료하면 수락 직후 레이스로 통화가 끊기는 회귀가 발생한다.
+    if call_state is None or call_state.status != "active":
+        return
+    try:
+        await asyncio.sleep(VOIP_LEG_DISCONNECT_GRACE_SECONDS)
+    except asyncio.CancelledError:  # pragma: no cover
+        return
+    # 같은 role 소켓이 다시 붙었으면(재연결) 통화 유지 — 아무 것도 하지 않는다.
+    if call_participants.get(call_id, {}).get(disconnected_role) is not None:
+        return
+    call_state = call_states.get(call_id)
+    if call_state is None or call_state.status != "active":
+        return
+    if call_state.call_route != "app_webrtc":
+        return
+    logger.info(
+        "[VoIP] leg disconnect grace expired → teardown | call_id=%s | role=%s",
+        call_id,
+        disconnected_role,
+    )
+    call_state.set_status("ended")
+    other_role = "callee" if disconnected_role == "caller" else "caller"
+    try:
+        await _send_app_signal_to_role(
+            call_id,
+            other_role,
+            {"type": "hangup", "reason": "peer_disconnected", "call_id": call_id},
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    for voice_id, party_user_id in (
+        (call_state.callee_voice_id, call_state.callee_user_id),
+        (call_state.caller_voice_id, call_state.caller_user_id),
+    ):
+        if party_user_id is None and not voice_id:
+            continue
+        try:
+            await _send_voip_call_cancel_push(
+                voice_id or "",
+                call_id,
+                callee_user_id=(
+                    int(party_user_id) if party_user_id is not None else None
+                ),
+            )
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        await _close_bridge(call_id)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 async def _send_app_signal_to_role(
@@ -2152,8 +2723,8 @@ def _get_or_create_voip_direct_room(
     db.flush()
     db.add_all(
         [
-            _create_chat_room_member(room.id, caller_user_id, "owner"),
-            _create_chat_room_member(room.id, callee_user_id, "member"),
+            _create_chat_room_member(room.id, caller_user_id, "owner"), # pyright: ignore[reportArgumentType]
+            _create_chat_room_member(room.id, callee_user_id, "member"), # pyright: ignore[reportArgumentType]
         ]
     )
     db.flush()
@@ -2197,8 +2768,8 @@ def _persist_voip_chat_message(
 
         room = _get_or_create_voip_direct_room(
             db,
-            caller_user_id=call_state.caller_user_id,
-            callee_user_id=call_state.callee_user_id,
+            caller_user_id=call_state.caller_user_id, # pyright: ignore[reportArgumentType]
+            callee_user_id=call_state.callee_user_id, # pyright: ignore[reportArgumentType]
         )
         if room is None:
             return None
@@ -2384,6 +2955,32 @@ async def websocket_signaling(
             normalized_role,
         )
         await _flush_pending_signals(call_id, normalized_role, websocket)
+
+        # 서버 미디어 브리지(§13/MB-3): MCU 는 두 폰이 모두 서버와 연결돼야 한다.
+        # caller 는 자기 offer 를 보내 서버가 answer 한다(아래 'offer' 핸들러). 그러나 callee 는
+        # P2P 습관상 offer 를 기다리기만 하므로, 서버가 callee 에게 offer 를 만들어 보낸다.
+        # (from_role='server_bridge' 마커로 클라가 브리지 모드 진입.)
+        if _server_bridge_active() and normalized_role == "callee":
+            try:
+                bridge = _get_or_create_bridge(call_id, call_state)
+                offer_sdp = await bridge.create_offer_for("callee")
+                await websocket.send_json(
+                    {
+                        "type": "offer",
+                        "call_id": call_id,
+                        "sdp": offer_sdp,
+                        "from_role": "server_bridge",
+                    }
+                )
+                logger.info(
+                    "[VoIP] Bridge offer sent to callee | call_id=%s", call_id
+                )
+            except Exception as exc:
+                logger.error(
+                    "[VoIP] Bridge callee offer failed | call_id=%s | error=%s",
+                    call_id,
+                    exc,
+                )
         try:
             while True:
                 data = await websocket.receive_text()
@@ -2403,13 +3000,104 @@ async def websocket_signaling(
                     )
                 if message_type == "offer":
                     call_state.local_sdp = message.get("sdp")
-                    await _relay_app_signal(call_id, normalized_role, message)
+                    if _server_bridge_active():
+                        # 서버 미디어 브리지 모드(§13): 폰이 서버에 offer → 서버가 answer.
+                        # 각 폰이 서버와 sendrecv 로 연결되고, 서버가 양 레그를 포워딩 + AI 탭.
+                        try:
+                            bridge = _get_or_create_bridge(call_id, call_state)
+                            answer_sdp = await bridge.handle_offer(
+                                normalized_role, message.get("sdp", "")
+                            )
+                            await websocket.send_json(
+                                {
+                                    "type": "answer",
+                                    "call_id": call_id,
+                                    "sdp": answer_sdp,
+                                    "from_role": "server_bridge",
+                                }
+                            )
+                            # [근본원인 수정] 발신자(caller)가 서버 브리지에 연결된 것만으로는
+                            # '통화 성립(active)'이 아니다. 콜리가 수락(answer)하기 전까지는
+                            # 'ringing' 을 유지해야 콜리의 pending-incoming 조회가 착신을 계속
+                            # 찾아 받기/거절 UI를 띄운다. caller-offer 로 active 가 되면 status 가
+                            # pending_statuses({ringing,callee_offline})에서 빠져 콜리가 받기를
+                            # 누를 틈도 없이 ~1초 만에 부재중 처리되던 회귀를 차단한다.
+                            # 실제 active 전환은 콜리 answer 분기(아래)에서만 일어난다.
+                            if normalized_role == "callee":
+                                call_state.set_status("active")
+                            logger.info(
+                                "[VoIP] Bridge answer sent | call_id=%s | role=%s | status=%s",
+                                call_id,
+                                normalized_role,
+                                call_state.status,
+                            )
+                        except Exception as exc:
+                            logger.error(
+                                "[VoIP] Bridge offer failed, fallback to P2P relay "
+                                "| call_id=%s | error=%s",
+                                call_id,
+                                exc,
+                            )
+                            await _relay_app_signal(call_id, normalized_role, message)
+                    else:
+                        await _relay_app_signal(call_id, normalized_role, message)
                 elif message_type == "answer":
                     call_state.remote_sdp = message.get("sdp")
                     call_state.set_status("active")
-                    await _relay_app_signal(call_id, normalized_role, message)
+                    if _server_bridge_active():
+                        # 브리지 모드: 서버가 callee 에 보낸 offer 에 대한 응답 → 브리지에 적용.
+                        # (caller 는 서버가 answer 하는 쪽이라 여기로 오지 않는다.)
+                        if call_id in call_media_bridges:
+                            await call_media_bridges[call_id].handle_answer(
+                                normalized_role, message.get("sdp", "")
+                            )
+                            logger.info(
+                                "[VoIP] Bridge answer applied | call_id=%s | role=%s",
+                                call_id,
+                                normalized_role,
+                            )
+                            # 발신음(ringback) 종료 트리거: callee 가 서버 offer 에 응답한 순간이
+                            # = 실제 "전화 받음". 브리지 모드에서 caller 의 WebRTC 는 서버와 즉시
+                            # connected 되므로(상대 응답과 무관), 이 신호로만 "상대가 받았다"를
+                            # 알 수 있다 → caller 클라가 ringback 을 멈춘다.
+                            if normalized_role == "callee":
+                                await _send_app_signal_to_role(
+                                    call_id,
+                                    "caller",
+                                    {
+                                        "type": "peer_state",
+                                        "call_id": call_id,
+                                        "state": "callee_answered",
+                                    },
+                                    queue_if_missing=True,
+                                )
+                    else:
+                        await _relay_app_signal(call_id, normalized_role, message)
                 elif message_type == "candidate":
-                    await _relay_app_signal(call_id, normalized_role, message)
+                    if _server_bridge_active() and call_id in call_media_bridges:
+                        await call_media_bridges[call_id].add_ice_candidate(
+                            normalized_role,
+                            message.get("candidate"),
+                            message.get("sdpMid"),
+                            message.get("sdpMLineIndex"),
+                        )
+                    else:
+                        await _relay_app_signal(call_id, normalized_role, message)
+                elif message_type == "client_caps":
+                    # 클라 능력 협상(build174+): 클라가 브리지 모드에서 자체 TTS 를 재생하지 않고
+                    # 자막-only 로 동작하면 server_tts=true 를 보낸다 → 서버가 그 레그에 번역
+                    # TTS 를 다운링크로 주입한다. 신호가 없는 구버전(build173)은 기본 false 라
+                    # 서버가 주입하지 않으므로(클라 자체 재생) 2중창이 발생하지 않는다(무경합 롤아웃).
+                    if _server_bridge_active() and call_id in call_media_bridges:
+                        wants = bool(message.get("server_tts"))
+                        call_media_bridges[call_id].set_leg_wants_server_tts(
+                            normalized_role, wants
+                        )
+                        logger.info(
+                            "[VoIP] Bridge client_caps | call_id=%s | role=%s | server_tts=%s",
+                            call_id, normalized_role, wants,
+                        )
+                    continue
                 elif message_type == "chat_message":
                     text = str(message.get("text") or "").strip()
                     if not text:
@@ -2486,20 +3174,24 @@ async def websocket_signaling(
                                 "type": "chat_message",
                                 "from_role": normalized_role,
                                 "text": text[:280],
-                                "sent_at": sender_message.get("created_at")
+                                "sent_at": sender_message.get("created_at") # pyright: ignore[reportPossiblyUnboundVariable]
                                 or relay_payload["sent_at"],
                                 "client_sent_at": client_sent_at,
                                 "message_id": persisted_message["message_id"],
                                 "room_id": persisted_message["room_id"],
-                                "translated_text": sender_message.get("translated_body"),
-                                "source_lang": sender_message.get("body_source_lang"),
-                                "target_lang": sender_message.get("body_target_lang"),
-                                "translation_status": sender_message.get("translation_status"),
-                                "sender_label": sender_message.get("sender_label"),
-                                "sender_voice_id": sender_message.get("sender_voice_id"),
+                                "translated_text": sender_message.get("translated_body"), # pyright: ignore[reportPossiblyUnboundVariable]
+                                "source_lang": sender_message.get("body_source_lang"), # pyright: ignore[reportPossiblyUnboundVariable]
+                                "target_lang": sender_message.get("body_target_lang"), # pyright: ignore[reportPossiblyUnboundVariable]
+                                "translation_status": sender_message.get("translation_status"), # pyright: ignore[reportPossiblyUnboundVariable]
+                                "sender_label": sender_message.get("sender_label"), # pyright: ignore[reportPossiblyUnboundVariable]
+                                "sender_voice_id": sender_message.get("sender_voice_id"), # pyright: ignore[reportPossiblyUnboundVariable]
                             },
                         )
                 elif message_type == "voice_translation":
+                    # 브리지 모드에선 서버 AI 탭이 통역 자막을 생성하므로
+                    # 클라이언트발 voice_translation 은 무시(중복 자막 방지).
+                    if _server_bridge_active():
+                        continue
                     relay_payload = _build_voice_translation_relay_payload(message)
                     if (
                         not relay_payload.get("transcript")
@@ -2514,6 +3206,7 @@ async def websocket_signaling(
                 elif message_type == "hangup":
                     call_state.set_status("ended")
                     _cleanup_call_runtime_state(call_id)
+                    await _close_bridge(call_id)
                     await _relay_app_signal(call_id, normalized_role, message)
                     break
                 elif message_type == "ping":
@@ -2560,6 +3253,15 @@ async def websocket_signaling(
             if participants.get(normalized_role) is websocket:
                 participants.pop(normalized_role, None)
             connected_clients.pop(f"{call_id}:{normalized_role}", None)
+            # 양 레그가 모두 떠났으면 서버 미디어 브리지 종료(리소스 회수).
+            if not call_participants.get(call_id):
+                await _close_bridge(call_id)
+            # 끊김 누락 안전망: 유예시간 내 재연결이 없으면 상대 통지 + 양측 취소 푸시.
+            _cs_disc = call_states.get(call_id)
+            if _cs_disc is not None and _cs_disc.status != "ended":
+                asyncio.create_task(
+                    _grace_teardown_on_leg_disconnect(call_id, normalized_role)
+                )
         return
 
     connected_clients[call_id] = websocket
@@ -2785,6 +3487,20 @@ async def get_call_details(
         )
 
     call_state = call_states[call_id]
+
+    # [보안 수정][MED] IDOR 차단: 이 엔드포인트는 callee_phone(상대 전화번호)·user_id·session_id 등
+    # 민감정보를 반환한다. 과거엔 인증만 하면 누구나 임의 call_id 의 상세를 조회할 수 있어 전화번호가
+    # 노출됐다. → 통화 당사자(발신/착신)만 조회 가능하게 제한한다.
+    participant_ids = {
+        int(call_state.caller_user_id or 0),
+        int(call_state.callee_user_id or 0),
+    }
+    participant_ids.discard(0)
+    if participant_ids and int(current_user.id) not in participant_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 통화의 당사자가 아닙니다.",
+        )
 
     return {
         "call_id": call_id,

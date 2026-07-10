@@ -1,6 +1,7 @@
 """관광 데이터 사람검수 라우터 — 샘플링/라벨/집계 API + 자체완결 HTML 검수 콘솔.
 
-내부 전문가 도구. 기본 활성(`TOURISM_REVIEW_ENABLED=1`)이며, 관리자 인증을 요구한다.
+내부 전문가 도구. 기본 활성(`TOURISM_REVIEW_ENABLED=1`)이며, 모든 엔드포인트는 관리자 인증을
+요구한다(콘솔 HTML 은 정적, API 는 동일 오리진 호출).
 """
 
 from __future__ import annotations

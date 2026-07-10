@@ -7,6 +7,7 @@
 import { Platform } from 'react-native';
 
 import { WebRTCStatsReporter } from '../features/voip-voice-relay/webrtcStatsReporter';
+import { setVoipServerBridgeActive } from './worldlincoTuningConfig';
 
 // Declare navigator for TypeScript
 declare const navigator: any;
@@ -43,6 +44,10 @@ export interface VoIPCallConfig {
     callId: string;
     signalingServerUrl: string;
     turnServers: TURNServer[];
+    // 장거리 기준 고정: 백엔드가 'relay' 를 내려주면 릴레이 경로만 사용(VOIP_FORCE_RELAY).
+    iceTransportPolicy?: 'all' | 'relay';
+    // 재협상 주체 구분: 'caller'(offerer) 만 ICE 재시작 offer 를 만든다(글레어 방지). 'callee' 는 통화를 유지하며 대기.
+    participantRole?: 'caller' | 'callee';
     mediaConstraints?: {
         audio: {
             echoCancellation: boolean;
@@ -63,6 +68,7 @@ export interface CallInitResponse {
     call_id: string;
     signaling_server: string;
     turn_servers: TURNServer[];
+    ice_transport_policy?: 'all' | 'relay' | null;
     session_id?: string;
     call_route?: string;
     phone_dialer_required?: boolean;
@@ -123,6 +129,11 @@ export interface VoIPVoiceTranslationMessage {
     correlation_id?: string;
 }
 
+// 장거리 ICE 복구 파라미터. 'disconnected' 는 일시적인 경우가 많아 잠깐 자가회복을 기다린 뒤 재시작한다.
+const ICE_DISCONNECT_GRACE_MS = 2500;
+const ICE_RESTART_MAX_ATTEMPTS = 4;
+const ICE_RESTART_BACKOFF_BASE_MS = 2000;
+
 export class VoIPCallClient {
     private peerConnection: any = null;
     private localStream: any = null;
@@ -145,9 +156,22 @@ export class VoIPCallClient {
     private onChatMessageCallback: ((message: VoIPChatMessage) => void) | null = null;
     private onChatMessageRejectedCallback: ((detail: string) => void) | null = null;
     private onVoiceTranslationCallback: ((message: VoIPVoiceTranslationMessage) => void) | null = null;
+    // ICE 자동 재연결 상태(장거리 경로 변동·일시 손실 복구).
+    private iceRestartAttempts = 0;
+    private iceRestartInFlight = false;
+    private reconnecting = false;
+    private closed = false;
+    private iceDisconnectGraceTimer: ReturnType<typeof setTimeout> | null = null;
+    private iceRestartBackoffTimer: ReturnType<typeof setTimeout> | null = null;
+    // 서버 미디어 브리지(MCU) 모드 여부 — 서버 answer(from_role='server_bridge') 수신 시 true.
+    private serverBridgeMode = false;
 
     constructor(config: VoIPCallConfig) {
         this.config = config;
+    }
+
+    isServerBridgeMode(): boolean {
+        return this.serverBridgeMode;
     }
 
     /**
@@ -272,6 +296,12 @@ export class VoIPCallClient {
             return 'connected';
         }
 
+        // 장거리 ICE 자동 재연결 중에는 통화를 끝내지 않고 'connecting'(재연결 중)으로 유지한다.
+        // 재시도 예산이 소진되면 reconnecting=false 가 되어 실제 terminal 상태가 그대로 노출된다.
+        if ((normalizedState === 'failed' || normalizedState === 'disconnected') && this.reconnecting) {
+            return 'connecting';
+        }
+
         return normalizedState;
     }
 
@@ -282,6 +312,153 @@ export class VoIPCallClient {
         if (this.onStateChangeCallback) {
             this.onStateChangeCallback(state);
         }
+    }
+
+    private clearIceReconnectTimers(): void {
+        if (this.iceDisconnectGraceTimer) {
+            clearTimeout(this.iceDisconnectGraceTimer);
+            this.iceDisconnectGraceTimer = null;
+        }
+        if (this.iceRestartBackoffTimer) {
+            clearTimeout(this.iceRestartBackoffTimer);
+            this.iceRestartBackoffTimer = null;
+        }
+    }
+
+    /**
+     * ICE 연결 상태 변화 처리: 'disconnected'(일시적 다수)는 짧은 자가회복 유예 뒤,
+     * 'failed'(영구)는 즉시 ICE 재시작을 시도한다. 통화가 한 번이라도 성립된 뒤에만 동작한다.
+     */
+    private handleIceConnectionStateChange(): void {
+        this.emitStateChange();
+        if (this.closed || !this.peerConnection) {
+            return;
+        }
+        const ice = String(this.peerConnection.iceConnectionState || '');
+
+        if (ice === 'connected' || ice === 'completed') {
+            // 복구 완료 — 재시도 카운터/타이머 초기화.
+            this.clearIceReconnectTimers();
+            if (this.reconnecting || this.iceRestartAttempts > 0) {
+                console.log('[VoIP] ICE recovered — connection restored');
+            }
+            this.iceRestartAttempts = 0;
+            this.iceRestartInFlight = false;
+            this.reconnecting = false;
+            return;
+        }
+
+        // 통화가 성립되기 전(초기 협상 단계)에는 재시작하지 않는다(초기 실패는 상위에서 처리).
+        if (!this.remoteDescriptionApplied) {
+            return;
+        }
+
+        if (ice === 'disconnected') {
+            if (!this.iceDisconnectGraceTimer && !this.iceRestartInFlight) {
+                this.iceDisconnectGraceTimer = setTimeout(() => {
+                    this.iceDisconnectGraceTimer = null;
+                    const cur = String(this.peerConnection?.iceConnectionState || '');
+                    if (cur === 'disconnected' || cur === 'failed') {
+                        this.beginIceRestart('disconnected-grace-elapsed');
+                    }
+                }, ICE_DISCONNECT_GRACE_MS);
+            }
+            return;
+        }
+
+        if (ice === 'failed') {
+            this.beginIceRestart('failed');
+        }
+    }
+
+    /**
+     * ICE 재시작 시작. 글레어 방지를 위해 offerer('caller')만 재협상 offer 를 만든다.
+     * callee 는 통화를 유지(reconnecting)하며 caller 의 재시작 offer 를 기다린다.
+     */
+    private beginIceRestart(reason: string): void {
+        if (this.closed || !this.peerConnection) {
+            return;
+        }
+        if (this.iceRestartInFlight) {
+            return;
+        }
+        if (this.iceRestartAttempts >= ICE_RESTART_MAX_ATTEMPTS) {
+            // 재시도 예산 소진 — 실제 terminal 상태를 노출(통화 종료 허용).
+            this.reconnecting = false;
+            this.emitStateChange();
+            return;
+        }
+
+        if (this.config.participantRole === 'callee') {
+            // 콜리는 직접 재협상하지 않고 통화를 유지하며 대기(caller 의 재시작 offer 로 handleOffer 재협상).
+            this.reconnecting = true;
+            this.emitStateChange();
+            return;
+        }
+
+        this.iceRestartInFlight = true;
+        this.reconnecting = true;
+        this.iceRestartAttempts += 1;
+        const attempt = this.iceRestartAttempts;
+        console.warn(`[VoIP] ICE restart attempt ${attempt}/${ICE_RESTART_MAX_ATTEMPTS} (reason=${reason})`);
+        this.emitStateChange();
+
+        this.performIceRestartOffer()
+            .catch((err) => console.warn('[VoIP] ICE restart offer failed', err))
+            .finally(() => {
+                this.iceRestartInFlight = false;
+                this.scheduleIceRestartRetry();
+            });
+    }
+
+    private async performIceRestartOffer(): Promise<void> {
+        if (!this.peerConnection) {
+            return;
+        }
+        if (typeof this.peerConnection.restartIce === 'function') {
+            try {
+                this.peerConnection.restartIce();
+            } catch {
+                // restartIce 미지원/실패 시 iceRestart 옵션으로 대체.
+            }
+        }
+        const offer = await this.peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: false,
+            iceRestart: true,
+        });
+        await this.peerConnection.setLocalDescription(offer);
+        this.sendSignalingMessage({
+            type: 'offer',
+            call_id: this.config.callId,
+            sdp: offer.sdp,
+            ice_restart: true,
+        });
+        console.log('[VoIP] ICE restart offer sent');
+    }
+
+    private scheduleIceRestartRetry(): void {
+        if (this.closed || this.iceRestartBackoffTimer) {
+            return;
+        }
+        const cur = String(this.peerConnection?.iceConnectionState || '');
+        if (cur === 'connected' || cur === 'completed') {
+            return;
+        }
+        if (this.iceRestartAttempts >= ICE_RESTART_MAX_ATTEMPTS) {
+            // 예산 소진 — terminal 노출.
+            this.reconnecting = false;
+            this.emitStateChange();
+            return;
+        }
+        const backoff = ICE_RESTART_BACKOFF_BASE_MS * this.iceRestartAttempts;
+        this.iceRestartBackoffTimer = setTimeout(() => {
+            this.iceRestartBackoffTimer = null;
+            const c = String(this.peerConnection?.iceConnectionState || '');
+            if (c !== 'connected' && c !== 'completed') {
+                this.beginIceRestart('retry');
+            }
+        }, backoff);
     }
 
     /**
@@ -299,11 +476,20 @@ export class VoIPCallClient {
             return server;
         });
 
-        const peerConnectionConfig = {
+        const peerConnectionConfig: {
+            iceServers: typeof iceServers;
+            bundlePolicy: string;
+            rtcpMuxPolicy: string;
+            iceTransportPolicy?: 'all' | 'relay';
+        } = {
             iceServers,
             bundlePolicy: 'max-bundle',
             rtcpMuxPolicy: 'require',
         };
+        // 장거리 기준 고정: 백엔드가 'relay' 를 지정하면 릴레이만 사용(같은 LAN 테스트도 동일 경로).
+        if (this.config.iceTransportPolicy === 'relay') {
+            peerConnectionConfig.iceTransportPolicy = 'relay';
+        }
 
         this.peerConnection = new RTCPeerConnection(peerConnectionConfig);
 
@@ -362,7 +548,7 @@ export class VoIPCallClient {
         };
 
         this.peerConnection.oniceconnectionstatechange = () => {
-            this.emitStateChange();
+            this.handleIceConnectionStateChange();
         };
 
         this.peerConnection.onsignalingstatechange = () => {
@@ -782,10 +968,25 @@ export class VoIPCallClient {
             });
             switch (messageType) {
                 case 'offer':
+                    // 서버 미디어 브리지(MCU)에서 callee 는 서버가 보낸 offer 를 받는다(§13/MB-5):
+                    // P2P 와 달리 발신측 offer 가 아니라 'server_bridge' offer 이므로, 여기서도
+                    // 브리지 모드를 켜야 callee 가 라이브 연속 음성 + 서버측 통역을 받게 된다.
+                    if (message.from_role === 'server_bridge') {
+                        this.serverBridgeMode = true;
+                        setVoipServerBridgeActive(true);
+                        console.log('[VoIP] server media bridge mode active (callee/offer)', { callId: this.config.callId });
+                    }
                     // Handle offer from remote peer (receiver side)
                     await this.handleOffer(message.sdp);
                     break;
                 case 'answer':
+                    // 서버 미디어 브리지(MCU) answer 면 브리지 모드 활성화(§13/MB-5):
+                    // 라이브 연속 음성 + 서버측 STT/번역/TTS. 클라 로컬 STT 는 중단된다.
+                    if (message.from_role === 'server_bridge') {
+                        this.serverBridgeMode = true;
+                        setVoipServerBridgeActive(true);
+                        console.log('[VoIP] server media bridge mode active', { callId: this.config.callId });
+                    }
                     await this.handleAnswer(message.sdp);
                     break;
                 case 'candidate':
@@ -1170,6 +1371,15 @@ export class VoIPCallClient {
      */
     async hangup(): Promise<void> {
         console.log('[VoIP] Hanging up');
+        this.closed = true;
+        this.reconnecting = false;
+        this.iceRestartInFlight = false;
+        // 통화 단위 런타임 플래그 해제(다음 통화가 P2P 일 수 있음).
+        if (this.serverBridgeMode) {
+            this.serverBridgeMode = false;
+            setVoipServerBridgeActive(false);
+        }
+        this.clearIceReconnectTimers();
         this.stopStatsReporter();
         this.remoteDescriptionApplied = false;
 

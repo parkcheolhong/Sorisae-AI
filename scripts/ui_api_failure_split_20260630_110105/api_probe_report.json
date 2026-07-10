@@ -1,0 +1,29 @@
+﻿{
+    "baseUrl":  "http://127.0.0.1:8000",
+    "startedAt":  "2026-06-30T11:01:05.7639380+09:00",
+    "probes":  [
+                   {
+                       "name":  "friend_chat",
+                       "url":  "http://127.0.0.1:8000/api/llm/voice/friend-chat",
+                       "ok":  true,
+                       "status":  200,
+                       "elapsedMs":  34716.7,
+                       "error":  "",
+                       "responseBody":  "{\"transcript\":\"?? ?? ?? ???\",\"response_text\":\"ìë\u0085íì¸ì! ì´ë»ê² ëìëë¦´ê¹ì?\",\"evidence_grade\":\"ë¯¸íì¸\",\"evidence_reason\":\"ì¸ë¶ ê·¼ê±°ê° ìê³  ë¶íì¤ì± ê³ ì§ë ìì\",\"uncertainty_disclosed\":false,\"grounded_items_count\":0,\"audio_base64\":null,\"audio_format\":null,\"safety_alert\":false,\"safety_alert_message\":null,\"high_risk_mode_blocked\":false,\"cache_hit\":false,\"output_dir\":null,\"run_id\":null,\"timing_ms\":{\"stt\":0.0,\"grounding\":0.3,\"llm\":293.1,\"postprocess\":0.2,\"tts\":0.0,\"total\":534.5},\"conversation\":[{\"role\":\"user\",\"content\":\"?? ?? ?? ???\"},{\"role\":\"assistant\",\"content\":\"ìë\u0085íì¸ì! ì´ë»ê² ëìëë¦´ê¹ì?\"}]}"
+                   },
+                   {
+                       "name":  "face_translate",
+                       "url":  "http://127.0.0.1:8000/api/llm/face/voice-translate",
+                       "ok":  false,
+                       "status":  422,
+                       "elapsedMs":  64.6,
+                       "error":  "The remote server returned an error: (422) Unprocessable Content.",
+                       "responseBody":  ""
+                   }
+               ],
+    "summary":  {
+                    "total":  2,
+                    "ok":  7,
+                    "fail":  -5
+                }
+}

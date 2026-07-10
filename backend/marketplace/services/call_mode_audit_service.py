@@ -57,3 +57,25 @@ def record_call_mode_event(db: Session, event: CallModeAuditEventCreate) -> Call
 
 def list_call_mode_events(db: Session, *, call_id: str) -> List[CallModeAuditEventRead]:
     return [event for event in _AUDIT_EVENTS if event.call_id == call_id]
+
+
+def list_call_mode_events_by_filter(
+    db: Session,
+    *,
+    event_type: Optional[str] = None,
+    callee_user_id: Optional[int] = None,
+    limit: Optional[int] = None,
+) -> List[CallModeAuditEventRead]:
+    rows = _AUDIT_EVENTS
+    if event_type is not None:
+        rows = [event for event in rows if event.event_type == event_type]
+    if callee_user_id is not None:
+        rows = [event for event in rows if event.callee_user_id == callee_user_id]
+    rows = sorted(
+        rows,
+        key=lambda event: (event.created_at, event.id),
+        reverse=True,
+    )
+    if isinstance(limit, int) and limit > 0:
+        rows = rows[:limit]
+    return rows

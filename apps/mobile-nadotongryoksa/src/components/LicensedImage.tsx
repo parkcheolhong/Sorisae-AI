@@ -58,8 +58,8 @@ export default function LicensedImage({ media, width, height = 160, style }: Pro
 }
 
 const styles = StyleSheet.create({
-    wrap: { borderRadius: 10, overflow: 'hidden', backgroundColor: '#0d1117' },
+    wrap: { borderRadius: 10, overflow: 'hidden', backgroundColor: '#eef4fb' },
     img: { width: '100%', borderRadius: 10 },
-    caption: { fontSize: 10, color: '#79c0ff', paddingVertical: 3, paddingHorizontal: 4 },
-    captionMuted: { fontSize: 10, color: '#8b949e', paddingVertical: 3, paddingHorizontal: 4 },
+    caption: { fontSize: 10, color: '#1e6fe0', paddingVertical: 3, paddingHorizontal: 4 },
+    captionMuted: { fontSize: 10, color: '#5f6b80', paddingVertical: 3, paddingHorizontal: 4 },
 });

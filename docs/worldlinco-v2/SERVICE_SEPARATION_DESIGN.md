@@ -2,6 +2,7 @@
 
 > **목적:** 성격이 다른 두 서비스(① 여행 대면 통역, ② VoIP/채팅)를 어떻게 분리할지 설계하고, 분리 시 vs 현 상태의 장단점을 명시한 뒤 A/B/C 안을 논의·결정하기 위한 SSOT.
 > **상위 문서:** [`WORLDLINCO_V2_ROADMAP.md`](WORLDLINCO_V2_ROADMAP.md) · [`FILE_MAP.md`](FILE_MAP.md)
+> **후속(클라이언트 5기능 물리 분리):** [`FEATURE_SEPARATION_MASTER_SPEC.md`](FEATURE_SEPARATION_MASTER_SPEC.md) — 본 문서가 정한 백엔드 채널 프로파일(face/voip/chat) 경계를, 모바일 앱의 5개 기능(대면통역/소리새AI+OCR/VOIP+채팅/일반전화+예약/노래번역) 단위로 단일-활성 마이크·TTS 소유권 계약과 함께 클라이언트에서 물리 분리하는 마스터 기술서.
 > **원칙(고정):** V2 Strangler Fig — `POST /api/llm/voice-translate` + `voip-voice-relay/*` **public contract(hot path) 동결**. 분리는 상위 경계만 추가.
 
 ---

@@ -17,17 +17,21 @@ import tempfile
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from backend.auth import get_current_user
 from backend.voip_language_locales import (
     resolve_edge_tts_voice,
     resolve_whisper_initial_prompt,
     resolve_whisper_language_hint,
 )
+from backend.llm.correlation import FEATURE_IDS
+from backend.marketplace.worldlinco_section_freeze import frozen_sorisae_edge_tts_prosody_ko
+from backend.voip.voip_tts_prosody import resolve_voip_edge_tts_prosody
 
 from backend.llm.model_config import (
     build_ollama_options,
@@ -453,7 +457,7 @@ def _friend_fetch_grounding(
     nearby = any(marker in norm for marker in _FRIEND_NEARBY_MARKERS)
 
     # 1) 장소 찾기 의도 → 합법 오픈데이터만 사용(음성/저장/학습 합법).
-    #    1순위 자체 인덱스(Qdrant) → 2순위 OSM 실시간(Nominatim) → 3순위 Google(정식 라이선스 시만).
+    #    1순위 자체 인덱스(Qdrant) → 2순위 한국관광공사 KorWithService2 → 3순위 OSM → 4순위 Google.
     if _friend_is_place_query(transcript):
         place_query = transcript
         # 좌표가 없으면 질의어에 현재 위치명을 붙여 지역을 좁힌다.
@@ -468,6 +472,20 @@ def _friend_fetch_grounding(
             )
             if index_block:
                 return index_block
+        try:
+            from backend.services.friend_public_portal import fetch_friend_public_portal_grounding
+
+            portal_block = fetch_friend_public_portal_grounding(
+                place_query,
+                latitude=latitude,
+                longitude=longitude,
+                max_items=VOICE_FRIEND_WEB_MAX_ITEMS,
+                timeout_sec=VOICE_FRIEND_WEB_TIMEOUT_SEC,
+            )
+            if portal_block:
+                return portal_block
+        except Exception as exc:
+            logger.warning("[voice/friend-chat] public portal grounding 실패: %s", exc)
         if VOICE_FRIEND_OSM_GROUNDING:
             osm_block = _friend_fetch_osm_grounding(
                 place_query,
@@ -532,6 +550,11 @@ def _friend_chat_base_url() -> str:
             "://localhost", "://host.docker.internal"
         )
     return raw
+
+
+def _friend_chat_dedicated_instance() -> str:
+    """Explicit dedicated-instance seam kept for Sorisae friend-chat gates/tests."""
+    return _friend_chat_base_url()
 
 
 def _list_served_models(base_url: Optional[str] = None) -> set[str]:
@@ -746,7 +769,122 @@ def _friend_is_noise_or_hallucination(transcript: str) -> bool:
             return True
     except Exception:
         pass
+    words = text.split()
+    if len(words) >= 20:
+        unique_ratio = len(set(words)) / max(1, len(words))
+        if unique_ratio <= 0.2:
+            return True
     return False
+
+
+def _guess_audio_input_suffix(audio_bytes: bytes) -> str:
+    if audio_bytes[:4] == b"RIFF":
+        return ".wav"
+    if b"ftyp" in audio_bytes[:32]:
+        return ".m4a"
+    if audio_bytes[:3] == b"ID3" or audio_bytes[:2] == b"\xff\xfb":
+        return ".mp3"
+    return ".dat"
+
+
+def _voice_stt_exc_http_status(message: str) -> int:
+    lowered = str(message or "").strip().lower()
+    if "음성이 감지되지 않았습니다" in str(message or "") or "no speech" in lowered:
+        return 422
+    return 400
+
+
+def _friend_accept_despite_low_stt_trust(
+    transcript: str,
+    detected_language: Optional[str],
+    language_probability: float,
+    stt_trust: str,
+) -> bool:
+    if str(stt_trust or "").strip().lower() != "low":
+        return False
+    text = str(transcript or "").strip()
+    if len(text) < 2:
+        return False
+    if _lang_primary(detected_language) == "ko":
+        return True
+    has_hangul = any("가" <= char <= "힣" for char in text)
+    return has_hangul and float(language_probability or 0.0) >= 0.4
+
+
+def _friend_is_tourism_guide_query(transcript: str) -> bool:
+    normalized = " ".join(str(transcript or "").strip().split()).lower()
+    if not normalized:
+        return False
+    guide_keywords = (
+        "역사", "탐방", "맛집", "숙소", "관광", "명소", "가볼만", "가 볼 만",
+        "hotel", "restaurant", "museum", "attraction", "things to do",
+    )
+    return any(keyword.lower() in normalized for keyword in guide_keywords)
+
+
+def _resolve_friend_reply_budget(
+    transcript: str,
+    config: dict[str, object],
+) -> dict[str, object]:
+    is_guide_query = _friend_is_tourism_guide_query(transcript)
+    tier = int(config.get("tourism_guide_tier", 1) or 1)
+    reply_tokens = int(config.get("friend_reply_max_tokens", 256) or 256)
+    realtime_tokens = int(config.get("friend_realtime_max_tokens", 192) or 192)
+    max_len_ko = 320
+    if is_guide_query:
+        if tier >= 3:
+            max_len_ko = 900
+        elif tier == 2:
+            max_len_ko = 700
+        else:
+            max_len_ko = 520
+    return {
+        "is_guide_query": is_guide_query,
+        "tourism_guide_tier": tier,
+        "friend_reply_max_tokens": reply_tokens,
+        "friend_realtime_max_tokens": realtime_tokens,
+        "max_len_ko": max_len_ko,
+    }
+
+
+def _trim_friend_reply_for_speed(text: str, profile_language: Optional[str], transcript: str) -> str:
+    cleaned = _sanitize_friend_reply_for_speech(text)
+    budget = _resolve_friend_reply_budget(transcript, {})
+    max_len_ko = int(budget.get("max_len_ko", 320) or 320)
+    if _lang_primary(profile_language) == "ko" and len(cleaned) > max_len_ko:
+        return cleaned[:max_len_ko].rstrip()
+    return cleaned
+
+
+def _normalize_friend_reply_output_language(text: str, target_lang: Optional[str]) -> str:
+    cleaned = _sanitize_friend_reply_for_speech(text)
+    if _lang_primary(target_lang) != "ja":
+        return cleaned
+    if not any("가" <= char <= "힣" for char in cleaned):
+        return cleaned
+    try:
+        from backend.services.nadotongryoksa.translator import NadoTranslator
+
+        translator = NadoTranslator.get_instance()
+        return str(translator.translate(cleaned, from_lang="ko", to_lang="ja") or cleaned).strip()
+    except Exception:
+        return cleaned
+
+
+def _resolve_friend_reply_language(
+    profile_language: Optional[str],
+    detected_language: Optional[str],
+    language_probability: float,
+    transcript: str,
+    min_lang_prob: float,
+) -> str:
+    profile = _lang_primary(profile_language)
+    if profile:
+        return profile
+    detected = _lang_primary(detected_language)
+    if detected and float(language_probability or 0.0) >= float(min_lang_prob or 0.0):
+        return detected
+    return _lang_primary(_detect_dominant_script_lang(transcript)) or "ko"
 
 
 def _resolve_voice_chat_model(agent_key: str, *, lightweight: bool) -> str:
@@ -884,7 +1022,7 @@ def _normalize_voice_audio_bytes(audio_bytes: bytes) -> bytes:
         raise RuntimeError("오디오 데이터가 비어 있습니다")
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        src = Path(temp_dir) / "voice_input.bin"
+        src = Path(temp_dir) / f"voice_input{_guess_audio_input_suffix(audio_bytes)}"
         dst = Path(temp_dir) / "voice_normalized.wav"
         src.write_bytes(audio_bytes)
         audio_filter = os.getenv(
@@ -1327,17 +1465,46 @@ def edge_tts_base_rate_pct() -> float:
         return -6.0
 
 
+def _lang_primary(target_lang: Optional[str]) -> str:
+    raw = str(target_lang or "ko").strip().lower().replace("_", "-")
+    if raw.startswith("zh"):
+        return "zh-tw" if "tw" in raw or "hant" in raw else "zh"
+    return raw.split("-")[0] or "ko"
+
+
+def _edge_tts_prosody_defaults(target_lang: Optional[str]) -> tuple[str, str, str]:
+    lang = _lang_primary(target_lang)
+    if lang == "ko":
+        return resolve_voip_edge_tts_prosody(lang)
+    return (os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%", "+0%", "+0Hz")
+
+
+def _resolve_edge_tts_prosody(
+    target_lang: Optional[str],
+    feature_id: Optional[str],
+) -> tuple[str, str, str]:
+    lang = _lang_primary(target_lang)
+    if lang != "ko":
+        return _edge_tts_prosody_defaults(target_lang)
+
+    resolved_feature = str(feature_id or "").strip()
+    if resolved_feature == FEATURE_IDS["face_interpret"]:
+        return ("-1%", "+28%", "+2Hz")
+    if resolved_feature == "sorisae.friend":
+        return frozen_sorisae_edge_tts_prosody_ko()
+    return resolve_voip_edge_tts_prosody(lang)
+
+
 def _synthesize_edge_tts(
     text: str,
     target_lang: Optional[str] = None,
     *,
+    feature_id: Optional[str] = None,
     expressive: Optional[object] = None,
 ) -> tuple[bytes, str]:
     import edge_tts
 
-    rate = os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%"
-    volume = "+0%"
-    pitch = "+0Hz"
+    rate, volume, pitch = _resolve_edge_tts_prosody(target_lang, feature_id)
     # [V2 감정 E3] 표현형 운율 적용(카나리). expressive 가 주어지면(=COMM_V2_EMOTION_EXPRESSIVE_TTS
     # on + 비중립) rate/volume/pitch 를 감정 운율로 대체. 없으면 기존 동작과 100% 동일.
     if expressive is not None:
@@ -1393,6 +1560,7 @@ def _synthesize_tts(
     text: str,
     target_lang: Optional[str] = None,
     *,
+    feature_id: Optional[str] = None,
     expressive: Optional[object] = None,
 ) -> tuple[Optional[str], Optional[str]]:
     trimmed = str(text or "").strip()
@@ -1402,7 +1570,7 @@ def _synthesize_tts(
     if _edge_tts_enabled():
         try:
             audio_bytes, audio_format = _synthesize_edge_tts(
-                trimmed, target_lang, expressive=expressive
+                trimmed, target_lang, feature_id=feature_id, expressive=expressive
             )
             return base64.b64encode(audio_bytes).decode("ascii"), audio_format
         except ImportError:
@@ -1463,7 +1631,7 @@ async def voice_synthesize(request: VoiceSynthesizeRequest):
     )
     try:
         audio_base64, audio_format = await asyncio.to_thread(
-            _synthesize_tts, trimmed, request.target_lang
+            _synthesize_tts, trimmed, request.target_lang, feature_id=request.feature_id
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"TTS 실패: {exc}") from exc
@@ -1488,7 +1656,7 @@ async def voice_synthesize(request: VoiceSynthesizeRequest):
 
 
 @router.post("/voice/orchestrate", response_model=VoiceResponse)
-async def voice_orchestrate(request_context: Request, request: VoiceRequest):
+async def voice_orchestrate(request_context: Request, request: VoiceRequest, current_user: Any = Depends(get_current_user)):
     transcript = (request.transcript or "").strip()
     detected_language: Optional[str] = None
 
@@ -1594,6 +1762,7 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
                     logger=logger,
                     re_module=re,
                     session_factory=None,
+                    current_user=current_user,
                 )
             )
         )
@@ -1761,6 +1930,7 @@ async def voice_friend_chat(request: FriendChatRequest):
                 _synthesize_tts,
                 response_text,
                 reply_language,
+                feature_id="sorisae.friend",
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"TTS 실패: {exc}")

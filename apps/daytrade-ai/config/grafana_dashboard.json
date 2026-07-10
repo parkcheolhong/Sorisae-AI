@@ -1,0 +1,92 @@
+{
+  "__comment": "daytrade-ai 운영 대시보드(설계서 §10-5). Grafana > Import 로 사용. 데이터소스=Prometheus. 메트릭 출처=daytrade.monitoring.exporter.",
+  "title": "daytrade-ai — 단타 자동매매 운영",
+  "schemaVersion": 39,
+  "editable": true,
+  "tags": ["daytrade", "trading", "scalping"],
+  "templating": {
+    "list": [
+      { "name": "symbol", "type": "query", "query": "label_values(daytrade_equity, symbol)", "includeAll": true },
+      { "name": "mode", "type": "query", "query": "label_values(daytrade_equity, mode)", "includeAll": true }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "title": "순자산(Equity)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "daytrade_equity{symbol=~\"$symbol\",mode=~\"$mode\"}", "legendFormat": "{{symbol}}" }]
+    },
+    {
+      "id": 2, "title": "총 수익률 % / 실현손익", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "daytrade_return_pct{symbol=~\"$symbol\"}", "legendFormat": "return% {{symbol}}" },
+        { "expr": "daytrade_realized_pnl{symbol=~\"$symbol\"}", "legendFormat": "pnl {{symbol}}" }
+      ]
+    },
+    {
+      "id": 3, "title": "처리 레이턴시 p99 (ms)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms", "thresholds": { "steps": [
+        { "color": "green", "value": null }, { "color": "red", "value": 5 } ] } } },
+      "targets": [{ "expr": "daytrade_latency_ms_p99{symbol=~\"$symbol\"}", "legendFormat": "p99 {{symbol}}" }]
+    },
+    {
+      "id": 4, "title": "Sharpe / 최대낙폭 %", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        { "expr": "daytrade_sharpe{symbol=~\"$symbol\"}", "legendFormat": "sharpe {{symbol}}" },
+        { "expr": "daytrade_max_drawdown_pct{symbol=~\"$symbol\"}", "legendFormat": "mdd% {{symbol}}" }
+      ]
+    },
+    {
+      "id": 5, "title": "서킷브레이커", "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "fieldConfig": { "defaults": { "mappings": [
+        { "type": "value", "options": { "0": { "text": "정상" }, "1": { "text": "HALTED" } } } ],
+        "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } },
+      "targets": [{ "expr": "max(daytrade_circuit_breaker_halted{symbol=~\"$symbol\"})" }]
+    },
+    {
+      "id": 6, "title": "주문 처리량 / 거절률", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "rate(daytrade_orders_total{symbol=~\"$symbol\"}[5m])", "legendFormat": "orders/s {{symbol}}" },
+        { "expr": "rate(daytrade_fills_total{symbol=~\"$symbol\"}[5m])", "legendFormat": "fills/s {{symbol}}" },
+        { "expr": "rate(daytrade_rejects_total{symbol=~\"$symbol\"}[5m]) / clamp_min(rate(daytrade_orders_total{symbol=~\"$symbol\"}[5m]), 1e-9)", "legendFormat": "reject_rate {{symbol}}" }
+      ]
+    },
+    {
+      "id": 7, "title": "평균 슬리피지 %", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [{ "expr": "daytrade_mean_slippage_pct{symbol=~\"$symbol\"}", "legendFormat": "slippage% {{symbol}}" }]
+    },
+    {
+      "id": 8, "title": "운영 모델 버전 / 핫스왑 (M7)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "__comment": "재학습 승격(버전↑) + 런타임 무중단 핫스왑 추적. 버전 계단·reloads 증가 시점이 재학습/스왑.",
+      "targets": [
+        { "expr": "daytrade_model_version{symbol=~\"$symbol\"}", "legendFormat": "version {{symbol}}" },
+        { "expr": "daytrade_model_reloads_total{symbol=~\"$symbol\"}", "legendFormat": "reloads {{symbol}}" }
+      ]
+    },
+    {
+      "id": 9, "title": "자동 튜닝 KPI 회귀 (baseline vs tuned)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 24 },
+      "__comment": "scripts/kpi_regression.py --metrics-out 의 textfile collector/pushgateway 노출.",
+      "targets": [
+        { "expr": "daytrade_kpi_baseline_sharpe", "legendFormat": "baseline sharpe" },
+        { "expr": "daytrade_kpi_tuned_sharpe", "legendFormat": "tuned sharpe" },
+        { "expr": "daytrade_kpi_tuned_worst_mdd_pct", "legendFormat": "tuned worst mdd%" }
+      ]
+    },
+    {
+      "id": 10, "title": "KPI 게이트 판정", "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 24 },
+      "fieldConfig": { "defaults": { "mappings": [
+        { "type": "value", "options": { "0": { "text": "FAIL" }, "1": { "text": "PASS" } } } ],
+        "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
+      "targets": [{ "expr": "min(daytrade_kpi_passed)" }]
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import type {
     OrchestratorCapabilitySummaryResponse,
     OverviewStats,
     RevenueStats,
+    SorisaeFailureMonitorStatus,
 } from '@/lib/admin-dashboard-types';
 import type { HealthDiagnostics, HealthStatus } from '@/lib/admin-health-analysis';
 
@@ -23,6 +24,7 @@ interface BuildAdminPageHealthAnalysisInput {
     orchestratorCapabilitySummary: OrchestratorCapabilitySummaryResponse | null;
     securityGuardDetail: OrchestratorCapabilityDetailResponse | null;
     dashboardSelfRunStatus: AdminDashboardSelfRunStatus | null;
+    sorisaeFailureStatus: SorisaeFailureMonitorStatus | null;
     systemSettingsDisconnected: boolean;
     capabilityBootstrapEnabled: boolean;
     projectQuery: string;
@@ -101,6 +103,7 @@ export function buildAdminPageHealthAnalysis(input: BuildAdminPageHealthAnalysis
         healthDiagnostics,
         hasOrchestratorCapabilityError,
         hasOrchestratorCapabilityWarning,
+        sorisaeFailureStatus: input.sorisaeFailureStatus,
     });
     const {
         vectorStatus,
@@ -202,6 +205,14 @@ export function buildAdminPageHealthAnalysis(input: BuildAdminPageHealthAnalysis
             tone: 'blue',
         });
     }
+    if (input.sorisaeFailureStatus && input.sorisaeFailureStatus.classification !== 'ALL_PASS' && input.sorisaeFailureStatus.classification !== 'unknown') {
+        automaticOpsActions.push({
+            id: 'sorisae-failure-watch',
+            title: '소리새 장애감지 경고',
+            summary: `${input.sorisaeFailureStatus.classification} · 관리자 계정 모바일 푸시와 장애 위젯을 함께 갱신합니다.`,
+            tone: input.sorisaeFailureStatus.classification === 'API_ONLY_FAILURE' ? 'amber' : 'red',
+        });
+    }
     const securityGuardDetailSections = {
         pythonRules: [...((input.securityGuardDetail?.sections?.find((section) => section.id === 'python-security-validation')?.items || []).filter((item) => !['오류', '경고', '검사 파일 수'].includes(item.label)).map((item) => ({
             label: item.label,
@@ -240,6 +251,7 @@ export function buildAdminPageHealthAnalysis(input: BuildAdminPageHealthAnalysis
         automaticHealthLabel,
         automaticOpsActions: automaticOpsActions.slice(0, 4),
         securityGuardDetailSections,
+        sorisaeFailureStatus: input.sorisaeFailureStatus,
     };
 }
 
@@ -331,6 +343,7 @@ export function buildAdminDashboardOverviewAssembly(input: BuildAdminDashboardOv
         formatHealthMetricValue: input.formatHealthMetricValue,
         apiBaseUrl: input.apiBaseUrl,
         opsAlerts: input.dashboardAnalysis.opsAlerts,
+        sorisaeFailureStatus: input.dashboardAnalysis.sorisaeFailureStatus,
         onImmediateRefresh: input.onImmediateRefresh,
         voiceAlertEnabled: input.voiceAlertEnabled,
         onToggleVoiceAlertEnabled: input.onToggleVoiceAlertEnabled,

@@ -24,3 +24,7 @@ webauthn==2.7.1
 faster-whisper==1.2.1
 mpmath==1.3.0
 setuptools==82.0.1
+# 서버 미디어 브리지(MCU, 체크리스트 §13). 빌드된 이미지 실측 버전으로 고정.
+aiortc==1.14.0
+av==16.1.0
+numpy==2.5.0

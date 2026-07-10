@@ -12,6 +12,7 @@ env:
 
 jobs:
     consistency-hard-gate:
+        name: checklist-consistency-gate / consistency-hard-gate
         runs-on: ubuntu-latest
         steps:
             - name: Checkout

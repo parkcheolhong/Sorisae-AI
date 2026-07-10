@@ -1,0 +1,70 @@
+// daytrade-ai 직렬화 스키마 (FlatBuffers IDL) — C++/Python 공유 SSOT.
+//
+// 의미론적 SSOT 는 daytrade/types.py 이며, 본 스키마는 직렬화(0-copy 바이너리) SSOT 이다.
+// 두 정의의 필드/순서는 tests/test_schema_consistency.py 골든 테스트로 일치 검증한다.
+// 코드 생성(C++/Python): flatc --cpp --python market.fbs   (M3 C++ 코어에서 사용)
+
+namespace daytrade;
+
+struct OrderBookLevel {
+  price:double;
+  qty:double;
+}
+
+table MarketTick {
+  ts_ns:ulong;          // NIC hardware timestamp (PTP, nanoseconds)
+  symbol:string;
+  bids:[OrderBookLevel];  // index 0 = best bid
+  asks:[OrderBookLevel];  // index 0 = best ask
+  last_price:double;
+  last_qty:double;
+}
+
+// FeatureVector 필드 순서는 features/engine.py 의 FEATURE_NAMES / as_array() 와 동일해야 한다.
+table FeatureVector {
+  ts_ns:ulong;
+  symbol:string;
+  obi:double;
+  obi_norm:double;
+  volume_spike:double;
+  micro_momentum:double;
+  vwap:double;
+  vwap_delta:double;
+  spread:double;
+  mid_price:double;
+}
+
+enum SignalSide:byte { BUY = 0, SELL = 1, FLAT = 2 }
+enum OrderSide:byte { BUY = 0, SELL = 1 }
+enum OrderType:byte { MARKET = 0, LIMIT = 1, IOC = 2 }
+
+table Signal {
+  side:SignalSide;
+  confidence:double;
+  ts_ns:ulong;
+  symbol:string;
+  reason:string;
+}
+
+table Order {
+  symbol:string;
+  side:OrderSide;
+  qty:double;
+  order_type:OrderType;
+  limit_price:double;
+  ts_ns:ulong;
+  client_order_id:string;
+}
+
+table Fill {
+  symbol:string;
+  side:OrderSide;
+  filled_qty:double;
+  avg_price:double;
+  ts_ns:ulong;
+  slippage:double;
+  fee:double;
+  status:string;
+}
+
+root_type MarketTick;

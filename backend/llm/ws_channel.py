@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Set
 
 from fastapi import WebSocket
 
@@ -11,8 +11,9 @@ class WebSocketProgressChannel:
     def __init__(self):
         self._connections: Set[WebSocket] = set()
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
+    async def connect(self, websocket: WebSocket, subprotocol: Optional[str] = None):
+        # [#6] Sec-WebSocket-Protocol 협상 시 echo(아니면 None) — 헤더 기반 토큰 전달 지원.
+        await websocket.accept(subprotocol=subprotocol)
         self._connections.add(websocket)
 
     def disconnect(self, websocket: WebSocket):

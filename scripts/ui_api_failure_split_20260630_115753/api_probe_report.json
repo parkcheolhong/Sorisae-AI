@@ -1,0 +1,31 @@
+﻿{
+    "baseUrl":  "http://127.0.0.1:8000",
+    "startedAt":  "2026-06-30T11:57:53.3542875+09:00",
+    "probes":  [
+                   {
+                       "name":  "friend_chat",
+                       "url":  "http://127.0.0.1:8000/api/llm/voice/friend-chat",
+                       "ok":  false,
+                       "status":  null,
+                       "elapsedMs":  57.8,
+                       "attempts":  2,
+                       "error":  "The underlying connection was closed: The connection was closed unexpectedly.",
+                       "responseBody":  ""
+                   },
+                   {
+                       "name":  "face_translate",
+                       "url":  "http://127.0.0.1:8000/api/llm/face/voice-translate",
+                       "ok":  false,
+                       "status":  null,
+                       "elapsedMs":  6.6,
+                       "attempts":  2,
+                       "error":  "The underlying connection was closed: The connection was closed unexpectedly.",
+                       "responseBody":  ""
+                   }
+               ],
+    "summary":  {
+                    "total":  2,
+                    "ok":  0,
+                    "fail":  2
+                }
+}

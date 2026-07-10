@@ -37,6 +37,8 @@ class AnswerFeedback(BaseModel):
     candidate_count: Optional[int] = None
     cached: Optional[bool] = None
     total_ms: Optional[float] = None
+    evidence_grade: Optional[str] = None
+    uncertainty_disclosed: Optional[bool] = None
 
 
 @router.post("")

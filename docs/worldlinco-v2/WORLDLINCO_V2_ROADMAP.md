@@ -4,6 +4,7 @@
 > **연계 체크리스트:** `docs/worldlinco-v2/V2_FEATURE_AUDIT.md`(hot path 정합성) · `ORCHESTRATOR_WORLDLINCO_ANALYSIS_CHECKLIST.md`  
 > **자가 진화 설계:** [`SELF_EVOLVING_ENGINE_DESIGN.md`](SELF_EVOLVING_ENGINE_DESIGN.md) — LLM(엔진)+평가/학습 루프(진화)+게이트(안전) 2층 구조로 통역 품질·정책을 데이터로 점진 개선  
 > **신규 채널/품질 설계:** [`TELEPHONY_BRIDGE_DESIGN.md`](TELEPHONY_BRIDGE_DESIGN.md)(일반 전화 착신 통역 — 권한 제약·SIP 브리지) · [`EMOTION_EXPRESSIVE_DESIGN.md`](EMOTION_EXPRESSIVE_DESIGN.md)(감성·표현형 통역 — SeamlessExpressive·SER)  
+> **모바일 기능 분리 설계:** [`FEATURE_SEPARATION_MASTER_SPEC.md`](FEATURE_SEPARATION_MASTER_SPEC.md) — 앱 5개 기능(대면통역/소리새AI+OCR/VOIP+채팅/일반전화+예약/노래번역) 완전 분리 + 단일-활성 마이크·TTS 소유권 계약  
 > **현재 제품:** APK WorldLinco **build 157** — 통역 통화(G10 AEC 정합+재무장 직렬화 해소 검증) + 대면 통역(동결) 운영 중  
 > **원칙:** 기존 VoIP·Voice Relay·`POST /api/llm/voice-translate`(≈2.8s) **hot path 무중단 유지**하며 상위 계층·인프라를 **현재 진행으로 점진 적용**(Strangler Fig).
 

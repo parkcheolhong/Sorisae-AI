@@ -1,0 +1,14 @@
+{
+  "adminPush": {
+    "attempted": false,
+    "success": false,
+    "classification": "UI_ONLY_FAILURE",
+    "admin_user_count": 0,
+    "success_user_count": 0,
+    "failure_user_count": 0,
+    "sent_at": "2026-06-30T10:42:41.510486Z",
+    "skipped_reason": "db_unavailable",
+    "error": "(psycopg2.OperationalError) could not translate host name \"postgres\" to address: Name or service not known\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+    "users": []
+  }
+}

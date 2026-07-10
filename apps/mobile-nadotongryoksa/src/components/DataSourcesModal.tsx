@@ -18,13 +18,13 @@ type DataSourcesModalProps = {
 };
 
 const C = {
-    panel: '#151b23',
-    border: '#21262d',
-    text: '#e6edf3',
-    sub: '#8b949e',
-    accent: '#2a7cff',
-    link: '#79c0ff',
-    chip: '#0d2236',
+    panel: '#ffffff',
+    border: '#dce6f2',
+    text: '#1a1f36',
+    sub: '#5f6b80',
+    accent: '#1e6fe0',
+    link: '#1e6fe0',
+    chip: '#e8f1ff',
 };
 
 type SourceItem = {
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     scroll: { marginTop: 4 },
     scrollBody: { gap: 12, paddingBottom: 4 },
     card: {
-        backgroundColor: '#0b1622',
+        backgroundColor: '#f4f9ff',
         borderRadius: 12,
         borderWidth: 1,
         borderColor: C.border,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     link: { color: C.link, fontSize: 12, textDecorationLine: 'underline' },
     note: { color: C.sub, fontSize: 12, lineHeight: 18, marginTop: 2 },
     privacyCard: {
-        backgroundColor: '#0b1622',
+        backgroundColor: '#f4f9ff',
         borderRadius: 12,
         borderWidth: 1,
         borderColor: C.border,

@@ -115,6 +115,47 @@ _VOIP_CALL_QUOTA = _InMemoryQuotaGate(
     default_window_seconds=60.0,
 )
 
+# [보안 보강] 아래 게이트들은 '무인증'으로 열려 있는 고비용/민감 엔드포인트를 IP 단위로 제한한다.
+# 모바일 클라가 이 경로들에 Authorization 헤더를 보내지 않으므로(앱 호환), 하드 인증 대신
+# 클라이언트 IP 키 레이트리밋으로 비용 증폭/DoS·브루트포스·OTP 폭탄을 1차 차단한다.
+# (완전한 인증 도입은 모바일 토큰 첨부 + APK 재배포가 동반되는 별도 작업으로 분리.)
+
+# LBS 주변검색: live 시 SerpApi(유료)·Overpass 팬아웃 → 비용 증폭 차단(기본 40/분).
+_LBS_SEARCH_QUOTA = _InMemoryQuotaGate(
+    scope="lbs-search",
+    max_requests_env="LBS_SEARCH_QUOTA_MAX_REQUESTS",
+    window_seconds_env="LBS_SEARCH_QUOTA_WINDOW_SEC",
+    default_max_requests=40,
+    default_window_seconds=60.0,
+)
+
+# 이미지 번역(OCR): 업로드 + RapidOCR(CPU) → 연산/메모리 DoS 차단(기본 12/분).
+_PUBLIC_IMAGE_QUOTA = _InMemoryQuotaGate(
+    scope="public-image",
+    max_requests_env="PUBLIC_IMAGE_QUOTA_MAX_REQUESTS",
+    window_seconds_env="PUBLIC_IMAGE_QUOTA_WINDOW_SEC",
+    default_max_requests=12,
+    default_window_seconds=60.0,
+)
+
+# 로그인: bcrypt 검증을 무제한 호출하는 크리덴셜 스터핑 차단(기본 10/분/IP).
+_AUTH_LOGIN_QUOTA = _InMemoryQuotaGate(
+    scope="auth-login",
+    max_requests_env="AUTH_LOGIN_QUOTA_MAX_REQUESTS",
+    window_seconds_env="AUTH_LOGIN_QUOTA_WINDOW_SEC",
+    default_max_requests=10,
+    default_window_seconds=60.0,
+)
+
+# OTP/복구 코드 발송: SMS·메일 폭탄(비용+스팸) 차단(기본 5/분/IP).
+_AUTH_OTP_QUOTA = _InMemoryQuotaGate(
+    scope="auth-otp",
+    max_requests_env="AUTH_OTP_QUOTA_MAX_REQUESTS",
+    window_seconds_env="AUTH_OTP_QUOTA_WINDOW_SEC",
+    default_max_requests=5,
+    default_window_seconds=60.0,
+)
+
 
 def _identity_key(request: Request, current_user: Any) -> str:
     user_key = (
@@ -141,6 +182,26 @@ def _enforce_quota(
             headers={"Retry-After": str(retry_after)},
         )
     return current_user
+
+
+def _client_key(request: Request) -> str:
+    """무인증 엔드포인트용 IP 키. 프록시(nginx) 뒤이면 X-Forwarded-For 의 첫 IP 를 신뢰한다."""
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded:
+        return f"ip={forwarded}"
+    client_host = getattr(getattr(request, "client", None), "host", None) or "unknown-client"
+    return f"ip={client_host}"
+
+
+def _enforce_quota_public(*, quota_gate: _InMemoryQuotaGate, request: Request) -> None:
+    """current_user 없이 IP 키로만 제한하는 무인증 엔드포인트 전용 게이트."""
+    retry_after = quota_gate.check(_client_key(request))
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+            headers={"Retry-After": str(retry_after)},
+        )
 
 
 def require_admin_user(current_user: Any = Depends(get_current_user)) -> Any:
@@ -196,6 +257,24 @@ def require_voip_call_quota(
     )
 
 
+# ── 무인증(IP 키) 게이트 — 모바일 호환 유지하면서 비용/DoS·브루트포스 1차 차단 ──
+
+def require_lbs_search_quota(request: Request) -> None:
+    _enforce_quota_public(quota_gate=_LBS_SEARCH_QUOTA, request=request)
+
+
+def require_public_image_quota(request: Request) -> None:
+    _enforce_quota_public(quota_gate=_PUBLIC_IMAGE_QUOTA, request=request)
+
+
+def require_login_quota(request: Request) -> None:
+    _enforce_quota_public(quota_gate=_AUTH_LOGIN_QUOTA, request=request)
+
+
+def require_otp_send_quota(request: Request) -> None:
+    _enforce_quota_public(quota_gate=_AUTH_OTP_QUOTA, request=request)
+
+
 def reset_for_test() -> None:
     """테스트 격리용: 프로세스 전역 인메모리 쿼터 상태를 초기화한다."""
     for gate in (
@@ -203,5 +282,9 @@ def reset_for_test() -> None:
         _IMAGE_MUTATION_QUOTA,
         _ADMIN_MUTATION_QUOTA,
         _VOIP_CALL_QUOTA,
+        _LBS_SEARCH_QUOTA,
+        _PUBLIC_IMAGE_QUOTA,
+        _AUTH_LOGIN_QUOTA,
+        _AUTH_OTP_QUOTA,
     ):
         gate.reset()
