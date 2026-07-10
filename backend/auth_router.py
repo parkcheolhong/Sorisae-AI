@@ -82,8 +82,14 @@ class UserCreate(BaseModel):
     business_name: Optional[str] = None
     business_registration_number: Optional[str] = None
     representative_name: Optional[str] = None
-    native_language: Optional[str] = None
-    country: Optional[str] = None
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+    phone_number: Optional[str] = None
+
+
+class UserProfileUpdate(BaseModel):
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -98,8 +104,9 @@ class UserResponse(BaseModel):
     business_name: Optional[str] = None
     business_registration_number: Optional[str] = None
     representative_name: Optional[str] = None
-    native_language: Optional[str] = None
-    country: Optional[str] = None
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+    phone_number: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -460,8 +467,6 @@ def _create_user_from_signup_payload(payload: UserCreate, db: Session) -> User:
         business_name=(payload.business_name or "").strip() or None,
         business_registration_number=(payload.business_registration_number or "").strip() or None,
         representative_name=(payload.representative_name or "").strip() or None,
-        native_language=(payload.native_language or "").strip() or None,
-        country=(payload.country or "").strip() or None,
         hashed_password=get_password_hash(payload.password),
         preferred_language=preferred_language,
         country_code=country_code,
