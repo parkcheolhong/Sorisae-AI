@@ -1,0 +1,42 @@
+--------- beginning of main
+06-14 22:48:26.630 I/ReactNativeJS(20731): [VoIP][DiagLine] connectSignaling:onmessage callId=call-733b4aa749d9 state=OPEN rawLength=61
+06-14 22:48:26.631 I/ReactNativeJS(20731): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-733b4aa749d9',
+06-14 22:48:26.631 I/ReactNativeJS(20731):   socketState: 'OPEN',
+06-14 22:48:26.631 I/ReactNativeJS(20731):   rawLength: 61,
+06-14 22:48:26.631 I/ReactNativeJS(20731):   rawPreview: '{"type":"pong","call_id":"call-733b4aa749d9","role":"caller"}' }
+06-14 22:48:26.632 I/ReactNativeJS(20731): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-733b4aa749d9',
+06-14 22:48:26.632 I/ReactNativeJS(20731):   socketState: 'OPEN',
+06-14 22:48:26.632 I/ReactNativeJS(20731):   summary: 
+06-14 22:48:26.632 I/ReactNativeJS(20731):    { type: 'pong',
+06-14 22:48:26.632 I/ReactNativeJS(20731):      call_id: 'call-733b4aa749d9',
+06-14 22:48:26.632 I/ReactNativeJS(20731):      from_role: null,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      has_sdp: false,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      sdp_length: 0,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      has_candidate: false,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      candidate_length: 0,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      sdp_mid: null,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      sdp_Milne_index: null,
+06-14 22:48:26.632 I/ReactNativeJS(20731):      username_fragment: null },
+06-14 22:48:26.632 I/ReactNativeJS(20731):   normalizedType: 'pong' }
+06-14 22:48:26.633 I/ReactNativeJS(20731): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-733b4aa749d9', socketState: 'OPEN' }
+06-14 22:48:36.742 I/ReactNativeJS(20731): '[UI_PRESS_PROBE]', '{"event":"VOIP_CALL_MODE_AUDIT_LOADED","call_id":"call-733b4aa749d9","event_count":2,"event_types":["call_initiated","call_accepted"],"show_loading":false,"timestamp":"2026-06-14T13:48:36.742Z"}'
+06-14 22:48:46.633 I/ReactNativeJS(20731): [VoIP][DiagLine] connectSignaling:onmessage callId=call-733b4aa749d9 state=OPEN rawLength=61
+06-14 22:48:46.633 I/ReactNativeJS(20731): '[VoIP][Diag] connectSignaling:onmessage', { callId: 'call-733b4aa749d9',
+06-14 22:48:46.633 I/ReactNativeJS(20731):   socketState: 'OPEN',
+06-14 22:48:46.633 I/ReactNativeJS(20731):   rawLength: 61,
+06-14 22:48:46.633 I/ReactNativeJS(20731):   rawPreview: '{"type":"pong","call_id":"call-733b4aa749d9","role":"caller"}' }
+06-14 22:48:46.634 I/ReactNativeJS(20731): '[VoIP][Diag] handleSignalingMessage:dispatch', { callId: 'call-733b4aa749d9',
+06-14 22:48:46.634 I/ReactNativeJS(20731):   socketState: 'OPEN',
+06-14 22:48:46.634 I/ReactNativeJS(20731):   summary: 
+06-14 22:48:46.634 I/ReactNativeJS(20731):    { type: 'pong',
+06-14 22:48:46.634 I/ReactNativeJS(20731):      call_id: 'call-733b4aa749d9',
+06-14 22:48:46.634 I/ReactNativeJS(20731):      from_role: null,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      has_sdp: false,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      sdp_length: 0,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      has_candidate: false,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      candidate_length: 0,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      sdp_mid: null,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      sdp_Milne_index: null,
+06-14 22:48:46.634 I/ReactNativeJS(20731):      username_fragment: null },
+06-14 22:48:46.634 I/ReactNativeJS(20731):   normalizedType: 'pong' }
+06-14 22:48:46.634 I/ReactNativeJS(20731): '[VoIP][Diag] handleSignalingMessage:pong', { callId: 'call-733b4aa749d9', socketState: 'OPEN' }

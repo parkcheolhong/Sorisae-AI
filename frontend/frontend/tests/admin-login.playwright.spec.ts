@@ -16,9 +16,10 @@ test.describe('admin login regression', () => {
 
         await expect(page.getByTestId('admin-login-form')).toBeVisible();
         await expect(page.getByTestId('admin-login-email')).toHaveValue('119cash@naver.com');
-        await expect(page.getByTestId('admin-login-password')).toHaveValue('sample-password');
+        await expect(page.getByTestId('admin-login-password')).toHaveValue('');
         await expect(page.getByTestId('admin-login-remember-id')).toBeChecked();
-        await expect(page.getByTestId('admin-login-remember-password')).toBeChecked();
+        await expect(page.getByTestId('admin-login-remember-password')).not.toBeChecked();
+        await expect(page.getByTestId('admin-login-remember-password')).toBeDisabled();
         await expect(page.getByTestId('admin-login-allow-passkey')).toBeChecked();
         await expect(page.getByTestId('admin-login-passkey-button')).toBeEnabled();
         await expect(page.getByTestId('admin-login-recovery-link')).toHaveAttribute('href', '/admin/recovery');
@@ -33,9 +34,9 @@ test.describe('admin login regression', () => {
     });
 
     test('login timeout shows stable recovery guidance when admin proxy is slow', async ({ page }) => {
-        await page.route('**/api/proxy', async () => {
+        await page.route('**/api/proxy', async (route) => {
             await page.waitForTimeout(1000);
-            throw new Error('simulated proxy disconnect');
+            await route.abort('failed');
         });
 
         await page.goto('/admin/login');

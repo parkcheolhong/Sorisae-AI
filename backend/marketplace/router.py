@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Response
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, func
 from typing import Any, Callable, Dict, List, Optional
 from pydantic import BaseModel
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+
+from backend.time_utils import utcnow
 import asyncio
 import logging
 import os
@@ -32,7 +34,6 @@ from uuid import uuid4
 from redis.exceptions import RedisError
 from . import models, schemas, crud
 from .subscription_service import subscription_service
-from .database import add_missing_columns
 from .ad_strategy_engine import plan_ad_strategy
 from .audience_profile_engine import infer_audience_profiles
 from .campaign_orchestrator_engine import plan_local_campaign
@@ -120,7 +121,8 @@ from .ad_order_policy import (
     order_duration_seconds as _policy_order_duration_seconds,
     recommended_cut_count as _policy_recommended_cut_count,
 )
-from backend.auth import get_current_user
+from backend.auth import get_current_user, oauth2_scheme_optional, _resolve_current_user_from_token
+from .worldlinco_tourism_promo import UserTourismPromoCreate
 from backend.orchestration_stage_service import (
     ORCHESTRATION_STAGE_DEFINITIONS,
     build_stage_tracking_payload,
@@ -424,7 +426,43 @@ def _iter_feature_artifacts(feature_metadata: Dict[str, Any]) -> List[Dict[str, 
     return artifacts
 
 
+# [보안 보강] run_id 는 파일 경로(_stage_run_path) 에 직접 결합되므로 토큰 화이트리스트로
+# 경로 트래버설/LFI(예: 인코딩된 구분자 주입)를 차단한다. 실제 run_id 는 token_urlsafe 기반.
+_FEATURE_RUN_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
+
+
+def _feature_delivery_allowed_roots() -> List[Path]:
+    """delivery 산출물이 생성되는 허용 루트(시스템 temp 하위 codeai-marketplace-*)."""
+    return [(Path(tempfile.gettempdir()) / name).resolve() for name in (
+        "codeai-marketplace-image",
+        "codeai-marketplace-video",
+        "codeai-marketplace-music",
+        "codeai-marketplace-sheet",
+        "codeai-marketplace-ppt",
+        "codeai-marketplace-document",
+    )]
+
+
+def _assert_delivery_path_confined(asset_path: Path) -> None:
+    """제공 파일이 허용된 산출물 루트 안에 있는지 검증(메타데이터 경로 변조 시 임의 파일 노출 방지)."""
+    try:
+        resolved = asset_path.resolve()
+    except (OSError, RuntimeError) as exc:
+        raise HTTPException(status_code=404, detail="delivery asset 파일이 존재하지 않습니다.") from exc
+    for root in _feature_delivery_allowed_roots():
+        try:
+            if resolved.is_relative_to(root):
+                return
+        except AttributeError:  # py<3.9 안전망
+            if str(resolved).startswith(str(root)):
+                return
+    logger.warning("[feature-delivery] 허용 루트 밖 경로 차단: %s", resolved)
+    raise HTTPException(status_code=404, detail="요청한 delivery asset 을 찾을 수 없습니다.")
+
+
 def _resolve_feature_delivery_asset_or_404(run_id: str, asset_format: str) -> Dict[str, Any]:
+    if not _FEATURE_RUN_ID_RE.match(str(run_id or "")):
+        raise HTTPException(status_code=400, detail="run_id 형식이 올바르지 않습니다.")
     stage_run = _get_feature_stage_run_or_404(run_id)
     feature_metadata = _get_feature_metadata(stage_run)
     normalized_format = str(asset_format or "").strip().lower()
@@ -436,6 +474,8 @@ def _resolve_feature_delivery_asset_or_404(run_id: str, asset_format: str) -> Di
             if str(asset.get("format") or "").strip().lower() != normalized_format:
                 continue
             asset_path = Path(str(asset.get("path") or "")).expanduser()
+            # [보안 보강] 메타데이터의 path 가 변조되어 임의 파일을 가리키지 못하도록 루트 confine.
+            _assert_delivery_path_confined(asset_path)
             if not asset_path.exists() or not asset_path.is_file():
                 raise HTTPException(status_code=404, detail="delivery asset 파일이 존재하지 않습니다.")
             return {
@@ -519,6 +559,474 @@ def _resolve_latest_marketplace_apk_path() -> Path:
     return apk_candidates[0]
 
 
+def _read_worldlinco_apk_manifest() -> dict[str, Any]:
+    apk_dir = _resolve_marketplace_apk_dir()
+    manifest_path = apk_dir / "nadotongryoksa-v1.manifest.json"
+    if manifest_path.is_file():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except json.JSONDecodeError:
+            pass
+
+    target = apk_dir / "nadotongryoksa-v1.apk"
+    if not target.is_file():
+        target = _resolve_latest_marketplace_apk_path()
+    stat = target.stat()
+    return {
+        "package": "com.parkcheolhong.worldlinco",
+        "versionName": None,
+        "versionCode": None,
+        "apkFilename": target.name,
+        "downloadPath": f"/api/marketplace/apk/{target.name}",
+        "publishedAt": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        "sizeBytes": stat.st_size,
+        "manifestMissing": True,
+    }
+
+
+class WorldlincoTelemetryItem(BaseModel):
+    source: str
+    feature: str
+    metric: str
+    value: float
+    unit: Optional[str] = None
+    timestamp: Optional[str] = None
+    device_id: Optional[str] = None
+    run_id: Optional[str] = None
+    tags: Dict[str, str] = {}
+
+
+class WorldlincoTelemetryUploadRequest(BaseModel):
+    note: Optional[str] = None
+    items: List[WorldlincoTelemetryItem] = []
+
+
+_WORLDLINCO_TELEMETRY_FILE_NAME = "admin_worldlinco_telemetry.json"
+_WORLDLINCO_TELEMETRY_MAX_ITEMS = 1000
+
+
+def _worldlinco_telemetry_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[2]
+    return (workspace_root / ".runtime" / _WORLDLINCO_TELEMETRY_FILE_NAME).resolve()
+
+
+def _load_json_file(path: Path) -> Dict[str, Any]:
+    try:
+        if not path.is_file():
+            return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_json_file(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _normalize_worldlinco_telemetry_item(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    try:
+        model = WorldlincoTelemetryItem.model_validate(raw)
+    except Exception:
+        return None
+    payload = model.model_dump()
+    payload["source"] = str(payload.get("source") or "unknown").strip() or "unknown"
+    payload["feature"] = str(payload.get("feature") or "unknown").strip() or "unknown"
+    payload["metric"] = str(payload.get("metric") or "unknown").strip() or "unknown"
+    payload["timestamp"] = str(payload.get("timestamp") or utcnow().isoformat() + "Z")
+    tags = payload.get("tags") if isinstance(payload.get("tags"), dict) else {}
+    payload["tags"] = {str(key): str(value) for key, value in tags.items()}
+    return payload
+
+
+def _summarize_worldlinco_telemetry(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    grouped: Dict[str, Dict[str, List[float]]] = {}
+    for item in items:
+        feature = str(item.get("feature") or "unknown")
+        metric = str(item.get("metric") or "unknown")
+        value = item.get("value")
+        if not isinstance(value, (int, float)):
+            continue
+        feature_bucket = grouped.setdefault(feature, {})
+        metric_bucket = feature_bucket.setdefault(metric, [])
+        metric_bucket.append(float(value))
+
+    features: Dict[str, Any] = {}
+    for feature, metrics in grouped.items():
+        metric_summary: Dict[str, Any] = {}
+        for metric_name, values in metrics.items():
+            if not values:
+                continue
+            sorted_values = sorted(values)
+            p95_index = max(0, min(len(sorted_values) - 1, int(round((len(sorted_values) - 1) * 0.95))))
+            metric_summary[metric_name] = {
+                "count": len(sorted_values),
+                "avg": round(sum(sorted_values) / len(sorted_values), 2),
+                "min": round(sorted_values[0], 2),
+                "max": round(sorted_values[-1], 2),
+                "p95": round(sorted_values[p95_index], 2),
+            }
+        if metric_summary:
+            features[feature] = metric_summary
+
+    return {
+        "total_items": len(items),
+        "features": features,
+    }
+
+
+def _normalize_worldlinco_telemetry_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    normalized_items: List[Dict[str, Any]] = []
+    raw_items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        normalized = _normalize_worldlinco_telemetry_item(item)
+        if normalized:
+            normalized_items.append(normalized)
+    if len(normalized_items) > _WORLDLINCO_TELEMETRY_MAX_ITEMS:
+        normalized_items = normalized_items[-_WORLDLINCO_TELEMETRY_MAX_ITEMS:]
+
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "note": str(payload.get("note") or ""),
+        "items": normalized_items,
+        "summary": _summarize_worldlinco_telemetry(normalized_items),
+    }
+
+
+def _load_worldlinco_telemetry_payload() -> Dict[str, Any]:
+    path = _worldlinco_telemetry_path()
+    if not path.exists() or not path.is_file():
+        return {
+            "updated_at": None,
+            "updated_by": "system",
+            "note": "",
+            "items": [],
+            "summary": _summarize_worldlinco_telemetry([]),
+        }
+    return _normalize_worldlinco_telemetry_payload(_load_json_file(path))
+
+
+def _save_worldlinco_telemetry_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_worldlinco_telemetry_payload(payload)
+    _write_json_file(_worldlinco_telemetry_path(), normalized)
+    return normalized
+
+
+@router.get("/apk/worldlinco/manifest")
+def get_worldlinco_apk_manifest() -> Any:
+    """Marketplace UI용 WorldLinco APK 버전 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/latest-apk-metadata")
+def get_latest_apk_metadata() -> Any:
+    """모바일 앱 자동 업데이트 확인용 메타 (로그인 불필요)."""
+    payload = _read_worldlinco_apk_manifest()
+    return JSONResponse(
+        content={
+            "version_name": payload.get("versionName"),
+            "build_number": payload.get("versionCode"),
+            "package": payload.get("package"),
+            "download_path": payload.get("downloadPath"),
+            "published_at": payload.get("publishedAt"),
+            "size_bytes": payload.get("sizeBytes"),
+            "apk_filename": payload.get("apkFilename"),
+        },
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/worldlinco/tuning")
+def get_worldlinco_tuning_public() -> Any:
+    """WorldLinco 모바일 VoIP/대면 통역 튜닝값 (로그인 불필요)."""
+    from backend.marketplace.worldlinco_tuning import worldlinco_tuning_public_payload
+
+    return JSONResponse(
+        content=worldlinco_tuning_public_payload(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/worldlinco/billing-policy")
+def get_worldlinco_billing_policy_public() -> Any:
+    """WorldLinco 모바일 요금/접근 정책 (로그인 불필요). 관리자 대시보드에서 원격 제어."""
+    from backend.marketplace.worldlinco_billing_policy import worldlinco_billing_policy_public_payload
+
+    return JSONResponse(
+        content=worldlinco_billing_policy_public_payload(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get("/worldlinco/tourism-promo")
+def get_worldlinco_tourism_promo_public(
+    country: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    lang: Optional[str] = None,
+    mode: Optional[str] = None,
+) -> Any:
+    """GPS 국가 관광 홍보. mode=board 이면 사용자 UGC+관리자 spot 게시판. lang=뷰어 프로그램 언어."""
+    from backend.marketplace.worldlinco_tourism_promo import tourism_country_promo_public_payload
+
+    return JSONResponse(
+        content=tourism_country_promo_public_payload(
+            country,
+            latitude=lat,
+            longitude=lon,
+            language=lang,
+            mode=mode,
+        ),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.post("/worldlinco/tourism-promo")
+def post_worldlinco_tourism_promo_user(
+    body: UserTourismPromoCreate,
+    current_user: Any = Depends(get_current_user),
+) -> Any:
+    """로그인 사용자 홍보 등록 — 프로그램 사용자 누구나 현재 GPS 국가에 홍보 가능."""
+    from backend.marketplace.worldlinco_tourism_promo import create_user_tourism_promo
+
+    user_id = int(getattr(current_user, "id", 0) or 0)
+    if user_id <= 0:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    author = str(getattr(current_user, "username", None) or getattr(current_user, "email", "") or f"user-{user_id}")
+    try:
+        post = create_user_tourism_promo(
+            user_id=user_id,
+            author_username=author,
+            payload=body,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code in {"country_code_invalid", "coordinates_invalid", "title_body_required"}:
+            raise HTTPException(status_code=400, detail=code) from exc
+        raise HTTPException(status_code=400, detail="invalid_payload") from exc
+    return JSONResponse(
+        content={"ok": True, "post": post},
+        status_code=201,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get("/worldlinco/sales/invite/{code}")
+def get_worldlinco_sales_invite_landing(code: str, request: Request) -> HTMLResponse:
+    from backend.marketplace.worldlinco_sales_commission import build_sales_invite_landing_html, resolve_sales_agent_by_code
+
+    if not resolve_sales_agent_by_code(code):
+        raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
+    api_base = str(request.base_url).rstrip("/")
+    return HTMLResponse(content=build_sales_invite_landing_html(code=code, api_base=api_base), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/worldlinco/sales/invite/{code}/qr.png")
+def get_worldlinco_sales_invite_qr(code: str, request: Request) -> Response:
+    from backend.marketplace.worldlinco_sales_commission import (
+        build_sales_invite_url,
+        render_sales_qr_png,
+        resolve_sales_agent_by_code,
+    )
+
+    agent = resolve_sales_agent_by_code(code)
+    if not agent:
+        raise HTTPException(status_code=404, detail="sales_agent_code_not_found")
+    api_base = str(request.base_url).rstrip("/")
+    invite_url = build_sales_invite_url(api_base=api_base, code=str(agent["code"]))
+    return Response(content=render_sales_qr_png(invite_url), media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/worldlinco/referral/discount-quote")
+def get_worldlinco_referral_discount_quote(
+    amount: Optional[int] = None,
+    amount_minor: Optional[int] = None,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    from backend.marketplace.worldlinco_referral import resolve_referral_discount_quote
+
+    user_id = int(getattr(current_user, "id", 0) or 0)
+    if user_id <= 0:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    minor = int(amount_minor if amount_minor is not None else float(amount or 0))
+    if minor <= 0:
+        raise HTTPException(status_code=400, detail="amount 또는 amount_minor 가 필요합니다.")
+    return JSONResponse(
+        content=resolve_referral_discount_quote(user_id=user_id, amount_minor=minor, db=db),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get("/worldlinco/billing/mobile-offer")
+def get_worldlinco_mobile_billing_offer(
+    plan_key: str,
+    platform: str,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Play/App Store/Stripe 결제 준비 — 추천 할인 견적 + 스토어 SKU/오퍼 ID."""
+    from backend.marketplace.worldlinco_billing_plans import resolve_worldlinco_plan
+    from backend.marketplace.worldlinco_referral import load_referral_discount_policy, resolve_referral_discount_quote
+
+    user_id = int(getattr(current_user, "id", 0) or 0)
+    if user_id <= 0:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    plan = resolve_worldlinco_plan(plan_key)
+    if not plan:
+        raise HTTPException(status_code=404, detail="plan_key_not_found")
+    normalized_platform = str(platform or "").strip().lower()
+    if normalized_platform not in {"android", "ios", "stripe", "google", "apple"}:
+        raise HTTPException(status_code=400, detail="platform 은 android|ios|stripe 이어야 합니다.")
+    provider = "google" if normalized_platform in {"android", "google"} else "apple" if normalized_platform in {"ios", "apple"} else "stripe"
+    quote = resolve_referral_discount_quote(
+        user_id=user_id,
+        amount_minor=int(plan["amount_minor"]),
+        db=db,
+    )
+    policy = load_referral_discount_policy()
+    external_product_id = plan["google_product_id"] if provider == "google" else plan["apple_product_id"] if provider == "apple" else plan["stripe_price_code"]
+    offer_id = policy.get("google_offer_id") if provider == "google" else policy.get("apple_offer_id") if provider == "apple" else policy.get("stripe_coupon_id")
+    return JSONResponse(
+        content={
+            "plan_key": plan["plan_key"],
+            "product_code": plan["product_code"],
+            "plan_code": plan["plan_code"],
+            "provider": provider,
+            "platform": normalized_platform,
+            "external_product_id": external_product_id,
+            "external_price_id": external_product_id,
+            "external_offer_id": offer_id if quote.get("eligible") else None,
+            "amount_minor": int(plan["amount_minor"]),
+            "referral_discount": quote,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get("/worldlinco/referral/me")
+def get_worldlinco_referral_me(
+    request: Request,
+    current_user: Any = Depends(get_current_user),
+) -> Any:
+    """로그인 사용자 추천 코드 · 초대 URL · QR · 가입 집계."""
+    from backend.marketplace.worldlinco_referral import referral_me_payload
+
+    user_id = int(getattr(current_user, "id", 0) or 0)
+    if user_id <= 0:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    username = str(getattr(current_user, "username", None) or getattr(current_user, "email", "") or f"user-{user_id}")
+    api_base = str(request.base_url).rstrip("/")
+    return JSONResponse(
+        content=referral_me_payload(user_id=user_id, username=username, api_base=api_base),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get("/worldlinco/invite/{code}")
+def get_worldlinco_invite_landing(code: str, request: Request) -> HTMLResponse:
+    """추천 QR/링크 랜딩 — APK 설치 + 앱 딥링크."""
+    from backend.marketplace.worldlinco_referral import build_invite_landing_html, resolve_referrer_by_code
+
+    referrer = resolve_referrer_by_code(code)
+    if not referrer:
+        raise HTTPException(status_code=404, detail="referral_code_not_found")
+    api_base = str(request.base_url).rstrip("/")
+    html = build_invite_landing_html(
+        code=str(referrer["code"]),
+        api_base=api_base,
+        referrer_username=str(referrer.get("username") or ""),
+    )
+    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/worldlinco/invite/{code}/qr.png")
+def get_worldlinco_invite_qr(code: str, request: Request) -> Response:
+    """추천 초대 URL QR PNG."""
+    from backend.marketplace.worldlinco_referral import (
+        build_invite_url,
+        render_referral_qr_png,
+        resolve_referrer_by_code,
+    )
+
+    referrer = resolve_referrer_by_code(code)
+    if not referrer:
+        raise HTTPException(status_code=404, detail="referral_code_not_found")
+    api_base = str(request.base_url).rstrip("/")
+    invite_url = build_invite_url(api_base=api_base, code=str(referrer["code"]))
+    png = render_referral_qr_png(invite_url)
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.post("/worldlinco/telemetry/upload")
+def upload_worldlinco_telemetry_public(
+    payload: WorldlincoTelemetryUploadRequest,
+    current_user: Any = Depends(get_current_user),
+) -> Any:
+    if not payload.items:
+        raise HTTPException(status_code=400, detail="items 가 비어 있습니다.")
+
+    current = _load_worldlinco_telemetry_payload()
+    existing_items = current.get("items") if isinstance(current.get("items"), list) else []
+    normalized_new: List[Dict[str, Any]] = []
+    for item in payload.items:
+        normalized = _normalize_worldlinco_telemetry_item(item.model_dump())
+        if normalized:
+            normalized_new.append(normalized)
+    if not normalized_new:
+        raise HTTPException(status_code=400, detail="유효한 telemetry item 이 없습니다.")
+
+    merged_items = [*existing_items, *normalized_new]
+    if len(merged_items) > _WORLDLINCO_TELEMETRY_MAX_ITEMS:
+        merged_items = merged_items[-_WORLDLINCO_TELEMETRY_MAX_ITEMS:]
+
+    updated_by = str(getattr(current_user, "email", None) or getattr(current_user, "id", "mobile"))
+    note = str(payload.note or current.get("note") or "")
+    updated_payload = {
+        "updated_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "note": note,
+        "items": merged_items,
+    }
+    try:
+        saved = _save_worldlinco_telemetry_payload(updated_payload)
+    except Exception as exc:
+        logger.warning("[worldlinco][telemetry] persist failed (non-fatal): %s", exc)
+        saved = _normalize_worldlinco_telemetry_payload(updated_payload)
+    return {
+        "accepted": len(normalized_new),
+        "total_items": len(saved.get("items") or []),
+        "summary": saved.get("summary") or {},
+        "updated_at": saved.get("updated_at"),
+    }
+
+
 @router.get("/latest.apk")
 def download_latest_marketplace_apk() -> Any:
     """모바일 자동업데이트용 고정 APK URL 엔드포인트."""
@@ -565,14 +1073,33 @@ def issue_apk_test_download_token(
     return {"token": token, "download_url": download_url, "expires_in": 7 * 24 * 3600}
 
 
+def _resolve_optional_bearer_user(
+    bearer_token: Optional[str] = Depends(oauth2_scheme_optional),
+) -> Any:
+    """Bearer 토큰이 있으면 사용자로 해석하고, 없거나 무효면 None 을 반환한다(401 미발생).
+
+    [보안 수정][MED] APK 다운로드의 무토큰 분기는 과거 `current_user: Any = None` 을 일반 파라미터로
+    선언해 FastAPI 가 이를 '쿼리 파라미터'로 취급했다. 그 결과 `?current_user=1` 만 붙이면
+    `if not current_user` 가 거짓이 되어 401 인증 게이트가 우회됐다(클라이언트가 신원을 자칭).
+    → 신원은 절대 클라이언트 쿼리에서 가져오지 않고 Bearer 토큰에서만 도출한다.
+    """
+    effective = str(bearer_token or "").strip()
+    if not effective:
+        return None
+    try:
+        return _resolve_current_user_from_token(effective)
+    except HTTPException:
+        return None
+
+
 @router.get("/apk/{filename}")
 def download_marketplace_apk(
     filename: str,
     token: Optional[str] = None,
     test_token: Optional[str] = None,
-    current_user: Any = None,
+    current_user: Any = Depends(_resolve_optional_bearer_user),
 ) -> Any:
-    """모바일 APK 직접 다운로드 엔드포인트 — 신세계소리새 나도통역사 등
+    """모바일 APK 직접 다운로드 엔드포인트 — WorldLinco(월드링코) 등
     
     인증 필수: 구매자 또는 유효한 다운로드 토큰 보유
     토큰은 query parameter로 전달: /apk/file.apk?token=abc123
@@ -759,15 +1286,30 @@ def create_marketplace_purchase(
     if not project:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
     
+    server_price = float(project.price or 0)
+    amount_minor = int(round(server_price))
+    from backend.marketplace.worldlinco_referral import resolve_referral_discount_quote
+    from backend.marketplace.worldlinco_billing_plans import resolve_worldlinco_plan_by_amount
+
+    quote = resolve_referral_discount_quote(
+        user_id=int(current_user.id),
+        amount_minor=amount_minor,
+        db=db,
+    )
+    final_price = float(quote["final_amount_minor"]) / 100.0 if quote.get("eligible") else server_price
     purchase = payment_service.create_purchase(
         db=db,
         project_id=request.project_id,
         buyer_id=current_user.id,
-        amount=request.amount or float(project.price or 0),
+        amount=final_price,
         payment_method=request.payment_method,
     )
-    
-    return schemas.Purchase.model_validate(purchase)
+    plan_row = resolve_worldlinco_plan_by_amount(amount_minor)
+    response = schemas.Purchase.model_validate(purchase).model_dump()
+    if quote.get("eligible"):
+        response["referral_discount"] = quote
+        response["plan_key"] = plan_row.get("plan_key") if plan_row else None
+    return response
 
 
 @router.post("/purchase/{purchase_id}/pay")
@@ -789,13 +1331,151 @@ def initiate_marketplace_payment(
     
     if purchase.buyer_id != current_user.id:
         raise HTTPException(status_code=403, detail="본인의 구매만 결제할 수 있습니다.")
+
+    from backend.marketplace.worldlinco_referral import resolve_referral_discount_quote
+
+    amount_minor = int(round(float(purchase.amount)))
+    original_minor = amount_minor
+    for candidate in (9900, 19900, 2900):
+        quote_probe = resolve_referral_discount_quote(
+            user_id=int(current_user.id),
+            amount_minor=candidate,
+            db=db,
+        )
+        if quote_probe.get("eligible") and int(quote_probe.get("final_amount_minor") or 0) == amount_minor:
+            original_minor = candidate
+            break
+
+    quote = resolve_referral_discount_quote(
+        user_id=int(current_user.id),
+        amount_minor=original_minor,
+        db=db,
+    )
     
     result = payment_service.initiate_payment(
         purchase_id=purchase_id,
         purchase=purchase,
     )
-    
+
+    if quote.get("eligible") and int(round(float(purchase.amount))) == int(quote.get("final_amount_minor") or 0):
+        result["referral_discount"] = quote
+
     return schemas.PaymentInitResult(**result)
+
+
+def _finalize_confirmed_marketplace_purchase(
+    *,
+    db: Session,
+    purchase: models.Purchase,
+    buyer_id: int,
+    transaction_id: str,
+    user_country_code: Optional[str] = None,
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_marketplace_settlement import (
+        apply_confirmed_worldlinco_marketplace_settlements,
+    )
+
+    if str(purchase.status or "") != "completed":
+        purchase = payment_service.confirm_payment(
+            db=db,
+            purchase_id=int(purchase.id),
+            transaction_id=str(transaction_id or ""),
+            status="completed",
+        )
+
+    settlement = apply_confirmed_worldlinco_marketplace_settlements(
+        user_id=int(buyer_id),
+        purchase_id=int(purchase.id),
+        payment_amount_minor=int(round(float(purchase.amount))),
+        transaction_id=str(purchase.transaction_id or transaction_id or ""),
+        user_country_code=user_country_code,
+        currency="KRW",
+        db=db,
+    )
+
+    allow_simulated = (os.getenv("MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT", "true") or "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    return {
+        "purchase": purchase,
+        "settlement": settlement,
+        "payment_mode": "simulated" if allow_simulated else "gateway",
+        "payment_provider": "marketplace_legacy",
+        "payment_simulation": allow_simulated,
+        "payment_message": "결제가 확정되었습니다." if str(purchase.status) == "completed" else "결제 상태를 확인할 수 없습니다.",
+    }
+
+
+@router.post("/purchase/{purchase_id}/confirm", response_model=schemas.PaymentCallbackResponse)
+def confirm_marketplace_purchase(
+    purchase_id: int,
+    request: schemas.MarketplacePurchaseConfirmRequest,
+    current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PaymentCallbackResponse:
+    """결제 확정 후 WorldLinco referral/settlement 적용 (initiate 시점이 아님)."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+
+    purchase = payment_service.get_purchase_by_id(db, purchase_id)
+    if not purchase:
+        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
+    if purchase.buyer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="본인의 구매만 결제 확정할 수 있습니다.")
+
+    txn_id = str(request.transaction_id or purchase.transaction_id or f"TXN_{uuid4().hex[:12]}")
+    finalized = _finalize_confirmed_marketplace_purchase(
+        db=db,
+        purchase=purchase,
+        buyer_id=int(current_user.id),
+        transaction_id=txn_id,
+        user_country_code=getattr(current_user, "country_code", None),
+    )
+    purchase = finalized["purchase"]
+    return schemas.PaymentCallbackResponse(
+        status=str(purchase.status or request.status or "completed"),
+        purchase_id=int(purchase.id),
+        transaction_id=str(purchase.transaction_id or txn_id),
+        payment_mode=str(finalized["payment_mode"]),
+        payment_provider=str(finalized["payment_provider"]),
+        payment_simulation=bool(finalized["payment_simulation"]),
+        payment_message=str(finalized["payment_message"]),
+        worldlinco_settlement=finalized.get("settlement"),
+    )
+
+
+@router.post("/payment/callback", response_model=schemas.PaymentCallbackResponse)
+def marketplace_payment_callback(
+    order_id: int,
+    transaction_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+) -> schemas.PaymentCallbackResponse:
+    """PG return/webhook — order_id 쿼리 + transaction_id 로 결제 확정."""
+    purchase = payment_service.get_purchase_by_id(db, int(order_id))
+    if not purchase:
+        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
+
+    txn_id = str(transaction_id or purchase.transaction_id or f"TXN_{uuid4().hex[:12]}")
+    finalized = _finalize_confirmed_marketplace_purchase(
+        db=db,
+        purchase=purchase,
+        buyer_id=int(purchase.buyer_id),
+        transaction_id=txn_id,
+    )
+    purchase = finalized["purchase"]
+    return schemas.PaymentCallbackResponse(
+        status=str(purchase.status or "completed"),
+        purchase_id=int(purchase.id),
+        transaction_id=str(purchase.transaction_id or txn_id),
+        payment_mode=str(finalized["payment_mode"]),
+        payment_provider=str(finalized["payment_provider"]),
+        payment_simulation=bool(finalized["payment_simulation"]),
+        payment_message=str(finalized["payment_message"]),
+        worldlinco_settlement=finalized.get("settlement"),
+    )
 
 
 @router.get("/purchases")
@@ -886,7 +1566,7 @@ def create_marketplace_download_token(
     purchases = db.query(models.Purchase).filter(
         models.Purchase.project_id == request.project_id,
         models.Purchase.buyer_id == current_user.id,
-        models.Purchase.status.in_(["completed", "pending"]),
+        models.Purchase.status == "completed",
     ).all()
     
     if not purchases:
@@ -1095,12 +1775,23 @@ def _ensure_video_service_user_schema() -> None:
         return
 
     with engine.begin() as conn:
-        add_missing_columns(
-            conn,
-            "users",
-            {"credit_balance": "INTEGER"},
-            inspector=inspector,
-        )
+        conn_inspector = inspect(conn)
+        existing_columns = {
+            column["name"]
+            for column in conn_inspector.get_columns("users")
+        }
+        if "credit_balance" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN credit_balance INTEGER"
+            ))
+        if "preferred_language" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(16)"
+            ))
+        if "country_code" not in existing_columns:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN country_code VARCHAR(8)"
+            ))
         conn.execute(text(
             "UPDATE users SET credit_balance=10 WHERE credit_balance IS NULL"
         ))
@@ -1205,6 +1896,30 @@ def _get_customer_stage_execution_metadata(stage_run_payload: Dict[str, Any]) ->
     return dict(metadata.get("orchestration_execution") or {})
 
 
+def _customer_stage_run_owner_id(stage_run_payload: Dict[str, Any]) -> str:
+    requested_by = stage_run_payload.get("requested_by") if isinstance(stage_run_payload, dict) else {}
+    if not isinstance(requested_by, dict):
+        return ""
+    return str(requested_by.get("id") or "").strip()
+
+
+def _current_customer_user_id(current_user: models.User) -> str:
+    return str(getattr(current_user, "id", "") or "").strip()
+
+
+def _customer_stage_run_owned_by_current_user(stage_run_payload: Dict[str, Any], current_user: models.User) -> bool:
+    owner_id = _customer_stage_run_owner_id(stage_run_payload)
+    current_user_id = _current_customer_user_id(current_user)
+    return bool(owner_id and current_user_id and owner_id == current_user_id)
+
+
+def _load_customer_stage_run_for_user(run_id: str, current_user: models.User) -> Dict[str, Any]:
+    payload = load_stage_run(run_id)
+    if not payload or not _customer_stage_run_owned_by_current_user(payload, current_user):
+        raise HTTPException(status_code=404, detail="고객 stage run을 찾을 수 없습니다.")
+    return payload
+
+
 def _update_customer_stage_execution_metadata(run_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
     payload = load_stage_run(run_id)
     if not payload:
@@ -1236,10 +1951,13 @@ def _ensure_customer_stage_run_payload(
     return stage_run_payload
 
 
-async def _run_customer_orchestration_request(orchestration_request):
-    from backend.llm.orchestrator import execute_orchestration as execute_orchestration_handler
+async def _run_customer_orchestration_request(orchestration_request, owner_id: str | None = None):
+    from backend.orchestrator.autonomous.surface_adapter import run_autonomous_surface_execution
 
-    return await execute_orchestration_handler(orchestration_request)
+    return await run_autonomous_surface_execution(
+        orchestration_request,
+        owner_id=str(owner_id or getattr(orchestration_request, "run_id", "") or "marketplace-customer"),
+    )
 
 
 def _build_customer_orchestrate_result_payload(
@@ -1410,7 +2128,7 @@ def _resolve_stage_run_for_request(
     current_user: models.User,
 ) -> Optional[Dict[str, Any]]:
     if request.stage_run_id:
-        return load_stage_run(request.stage_run_id)
+        return _load_customer_stage_run_for_user(request.stage_run_id, current_user)
     project_name = (request.project_name or "customer-product").strip() or "customer-product"
     return initialize_stage_run(
         scope="marketplace",
@@ -1588,7 +2306,7 @@ def _append_customer_follow_up_history(*, history_id: str, score: int, limit: in
     normalized_score = max(0, min(100, int(score)))
     if not entries or int(entries[-1].get("score") or -1) != normalized_score:
         entries.append({
-            "recorded_at": datetime.utcnow().isoformat() + "Z",
+            "recorded_at": utcnow().isoformat() + "Z",
             "score": normalized_score,
         })
     entries = entries[-max(2, limit):]
@@ -1661,6 +2379,7 @@ def _build_customer_orchestrate_request(
             request.manual_correction,
         ),
         mode=safe_mode,
+        run_id=str(request.stage_run_id or "").strip() or None,
         project_name=request.project_name,
         output_base_dir=user_dir,
         output_dir=validated_output_dir,

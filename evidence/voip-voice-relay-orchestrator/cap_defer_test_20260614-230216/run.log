@@ -1,0 +1,9 @@
+[23:02:16] Cap/defer test dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-230216
+[23:02:16] Expected build 1.0.39 code 64
+[23:02:17] Using existing connected call
+[23:02:17] Waiting for S10 voice relay segment...
+[23:02:36] === Cap only (60s): S10 15초+ 연속 발화 (14s cap 확인) ===
+[23:02:36] Cap phase: 22s probe + return to VoIP foreground
+[23:03:15] WARN: no max_duration in cap window — utterance may have ended via silence before 14s
+[23:03:15] Cap phase: max_duration=0 elapsed_ms= PASS=False
+[23:03:15] Artifacts: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-230216

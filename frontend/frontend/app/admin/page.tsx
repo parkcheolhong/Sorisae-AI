@@ -7,12 +7,31 @@ import { useAdminPageActions } from '@/app/admin/hooks/useAdminPageActions';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { resolveApiBaseUrl } from '@/lib/api';
+import { resolveApiBaseUrl, resolveBackendDocsUrl } from '@/lib/api';
 import AdminAdPreviewModal from '@/components/admin/admin-ad-preview-modal';
 import AdminLlmControlSummary from '@/components/admin/admin-llm-control-summary';
 import AdminManagementSection from '@/components/admin/admin-management-section';
 import AdminStoryboardModal from '@/components/admin/admin-storyboard-modal';
 import AdminSystemSettingsPanel from '@/components/admin/admin-system-settings-panel';
+import { AdminWorldlincoTuningPanel } from '@/components/admin/admin-worldlinco-tuning-panel';
+import AdminWorldlincoBillingPolicyPanel from '@/components/admin/admin-worldlinco-billing-policy-panel';
+import AdminWorldlincoTourismPromoPanel from '@/components/admin/admin-worldlinco-tourism-promo-panel';
+import AdminWorldlincoReferralPanel from '@/components/admin/admin-worldlinco-referral-panel';
+import AdminWorldlincoSalesCommissionPanel from '@/components/admin/admin-worldlinco-sales-commission-panel';
+import AdminWorldlincoRegionalPanel from '@/components/admin/admin-worldlinco-regional-panel';
+import AdminWorldlincoBulkChatPanel from '@/components/admin/admin-worldlinco-bulk-chat-panel';
+import AdminTravelPartnerIntegrationPanel from '@/components/admin/admin-travel-partner-integration-panel';
+import AdminTravelPartnerKpiPanel from '@/components/admin/admin-travel-partner-kpi-panel';
+import AdminGrafanaMonitorSection from '@/components/admin/admin-grafana-monitor-section';
+import AdminPrometheusSection from '@/components/admin/admin-prometheus-section';
+import AdminP50P95ChartSection from '@/components/admin/admin-p50p95-chart-section';
+import AdminPerformanceSection from '@/components/admin/admin-performance-section';
+import AdminLlmPathSection from '@/components/admin/admin-llm-path-section';
+import AdminFastPathSection from '@/components/admin/admin-fast-path-section';
+import AdminOpsSection from '@/components/admin/admin-ops-section';
+import AdminAlertManagerSection from '@/components/admin/admin-alert-manager-section';
+import AdminSLASection from '@/components/admin/admin-sla-section';
+import AdminSubscriptionMonitorSection from '@/components/admin/admin-subscription-monitor-section';
 import WorkspaceChrome from '@/components/ui/workspace-chrome';
 import { buildAdminDashboardSectionsConfig } from '@/app/admin/admin-dashboard-sections-config';
 import { buildAdminLauncherRailItems } from '@/app/admin/admin-rail-builders';
@@ -95,6 +114,20 @@ import {
 import {
     assertAdminSystemSettingsServiceContract,
 } from '@/lib/admin-system-settings-service';
+import {
+    cloneAdminRailSettingsDefaults,
+    loadAdminRailSettings,
+    saveAdminRailSettings,
+    type AdminRailId,
+    type AdminRailSettingsMap,
+} from '@/lib/admin-rail-settings-service';
+import {
+    analyzeAdminThresholds,
+    applyApprovedWorldlincoRecommendations,
+    approveAdminThresholdTarget,
+    loadAdminThresholdAnalysis,
+    type AdminThresholdAnalysisResponse,
+} from '@/lib/admin-threshold-analysis-service';
 import {
     assertAdminManualOrchestratorContract,
 } from '@/lib/admin-manual-orchestrator';
@@ -251,24 +284,136 @@ const initialOverview: OverviewStats = { projects: 0, users: 0, purchases: 0, re
 const initialRevenue: RevenueStats = { total_revenue: 0, total_purchases: 0, average_purchase_amount: 0 };
 const adminPassKmcKcbDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md';
 const adminCommercialTermsDocsHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-terms-checklist.md';
+const adminCommercialValuesInputHref = '/admin/docs-viewer?path=docs%2Fidentity-provider-commercial-values-input-checklist.md';
+const ADMIN_RAIL_OPERATOR_NOTES_STORAGE_KEY = 'admin-rail-operator-notes-v1';
+
+type AdminRailActionItem = {
+    id: AdminRailId;
+    label: string;
+    description: string;
+    emergencyActionLabel: string;
+};
+
+type AdminRailSettingFieldConfig = {
+    key: string;
+    label: string;
+    input: 'boolean' | 'number' | 'text' | 'select';
+    help: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    options?: Array<{ value: string; label: string }>;
+};
+
+const ADMIN_RAIL_ACTION_ITEMS: readonly AdminRailActionItem[] = [
+    { id: 'sla', label: 'SLA', description: '장애 상황 관리자 Push 재전송과 SLA 패널 즉시 확인', emergencyActionLabel: '관리자 Push 재전송' },
+    { id: 'list', label: '일람', description: '소리새 최신 result JSON/장애 분류를 바로 조회', emergencyActionLabel: '최신 결과 JSON 조회' },
+    { id: 'ops', label: '운영', description: '운영 준비 패널 열기 + 전역 자동 모드 즉시 적용', emergencyActionLabel: '전역 자동 모드 적용' },
+    { id: 'cover', label: '커버', description: 'Fast path 커버리지 패널을 즉시 열어 누락 경로 확인', emergencyActionLabel: '커버리지 패널 열기' },
+    { id: 'llm', label: 'LLM', description: 'LLM 응답 경로 패널 또는 LLM 관리 페이지 이동', emergencyActionLabel: 'LLM 관리 페이지 이동' },
+    { id: 'performance', label: '성능', description: '성능 최적화 패널 즉시 오픈', emergencyActionLabel: '성능 패널 열기' },
+    { id: 'latency', label: '응답시간', description: 'p50/p95 패널 즉시 오픈', emergencyActionLabel: 'p50/p95 패널 열기' },
+    { id: 'data', label: '데이터', description: 'Prometheus 데이터 패널 오픈 및 메트릭 확인', emergencyActionLabel: 'Prometheus 패널 열기' },
+    { id: 'monitoring', label: '모니터링', description: 'Grafana 모니터링 패널 오픈 및 대시보드 새로고침', emergencyActionLabel: '모니터링 즉시 점검' },
+];
+
+const FLOW_ADM_DASH_COMMAND_ITEMS = [
+    { id: 'once', label: 'verify-flow-adm-dash-playwright-once' },
+    { id: 'webserver', label: 'verify-flow-adm-dash-playwright-once-webserver' },
+    { id: 'npm', label: 'verify-flow-adm-dash-npm' },
+    { id: 'all', label: 'FLOW-ADM-DASH 회귀 전체 실행' },
+] as const;
+
+const ADMIN_RAIL_SETTING_FIELDS: Record<AdminRailId, readonly AdminRailSettingFieldConfig[]> = {
+    sla: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: 'SLA 레일 운영 여부' },
+        { key: 'availability_target_percent', label: '가용성 목표(%)', input: 'number', help: '목표 SLA 가용성', min: 90, max: 100, step: 0.01 },
+        { key: 'alert_on_breach', label: '위반시 알림', input: 'boolean', help: '임계치 이탈 시 알림 여부' },
+        { key: 'auto_push_on_breach', label: '자동 Push', input: 'boolean', help: '위반 시 관리자 Push 재전송 허용' },
+        { key: 'breach_cooldown_minutes', label: '쿨다운(분)', input: 'number', help: '연속 알림 방지 시간', min: 1, max: 240, step: 1 },
+    ],
+    list: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '일람 레일 운영 여부' },
+        { key: 'auto_refresh_seconds', label: '자동 새로고침(초)', input: 'number', help: '결과 조회 기본 주기', min: 5, max: 600, step: 1 },
+        { key: 'show_failed_only', label: '실패만 보기', input: 'boolean', help: '성공 항목을 숨기고 실패만 요약' },
+        { key: 'include_raw_payload', label: '원본 payload 포함', input: 'boolean', help: 'raw JSON 전체 노출 여부' },
+        { key: 'max_items', label: '최대 표시 수', input: 'number', help: '목록/배열 절단 상한', min: 1, max: 200, step: 1 },
+    ],
+    ops: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '운영 레일 사용 여부' },
+        { key: 'auto_apply_global_mode', label: '자동 모드 즉시 적용', input: 'boolean', help: '응급조치 시 전역 자동 모드 적용' },
+        { key: 'healthcheck_on_open', label: '오픈 시 헬스체크', input: 'boolean', help: '패널 오픈 후 헬스 점검 여부' },
+        { key: 'allow_runtime_restart', label: '런타임 재시작 허용', input: 'boolean', help: '향후 재시작 액션 허용 플래그' },
+        {
+            key: 'deployment_gate_level', label: '배포 게이트', input: 'select', help: '운영 게이트 기준', options: [
+                { value: 'strict', label: 'strict' },
+                { value: 'standard', label: 'standard' },
+                { value: 'flexible', label: 'flexible' },
+            ]
+        },
+    ],
+    cover: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '커버리지 레일 사용 여부' },
+        { key: 'target_fastpath_percent', label: 'Fast path 목표(%)', input: 'number', help: '목표 커버리지 비율', min: 0, max: 100, step: 1 },
+        { key: 'enforce_fastpath_guard', label: '가드 강제', input: 'boolean', help: '목표 미달 시 가드 활성화' },
+        { key: 'auto_open_failures', label: '실패 자동 오픈', input: 'boolean', help: '문제 탐지 시 패널 자동 오픈' },
+        { key: 'sample_size', label: '표본 수', input: 'number', help: '분석 샘플 개수', min: 1, max: 500, step: 1 },
+    ],
+    llm: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: 'LLM 레일 사용 여부' },
+        { key: 'route_timeout_ms', label: '타임아웃(ms)', input: 'number', help: 'LLM 경로 목표 제한시간', min: 1000, max: 300000, step: 1000 },
+        { key: 'prefer_fast_path', label: 'Fast path 우선', input: 'boolean', help: '경량 경로 우선 사용' },
+        { key: 'auto_recover_on_timeout', label: '타임아웃 자동복구', input: 'boolean', help: '타임아웃 후 자동 복구 전략' },
+        { key: 'max_retry_count', label: '최대 재시도', input: 'number', help: '자동 재시도 횟수', min: 0, max: 10, step: 1 },
+    ],
+    performance: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '성능 레일 사용 여부' },
+        { key: 'response_budget_ms', label: '응답 예산(ms)', input: 'number', help: '전체 응답 목표', min: 50, max: 10000, step: 10 },
+        { key: 'db_query_budget_ms', label: 'DB 예산(ms)', input: 'number', help: 'DB 쿼리 목표', min: 10, max: 5000, step: 10 },
+        { key: 'cache_ttl_seconds', label: '캐시 TTL(초)', input: 'number', help: '권장 캐시 TTL', min: 0, max: 86400, step: 1 },
+        { key: 'auto_collect_snapshot', label: '자동 스냅샷', input: 'boolean', help: '응급조치 시 스냅샷 수집' },
+    ],
+    latency: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '응답시간 레일 사용 여부' },
+        { key: 'p50_budget_ms', label: 'p50 목표(ms)', input: 'number', help: '중앙값 목표', min: 10, max: 5000, step: 10 },
+        { key: 'p95_budget_ms', label: 'p95 목표(ms)', input: 'number', help: '상위 5% 지연 목표', min: 10, max: 15000, step: 10 },
+        { key: 'sampling_window_minutes', label: '샘플 윈도우(분)', input: 'number', help: '지연 분석 시간창', min: 1, max: 180, step: 1 },
+        { key: 'alert_on_regression', label: '회귀 알림', input: 'boolean', help: '지연 악화 시 알림' },
+    ],
+    data: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '데이터 레일 사용 여부' },
+        { key: 'metric_refresh_seconds', label: '메트릭 갱신(초)', input: 'number', help: '메트릭 기본 주기', min: 5, max: 600, step: 1 },
+        { key: 'include_zero_metrics', label: '0값 포함', input: 'boolean', help: '0인 메트릭 포함 여부' },
+        {
+            key: 'selected_metric_key', label: '기본 메트릭', input: 'select', help: '기본 표시 메트릭', options: [
+                { value: 'http_requests_total', label: 'http_requests_total' },
+                { value: 'cache_hits_total', label: 'cache_hits_total' },
+                { value: 'cache_misses_total', label: 'cache_misses_total' },
+                { value: 'db_queries_total', label: 'db_queries_total' },
+                { value: 'purchases_total', label: 'purchases_total' },
+            ]
+        },
+        { key: 'max_series_points', label: '최대 포인트', input: 'number', help: '차트 시계열 포인트 상한', min: 10, max: 1000, step: 10 },
+    ],
+    monitoring: [
+        { key: 'enabled', label: '활성화', input: 'boolean', help: '모니터링 레일 사용 여부' },
+        { key: 'grafana_base_url', label: 'Grafana URL', input: 'text', help: '외부 대시보드 기본 주소' },
+        { key: 'auto_refresh_seconds', label: '자동 새로고침(초)', input: 'number', help: '모니터링 갱신 주기', min: 5, max: 600, step: 1 },
+        { key: 'open_external_dashboard', label: '외부 대시보드 열기', input: 'boolean', help: '응급조치 시 Grafana 새 탭 오픈' },
+        {
+            key: 'alert_channel', label: '알림 채널', input: 'select', help: '기본 알림 채널', options: [
+                { value: 'admin', label: 'admin' },
+                { value: 'slack', label: 'slack' },
+                { value: 'teams', label: 'teams' },
+            ]
+        },
+    ],
+};
 
 export default function AdminDashboardPage() {
     const router = useRouter();
     const apiBaseUrl = resolveApiBaseUrl();
-    const adminApiDocsHref = useMemo(() => {
-        if (typeof window === 'undefined') {
-            return `${apiBaseUrl}/docs`;
-        }
-
-        const { hostname, protocol, port } = window.location;
-        const isLocalFrontendPort = (hostname === 'localhost' || hostname === '127.0.0.1') && (port === '3000' || port === '3005') && protocol === 'http:';
-
-        if (isLocalFrontendPort) {
-            return `${protocol}//${hostname}:8000/docs`;
-        }
-
-        return `${apiBaseUrl}/docs`;
-    }, [apiBaseUrl]);
+    const adminApiDocsHref = useMemo(() => resolveBackendDocsUrl(apiBaseUrl), [apiBaseUrl]);
     const marketplaceHomeHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace'), []);
     const marketplaceOrchestratorHref = useMemo(() => resolveMarketplaceSiteHref('/marketplace/orchestrator'), []);
     const adminCategoriesBootstrappedRef = useRef(false);
@@ -362,6 +507,8 @@ export default function AdminDashboardPage() {
         setSecurityGuardDetail,
         dashboardSelfRunStatus,
         setDashboardSelfRunStatus,
+        sorisaeFailureStatus,
+        setSorisaeFailureStatus,
         voiceAlertEnabled,
         setVoiceAlertEnabled,
         llmPanelHeight,
@@ -443,10 +590,33 @@ export default function AdminDashboardPage() {
     const autoConnectGraphApiUnavailableRef = useRef(false);
     const adMonitorApiUnavailableRef = useRef(false);
     const adSettlementApiUnavailableRef = useRef(false);
+    const loadDashboardInFlightRef = useRef(false);
     const panelDeepLinkHandledRef = useRef(false);
     const lastSpokenAlertSignatureRef = useRef('');
     const autoOpsSignatureRef = useRef('');
+    const thresholdRecoveryCandidateRef = useRef<{ reasons: string[]; shouldApplyWorldlinco: boolean } | null>(null);
+    const applyApprovedWorldlincoThresholdRecoveryRef = useRef<() => Promise<any>>(async () => null);
     const [musicPanelOpen, setMusicPanelOpen] = React.useState(false);
+    const [worldlincoTuningPanelOpen, setWorldlincoTuningPanelOpen] = React.useState(false);
+    const [worldlincoBillingPolicyPanelOpen, setWorldlincoBillingPolicyPanelOpen] = React.useState(false);
+    const [worldlincoTourismPromoPanelOpen, setWorldlincoTourismPromoPanelOpen] = React.useState(false);
+    const [worldlincoReferralPanelOpen, setWorldlincoReferralPanelOpen] = React.useState(false);
+    const [worldlincoSalesCommissionPanelOpen, setWorldlincoSalesCommissionPanelOpen] = React.useState(false);
+    const [worldlincoRegionalPanelOpen, setWorldlincoRegionalPanelOpen] = React.useState(false);
+    const [worldlincoBulkChatPanelOpen, setWorldlincoBulkChatPanelOpen] = React.useState(false);
+    const [travelPartnerIntegrationOpen, setTravelPartnerIntegrationOpen] = React.useState(false);
+    const [travelPartnerKpiOpen, setTravelPartnerKpiOpen] = React.useState(false);
+    const [grafanaOpen, setGrafanaOpen] = React.useState(false);
+    const [prometheusOpen, setPrometheusOpen] = React.useState(false);
+    const [p50p95Open, setP50p95Open] = React.useState(false);
+    const [performanceOpen, setPerformanceOpen] = React.useState(false);
+    const [llmPathOpen, setLlmPathOpen] = React.useState(false);
+    const [fastPathOpen, setFastPathOpen] = React.useState(false);
+    const [opsOpen, setOpsOpen] = React.useState(false);
+    const [alertManagerOpen, setAlertManagerOpen] = React.useState(false);
+    const [slaOpen, setSlaOpen] = React.useState(false);
+    const [rightRailOpen, setRightRailOpen] = React.useState(true);
+    const [leftRailOpen, setLeftRailOpen] = React.useState(true);
     const [musicEmotion, setMusicEmotion] = React.useState('happy');
     const [musicIntensity, setMusicIntensity] = React.useState('0.7');
     const [musicTheme, setMusicTheme] = React.useState('소리새 테마');
@@ -475,7 +645,81 @@ export default function AdminDashboardPage() {
         error: null,
         payload: null,
     });
+    const [sorisaeResultJsonPanelOpen, setSorisaeResultJsonPanelOpen] = React.useState(false);
+    const [sorisaeResultJsonState, setSorisaeResultJsonState] = React.useState<{
+        loading: boolean;
+        statusCode: number | null;
+        durationMs: number | null;
+        fetchedAt: string | null;
+        error: string | null;
+        resultJsonPath: string | null;
+        payload: unknown;
+    }>({
+        loading: false,
+        statusCode: null,
+        durationMs: null,
+        fetchedAt: null,
+        error: null,
+        resultJsonPath: null,
+        payload: null,
+    });
+    const [railActionBusyId, setRailActionBusyId] = React.useState<string | null>(null);
+    const [railActionMessage, setRailActionMessage] = React.useState<string | null>(null);
+    const [railActionError, setRailActionError] = React.useState<string | null>(null);
+    const [railActionPayload, setRailActionPayload] = React.useState<unknown>(null);
+    const [railActionCenterOpen, setRailActionCenterOpen] = React.useState(true);
+    const [railOperatorNotes, setRailOperatorNotes] = React.useState<Record<string, string>>({});
+    const [railSettings, setRailSettings] = React.useState<AdminRailSettingsMap>(() => cloneAdminRailSettingsDefaults());
+    const [railSettingsDraft, setRailSettingsDraft] = React.useState<AdminRailSettingsMap>(() => cloneAdminRailSettingsDefaults());
+    const [railSettingsLoading, setRailSettingsLoading] = React.useState(false);
+    const [railSettingsError, setRailSettingsError] = React.useState<string | null>(null);
+    const [railSettingsSavingId, setRailSettingsSavingId] = React.useState<AdminRailId | null>(null);
+    const [railSettingsUpdatedAt, setRailSettingsUpdatedAt] = React.useState<string | null>(null);
+    const [flowAdmDashCommandBusyId, setFlowAdmDashCommandBusyId] = React.useState<string | null>(null);
+    const liveLogDedupRef = React.useRef<Record<string, number>>({});
+    const [thresholdAnalysis, setThresholdAnalysis] = React.useState<AdminThresholdAnalysisResponse | null>(null);
+    const [thresholdAnalysisLoading, setThresholdAnalysisLoading] = React.useState(false);
+    const [thresholdAnalysisError, setThresholdAnalysisError] = React.useState<string | null>(null);
+    const [thresholdAnalysisRunning, setThresholdAnalysisRunning] = React.useState(false);
+    const [thresholdApprovalSavingTarget, setThresholdApprovalSavingTarget] = React.useState<'rails' | 'worldlinco' | null>(null);
+    const [worldlincoApprovedApplyRunning, setWorldlincoApprovedApplyRunning] = React.useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            const raw = window.localStorage.getItem(ADMIN_RAIL_OPERATOR_NOTES_STORAGE_KEY);
+            if (!raw) {
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                setRailOperatorNotes(parsed as Record<string, string>);
+            }
+        } catch {
+            // Ignore malformed local storage payload.
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage.setItem(ADMIN_RAIL_OPERATOR_NOTES_STORAGE_KEY, JSON.stringify(railOperatorNotes));
+        } catch {
+            // Ignore local storage write failures in locked-down browsers.
+        }
+    }, [railOperatorNotes]);
     const pushLiveLog = useCallback((level: LiveLogItem['level'], message: string, meta?: Partial<LiveLogItem> & { capabilityId?: string }) => {
+        const dedupKey = `${level}:${message}`;
+        const now = Date.now();
+        const lastLoggedAt = liveLogDedupRef.current[dedupKey] || 0;
+        if ((now - lastLoggedAt) < 15000) {
+            return;
+        }
+        liveLogDedupRef.current[dedupKey] = now;
         const connectionMeta = meta?.connection_id
             ? {
                 connection_id: meta.connection_id,
@@ -605,6 +849,7 @@ export default function AdminDashboardPage() {
         systemSettingsOpen,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -645,6 +890,7 @@ export default function AdminDashboardPage() {
         setCategorySortBy,
         categoryMessage,
         loadSystemSettings,
+        fillMissingSystemSettings,
         changeAdminPassword,
         updatePostgresRuntimePassword,
         updateSystemSettingValue,
@@ -1070,90 +1316,105 @@ export default function AdminDashboardPage() {
     }, [apiBaseUrl, dashboardSelfRunStatus?.approval_id, handleAdminUnauthorized]);
 
     const loadDashboard = useCallback(async (isRefresh = false) => {
+        if (loadDashboardInFlightRef.current) {
+            return;
+        }
+        loadDashboardInFlightRef.current = true;
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         setError(null);
-        if (isRefresh && !capabilityBootstrapReady) {
-            setCapabilityBootstrapReady(true);
-        }
-        autoConnectGraphApiUnavailableRef.current = isAdminApiBackoffActive('auto-connect-graph');
-        adMonitorApiUnavailableRef.current = isAdminApiBackoffActive('ad-video-orders-monitor-summary');
-        adSettlementApiUnavailableRef.current = isAdminApiBackoffActive('ad-video-orders-settlement-dashboard');
-        trackDashboardAutoConnect({
-            capabilityId: 'dashboard-sync',
-            title: isRefresh ? '관리자 대시보드 새로고침' : '관리자 대시보드 초기 동기화',
-            detail: isRefresh ? '관리자 상태 재수집 요청' : '관리자 초기 상태 동기화 요청',
-            panelId: 'PANEL-ADMIN-DASHBOARD',
-            status: 'queued',
-            execution: 'sync',
-        });
+        try {
+            if (isRefresh && !capabilityBootstrapReady) {
+                setCapabilityBootstrapReady(true);
+            }
+            autoConnectGraphApiUnavailableRef.current = isAdminApiBackoffActive('auto-connect-graph');
+            adMonitorApiUnavailableRef.current = isAdminApiBackoffActive('ad-video-orders-monitor-summary');
+            adSettlementApiUnavailableRef.current = isAdminApiBackoffActive('ad-video-orders-settlement-dashboard');
+            trackDashboardAutoConnect({
+                capabilityId: 'dashboard-sync',
+                title: isRefresh ? '관리자 대시보드 새로고침' : '관리자 대시보드 초기 동기화',
+                detail: isRefresh ? '관리자 상태 재수집 요청' : '관리자 초기 상태 동기화 요청',
+                panelId: 'PANEL-ADMIN-DASHBOARD',
+                status: 'queued',
+                execution: 'sync',
+            });
 
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-            handleAdminUnauthorized('관리자 로그인이 필요합니다. 다시 로그인하세요.');
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                handleAdminUnauthorized('관리자 로그인이 필요합니다. 다시 로그인하세요.');
+                return;
+            }
+            const controllerResult = await loadAdminDashboardController({
+                apiBaseUrl,
+                token,
+                previousSnapshot: snapshotRef.current,
+                currentOverview: overview,
+                currentRevenue: revenue,
+                currentHealth: health,
+                currentLlmStatus: llmStatus,
+                adMonitorUnavailable: adMonitorApiUnavailableRef.current,
+                adSettlementUnavailable: adSettlementApiUnavailableRef.current,
+                includeCapabilityBootstrap: isRefresh || capabilityBootstrapReady,
+                formatCurrency,
+                buildFallbackAdOrderMonitorSummary,
+                buildFallbackAdSettlementDashboard,
+            });
+            if (controllerResult.unauthorized) {
+                setHealth(null);
+                setLlmStatus(null);
+                setOrchestratorCapabilitySummary(null);
+                setSecurityGuardDetail(null);
+                setDashboardSelfRunStatus(null);
+                setSorisaeFailureStatus(null);
+                handleAdminUnauthorized();
+                return;
+            }
+            if (controllerResult.adMonitorUnavailable) {
+                setAdminApiBackoff('ad-video-orders-monitor-summary');
+                adMonitorApiUnavailableRef.current = true;
+            } else {
+                clearAdminApiBackoff('ad-video-orders-monitor-summary');
+                adMonitorApiUnavailableRef.current = false;
+            }
+            if (controllerResult.adSettlementUnavailable) {
+                setAdminApiBackoff('ad-video-orders-settlement-dashboard');
+                adSettlementApiUnavailableRef.current = true;
+            } else {
+                clearAdminApiBackoff('ad-video-orders-settlement-dashboard');
+                adSettlementApiUnavailableRef.current = false;
+            }
+            controllerResult.liveLogEvents.forEach((entry) => pushLiveLog(entry.level, entry.message));
+            if (controllerResult.overviewData) setOverview(controllerResult.overviewData);
+            if (controllerResult.revenueData) setRevenue(controllerResult.revenueData);
+            if (controllerResult.topData) setTopProjects(controllerResult.topData);
+            setHealth(controllerResult.healthData ?? null);
+            setLlmStatus(controllerResult.llmData ?? null);
+            if (controllerResult.assembledState.adVideoOrders) {
+                setAdVideoTotal(Number(controllerResult.assembledState.adVideoTotal || 0));
+                setAdVideoOrders(controllerResult.assembledState.adVideoOrders);
+            }
+            if (controllerResult.assembledState.adOrderMonitorSummary) {
+                setAdOrderMonitorSummary(controllerResult.assembledState.adOrderMonitorSummary);
+            }
+            if (controllerResult.assembledState.adSettlementDashboard) {
+                setAdSettlementDashboard(controllerResult.assembledState.adSettlementDashboard);
+            }
+            setOrchestratorCapabilitySummary(controllerResult.assembledState.orchestratorCapabilitySummary ?? null);
+            setSecurityGuardDetail(controllerResult.assembledState.securityGuardDetail);
+            setDashboardSelfRunStatus(controllerResult.assembledState.dashboardSelfRunStatus);
+            setSorisaeFailureStatus(controllerResult.assembledState.sorisaeFailureStatus);
+            if (controllerResult.failedMessages.length > 0) setError(controllerResult.failedMessages.join(' · '));
+            snapshotRef.current = controllerResult.nextSnapshot;
+            setLastUpdated(controllerResult.lastUpdated);
+        } catch (error: any) {
+            const message = error?.message || '관리자 대시보드 새로고침에 실패했습니다.';
+            setError(message);
+            pushLiveLog('warning', message, { capabilityId: 'dashboard', panel_id: 'PANEL-ADMIN-DASHBOARD' });
+        } finally {
+            loadDashboardInFlightRef.current = false;
             if (isRefresh) setRefreshing(false);
             else setLoading(false);
-            return;
         }
-        const controllerResult = await loadAdminDashboardController({
-            apiBaseUrl,
-            token,
-            previousSnapshot: snapshotRef.current,
-            currentOverview: overview,
-            currentRevenue: revenue,
-            currentHealth: health,
-            currentLlmStatus: llmStatus,
-            adMonitorUnavailable: adMonitorApiUnavailableRef.current,
-            adSettlementUnavailable: adSettlementApiUnavailableRef.current,
-            includeCapabilityBootstrap: isRefresh || capabilityBootstrapReady,
-            formatCurrency,
-            buildFallbackAdOrderMonitorSummary,
-            buildFallbackAdSettlementDashboard,
-        });
-        if (controllerResult.unauthorized) {
-            handleAdminUnauthorized();
-            return;
-        }
-        if (controllerResult.adMonitorUnavailable) {
-            setAdminApiBackoff('ad-video-orders-monitor-summary');
-            adMonitorApiUnavailableRef.current = true;
-        } else {
-            clearAdminApiBackoff('ad-video-orders-monitor-summary');
-            adMonitorApiUnavailableRef.current = false;
-        }
-        if (controllerResult.adSettlementUnavailable) {
-            setAdminApiBackoff('ad-video-orders-settlement-dashboard');
-            adSettlementApiUnavailableRef.current = true;
-        } else {
-            clearAdminApiBackoff('ad-video-orders-settlement-dashboard');
-            adSettlementApiUnavailableRef.current = false;
-        }
-        controllerResult.liveLogEvents.forEach((entry) => pushLiveLog(entry.level, entry.message));
-        if (controllerResult.overviewData) setOverview(controllerResult.overviewData);
-        if (controllerResult.revenueData) setRevenue(controllerResult.revenueData);
-        if (controllerResult.topData) setTopProjects(controllerResult.topData);
-        if (controllerResult.healthData) setHealth(controllerResult.healthData);
-        if (controllerResult.llmData) setLlmStatus(controllerResult.llmData);
-        if (controllerResult.assembledState.adVideoOrders) {
-            setAdVideoTotal(Number(controllerResult.assembledState.adVideoTotal || 0));
-            setAdVideoOrders(controllerResult.assembledState.adVideoOrders);
-        }
-        if (controllerResult.assembledState.adOrderMonitorSummary) {
-            setAdOrderMonitorSummary(controllerResult.assembledState.adOrderMonitorSummary);
-        }
-        if (controllerResult.assembledState.adSettlementDashboard) {
-            setAdSettlementDashboard(controllerResult.assembledState.adSettlementDashboard);
-        }
-        if (controllerResult.assembledState.orchestratorCapabilitySummary) {
-            setOrchestratorCapabilitySummary(controllerResult.assembledState.orchestratorCapabilitySummary);
-        }
-        setSecurityGuardDetail(controllerResult.assembledState.securityGuardDetail);
-        setDashboardSelfRunStatus(controllerResult.assembledState.dashboardSelfRunStatus);
-        if (controllerResult.failedMessages.length > 0) setError(controllerResult.failedMessages.join(' · '));
-        snapshotRef.current = controllerResult.nextSnapshot;
-        setLastUpdated(controllerResult.lastUpdated);
-        if (isRefresh) setRefreshing(false);
-        else setLoading(false);
     }, [apiBaseUrl, capabilityBootstrapReady, handleAdminUnauthorized]);
 
     const approveWorkspaceSelfRun = useCallback(async () => {
@@ -1417,12 +1678,13 @@ export default function AdminDashboardPage() {
         orchestratorCapabilitySummary,
         securityGuardDetail,
         dashboardSelfRunStatus,
+        sorisaeFailureStatus,
         systemSettingsDisconnected: !systemSettings && !systemSettingsLoading && !!systemSettingsMessage,
         capabilityBootstrapEnabled: capabilityBootstrapReady,
         projectQuery,
         topProjects,
         formatCurrency,
-    }), [dashboardSelfRunStatus, formatCurrency, health, llmStatus, orchestratorCapabilitySummary, overview, projectQuery, revenue, securityGuardDetail, systemSettings, systemSettingsLoading, systemSettingsMessage, topProjects]);
+    }), [dashboardSelfRunStatus, formatCurrency, health, llmStatus, orchestratorCapabilitySummary, overview, projectQuery, revenue, securityGuardDetail, sorisaeFailureStatus, systemSettings, systemSettingsLoading, systemSettingsMessage, topProjects]);
     const filteredTopProjects = useMemo(() => {
         const query = projectQuery.trim().toLowerCase();
         if (!query) return topProjects;
@@ -1515,6 +1777,30 @@ export default function AdminDashboardPage() {
     const executeAutomaticRecovery = useCallback(async (mode: 'auto' | 'manual') => {
         setAutoRecoveryRunning(true);
         try {
+            let thresholdRecoveryHistory: AutoRecoveryHistoryItem | null = null;
+            if (!dashboardAnalysis.selfRunFailureInsight && thresholdRecoveryCandidateRef.current) {
+                const thresholdActions: string[] = [];
+                if (thresholdRecoveryCandidateRef.current.shouldApplyWorldlinco) {
+                    const applied = await applyApprovedWorldlincoThresholdRecoveryRef.current();
+                    if (applied?.applied) {
+                        thresholdActions.push('승인된 월드린코 추천값 적용');
+                    }
+                }
+                if (mode === 'manual') {
+                    await applyGlobalAutomaticMode();
+                    thresholdActions.push('전역 자동 모드 재적용');
+                } else {
+                    thresholdActions.push('자동 모드에서는 전역 자동 모드 재적용 생략(수동 실행 전용)');
+                }
+                thresholdRecoveryHistory = {
+                    id: `threshold-${Date.now()}`,
+                    triggeredAt: new Date().toLocaleString('ko-KR', { hour12: false }),
+                    mode,
+                    title: '승인 임계치 기반 자동 복구',
+                    category: 'generic',
+                    summary: `${thresholdRecoveryCandidateRef.current.reasons.join(' · ')} · ${thresholdActions.join(' · ')}`,
+                } as AutoRecoveryHistoryItem;
+            }
             const recoveryResult = await executeAdminAutomaticRecovery({
                 mode,
                 selfRunFailureInsight: dashboardAnalysis.selfRunFailureInsight,
@@ -1540,12 +1826,19 @@ export default function AdminDashboardPage() {
                 await loadDashboard(true);
             }
             setAutoOpsLastExecutedAt(recoveryResult.executedAt);
-            setAutoRecoveryHistory((prev: any) => [recoveryResult.historyItem as AutoRecoveryHistoryItem, ...prev].slice(0, 20));
+            setAutoRecoveryHistory((prev: any) => {
+                const items = [recoveryResult.historyItem as AutoRecoveryHistoryItem, ...prev];
+                if (thresholdRecoveryHistory) {
+                    items.unshift(thresholdRecoveryHistory);
+                }
+                return items.slice(0, 20);
+            });
         } finally {
             setAutoRecoveryRunning(false);
         }
     }, [
         dashboardSelfRunStatus?.approval_id,
+        applyGlobalAutomaticMode,
         dashboardAnalysis.hasOrchestratorCapabilityError,
         dashboardAnalysis.hasOrchestratorCapabilityWarning,
         loadDashboard,
@@ -1647,6 +1940,8 @@ export default function AdminDashboardPage() {
             String(systemSettingsDisconnected),
             String(dashboardAnalysis.hasOrchestratorCapabilityError),
             String(dashboardAnalysis.hasOrchestratorCapabilityWarning),
+            thresholdAnalysis?.safe_gate.threshold_recovery_allowed ? 'threshold-gate-open' : 'threshold-gate-closed',
+            String(thresholdAnalysis?.recommendations.observation_summary.sorisae_classification || '-'),
         ].join('|');
         if (autoOpsSignatureRef.current === signature) return;
         autoOpsSignatureRef.current = signature;
@@ -1661,6 +1956,8 @@ export default function AdminDashboardPage() {
         dashboardSelfRunStatus?.status,
         executeAutomaticRecovery,
         dashboardAnalysis.selfRunFailureInsight,
+        thresholdAnalysis?.safe_gate.threshold_recovery_allowed,
+        thresholdAnalysis?.recommendations.observation_summary.sorisae_classification,
     ]);
 
     const adminManualOrchestratorAssembly = buildAdminPageManualOrchestratorAssembly({
@@ -1872,6 +2169,7 @@ export default function AdminDashboardPage() {
         systemSettingsDisconnected,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -1886,15 +2184,25 @@ export default function AdminDashboardPage() {
         postgresPasswordConfirm,
         postgresPasswordSaving,
         postgresPasswordMessage,
+        adminPasswordCurrent,
+        adminPasswordNext,
+        adminPasswordConfirm,
+        adminPasswordChanging,
+        adminPasswordMessage,
         onApplyGlobalAutomaticMode: applyGlobalAutomaticMode,
         onLoadSystemSettings: loadSystemSettings,
         onSaveSystemSettings: saveSystemSettings,
+        onFillMissingSystemSettings: () => { void fillMissingSystemSettings(); },
         onApplyGeneratorModelOverride: applyGeneratorModelOverride,
         onToggleSystemSettingsSection: toggleSystemSettingsSection,
         onUpdateSystemSettingValue: updateSystemSettingValue,
         onPostgresPasswordNextChange: setPostgresPasswordNext,
         onPostgresPasswordConfirmChange: setPostgresPasswordConfirm,
         onUpdatePostgresRuntimePassword: updatePostgresRuntimePassword,
+        onAdminPasswordCurrentChange: setAdminPasswordCurrent,
+        onAdminPasswordNextChange: setAdminPasswordNext,
+        onAdminPasswordConfirmChange: setAdminPasswordConfirm,
+        onChangeAdminPassword: () => { void changeAdminPassword(); },
     });
 
     const adminSampleProductsAssembly = buildAdminPageSampleProductsAssembly({
@@ -2144,6 +2452,502 @@ export default function AdminDashboardPage() {
         }
     }, [apiBaseUrl, pushLiveLog]);
 
+    const openSorisaeResultJsonPanel = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            setSorisaeResultJsonPanelOpen(true);
+            setSorisaeResultJsonState((prev) => ({
+                ...prev,
+                loading: false,
+                statusCode: null,
+                durationMs: null,
+                fetchedAt: new Date().toISOString(),
+                error: '관리자 토큰이 없어 결과 JSON을 불러오지 못했습니다.',
+                payload: null,
+            }));
+            return;
+        }
+
+        setSorisaeResultJsonPanelOpen(true);
+        setSorisaeResultJsonState((prev) => ({
+            ...prev,
+            loading: true,
+            error: null,
+        }));
+
+        const startedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        const endpoint = `${apiBaseUrl}/api/admin/sorisae-failure-monitor/latest/result-json`;
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store',
+            });
+
+            const rawText = await response.text();
+            let parsedBody: any = null;
+            try {
+                parsedBody = rawText ? JSON.parse(rawText) : null;
+            } catch {
+                parsedBody = null;
+            }
+
+            const finishedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+            const payloadCandidate = parsedBody?.payload ?? parsedBody ?? rawText;
+            const summarizedPayload = typeof payloadCandidate === 'object' && payloadCandidate !== null
+                ? {
+                    classification: (payloadCandidate as any)?.classification ?? null,
+                    apiFail: (payloadCandidate as any)?.apiFail ?? (payloadCandidate as any)?.api_fail ?? null,
+                    uiFail: (payloadCandidate as any)?.uiFail ?? (payloadCandidate as any)?.ui_fail ?? null,
+                    adminPush: (() => {
+                        const adminPushPayload = (payloadCandidate as any)?.adminPush ?? (payloadCandidate as any)?.admin_push ?? null;
+                        if (!adminPushPayload || typeof adminPushPayload !== 'object') {
+                            return adminPushPayload;
+                        }
+                        const maxUsers = Math.max(1, Number(railSettings.list.max_items || 20));
+                        return {
+                            ...adminPushPayload,
+                            users: Array.isArray((adminPushPayload as any).users)
+                                ? (adminPushPayload as any).users.slice(0, maxUsers)
+                                : [],
+                        };
+                    })(),
+                }
+                : payloadCandidate;
+            setSorisaeResultJsonState({
+                loading: false,
+                statusCode: response.status,
+                durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
+                fetchedAt: new Date().toISOString(),
+                error: response.ok
+                    ? null
+                    : String(parsedBody?.detail || rawText || `결과 JSON 조회 실패 (${response.status})`),
+                resultJsonPath: String(parsedBody?.result_json_path || ''),
+                payload: railSettings.list.include_raw_payload ? payloadCandidate : summarizedPayload,
+            });
+        } catch (error: any) {
+            const finishedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+            setSorisaeResultJsonState({
+                loading: false,
+                statusCode: null,
+                durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
+                fetchedAt: new Date().toISOString(),
+                error: error?.message || '결과 JSON 조회 중 네트워크 오류가 발생했습니다.',
+                resultJsonPath: null,
+                payload: null,
+            });
+        }
+    }, [apiBaseUrl, railSettings.list.include_raw_payload, railSettings.list.max_items]);
+
+    const loadRailSettings = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            return;
+        }
+        setRailSettingsLoading(true);
+        setRailSettingsError(null);
+        try {
+            const payload = await loadAdminRailSettings({
+                apiBaseUrl,
+                token,
+            });
+            setRailSettings(payload.rails);
+            setRailSettingsDraft(payload.rails);
+            setRailSettingsUpdatedAt(payload.updated_at || null);
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_RAIL_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return;
+            }
+            setRailSettingsError(error?.message || '레일 설정을 불러오지 못했습니다.');
+        } finally {
+            setRailSettingsLoading(false);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized]);
+
+    const updateRailSettingDraft = useCallback((railId: AdminRailId, key: string, value: string | number | boolean) => {
+        setRailSettingsDraft((prev) => ({
+            ...prev,
+            [railId]: {
+                ...((prev[railId] as unknown) as Record<string, unknown>),
+                [key]: value,
+            },
+        }) as AdminRailSettingsMap);
+    }, []);
+
+    const resetRailSettingDraft = useCallback((railId: AdminRailId) => {
+        const defaults = cloneAdminRailSettingsDefaults();
+        setRailSettingsDraft((prev) => ({
+            ...prev,
+            [railId]: defaults[railId],
+        }));
+    }, []);
+
+    const saveRailSettingsFor = useCallback(async (railId: AdminRailId) => {
+        const token = getAdminToken();
+        if (!token) {
+            handleAdminUnauthorized();
+            return;
+        }
+        setRailSettingsSavingId(railId);
+        setRailSettingsError(null);
+        try {
+            const payload = await saveAdminRailSettings({
+                apiBaseUrl,
+                token,
+                rails: railSettingsDraft,
+            });
+            setRailSettings(payload.rails);
+            setRailSettingsDraft(payload.rails);
+            setRailSettingsUpdatedAt(payload.updated_at || null);
+            setRailActionMessage(`${ADMIN_RAIL_ACTION_ITEMS.find((item) => item.id === railId)?.label || railId} 설정을 저장했습니다.`);
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_RAIL_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return;
+            }
+            setRailSettingsError(error?.message || '레일 설정 저장에 실패했습니다.');
+        } finally {
+            setRailSettingsSavingId(null);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized, railSettingsDraft]);
+
+    const loadThresholdAnalysisState = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            return;
+        }
+        setThresholdAnalysisLoading(true);
+        setThresholdAnalysisError(null);
+        try {
+            const payload = await loadAdminThresholdAnalysis({ apiBaseUrl, token });
+            setThresholdAnalysis(payload);
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_THRESHOLD_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return;
+            }
+            setThresholdAnalysisError(error?.message || '임계치 분석 상태를 불러오지 못했습니다.');
+        } finally {
+            setThresholdAnalysisLoading(false);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized]);
+
+    const runThresholdAnalysis = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            handleAdminUnauthorized();
+            return;
+        }
+        setThresholdAnalysisRunning(true);
+        setThresholdAnalysisError(null);
+        try {
+            const payload = await analyzeAdminThresholds({
+                apiBaseUrl,
+                token,
+                health: (health as unknown as Record<string, unknown>) || null,
+                sorisaeFailure: (sorisaeFailureStatus as unknown as Record<string, unknown>) || null,
+                railSettings: railSettingsDraft,
+            });
+            setThresholdAnalysis(payload);
+            setRailActionMessage('임계치 분석 모드를 실행해 최근 관측값 기반 권장치를 계산했습니다.');
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_THRESHOLD_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return;
+            }
+            setThresholdAnalysisError(error?.message || '임계치 분석 실행에 실패했습니다.');
+        } finally {
+            setThresholdAnalysisRunning(false);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized, health, railSettingsDraft, sorisaeFailureStatus]);
+
+    const saveThresholdApproval = useCallback(async (target: 'rails' | 'worldlinco', approved: boolean) => {
+        const token = getAdminToken();
+        if (!token) {
+            handleAdminUnauthorized();
+            return;
+        }
+        setThresholdApprovalSavingTarget(target);
+        setThresholdAnalysisError(null);
+        try {
+            const payload = await approveAdminThresholdTarget({ apiBaseUrl, token, target, approved });
+            setThresholdAnalysis(payload);
+            setRailActionMessage(`${target === 'rails' ? '임계치' : '월드린코 튜닝'} 승인 상태를 저장했습니다.`);
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_THRESHOLD_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return;
+            }
+            setThresholdAnalysisError(error?.message || '승인 상태 저장에 실패했습니다.');
+        } finally {
+            setThresholdApprovalSavingTarget(null);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized]);
+
+    const applyApprovedWorldlincoThresholdRecovery = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            handleAdminUnauthorized();
+            return null;
+        }
+        setWorldlincoApprovedApplyRunning(true);
+        setThresholdAnalysisError(null);
+        try {
+            const payload = await applyApprovedWorldlincoRecommendations({ apiBaseUrl, token });
+            setRailActionMessage('승인된 월드린코 자동 튜닝 추천값을 실제 SSOT에 적용했습니다.');
+            await loadThresholdAnalysisState();
+            return payload;
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_THRESHOLD_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return null;
+            }
+            setThresholdAnalysisError(error?.message || '승인된 월드린코 추천값 적용에 실패했습니다.');
+            return null;
+        } finally {
+            setWorldlincoApprovedApplyRunning(false);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized, loadThresholdAnalysisState]);
+
+    useEffect(() => {
+        applyApprovedWorldlincoThresholdRecoveryRef.current = applyApprovedWorldlincoThresholdRecovery;
+    }, [applyApprovedWorldlincoThresholdRecovery]);
+
+    const railDirtyState = useMemo<Record<AdminRailId, boolean>>(() => ({
+        sla: JSON.stringify(railSettings.sla) !== JSON.stringify(railSettingsDraft.sla),
+        list: JSON.stringify(railSettings.list) !== JSON.stringify(railSettingsDraft.list),
+        ops: JSON.stringify(railSettings.ops) !== JSON.stringify(railSettingsDraft.ops),
+        cover: JSON.stringify(railSettings.cover) !== JSON.stringify(railSettingsDraft.cover),
+        llm: JSON.stringify(railSettings.llm) !== JSON.stringify(railSettingsDraft.llm),
+        performance: JSON.stringify(railSettings.performance) !== JSON.stringify(railSettingsDraft.performance),
+        latency: JSON.stringify(railSettings.latency) !== JSON.stringify(railSettingsDraft.latency),
+        data: JSON.stringify(railSettings.data) !== JSON.stringify(railSettingsDraft.data),
+        monitoring: JSON.stringify(railSettings.monitoring) !== JSON.stringify(railSettingsDraft.monitoring),
+    }), [railSettings, railSettingsDraft]);
+
+    const thresholdRecoveryCandidate = useMemo(() => {
+        if (!thresholdAnalysis?.safe_gate.threshold_recovery_allowed) {
+            return null;
+        }
+        const summary = thresholdAnalysis.recommendations.observation_summary || {};
+        const metrics = summary.metrics || {};
+        const p95Observed = Number(metrics.p95_latency_ms || 0);
+        const p95Budget = Number(thresholdAnalysis.recommendations.rails.latency.p95_budget_ms || 0);
+        const cpuUsage = Number(summary.cpu_usage_percent || 0);
+        const queueDepth = Number(summary.queue_depth || 0);
+        const sorisaeClassification = String(summary.sorisae_classification || 'unknown');
+        const reasons: string[] = [];
+        if (p95Observed > 0 && p95Budget > 0 && p95Observed > p95Budget) {
+            reasons.push(`p95 ${p95Observed}ms > budget ${p95Budget}ms`);
+        }
+        if (cpuUsage >= 85) {
+            reasons.push(`cpu ${cpuUsage}%`);
+        }
+        if (queueDepth >= 5) {
+            reasons.push(`queue ${queueDepth}`);
+        }
+        if (sorisaeClassification !== 'ALL_PASS' && sorisaeClassification !== 'unknown') {
+            reasons.push(`sorisae ${sorisaeClassification}`);
+        }
+        if (reasons.length === 0) {
+            return null;
+        }
+        return {
+            reasons,
+            shouldApplyWorldlinco: thresholdAnalysis.safe_gate.worldlinco_auto_apply_allowed && sorisaeClassification !== 'ALL_PASS' && sorisaeClassification !== 'unknown',
+        };
+    }, [thresholdAnalysis]);
+
+    useEffect(() => {
+        thresholdRecoveryCandidateRef.current = thresholdRecoveryCandidate;
+    }, [thresholdRecoveryCandidate]);
+
+    useEffect(() => {
+        if (!authChecked) {
+            return;
+        }
+        void loadRailSettings();
+    }, [authChecked, loadRailSettings]);
+
+    useEffect(() => {
+        if (!authChecked) {
+            return;
+        }
+        void loadThresholdAnalysisState();
+    }, [authChecked, loadThresholdAnalysisState]);
+
+    const openRailPanel = useCallback((railId: AdminRailActionItem['id']) => {
+        switch (railId) {
+            case 'sla':
+                setSlaOpen(true);
+                break;
+            case 'list':
+                setSorisaeResultJsonPanelOpen(true);
+                break;
+            case 'ops':
+                setOpsOpen(true);
+                break;
+            case 'cover':
+                setFastPathOpen(true);
+                break;
+            case 'llm':
+                setLlmPathOpen(true);
+                break;
+            case 'performance':
+                setPerformanceOpen(true);
+                break;
+            case 'latency':
+                setP50p95Open(true);
+                break;
+            case 'data':
+                setPrometheusOpen(true);
+                break;
+            case 'monitoring':
+                setGrafanaOpen(true);
+                break;
+            default:
+                break;
+        }
+    }, []);
+
+    const runRailEmergencyAction = useCallback(async (railId: AdminRailActionItem['id']) => {
+        setRailActionBusyId(railId);
+        setRailActionError(null);
+        setRailActionMessage(null);
+        try {
+            const currentSettings = railSettingsDraft[railId] as Record<string, any>;
+            if (railId === 'sla') {
+                if (!currentSettings.auto_push_on_breach) {
+                    openRailPanel('sla');
+                    setRailActionMessage('저장된 SLA 설정에서 자동 Push가 비활성화되어 있어 패널만 열었습니다.');
+                    return;
+                }
+                const token = getAdminToken();
+                if (!token) {
+                    throw new Error('관리자 토큰이 없어 Push 재전송을 수행할 수 없습니다.');
+                }
+                const response = await fetch(`${apiBaseUrl}/api/admin/sorisae-failure-monitor/latest/push`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    cache: 'no-store',
+                });
+                const raw = await response.text();
+                let payload: any = null;
+                try {
+                    payload = raw ? JSON.parse(raw) : null;
+                } catch {
+                    payload = raw;
+                }
+                if (!response.ok) {
+                    throw new Error(String(payload?.detail || raw || `Push 재전송 실패 (${response.status})`));
+                }
+                setRailActionPayload(payload);
+                setRailActionMessage(`관리자 Push 재전송을 완료했습니다. 쿨다운 ${currentSettings.breach_cooldown_minutes || 15}분 기준으로 운영하세요.`);
+                await openSorisaeResultJsonPanel();
+            } else if (railId === 'list') {
+                await openSorisaeResultJsonPanel();
+                setRailActionMessage(`최신 결과 JSON을 다시 조회했습니다. raw payload ${currentSettings.include_raw_payload ? '포함' : '요약'} 모드입니다.`);
+            } else if (railId === 'ops') {
+                openRailPanel('ops');
+                if (currentSettings.auto_apply_global_mode) {
+                    await applyGlobalAutomaticMode();
+                    setRailActionMessage(`전역 자동 모드를 적용했습니다. 게이트 레벨=${currentSettings.deployment_gate_level || 'strict'}`);
+                } else {
+                    setRailActionMessage('저장된 운영 설정상 자동 적용이 꺼져 있어 패널만 열었습니다.');
+                }
+            } else if (railId === 'llm') {
+                if (!currentSettings.enabled) {
+                    setRailActionMessage('저장된 LLM 레일 설정이 비활성화되어 있어 이동하지 않았습니다.');
+                } else {
+                    router.push('/admin/llm');
+                    setRailActionMessage(`LLM 관리 페이지로 이동했습니다. timeout=${currentSettings.route_timeout_ms || 45000}ms`);
+                }
+            } else if (railId === 'monitoring') {
+                openRailPanel('monitoring');
+                if (currentSettings.open_external_dashboard && currentSettings.grafana_base_url && typeof window !== 'undefined') {
+                    window.open(String(currentSettings.grafana_base_url), '_blank', 'noopener,noreferrer');
+                }
+                await loadDashboard(true);
+                setRailActionMessage(`모니터링 패널 오픈 + 대시보드 새로고침을 완료했습니다. refresh=${currentSettings.auto_refresh_seconds || 20}s`);
+            } else if (railId === 'data') {
+                openRailPanel('data');
+                setRailActionMessage(`Prometheus 패널을 열었습니다. 기본 메트릭=${currentSettings.selected_metric_key || 'http_requests_total'}`);
+            } else {
+                openRailPanel(railId);
+                setRailActionMessage('선택한 레일 패널을 즉시 열었습니다.');
+            }
+        } catch (error: any) {
+            setRailActionError(error?.message || '레일 즉시조치 실행 중 오류가 발생했습니다.');
+        } finally {
+            setRailActionBusyId(null);
+        }
+    }, [apiBaseUrl, applyGlobalAutomaticMode, loadDashboard, openRailPanel, openSorisaeResultJsonPanel, railSettingsDraft, router]);
+
+    const runFlowAdmDashRailCommand = useCallback(async (commandLabel: string) => {
+        setFlowAdmDashCommandBusyId(commandLabel);
+        setRailActionError(null);
+        setRailActionMessage(null);
+        try {
+            const token = getAdminToken();
+            if (!token) {
+                throw new Error('관리자 토큰이 없어 FLOW-ADM-DASH 검증을 실행할 수 없습니다.');
+            }
+            // FLOW-ADM-DASH 경로 핵심: 대시보드 새로고침 + 전역 설정 API 재조회
+            await loadDashboard(true);
+            setSystemSettingsPanelOpen(true);
+            const settingsResponse = await fetch(`${apiBaseUrl}/api/admin/system-settings`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                cache: 'no-store',
+            });
+            if (settingsResponse.status === 401 || settingsResponse.status === 403) {
+                handleAdminUnauthorized();
+                return;
+            }
+            if (!settingsResponse.ok) {
+                throw new Error(`전역 설정 조회 실패(${settingsResponse.status})`);
+            }
+            await loadSystemSettings();
+            setRailActionMessage(`${commandLabel} 웹 실행 완료: 대시보드 새로고침 + 전역 설정 재조회(502 미검출).`);
+        } catch (error: any) {
+            setRailActionError(error?.message || `${commandLabel} 실행 중 오류가 발생했습니다.`);
+        } finally {
+            setFlowAdmDashCommandBusyId(null);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized, loadDashboard, loadSystemSettings]);
+
+    const railPanelOpenState = useMemo<Record<AdminRailActionItem['id'], boolean>>(() => ({
+        sla: slaOpen,
+        list: sorisaeResultJsonPanelOpen,
+        ops: opsOpen,
+        cover: fastPathOpen,
+        llm: llmPathOpen,
+        performance: performanceOpen,
+        latency: p50p95Open,
+        data: prometheusOpen,
+        monitoring: grafanaOpen,
+    }), [
+        slaOpen,
+        sorisaeResultJsonPanelOpen,
+        opsOpen,
+        fastPathOpen,
+        llmPathOpen,
+        performanceOpen,
+        p50p95Open,
+        prometheusOpen,
+        grafanaOpen,
+    ]);
+
     const launcherLeftColumn = [
         {
             id: 'admin-control-hub',
@@ -2173,6 +2977,13 @@ export default function AdminDashboardPage() {
             accent: 'blue',
             onClick: () => setCategoryPanelOpen(true),
         },
+        {
+            id: 'travel-kpi-dashboard',
+            label: '📊 Travel Partner KPI',
+            summary: 'CTR · 예약확정률 · 취소율 · 커미션 · RPS · SLA · fallback',
+            accent: 'emerald',
+            onClick: () => setTravelPartnerKpiOpen(true),
+        },
     ] as const;
 
     const launcherRightColumn = [
@@ -2196,6 +3007,62 @@ export default function AdminDashboardPage() {
             summary: '관리자/고객 공통 StageCardPanel · 단계별 수동 점검 · 구조 설계',
             accent: 'emerald',
             onClick: () => setCustomerOrchestratorPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-tuning',
+            label: '🌐 WorldLinco 튜닝',
+            summary: 'VoIP·대면 통역 VAD/TTS 타이밍 원격 조절',
+            accent: 'cyan',
+            onClick: () => setWorldlincoTuningPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-billing-policy',
+            label: '💳 WorldLinco 요금 정책',
+            summary: '베타 무료 ↔ 유료 · 요금 중지/재개',
+            accent: 'cyan',
+            onClick: () => setWorldlincoBillingPolicyPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-referral',
+            label: '🎁 WorldLinco 추천인 QR',
+            summary: 'WL 코드 · 가입 attribution · 3% 할인',
+            accent: 'cyan',
+            onClick: () => setWorldlincoReferralPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-sales-commission',
+            label: '💼 WorldLinco 영업 정산',
+            summary: 'WS QR · 수수료 · 현지 매출 전액 · KR 폴백',
+            accent: 'cyan',
+            onClick: () => setWorldlincoSalesCommissionPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-regional',
+            label: '🗺️ WorldLinco 지역 관리',
+            summary: '지역 관리자 · 귀속 유저 · KPI',
+            accent: 'cyan',
+            onClick: () => setWorldlincoRegionalPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-tourism-promo',
+            label: '🌏 WorldLinco 관광 홍보',
+            summary: 'GPS 국가별 홈 카드 · spot 홍보',
+            accent: 'cyan',
+            onClick: () => setWorldlincoTourismPromoPanelOpen(true),
+        },
+        {
+            id: 'worldlinco-bulk-chat',
+            label: '📣 WorldLinco 일괄 안내',
+            summary: '앱 채팅 · 국가·언어별 번역 푸시',
+            accent: 'cyan',
+            onClick: () => setWorldlincoBulkChatPanelOpen(true),
+        },
+        {
+            id: 'travel-partner-integration',
+            label: '🧳 Travel Partner Integration Hub',
+            summary: '호텔/이동/투어 API 연결 · 라우팅 정책 · 수익 퍼널',
+            accent: 'emerald',
+            onClick: () => setTravelPartnerIntegrationOpen(true),
         },
         {
             id: 'music-panel',
@@ -2293,6 +3160,14 @@ export default function AdminDashboardPage() {
             label: '🧭 운영 설정 패널',
             accent: 'slate',
             onClick: () => setSystemSettingsPanelOpen(true),
+        },
+        {
+            id: 'ops-flow-adm-dash',
+            label: '✅ FLOW-ADM-DASH 회귀 실행',
+            accent: 'emerald',
+            onClick: () => {
+                void runFlowAdmDashRailCommand('FLOW-ADM-DASH 회귀 전체 실행');
+            },
         },
     ] as const;
 
@@ -2775,9 +3650,116 @@ export default function AdminDashboardPage() {
                         id: 'docs', label: '문서', shortLabel: '문서', href: adminPassKmcKcbDocsHref, accent: 'amber',
                         icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📘</div>
                     },
+                    {
+                        id: 'tourism-review', label: '관광 검수', shortLabel: '검수', href: '/admin/tourism-review', accent: 'emerald', testId: 'admin-rail-tourism-review',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🧭</div>
+                    },
+                    {
+                        id: 'carbon', label: '탄소 측정', shortLabel: '탄소', href: '/admin/carbon', accent: 'emerald', testId: 'admin-rail-carbon',
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🌱</div>
+                    },
                     ...buildAdminLauncherRailItems(launcherLeftColumn, ADMIN_LEFT_SHORT_LABEL_OVERRIDES),
                 ]}
                 rightRailItems={[
+                    {
+                        id: 'grafana',
+                        label: 'Grafana 모니터링',
+                        shortLabel: '모니터링',
+                        accent: 'cyan',
+                        onClick: () => setGrafanaOpen(!grafanaOpen),
+                        active: grafanaOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📊</div>
+                    },
+                    {
+                        id: 'prometheus',
+                        label: 'Prometheus 데이터',
+                        shortLabel: '데이터',
+                        accent: 'blue',
+                        onClick: () => setPrometheusOpen(!prometheusOpen),
+                        active: prometheusOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📈</div>
+                    },
+                    {
+                        id: 'p50p95',
+                        label: 'p50/p95 차트',
+                        shortLabel: '응답시간',
+                        accent: 'emerald',
+                        onClick: () => setP50p95Open(!p50p95Open),
+                        active: p50p95Open,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📉</div>
+                    },
+                    {
+                        id: 'performance',
+                        label: '성능 최적화',
+                        shortLabel: '성능',
+                        accent: 'amber',
+                        onClick: () => setPerformanceOpen(!performanceOpen),
+                        active: performanceOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">⚡</div>
+                    },
+                    {
+                        id: 'llmPath',
+                        label: 'LLM path 개선',
+                        shortLabel: 'LLM',
+                        accent: 'violet',
+                        onClick: () => setLlmPathOpen(!llmPathOpen),
+                        active: llmPathOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🚀</div>
+                    },
+                    {
+                        id: 'fastPath',
+                        label: 'Fast path 커버리지',
+                        shortLabel: '커버',
+                        accent: 'cyan',
+                        onClick: () => setFastPathOpen(!fastPathOpen),
+                        active: fastPathOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🎯</div>
+                    },
+                    {
+                        id: 'ops',
+                        label: '운영 준비',
+                        shortLabel: '운영',
+                        accent: 'slate',
+                        onClick: () => setOpsOpen(!opsOpen),
+                        active: opsOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🛠️</div>
+                    },
+                    {
+                        id: 'alertManager',
+                        label: 'AlertManager 설정',
+                        shortLabel: '알람',
+                        accent: 'amber',
+                        onClick: () => {
+                            setAlertManagerOpen(true);
+                            if (typeof window !== 'undefined') {
+                                window.requestAnimationFrame(() => {
+                                    window.setTimeout(() => {
+                                        document.querySelector('[data-testid="admin-alertmanager-section"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }, 80);
+                                });
+                            }
+                        },
+                        active: alertManagerOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">🚨</div>
+                    },
+                    {
+                        id: 'sla',
+                        label: 'SLA 정의',
+                        shortLabel: 'SLA',
+                        accent: 'emerald',
+                        onClick: () => {
+                            setSlaOpen(true);
+                            if (typeof window !== 'undefined') {
+                                window.requestAnimationFrame(() => {
+                                    window.setTimeout(() => {
+                                        document.querySelector('[data-testid="admin-sla-section"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }, 80);
+                                });
+                            }
+                        },
+                        active: slaOpen,
+                        icon: <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 mb-0.5 text-sm">📋</div>
+                    },
                     {
                         id: 'subscription-monitor',
                         label: '구독 결제 모니터링',
@@ -2790,10 +3772,17 @@ export default function AdminDashboardPage() {
                     ...buildAdminLauncherRailItems(opsExtensionRailColumn, ADMIN_RIGHT_SHORT_LABEL_OVERRIDES),
                 ]}
                 rightRailFooter={opsGateRailFooter}
+                rightRailOpen={rightRailOpen}
+                onRightRailToggle={setRightRailOpen}
+                leftRailOpen={leftRailOpen}
+                onLeftRailToggle={setLeftRailOpen}
                 topActions={(
                     <>
-                        <Link prefetch={false} href={marketplaceHomeHref} data-testid="admin-topnav-marketplace" aria-label="마켓플레이스 이동" className="workspace-topbar-chip">
-                            마켓
+                        <Link href="/admin/tourism-review" data-testid="admin-topnav-tourism-review" aria-label="관광 데이터 사람검수 콘솔 열기" className="workspace-topbar-chip">
+                            관광 검수
+                        </Link>
+                        <Link href="/admin/carbon" data-testid="admin-topnav-carbon" aria-label="추론 탄소 전력 측정 열기" className="workspace-topbar-chip">
+                            탄소 측정
                         </Link>
                         <Link href="/admin/users" data-testid="admin-topnav-users" aria-label="회원가입 사용자 확인" className="workspace-topbar-chip">
                             가입 사용자
@@ -2803,6 +3792,9 @@ export default function AdminDashboardPage() {
                         </Link>
                         <Link href={adminCommercialTermsDocsHref} data-testid="admin-topnav-commercial-terms" aria-label="상용화 계약 약관 기준 열기" className="workspace-topbar-chip">
                             계약 기준
+                        </Link>
+                        <Link href={adminCommercialValuesInputHref} data-testid="admin-topnav-commercial-values-input" aria-label="PASS KMC KCB 상용값 입력 체크리스트 열기" className="workspace-topbar-chip">
+                            상용값 입력
                         </Link>
                         <a href={adminApiDocsHref} target="_blank" rel="noreferrer" data-testid="admin-topnav-api-docs" aria-label="API 문서 열기" className="workspace-topbar-chip">
                             API Docs
@@ -2841,246 +3833,839 @@ export default function AdminDashboardPage() {
                         <h2 style={{ fontSize: '28px', fontWeight: 600, color: 'white', marginBottom: '8px' }}>GenSpark 스타일 AI 워크스페이스 4.0</h2>
                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '15px' }}>무엇이든 물어보고 만들어보세요 (관리자 전용)</p>
                     </div>
-                    <div className="w-full">
-                        <AdminLlmControlSummary llmPanelHeight={llmPanelHeight} />
-                    </div>
-                </div>
-
-                <AdminManagementSection
-                    title="🧭 전역 .env 설정 패널"
-                    usage="프로그램 전반 운영값과 연결 설정을 중앙 관리"
-                    description="도메인, 저장 경로, LLM 기본 환경값, 셀프 엔진 연동 설정을 첫 화면 핵심 카드 아래 바로 붙입니다."
-                    open={systemSettingsPanelOpen}
-                    onToggle={() => setSystemSettingsPanelOpen((prev: any) => !prev)}
-                    toggleTestId="admin-system-settings-section"
-                    windowSize="full"
-                    launcherHidden
-                >
-                    <AdminSystemSettingsPanel {...adminSystemSettingsAssembly} />
-                </AdminManagementSection>
-
-                <AdminManagementSection
-                    title="🎵 음악 생성·작사·협업 패널"
-                    usage="관리자 대시보드에서 music API 토큰 호출을 직접 검증"
-                    description="감정 기반 작곡, 코드 기반 작곡, 협업 데모 API를 관리자 권한 토큰으로 즉시 호출하고 payload를 확인합니다."
-                    open={musicPanelOpen}
-                    onToggle={() => setMusicPanelOpen((prev) => !prev)}
-                    toggleTestId="admin-music-panel-section"
-                    windowSize="wide"
-                    launcherHidden
-                >
-                    <div className="workspace-section-stack" data-testid="admin-music-panel">
-                        <div className="workspace-sidebar-card">
-                            <p className="workspace-card-kicker">Emotion Compose</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                                <input
-                                    data-testid="admin-music-emotion-input"
-                                    value={musicEmotion}
-                                    onChange={(event) => setMusicEmotion(event.target.value)}
-                                    placeholder="emotion"
-                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
-                                />
-                                <input
-                                    data-testid="admin-music-intensity-input"
-                                    value={musicIntensity}
-                                    onChange={(event) => setMusicIntensity(event.target.value)}
-                                    placeholder="intensity"
-                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
-                                />
-                                <input
-                                    data-testid="admin-music-theme-input"
-                                    value={musicTheme}
-                                    onChange={(event) => setMusicTheme(event.target.value)}
-                                    placeholder="theme"
-                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
-                                />
+                    {sorisaeFailureStatus && (
+                        <section
+                            data-testid="admin-sorisae-failure-widget"
+                            className="mb-6 rounded-xl border border-white/15 bg-black/35 px-4 py-4 text-white"
+                        >
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-sm font-semibold">소리새 장애감지</h3>
+                                <span className="rounded-full border border-white/20 px-2 py-0.5 text-[11px] font-semibold tracking-wide">
+                                    {sorisaeFailureStatus.classification || 'unknown'}
+                                </span>
+                                {sorisaeFailureStatus.admin_push?.attempted && (
+                                    <span className="rounded-full border border-white/20 px-2 py-0.5 text-[11px]">
+                                        관리자 push 성공 {sorisaeFailureStatus.admin_push?.success_user_count ?? 0} / {sorisaeFailureStatus.admin_push?.admin_user_count ?? 0}
+                                    </span>
+                                )}
                             </div>
-                            <button
-                                type="button"
-                                data-testid="admin-music-compose-emotion-btn"
-                                onClick={handleAdminMusicCompose}
-                                disabled={musicLoading}
-                                className="workspace-topbar-chip"
-                                style={{ marginTop: 10 }}
-                            >
-                                {musicLoading ? '음악 생성 중...' : '감정 기반 음악 생성'}
-                            </button>
-                        </div>
-
-                        <div className="workspace-sidebar-card">
-                            <p className="workspace-card-kicker">Code Compose</p>
-                            <textarea
-                                data-testid="admin-music-code-input"
-                                value={musicCode}
-                                onChange={(event) => setMusicCode(event.target.value)}
-                                className="workspace-admin-command-textarea"
-                                style={{ minHeight: 80 }}
-                                placeholder="작곡 패턴으로 변환할 코드"
-                            />
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 8 }}>
-                                <input
-                                    data-testid="admin-music-code-emotion-input"
-                                    value={musicCodeEmotion}
-                                    onChange={(event) => setMusicCodeEmotion(event.target.value)}
-                                    placeholder="emotion"
-                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
-                                />
-                                <button
-                                    type="button"
-                                    data-testid="admin-music-compose-code-btn"
-                                    onClick={handleAdminMusicComposeFromCode}
-                                    disabled={musicLoading}
-                                    className="workspace-topbar-chip"
-                                >
-                                    코드 작곡
-                                </button>
-                            </div>
-                            <button
-                                type="button"
-                                data-testid="admin-music-friends-demo-btn"
-                                onClick={handleAdminMusicCollaboration}
-                                disabled={musicLoading}
-                                className="workspace-topbar-chip"
-                                style={{ marginTop: 8 }}
-                            >
-                                협업 데모 연결
-                            </button>
-                        </div>
-
-                        <div className="workspace-sidebar-card">
-                            <p className="workspace-card-kicker">Payload</p>
-                            {musicMode ? <p className="workspace-card-copy" data-testid="admin-music-mode">mode: {musicMode}</p> : null}
-                            {musicError ? <p className="workspace-card-copy" style={{ color: 'var(--workspace-danger)' }} data-testid="admin-music-error">{musicError}</p> : null}
-                            {musicComposeResult ? (
-                                <div className="workspace-list" data-testid="admin-music-compose-result">
-                                    <div className="workspace-list-item"><strong>song</strong><span>{String(musicComposeResult.song_title || '-')}</span></div>
-                                    <div className="workspace-list-item"><strong>lyrics</strong><span>{String(musicComposeResult.lyrics_title || '-')}</span></div>
-                                    <div className="workspace-list-item"><strong>tempo</strong><span>{String(musicComposeResult.tempo || '-')}</span></div>
-                                </div>
-                            ) : null}
-                            {musicCodeResult ? (
-                                <div className="workspace-list" data-testid="admin-music-code-result" style={{ marginTop: 10 }}>
-                                    <div className="workspace-list-item"><strong>song</strong><span>{String(musicCodeResult.song_title || '-')}</span></div>
-                                    <div className="workspace-list-item"><strong>composition</strong><span>{String(musicCodeResult.code_composition_title || '-')}</span></div>
-                                    <div className="workspace-list-item"><strong>chords</strong><span>{Array.isArray(musicCodeResult.chords) ? musicCodeResult.chords.join(' → ') : '-'}</span></div>
-                                </div>
-                            ) : null}
-                            {musicFriendResult ? (
-                                <div className="workspace-list" data-testid="admin-music-friends-result" style={{ marginTop: 10 }}>
-                                    <div className="workspace-list-item"><strong>request</strong><span>{String(musicFriendResult.request_id || '-')}</span></div>
-                                    <div className="workspace-list-item"><strong>collaboration</strong><span>{String(musicFriendResult.collaboration_id || '-')}</span></div>
-                                    <div className="workspace-list-item"><strong>friends</strong><span>{Array.isArray(musicFriendResult.friends_of_a) ? musicFriendResult.friends_of_a.join(', ') : '-'}</span></div>
-                                </div>
-                            ) : null}
-                        </div>
-                    </div>
-                </AdminManagementSection>
-
-                <AdminManagementSection
-                    title="🧪/🧬 Extras API 인앱 프리뷰"
-                    usage="새 탭 이동 없이 health/catalog 응답을 대시보드 내부에서 확인"
-                    description="상태코드, 응답시간, 갱신 시각, JSON payload를 한 패널에서 확인하고 즉시 재조회할 수 있습니다."
-                    open={extrasPreviewPanelOpen}
-                    onToggle={() => setExtrasPreviewPanelOpen((prev) => !prev)}
-                    toggleTestId="admin-extras-preview-section"
-                    windowSize="wide"
-                    launcherHidden
-                >
-                    <div className="workspace-section-stack" data-testid="admin-extras-preview-panel">
-                        <div className="workspace-sidebar-card">
-                            <p className="workspace-card-kicker">Request</p>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                <button
-                                    type="button"
-                                    data-testid="admin-extras-preview-health-btn"
-                                    onClick={() => void runExtrasPreviewRequest('health')}
-                                    disabled={extrasPreviewState.loading}
-                                    className="workspace-topbar-chip"
-                                >
-                                    health 조회
-                                </button>
-                                <button
-                                    type="button"
-                                    data-testid="admin-extras-preview-catalog-btn"
-                                    onClick={() => void runExtrasPreviewRequest('catalog')}
-                                    disabled={extrasPreviewState.loading}
-                                    className="workspace-topbar-chip"
-                                >
-                                    catalog 조회
-                                </button>
-                                <button
-                                    type="button"
-                                    data-testid="admin-extras-preview-refresh-btn"
-                                    onClick={() => void runExtrasPreviewRequest(extrasPreviewTarget)}
-                                    disabled={extrasPreviewState.loading}
-                                    className="workspace-topbar-chip"
-                                >
-                                    {extrasPreviewState.loading ? '조회 중...' : '현재 탭 재조회'}
-                                </button>
-                            </div>
-                            <p className="workspace-card-copy" style={{ marginTop: 10 }}>
-                                endpoint: {extrasPreviewTarget === 'health' ? '/api/marketplace/extras/health' : '/api/marketplace/extras/catalog'}
+                            <p className="mt-2 text-xs text-white/80">
+                                API 실패 {sorisaeFailureStatus.api_fail ?? 0}건 · UI 실패 {sorisaeFailureStatus.ui_fail ?? 0}건
                             </p>
-                        </div>
-
-                        <div className="workspace-sidebar-card">
-                            <p className="workspace-card-kicker">Response Meta</p>
-                            <div className="workspace-list">
-                                <div className="workspace-list-item"><strong>status</strong><span data-testid="admin-extras-preview-status">{extrasPreviewState.statusCode ?? '-'}</span></div>
-                                <div className="workspace-list-item"><strong>latency</strong><span>{extrasPreviewState.durationMs != null ? `${extrasPreviewState.durationMs} ms` : '-'}</span></div>
-                                <div className="workspace-list-item"><strong>fetchedAt</strong><span>{extrasPreviewState.fetchedAt ? new Date(extrasPreviewState.fetchedAt).toLocaleString('ko-KR') : '-'}</span></div>
+                            {sorisaeFailureStatus.result_json_path && (
+                                <button
+                                    type="button"
+                                    onClick={() => void openSorisaeResultJsonPanel()}
+                                    className="mt-3 inline-flex rounded-lg border border-white/20 px-3 py-1 text-xs font-semibold hover:bg-white/10"
+                                    data-testid="admin-sorisae-result-json-open"
+                                >
+                                    결과 JSON 열기
+                                </button>
+                            )}
+                        </section>
+                    )}
+                    {sorisaeResultJsonPanelOpen && (
+                        <section
+                            data-testid="admin-sorisae-result-json-panel"
+                            className="mb-6 rounded-xl border border-cyan-400/30 bg-[#061325] px-4 py-4 text-white"
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h3 className="text-sm font-semibold">소리새 smoke_result.json 패널</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setSorisaeResultJsonPanelOpen(false)}
+                                    className="rounded-lg border border-white/20 px-2 py-0.5 text-xs hover:bg-white/10"
+                                >
+                                    닫기
+                                </button>
                             </div>
-                            {extrasPreviewState.error ? (
-                                <p data-testid="admin-extras-preview-error" className="workspace-card-copy" style={{ marginTop: 10, color: 'var(--workspace-danger)' }}>
-                                    {extrasPreviewState.error}
-                                </p>
+                            <p className="mt-2 text-xs text-white/75">
+                                status {sorisaeResultJsonState.statusCode ?? '-'} · latency {sorisaeResultJsonState.durationMs ?? '-'}ms
+                            </p>
+                            {sorisaeResultJsonState.resultJsonPath && (
+                                <p className="mt-1 text-[11px] text-cyan-200/90 break-all">{sorisaeResultJsonState.resultJsonPath}</p>
+                            )}
+                            {sorisaeResultJsonState.loading ? (
+                                <p className="mt-3 text-xs text-white/80">결과 JSON 조회 중...</p>
+                            ) : sorisaeResultJsonState.error ? (
+                                <p className="mt-3 text-xs text-rose-300">{sorisaeResultJsonState.error}</p>
                             ) : null}
-                        </div>
-
-                        <div className="workspace-sidebar-card">
-                            <p className="workspace-card-kicker">Payload</p>
                             <pre
-                                data-testid="admin-extras-preview-payload"
                                 style={{
-                                    margin: 0,
+                                    marginTop: 10,
+                                    marginBottom: 0,
                                     whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word',
                                     background: 'rgba(9,14,22,0.96)',
-                                    border: '1px solid var(--workspace-border)',
-                                    borderRadius: 'var(--workspace-radius-sm)',
+                                    border: '1px solid rgba(120, 185, 255, 0.25)',
+                                    borderRadius: 10,
                                     padding: 12,
-                                    maxHeight: 320,
+                                    maxHeight: 300,
                                     overflow: 'auto',
                                     color: 'var(--workspace-text)',
                                     fontSize: 12,
                                     lineHeight: 1.45,
                                 }}
                             >
-                                {extrasPreviewState.payload == null
-                                    ? '조회 결과가 없습니다.'
-                                    : typeof extrasPreviewState.payload === 'string'
-                                        ? extrasPreviewState.payload
-                                        : JSON.stringify(extrasPreviewState.payload, null, 2)}
+                                {sorisaeResultJsonState.payload == null
+                                    ? '표시할 JSON이 없습니다.'
+                                    : typeof sorisaeResultJsonState.payload === 'string'
+                                        ? sorisaeResultJsonState.payload
+                                        : JSON.stringify(sorisaeResultJsonState.payload, null, 2)}
                             </pre>
-                        </div>
-                    </div>
-                </AdminManagementSection>
-
-                {boardSections.filter(section => section.id !== 'llm').map((section) => (
-                    <AdminManagementSection
-                        key={section.id}
-                        title={section.title}
-                        usage={section.usage}
-                        description={section.description}
-                        open={section.open}
-                        onToggle={section.onToggle}
-                        toggleTestId={section.toggleTestId || `admin-${section.id}-section`}
-                        windowSize={section.windowSize}
-                        launcherHidden
+                        </section>
+                    )}
+                    <section
+                        data-testid="admin-threshold-analysis-mode"
+                        className="mb-6 rounded-xl border border-amber-400/30 bg-[#1a1307] px-4 py-4 text-white"
                     >
-                        {section.body}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h3 className="text-sm font-semibold">임계치 분석 모드</h3>
+                            <span className={`rounded-full border px-2 py-0.5 text-[11px] ${thresholdAnalysis?.safe_gate.threshold_recovery_allowed ? 'border-emerald-300/60 text-emerald-300' : 'border-amber-300/60 text-amber-200'}`}>
+                                {thresholdAnalysis?.safe_gate.threshold_recovery_allowed ? '승인값만 자동복구 사용 가능' : '승인 전 자동복구 차단'}
+                            </span>
+                        </div>
+                        <p className="mt-2 text-xs text-white/75">
+                            최근 관측값으로 권장 임계치를 계산합니다. 승인 전까지는 어떤 추천 임계치도 자동복구에 사용되지 않습니다.
+                        </p>
+                        <p className="mt-1 text-[11px] text-white/50">
+                            {thresholdAnalysisLoading
+                                ? '분석 상태 조회 중...'
+                                : thresholdAnalysis?.last_analyzed_at
+                                    ? `최근 분석: ${thresholdAnalysis.last_analyzed_at}`
+                                    : '아직 분석 기록이 없습니다.'}
+                        </p>
+                        {thresholdAnalysisError && (
+                            <p className="mt-2 text-xs text-rose-300">{thresholdAnalysisError}</p>
+                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => void runThresholdAnalysis()}
+                                disabled={thresholdAnalysisRunning}
+                                className="rounded-lg border border-amber-300/60 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/20 disabled:opacity-60"
+                            >
+                                {thresholdAnalysisRunning ? '분석 중...' : '최근 관측값으로 권장 임계치 계산'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void saveThresholdApproval('rails', !thresholdAnalysis?.approvals.rails.approved)}
+                                disabled={thresholdApprovalSavingTarget === 'rails' || !thresholdAnalysis?.recommendations.observation_summary.observations_complete}
+                                className="rounded-lg border border-emerald-300/60 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20 disabled:opacity-60"
+                            >
+                                {thresholdApprovalSavingTarget === 'rails'
+                                    ? '저장 중...'
+                                    : thresholdAnalysis?.approvals.rails.approved
+                                        ? '임계치 승인 해제'
+                                        : '권장 임계치 승인'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void saveThresholdApproval('worldlinco', !thresholdAnalysis?.approvals.worldlinco.approved)}
+                                disabled={thresholdApprovalSavingTarget === 'worldlinco' || !thresholdAnalysis?.recommendations.observation_summary.observations_complete}
+                                className="rounded-lg border border-sky-300/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-500/20 disabled:opacity-60"
+                            >
+                                {thresholdApprovalSavingTarget === 'worldlinco'
+                                    ? '저장 중...'
+                                    : thresholdAnalysis?.approvals.worldlinco.approved
+                                        ? '월드린코 승인 해제'
+                                        : '월드린코 추천 승인'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void applyApprovedWorldlincoThresholdRecovery()}
+                                disabled={worldlincoApprovedApplyRunning || !thresholdAnalysis?.safe_gate.worldlinco_auto_apply_allowed}
+                                className="rounded-lg border border-violet-300/60 px-3 py-1.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20 disabled:opacity-60"
+                            >
+                                {worldlincoApprovedApplyRunning ? '적용 중...' : '승인된 월드린코 추천값 적용'}
+                            </button>
+                        </div>
+                        {thresholdAnalysis && (
+                            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                    <p className="text-[11px] text-white/55">관측 p50 / p95</p>
+                                    <p className="mt-1 text-sm font-semibold text-white">
+                                        {String(thresholdAnalysis.recommendations.observation_summary.metrics?.p50_latency_ms ?? '-')}ms / {String(thresholdAnalysis.recommendations.observation_summary.metrics?.p95_latency_ms ?? '-')}ms
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                    <p className="text-[11px] text-white/55">권장 p50 / p95</p>
+                                    <p className="mt-1 text-sm font-semibold text-white">
+                                        {thresholdAnalysis.recommendations.rails.latency.p50_budget_ms}ms / {thresholdAnalysis.recommendations.rails.latency.p95_budget_ms}ms
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                    <p className="text-[11px] text-white/55">권장 응답 / DB 예산</p>
+                                    <p className="mt-1 text-sm font-semibold text-white">
+                                        {thresholdAnalysis.recommendations.rails.performance.response_budget_ms}ms / {thresholdAnalysis.recommendations.rails.performance.db_query_budget_ms}ms
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                    <p className="text-[11px] text-white/55">안전 게이트</p>
+                                    <p className="mt-1 text-sm font-semibold text-white">
+                                        {thresholdAnalysis.safe_gate.reason}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        {thresholdAnalysis && (
+                            <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3 text-[11px] leading-relaxed text-white/75">
+                                <div>월드린코 추천 그룹: {Object.keys(thresholdAnalysis.recommendations.worldlinco || {}).join(', ')}</div>
+                                <div>관측 완료 여부: {thresholdAnalysis.recommendations.observation_summary.observations_complete ? '완료' : '불충분'}</div>
+                                <div>현재 분류: {thresholdAnalysis.recommendations.observation_summary.sorisae_classification || 'unknown'}</div>
+                            </div>
+                        )}
+                    </section>
+                    <section
+                        data-testid="admin-rail-action-center"
+                        className="mb-6 rounded-xl border border-indigo-400/30 bg-[#0a1228] px-4 py-4 text-white"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h3 className="text-sm font-semibold">레일 운영 액션 센터 (즉시조치/수정/확장)</h3>
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full border border-white/20 px-2 py-0.5 text-[11px] text-white/80">9개 레일 실조치 활성화</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setRailActionCenterOpen((prev) => !prev)}
+                                    className="rounded-full border border-indigo-300/50 px-2.5 py-1 text-[11px] text-indigo-100 hover:bg-indigo-500/20"
+                                    data-testid="admin-rail-action-center-toggle-top"
+                                >
+                                    {railActionCenterOpen ? '위에서 접기 ▲' : '위에서 열기 ▼'}
+                                </button>
+                            </div>
+                        </div>
+                        <p className="mt-2 text-xs text-white/70">
+                            각 레일에서 패널 열기, 즉시조치 실행, 운영 파라미터 저장, 운영 메모 기록이 가능합니다.
+                        </p>
+                        <div className="mt-3 rounded-lg border border-emerald-300/25 bg-emerald-950/20 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-xs font-semibold text-emerald-200">FLOW-ADM-DASH 웹 실행 버튼</p>
+                                <span className="rounded-full border border-emerald-300/35 px-2 py-0.5 text-[10px] text-emerald-200">
+                                    레일 내 실버튼
+                                </span>
+                            </div>
+                            <p className="mt-1 text-[11px] text-emerald-100/80">
+                                브라우저에서 대시보드 새로고침과 전역 설정 재조회를 순서대로 수행합니다.
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {FLOW_ADM_DASH_COMMAND_ITEMS.map((command) => {
+                                    const isBusy = flowAdmDashCommandBusyId === command.label;
+                                    return (
+                                        <button
+                                            key={command.id}
+                                            type="button"
+                                            onClick={() => {
+                                                void runFlowAdmDashRailCommand(command.label);
+                                            }}
+                                            disabled={Boolean(flowAdmDashCommandBusyId)}
+                                            data-testid={`admin-flow-adm-dash-command-${command.id}`}
+                                            className="rounded-md border border-emerald-300/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            {isBusy ? '실행 중...' : command.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <p className="mt-1 text-[11px] text-white/50">
+                            {railSettingsLoading
+                                ? '레일 설정 불러오는 중...'
+                                : railSettingsUpdatedAt
+                                    ? `마지막 저장: ${railSettingsUpdatedAt}`
+                                    : '아직 저장된 레일 설정 파일이 없어 기본값으로 동작합니다.'}
+                        </p>
+                        {railActionMessage && (
+                            <p className="mt-2 text-xs text-emerald-300">{railActionMessage}</p>
+                        )}
+                        {railActionError && (
+                            <p className="mt-2 text-xs text-rose-300">{railActionError}</p>
+                        )}
+                        {railSettingsError && (
+                            <p className="mt-2 text-xs text-rose-300">{railSettingsError}</p>
+                        )}
+                        {railActionCenterOpen && (
+                            <>
+                                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                    {ADMIN_RAIL_ACTION_ITEMS.map((item) => {
+                                        const isBusy = railActionBusyId === item.id;
+                                        const isOpen = railPanelOpenState[item.id];
+                                        const isSaving = railSettingsSavingId === item.id;
+                                        const isDirty = railDirtyState[item.id];
+                                        const settingFields = ADMIN_RAIL_SETTING_FIELDS[item.id];
+                                        const draftSettings = (railSettingsDraft[item.id] as unknown) as Record<string, string | number | boolean>;
+                                        return (
+                                            <article
+                                                key={item.id}
+                                                className="rounded-lg border border-white/15 bg-white/[0.03] p-3"
+                                                data-testid={`admin-rail-action-${item.id}`}
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <p className="text-sm font-semibold">{item.label}</p>
+                                                        <p className="mt-1 text-[11px] text-white/70">{item.description}</p>
+                                                    </div>
+                                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${isOpen ? 'border-emerald-300/60 text-emerald-300' : 'border-white/20 text-white/60'}`}>
+                                                        {isOpen ? 'OPEN' : 'CLOSED'}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-3 grid gap-2">
+                                                    {settingFields.map((field) => {
+                                                        const fieldId = `admin-rail-setting-${item.id}-${field.key}`;
+                                                        const value = draftSettings[field.key];
+                                                        return (
+                                                            <label key={field.key} htmlFor={fieldId} className="rounded-md border border-white/10 bg-black/20 px-2.5 py-2 text-[11px] text-white/80">
+                                                                <span className="block font-semibold text-white">{field.label}</span>
+                                                                <span className="mt-0.5 block text-[10px] text-white/55">{field.help}</span>
+                                                                {field.input === 'boolean' ? (
+                                                                    <input
+                                                                        id={fieldId}
+                                                                        type="checkbox"
+                                                                        checked={Boolean(value)}
+                                                                        onChange={(event) => updateRailSettingDraft(item.id, field.key, event.target.checked)}
+                                                                        className="mt-2 h-4 w-4"
+                                                                    />
+                                                                ) : field.input === 'select' ? (
+                                                                    <select
+                                                                        id={fieldId}
+                                                                        value={String(value ?? '')}
+                                                                        onChange={(event) => updateRailSettingDraft(item.id, field.key, event.target.value)}
+                                                                        className="mt-2 w-full rounded-md border border-white/15 bg-[#050b16] px-2 py-1.5 text-[11px] text-white"
+                                                                    >
+                                                                        {(field.options || []).map((option) => (
+                                                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                ) : (
+                                                                    <input
+                                                                        id={fieldId}
+                                                                        type={field.input === 'number' ? 'number' : 'text'}
+                                                                        value={field.input === 'number' ? Number(value ?? 0) : String(value ?? '')}
+                                                                        min={field.min}
+                                                                        max={field.max}
+                                                                        step={field.step}
+                                                                        onChange={(event) => updateRailSettingDraft(
+                                                                            item.id,
+                                                                            field.key,
+                                                                            field.input === 'number' ? Number(event.target.value || 0) : event.target.value,
+                                                                        )}
+                                                                        className="mt-2 w-full rounded-md border border-white/15 bg-[#050b16] px-2 py-1.5 text-[11px] text-white"
+                                                                    />
+                                                                )}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openRailPanel(item.id)}
+                                                        className="rounded-lg border border-white/25 px-2.5 py-1 text-[11px] font-semibold hover:bg-white/10"
+                                                    >
+                                                        패널 열기
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void runRailEmergencyAction(item.id)}
+                                                        disabled={isBusy}
+                                                        className="rounded-lg border border-indigo-300/60 px-2.5 py-1 text-[11px] font-semibold text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-60"
+                                                    >
+                                                        {isBusy ? '실행 중...' : item.emergencyActionLabel}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void saveRailSettingsFor(item.id)}
+                                                        disabled={isSaving || !isDirty}
+                                                        className="rounded-lg border border-emerald-300/60 px-2.5 py-1 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-60"
+                                                    >
+                                                        {isSaving ? '저장 중...' : '설정 저장'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => resetRailSettingDraft(item.id)}
+                                                        className="rounded-lg border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/80 hover:bg-white/10"
+                                                    >
+                                                        기본값 복원
+                                                    </button>
+                                                </div>
+                                                <div className="mt-3">
+                                                    <label className="text-[10px] text-white/55" htmlFor={`admin-rail-note-${item.id}`}>운영 메모</label>
+                                                    <textarea
+                                                        id={`admin-rail-note-${item.id}`}
+                                                        value={railOperatorNotes[item.id] || ''}
+                                                        onChange={(event) => {
+                                                            const nextValue = event.target.value;
+                                                            setRailOperatorNotes((prev) => ({
+                                                                ...prev,
+                                                                [item.id]: nextValue,
+                                                            }));
+                                                        }}
+                                                        className="mt-1 w-full rounded-md border border-white/15 bg-black/35 px-2 py-1.5 text-[11px] text-white"
+                                                        placeholder="이 레일의 조치 메모를 기록하세요"
+                                                        rows={3}
+                                                    />
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-3 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRailActionCenterOpen(false)}
+                                        className="rounded-full border border-indigo-300/50 px-2.5 py-1 text-[11px] text-indigo-100 hover:bg-indigo-500/20"
+                                        data-testid="admin-rail-action-center-toggle-bottom"
+                                    >
+                                        아래에서 접기 ▲
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                        {railActionPayload != null && (
+                            <pre
+                                className="mt-3 max-h-56 overflow-auto rounded-lg border border-indigo-300/25 bg-black/45 p-3 text-[11px] leading-relaxed text-indigo-100"
+                                data-testid="admin-rail-action-payload"
+                            >
+                                {typeof railActionPayload === 'string'
+                                    ? railActionPayload
+                                    : JSON.stringify(railActionPayload, null, 2)}
+                            </pre>
+                        )}
+                    </section>
+                    <div className="w-full">
+                        <AdminLlmControlSummary llmPanelHeight={llmPanelHeight} />
+                    </div>
+                </div>
+
+                <div style={{ width: '100%', paddingTop: '20px' }}>
+                    <AdminManagementSection
+                        title="🧭 전역 .env 설정 패널"
+                        usage="프로그램 전반 운영값과 연결 설정을 중앙 관리"
+                        description="도메인, 저장 경로, LLM 기본 환경값, 셀프 엔진 연동 설정을 첫 화면 핵심 카드 아래 바로 붙입니다."
+                        open={systemSettingsPanelOpen}
+                        onToggle={() => setSystemSettingsPanelOpen((prev: any) => !prev)}
+                        toggleTestId="admin-system-settings-section"
+                        windowSize="full"
+                    >
+                        <AdminSystemSettingsPanel {...adminSystemSettingsAssembly} />
                     </AdminManagementSection>
-                ))}
+
+                    <AdminManagementSection
+                        title="🌐 WorldLinco 튜닝"
+                        usage="VoIP·대면 통역 VAD/에코/TTS 타이밍을 슬라이더로 원격 조절"
+                        description="현재 배포 버전의 고정 기준값을 baseline 으로 유지하고, 저장 즉시 /api/marketplace/worldlinco/tuning 에 반영됩니다. 모바일은 앱 포그라운드 시 자동 fetch."
+                        open={worldlincoTuningPanelOpen}
+                        onToggle={() => setWorldlincoTuningPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-tuning-section"
+                        windowSize="wide"
+                    >
+                        <AdminWorldlincoTuningPanel apiBaseUrl={apiBaseUrl} getAdminToken={getAdminToken} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="💳 WorldLinco 요금 정책"
+                        usage="베타 무료 ↔ 유료 전환 · 요금 중지/재개"
+                        description="로그인 사용자 무료 이용(베타)과 유료 게이트 전환, 프로모 기간·요금 징수 중지를 관리자에서 원격 제어합니다. 모바일은 /api/marketplace/worldlinco/billing-policy 를 앱 포그라운드 시 fetch 합니다."
+                        open={worldlincoBillingPolicyPanelOpen}
+                        onToggle={() => setWorldlincoBillingPolicyPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-billing-policy-section"
+                        windowSize="wide"
+                    >
+                        <AdminWorldlincoBillingPolicyPanel apiBaseUrl={apiBaseUrl} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🌏 WorldLinco 국가별 관광 홍보"
+                        usage="앱 홈 중앙 · 국가별 카드"
+                        description="GPS 국가 + 50km 반경 spot 홍보만 앱 번역 홈 중앙에 노출됩니다. 문구는 i18n(사용자 프로그램 언어)로 반환됩니다."
+                        open={worldlincoTourismPromoPanelOpen}
+                        onToggle={() => setWorldlincoTourismPromoPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-tourism-promo-section"
+                        windowSize="wide"                >
+                        <AdminWorldlincoTourismPromoPanel apiBaseUrl={apiBaseUrl} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🎁 WorldLinco 추천인 QR"
+                        usage="앱 설정 · QR/링크 초대"
+                        description="사용자가 설정에서 만든 추천 QR·링크로 가입한 신규 회원을 추천인별로 집계합니다."
+                        open={worldlincoReferralPanelOpen}
+                        onToggle={() => setWorldlincoReferralPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-referral-section"
+                        windowSize="wide"                >
+                        <AdminWorldlincoReferralPanel apiBaseUrl={apiBaseUrl} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="💼 WorldLinco 영업 수수료 정산"
+                        usage="지역·국가별 영업부 · QR 가입 귀속"
+                        description="영업자 QR 가입 귀속 · 결제 수수료(30%/10%)를 국가·지역 영업부 지정 통장으로 자동 이체합니다."
+                        open={worldlincoSalesCommissionPanelOpen}
+                        onToggle={() => setWorldlincoSalesCommissionPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-sales-commission-section"
+                        windowSize="wide"                >
+                        <AdminWorldlincoSalesCommissionPanel apiBaseUrl={apiBaseUrl} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🗺️ WorldLinco 지역 관리자 · 유저 관리"
+                        usage="국가·지역 단위 · 귀속 가입자"
+                        description="지역 관리자를 등록하고 국가/지역별 영업 QR 귀속 유저·수수료 KPI를 조회합니다. 지역 관리자는 /admin/regional 에서 로그인합니다."
+                        open={worldlincoRegionalPanelOpen}
+                        onToggle={() => setWorldlincoRegionalPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-regional-section"
+                        windowSize="wide"                >
+                        <AdminWorldlincoRegionalPanel apiBaseUrl={apiBaseUrl} mode="admin" />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="📣 WorldLinco 일괄 안내"
+                        usage="앱 채팅 · 국가·언어별 번역"
+                        description="앱 가입자에게 번역 보관함 + 푸시로 안내를 보냅니다. 미가입자 초대는 앱 내 SNS 공유(카카오·라인)를 사용합니다."
+                        open={worldlincoBulkChatPanelOpen}
+                        onToggle={() => setWorldlincoBulkChatPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-worldlinco-bulk-chat-section"
+                        windowSize="wide"                >
+                        <AdminWorldlincoBulkChatPanel apiBaseUrl={apiBaseUrl} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="📊 Travel Partner KPI Dashboard"
+                        usage="수익 퍼널 KPI · 파트너 SLA · fallback 비율 운영 관제"
+                        description="Section 6 KPI 카드를 관리자 좌측 레일에서 즉시 열어 운영 지표를 확인합니다."
+                        open={travelPartnerKpiOpen}
+                        onToggle={() => setTravelPartnerKpiOpen((prev) => !prev)}
+                        toggleTestId="admin-travel-partner-kpi-section"
+                        windowSize="wide"                >
+                        <AdminTravelPartnerKpiPanel />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🧳 Travel Partner Integration Hub"
+                        usage="여행 파트너 API 연결 · 라우팅 · 수익화 운영 허브"
+                        description="호텔/이동/투어 파트너 연동 로드맵과 관리자 대시보드 운영 관문입니다."
+                        open={travelPartnerIntegrationOpen}
+                        onToggle={() => setTravelPartnerIntegrationOpen((prev) => !prev)}
+                        toggleTestId="admin-travel-partner-integration-section"
+                        windowSize="wide"                >
+                        <AdminTravelPartnerIntegrationPanel />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="📊 Grafana 모니터링 대시보드"
+                        usage="실시간 메트릭 시각화 · 알람 연동 · 성능 추적"
+                        description="Prometheus 데이터를 기반으로 한 대시보드. 실시간 시스템 메트릭과 비즈니스 메트릭을 한눈에 확인합니다."
+                        open={grafanaOpen}
+                        onToggle={() => setGrafanaOpen(!grafanaOpen)}
+                        toggleTestId="admin-grafana-section"
+                        windowSize="full"                >
+                        <AdminGrafanaMonitorSection apiBaseUrl={apiBaseUrl} settings={railSettings.monitoring} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="📈 Prometheus 데이터 시각화"
+                        usage="메트릭 수집 · 시계열 저장 · 쿼리 인터페이스"
+                        description="모든 메트릭이 집계되는 시계열 데이터베이스. 시간별 추이를 추적하고 이상 탐지를 수행합니다."
+                        open={prometheusOpen}
+                        onToggle={() => setPrometheusOpen(!prometheusOpen)}
+                        toggleTestId="admin-prometheus-section"
+                        windowSize="full"                >
+                        <AdminPrometheusSection apiBaseUrl={apiBaseUrl} settings={railSettings.data} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="📉 p50/p95 시계열 차트"
+                        usage="응답 시간 백분위수 · 성능 분포 분석"
+                        description="사용자 체감 성능을 정량화. p50은 중간값, p95는 상위 5% 지연을 나타냅니다."
+                        open={p50p95Open}
+                        onToggle={() => setP50p95Open(!p50p95Open)}
+                        toggleTestId="admin-p50p95-section"
+                        windowSize="wide"                >
+                        <AdminP50P95ChartSection settings={railSettings.latency} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="⚡ 성능 최적화"
+                        usage="응답 시간 개선 · 처리량 증대 · 병목 분석"
+                        description="시스템 병목을 식별하고 최적화 기회를 제시합니다."
+                        open={performanceOpen}
+                        onToggle={() => setPerformanceOpen(!performanceOpen)}
+                        toggleTestId="admin-performance-section"
+                        windowSize="wide"                >
+                        <AdminPerformanceSection settings={railSettings.performance} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🚀 LLM path 응답 시간 개선"
+                        usage="추론 속도 향상 · 지연 시간 감소 · 처리량 극대화"
+                        description="LLM 호출 경로의 엔드-투-엔드 성능을 분석하고 개선합니다."
+                        open={llmPathOpen}
+                        onToggle={() => setLlmPathOpen(!llmPathOpen)}
+                        toggleTestId="admin-llmpath-section"
+                        windowSize="wide"                >
+                        <AdminLlmPathSection settings={railSettings.llm} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🎯 Fast path 커버리지 확대"
+                        usage="직접 경로 커버리지 · 우회 경로 최소화 · 성공률 추적"
+                        description="캐시 히트율과 fast path 전환율을 모니터링합니다."
+                        open={fastPathOpen}
+                        onToggle={() => setFastPathOpen(!fastPathOpen)}
+                        toggleTestId="admin-fastpath-section"
+                        windowSize="wide"                >
+                        <AdminFastPathSection settings={railSettings.cover} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🛠️ 운영 준비"
+                        usage="배포 준비 · 시스템 점검 · 운영 체크리스트"
+                        description="본 운영 단계 이전 필수 검증 항목과 체크리스트를 관리합니다."
+                        open={opsOpen}
+                        onToggle={() => setOpsOpen(!opsOpen)}
+                        toggleTestId="admin-ops-section"
+                        windowSize="wide"                >
+                        <AdminOpsSection settings={railSettings.ops} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🚨 Prometheus AlertManager 설정"
+                        usage="알람 규칙 정의 · 알림 라우팅 · 에스컬레이션"
+                        description="임계값 기반 알람을 설정하고 알림 전달 채널을 구성합니다."
+                        open={alertManagerOpen}
+                        onToggle={() => setAlertManagerOpen(!alertManagerOpen)}
+                        toggleTestId="admin-alertmanager-section"
+                        windowSize="wide"                >
+                        <AdminAlertManagerSection settings={railSettings.sla} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="📋 SLA 정의 및 알림 구성"
+                        usage="가용성 목표 · 성능 기준 · 실시간 준수 현황"
+                        description="SLA 목표를 설정하고 준수 여부를 실시간으로 모니터링합니다."
+                        open={slaOpen}
+                        onToggle={() => setSlaOpen(!slaOpen)}
+                        toggleTestId="admin-sla-section"
+                        windowSize="wide"                >
+                        <AdminSLASection settings={railSettings.sla} />
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🎵 음악 생성·작사·협업 패널"
+                        usage="관리자 대시보드에서 music API 토큰 호출을 직접 검증"
+                        description="감정 기반 작곡, 코드 기반 작곡, 협업 데모 API를 관리자 권한 토큰으로 즉시 호출하고 payload를 확인합니다."
+                        open={musicPanelOpen}
+                        onToggle={() => setMusicPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-music-panel-section"
+                        windowSize="wide"                >
+                        <div className="workspace-section-stack" data-testid="admin-music-panel">
+                            <div className="workspace-sidebar-card">
+                                <p className="workspace-card-kicker">Emotion Compose</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                    <input
+                                        data-testid="admin-music-emotion-input"
+                                        value={musicEmotion}
+                                        onChange={(event) => setMusicEmotion(event.target.value)}
+                                        placeholder="emotion"
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                    />
+                                    <input
+                                        data-testid="admin-music-intensity-input"
+                                        value={musicIntensity}
+                                        onChange={(event) => setMusicIntensity(event.target.value)}
+                                        placeholder="intensity"
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                    />
+                                    <input
+                                        data-testid="admin-music-theme-input"
+                                        value={musicTheme}
+                                        onChange={(event) => setMusicTheme(event.target.value)}
+                                        placeholder="theme"
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    data-testid="admin-music-compose-emotion-btn"
+                                    onClick={handleAdminMusicCompose}
+                                    disabled={musicLoading}
+                                    className="workspace-topbar-chip"
+                                    style={{ marginTop: 10 }}
+                                >
+                                    {musicLoading ? '음악 생성 중...' : '감정 기반 음악 생성'}
+                                </button>
+                            </div>
+
+                            <div className="workspace-sidebar-card">
+                                <p className="workspace-card-kicker">Code Compose</p>
+                                <textarea
+                                    data-testid="admin-music-code-input"
+                                    value={musicCode}
+                                    onChange={(event) => setMusicCode(event.target.value)}
+                                    className="workspace-admin-command-textarea"
+                                    style={{ minHeight: 80 }}
+                                    placeholder="작곡 패턴으로 변환할 코드"
+                                />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 8 }}>
+                                    <input
+                                        data-testid="admin-music-code-emotion-input"
+                                        value={musicCodeEmotion}
+                                        onChange={(event) => setMusicCodeEmotion(event.target.value)}
+                                        placeholder="emotion"
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--workspace-radius-sm)', border: '1px solid var(--workspace-border)', background: 'rgba(9,14,22,0.96)', color: 'var(--workspace-text)', fontSize: 12 }}
+                                    />
+                                    <button
+                                        type="button"
+                                        data-testid="admin-music-compose-code-btn"
+                                        onClick={handleAdminMusicComposeFromCode}
+                                        disabled={musicLoading}
+                                        className="workspace-topbar-chip"
+                                    >
+                                        코드 작곡
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    data-testid="admin-music-friends-demo-btn"
+                                    onClick={handleAdminMusicCollaboration}
+                                    disabled={musicLoading}
+                                    className="workspace-topbar-chip"
+                                    style={{ marginTop: 8 }}
+                                >
+                                    협업 데모 연결
+                                </button>
+                            </div>
+
+                            <div className="workspace-sidebar-card">
+                                <p className="workspace-card-kicker">Payload</p>
+                                {musicMode ? <p className="workspace-card-copy" data-testid="admin-music-mode">mode: {musicMode}</p> : null}
+                                {musicError ? <p className="workspace-card-copy" style={{ color: 'var(--workspace-danger)' }} data-testid="admin-music-error">{musicError}</p> : null}
+                                {musicComposeResult ? (
+                                    <div className="workspace-list" data-testid="admin-music-compose-result">
+                                        <div className="workspace-list-item"><strong>song</strong><span>{String(musicComposeResult.song_title || '-')}</span></div>
+                                        <div className="workspace-list-item"><strong>lyrics</strong><span>{String(musicComposeResult.lyrics_title || '-')}</span></div>
+                                        <div className="workspace-list-item"><strong>tempo</strong><span>{String(musicComposeResult.tempo || '-')}</span></div>
+                                    </div>
+                                ) : null}
+                                {musicCodeResult ? (
+                                    <div className="workspace-list" data-testid="admin-music-code-result" style={{ marginTop: 10 }}>
+                                        <div className="workspace-list-item"><strong>song</strong><span>{String(musicCodeResult.song_title || '-')}</span></div>
+                                        <div className="workspace-list-item"><strong>composition</strong><span>{String(musicCodeResult.code_composition_title || '-')}</span></div>
+                                        <div className="workspace-list-item"><strong>chords</strong><span>{Array.isArray(musicCodeResult.chords) ? musicCodeResult.chords.join(' → ') : '-'}</span></div>
+                                    </div>
+                                ) : null}
+                                {musicFriendResult ? (
+                                    <div className="workspace-list" data-testid="admin-music-friends-result" style={{ marginTop: 10 }}>
+                                        <div className="workspace-list-item"><strong>request</strong><span>{String(musicFriendResult.request_id || '-')}</span></div>
+                                        <div className="workspace-list-item"><strong>collaboration</strong><span>{String(musicFriendResult.collaboration_id || '-')}</span></div>
+                                        <div className="workspace-list-item"><strong>friends</strong><span>{Array.isArray(musicFriendResult.friends_of_a) ? musicFriendResult.friends_of_a.join(', ') : '-'}</span></div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+                    </AdminManagementSection>
+
+                    <AdminManagementSection
+                        title="🧪/🧬 Extras API 인앱 프리뷰"
+                        usage="새 탭 이동 없이 health/catalog 응답을 대시보드 내부에서 확인"
+                        description="상태코드, 응답시간, 갱신 시각, JSON payload를 한 패널에서 확인하고 즉시 재조회할 수 있습니다."
+                        open={extrasPreviewPanelOpen}
+                        onToggle={() => setExtrasPreviewPanelOpen((prev) => !prev)}
+                        toggleTestId="admin-extras-preview-section"
+                        windowSize="wide"                >
+                        <div className="workspace-section-stack" data-testid="admin-extras-preview-panel">
+                            <div className="workspace-sidebar-card">
+                                <p className="workspace-card-kicker">Request</p>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        data-testid="admin-extras-preview-health-btn"
+                                        onClick={() => void runExtrasPreviewRequest('health')}
+                                        disabled={extrasPreviewState.loading}
+                                        className="workspace-topbar-chip"
+                                    >
+                                        health 조회
+                                    </button>
+                                    <button
+                                        type="button"
+                                        data-testid="admin-extras-preview-catalog-btn"
+                                        onClick={() => void runExtrasPreviewRequest('catalog')}
+                                        disabled={extrasPreviewState.loading}
+                                        className="workspace-topbar-chip"
+                                    >
+                                        catalog 조회
+                                    </button>
+                                    <button
+                                        type="button"
+                                        data-testid="admin-extras-preview-refresh-btn"
+                                        onClick={() => void runExtrasPreviewRequest(extrasPreviewTarget)}
+                                        disabled={extrasPreviewState.loading}
+                                        className="workspace-topbar-chip"
+                                    >
+                                        {extrasPreviewState.loading ? '조회 중...' : '현재 탭 재조회'}
+                                    </button>
+                                </div>
+                                <p className="workspace-card-copy" style={{ marginTop: 10 }}>
+                                    endpoint: {extrasPreviewTarget === 'health' ? '/api/marketplace/extras/health' : '/api/marketplace/extras/catalog'}
+                                </p>
+                            </div>
+
+                            <div className="workspace-sidebar-card">
+                                <p className="workspace-card-kicker">Response Meta</p>
+                                <div className="workspace-list">
+                                    <div className="workspace-list-item"><strong>status</strong><span data-testid="admin-extras-preview-status">{extrasPreviewState.statusCode ?? '-'}</span></div>
+                                    <div className="workspace-list-item"><strong>latency</strong><span>{extrasPreviewState.durationMs != null ? `${extrasPreviewState.durationMs} ms` : '-'}</span></div>
+                                    <div className="workspace-list-item"><strong>fetchedAt</strong><span>{extrasPreviewState.fetchedAt ? new Date(extrasPreviewState.fetchedAt).toLocaleString('ko-KR') : '-'}</span></div>
+                                </div>
+                                {extrasPreviewState.error ? (
+                                    <p data-testid="admin-extras-preview-error" className="workspace-card-copy" style={{ marginTop: 10, color: 'var(--workspace-danger)' }}>
+                                        {extrasPreviewState.error}
+                                    </p>
+                                ) : null}
+                            </div>
+
+                            <div className="workspace-sidebar-card">
+                                <p className="workspace-card-kicker">Payload</p>
+                                <pre
+                                    data-testid="admin-extras-preview-payload"
+                                    style={{
+                                        margin: 0,
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                        background: 'rgba(9,14,22,0.96)',
+                                        border: '1px solid var(--workspace-border)',
+                                        borderRadius: 'var(--workspace-radius-sm)',
+                                        padding: 12,
+                                        maxHeight: 320,
+                                        overflow: 'auto',
+                                        color: 'var(--workspace-text)',
+                                        fontSize: 12,
+                                        lineHeight: 1.45,
+                                    }}
+                                >
+                                    {extrasPreviewState.payload == null
+                                        ? '조회 결과가 없습니다.'
+                                        : typeof extrasPreviewState.payload === 'string'
+                                            ? extrasPreviewState.payload
+                                            : JSON.stringify(extrasPreviewState.payload, null, 2)}
+                                </pre>
+                            </div>
+                        </div>
+                    </AdminManagementSection>
+
+                    {boardSections.filter(section => section.id !== 'llm').map((section) => (
+                        <AdminManagementSection
+                            key={section.id}
+                            title={section.title}
+                            usage={section.usage}
+                            description={section.description}
+                            open={section.open}
+                            onToggle={section.onToggle}
+                            toggleTestId={section.toggleTestId || `admin-${section.id}-section`}
+                            windowSize={section.windowSize}                    >
+                            {section.body}
+                        </AdminManagementSection>
+                    ))}
+                </div>
             </WorkspaceChrome>
 
             <AdminAdPreviewModal

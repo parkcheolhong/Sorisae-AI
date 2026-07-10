@@ -1,0 +1,16 @@
+[22:15:28] Run dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\manual_retest_20260614-221528
+[22:15:28] Grant mic + launch apps
+[22:15:34] Waiting auth...
+[22:15:35] Dismiss stale calls
+[22:15:46] Tab placing call to nado-000226
+[22:15:46] Starting validation auto-call deeplink on Tab...
+[22:15:53] Waiting incoming on S10...
+[22:16:17] Tap '받기' on 172.30.1.19:5555 at 188,1342
+[22:16:17] Waiting connected...
+[22:16:17] Enable speaker on Tab (TTS playback)
+[22:16:25] === READY: S10에서 한국어 6초 이상 말씀해 주세요. Tab은 영어 TTS 수신 예상 ===
+[22:16:25] Monitoring 2s...
+[22:16:27] S10 SEGMENT=False S10 SENT=False S10 PLAYBACK=False
+[22:16:27] TAB PLAYBACK=False TAB SENT=False
+[22:16:27] Verdict: FAIL
+[22:16:27] Logs: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\manual_retest_20260614-221528

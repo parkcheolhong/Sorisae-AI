@@ -1,0 +1,16 @@
+[02:39:10] Run dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\manual_retest_20260616-023910
+[02:39:10] Grant mic + force-stop apps (reset deeplink consume)
+[02:39:21] Waiting auth...
+[02:39:34] Apply preferred_language=ko via deeplink on R83W70QY11H
+[02:39:39] Apply preferred_language=ja via deeplink on 172.30.1.19:5555
+[02:39:44] Dismiss stale calls (force hangup)
+[02:39:44] Force hangup (pre_call) on Tab + S10
+[02:39:47] Tab placing call to nado-000001
+[02:39:47] Starting validation auto-call deeplink on Tab...
+[02:39:53] Tab call started call_id=call-0f44540d27f6 (deeplink auto-call)
+[02:39:54] Tab call_id=call-0f44540d27f6 — waiting matching incoming on S10...
+[02:39:54] S10 accept — incoming deeplink auto-accept call_id=call-0f44540d27f6 caller=nado-000226
+[02:39:54] Launch incoming deeplink (worldlingo) on 172.30.1.19:5555 call_id=call-0f44540d27f6
+[02:39:59] Waiting connected...
+[02:39:59] Enable speaker on Tab (TTS playback)
+[02:40:16] === SETUP ONLY: connected call_id=call-0f44540d27f6 ===

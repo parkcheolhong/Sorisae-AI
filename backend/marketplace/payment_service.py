@@ -3,6 +3,8 @@
 """
 import uuid
 from datetime import datetime, timedelta
+
+from backend.time_utils import utcnow
 from sqlalchemy.orm import Session
 from . import models, schemas
 import requests
@@ -120,7 +122,7 @@ class PaymentService:
         purchase.status = status
         purchase.transaction_id = transaction_id
         purchase.receipt_url = f"https://receipt.example.com/{transaction_id}"
-        purchase.updated_at = datetime.utcnow()
+        purchase.updated_at = utcnow()
         
         db.commit()
         db.refresh(purchase)
@@ -193,7 +195,7 @@ class PaymentService:
             raise ValueError(f"환불 불가: 상태={purchase.status}")
         
         purchase.status = "refunded"
-        purchase.updated_at = datetime.utcnow()
+        purchase.updated_at = utcnow()
         
         db.commit()
         db.refresh(purchase)
@@ -223,7 +225,7 @@ class DownloadTokenService:
             DownloadToken 객체
         """
         token = uuid.uuid4().hex
-        expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        expires_at = utcnow() + timedelta(seconds=expires_in)
         
         download_token = models.DownloadToken(
             token=token,
@@ -259,7 +261,7 @@ class DownloadTokenService:
         if download_token.is_used:
             raise ValueError("Token already used")
         
-        if download_token.expires_at < datetime.utcnow():
+        if download_token.expires_at < utcnow():
             raise ValueError("Token expired")
         
         return download_token

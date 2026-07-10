@@ -68,11 +68,36 @@ def test_admin_tokens_expire_by_default(monkeypatch):
     assert auth_router._should_issue_non_expiring_admin_token(admin_user) is True
 
 
-def test_start_password_recovery_uses_random_verification_code(monkeypatch):
+def test_start_password_recovery_delegates_to_otp_service(monkeypatch):
+    """복구 시작은 OTP 서비스(contact_verification)에 위임한다.
+
+    검증코드 난수성(secrets.randbelow)·시도 제한은 OTP 서비스 SSOT가 담당하므로
+    auth_router는 (1) 세션 위임 (2) verification_code_required 다음 단계 반환만 책임진다.
+    """
     auth_router = _load_auth_router(monkeypatch)
     auth_router._password_recovery_store.clear()
-    monkeypatch.setattr(auth_router, "randbelow", lambda upper_bound: 123456)
-    db = _FakeDB(SimpleNamespace(id=7, is_admin=True, is_superuser=False))
+
+    import backend.services.contact_verification as cv
+
+    captured: dict = {}
+
+    def _fake_start(**kwargs):
+        captured.update(kwargs)
+        return {
+            "sessionToken": "sess-recovery-1",
+            "expiresAt": "2099-01-01T00:00:00",
+            "maskedTarget": "a***@example.com",
+            "verificationChannel": "email",
+            "devOtpHint": None,
+        }
+
+    monkeypatch.setattr(cv, "start_verification_session", _fake_start)
+    db = _FakeDB(
+        SimpleNamespace(
+            id=7, email="admin@example.com", username="admin",
+            is_admin=True, is_superuser=False, phone_number=None,
+        )
+    )
 
     response = auth_router.start_password_recovery(
         auth_router.PasswordRecoveryStartRequest(
@@ -82,38 +107,39 @@ def test_start_password_recovery_uses_random_verification_code(monkeypatch):
         db,
     )
 
-    session_state = auth_router._password_recovery_store[response["recovery_session_token"]]
-    assert session_state["verification_code"] == "123456"
-    assert session_state["verification_code"] != "000000"
+    assert response["recovery_session_token"] == "sess-recovery-1"
+    assert response["next_action"] == "verification_code_required"
+    assert captured["purpose"] == "admin_recovery"
 
 
-def test_password_recovery_verify_identity_limits_failed_attempts(monkeypatch):
+def test_password_recovery_verify_identity_maps_rate_limit_to_429(monkeypatch):
+    """OTP 서비스가 시도 초과(PermissionError)를 올리면 429로, 코드 불일치(ValueError)는 401로 매핑."""
     auth_router = _load_auth_router(monkeypatch)
     auth_router._password_recovery_store.clear()
-    recovery_session_token = "recovery_test"
-    auth_router._password_recovery_store[recovery_session_token] = {
-        "user_id": 1,
-        "scope": "admin",
-        "verified": False,
-        "verification_code": "654321",
-        "verification_attempts": 0,
 
-    }
+    import backend.services.contact_verification as cv
+
     payload = auth_router.PasswordRecoveryVerifyIdentityRequest(
-        recovery_session_token=recovery_session_token,
+        recovery_session_token="recovery_test",
         identity_session_token="identity-proof",
         verification_code="000000",
     )
 
-    for _ in range(auth_router._PASSWORD_RECOVERY_MAX_VERIFY_ATTEMPTS - 1):
-        with pytest.raises(HTTPException) as exc_info:
-            auth_router.verify_password_recovery_identity(payload)
-        assert exc_info.value.status_code == 401
+    def _raise_bad_code(token, code):
+        raise ValueError("인증 코드가 일치하지 않습니다")
 
+    monkeypatch.setattr(cv, "verify_session_code", _raise_bad_code)
+    with pytest.raises(HTTPException) as exc_info:
+        auth_router.verify_password_recovery_identity(payload)
+    assert exc_info.value.status_code == 401
+
+    def _raise_rate_limited(token, code):
+        raise PermissionError("인증 시도 횟수를 초과했습니다")
+
+    monkeypatch.setattr(cv, "verify_session_code", _raise_rate_limited)
     with pytest.raises(HTTPException) as exc_info:
         auth_router.verify_password_recovery_identity(payload)
     assert exc_info.value.status_code == 429
-    assert recovery_session_token not in auth_router._password_recovery_store
 
 
 def test_reset_password_requires_verified_identity(monkeypatch):
@@ -167,3 +193,41 @@ def test_reset_password_updates_hash_and_clears_session(monkeypatch):
     assert user.hashed_password != "old"
     assert db.committed is True
     assert "recovery_test" not in auth_router._password_recovery_store
+
+
+def test_non_expiring_admin_token_forced_off_in_prod(monkeypatch):
+    """[#4] ALLOW_NON_EXPIRING_ADMIN_TOKENS 가 켜져 있어도 prod/stage 에서는 무시(만료 토큰)."""
+    admin_user = SimpleNamespace(is_admin=True, is_superuser=False)
+
+    monkeypatch.setenv("ALLOW_NON_EXPIRING_ADMIN_TOKENS", "true")
+    monkeypatch.setenv("APP_ENV", "production")
+    auth_router = _load_auth_router(monkeypatch)
+    assert auth_router._should_issue_non_expiring_admin_token(admin_user) is False
+
+    monkeypatch.setenv("APP_ENV", "staging")
+    auth_router = _load_auth_router(monkeypatch)
+    assert auth_router._should_issue_non_expiring_admin_token(admin_user) is False
+
+    # dev 에서는 (개발 편의상) 여전히 비만료 발급 허용.
+    monkeypatch.setenv("APP_ENV", "dev")
+    auth_router = _load_auth_router(monkeypatch)
+    assert auth_router._should_issue_non_expiring_admin_token(admin_user) is True
+
+
+def test_lookup_active_session_signals_db_failure(monkeypatch):
+    """[#4] 세션 조회 DB 실패는 (None, True) 로 신호 → 호출측이 admin fail-closed 판단."""
+    import backend.auth as auth
+    import backend.database as database
+
+    def _boom():
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(database, "SessionLocal", _boom, raising=False)
+    sid, failed = auth._lookup_active_session(123)
+    assert sid is None
+    assert failed is True
+
+    # uid<=0 은 조회 자체를 생략하며 실패가 아님(정상 None).
+    sid0, failed0 = auth._lookup_active_session(0)
+    assert sid0 is None
+    assert failed0 is False

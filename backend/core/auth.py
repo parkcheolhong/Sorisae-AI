@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 from jose import JWTError, jwt
 
+from backend.time_utils import utcnow
+
 JWT_SCOPES = ["program.read", "program.write"]
 JWT_SECRET = os.getenv('JWT_SECRET', '').strip()
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
@@ -29,7 +31,7 @@ def get_auth_settings() -> Dict[str, Any]:
     }
 
 def create_access_token(subject: str, scopes: list[str] | None = None) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    expire = utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
     payload = {'sub': subject, 'scopes': scopes or list(JWT_SCOPES), 'exp': expire}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 

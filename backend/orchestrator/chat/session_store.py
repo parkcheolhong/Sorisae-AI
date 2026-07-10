@@ -32,18 +32,13 @@ def _is_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
-def _normalize_session_owner(session_owner_id: Any = None) -> str:
-    normalized = _SAFE_SESSION_ID.sub("_", str(session_owner_id or "").strip())[:160]
-    return normalized
-
-
-def _session_path(session_id: str, session_owner_id: Any = None) -> Path | None:
+def _session_path(session_id: str, *, session_owner_id: str | None = None) -> Path | None:
     normalized = _SAFE_SESSION_ID.sub("_", str(session_id or "").strip())[:160]
     if not normalized:
         return None
+    normalized_owner = _SAFE_SESSION_ID.sub("_", str(session_owner_id or "").strip())[:160] if session_owner_id is not None else ""
     root = _session_root()
-    owner = _normalize_session_owner(session_owner_id)
-    digest_source = f"{owner}\0{normalized}" if owner else normalized
+    digest_source = f"{normalized_owner}\0{normalized}" if normalized_owner else normalized
     digest = hashlib.sha256(digest_source.encode("utf-8", errors="ignore")).hexdigest()
     candidate = (root / f"{digest}.json").resolve()
     if not _is_relative_to(candidate, root):
@@ -51,8 +46,8 @@ def _session_path(session_id: str, session_owner_id: Any = None) -> Path | None:
     return candidate
 
 
-def load_chat_session_snapshot(session_id: str, session_owner_id: Any = None) -> Dict[str, Any]:
-    path = _session_path(session_id, session_owner_id)
+def load_chat_session_snapshot(session_id: str, *, session_owner_id: str | None = None) -> Dict[str, Any]:
+    path = _session_path(session_id, session_owner_id=session_owner_id)
     if path is None or not path.exists():
         return {}
     try:
@@ -61,15 +56,15 @@ def load_chat_session_snapshot(session_id: str, session_owner_id: Any = None) ->
         return {}
     if not isinstance(payload, dict):
         return {}
-    stored_owner = _normalize_session_owner(payload.get("session_owner_id"))
-    requested_owner = _normalize_session_owner(session_owner_id)
-    if stored_owner and requested_owner and stored_owner != requested_owner:
+    expected_owner = str(session_owner_id or "").strip()
+    payload_owner = str(payload.get("session_owner_id") or "").strip()
+    if payload_owner != expected_owner:
         return {}
     return payload
 
 
-def save_chat_session_snapshot(session_id: str, snapshot: Dict[str, Any], session_owner_id: Any = None) -> None:
-    path = _session_path(session_id, session_owner_id)
+def save_chat_session_snapshot(session_id: str, snapshot: Dict[str, Any], *, session_owner_id: str | None = None) -> None:
+    path = _session_path(session_id, session_owner_id=session_owner_id)
     if path is None:
         return
     snapshot_payload = dict(snapshot)

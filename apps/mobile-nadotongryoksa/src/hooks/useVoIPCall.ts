@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { WORLDLINGO_VOIP_CALLER_ID } from '../constants/worldlincoBrand';
 import { CallInitResponse } from '../services/voipCallClient';
 
 interface UseVoIPCallOptions {
@@ -60,7 +61,7 @@ export const useVoIPCall = (options: UseVoIPCallOptions) => {
           },
           body: JSON.stringify({
             callee_phone: phoneNumber,
-            caller_id: 'user@nadotongryoksa',
+            caller_id: WORLDLINGO_VOIP_CALLER_ID,
             session_id: sessionId,
           }),
           signal: callAbortControllerRef.current.signal,

@@ -37,6 +37,15 @@ const noStoreHeaders = [
 const nextConfig: NextConfig = {
     distDir: nextDistDir,
     generateBuildId: async () => FRONTEND_BUILD_ID,
+    experimental: {
+        optimizePackageImports: ['lucide-react'],
+    },
+    compress: true,
+    images: {
+        formats: ['image/avif', 'image/webp'],
+        minimumCacheTTL: 300,
+        dangerouslyAllowSVG: false,
+    },
     env: {
         NEXT_PUBLIC_FRONTEND_BUILD_ID: FRONTEND_BUILD_ID,
     },
@@ -46,6 +55,14 @@ const nextConfig: NextConfig = {
             {
                 source: '/api/:path*',
                 destination: `${backendTarget}/api/:path*`,
+            },
+            {
+                source: '/docs',
+                destination: `${backendTarget}/docs`,
+            },
+            {
+                source: '/openapi.json',
+                destination: `${backendTarget}/openapi.json`,
             },
         ];
     },

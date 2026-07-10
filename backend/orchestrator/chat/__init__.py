@@ -1,6 +1,5 @@
 """관리자 오케스트레이터 chat 모듈"""
 
-from .chat_service import answer_orchestrator_chat
 from .flow_trace import (
     ADMIN_AUTONOMOUS_FLOW_TRACE,
     build_admin_flow_trace,
@@ -41,3 +40,10 @@ __all__ = [
     "OrchestratorStageChatContext",
     "WebGroundingItem",
 ]
+
+
+def __getattr__(name: str):
+    if name == "answer_orchestrator_chat":
+        from .chat_service import answer_orchestrator_chat
+        return answer_orchestrator_chat
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

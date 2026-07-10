@@ -1,4 +1,4 @@
-import type { OverviewStats, RevenueStats, TopProject, AdminAdOrderMonitorSummary, AdminAdOrderSettlementDashboard, AdminAdVideoOrderItem, AdminDashboardSelfRunStatus, OrchestratorCapabilityDetailResponse, OrchestratorCapabilitySummaryResponse } from '@/lib/admin-dashboard-types';
+import type { OverviewStats, RevenueStats, TopProject, AdminAdOrderMonitorSummary, AdminAdOrderSettlementDashboard, AdminAdVideoOrderItem, AdminDashboardSelfRunStatus, OrchestratorCapabilityDetailResponse, OrchestratorCapabilitySummaryResponse, SorisaeFailureMonitorStatus } from '@/lib/admin-dashboard-types';
 import type { HealthStatus } from '@/lib/admin-health-analysis';
 import type { LlmStatus, LiveLogItem } from '@/lib/admin-runtime-types';
 
@@ -20,6 +20,7 @@ export type AdminDashboardParsedBootstrapData = {
     adSettlementData: AdminAdOrderSettlementDashboard | null;
     capabilityData: OrchestratorCapabilitySummaryResponse | null;
     selfRunData: AdminDashboardSelfRunStatus | null;
+    sorisaeFailureData: SorisaeFailureMonitorStatus | null;
     securityGuardDetailData: OrchestratorCapabilityDetailResponse | null;
     failedMessages: string[];
     unauthorized: boolean;
@@ -163,6 +164,7 @@ export async function parseAdminDashboardBootstrapResults(options: {
         adSettlementData: await parseBootstrapJson<AdminAdOrderSettlementDashboard>({ resultMap, key: 'ad-video-orders-settlement-dashboard', label: '광고 주문 정산', context }),
         capabilityData: await parseBootstrapJson<OrchestratorCapabilitySummaryResponse>({ resultMap, key: 'capabilities-summary', label: '오케스트레이터 기능군', context }),
         selfRunData: await parseBootstrapJson<AdminDashboardSelfRunStatus>({ resultMap, key: 'latest-self-run', label: '최신 self-run', context }),
+        sorisaeFailureData: await parseBootstrapJson<SorisaeFailureMonitorStatus>({ resultMap, key: 'sorisae-failure-monitor', label: '소리새 장애감지', context }),
         securityGuardDetailData: await parseBootstrapJson<OrchestratorCapabilityDetailResponse>({ resultMap, key: 'security-guard-detail', label: 'Security Guard 상세', context }),
         failedMessages: context.failedMessages,
         unauthorized: context.unauthorized,

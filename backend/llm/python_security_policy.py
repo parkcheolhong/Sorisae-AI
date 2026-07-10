@@ -20,6 +20,7 @@ DEFAULT_EXCLUDED_DIR_NAMES = {
     "uploads",
     "models",
     "archive",
+    "tests",
 }
 SECRET_NAME_TOKENS = (
     "secret",
