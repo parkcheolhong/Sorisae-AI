@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 
 const ADMIN_USERNAME = process.env.PLAYWRIGHT_ADMIN_USERNAME ?? '';
 const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? '';
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
+
+test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'admin-system-settings-operational requires live backend responses.');
 
 async function ensureAdminDashboard(page: import('@playwright/test').Page) {
     await page.goto('/admin');

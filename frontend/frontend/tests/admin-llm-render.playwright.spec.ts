@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
+
+test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'admin-llm-render requires live backend responses.');
+
 test('admin llm renders upgraded generator panels after hydration', async ({ page }) => {
     await page.goto('/admin/llm');
 

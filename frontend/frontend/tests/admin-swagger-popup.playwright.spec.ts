@@ -2,6 +2,10 @@ import * as fs from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
+
+test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'admin-swagger-popup requires live backend docs endpoint.');
+
 type StorageOrigin = {
     origin?: string;
     localStorage?: Array<{ name?: string; value?: string }>;

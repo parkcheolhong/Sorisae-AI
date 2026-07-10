@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 
 const ADMIN_EMAIL = process.env.PLAYWRIGHT_ADMIN_USERNAME ?? '119cash@naver.com';
 const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? 'space0215@';
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
+
+test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'admin-passkey-operational requires live backend responses.');
 
 async function attachVirtualAuthenticator(page: import('@playwright/test').Page) {
     const client = await page.context().newCDPSession(page);

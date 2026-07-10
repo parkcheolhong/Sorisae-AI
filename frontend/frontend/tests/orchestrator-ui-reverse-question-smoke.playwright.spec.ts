@@ -5,6 +5,9 @@ import path from 'node:path';
 const ADMIN_BASE = process.env.PLAYWRIGHT_ADMIN_BASE_URL || 'http://127.0.0.1:3000';
 const MARKET_BASE = process.env.PLAYWRIGHT_MARKETPLACE_BASE_URL || 'http://127.0.0.1:3000';
 const OUT_DIR = path.resolve(process.cwd(), '../../reports/playwright-evidence');
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
+
+test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'orchestrator-ui-reverse-question-smoke requires live backend responses.');
 
 test('admin + marketplace orchestrator reverse-question smoke', async ({ page, request }) => {
     fs.mkdirSync(OUT_DIR, { recursive: true });

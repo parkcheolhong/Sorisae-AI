@@ -7,6 +7,7 @@ const TARGET_ORDER_ID = process.env.PLAYWRIGHT_STORYBOARD_ORDER_ID ?? '';
 const STORAGE_STATE_PATH = process.env.PLAYWRIGHT_STORAGE_STATE ?? 'playwright/.auth/adminAuthState.json';
 const HAS_STORAGE_STATE = fs.existsSync(STORAGE_STATE_PATH);
 const ADMIN_DASHBOARD_WAIT_MS = 30_000;
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
 
 const readExistingAdminToken = () => {
     try {
@@ -24,6 +25,8 @@ const readExistingAdminToken = () => {
     }
     return '';
 };
+
+test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'admin-storyboard-review requires live backend data.');
 
 test.describe('admin storyboard review', () => {
     const sectionToggleSelector = '[data-testid="admin-storyboard-section-toggle"]';

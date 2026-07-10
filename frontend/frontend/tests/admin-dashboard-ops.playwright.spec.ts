@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+const ADMIN_REGRESSION_MOCK_BACKEND = process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1' && process.env.CI === '1';
+
 test.describe('admin dashboard ops regression', () => {
     const openManagementSection = async (page: import('@playwright/test').Page, title: string) => {
         const testIdMap: Record<string, string> = {
@@ -121,6 +123,7 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('logout, refresh, and orchestrator/detail actions remain usable', async ({ page }) => {
+        test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'mock backend mode skips deep LLM/docs navigation checks.');
         await page.getByTestId('admin-topnav-refresh').click();
         await page.getByTestId('admin-launcher-health-overview').click();
         await expect(page.getByText('🧠 오케스트레이터 기능군 상태 요약')).toBeVisible({ timeout: 8000 });
@@ -151,22 +154,24 @@ test.describe('admin dashboard ops regression', () => {
         await page.getByRole('link', { name: '상세 제어 열기', exact: true }).first().click();
         await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
         await page.waitForLoadState('domcontentloaded');
-        const llmToMarketplace = page.getByTestId('admin-llm-topnav-marketplace-orchestrator');
-        if (await llmToMarketplace.count() && await llmToMarketplace.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-            await llmToMarketplace.click();
-        } else {
-            await page.goto('/marketplace/orchestrator');
+        if (!ADMIN_REGRESSION_MOCK_BACKEND) {
+            const llmToMarketplace = page.getByTestId('admin-llm-topnav-marketplace-orchestrator');
+            if (await llmToMarketplace.count() && await llmToMarketplace.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+                await llmToMarketplace.click();
+            } else {
+                await page.goto('/marketplace/orchestrator');
+            }
+            await page.waitForURL(/\/marketplace\/orchestrator(?:\/)?(?:\?.*)?$/, { timeout: 15000 });
+            await page.goBack();
+            const llmToDashboard = page.getByTestId('admin-llm-topnav-dashboard');
+            if (await llmToDashboard.count()) {
+                await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
+                await llmToDashboard.click();
+            } else {
+                await page.goto('/admin');
+            }
+            await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
         }
-        await page.waitForURL(/\/marketplace\/orchestrator(?:\/)?(?:\?.*)?$/, { timeout: 15000 });
-        await page.goBack();
-        const llmToDashboard = page.getByTestId('admin-llm-topnav-dashboard');
-        if (await llmToDashboard.count()) {
-            await page.waitForURL(/\/admin\/llm(?:\/)?(?:\?.*)?$/);
-            await llmToDashboard.click();
-        } else {
-            await page.goto('/admin');
-        }
-        await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
 
         const logoutButton = page.getByTestId('admin-topnav-logout');
         if (await logoutButton.count()) {
@@ -189,6 +194,7 @@ test.describe('admin dashboard ops regression', () => {
     });
 
     test('docs viewer top navigation routes to the expected mapped documents', async ({ page }) => {
+        test.skip(ADMIN_REGRESSION_MOCK_BACKEND, 'mock backend mode skips docs viewer navigation checks.');
         await page.getByTestId('admin-topnav-pass-kmc-kcb').click();
         await page.waitForURL(/\/admin\/docs-viewer\?path=docs%2Fidentity-provider-integration-contract\.md/);
         await expect(page.getByText('PASS/KMC/KCB 기술 연동 계약서').first()).toBeVisible();
