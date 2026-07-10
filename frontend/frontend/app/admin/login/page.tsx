@@ -10,12 +10,34 @@ import {
 } from "@/lib/admin-session";
 
 const ADMIN_LOGIN_REMEMBER_ID_KEY = "admin_login_remember_id_v1";
-const ADMIN_LOGIN_REMEMBER_PASSWORD_KEY = "admin_login_remember_password_v1";
 const ADMIN_LOGIN_EMAIL_KEY = "admin_login_email_v1";
 const ADMIN_LOGIN_PASSWORD_KEY = "admin_login_password_v1";
 const ADMIN_LOGIN_ALLOW_PASSKEY_KEY = "admin_login_allow_passkey_v1";
 const ADMIN_LOGIN_REQUEST_TIMEOUT_MS = ADMIN_PROXY_TIMEOUT_MS + 7_000;
 const ADMIN_LOGIN_RETRY_COUNT = 1;
+
+async function resolveAdminPostLoginPath(
+  accessToken: string,
+  me?: { is_admin?: boolean; is_superuser?: boolean } | null,
+): Promise<string> {
+  if (me?.is_admin || me?.is_superuser) {
+    return '/admin';
+  }
+  try {
+    const regionalRes = await fetch('/api/admin/worldlinco/regional/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (regionalRes.ok) {
+      const regionalMe = await regionalRes.json() as { is_regional_manager?: boolean };
+      if (regionalMe.is_regional_manager) {
+        return '/admin/regional';
+      }
+    }
+  } catch {
+    // ignore regional scope probe failures
+  }
+  return '/admin';
+}
 
 const createTimeoutSignal = (timeoutMs: number) => {
   const controller = new AbortController();
@@ -34,7 +56,6 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberId, setRememberId] = useState(true);
-  const [rememberPassword, setRememberPassword] = useState(false);
   const [allowPasskeyOnDevice, setAllowPasskeyOnDevice] = useState(true);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [passkeyReady, setPasskeyReady] = useState(false);
@@ -42,25 +63,20 @@ export default function AdminLoginPage() {
   useEffect(() => {
     try {
       const savedRememberId = localStorage.getItem(ADMIN_LOGIN_REMEMBER_ID_KEY);
-      const savedRememberPassword = localStorage.getItem(ADMIN_LOGIN_REMEMBER_PASSWORD_KEY);
       const savedAllowPasskey = localStorage.getItem(ADMIN_LOGIN_ALLOW_PASSKEY_KEY);
       const savedEmail = localStorage.getItem(ADMIN_LOGIN_EMAIL_KEY);
-      const savedPassword = localStorage.getItem(ADMIN_LOGIN_PASSWORD_KEY);
 
       const nextRememberId = savedRememberId !== 'false';
-      const nextRememberPassword = savedRememberPassword === 'true';
       const nextAllowPasskey = savedAllowPasskey !== 'false';
 
       setRememberId(nextRememberId);
-      setRememberPassword(nextRememberPassword);
       setAllowPasskeyOnDevice(nextAllowPasskey);
 
       if (nextRememberId && savedEmail) {
         setEmail(savedEmail);
       }
-      if (nextRememberPassword && savedPassword) {
-        setPassword(savedPassword);
-      }
+      // Immediately block legacy plaintext password persistence.
+      localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
     } catch {
     }
   }, []);
@@ -76,18 +92,6 @@ export default function AdminLoginPage() {
     } catch {
     }
   }, [email, rememberId]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(ADMIN_LOGIN_REMEMBER_PASSWORD_KEY, rememberPassword ? 'true' : 'false');
-      if (rememberPassword && password) {
-        localStorage.setItem(ADMIN_LOGIN_PASSWORD_KEY, password);
-      } else {
-        localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
-      }
-    } catch {
-    }
-  }, [password, rememberPassword]);
 
   useEffect(() => {
     try {
@@ -211,7 +215,8 @@ export default function AdminLoginPage() {
       }
 
       setAdminToken(finishPayload.access_token);
-      window.location.replace('/admin');
+      const nextPath = await resolveAdminPostLoginPath(finishPayload.access_token);
+      window.location.replace(nextPath);
     } catch (err: any) {
       setError(err?.message || '패스키 로그인 중 오류가 발생했습니다.');
       clearAdminToken();
@@ -227,7 +232,7 @@ export default function AdminLoginPage() {
       return;
     }
     if (!password) {
-      setError('패스키 등록 전 비밀번호로 먼저 본인 확인이 필요합니다.');
+      window.location.href = `/admin/recovery?intent=passkey&email=${encodeURIComponent(normalizedEmail)}`;
       return;
     }
     if (!passkeyReady) {
@@ -241,7 +246,11 @@ export default function AdminLoginPage() {
       const startResponse = await fetch('/api/proxy?action=passkey-register-start', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-        body: JSON.stringify({ email: normalizedEmail, device_label: '이 기기 패스키' }),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          device_label: '이 기기 패스키',
+          password,
+        }),
         cache: 'no-store',
       });
       const startPayload = await startResponse.json().catch(() => null);
@@ -292,22 +301,22 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+
+    const authUrl = "/api/proxy";
+    const normalizedEmail = email.trim();
+    const normalizedPassword = password;
+
+    if (!normalizedEmail || !normalizedPassword) {
+      setError("이메일과 비밀번호를 모두 입력해주세요.");
+      return;
+    }
+
+    setLoading(true);
     const loginFlowStartedAt = performance.now();
+    const loginRequest = createTimeoutSignal(ADMIN_LOGIN_REQUEST_TIMEOUT_MS);
 
     try {
-      const authUrl = "/api/proxy";
-      const normalizedEmail = email.trim();
-      const normalizedPassword = password;
-
-      if (!normalizedEmail || !normalizedPassword) {
-        setError("이메일과 비밀번호를 모두 입력해주세요.");
-        return;
-      }
-
-      const loginRequest = createTimeoutSignal(ADMIN_LOGIN_REQUEST_TIMEOUT_MS);
-
       const res = await fetchWithAdminBootstrapRetry(authUrl, {
         method: "POST",
         headers: {
@@ -327,7 +336,6 @@ export default function AdminLoginPage() {
           console.info('[admin-login-metric]', metric);
         },
       });
-      loginRequest.cleanup();
       console.info('[admin-login-flow]', {
         stage: 'post-response',
         status: res.status,
@@ -370,17 +378,12 @@ export default function AdminLoginPage() {
         } else {
           localStorage.removeItem(ADMIN_LOGIN_EMAIL_KEY);
         }
-        if (rememberPassword) {
-          localStorage.setItem(ADMIN_LOGIN_PASSWORD_KEY, normalizedPassword);
-        } else {
-          localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
-        }
+        localStorage.removeItem(ADMIN_LOGIN_PASSWORD_KEY);
       } catch {
       }
 
       setAdminToken(data.access_token);
 
-      // /me 호출로 관리자 권한 확인
       const me = data.user;
       if (!me || (typeof me !== 'object')) {
         setError("관리자 정보 응답 형식이 올바르지 않습니다. 프록시와 백엔드 상태를 확인해주세요.");
@@ -389,19 +392,25 @@ export default function AdminLoginPage() {
       }
 
       if (!me.is_admin && !me.is_superuser) {
-        setError("관리자 권한이 없습니다.");
-        clearAdminToken();
+        const nextPath = await resolveAdminPostLoginPath(data.access_token, me);
+        if (nextPath !== '/admin/regional') {
+          setError("관리자 또는 지역 관리자 권한이 없습니다.");
+          clearAdminToken();
+          return;
+        }
+        window.location.replace(nextPath);
         return;
       }
 
-      window.location.replace("/admin");
+      window.location.replace('/admin');
     } catch (err) {
       const message = err instanceof DOMException && err.name === 'AbortError'
-        ? `서버 응답이 ${Math.floor(ADMIN_LOGIN_REQUEST_TIMEOUT_MS / 1000)}초 이상 지연되어 로그인을 중단했습니다. 관리자 프록시와 백엔드 상태를 먼저 확인한 뒤 다시 시도해주세요.`
+        ? `서버 응답이 ${Math.floor(ADMIN_LOGIN_REQUEST_TIMEOUT_MS / 1000)}초 이상 지연되어 로그인을 중단했습니다. 관리자 프록시와 백엔드 상태를 먼저 확인해주세요.`
         : '서버 연결에 실패했습니다. 관리자 프록시 또는 백엔드 연결 상태를 확인한 뒤 다시 시도해주세요.';
       clearAdminToken();
       setError(message);
     } finally {
+      loginRequest.cleanup();
       setLoading(false);
     }
   };
@@ -416,22 +425,22 @@ export default function AdminLoginPage() {
             관리자 대시보드
           </h1>
           <p className="mt-1.5 text-sm text-[#666]">
-            관리자 계정으로 로그인하세요
+            관리자 · 지역 관리자 로그인
           </p>
           <p className="mt-2 text-xs text-[#7b7b98]">
-            아이디/비밀번호 기억, 지문/패스키 로그인 사용 여부, 로그인 전 복구 진입 경로를 이 화면에서 바로 확인할 수 있습니다.
+            비밀번호 로그인 또는 지문/패스키(등록 후)로 접속합니다. 지역 관리자는 로그인 후 자동으로 지역 대시보드로 이동합니다.
           </p>
         </div>
 
         {/* 오류 메시지 */}
         {error && (
-          <div data-testid="admin-login-error" className="mb-5 rounded-lg border border-[#ffcccc] bg-[#fff0f0] px-4 py-3 text-sm text-[#cc0000]">
+          <div data-testid="admin-login-error" role="alert" className="mb-5 rounded-lg border border-[#ffcccc] bg-[#fff0f0] px-4 py-3 text-sm text-[#cc0000]">
             ⚠️ {error}
           </div>
         )}
 
         {/* 로그인 폼 */}
-        <form onSubmit={handleLogin} data-testid="admin-login-form">
+        <form onSubmit={handleLogin} data-testid="admin-login-form" noValidate>
           <div className="mb-[18px]">
             <label htmlFor="admin-login-email" className="mb-1.5 block text-[13px] font-semibold text-[#444]">
               이메일
@@ -444,7 +453,6 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@example.com"
               autoComplete="username"
-              required
               data-testid="admin-login-email"
               className="box-border w-full rounded-lg border-[1.5px] border-[#e0e0e0] px-[14px] py-3 text-[15px] outline-none transition-colors focus:border-[#667eea]"
             />
@@ -462,7 +470,6 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
-              required
               data-testid="admin-login-password"
               className="box-border w-full rounded-lg border-[1.5px] border-[#e0e0e0] px-[14px] py-3 text-[15px] outline-none transition-colors focus:border-[#667eea]"
             />
@@ -486,12 +493,12 @@ export default function AdminLoginPage() {
                 id="admin-login-remember-password"
                 name="rememberPassword"
                 type="checkbox"
-                checked={rememberPassword}
-                onChange={(e) => setRememberPassword(e.target.checked)}
+                checked={false}
+                disabled
                 data-testid="admin-login-remember-password"
                 className="h-4 w-4"
               />
-              비밀번호 기억
+              비밀번호 기억 (보안 정책으로 비활성화)
             </label>
             <label htmlFor="admin-login-allow-passkey" className="flex items-center gap-2">
               <input
@@ -506,7 +513,7 @@ export default function AdminLoginPage() {
               이 기기에서 지문/패스키 로그인 사용
             </label>
             <p className="text-[12px] text-[#7b7b98]">
-              공용 기기에서는 비밀번호 기억을 권장하지 않습니다.
+              비밀번호는 브라우저에 저장되지 않습니다.
             </p>
           </div>
 
@@ -526,7 +533,7 @@ export default function AdminLoginPage() {
             type="button"
             disabled={!passkeyReady || passkeyBusy}
             data-testid="admin-login-passkey-button"
-            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${allowPasskeyOnDevice ? 'border-[#667eea] bg-white text-[#5b67d8] hover:bg-[#f4f6ff]' : 'cursor-not-allowed border-[#ddd] bg-[#f3f3f3] text-[#999]'}`}
+            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${allowPasskeyOnDevice ? 'border-[#667eea] bg-white text-[#5b67d8] hover:bg-[#f4f6ff]' : 'border-[#d6d8e6] bg-[#f3f4f8] text-[#8b90a8]'} ${(!passkeyReady || passkeyBusy) ? 'cursor-not-allowed opacity-60' : ''}`}
             onClick={() => void handlePasskeyLogin()}
           >
             {passkeyBusy ? '⏳ 패스키 처리 중...' : '📱 지문/패스키 로그인'}
@@ -537,20 +544,20 @@ export default function AdminLoginPage() {
             disabled={!passkeyReady || passkeyBusy}
             data-testid="admin-login-passkey-register"
             onClick={() => void handlePasskeyRegister()}
-            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${passkeyReady ? 'border-[#764ba2] bg-white text-[#764ba2] hover:bg-[#f7f0ff]' : 'cursor-not-allowed border-[#ddd] bg-[#f3f3f3] text-[#999]'}`}
+            className={`mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors ${passkeyReady ? 'border-[#764ba2] bg-white text-[#764ba2] hover:bg-[#f7f0ff]' : 'cursor-not-allowed border-[#d8d8e8] bg-[#f4f4f8] text-[#9c9cb0]'} ${passkeyBusy ? 'opacity-60' : ''}`}
           >
             {passkeyBusy ? '⏳ 패스키 등록 중...' : '🪪 이 기기 패스키 등록'}
           </button>
 
           <div className="mt-4 flex flex-col gap-2 text-sm">
             <Link href="/admin/recovery" className="font-medium text-[#5b67d8] underline underline-offset-2">
-              비밀번호를 잊으셨나요?
+              비밀번호를 잊으셨나요? (이메일/문자 인증)
+            </Link>
+            <Link href="/admin/recovery?intent=passkey" className="font-medium text-[#5b67d8] underline underline-offset-2">
+              비밀번호 없이 패스키 등록 (이메일/문자 인증)
             </Link>
             <Link href="/admin/recovery" data-testid="admin-login-recovery-link" className="hidden">
               비밀번호를 잊으셨나요?
-            </Link>
-            <Link href="/admin/recovery?mode=carrier" className="font-medium text-[#5b67d8] underline underline-offset-2">
-              통신사 본인확인 후 비밀번호 재설정
             </Link>
             <Link href="/admin/recovery?mode=carrier" data-testid="admin-login-carrier-recovery-link" className="hidden">
               통신사 본인확인 후 비밀번호 재설정
@@ -560,9 +567,9 @@ export default function AdminLoginPage() {
           <div className="mt-5 rounded-xl border border-[#d8dcff] bg-[#f7f8ff] px-4 py-4 text-sm text-[#4d5588]">
             <div className="font-semibold text-[#2f376d]">로그인 문제 해결 안내</div>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>관리자 비밀번호를 잊은 경우 로그인 전 복구 페이지에서 재설정 흐름을 시작할 수 있습니다.</li>
-              <li>통신사 본인확인과 패스키(지문/Face ID)는 다음 단계에서 관리자/회원 공통 인증 코어로 연결할 예정입니다.</li>
-              <li>고위험 설정 변경 시 추가 본인확인이 필요할 수 있습니다.</li>
+              <li>비밀번호를 잊은 경우 복구 페이지에서 이메일 또는 SMS 인증 코드로 재설정할 수 있습니다.</li>
+              <li>비밀번호 없이도 인증 후 이 기기에 패스키(지문/Face ID)를 등록할 수 있습니다.</li>
+              <li>패스키 등록 버튼을 누르면 비밀번호가 없을 때 자동으로 인증 복구 페이지로 이동합니다.</li>
             </ul>
           </div>
         </form>

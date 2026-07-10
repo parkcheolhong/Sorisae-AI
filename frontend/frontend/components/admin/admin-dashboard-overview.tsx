@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { AdminAlertItem, AutomaticOpsActionItem } from '@/lib/admin-runtime-types';
 import type { CompactOverviewCard, SystemResourceCard } from '@/lib/admin-dashboard-ui-types';
-import type { FocusedSelfHealingApplyResult, FocusedSelfHealingPlan } from '@/lib/admin-dashboard-types';
+import type { FocusedSelfHealingApplyResult, FocusedSelfHealingPlan, SorisaeFailureMonitorStatus } from '@/lib/admin-dashboard-types';
 
 interface SelfRunFailureInsight {
     severity: 'warning' | 'critical';
@@ -115,6 +115,7 @@ export interface AdminDashboardOverviewProps {
     formatHealthMetricValue: (key: string, value: string | number) => string;
     apiBaseUrl: string;
     opsAlerts: AdminAlertItem[];
+    sorisaeFailureStatus: SorisaeFailureMonitorStatus | null;
     onImmediateRefresh: () => void;
     voiceAlertEnabled: boolean;
     onToggleVoiceAlertEnabled: () => void;
@@ -158,6 +159,74 @@ export default function AdminDashboardOverview(props: AdminDashboardOverviewProp
                 <div data-testid="admin-dashboard-error-banner" className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     {`⚠️ 일부 데이터 로드에 실패했습니다: ${dashboardErrorMessage}`}
                 </div>
+            )}
+
+            {props.sorisaeFailureStatus && (
+                <section className={`mb-6 rounded-xl border px-5 py-4 ${props.sorisaeFailureStatus.status === 'critical'
+                    ? 'border-red-200 bg-red-50 text-red-900'
+                    : props.sorisaeFailureStatus.status === 'warning'
+                        ? 'border-amber-200 bg-amber-50 text-amber-900'
+                        : props.sorisaeFailureStatus.status === 'ok'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                            : 'border-slate-200 bg-slate-50 text-slate-900'}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="text-sm font-semibold">소리새 장애감지</h2>
+                                <span className="rounded-full border border-current/20 bg-white px-2 py-1 text-[11px] font-semibold">
+                                    {props.sorisaeFailureStatus.classification}
+                                </span>
+                                {props.sorisaeFailureStatus.admin_push?.attempted && (
+                                    <span className="rounded-full border border-current/20 bg-white px-2 py-1 text-[11px] font-semibold">
+                                        모바일 push {props.sorisaeFailureStatus.admin_push?.success ? '전송됨' : '실패'}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-2 text-sm">
+                                {props.sorisaeFailureStatus.message || '최신 소리새 스모크 결과를 관리자 대시보드에 표시합니다.'}
+                            </p>
+                            <p className="mt-1 text-xs opacity-80">
+                                API 실패 {props.sorisaeFailureStatus.api_fail ?? 0}건 · UI 실패 {props.sorisaeFailureStatus.ui_fail ?? 0}건
+                                {props.sorisaeFailureStatus.started_at ? ` · ${props.sorisaeFailureStatus.started_at}` : ''}
+                            </p>
+                            {!!props.sorisaeFailureStatus.page_top3?.length && (
+                                <div className="mt-3 rounded-lg bg-white/70 px-3 py-3 text-xs">
+                                    <p className="font-semibold">문제 페이지 Top 3</p>
+                                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                                        {props.sorisaeFailureStatus.page_top3.slice(0, 3).map((item) => (
+                                            <li key={item} className="break-all">{item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {!!props.sorisaeFailureStatus.admin_push?.attempted && (
+                                <p className="mt-2 text-xs opacity-80">
+                                    관리자 push 성공 {props.sorisaeFailureStatus.admin_push?.success_user_count ?? 0} / {props.sorisaeFailureStatus.admin_push?.admin_user_count ?? 0}
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {props.sorisaeFailureStatus.result_json_path && (
+                                <a href={props.toFileHref(props.sorisaeFailureStatus.result_json_path)} className="rounded-lg border border-current/20 bg-white px-3 py-2 text-xs font-semibold hover:bg-white/80">
+                                    result json
+                                </a>
+                            )}
+                            {props.sorisaeFailureStatus.ui_report_path && (
+                                <a href={props.toFileHref(props.sorisaeFailureStatus.ui_report_path)} className="rounded-lg border border-current/20 bg-white px-3 py-2 text-xs font-semibold hover:bg-white/80">
+                                    ui report
+                                </a>
+                            )}
+                            {props.sorisaeFailureStatus.ui_har_dir && (
+                                <a href={props.toFileHref(props.sorisaeFailureStatus.ui_har_dir)} className="rounded-lg border border-current/20 bg-white px-3 py-2 text-xs font-semibold hover:bg-white/80">
+                                    har
+                                </a>
+                            )}
+                            <button type="button" onClick={props.onImmediateRefresh} className="rounded-lg border border-current/20 bg-white px-3 py-2 text-xs font-semibold hover:bg-white/80">
+                                즉시 새로고침
+                            </button>
+                        </div>
+                    </div>
+                </section>
             )}
 
             {props.activeDashboardSelfRun && (

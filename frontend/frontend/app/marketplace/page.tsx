@@ -245,6 +245,8 @@ export default function MarketplacePage() {
     const [signupCountry, setSignupCountry] = React.useState('');
     const [authLoading, setAuthLoading] = React.useState(false);
     const [authMessage, setAuthMessage] = React.useState('');
+    const [rightRailOpen, setRightRailOpen] = React.useState(true);
+    const [leftRailOpen, setLeftRailOpen] = React.useState(true);
 
     const loadMyInfo = React.useCallback(async (targetToken: string) => {
         const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
@@ -317,7 +319,7 @@ export default function MarketplacePage() {
                     image_url: p.image_url || null,
                     is_active: true,
                     tags: (p.tags || []).map((name: string) => ({ id: 0, name })),
-                  }))
+                }))
                 : [];
 
             setCategories(Array.isArray(categoriesPayload) ? categoriesPayload : []);
@@ -538,6 +540,10 @@ export default function MarketplacePage() {
                     </>
                 }
                 sidebar={marketplaceSidebar}
+                rightRailOpen={rightRailOpen}
+                onRightRailToggle={setRightRailOpen}
+                leftRailOpen={leftRailOpen}
+                onLeftRailToggle={setLeftRailOpen}
             >
                 <div className="workspace-section-stack">
                     <div className="workspace-metric-grid" data-testid="marketplace-stats-cards">
@@ -580,7 +586,7 @@ export default function MarketplacePage() {
                                 <div className="marketplace-projects-grid" data-testid="shinsegye-products">
                                     {shinsegyeProducts.map((project) => (
                                         <article key={`shinsegye-${project.id}`} className="workspace-card">
-                                            <p className="workspace-card-kicker" style={{color: '#f0b43f', fontWeight: 700}}>완제품</p>
+                                            <p className="workspace-card-kicker" style={{ color: '#f0b43f', fontWeight: 700 }}>완제품</p>
                                             <h3 className="workspace-card-heading">{project.title}</h3>
                                             <p className="workspace-card-body">{project.description || '설명이 아직 등록되지 않았습니다.'}</p>
                                             {!!project.tags?.length && (
@@ -598,7 +604,7 @@ export default function MarketplacePage() {
                                             </div>
                                             <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
                                                 <div className="flex flex-wrap gap-2">
-                                                    <Link href={`/marketplace/shinsegye/${project.demo_url}`} className="workspace-secondary-button">상세 보기</Link>
+                                                    <Link href={project.demo_url || '#'} className="workspace-secondary-button">상세 보기</Link>
                                                     <Link href={`/marketplace/orchestrator?product=${encodeURIComponent(project.title)}&projectId=${project.id}&projectTitle=${encodeURIComponent(project.title)}&projectSummary=${encodeURIComponent(project.description || '')}`} className="workspace-primary-button">패키지 주문</Link>
                                                 </div>
                                             </div>
@@ -714,14 +720,14 @@ export default function MarketplacePage() {
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {project.demo_url && (
-                                                  project.demo_url.toLowerCase().endsWith('.apk')
-                                                    ? <a href={project.demo_url} download className="workspace-topbar-chip workspace-chip-active" style={{background:'#2a7cff',color:'#fff',fontWeight:700}}>� APK 다운로드</a>
-                                                    : <a href={project.demo_url} target="_blank" rel="noreferrer" className="workspace-topbar-chip">데모</a>
+                                                    project.demo_url.toLowerCase().endsWith('.apk')
+                                                        ? <a href={project.demo_url} download className="workspace-topbar-chip workspace-chip-active" style={{ background: '#2a7cff', color: '#fff', fontWeight: 700 }}>� APK 다운로드</a>
+                                                        : <a href={project.demo_url} target="_blank" rel="noreferrer" className="workspace-topbar-chip">데모</a>
                                                 )}
                                                 {project.github_url && (
-                                                  project.github_url.startsWith('/marketplace/')
-                                                    ? <a href={project.github_url} className="workspace-topbar-chip" style={{background:'#31c45d22',color:'#31c45d',fontWeight:700,border:'1px solid #31c45d44'}}>🌐 웹에서 바로 사용</a>
-                                                    : <a href={project.github_url} target="_blank" rel="noreferrer" className="workspace-topbar-chip">GitHub</a>
+                                                    project.github_url.startsWith('/marketplace/')
+                                                        ? <a href={project.github_url} className="workspace-topbar-chip" style={{ background: '#31c45d22', color: '#31c45d', fontWeight: 700, border: '1px solid #31c45d44' }}>🌐 웹에서 바로 사용</a>
+                                                        : <a href={project.github_url} target="_blank" rel="noreferrer" className="workspace-topbar-chip">GitHub</a>
                                                 )}
                                             </div>
                                         </div>

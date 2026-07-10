@@ -1,0 +1,28 @@
+name: constitution-hard-gate
+
+on:
+    pull_request:
+    push:
+        branches:
+            - "**"
+    workflow_dispatch:
+
+env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+    constitution-hard-gate:
+        name: constitution-hard-gate / constitution-hard-gate
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.13"
+
+            - name: Run constitution hard gate
+              run: |
+                  python scripts/check_constitution_hard_gate.py

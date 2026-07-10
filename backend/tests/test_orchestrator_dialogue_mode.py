@@ -1,5 +1,11 @@
+"""Legacy ② chat_service dialogue mode tests.
+
+Dual-path note (G-2-3-3): `reverse_question` / reciprocal flows remain on ②.
+① autonomous session restore · owner scoping → `test_orchestrator_dialogue_mode_autonomous.py`.
+"""
 from __future__ import annotations
 
+import json
 import logging
 
 import pytest
@@ -7,6 +13,7 @@ from starlette.requests import Request
 
 from backend.orchestrator.chat import chat_service
 from backend.orchestrator.chat.models import OrchestratorChatRequest
+from backend.orchestrator.chat import session_store
 
 
 def _request(path: str = "/api/llm/orchestrate/chat") -> Request:
@@ -24,7 +31,7 @@ def _request(path: str = "/api/llm/orchestrate/chat") -> Request:
     )
 
 
-async def _answer(request_model: OrchestratorChatRequest):
+async def _answer(request_model: OrchestratorChatRequest, *, current_user=None):
     return await chat_service.answer_orchestrator_chat(
         request_context=_request(),
         request=request_model,
@@ -39,9 +46,16 @@ async def _answer(request_model: OrchestratorChatRequest):
         logger=logging.getLogger("test"),
         re_module=__import__("re"),
         session_factory=None,
+        current_user=current_user,
     )
 
 
+class _User:
+    def __init__(self, user_id: str):
+        self.id = user_id
+
+
+@pytest.mark.legacy_chat_service
 @pytest.mark.asyncio
 async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
@@ -61,7 +75,7 @@ async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp
                 }
             ],
             session_id="dialogue-test-1",
-            conversation_mode="auto",
+            conversation_mode="reverse_question",
             reverse_question_mode="implementation",
             project_memory={"reverse_question_mode": "implementation"},
         )
@@ -74,6 +88,7 @@ async def test_reverse_question_mode_forces_reciprocal_question(monkeypatch, tmp
     assert response.technology_recommendations
 
 
+@pytest.mark.legacy_chat_service
 @pytest.mark.asyncio
 async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
@@ -105,3 +120,57 @@ async def test_session_id_restores_previous_conversation(monkeypatch, tmp_path):
     joined = "\n".join(item.content for item in response.conversation)
     assert "첫 결정은 실행을 /run으로만 제한" in joined
     assert "이전 결정을 이어서 기술 후보" in joined
+
+
+@pytest.mark.legacy_chat_service
+def test_session_snapshot_owner_mismatch_is_ignored(monkeypatch, tmp_path):
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+    session_store.save_chat_session_snapshot(
+        "dialogue-owner-mismatch",
+        {"session_id": "dialogue-owner-mismatch", "session_owner_id": "owner-a", "conversation": []},
+        session_owner_id="owner-a",
+    )
+    path = session_store._session_path("dialogue-owner-mismatch", session_owner_id="owner-a")
+    assert path is not None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["session_owner_id"] = "owner-b"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = session_store.load_chat_session_snapshot("dialogue-owner-mismatch", session_owner_id="owner-a")
+    assert loaded == {}
+
+
+@pytest.mark.legacy_chat_service
+@pytest.mark.asyncio
+async def test_session_id_is_scoped_by_current_user(monkeypatch, tmp_path):
+    monkeypatch.setenv("ORCHESTRATOR_CHAT_SESSION_DIR", str(tmp_path))
+
+    async def fake_llm(**kwargs):
+        return "같은 session_id라도 사용자별로 분리됩니다."
+
+    monkeypatch.setattr(chat_service, "call_orchestrator_chat_llm", fake_llm)
+
+    await _answer(
+        OrchestratorChatRequest(
+            message="owner-a의 이전 결정입니다.",
+            conversation=[{"role": "user", "content": "owner-a의 이전 결정입니다."}],
+            session_id="dialogue-test-owner",
+            reverse_question_mode="implementation",
+            project_memory={"reverse_question_mode": "implementation"},
+        ),
+        current_user=_User("owner-a"),
+    )
+    response = await _answer(
+        OrchestratorChatRequest(
+            message="owner-b 기준으로 이어서 설명해줘",
+            conversation=[{"role": "user", "content": "owner-b 기준으로 이어서 설명해줘"}],
+            session_id="dialogue-test-owner",
+            reverse_question_mode="implementation",
+            project_memory={"reverse_question_mode": "implementation"},
+        ),
+        current_user=_User("owner-b"),
+    )
+
+    joined = "\n".join(item.content for item in response.conversation)
+    assert "owner-a의 이전 결정입니다." not in joined
+    assert "owner-b 기준으로 이어서 설명해줘" in joined

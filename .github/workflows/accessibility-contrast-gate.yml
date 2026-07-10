@@ -1,0 +1,32 @@
+name: accessibility-contrast-gate
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+    wcag-contrast-gate:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.13"
+
+            # WCAG 2.1 AA 색대비 전수점검 — 미달 1건이상이면 exit 1 로 PR/푸시 차단.
+            - name: Run WCAG color contrast audit
+              run: python scripts/audit_color_contrast.py
+
+            - name: Upload contrast report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: color-contrast-report
+                  path: reports/color_contrast_audit.json
+                  if-no-files-found: ignore

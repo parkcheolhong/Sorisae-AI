@@ -23,3 +23,6 @@ __pycache__/
 .tmp/
 .venv*/
 TestResults/
+
+# Metro/Gradle 빌드 임시 캐시 (자동 재생성, 추적 금지)
+apps/mobile-nadotongryoksa/.gradle-tmp/

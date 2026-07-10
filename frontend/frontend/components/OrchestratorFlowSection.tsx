@@ -2,33 +2,18 @@
 
 import Link from 'next/link';
 import { resolveApiBaseUrl } from '@/lib/api';
+import { ORCHESTRATOR_LIVE_FLOW_STAGE_DEFS } from '@/lib/orchestrator-live-flow';
+import {
+    isAutonomousProgressSnapshot,
+    ORCHESTRATOR_LIVE_PROGRESS_EVENT,
+    ORCHESTRATOR_LIVE_PROGRESS_KEY,
+    type OrchestratorLiveProgressSnapshot,
+} from '@/lib/orchestrator-live-progress';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const ADMIN_LLM_PRESET_TASK_KEY = 'admin_llm_preset_task_v1';
-const ADMIN_ORCHESTRATOR_LIVE_PROGRESS_KEY = 'admin_orchestrator_live_progress_v1';
 const MARKETPLACE_ORCHESTRATOR_PATH = '/marketplace/orchestrator';
 const ORCHESTRATOR_STAGE_ORDER = ['DESIGN', 'PLAN', 'GENERATE', 'BUILD', 'TEST', 'REFLEXION', 'FIX', 'DONE'];
-
-type LiveLogEntry = {
-    id: string;
-    event: string;
-    stage?: string;
-    message: string;
-    timestamp: string;
-};
-
-type LiveProgressSnapshot = {
-    runId: string;
-    task: string;
-    mode: string;
-    pipeline: string[];
-    status: 'idle' | 'running' | 'success' | 'failed';
-    currentState: string;
-    stateHistory: string[];
-    logs: LiveLogEntry[];
-    wsConnected: boolean;
-    updatedAt: string;
-};
 
 type RuntimeConfigSnapshot = {
     code_generation_strategy?: string;
@@ -250,7 +235,7 @@ export default function OrchestratorFlowSection({
     const [renderError, setRenderError] = useState<string | null>(null);
     const [renderedSvg, setRenderedSvg] = useState('');
     const [selectedPresetId, setSelectedPresetId] = useState<string>('');
-    const [liveSnapshot, setLiveSnapshot] = useState<LiveProgressSnapshot | null>(null);
+    const [liveSnapshot, setLiveSnapshot] = useState<OrchestratorLiveProgressSnapshot | null>(null);
     const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfigSnapshot | null>(null);
     const renderIdRef = useRef(
         `orchestrator-flow-${Math.random().toString(36).slice(2)}`,
@@ -260,13 +245,13 @@ export default function OrchestratorFlowSection({
         const loadSnapshot = () => {
             try {
                 const raw = localStorage.getItem(
-                    ADMIN_ORCHESTRATOR_LIVE_PROGRESS_KEY,
+                    ORCHESTRATOR_LIVE_PROGRESS_KEY,
                 );
                 if (!raw) {
                     setLiveSnapshot(null);
                     return;
                 }
-                const parsed = JSON.parse(raw) as LiveProgressSnapshot;
+                const parsed = JSON.parse(raw) as OrchestratorLiveProgressSnapshot;
                 if (!parsed || typeof parsed !== 'object') {
                     setLiveSnapshot(null);
                     return;
@@ -281,7 +266,7 @@ export default function OrchestratorFlowSection({
         loadSnapshot();
         window.addEventListener('storage', handleSnapshotEvent);
         window.addEventListener(
-            'admin-orchestrator-progress',
+            ORCHESTRATOR_LIVE_PROGRESS_EVENT,
             handleSnapshotEvent as EventListener,
         );
         const timer = window.setInterval(loadSnapshot, 1000);
@@ -289,7 +274,7 @@ export default function OrchestratorFlowSection({
         return () => {
             window.removeEventListener('storage', handleSnapshotEvent);
             window.removeEventListener(
-                'admin-orchestrator-progress',
+                ORCHESTRATOR_LIVE_PROGRESS_EVENT,
                 handleSnapshotEvent as EventListener,
             );
             window.clearInterval(timer);
@@ -396,6 +381,8 @@ export default function OrchestratorFlowSection({
         };
     }, []);
 
+    const showAutonomousStages = isAutonomousProgressSnapshot(liveSnapshot);
+
     return (
         <section className="bg-white border rounded-xl p-5 mb-6">
             <details className="group" open={defaultOpen}>
@@ -500,9 +487,23 @@ export default function OrchestratorFlowSection({
                         </div>
                         <div className="flex flex-wrap gap-2 text-xs">
                             <span
-                                className={`rounded-full px-3 py-1 ${liveSnapshot?.wsConnected ? 'bg-emerald-700 text-white' : 'bg-amber-100 text-amber-800'}`}
+                                className={`rounded-full px-3 py-1 ${
+                                    liveSnapshot?.progressSource === 'autonomous_sse'
+                                        ? 'bg-emerald-700 text-white'
+                                        : liveSnapshot?.progressSource === 'autonomous_ws' || liveSnapshot?.wsConnected
+                                            ? 'bg-emerald-700 text-white'
+                                            : liveSnapshot?.progressSource === 'autonomous_poll'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-amber-100 text-amber-800'
+                                }`}
                             >
-                                WS {liveSnapshot?.wsConnected ? '연결됨' : '대기'}
+                                {liveSnapshot?.progressSource === 'autonomous_sse'
+                                    ? 'SSE 연결됨'
+                                    : liveSnapshot?.progressSource === 'autonomous_ws' || liveSnapshot?.wsConnected
+                                        ? 'WS 연결됨'
+                                        : liveSnapshot?.progressSource === 'autonomous_poll'
+                                            ? 'Poll'
+                                            : '실시간 대기'}
                             </span>
                             <span
                                 className={`rounded-full px-3 py-1 ${liveSnapshot?.status === 'success' ? 'bg-emerald-700 text-white' : liveSnapshot?.status === 'failed' ? 'bg-red-100 text-red-700' : liveSnapshot?.status === 'running' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
@@ -544,21 +545,41 @@ export default function OrchestratorFlowSection({
                                 </div>
                             </div>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {ORCHESTRATOR_STAGE_ORDER.map((stage) => {
-                                    const reached =
-                                        liveSnapshot.stateHistory?.includes(stage);
-                                    const current =
-                                        liveSnapshot.currentState === stage;
-                                    return (
-                                        <span
-                                            key={stage}
-                                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${current ? 'border-blue-600 bg-blue-600 text-white' : reached ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-200 bg-white text-gray-500'}`}
-                                        >
-                                            {stage}
-                                        </span>
-                                    );
-                                })}
+                                {showAutonomousStages
+                                    ? ORCHESTRATOR_LIVE_FLOW_STAGE_DEFS.map((stage) => {
+                                        const completed = typeof liveSnapshot.stagesCompleted === 'number'
+                                            && liveSnapshot.stagesCompleted >= stage.number;
+                                        const current = liveSnapshot.stageNumber === stage.number
+                                            || liveSnapshot.currentStage === stage.label;
+                                        return (
+                                            <span
+                                                key={stage.id}
+                                                className={`rounded-full border px-3 py-1 text-xs font-semibold ${current ? 'border-blue-600 bg-blue-600 text-white' : completed ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-200 bg-white text-gray-500'}`}
+                                            >
+                                                {stage.number}단계
+                                            </span>
+                                        );
+                                    })
+                                    : ORCHESTRATOR_STAGE_ORDER.map((stage) => {
+                                        const reached =
+                                            liveSnapshot.stateHistory?.includes(stage);
+                                        const current =
+                                            liveSnapshot.currentState === stage;
+                                        return (
+                                            <span
+                                                key={stage}
+                                                className={`rounded-full border px-3 py-1 text-xs font-semibold ${current ? 'border-blue-600 bg-blue-600 text-white' : reached ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-200 bg-white text-gray-500'}`}
+                                            >
+                                                {stage}
+                                            </span>
+                                        );
+                                    })}
                             </div>
+                            {showAutonomousStages && liveSnapshot.activeSubstep && (
+                                <p className="mt-2 text-xs text-emerald-800">
+                                    active substep: {liveSnapshot.activeSubstep}
+                                </p>
+                            )}
                             <div className="mt-3 grid gap-3 xl:grid-cols-2">
                                 <div className="rounded-lg border border-emerald-100 bg-white p-3">
                                     <p className="text-sm font-medium text-gray-700 mb-2">

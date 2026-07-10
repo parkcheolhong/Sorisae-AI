@@ -1,0 +1,6 @@
+[12:35:39] V-8 E2E run dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\run_20260614-123539
+[12:35:39] Caller=R83W70QY11H Callee=172.30.1.19:5555 callee_voice_id=nado-000226
+[12:35:39] Expected APK version: 1.0.32 (code 42)
+[12:35:39] Installing APK on R83W70QY11H ...
+[12:36:13] Installing APK on 172.30.1.19:5555 ...
+[12:37:23] Installed versionCode caller=42 callee=42

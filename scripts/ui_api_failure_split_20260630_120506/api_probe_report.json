@@ -1,0 +1,31 @@
+﻿{
+    "baseUrl":  "http://127.0.0.1:8000",
+    "startedAt":  "2026-06-30T12:05:06.2890465+09:00",
+    "probes":  [
+                   {
+                       "name":  "friend_chat",
+                       "url":  "http://127.0.0.1:8000/api/llm/voice/friend-chat",
+                       "ok":  true,
+                       "status":  200,
+                       "elapsedMs":  347.5,
+                       "attempts":  1,
+                       "error":  "",
+                       "responseBody":  "{\"transcript\":\"?? ?? ?? ???\",\"response_text\":\"ìë\u0085íì¸ì! ì´ëì ê³ìëì§ ëª¨ë¥´ê² ì´ì.\",\"evidence_grade\":\"ë¯¸íì¸\",\"evidence_reason\":\"ì¸ë¶ ê·¼ê±°ê° ìê³  ë¶íì¤ì± ê³ ì§ë ìì\",\"uncertainty_disclosed\":false,\"grounded_items_count\":0,\"audio_base64\":null,\"audio_format\":null,\"safety_alert\":false,\"safety_alert_message\":null,\"high_risk_mode_blocked\":false,\"cache_hit\":true,\"output_dir\":null,\"run_id\":null,\"timing_ms\":{\"stt\":0.0,\"tts\":0.0,\"total\":283.8},\"conversation\":[{\"role\":\"user\",\"content\":\"?? ?? ?? ???\"},{\"role\":\"assistant\",\"content\":\"ìë\u0085íì¸ì! ì´ëì ê³ìëì§ ëª¨ë¥´ê² ì´ì.\"}]}"
+                   },
+                   {
+                       "name":  "face_translate",
+                       "url":  "http://127.0.0.1:8000/api/llm/face/voice-translate",
+                       "ok":  true,
+                       "status":  200,
+                       "elapsedMs":  26.7,
+                       "attempts":  2,
+                       "error":  "",
+                       "responseBody":  "{\"original_text\":\"smoke fallback\",\"translated\":\"smoke backup\",\"engine\":\"nado-voice\",\"from\":\"ko\",\"to\":\"en\",\"detected_language\":\"ko\",\"audio_url\":null,\"audio_base64\":null,\"audio_format\":null,\"tts_delivery\":\"device_speech\",\"emotion\":null,\"stt_trust\":\"high\",\"stt_avg_logprob\":null,\"correlation_id\":\"face.interpret-mr02d60k-bba2dc\",\"utterance_id\":\"face.interpret-mr02d60k-bba2dc\",\"seq_id\":null,\"chunk_index\":null}"
+                   }
+               ],
+    "summary":  {
+                    "total":  2,
+                    "ok":  2,
+                    "fail":  0
+                }
+}

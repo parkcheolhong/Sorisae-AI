@@ -11,7 +11,7 @@ from redis.exceptions import RedisError
 from sqlalchemy import inspect, text
 
 from . import models
-from .database import SessionLocal, add_missing_columns, engine
+from .database import SessionLocal, engine
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,8 @@ def ensure_ad_video_orders_schema() -> None:
     inspector = inspect(engine)
     if not inspector.has_table("ad_video_orders"):
         return
+
+    existing_columns = {col["name"] for col in inspector.get_columns("ad_video_orders")}
 
     column_specs = {
         "title": "VARCHAR(200)",
@@ -87,12 +89,11 @@ def ensure_ad_video_orders_schema() -> None:
     }
 
     with engine.begin() as conn:
-        add_missing_columns(
-            conn,
-            "ad_video_orders",
-            column_specs,
-            inspector=inspector,
-        )
+        for col_name, col_type in column_specs.items():
+            if col_name not in existing_columns:
+                conn.execute(text(
+                    f"ALTER TABLE ad_video_orders ADD COLUMN {col_name} {col_type}"
+                ))
         if engine.dialect.name == "postgresql":
             conn.execute(text(
                 "DO $$ BEGIN "

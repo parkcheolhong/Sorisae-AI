@@ -1,22 +1,26 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
 import base64
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
-from typing import Optional
-from pydantic import BaseModel, EmailStr
-from sqlalchemy.orm import Session
-from webauthn import (
+from fastapi import APIRouter, Depends, HTTPException, Request, status  # pyright: ignore[reportMissingImports]
+from fastapi.security import OAuth2PasswordRequestForm  # pyright: ignore[reportMissingImports]
+from typing import Any, Optional
+import re
+from pydantic import BaseModel, ConfigDict, EmailStr  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
+from webauthn import (  # pyright: ignore[reportMissingImports]
     generate_authentication_options,
     generate_registration_options,
     options_to_json,
     verify_authentication_response,
     verify_registration_response,
 )
-from webauthn.helpers.structs import (
+from webauthn.helpers.structs import (  # pyright: ignore[reportMissingImports]
     PublicKeyCredentialType,
     AuthenticatorAssertionResponse,
     AuthenticatorAttestationResponse,
@@ -33,16 +37,35 @@ from backend.auth import (
     get_current_user,
     get_password_hash,
     register_issued_token,
+    set_active_session,
     verify_password,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from backend.database import get_db
 from backend.models import User
+from backend.security_gates import require_login_quota, require_otp_send_quota
+from backend.user_profile import normalize_country_code, normalize_preferred_language
 
 router = APIRouter()
 
 
 def _should_issue_non_expiring_admin_token(user: User) -> bool:
+    allow_non_expiring = os.getenv("ALLOW_NON_EXPIRING_ADMIN_TOKENS", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+    if not allow_non_expiring:
+        return False
+    # [보안 보강][#4] 운영/스테이징에서는 비만료 토큰을 절대 발급하지 않는다.
+    # 환경변수가 켜져 있어도 prod/stage 에서는 무시(하드 오프)하고 경고를 남겨,
+    # 유출된 admin 토큰이 영구히 유효해지는 사고를 원천 차단한다(만료 토큰으로 폴백).
+    app_env = str(os.getenv("APP_ENV") or "dev").strip().lower()
+    if app_env in {"prod", "production", "stage", "staging"}:
+        logger.warning(
+            "[AUTH][SECURITY] ALLOW_NON_EXPIRING_ADMIN_TOKENS 가 '%s' 환경에서 설정됐지만 "
+            "보안상 무시합니다(만료 토큰 발급). 이 설정은 로컬 개발에서만 허용됩니다.",
+            app_env,
+        )
+        return False
     return bool(
         getattr(user, "is_admin", False)
         or getattr(user, "is_superuser", False)
@@ -78,8 +101,7 @@ class UserResponse(BaseModel):
     native_language: Optional[str] = None
     country: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Token(BaseModel):
@@ -90,6 +112,8 @@ class Token(BaseModel):
 class PasskeyRegistrationStartRequest(BaseModel):
     email: EmailStr
     device_label: str | None = None
+    recovery_reset_token: str | None = None
+    password: str | None = None
 
 
 class PasskeyRegistrationStartResponse(BaseModel):
@@ -118,6 +142,17 @@ class PasskeyLoginFinishRequest(BaseModel):
 
 _passkey_registration_store: dict[str, dict[str, object]] = {}
 _passkey_login_store: dict[str, dict[str, object]] = {}
+
+
+def _user_may_use_admin_portal(user: Any) -> bool:
+    if getattr(user, "is_admin", False) or getattr(user, "is_superuser", False):
+        return True
+    try:
+        from backend.marketplace.worldlinco_sales_commission import resolve_regional_manager_for_user
+
+        return resolve_regional_manager_for_user(int(getattr(user, "id", 0) or 0)) is not None
+    except Exception:
+        return False
 
 
 def _issue_passkey_challenge() -> str:
@@ -215,18 +250,23 @@ def _resolve_passkey_request_context(request: Request | None) -> tuple[str, str]
 class PasswordRecoveryStartRequest(BaseModel):
     scope: str = "admin"
     user_hint: EmailStr
+    verification_channel: str = "email"
+    phone_number: Optional[str] = None
 
 
 class PasswordRecoveryStartResponse(BaseModel):
     recovery_session_token: str
     next_action: str
     expires_at: datetime
+    masked_target: str
+    verification_channel: str
+    dev_otp_hint: Optional[str] = None
 
 
 class PasswordRecoveryVerifyIdentityRequest(BaseModel):
     recovery_session_token: str
-    identity_session_token: str
     verification_code: str
+    identity_session_token: Optional[str] = None
 
 
 class PasswordRecoveryVerifyIdentityResponse(BaseModel):
@@ -246,19 +286,145 @@ class PasswordRecoveryResetResponse(BaseModel):
     must_relogin: bool = True
 
 
+class UserPasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class UserPasswordChangeResponse(BaseModel):
+    changed: bool
+    must_relogin: bool = True
+
+
+class SignupRequestCode(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+    member_type: str = "individual"
+    business_name: Optional[str] = None
+    business_registration_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+    phone_number: Optional[str] = None
+    verificationChannel: str = "email"
+    referral_code: Optional[str] = None
+    sales_agent_code: Optional[str] = None
+
+
+class SignupConfirmRequest(BaseModel):
+    signupSessionToken: str
+    verificationCode: str
+    preferred_language: Optional[str] = None
+    country_code: Optional[str] = None
+    full_name: Optional[str] = None
+    referral_code: Optional[str] = None
+    sales_agent_code: Optional[str] = None
+
+
+class SignupRequestCodeResponse(BaseModel):
+    signupSessionToken: str
+    verificationChannel: str
+    maskedTarget: str
+    expiresAt: str
+    devOtpHint: Optional[str] = None
+
+
 _password_recovery_store: dict[str, dict[str, object]] = {}
 
 
 def _issue_recovery_token(prefix: str) -> tuple[str, datetime]:
     from secrets import token_urlsafe
 
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     return f"{prefix}_{token_urlsafe(24)}", expires_at
 
 
-# ---------- 엔드포인트 ----------
-@router.post("/signup", response_model=UserResponse, status_code=201)
-def signup(payload: UserCreate, db: Session = Depends(get_db)):
+def _find_recovery_session_by_reset_token(reset_token: str, *, scope: str) -> tuple[str, dict[str, object]] | None:
+    for session_token, session_state in _password_recovery_store.items():
+        if session_state.get("reset_token") == reset_token and session_state.get("scope") == scope:
+            return session_token, session_state
+    return None
+
+
+def _assert_verified_recovery_reset_token(
+    reset_token: str,
+    *,
+    scope: str,
+    user_id: int | None = None,
+) -> tuple[str, dict[str, object]]:
+    matched = _find_recovery_session_by_reset_token(reset_token, scope=scope)
+    if not matched:
+        raise HTTPException(status_code=404, detail="재설정 토큰을 찾을 수 없습니다")
+
+    session_token, session_state = matched
+    if not session_state.get("verified"):
+        raise HTTPException(status_code=403, detail="본인확인이 완료되지 않은 세션입니다")
+
+    reset_expires_at = session_state.get("reset_expires_at")
+    if isinstance(reset_expires_at, datetime) and reset_expires_at <= datetime.now(timezone.utc):
+        _password_recovery_store.pop(session_token, None)
+        raise HTTPException(status_code=410, detail="재설정 토큰이 만료되었습니다")
+
+    if user_id is not None and int(session_state.get("user_id") or 0) != int(user_id):
+        raise HTTPException(status_code=403, detail="재설정 토큰이 대상 계정과 일치하지 않습니다")
+
+    return session_token, session_state
+
+
+def _validate_profile_fields(
+    preferred_language: Optional[str],
+    country_code: Optional[str],
+    *,
+    require_both: bool = False,
+) -> tuple[Optional[str], Optional[str]]:
+    normalized_language = normalize_preferred_language(preferred_language)
+    normalized_country = normalize_country_code(country_code)
+
+    if preferred_language is not None and str(preferred_language).strip():
+        if normalized_language is None:
+            raise HTTPException(
+                status_code=400,
+                detail="지원하지 않는 preferred_language 입니다",
+            )
+
+    if country_code is not None and str(country_code).strip():
+        if normalized_country is None:
+            raise HTTPException(
+                status_code=400,
+                detail="country_code 는 2자리 ISO 국가 코드여야 합니다",
+            )
+
+    if require_both:
+        if normalized_language is None or normalized_country is None:
+            raise HTTPException(
+                status_code=400,
+                detail="preferred_language 와 country_code 는 필수입니다",
+            )
+
+    return normalized_language, normalized_country
+
+
+def _normalize_signup_phone(phone: Optional[str]) -> Optional[str]:
+    cleaned = str(phone or "").strip()
+    if not cleaned:
+        return None
+    if not cleaned.startswith("+"):
+        raise HTTPException(
+            status_code=400,
+            detail="전화번호는 +국가번호 형식(E.164)으로 입력하세요",
+        )
+    digits = re.sub(r"\D", "", cleaned)
+    if len(digits) < 10 or len(digits) > 15:
+        raise HTTPException(status_code=400, detail="유효하지 않은 전화번호입니다")
+    return cleaned
+
+
+def _create_user_from_signup_payload(payload: UserCreate, db: Session) -> User:
+    if len(payload.password or "") < 8:
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
+
     member_type = str(payload.member_type or "individual").strip().lower()
     if member_type not in {"individual", "sole_proprietor", "corporation"}:
         raise HTTPException(status_code=400, detail="가입 유형은 individual, sole_proprietor, corporation 중 하나여야 합니다")
@@ -277,6 +443,15 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 사용자명입니다")
 
+    normalized_phone = _normalize_signup_phone(payload.phone_number)
+    if normalized_phone and db.query(User).filter(User.phone_number == normalized_phone).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 전화번호입니다")
+
+    preferred_language, country_code = _validate_profile_fields(
+        payload.preferred_language,
+        payload.country_code,
+    )
+
     user = User(
         username=payload.username,
         email=payload.email,
@@ -288,6 +463,9 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
         native_language=(payload.native_language or "").strip() or None,
         country=(payload.country or "").strip() or None,
         hashed_password=get_password_hash(payload.password),
+        preferred_language=preferred_language,
+        country_code=country_code,
+        phone_number=normalized_phone,
     )
     db.add(user)
     db.commit()
@@ -295,10 +473,190 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
     return user
 
 
+# ---------- 엔드포인트 ----------
+@router.post("/signup/request-code", response_model=SignupRequestCodeResponse)
+def signup_request_verification_code(
+    payload: SignupRequestCode,
+    db: Session = Depends(get_db),
+    # [보안 보강] OTP 발송 폭탄(비용+스팸) 차단 — IP 단위 분당 발송 제한(기본 5/분).
+    _otp_quota: None = Depends(require_otp_send_quota),
+):
+    from backend.services.contact_verification import (
+        ResendCooldownError,
+        start_verification_session,
+    )
+
+    normalized_phone = _normalize_signup_phone(payload.phone_number)
+    verification_channel = str(payload.verificationChannel or "email").strip().lower()
+    if verification_channel not in {"email", "phone"}:
+        raise HTTPException(status_code=400, detail="verificationChannel 은 email 또는 phone 이어야 합니다")
+    if verification_channel == "phone" and not normalized_phone:
+        raise HTTPException(status_code=400, detail="전화 인증을 선택한 경우 연락처를 입력하세요")
+
+    signup_payload = UserCreate(
+        username=payload.username,
+        email=payload.email,
+        password=payload.password,
+        full_name=payload.full_name,
+        member_type=payload.member_type,
+        business_name=payload.business_name,
+        business_registration_number=payload.business_registration_number,
+        representative_name=payload.representative_name,
+        preferred_language=payload.preferred_language,
+        country_code=payload.country_code,
+        phone_number=normalized_phone,
+    )
+    if db.query(User).filter(User.email == signup_payload.email).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다")
+    if db.query(User).filter(User.username == signup_payload.username).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 사용자명입니다")
+    if len(signup_payload.password or "") < 8:
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
+    _validate_profile_fields(
+        signup_payload.preferred_language,
+        signup_payload.country_code,
+        require_both=True,
+    )
+
+    signup_session_payload = signup_payload.model_dump()
+    from backend.marketplace.worldlinco_referral import split_signup_attribution_codes
+
+    referral_code, sales_agent_code = split_signup_attribution_codes(
+        payload.referral_code,
+        payload.sales_agent_code,
+    )
+    if referral_code:
+        signup_session_payload["referral_code"] = referral_code
+    if sales_agent_code:
+        signup_session_payload["sales_agent_code"] = sales_agent_code
+
+    try:
+        session = start_verification_session(
+            purpose="signup",
+            channel=verification_channel,
+            target_email=str(signup_payload.email),
+            target_phone=normalized_phone if verification_channel == "phone" else None,
+            payload=signup_session_payload,
+        )
+    except ResendCooldownError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return SignupRequestCodeResponse(
+        signupSessionToken=session["sessionToken"],
+        verificationChannel=session["verificationChannel"],
+        maskedTarget=session["maskedTarget"],
+        expiresAt=session["expiresAt"],
+        devOtpHint=session.get("devOtpHint"),
+    )
+
+
+@router.post("/signup/confirm", response_model=UserResponse, status_code=201)
+def signup_confirm_verification(payload: SignupConfirmRequest, db: Session = Depends(get_db)):
+    from backend.services.contact_verification import verify_session_code
+
+    try:
+        verified_payload = verify_session_code(
+            payload.signupSessionToken,
+            payload.verificationCode,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=410, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    if payload.full_name is not None:
+        verified_payload["full_name"] = str(payload.full_name).strip() or None
+    profile_language = (
+        payload.preferred_language
+        if payload.preferred_language is not None
+        else verified_payload.get("preferred_language")
+    )
+    profile_country = (
+        payload.country_code
+        if payload.country_code is not None
+        else verified_payload.get("country_code")
+    )
+    normalized_language, normalized_country = _validate_profile_fields(
+        profile_language,
+        profile_country,
+        require_both=True,
+    )
+    verified_payload["preferred_language"] = normalized_language
+    verified_payload["country_code"] = normalized_country
+
+    verification_meta = verified_payload.pop("_verification", None)
+    if isinstance(verification_meta, dict):
+        if verification_meta.get("channel") == "phone" and verification_meta.get("phone"):
+            verified_payload["phone_number"] = verification_meta["phone"]
+
+    referral_code = (
+        str(verified_payload.pop("referral_code", "") or "").strip().upper()
+        or str(payload.referral_code or "").strip().upper()
+        or None
+    )
+    sales_agent_code = (
+        str(verified_payload.pop("sales_agent_code", "") or "").strip().upper()
+        or str(payload.sales_agent_code or "").strip().upper()
+        or None
+    )
+    from backend.marketplace.worldlinco_referral import split_signup_attribution_codes
+
+    referral_code, sales_agent_code = split_signup_attribution_codes(referral_code, sales_agent_code)
+
+    signup_payload = UserCreate(**verified_payload)
+    user = _create_user_from_signup_payload(signup_payload, db)
+    if referral_code:
+        from backend.marketplace.worldlinco_referral import record_referral_signup
+
+        record_referral_signup(
+            referral_code=referral_code,
+            referred_user_id=int(user.id),
+            referred_username=str(user.username or ""),
+            referred_email=str(user.email or ""),
+        )
+    if sales_agent_code:
+        from backend.marketplace.worldlinco_sales_commission import record_sales_agent_signup
+
+        record_sales_agent_signup(
+            sales_agent_code=sales_agent_code,
+            user_id=int(user.id),
+            username=str(user.username or ""),
+            email=str(user.email or ""),
+            user_country_code=str(user.country_code or "") or None,
+        )
+    return user
+
+
+@router.post("/signup", response_model=UserResponse, status_code=201)
+def signup(payload: UserCreate, db: Session = Depends(get_db)):
+    from backend.services.contact_verification import allow_unverified_signup
+
+    if not allow_unverified_signup():
+        raise HTTPException(
+            status_code=428,
+            detail="회원가입은 이메일 OTP 인증이 필요합니다. /api/auth/signup/request-code → /confirm 경로를 사용하세요.",
+        )
+    return _create_user_from_signup_payload(payload, db)
+
+
 @router.post("/login", response_model=Token)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
+    # [보안 보강] 크리덴셜 스터핑/브루트포스 차단 — IP 단위 분당 로그인 시도 제한(기본 10/분).
+    _login_quota: None = Depends(require_login_quota),
 ):
     """username 필드에 email 또는 username 모두 허용"""
     user = db.query(User).filter(
@@ -316,11 +674,15 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # 단일 세션 강제: 새 로그인마다 고유 sid 발급 후 활성 세션으로 기록.
+    # 이전 단말/웹의 토큰(다른 sid)은 다음 요청부터 401 → 자동 로그아웃된다.
+    session_id = token_urlsafe(24)
     token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "sid": session_id},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         no_expiry=_should_issue_non_expiring_admin_token(user),
     )
+    set_active_session(int(user.id), session_id)
     register_issued_token(token, str(user.email or user.username or ""))
     return {"access_token": token, "token_type": "bearer"}
 
@@ -334,8 +696,24 @@ def start_passkey_registration(
     user = db.query(User).filter(
         (User.email == payload.email) | (User.username == payload.email)
     ).first()
-    if not user or not (getattr(user, "is_admin", False) or getattr(user, "is_superuser", False)):
-        raise HTTPException(status_code=404, detail="패스키를 등록할 관리자 계정을 찾을 수 없습니다")
+    if not user or not _user_may_use_admin_portal(user):
+        raise HTTPException(status_code=404, detail="패스키를 등록할 관리자·지역관리자 계정을 찾을 수 없습니다")
+
+    recovery_session_token: str | None = None
+    if payload.recovery_reset_token:
+        recovery_session_token, _ = _assert_verified_recovery_reset_token(
+            payload.recovery_reset_token.strip(),
+            scope="admin",
+            user_id=int(user.id),
+        )
+    elif payload.password:
+        if not verify_password(payload.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다")
+    else:
+        raise HTTPException(
+            status_code=428,
+            detail="패스키 등록 전 이메일/문자 인증(복구) 또는 비밀번호 확인이 필요합니다",
+        )
 
     rp_id, expected_origin = _resolve_passkey_request_context(request)
     registration_token = f"pkreg_{token_urlsafe(24)}"
@@ -355,10 +733,11 @@ def start_passkey_registration(
         "user_id": int(user.id),
         "challenge": _to_base64url(options.challenge),
         "device_label": str(payload.device_label or "이 기기 패스키").strip() or "이 기기 패스키",
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
         "user_handle": user_handle,
         "rp_id": rp_id,
         "expected_origin": expected_origin,
+        "recovery_session_token": recovery_session_token,
     }
     return {
         "registration_token": registration_token,
@@ -378,7 +757,7 @@ def finish_passkey_registration(
         raise HTTPException(status_code=404, detail="패스키 등록 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
         _passkey_registration_store.pop(payload.registration_token, None)
         raise HTTPException(status_code=410, detail="패스키 등록 세션이 만료되었습니다")
 
@@ -398,16 +777,20 @@ def finish_passkey_registration(
             require_user_verification=False,
         )
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=f"패스키 등록 검증에 실패했습니다: {exc}")
+        logger.warning("패스키 등록 검증 실패: %s", exc)
+        raise HTTPException(status_code=401, detail="패스키 등록 검증에 실패했습니다")
 
     user.passkey_enabled = True
     user.passkey_credential_id = _to_base64url(verification.credential_id)
     user.passkey_public_key = _to_base64url(verification.credential_public_key)
     user.passkey_device_label = str(state.get("device_label") or "이 기기 패스키")
     user.passkey_sign_count = int(verification.sign_count)
-    user.passkey_registered_at = datetime.utcnow()
+    user.passkey_registered_at = datetime.now(timezone.utc)
     db.add(user)
     db.commit()
+    recovery_session_token = state.get("recovery_session_token")
+    if isinstance(recovery_session_token, str) and recovery_session_token:
+        _password_recovery_store.pop(recovery_session_token, None)
     _passkey_registration_store.pop(payload.registration_token, None)
     return {
         "registered": True,
@@ -426,6 +809,8 @@ def start_passkey_login(
     ).first()
     if user is None or not getattr(user, "passkey_enabled", False) or not getattr(user, "passkey_credential_id", None):
         raise HTTPException(status_code=404, detail="등록된 패스키가 없습니다")
+    if not _user_may_use_admin_portal(user):
+        raise HTTPException(status_code=403, detail="관리자·지역관리자 계정만 패스키 로그인할 수 있습니다")
 
     rp_id, expected_origin = _resolve_passkey_request_context(request)
     options = generate_authentication_options(
@@ -440,7 +825,7 @@ def start_passkey_login(
     )
     _passkey_login_store[str(user.email)] = {
         "challenge": _to_base64url(options.challenge),
-        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
         "credential_id": str(user.passkey_credential_id),
         "rp_id": rp_id,
         "expected_origin": expected_origin,
@@ -461,13 +846,15 @@ def finish_passkey_login(
     ).first()
     if user is None or not getattr(user, "passkey_enabled", False):
         raise HTTPException(status_code=404, detail="패스키 로그인 대상 계정을 찾을 수 없습니다")
+    if not _user_may_use_admin_portal(user):
+        raise HTTPException(status_code=403, detail="관리자·지역관리자 계정만 패스키 로그인할 수 있습니다")
 
     state = _passkey_login_store.get(str(user.email))
     if not state:
         raise HTTPException(status_code=404, detail="패스키 로그인 세션을 찾을 수 없습니다")
 
     expires_at = state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= datetime.now(timezone.utc):
         _passkey_login_store.pop(str(user.email), None)
         raise HTTPException(status_code=410, detail="패스키 로그인 세션이 만료되었습니다")
 
@@ -484,13 +871,16 @@ def finish_passkey_login(
             require_user_verification=False,
         )
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=f"패스키 로그인 검증에 실패했습니다: {exc}")
+        logger.warning("패스키 로그인 검증 실패: %s", exc)
+        raise HTTPException(status_code=401, detail="패스키 로그인 검증에 실패했습니다")
 
+    session_id = token_urlsafe(24)
     token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "sid": session_id},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         no_expiry=_should_issue_non_expiring_admin_token(user),
     )
+    set_active_session(int(user.id), session_id)
     register_issued_token(token, str(user.email or user.username or ""))
     user.passkey_sign_count = int(verification.new_sign_count)
     db.add(user)
@@ -502,11 +892,15 @@ def finish_passkey_login(
 @router.put("/extend", response_model=Token)
 def extend_access_token(current_user: User = Depends(get_current_user)):
     subject = current_user.email or current_user.username
+    # 세션 연장: 동일 단말이 토큰만 갱신. sid 를 회전하고 활성 세션으로 재기록해
+    # 단일 세션을 유지(이 단말이 계속 유일한 활성 세션).
+    session_id = token_urlsafe(24)
     token = create_access_token(
-        data={"sub": subject},
+        data={"sub": subject, "sid": session_id},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         no_expiry=_should_issue_non_expiring_admin_token(current_user),
     )
+    set_active_session(int(current_user.id), session_id)
     register_issued_token(token, str(subject or ""))
     return {"access_token": token, "token_type": "bearer"}
 
@@ -516,11 +910,46 @@ def me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    payload: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.preferred_language is None and payload.country_code is None:
+        raise HTTPException(
+            status_code=400,
+            detail="수정할 preferred_language 또는 country_code 가 필요합니다",
+        )
+
+    preferred_language, country_code = _validate_profile_fields(
+        payload.preferred_language,
+        payload.country_code,
+    )
+
+    if payload.preferred_language is not None:
+        current_user.preferred_language = preferred_language
+    if payload.country_code is not None:
+        current_user.country_code = country_code
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @router.post("/recovery/start", response_model=PasswordRecoveryStartResponse)
 def start_password_recovery(
     payload: PasswordRecoveryStartRequest,
     db: Session = Depends(get_db),
+    # [보안 보강] 복구 코드 발송 폭탄(비용+스팸) 차단 — IP 단위 분당 발송 제한(기본 5/분).
+    _otp_quota: None = Depends(require_otp_send_quota),
 ):
+    from backend.services.contact_verification import (
+        ResendCooldownError,
+        start_verification_session,
+    )
+
     user = db.query(User).filter(
         (User.email == payload.user_hint)
         | (User.username == payload.user_hint)
@@ -532,45 +961,76 @@ def start_password_recovery(
     if payload.scope == "admin" and not (getattr(user, "is_admin", False) or getattr(user, "is_superuser", False)):
         raise HTTPException(status_code=403, detail="관리자 계정만 이 복구 경로를 사용할 수 있습니다")
 
-    recovery_session_token, expires_at = _issue_recovery_token("recovery")
-    _password_recovery_store[recovery_session_token] = {
-        "user_id": int(user.id),
-        "scope": payload.scope,
-        "verified": False,
-        "verification_code": "000000",
-        "expires_at": expires_at,
-    }
+    verification_channel = str(payload.verification_channel or "email").strip().lower()
+    phone_number = str(payload.phone_number or getattr(user, "phone_number", None) or "").strip() or None
+    if verification_channel == "phone" and not phone_number:
+        raise HTTPException(
+            status_code=400,
+            detail="전화 인증을 위해 phone_number가 필요합니다. 계정에 등록된 번호가 없으면 번호를 입력해주세요.",
+        )
+
+    try:
+        recovery_purpose = "admin_recovery" if payload.scope == "admin" else "user_recovery"
+        otp_session = start_verification_session(
+            purpose=recovery_purpose,
+            channel=verification_channel,
+            target_email=str(user.email),
+            target_phone=phone_number if verification_channel == "phone" else None,
+            payload={"user_id": int(user.id), "scope": payload.scope},
+        )
+    except ResendCooldownError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    expires_at = datetime.fromisoformat(str(otp_session["expiresAt"]))
     return {
-        "recovery_session_token": recovery_session_token,
-        "next_action": "identity_verification_required",
+        "recovery_session_token": str(otp_session["sessionToken"]),
+        "next_action": "verification_code_required",
         "expires_at": expires_at,
+        "masked_target": str(otp_session["maskedTarget"]),
+        "verification_channel": str(otp_session["verificationChannel"]),
+        "dev_otp_hint": otp_session.get("devOtpHint"),
     }
 
 
 @router.post("/recovery/verify-identity", response_model=PasswordRecoveryVerifyIdentityResponse)
 def verify_password_recovery_identity(payload: PasswordRecoveryVerifyIdentityRequest):
-    session_state = _password_recovery_store.get(payload.recovery_session_token)
-    if not session_state:
-        raise HTTPException(status_code=404, detail="복구 세션을 찾을 수 없습니다")
+    from backend.services.contact_verification import verify_session_code
 
-    expires_at = session_state.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= datetime.utcnow():
-        _password_recovery_store.pop(payload.recovery_session_token, None)
-        raise HTTPException(status_code=410, detail="복구 세션이 만료되었습니다")
+    try:
+        verified_payload = verify_session_code(
+            payload.recovery_session_token,
+            payload.verification_code,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="인증 세션을 찾을 수 없습니다") from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=410, detail="인증 세션이 만료되었습니다") from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
-    expected_code = str(session_state.get("verification_code") or "")
-    if payload.verification_code.strip() != expected_code:
-        raise HTTPException(status_code=401, detail="본인확인 코드가 올바르지 않습니다")
-
-    identity_session_token = payload.identity_session_token.strip()
-    if not identity_session_token:
-        raise HTTPException(status_code=400, detail="identity_session_token이 필요합니다")
+    user_id = int(verified_payload.get("user_id") or 0)
+    scope = str(verified_payload.get("scope") or "admin")
+    if user_id <= 0:
+        raise HTTPException(status_code=400, detail="복구 세션 정보가 올바르지 않습니다")
 
     reset_token, reset_expires_at = _issue_recovery_token("reset")
-    session_state["verified"] = True
-    session_state["identity_session_token"] = identity_session_token
-    session_state["reset_token"] = reset_token
-    session_state["reset_expires_at"] = reset_expires_at
+    _password_recovery_store[payload.recovery_session_token] = {
+        "user_id": user_id,
+        "scope": scope,
+        "verified": True,
+        "reset_token": reset_token,
+        "reset_expires_at": reset_expires_at,
+    }
     return {
         "verified": True,
         "reset_token": reset_token,
@@ -586,20 +1046,10 @@ def reset_password_via_recovery(
     if len(payload.new_password or "") < 8:
         raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
 
-    matched_session = None
-    for session_token, session_state in _password_recovery_store.items():
-        if session_state.get("reset_token") == payload.reset_token and session_state.get("scope") == payload.scope:
-            matched_session = (session_token, session_state)
-            break
-
-    if not matched_session:
-        raise HTTPException(status_code=404, detail="재설정 토큰을 찾을 수 없습니다")
-
-    session_token, session_state = matched_session
-    reset_expires_at = session_state.get("reset_expires_at")
-    if not isinstance(reset_expires_at, datetime) or reset_expires_at <= datetime.utcnow():
-        _password_recovery_store.pop(session_token, None)
-        raise HTTPException(status_code=410, detail="재설정 토큰이 만료되었습니다")
+    session_token, session_state = _assert_verified_recovery_reset_token(
+        payload.reset_token,
+        scope=payload.scope,
+    )
 
     user_id = session_state.get("user_id")
     user = db.query(User).filter(User.id == user_id).first()
@@ -610,8 +1060,38 @@ def reset_password_via_recovery(
     user.hashed_password = get_password_hash(payload.new_password)
     db.add(user)
     db.commit()
+    # [보안 보강] 비밀번호 재설정 시 기존 모든 세션 무효화 — 활성 sid 를 새 값으로 회전하면
+    # 이전에 발급된 모든 토큰(다른 sid)은 다음 요청부터 401 처리된다(계정탈취 복구의 핵심).
+    set_active_session(int(user.id), token_urlsafe(24))
     _password_recovery_store.pop(session_token, None)
     return {
         "reset": True,
+        "must_relogin": True,
+    }
+
+
+@router.post("/password/change", response_model=UserPasswordChangeResponse)
+def change_user_password(
+    payload: UserPasswordChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if len(payload.new_password or "") < 8:
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
+    if payload.current_password == payload.new_password:
+        raise HTTPException(status_code=400, detail="새 비밀번호는 현재 비밀번호와 달라야 합니다")
+
+    stored_hash = str(getattr(current_user, "hashed_password", "") or "")
+    if not stored_hash or not verify_password(payload.current_password, stored_hash):
+        raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다")
+
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    db.add(current_user)
+    db.commit()
+    # [보안 보강] 비밀번호 변경 시 기존 모든 세션 무효화(현재 세션 포함) — 활성 sid 회전.
+    # 응답이 must_relogin=True 이므로 클라는 재로그인한다(유출 비밀번호 기반 토큰 무력화).
+    set_active_session(int(current_user.id), token_urlsafe(24))
+    return {
+        "changed": True,
         "must_relogin": True,
     }

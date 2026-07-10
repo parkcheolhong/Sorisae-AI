@@ -91,20 +91,25 @@ async function callInitiatePaymentApi(apiBase: string, purchaseId: number): Prom
     return result;
 }
 
+async function callConfirmPaymentApi(apiBase: string, purchaseId: number, transactionId: string): Promise<void> {
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '') : '';
+    if (!token) throw new Error('결제는 로그인 후 사용할 수 있습니다.');
+    const res = await fetch(`${apiBase}/api/marketplace/purchase/${purchaseId}/confirm`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transaction_id: transactionId, status: 'completed' }),
+        signal: AbortSignal.timeout(10_000),
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(result.detail || result.payment_message || `결제 확정 실패 HTTP ${res.status}`);
+}
+
 function osmEmbedUrl(lat: number, lon: number): string {
     const d = 0.015;
     return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d},${lat - d},${lon + d},${lat + d}&layer=mapnik&marker=${lat},${lon}`;
-}
-
-function sanitizeCoordinate(value: unknown, fallback: number): number {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function buildOpenStreetMapLink(latValue: unknown, lonValue: unknown, fallbackLat: number, fallbackLon: number): string {
-    const lat = sanitizeCoordinate(latValue, fallbackLat);
-    const lon = sanitizeCoordinate(lonValue, fallbackLon);
-    return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lon))}#map=15/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lon))}`;
 }
 
 const LANGS = [
@@ -187,6 +192,8 @@ const UI_LANGS = [
     { label: 'Hrvatski', code: 'hr' },
 ] as const;
 
+type UiLangCode = (typeof UI_LANGS)[number]['code'];
+
 const CATEGORY_OPTIONS = [
     { label: '전체', value: 'all' },
     { label: '호텔', value: 'hotel' },
@@ -204,7 +211,6 @@ const RADIUS_OPTIONS = [
 ] as const;
 
 type LangCode = (typeof LANGS)[number]['code'];
-type UiLangCode = (typeof UI_LANGS)[number]['code'];
 type SearchCategory = (typeof CATEGORY_OPTIONS)[number]['value'];
 
 /** ISO 3166-1 alpha-2 국가코드 → 대상 언어 자동 매핑 (GPS 기반) */
@@ -273,9 +279,16 @@ type BookingResponse = {
 };
 
 const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
-const NADO_PROJECT_SEARCH = '나도통역사';
 const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk';
-let cachedNadoProjectId: number | null = null;
+
+type WorldLincoApkManifest = {
+    versionName?: string | null;
+    versionCode?: number | null;
+    publishedAt?: string | null;
+    apkFilename?: string;
+    sizeBytes?: number;
+};
+let cachedWorldLincoProjectId: number | null = null;
 
 const UI_KO_TEXT = {
     uiLanguage: 'UI 언어',
@@ -377,8 +390,27 @@ const UI_KO_TEXT = {
     apkGuideLine2: 'EAS CLI로 클라우드 빌드하면 실제 설치 가능한 APK가 생성됩니다.',
     footerEngine: 'WorldLinco v3.0 · WorldLinco AI Engine',
     footerLanguages: 'UI 50개국어 지원',
+    helpBtn: '사용법',
+    helpTitle: '📖 WorldLinco 사용 가이드',
+    helpClose: '닫기',
+    helpLangNote: '이 안내는 우측 상단의 UI 언어 설정에 따라 자동으로 번역됩니다.',
+    helpStep1Title: '1️⃣ 언어 선택',
+    helpStep1Desc: '화면 우측 상단의 "UI 언어" 드롭다운에서 자국어를 선택하면 모든 안내 텍스트가 해당 언어로 자동 표시됩니다. 50개 언어를 지원합니다.',
+    helpStep2Title: '2️⃣ 텍스트 번역',
+    helpStep2Desc: '원본 언어 드롭다운으로 입력 언어를 고른 뒤 텍스트를 입력하고 "번역" 버튼을 누르거나 Ctrl+Enter를 사용하세요. 번역 결과는 하단에 표시됩니다.',
+    helpStep3Title: '3️⃣ 음성 입력 · 읽기',
+    helpStep3Desc: '입력창의 마이크(🎤) 버튼으로 음성을 텍스트로 변환하여 입력할 수 있습니다. 스피커(🔊) 버튼을 누르면 입력 또는 번역 결과를 음성으로 읽어줍니다.',
+    helpStep4Title: '4️⃣ GPS 언어 자동 감지',
+    helpStep4Desc: '"🌐 GPS 언어 감지" 버튼을 누르면 현재 위치를 기반으로 해당 국가의 언어가 번역 대상 언어로 자동 설정됩니다.',
+    helpStep5Title: '5️⃣ 실시간 통역 통화 모드',
+    helpStep5Desc: '"📞 통역 통화 시작" 버튼을 누르면 두 언어 간 실시간 음성 통역이 시작됩니다. A 측이 말하면 자동으로 번역 후 B 측 언어로 읽어주고, 이후 B 측 음성을 다시 받아 통역합니다.',
+    helpStep6Title: '6️⃣ 주변 장소 검색',
+    helpStep6Desc: '"현재 위치" 버튼으로 좌표를 가져온 뒤, 카테고리(호텔/공항/식당/관광명소)와 반경을 선택하고 "주변 장소 찾기" 버튼을 누르세요. 결과는 번역 대상 언어로 표시됩니다.',
+    helpStep7Title: '7️⃣ 호텔 예약',
+    helpStep7Desc: '주변 검색 결과에서 예약 가능 호텔을 선택하면 하단에 예약 패널이 나타납니다. 예약자명, 체크인/체크아웃 날짜, 인원, 객실 수를 입력하고 "예약 요청 보내기"를 누르세요.',
+    helpStep8Title: '8️⃣ 결제',
+    helpStep8Desc: '예약 완료 후 나타나는 결제 패널에서 "💳 결제 진행하기"를 누르면 결제 페이지로 이동합니다. 결제는 로그인 후 이용할 수 있습니다.',
 } as const;
-
 const OFFLINE_DICT: Record<string, string> = {
     '안녕하세요': 'Hello',
     '감사합니다': 'Thank you',
@@ -395,13 +427,12 @@ function getStoredToken(): string {
     return localStorage.getItem('customer_token') || localStorage.getItem('admin_token') || '';
 }
 
-async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> {
-    if (cachedNadoProjectId !== null) {
-        return cachedNadoProjectId;
+async function resolveWorldLincoProjectId(apiBase: string): Promise<number> {
+    if (cachedWorldLincoProjectId !== null) {
+        return cachedWorldLincoProjectId;
     }
 
-    const query = new URLSearchParams({ search: NADO_PROJECT_SEARCH, limit: '12' });
-    const response = await fetch(`${apiBase}/api/marketplace/projects?${query.toString()}`, {
+    const response = await fetch(`${apiBase}/api/marketplace/projects?skip=0&limit=50`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(8_000),
     });
@@ -411,23 +442,24 @@ async function resolveNadotongryoksaProjectId(apiBase: string): Promise<number> 
     }
 
     const projects: ProjectSummary[] = Array.isArray(payload.projects) ? payload.projects : [];
-    const project = projects.find((item) => String(item.demo_url ?? '').includes(NADO_APK_FILENAME))
-        ?? projects.find((item) => String(item.title ?? '').includes(NADO_PROJECT_SEARCH))
+    const project = projects.find((item) => matchesWorldLincoApkFilename(item.demo_url))
+        ?? projects.find((item) => matchesWorldLincoProjectTitle(item.title))
+        ?? projects.find((item) => matchesWorldLincoProjectTitle(item.demo_url))
         ?? projects[0];
     if (!project?.id) {
-        throw new Error('나도통역사 상품을 찾을 수 없습니다.');
+        throw new Error(`${WORLDLINGO_BRAND_NAME}(${WORLDLINGO_BRAND_NAME_KO}) 상품을 찾을 수 없습니다.`);
     }
 
-    cachedNadoProjectId = Number(project.id);
-    return cachedNadoProjectId;
+    cachedWorldLincoProjectId = Number(project.id);
+    return cachedWorldLincoProjectId;
 }
 
-function resolveUiLangForTranslation(lang: UiLangCode): string {
+function resolveUiLangForTranslation(lang: LangCode): string {
     if (lang === 'zh-tw') return 'zh';
     return String(lang).split('-')[0] || 'en';
 }
 
-async function callUiTranslateApi(text: string, uiLang: UiLangCode): Promise<string> {
+async function callUiTranslateApi(text: string, uiLang: LangCode): Promise<string> {
     if (!text.trim() || uiLang === 'ko') return text;
     const toLang = resolveUiLangForTranslation(uiLang);
     const response = await fetch(`${API_BASE}/api/llm/translate`, {
@@ -442,7 +474,6 @@ async function callUiTranslateApi(text: string, uiLang: UiLangCode): Promise<str
     const payload = await response.json().catch(() => ({}));
     return String(payload.translated ?? payload.result ?? text);
 }
-
 async function callTranslateApi(
     text: string,
     from: LangCode,
@@ -489,7 +520,7 @@ async function callNearbyPlacesApi(params: {
         target_lang: params.targetLang,
         limit: '8',
     });
-    const response = await fetch(`${API_BASE}/api/marketplace/nadotongryoksa/lbs/nearby?${query.toString()}`, {
+    const response = await fetch(`${API_BASE}${WORLDLINGO_MARKETPLACE_API_PREFIX}/lbs/nearby?${query.toString()}`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(10_000),
     });
@@ -531,7 +562,7 @@ async function callBookingApi(payload: {
     if (!token) {
         throw new Error('예약은 로그인 후 사용할 수 있습니다.');
     }
-    const response = await fetch(`${API_BASE}/api/marketplace/nadotongryoksa/lbs/bookings`, {
+    const response = await fetch(`${API_BASE}${WORLDLINGO_MARKETPLACE_API_PREFIX}/lbs/bookings`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -567,13 +598,13 @@ function todayPlus(days: number): string {
 }
 
 export default function WorldLincoPage() {
-    const [uiLang, setUiLang] = useState<UiLangCode>('ko');
-    const [uiText, setUiText] = useState<Record<keyof typeof UI_KO_TEXT, string>>({ ...UI_KO_TEXT });
-    const uiTextCacheRef = useRef<Record<UiLangCode, Record<keyof typeof UI_KO_TEXT, string>>>({
-        ko: { ...UI_KO_TEXT },
-    } as Record<UiLangCode, Record<keyof typeof UI_KO_TEXT, string>>);
-    const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEXT[key], [uiText]);
-
+const [uiLang, setUiLang] = useState<UiLangCode>('ko');
+const [uiText, setUiText] = useState<Record<keyof typeof UI_KO_TEXT, string>>({ ...UI_KO_TEXT });
+const [showHelp, setShowHelp] = useState(false);
+const uiTextCacheRef = useRef<Record<UiLangCode, Record<keyof typeof UI_KO_TEXT, string>>>({
+    ko: { ...UI_KO_TEXT },
+} as Record<UiLangCode, Record<keyof typeof UI_KO_TEXT, string>>);
+const t = useCallback((key: keyof typeof UI_KO_TEXT) => uiText[key] || UI_KO_TEXT[key], [uiText]);
     // ── 로그인/내정보 ─────────────────────────────────────
     const [token, setToken] = useState('');
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -638,43 +669,15 @@ export default function WorldLincoPage() {
     const [payError, setPayError] = useState('');
     const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
     const [payUrl, setPayUrl] = useState('');
+    const [apkManifest, setApkManifest] = useState<WorldLincoApkManifest | null>(null);
 
     const selectedHotel = nearbyPlaces.find((item) => item.id === selectedHotelId) ?? null;
-
-    useEffect(() => {
-        let cancelled = false;
-        const syncUiText = async () => {
-            if (uiLang === 'ko') {
-                setUiText({ ...UI_KO_TEXT });
-                return;
-            }
-            const cached = uiTextCacheRef.current[uiLang];
-            if (cached) {
-                setUiText(cached);
-                return;
-            }
-            const translatedEntries = await Promise.all(
-                (Object.entries(UI_KO_TEXT) as [keyof typeof UI_KO_TEXT, string][])
-                    .map(async ([key, value]) => {
-                        try {
-                            const translated = await callUiTranslateApi(value, uiLang);
-                            return [key, translated] as const;
-                        } catch {
-                            return [key, value] as const;
-                        }
-                    }),
-            );
-            const translatedDict = Object.fromEntries(translatedEntries) as Record<keyof typeof UI_KO_TEXT, string>;
-            uiTextCacheRef.current[uiLang] = translatedDict;
-            if (!cancelled) {
-                setUiText(translatedDict);
-            }
-        };
-        void syncUiText();
-        return () => {
-            cancelled = true;
-        };
-    }, [uiLang]);
+    const apkVersionLabel = apkManifest?.versionName && apkManifest?.versionCode != null
+        ? `v${apkManifest.versionName} · build ${apkManifest.versionCode}`
+        : 'v1.0.67 · build 97';
+    const apkPublishedLabel = apkManifest?.publishedAt
+        ? new Date(apkManifest.publishedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+        : null;
 
     // ── 토큰 복원 ─────────────────────────────────────────
     useEffect(() => {
@@ -684,16 +687,30 @@ export default function WorldLincoPage() {
         callMeApi(API_BASE, stored).then(setUserInfo).catch(() => { clearStoredToken(); setToken(''); });
     }, []);
 
+    useEffect(() => {
+        if (!API_BASE) return;
+        let active = true;
+        fetch(`${API_BASE}/api/marketplace/apk/worldlinco/manifest`, { cache: 'no-store' })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data: WorldLincoApkManifest | null) => {
+                if (active && data?.versionName && data?.versionCode != null) {
+                    setApkManifest(data);
+                }
+            })
+            .catch(() => {});
+        return () => { active = false; };
+    }, []);
+
     // ── 로그인 ────────────────────────────────────────────
     const handleLogin = async () => {
-        if (!loginEmail.trim() || !loginPw.trim()) { setLoginError(`${t('loginEmail')}, ${t('loginPassword')}`); return; }
+        if (!loginEmail.trim() || !loginPw.trim()) { setLoginError('이메일과 비밀번호를 입력하세요.'); return; }
         setLoginLoading(true); setLoginError('');
         try {
             const tk = await callLoginApi(loginEmail.trim(), loginPw);
             setStoredToken(tk); setToken(tk);
             const me = await callMeApi(API_BASE, tk);
             setUserInfo(me); setShowLoginModal(false); setLoginEmail(''); setLoginPw('');
-        } catch (e: any) { setLoginError(e?.message || t('login')); }
+        } catch (e: any) { setLoginError(e?.message || '로그인 실패'); }
         finally { setLoginLoading(false); }
     };
     const handleLogout = () => { clearStoredToken(); setToken(''); setUserInfo(null); setShowMyInfo(false); setMyPurchases(null); };
@@ -717,18 +734,21 @@ export default function WorldLincoPage() {
 
     // ── 결제 ──────────────────────────────────────────────
     const handlePayment = useCallback(async () => {
-        if (!bookingResult || !selectedHotel) { setPayError(t('sendBookingRequest')); return; }
-        if (!token) { setShowLoginModal(true); setPayError(t('loginForPayment')); return; }
+        if (!bookingResult || !selectedHotel) { setPayError('예약을 먼저 완료해 주세요.'); return; }
+        if (!token) { setShowLoginModal(true); setPayError('결제는 로그인 후 사용할 수 있습니다.'); return; }
         setPayLoading(true); setPayError('');
         try {
             const nights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000));
             const amount = nights * roomCount * 80000;
-            const projectId = await resolveNadotongryoksaProjectId(API_BASE);
+            const projectId = await resolveWorldLincoProjectId(API_BASE);
             const purchase = await callCreatePurchaseApi(API_BASE, projectId, amount);
             setPurchaseResult(purchase);
             const payData = await callInitiatePaymentApi(API_BASE, purchase.id);
             setPayUrl(payData.payment_url);
-        } catch (e: any) { setPayError(e?.message || t('loadingPaymentUrl')); }
+            if (payData.transaction_id) {
+                await callConfirmPaymentApi(API_BASE, purchase.id, payData.transaction_id);
+            }
+        } catch (e: any) { setPayError(e?.message || '결제 초기화에 실패했습니다.'); }
         finally { setPayLoading(false); }
     }, [bookingResult, selectedHotel, token, checkinDate, checkoutDate, roomCount]);
 
@@ -771,7 +791,7 @@ export default function WorldLincoPage() {
         const translateTo = turn === 'from' ? toRef.current : fromRef.current;
         const listenLabel = LANGS.find((l) => l.code === listenLang)?.label ?? listenLang;
         setInterCallTurn(turn);
-        setInterCallStatus(`🎤 ${listenLabel}...`);
+        setInterCallStatus(`🎤 ${listenLabel} 로 말하세요...`);
 
         const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognitionCtor) return;
@@ -783,7 +803,7 @@ export default function WorldLincoPage() {
         recognizer.onresult = async (event: any) => {
             const spokenText: string = event.results[0][0].transcript;
             if (!interCallActiveRef.current) return;
-            setInterCallStatus(t('translating'));
+            setInterCallStatus('🔄 번역 중...');
             try {
                 const res = await fetch(`${API_BASE}/api/llm/translate`, {
                     method: 'POST',
@@ -795,7 +815,7 @@ export default function WorldLincoPage() {
                 setInterCallLog((prev) => [...prev.slice(-19), { turn, text: spokenText, translated: translatedText }]);
                 if (!interCallActiveRef.current) return;
                 const toLabel = LANGS.find((l) => l.code === translateTo)?.label ?? translateTo;
-                setInterCallStatus(`🔊 ${toLabel}...`);
+                setInterCallStatus(`🔊 ${toLabel} 로 읽는 중...`);
                 const utter = new SpeechSynthesisUtterance(translatedText);
                 utter.lang = LANG_BCP47[translateTo];
                 utter.rate = 0.9;
@@ -825,7 +845,7 @@ export default function WorldLincoPage() {
         } else {
             const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             if (!SpeechRecognitionCtor) {
-                alert(t('startCall'));
+                alert('통역 통화는 Chrome 브라우저(데스크톱/Android)에서 지원됩니다.');
                 return;
             }
             setInterCallLog([]);
@@ -838,7 +858,7 @@ export default function WorldLincoPage() {
     /** GPS 위치 → 국가 → 번역 대상 언어 자동 설정 */
     const handleDetectLangByGPS = useCallback(async () => {
         if (typeof window === 'undefined' || !navigator.geolocation) {
-            alert(t('currentLocation'));
+            alert('이 브라우저에서는 위치 정보를 사용할 수 없습니다.');
             return;
         }
         setGpsLangLoading(true);
@@ -866,7 +886,7 @@ export default function WorldLincoPage() {
                 setTo(detectedLang);
             }
         } catch {
-            alert(t('gpsDetect'));
+            alert('위치 기반 언어 감지에 실패했습니다. 직접 선택해 주세요.');
         } finally {
             setGpsLangLoading(false);
         }
@@ -889,7 +909,7 @@ export default function WorldLincoPage() {
         }
         const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognitionCtor) {
-            alert(t('voiceInput'));
+            alert('이 브라우저는 음성 인식을 지원하지 않습니다.\nChrome을 사용하세요.');
             return;
         }
         const recognizer = new SpeechRecognitionCtor();
@@ -904,7 +924,7 @@ export default function WorldLincoPage() {
 
     const handleUseCurrentLocation = () => {
         if (typeof window === 'undefined' || !navigator.geolocation) {
-            alert(t('currentLocation'));
+            alert('이 브라우저에서는 위치 정보를 사용할 수 없습니다.');
             return;
         }
         navigator.geolocation.getCurrentPosition(
@@ -913,7 +933,7 @@ export default function WorldLincoPage() {
                 setLon(position.coords.longitude.toFixed(6));
             },
             () => {
-                alert(t('currentLocation'));
+                alert('현재 위치를 불러오지 못했습니다. 좌표를 직접 입력하세요.');
             },
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
         );
@@ -921,7 +941,7 @@ export default function WorldLincoPage() {
 
     const handleSearchNearby = useCallback(async () => {
         if (!lat.trim() || !lon.trim()) {
-            setNearbyError(`${t('latitude')} / ${t('longitude')}`);
+            setNearbyError('위도와 경도를 입력해 주세요.');
             return;
         }
         setNearbyLoading(true);
@@ -932,11 +952,11 @@ export default function WorldLincoPage() {
             const places = await callNearbyPlacesApi({ lat, lon, category: nearbyCategory, radiusM, targetLang: to });
             setNearbyPlaces(places);
             if (!places.length) {
-                setNearbyError(t('findNearby'));
+                setNearbyError('현재 반경에서 찾은 장소가 없습니다. 반경을 넓혀 보세요.');
             }
         } catch (error: any) {
             setNearbyPlaces([]);
-            setNearbyError(error?.message || t('searchingNearby'));
+            setNearbyError(error?.message || '주변검색 중 오류가 발생했습니다.');
         } finally {
             setNearbyLoading(false);
         }
@@ -949,7 +969,7 @@ export default function WorldLincoPage() {
             const reviews = await callMapsReviewsApi(place.review_query);
             setReviewsByPlace((prev) => ({ ...prev, [place.id]: reviews }));
         } catch (error: any) {
-            setReviewError(error?.message || t('googleReviews'));
+            setReviewError(error?.message || '리뷰를 불러오지 못했습니다.');
         } finally {
             setReviewLoadingId('');
         }
@@ -957,11 +977,11 @@ export default function WorldLincoPage() {
 
     const handleReserveHotel = useCallback(async () => {
         if (!selectedHotel) {
-            setBookingError(t('selectBookableHotel'));
+            setBookingError('예약할 호텔을 먼저 선택하세요.');
             return;
         }
         if (!bookingName.trim() || !checkinDate || !checkoutDate) {
-            setBookingError(`${t('bookingName')}, ${t('checkin')}/${t('checkout')}`);
+            setBookingError('예약자명과 체크인/체크아웃 날짜를 입력하세요.');
             return;
         }
         setBookingLoading(true);
@@ -980,7 +1000,7 @@ export default function WorldLincoPage() {
             });
             setBookingResult(payload);
         } catch (error: any) {
-            setBookingError(error?.message || t('sendBookingRequest'));
+            setBookingError(error?.message || '예약 요청에 실패했습니다.');
         } finally {
             setBookingLoading(false);
         }
@@ -989,7 +1009,7 @@ export default function WorldLincoPage() {
     const handleApkDownload = async () => {
         const token = getStoredToken();
         if (!token) {
-            alert(t('apkDownload'));
+            alert('로그인 후 다운로드할 수 있습니다.\n마켓플레이스 상단의 로그인 버튼을 이용하세요.');
             return;
         }
         try {
@@ -999,13 +1019,13 @@ export default function WorldLincoPage() {
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ detail: 'unknown' }));
-                alert(`${t('apkDownload')}: ${err.detail ?? res.status}`);
+                alert(`다운로드 링크 발급 실패: ${err.detail ?? res.status}`);
                 return;
             }
             const { download_url } = await res.json();
             window.location.href = download_url;
         } catch {
-            alert(t('loadingPaymentUrl'));
+            alert('네트워크 오류로 다운로드 링크를 가져올 수 없습니다.');
         }
     };
 
@@ -1024,12 +1044,12 @@ export default function WorldLincoPage() {
                 <div style={{ position: 'fixed', inset: 0, background: '#000c', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     onClick={(e) => { if (e.target === e.currentTarget) setShowLoginModal(false); }}>
                     <div style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 16, padding: 24, width: 360, maxWidth: '92vw' }}>
-                        <h2 style={{ margin: '0 0 16px', fontSize: 18, color: '#58c9ff' }}>🔐 {t('loginTitle')}</h2>
-                        <input type="email" placeholder={t('loginEmail')} value={loginEmail}
+                        <h2 style={{ margin: '0 0 16px', fontSize: 18, color: '#58c9ff' }}>🔐 로그인</h2>
+                        <input type="email" placeholder="이메일" value={loginEmail}
                             onChange={(e) => setLoginEmail(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                             style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px', width: '100%', boxSizing: 'border-box', marginBottom: 10 }} />
-                        <input type="password" placeholder={t('loginPassword')} value={loginPw}
+                        <input type="password" placeholder="비밀번호" value={loginPw}
                             onChange={(e) => setLoginPw(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                             style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px', width: '100%', boxSizing: 'border-box', marginBottom: 14 }} />
@@ -1037,14 +1057,85 @@ export default function WorldLincoPage() {
                         <div style={{ display: 'flex', gap: 10 }}>
                             <button onClick={handleLogin} disabled={loginLoading}
                                 style={{ flex: 2, background: '#2a7cff', border: 'none', color: '#fff', borderRadius: 10, padding: '11px 0', fontWeight: 800, cursor: loginLoading ? 'not-allowed' : 'pointer' }}>
-                                {loginLoading ? t('loginLoading') : t('login')}
+                                {loginLoading ? '로그인 중...' : '로그인'}
                             </button>
                             <button onClick={() => setShowLoginModal(false)}
-                                style={{ flex: 1, background: '#151b23', border: '1px solid #21262d', color: '#8b949e', borderRadius: 10, padding: '11px 0', cursor: 'pointer', fontWeight: 600 }}>{t('close')}</button>
+                                style={{ flex: 1, background: '#151b23', border: '1px solid #21262d', color: '#8b949e', borderRadius: 10, padding: '11px 0', cursor: 'pointer', fontWeight: 600 }}>닫기</button>
                         </div>
                         <p style={{ margin: '10px 0 0', fontSize: 12, color: '#6b7280', textAlign: 'center' }}>
-                            {t('signupGuidePrefix')} <a href="/marketplace/auth/register" style={{ color: '#79c0ff' }}>{t('signup')}</a>
+                            계정이 없으면 <a href="/marketplace/auth/register" style={{ color: '#79c0ff' }}>회원가입</a>
                         </p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 사용법 가이드 모달 ── */}
+            {showHelp && (
+                <div
+                    style={{ position: 'fixed', inset: 0, background: '#000c', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowHelp(false); }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="worldlinco-help-title"
+                        onKeyDown={(e) => { if (e.key === 'Escape') setShowHelp(false); }}
+                        style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 18, padding: '24px 20px', width: '100%', maxWidth: 540, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 16px 48px #000c' }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <h2 id="worldlinco-help-title" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#58c9ff' }}>{t('helpTitle')}</h2>
+                            <button autoFocus onClick={() => setShowHelp(false)} style={{ background: 'none', border: '1px solid #21262d', color: '#8b949e', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{t('helpClose')}</button>
+                        </div>
+
+                        <div style={{ background: '#0d1e2e', border: '1px solid #1e3a52', borderRadius: 10, padding: '10px 14px', marginBottom: 18, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                            <span style={{ fontSize: 18, lineHeight: 1.4 }}>💡</span>
+                            <p style={{ margin: 0, fontSize: 12, color: '#79c0ff', lineHeight: 1.6 }}>{t('helpLangNote')}</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            {([
+                                ['helpStep1Title', 'helpStep1Desc'],
+                                ['helpStep2Title', 'helpStep2Desc'],
+                                ['helpStep3Title', 'helpStep3Desc'],
+                                ['helpStep4Title', 'helpStep4Desc'],
+                                ['helpStep5Title', 'helpStep5Desc'],
+                                ['helpStep6Title', 'helpStep6Desc'],
+                                ['helpStep7Title', 'helpStep7Desc'],
+                                ['helpStep8Title', 'helpStep8Desc'],
+                            ] as [keyof typeof UI_KO_TEXT, keyof typeof UI_KO_TEXT][]).map(([titleKey, descKey]) => (
+                                <div key={titleKey} style={{ background: '#0f1623', border: '1px solid #21262d', borderRadius: 12, padding: '12px 14px' }}>
+                                    <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: '#e6edf3' }}>{t(titleKey)}</p>
+                                    <p style={{ margin: 0, fontSize: 13, color: '#8b949e', lineHeight: 1.65 }}>{t(descKey)}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 480 }}>
+                                {UI_LANGS.map((lang) => (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => setUiLang(lang.code)}
+                                        style={{
+                                            background: uiLang === lang.code ? '#11243d' : '#0f1623',
+                                            border: `1px solid ${uiLang === lang.code ? '#2a7cff' : '#21262d'}`,
+                                            color: uiLang === lang.code ? '#79c0ff' : '#8b949e',
+                                            borderRadius: 20,
+                                            padding: '5px 12px',
+                                            fontSize: 12,
+                                            cursor: 'pointer',
+                                            fontWeight: uiLang === lang.code ? 700 : 400,
+                                        }}
+                                    >
+                                        {lang.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: '#4a5568' }}>
+                            {t('uiLanguage')}: {UI_LANGS.find((l) => l.code === uiLang)?.label} · {t('footerLanguages')}
+                        </div>
                     </div>
                 </div>
             )}
@@ -1066,26 +1157,43 @@ export default function WorldLincoPage() {
             >
                 <span style={{ fontSize: 28 }}>📱</span>
                 <div style={{ flex: 1 }}>
-                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#58c9ff' }}>{t('appTitle')}</h1>
-                    <p style={{ margin: 0, fontSize: 13, color: '#8b949e' }}>{t('appSubtitle')}</p>
+                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#58c9ff' }}>{WORLDLINGO_BRAND_NAME}</h1>
+                    <p style={{ margin: 0, fontSize: 13, color: '#8b949e' }}>{WORLDLINGO_BRAND_NAME_KO} · 신세계소리새 AI · 통번역 · 지도 · 예약 · 결제</p>
                 </div>
                 {engine && (
                     <span style={{ background: '#1a2535', border: '1px solid #21262d', borderRadius: 20, padding: '3px 10px', fontSize: 12, color: offline ? '#f0b050' : '#31c45d' }}>
-                        {offline ? t('offlineBadge') : `🟢 ${engine}`}
+                        {offline ? '🔴 오프라인' : `🟢 ${engine}`}
                     </span>
                 )}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8b949e', fontSize: 12 }}>
-                    {t('uiLanguage')}
-                    <select
-                        value={uiLang}
-                        onChange={(e) => setUiLang(e.target.value as UiLangCode)}
-                        style={{ background: '#0f1623', border: '1px solid #21262d', color: '#e6edf3', borderRadius: 8, padding: '6px 8px', fontSize: 12 }}
-                    >
-                        {UI_LANGS.map((lang) => (
-                            <option key={lang.code} value={lang.code}>{lang.label}</option>
-                        ))}
-                    </select>
-                </label>
+<label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8b949e', fontSize: 12 }}>
+    {t('uiLanguage')}
+    <select
+        value={uiLang}
+        onChange={(e) => setUiLang(e.target.value as UiLangCode)}
+        style={{ background: '#0f1623', border: '1px solid #21262d', color: '#e6edf3', borderRadius: 8, padding: '6px 8px', fontSize: 12 }}
+    >
+        {UI_LANGS.map((lang) => (
+            <option key={lang.code} value={lang.code}>{lang.label}</option>
+        ))}
+    </select>
+</label>
+<button
+    onClick={() => setShowHelp(true)}
+    title={t('helpBtn')}
+    style={{
+        background: '#0e1e30',
+        border: '1px solid #35506c',
+        color: '#79c0ff',
+        borderRadius: 8,
+        padding: '6px 12px',
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+    }}
+>
+    ❓ {t('helpBtn')}
+</button>
                 {/* 로그인/내정보 레일 */}
                 {userInfo ? (
                     <div style={{ position: 'relative' }}>
@@ -1095,16 +1203,16 @@ export default function WorldLincoPage() {
                         </button>
                         {showMyInfo && (
                             <div style={{ position: 'absolute', right: 0, top: 44, background: '#151b23', border: '1px solid #21262d', borderRadius: 14, padding: 16, minWidth: 220, zIndex: 100, boxShadow: '0 8px 32px #000a' }}>
-                                <div style={{ fontWeight: 700, color: '#f8fbff', marginBottom: 6 }}>{t('myInfo')}</div>
-                                <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 4 }}>{t('loginEmail')}: {userInfo.email}</div>
+                                <div style={{ fontWeight: 700, color: '#f8fbff', marginBottom: 6 }}>내 정보</div>
+                                <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 4 }}>이메일: {userInfo.email}</div>
                                 <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 12 }}>ID: {userInfo.id}</div>
                                 <button onClick={handleShowPurchases} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#79c0ff', fontSize: 13, marginBottom: 4, cursor: 'pointer', padding: 0 }}>
-                                    {myPurchasesLoading ? t('loadingDots') : myPurchases !== null ? t('hideHistory') : t('bookingHistory')}
+                                    {myPurchasesLoading ? '⏳ 불러오는 중...' : myPurchases !== null ? '📋 내역 닫기' : '📋 구매/예약 내역'}
                                 </button>
                                 {myPurchases !== null && (
                                     <div style={{ maxHeight: 160, overflowY: 'auto', marginBottom: 8, background: '#0d1117', borderRadius: 8, padding: '8px 10px' }}>
                                         {myPurchases.length === 0 ? (
-                                            <div style={{ fontSize: 12, color: '#8b949e' }}>{t('noPurchases')}</div>
+                                            <div style={{ fontSize: 12, color: '#8b949e' }}>구매 내역이 없습니다.</div>
                                         ) : myPurchases.map((p) => (
                                             <div key={p.id} style={{ fontSize: 12, color: '#c9d1d9', borderBottom: '1px solid #21262d', paddingBottom: 6, marginBottom: 6 }}>
                                                 <span style={{ color: '#79c0ff' }}>#{p.id}</span> · {p.amount?.toLocaleString()}원 · <span style={{ color: p.status === 'completed' ? '#3fb950' : '#f0883e' }}>{p.status}</span>
@@ -1112,14 +1220,14 @@ export default function WorldLincoPage() {
                                         ))}
                                     </div>
                                 )}
-                                <button onClick={handleLogout} style={{ width: '100%', background: '#2a1616', border: '1px solid #5e2727', color: '#ffb4b4', borderRadius: 8, padding: '8px 0', fontWeight: 700, cursor: 'pointer' }}>{t('logout')}</button>
+                                <button onClick={handleLogout} style={{ width: '100%', background: '#2a1616', border: '1px solid #5e2727', color: '#ffb4b4', borderRadius: 8, padding: '8px 0', fontWeight: 700, cursor: 'pointer' }}>로그아웃</button>
                             </div>
                         )}
                     </div>
                 ) : (
                     <button onClick={() => { setShowLoginModal(true); setLoginError(''); }}
                         style={{ background: '#11243d', border: '1px solid #35506c', color: '#79c0ff', borderRadius: 10, padding: '8px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-                        🔐 {t('login')}
+                        🔐 로그인
                     </button>
                 )}
                 {/* 도움말 버튼 */}
@@ -1164,11 +1272,11 @@ export default function WorldLincoPage() {
                     <section style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 16, padding: 18 }}>
                         <div style={{ marginBottom: 12 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                                <span style={{ fontSize: 12, color: '#8b949e' }}>{t('sourceLanguage')}</span>
+                                <span style={{ fontSize: 12, color: '#8b949e' }}>원본 언어</span>
                                 <button
                                     onClick={handleDetectLangByGPS}
                                     disabled={gpsLangLoading}
-                                    title={t('gpsDetectTitle')}
+                                    title="현재 위치로 번역 언어 자동 감지"
                                     style={{
                                         marginLeft: 'auto',
                                         background: '#0e1e30',
@@ -1182,7 +1290,7 @@ export default function WorldLincoPage() {
                                         whiteSpace: 'nowrap',
                                     }}
                                 >
-                                    {gpsLangLoading ? t('gpsDetectLoading') : t('gpsDetect')}
+                                    {gpsLangLoading ? '⏳ 감지 중...' : '🌐 GPS 언어 감지'}
                                 </button>
                             </div>
                             <select
@@ -1215,7 +1323,7 @@ export default function WorldLincoPage() {
                                         handleTranslate();
                                     }
                                 }}
-                                placeholder={t('inputPlaceholder')}
+                                placeholder="번역할 텍스트를 입력하세요 (Ctrl+Enter로 번역)"
                                 rows={5}
                                 style={{
                                     width: '100%',
@@ -1229,18 +1337,18 @@ export default function WorldLincoPage() {
                                 }}
                             />
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-                                <button onClick={handleVoiceInput} title={t('voiceInput')} style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>🎤</button>
-                                <button onClick={() => handleSpeak(input, from)} title={t('readAloud')} style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>🔊</button>
+                                <button onClick={handleVoiceInput} title="음성 입력" style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>🎤</button>
+                                <button onClick={() => handleSpeak(input, from)} title="읽기" style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>🔊</button>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                            <button onClick={handleSwap} style={{ flex: 1, background: '#151b23', border: '1px solid #21262d', borderRadius: 10, padding: '12px 0', color: '#8b949e', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>{t('swapLanguage')}</button>
-                            <button onClick={handleTranslate} disabled={loading || !input.trim()} style={{ flex: 2, background: loading ? '#1a3a1a' : '#31c45d', border: 'none', borderRadius: 10, padding: '12px 0', color: '#fff', fontSize: 16, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading || !input.trim() ? 0.7 : 1 }}>{loading ? t('translating') : t('translate')}</button>
+                            <button onClick={handleSwap} style={{ flex: 1, background: '#151b23', border: '1px solid #21262d', borderRadius: 10, padding: '12px 0', color: '#8b949e', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>⇄ 언어 스왑</button>
+                            <button onClick={handleTranslate} disabled={loading || !input.trim()} style={{ flex: 2, background: loading ? '#1a3a1a' : '#31c45d', border: 'none', borderRadius: 10, padding: '12px 0', color: '#fff', fontSize: 16, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading || !input.trim() ? 0.7 : 1 }}>{loading ? '번역 중...' : '번역'}</button>
                         </div>
 
                         <div style={{ marginBottom: 8 }}>
-                            <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 6 }}>{t('targetLanguage')}</div>
+                            <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 6 }}>번역 언어</div>
                             <select
                                 value={to}
                                 onChange={(e) => setTo(e.target.value as LangCode)}
@@ -1264,23 +1372,23 @@ export default function WorldLincoPage() {
 
                         <div style={{ background: '#0f1623', border: `1px solid ${result ? '#31c45d33' : '#21262d'}`, borderRadius: 12, padding: 14, minHeight: 120, marginTop: 8 }}>
                             {loading ? (
-                                <div style={{ color: '#8b949e', fontSize: 14 }}>{t('translatingWithAi')}</div>
+                                <div style={{ color: '#8b949e', fontSize: 14 }}>신세계소리새 AI 번역 중...</div>
                             ) : result ? (
                                 <>
                                     <p style={{ margin: 0, fontSize: 16, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{result}</p>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-                                        <button onClick={() => handleSpeak(result, to)} title={t('readAloud')} style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>🔊</button>
-                                        <button onClick={() => navigator.clipboard?.writeText(result)} title={t('copy')} style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>📋</button>
+                                        <button onClick={() => handleSpeak(result, to)} title="읽기" style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>🔊</button>
+                                        <button onClick={() => navigator.clipboard?.writeText(result)} title="복사" style={{ background: 'none', border: '1px solid #21262d', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 16 }}>📋</button>
                                     </div>
                                 </>
                             ) : (
-                                <p style={{ margin: 0, color: '#8b949e', fontSize: 14 }}>{t('resultPlaceholder')}</p>
+                                <p style={{ margin: 0, color: '#8b949e', fontSize: 14 }}>번역 결과가 여기에 표시됩니다</p>
                             )}
                         </div>
 
                         {offline && (
                             <div style={{ background: '#2a1a00', border: '1px solid #5a3a00', borderRadius: 8, padding: '10px 14px', marginTop: 10, fontSize: 13, color: '#f0b050' }}>
-                                {t('offlineNotice')}
+                                📡 오프라인 모드 — 백엔드 연결 후 신세계소리새 전체 통역 엔진 사용 가능
                             </div>
                         )}
 
@@ -1302,7 +1410,7 @@ export default function WorldLincoPage() {
                                     boxShadow: interCallActive ? '0 0 0 2px #ff444444' : '0 0 0 2px #31c45d44',
                                 }}
                             >
-                                {interCallActive ? t('endCall') : t('startCall')}
+                                {interCallActive ? '📵 통역 통화 종료' : '📞 통역 통화 시작'}
                             </button>
 
                             {interCallActive && (
@@ -1310,7 +1418,7 @@ export default function WorldLincoPage() {
                                     {/* 통화 상태 헤더 */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                                         <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#31c45d', boxShadow: '0 0 6px #31c45d' }} />
-                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#3fb950' }}>{t('inCall')}</span>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#3fb950' }}>통화 중</span>
                                         <span style={{ fontSize: 12, color: '#8b949e', marginLeft: 'auto' }}>
                                             {LANGS.find((l) => l.code === fromRef.current)?.label} ⇄ {LANGS.find((l) => l.code === toRef.current)?.label}
                                         </span>
@@ -1328,7 +1436,7 @@ export default function WorldLincoPage() {
                                         marginBottom: 10,
                                         minHeight: 40,
                                     }}>
-                                        {interCallStatus || t('preparing')}
+                                        {interCallStatus || '준비 중...'}
                                     </div>
 
                                     {/* 대화 로그 */}
@@ -1363,36 +1471,26 @@ export default function WorldLincoPage() {
                     <section style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 16, padding: 18 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: 18, color: '#f8fbff' }}>{t('nearbyTitle')}</h2>
-                                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#8b949e' }}>{t('nearbyDesc')}</p>
+                                <h2 style={{ margin: 0, fontSize: 18, color: '#f8fbff' }}>📍 주변 검색</h2>
+                                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#8b949e' }}>호텔 · 공항 · 식당 · 관광명소를 현재 좌표 기준으로 찾습니다.</p>
                             </div>
-                            <button onClick={handleUseCurrentLocation} style={{ border: '1px solid #35506c', background: '#08111d', color: '#79c0ff', borderRadius: 10, padding: '8px 12px', fontWeight: 700, cursor: 'pointer' }}>{t('currentLocation')}</button>
+                            <button onClick={handleUseCurrentLocation} style={{ border: '1px solid #35506c', background: '#08111d', color: '#79c0ff', borderRadius: 10, padding: '8px 12px', fontWeight: 700, cursor: 'pointer' }}>현재 위치</button>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 10 }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#8b949e' }}>
-                                <span>{t('latitude')}</span>
+                                <span>위도</span>
                                 <input value={lat} onChange={(event) => setLat(event.target.value)} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#8b949e' }}>
-                                <span>{t('longitude')}</span>
+                                <span>경도</span>
                                 <input value={lon} onChange={(event) => setLon(event.target.value)} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                             </label>
                         </div>
 
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                             {CATEGORY_OPTIONS.map((option) => (
-                                <button key={option.value} onClick={() => setNearbyCategory(option.value)} style={{ borderRadius: 20, border: '1px solid', borderColor: nearbyCategory === option.value ? '#79c0ff' : '#21262d', background: nearbyCategory === option.value ? '#11243d' : '#0f1623', color: nearbyCategory === option.value ? '#f8fbff' : '#8b949e', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>
-                                    {option.value === 'all'
-                                        ? t('categoryAll')
-                                        : option.value === 'hotel'
-                                            ? t('categoryHotel')
-                                            : option.value === 'airport'
-                                                ? t('categoryAirport')
-                                                : option.value === 'restaurant'
-                                                    ? t('categoryRestaurant')
-                                                    : t('categoryAttraction')}
-                                </button>
+                                <button key={option.value} onClick={() => setNearbyCategory(option.value)} style={{ borderRadius: 20, border: '1px solid', borderColor: nearbyCategory === option.value ? '#79c0ff' : '#21262d', background: nearbyCategory === option.value ? '#11243d' : '#0f1623', color: nearbyCategory === option.value ? '#f8fbff' : '#8b949e', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>{option.label}</button>
                             ))}
                         </div>
 
@@ -1402,7 +1500,7 @@ export default function WorldLincoPage() {
                             ))}
                         </div>
 
-                        <button onClick={handleSearchNearby} disabled={nearbyLoading} style={{ width: '100%', borderRadius: 12, border: 'none', background: nearbyLoading ? '#26466b' : '#2a7cff', color: '#fff', padding: '12px 14px', fontWeight: 800, cursor: nearbyLoading ? 'not-allowed' : 'pointer', marginBottom: 10 }}>{nearbyLoading ? t('searchingNearby') : t('findNearby')}</button>
+                        <button onClick={handleSearchNearby} disabled={nearbyLoading} style={{ width: '100%', borderRadius: 12, border: 'none', background: nearbyLoading ? '#26466b' : '#2a7cff', color: '#fff', padding: '12px 14px', fontWeight: 800, cursor: nearbyLoading ? 'not-allowed' : 'pointer', marginBottom: 10 }}>{nearbyLoading ? '주변 검색 중...' : '주변 장소 찾기'}</button>
 
                         {nearbyError && <div style={{ background: '#2a1616', border: '1px solid #5e2727', color: '#ffb4b4', borderRadius: 10, padding: '10px 12px', fontSize: 13, marginBottom: 10 }}>{nearbyError}</div>}
                         {reviewError && <div style={{ background: '#251d10', border: '1px solid #5a4624', color: '#f5cb7f', borderRadius: 10, padding: '10px 12px', fontSize: 13, marginBottom: 10 }}>{reviewError}</div>}
@@ -1433,12 +1531,12 @@ export default function WorldLincoPage() {
                                     </div>
 
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                        <button onClick={() => setMapPlace(place)} style={{ background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>{t('map')}</button>
-                                        <a href={place.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 12px', borderRadius: 10, fontWeight: 700 }}>{t('openGoogleMap')}</a>
-                                        <a href={place.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 12px', borderRadius: 10, fontWeight: 700 }}>{t('naverMap')}</a>
-                                        <button onClick={() => handleLoadReviews(place)} disabled={reviewLoadingId === place.id} style={{ background: '#151b23', border: '1px solid #35506c', color: '#dbe7f5', padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>{reviewLoadingId === place.id ? t('loadingReviews') : t('googleReviews')}</button>
+                                        <button onClick={() => setMapPlace(place)} style={{ background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>🗺️ 지도</button>
+                                        <a href={place.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 12px', borderRadius: 10, fontWeight: 700 }}>Google Maps</a>
+                                        <a href={place.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 12px', borderRadius: 10, fontWeight: 700 }}>Naver 지도</a>
+                                        <button onClick={() => handleLoadReviews(place)} disabled={reviewLoadingId === place.id} style={{ background: '#151b23', border: '1px solid #35506c', color: '#dbe7f5', padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>{reviewLoadingId === place.id ? '리뷰 조회 중...' : 'Google 리뷰'}</button>
                                         {place.booking_supported && (
-                                            <button onClick={() => { setSelectedHotelId(place.id); setBookingResult(null); setBookingError(''); setPurchaseResult(null); setPayUrl(''); setPayError(''); }} style={{ background: selectedHotelId === place.id ? '#31c45d' : '#18291e', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>{t('hotelBooking')}</button>
+                                            <button onClick={() => { setSelectedHotelId(place.id); setBookingResult(null); setBookingError(''); setPurchaseResult(null); setPayUrl(''); setPayError(''); }} style={{ background: selectedHotelId === place.id ? '#31c45d' : '#18291e', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>호텔 예약</button>
                                         )}
                                     </div>
 
@@ -1446,8 +1544,8 @@ export default function WorldLincoPage() {
                                         <div style={{ marginTop: 12, borderTop: '1px solid #1e2a39', paddingTop: 12, display: 'grid', gap: 8 }}>
                                             {reviewsByPlace[place.id].map((review, index) => (
                                                 <div key={`${place.id}-review-${index}`} style={{ background: '#0b1018', border: '1px solid #1f2e40', borderRadius: 10, padding: 10 }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#dbe7f5' }}>{review.title || t('review')}</div>
-                                                    <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4, lineHeight: 1.5 }}>{review.snippet || t('noReviewSummary')}</div>
+                                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#dbe7f5' }}>{review.title || '리뷰'}</div>
+                                                    <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4, lineHeight: 1.5 }}>{review.snippet || '요약이 없습니다.'}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1461,8 +1559,8 @@ export default function WorldLincoPage() {
                 <section style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 16, padding: 18, marginTop: 18 }}>
                     <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                         <div>
-                            <h2 style={{ margin: '0 0 8px', fontSize: 18, color: '#f8fbff' }}>{t('hotelPanelTitle')}</h2>
-                            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8b949e' }}>{t('hotelPanelDesc')}</p>
+                            <h2 style={{ margin: '0 0 8px', fontSize: 18, color: '#f8fbff' }}>🏨 호텔 예약 패널</h2>
+                            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8b949e' }}>주변검색 결과에서 호텔을 선택하면 예약 요청을 보낼 수 있습니다.</p>
                             <div style={{ background: '#0f1623', border: '1px solid #21262d', borderRadius: 12, padding: 14, minHeight: 124 }}>
                                 {selectedHotel ? (
                                     <>
@@ -1473,47 +1571,47 @@ export default function WorldLincoPage() {
                                             <span style={{ fontSize: 12, color: '#ffd166' }}>★ {selectedHotel.rating.toFixed(1)}</span>
                                             <span style={{ fontSize: 12, color: '#8b949e' }}>{formatDistance(selectedHotel.distance_m)}</span>
                                         </div>
-                                        <button onClick={() => setMapPlace(selectedHotel)} style={{ marginTop: 10, background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>{t('viewOnMap')}</button>
+                                        <button onClick={() => setMapPlace(selectedHotel)} style={{ marginTop: 10, background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>🗺️ 지도에서 보기</button>
                                     </>
                                 ) : (
-                                    <div style={{ color: '#8b949e', fontSize: 14 }}>{t('selectBookableHotel')}</div>
+                                    <div style={{ color: '#8b949e', fontSize: 14 }}>주변검색 결과에서 예약 가능한 호텔을 선택하세요.</div>
                                 )}
                             </div>
                         </div>
 
                         <div style={{ display: 'grid', gap: 10 }}>
-                            <input value={bookingName} onChange={(event) => setBookingName(event.target.value)} placeholder={t('bookingName')} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
+                            <input value={bookingName} onChange={(event) => setBookingName(event.target.value)} placeholder="예약자명" style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#8b949e' }}>
-                                    <span>{t('checkin')}</span>
+                                    <span>체크인</span>
                                     <input type="date" value={checkinDate} onChange={(event) => setCheckinDate(event.target.value)} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                                 </label>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#8b949e' }}>
-                                    <span>{t('checkout')}</span>
+                                    <span>체크아웃</span>
                                     <input type="date" value={checkoutDate} onChange={(event) => setCheckoutDate(event.target.value)} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                                 </label>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#8b949e' }}>
-                                    <span>{t('guests')}</span>
+                                    <span>인원</span>
                                     <input type="number" min={1} max={8} value={guests} onChange={(event) => setGuests(Number(event.target.value) || 1)} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                                 </label>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#8b949e' }}>
-                                    <span>{t('roomCount')}</span>
+                                    <span>객실 수</span>
                                     <input type="number" min={1} max={4} value={roomCount} onChange={(event) => setRoomCount(Number(event.target.value) || 1)} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px' }} />
                                 </label>
                             </div>
-                            <textarea value={bookingNote} onChange={(event) => setBookingNote(event.target.value)} rows={3} placeholder={t('bookingNote')} style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px', resize: 'vertical', fontFamily: 'inherit' }} />
-                            <button onClick={handleReserveHotel} disabled={bookingLoading || !selectedHotel} style={{ borderRadius: 12, border: 'none', background: bookingLoading || !selectedHotel ? '#294034' : '#31c45d', color: '#fff', padding: '12px 14px', fontWeight: 800, cursor: bookingLoading || !selectedHotel ? 'not-allowed' : 'pointer' }}>{bookingLoading ? t('bookingLoading') : t('sendBookingRequest')}</button>
+                            <textarea value={bookingNote} onChange={(event) => setBookingNote(event.target.value)} rows={3} placeholder="추가 요청사항 (예: 금연실, 늦은 체크인)" style={{ borderRadius: 10, border: '1px solid #21262d', background: '#0f1623', color: '#f8fbff', padding: '10px 12px', resize: 'vertical', fontFamily: 'inherit' }} />
+                            <button onClick={handleReserveHotel} disabled={bookingLoading || !selectedHotel} style={{ borderRadius: 12, border: 'none', background: bookingLoading || !selectedHotel ? '#294034' : '#31c45d', color: '#fff', padding: '12px 14px', fontWeight: 800, cursor: bookingLoading || !selectedHotel ? 'not-allowed' : 'pointer' }}>{bookingLoading ? '예약 요청 중...' : '예약 요청 보내기'}</button>
                             {bookingError && <div style={{ background: '#2a1616', border: '1px solid #5e2727', color: '#ffb4b4', borderRadius: 10, padding: '10px 12px', fontSize: 13 }}>{bookingError}</div>}
                             {bookingResult && (
                                 <div style={{ background: '#102416', border: '1px solid #215c36', color: '#dff7e7', borderRadius: 12, padding: 14 }}>
-                                    <div style={{ fontWeight: 800 }}>{t('bookingConfirmation')} {bookingResult.confirmation_id}</div>
+                                    <div style={{ fontWeight: 800 }}>예약 확인번호 {bookingResult.confirmation_id}</div>
                                     <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6 }}>{bookingResult.booking_message}</div>
                                     <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6, color: '#9be8b3' }}>{bookingResult.translated_message}</div>
                                     <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                        <a href={bookingResult.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 12px', borderRadius: 10, fontWeight: 700 }}>{t('openHotelLocation')}</a>
-                                        <span style={{ fontSize: 12, color: '#b9dccc', alignSelf: 'center' }}>{t('supportPhone')} {bookingResult.support_phone}</span>
+                                        <a href={bookingResult.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 12px', borderRadius: 10, fontWeight: 700 }}>호텔 위치 열기</a>
+                                        <span style={{ fontSize: 12, color: '#b9dccc', alignSelf: 'center' }}>지원 전화 {bookingResult.support_phone}</span>
                                     </div>
                                 </div>
                             )}
@@ -1529,20 +1627,27 @@ export default function WorldLincoPage() {
                                 <h2 style={{ margin: 0, fontSize: 18, color: '#effff3' }}>🗺️ {mapPlace.name}</h2>
                                 <p style={{ margin: '4px 0 0', fontSize: 13, color: '#8b949e' }}>{mapPlace.address}</p>
                             </div>
-                            <button onClick={() => setMapPlace(null)} style={{ background: 'none', border: '1px solid #21262d', color: '#8b949e', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 14 }}>{t('closeMap')}</button>
+                            <button onClick={() => setMapPlace(null)} style={{ background: 'none', border: '1px solid #21262d', color: '#8b949e', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 14 }}>✕ 닫기</button>
                         </div>
                         <iframe
                             src={osmEmbedUrl(mapPlace.latitude ?? Number(lat), mapPlace.longitude ?? Number(lon))}
                             width="100%"
                             height="360"
                             style={{ border: 'none', borderRadius: 12 }}
-                            title={`${t('mapTitlePrefix')}: ${mapPlace.name}`}
+                            title={`지도: ${mapPlace.name}`}
                             loading="lazy"
                         />
                         <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <a href={mapPlace.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🌐 {t('openGoogleMap')}</a>
-                            <a href={mapPlace.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🗺️ {t('naverMap')}</a>
-                            <a href={buildOpenStreetMapLink(mapPlace.latitude, mapPlace.longitude, Number(lat), Number(lon))} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>{t('openStreetMap')}</a>
+                            <a href={mapPlace.google_maps_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#2a7cff', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🌐 Google Maps</a>
+                            <a href={mapPlace.naver_map_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#00c73c', color: '#fff', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}>🗺️ Naver 지도</a>
+                            <a
+                                href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(mapPlace.latitude ?? Number(lat)))}&mlon=${encodeURIComponent(String(mapPlace.longitude ?? Number(lon)))}#map=15/${encodeURIComponent(String(mapPlace.latitude ?? Number(lat)))}/${encodeURIComponent(String(mapPlace.longitude ?? Number(lon)))}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ textDecoration: 'none', background: '#1e3a2a', border: '1px solid #2d6b43', color: '#effff3', padding: '8px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13 }}
+                            >
+                                🌍 OpenStreetMap
+                            </a>
                         </div>
                     </section>
                 )}
@@ -1550,60 +1655,75 @@ export default function WorldLincoPage() {
                 {/* ── 결제 레일 ── */}
                 {bookingResult && (
                     <section style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 16, padding: 18, marginTop: 18 }}>
-                        <h2 style={{ margin: '0 0 12px', fontSize: 18, color: '#f8fbff' }}>{t('paymentPanelTitle')}</h2>
+                        <h2 style={{ margin: '0 0 12px', fontSize: 18, color: '#f8fbff' }}>💳 결제</h2>
                         <div style={{ background: '#102416', border: '1px solid #215c36', borderRadius: 12, padding: 14, marginBottom: 14 }}>
-                            <div style={{ fontWeight: 800, color: '#9be8b3', marginBottom: 6 }}>{t('bookingConfirmation')} · {bookingResult.confirmation_id}</div>
+                            <div style={{ fontWeight: 800, color: '#9be8b3', marginBottom: 6 }}>예약 확인 완료 · {bookingResult.confirmation_id}</div>
                             <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 4 }}>
-                                {t('checkin')} {checkinDate} → {t('checkout')} {checkoutDate} · {roomCount}{t('roomCount')} ·
-                                {' '}{Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000))}{t('nights')}
+                                체크인 {checkinDate} → 체크아웃 {checkoutDate} · {roomCount}객실 ·
+                                {' '}{Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000))}박
                             </div>
                             <div style={{ fontSize: 16, fontWeight: 800, color: '#ffd166' }}>
-                                {t('paymentAmount')}: {(Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000)) * roomCount * 80000).toLocaleString('ko-KR')}{t('currencyWon')}
+                                결제 예정 금액: {(Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / 86400000)) * roomCount * 80000).toLocaleString('ko-KR')}원
                             </div>
                         </div>
                         {payError && <div style={{ background: '#2a1616', border: '1px solid #5e2727', color: '#ffb4b4', borderRadius: 10, padding: '10px 12px', fontSize: 13, marginBottom: 12 }}>{payError}</div>}
                         {purchaseResult ? (
                             <div style={{ background: '#11243d', border: '1px solid #35506c', borderRadius: 12, padding: 14 }}>
-                                <div style={{ fontWeight: 800, color: '#79c0ff', marginBottom: 6 }}>{t('purchaseIdStatus')}: {purchaseResult.id} · {t('status')}: {purchaseResult.status}</div>
+                                <div style={{ fontWeight: 800, color: '#79c0ff', marginBottom: 6 }}>구매 ID: {purchaseResult.id} · 상태: {purchaseResult.status}</div>
                                 {payUrl ? (
                                     <a href={payUrl} target="_blank" rel="noreferrer"
                                         style={{ display: 'inline-block', background: '#2a7cff', color: '#fff', padding: '12px 24px', borderRadius: 12, fontWeight: 800, fontSize: 15, textDecoration: 'none' }}>
-                                        {t('openPaymentPage')}
+                                        🔗 결제 페이지 열기
                                     </a>
                                 ) : (
-                                    <div style={{ color: '#8b949e', fontSize: 13 }}>{t('loadingPaymentUrl')}</div>
+                                    <div style={{ color: '#8b949e', fontSize: 13 }}>결제 URL을 불러오는 중...</div>
                                 )}
                             </div>
                         ) : (
                             <button onClick={handlePayment} disabled={payLoading || !token}
                                 style={{ borderRadius: 12, border: 'none', background: (!token || payLoading) ? '#26466b' : '#2a7cff', color: '#fff', padding: '14px 24px', fontWeight: 800, fontSize: 16, cursor: (!token || payLoading) ? 'not-allowed' : 'pointer', width: '100%' }}>
-                                {payLoading ? t('paying') : token ? t('proceedPayment') : t('loginForPayment')}
+                                {payLoading ? '결제 처리 중...' : token ? '💳 결제 진행하기' : '🔐 로그인 후 결제'}
                             </button>
                         )}
                         {!token && (
                             <p style={{ margin: '8px 0 0', fontSize: 12, color: '#8b949e', textAlign: 'center' }}>
-                                {t('paymentLoginRequiredPrefix')} <button onClick={() => setShowLoginModal(true)} style={{ background: 'none', border: 'none', color: '#79c0ff', cursor: 'pointer', textDecoration: 'underline', fontSize: 12 }}>{t('login')}</button>{t('paymentLoginRequiredSuffix')}
+                                결제를 진행하려면 <button onClick={() => setShowLoginModal(true)} style={{ background: 'none', border: 'none', color: '#79c0ff', cursor: 'pointer', textDecoration: 'underline', fontSize: 12 }}>로그인</button>이 필요합니다.
                             </p>
                         )}
                     </section>
                 )}
 
                 <div style={{ background: '#151b23', border: '1px solid #21262d', borderRadius: 12, padding: 20, marginTop: 24 }}>
-                    <h3 style={{ margin: '0 0 6px', fontSize: 16, color: '#e6edf3' }}>{t('mobileInstallTitle')}</h3>
-                    <p style={{ margin: '0 0 14px', fontSize: 13, color: '#8b949e' }}>{t('mobileInstallDesc')}</p>
+                    <div style={{ background: '#1a2f1a', border: '1px solid #2d6b43', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                        <div style={{ fontWeight: 800, color: '#9be8b3', marginBottom: 6, fontSize: 15 }}>🌐 통역 통화 베타 ({apkVersionLabel})</div>
+                        <p style={{ margin: 0, fontSize: 13, color: '#c9d1d9', lineHeight: 1.55 }}>
+                            <strong>친구와 전화하면, 말하는 대로 상대방 언어로 들려줍니다.</strong>
+                            {' '}한국에 사는 내국인·외국인을 위한 개인용 Android 앱입니다. WiFi·LTE(HTTPS) · 베타 기간 무료 · 피드백 환영.
+                        </p>
+                        <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 12, color: '#8b949e', lineHeight: 1.6 }}>
+                            <li>✅ 통역 통화 · 친구 · 채팅 · 텍스트 통역 · ko↔ja strict PASS (build 73+)</li>
+                            <li>⚠️ LTE 베타: TLS/WSS·로그인 APK만 — 착신 푸시·전용 QA는 v1.1</li>
+                            <li>📄 베타 이용 안내: 레포 `docs/worldlinco-v2/BETA_LAUNCH_GUIDE.md`</li>
+                        </ul>
+                    </div>
+                    <h3 style={{ margin: '0 0 6px', fontSize: 16, color: '#e6edf3' }}>📱 WorldLinco APK 설치</h3>
+                    <p style={{ margin: '0 0 14px', fontSize: 13, color: '#8b949e' }}>
+                        Android 7+ · 패키지 <code style={{ color: '#79c0ff' }}>com.parkcheolhong.worldlinco</code> ·{' '}
+                        <strong style={{ color: '#c9d1d9' }}>{apkVersionLabel}</strong>
+                        {apkPublishedLabel ? ` · 배포 ${apkPublishedLabel}` : ''} · 로그인 후 다운로드
+                    </p>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <button onClick={handleApkDownload} style={{ display: 'inline-block', background: '#2a7cff', color: '#fff', padding: '10px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>{t('apkDownload')}</button>
-                        <a href="/marketplace/1" style={{ display: 'inline-block', background: '#151b23', border: '1px solid #21262d', color: '#8b949e', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>{t('backToMarketplace')}</a>
+                        <button onClick={handleApkDownload} style={{ display: 'inline-block', background: '#2a7cff', color: '#fff', padding: '10px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>📥 APK 다운로드 (로그인 필요)</button>
+                        <a href="/marketplace/1" style={{ display: 'inline-block', background: '#151b23', border: '1px solid #21262d', color: '#8b949e', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>마켓플레이스로 돌아가기</a>
                     </div>
                     <p style={{ margin: '12px 0 0', fontSize: 12, color: '#6b7280' }}>
-                        {t('apkGuideLine1')}<br />
-                        {t('apkGuideLine2')}
+                        통역·통화는 서버 연결이 필요합니다. Play Store 등록은 v1.1 이후 예정입니다.
                     </p>
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: 24, color: '#6b7280', fontSize: 12 }}>
-                    {t('footerEngine')}<br />
-                    {t('footerLanguages')} ({UI_LANGS.length})
+                    {WORLDLINGO_BRAND_NAME} v3.0 · {WORLDLINGO_ENGINE_LABEL} 엔진<br />
+                    한국어 · English · 中文 · 繁體 · 日本語 · Español · Français · Deutsch · Português · Русский · العربية · हिन्दी · Italiano · Türkçe · Tiếng Việt · ภาษาไทย · Indonesia · Melayu · Nederlands · Polski · Українська · Svenska · Norsk · Dansk (24개 언어)
                 </div>
             </div>
         </main>

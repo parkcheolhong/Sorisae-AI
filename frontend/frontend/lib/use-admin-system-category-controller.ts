@@ -4,6 +4,7 @@ import {
     buildSystemSettingsDraft,
     buildSystemSettingsOpenState,
     changeAdminAccountPassword,
+    fillAdminSystemSettingsMissingDefaults,
     loadAdminIdentityProviderSettings,
     loadAdminSystemSettings,
     saveAdminSystemSettings,
@@ -62,6 +63,7 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
     const [systemSettingsOpen, setSystemSettingsOpen] = useState<Record<string, boolean>>({});
     const [systemSettingsLoading, setSystemSettingsLoading] = useState(false);
     const [systemSettingsSaving, setSystemSettingsSaving] = useState(false);
+    const [systemSettingsFillingMissing, setSystemSettingsFillingMissing] = useState(false);
     const [systemAutomaticApplying, setSystemAutomaticApplying] = useState(false);
     const [systemSettingsMessage, setSystemSettingsMessage] = useState('');
     const [identityProviderSettings, setIdentityProviderSettings] = useState<AdminIdentityProviderSettings | null>(null);
@@ -115,8 +117,10 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
             body: JSON.stringify({
                 code_generation_strategy: 'auto_generator',
                 selected_profile: 'rtx5090_32gb',
-                min_files: 27,
+                min_files: 9,
                 min_dirs: 3,
+                stage11_min_files: 32,
+                stage11_min_dirs: 11,
                 model_routes: {
                     default: values.LLM_MODEL_DEFAULT || '',
                     reasoning: values.LLM_MODEL_REASONING || values.LLM_MODEL_DEFAULT || '',
@@ -366,6 +370,44 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
         }
     }, [apiBaseUrl, handleAdminUnauthorized, pushLiveLog, systemSettingsDraft]);
 
+    const fillMissingSystemSettings = useCallback(async () => {
+        const token = getAdminToken();
+        if (!token) {
+            handleAdminUnauthorized('관리자 로그인이 필요합니다. 다시 로그인하세요.');
+            return;
+        }
+
+        setSystemSettingsFillingMissing(true);
+        setSystemSettingsMessage('');
+        try {
+            const nextSettings = await fillAdminSystemSettingsMissingDefaults({
+                apiBaseUrl,
+                token,
+            });
+            await syncOptimizedRuntimeConfig(buildSystemSettingsDraft(nextSettings));
+            setSystemSettings(nextSettings);
+            setSystemSettingsDraft(buildSystemSettingsDraft(nextSettings));
+            setSystemSettingsOpen((prev) => buildSystemSettingsOpenState(nextSettings, prev));
+            const filledCount = Number(nextSettings.applied_env_update_count || 0);
+            setSystemSettingsMessage(
+                filledCount > 0
+                    ? `빈 .env 값 ${filledCount}개를 runtime/runtime-config 기준으로 보강했습니다.`
+                    : '추가로 보강할 빈 .env 값이 없습니다.',
+            );
+            pushLiveLog('success', '관리자 전역 .env 빈 값 보강 완료');
+        } catch (error: any) {
+            if (error?.message === '__ADMIN_SYSTEM_UNAUTHORIZED__') {
+                handleAdminUnauthorized();
+                return;
+            }
+            const message = error?.message || '빈 값 보강 중 오류가 발생했습니다.';
+            setSystemSettingsMessage(message);
+            pushLiveLog('warning', `빈 값 보강 실패: ${message}`);
+        } finally {
+            setSystemSettingsFillingMissing(false);
+        }
+    }, [apiBaseUrl, handleAdminUnauthorized, pushLiveLog, syncOptimizedRuntimeConfig]);
+
     const applyGlobalAutomaticMode = useCallback(async () => {
         const token = getAdminToken();
         if (!token) {
@@ -608,6 +650,7 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
         systemSettingsOpen,
         systemSettingsLoading,
         systemSettingsSaving,
+        systemSettingsFillingMissing,
         systemAutomaticApplying,
         systemSettingsMessage,
         identityProviderSettings,
@@ -653,6 +696,7 @@ export function useAdminSystemCategoryController(options: UseAdminSystemCategory
         updateSystemSettingValue,
         toggleSystemSettingsSection,
         saveSystemSettings,
+        fillMissingSystemSettings,
         applyGlobalAutomaticMode,
         loadCategories,
         createCategory,
