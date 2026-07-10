@@ -10,14 +10,28 @@ def ensure_user_role_columns() -> None:
     if not inspector.has_table("users"):
         return
 
-    columns = {
-        column["name"]
-        for column in inspector.get_columns("users")
-    }
-    statements = []
-    if "is_active" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE"
+    with engine.begin() as connection:
+        add_missing_columns(
+            connection,
+            "users",
+            {
+                "is_active": "BOOLEAN NOT NULL DEFAULT TRUE",
+                "is_admin": "BOOLEAN NOT NULL DEFAULT FALSE",
+                "is_superuser": "BOOLEAN NOT NULL DEFAULT FALSE",
+                "member_type": "VARCHAR(30) NOT NULL DEFAULT 'individual'",
+                "business_name": "VARCHAR(200)",
+                "business_registration_number": "VARCHAR(50)",
+                "representative_name": "VARCHAR(120)",
+                "passkey_enabled": "BOOLEAN NOT NULL DEFAULT FALSE",
+                "passkey_credential_id": "VARCHAR(255) UNIQUE",
+                "passkey_public_key": "TEXT",
+                "passkey_device_label": "VARCHAR(120)",
+                "passkey_sign_count": "INTEGER NOT NULL DEFAULT 0",
+                "passkey_registered_at": "TIMESTAMP",
+                "native_language": "VARCHAR(10)",
+                "country": "VARCHAR(10)",
+            },
+            inspector=inspector,
         )
     if "is_admin" not in columns:
         statements.append(
