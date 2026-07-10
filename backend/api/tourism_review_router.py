@@ -1,7 +1,7 @@
 """관광 데이터 사람검수 라우터 — 샘플링/라벨/집계 API + 자체완결 HTML 검수 콘솔.
 
-내부 전문가 도구. 기본 활성(`TOURISM_REVIEW_ENABLED=1`)이며, **운영에서는 관리자 인증/내부망 뒤**에
-두는 것을 전제로 한다(콘솔 HTML 은 정적, API 는 동일 오리진 호출).
+내부 전문가 도구. 기본 활성(`TOURISM_REVIEW_ENABLED=1`)이며, 모든 엔드포인트는 관리자 인증을
+요구한다(콘솔 HTML 은 정적, API 는 동일 오리진 호출).
 """
 
 from __future__ import annotations
@@ -9,11 +9,17 @@ from __future__ import annotations
 import os
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/tourism-review", tags=["tourism-review"])
+from backend.security_gates import require_admin_user
+
+router = APIRouter(
+    prefix="/api/tourism-review",
+    tags=["tourism-review"],
+    dependencies=[Depends(require_admin_user)],
+)
 
 
 def _enabled() -> bool:
