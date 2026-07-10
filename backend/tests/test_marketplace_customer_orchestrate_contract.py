@@ -481,9 +481,13 @@ def test_customer_orchestrate_stream_close_releases_lock_and_marks_failed(monkey
         _capture_execution_metadata,
     )
 
+    candidate_routes = []
+    for route in marketplace_router_module.router.routes:
+        candidate_routes.append(route)
+        candidate_routes.extend(getattr(getattr(route, "original_router", None), "routes", []) or [])
     stream_endpoint = next(
         route.endpoint
-        for route in marketplace_router_module.router.routes
+        for route in candidate_routes
         if getattr(route, "path", "") == "/customer-orchestrate/stream"
     )
     request_model = marketplace_router_module.CustomerOrchestrateRequest(
