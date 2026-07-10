@@ -45,6 +45,10 @@ export interface WorkspaceChromeProps {
     children: ReactNode;
     pageTestId?: string;
     compactHeader?: boolean;
+    rightRailOpen?: boolean;
+    onRightRailToggle?: (open: boolean) => void;
+    leftRailOpen?: boolean;
+    onLeftRailToggle?: (open: boolean) => void;
 }
 
 const accentClassMap: Record<NonNullable<WorkspaceRailItem['accent']>, string> = {
@@ -78,10 +82,28 @@ export default function WorkspaceChrome({
     pageTestId,
     compactHeader,
     hideHero,
+    rightRailOpen = true,
+    onRightRailToggle,
+    leftRailOpen = true,
+    onLeftRailToggle,
 }: WorkspaceChromeProps) {
     return (
         <div className="workspace-shell" data-testid={pageTestId}>
-            <aside className="workspace-rail" aria-label={`${brand} 탐색`}>
+            {/* LEFT RAIL - FORCE RENDER TEST */}
+            <aside className={`workspace-rail workspace-rail-left ${leftRailOpen ? 'workspace-rail-left-open' : 'workspace-rail-left-closed'}`} aria-label={`${brand} 탐색`}>
+                {!leftRailOpen && (
+                    <button
+                        type="button"
+                        onClick={() => onLeftRailToggle?.(!leftRailOpen)}
+                        className="workspace-rail-toggle workspace-rail-toggle-left"
+                        aria-label="좌측 레일 열기"
+                        title="열기"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M7 7l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                )}
                 <div className="workspace-rail-brand">{brand.slice(0, 2).toUpperCase()}</div>
                 <nav className="workspace-rail-nav">
                     {railItems.map((item) => {
@@ -115,6 +137,19 @@ export default function WorkspaceChrome({
                     })}
                 </nav>
                 <div className="workspace-rail-footer">{railFooter ?? 'LIVE'}</div>
+                {leftRailOpen && (
+                    <button
+                        type="button"
+                        onClick={() => onLeftRailToggle?.(!leftRailOpen)}
+                        className="workspace-rail-toggle workspace-rail-toggle-left-close"
+                        aria-label="좌측 레일 닫기"
+                        title="닫기"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M13 7l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                )}
             </aside>
 
             <div className={`workspace-stage ${compactHeader ? 'workspace-stage-compact' : ''}`}>
@@ -176,7 +211,18 @@ export default function WorkspaceChrome({
             </div>
 
             {rightRailItems && rightRailItems.length > 0 && (
-                <aside className="workspace-rail workspace-rail-right" aria-label="추가 기능 탐색">
+                <aside className={`workspace-rail workspace-rail-right ${rightRailOpen ? 'workspace-rail-right-open' : 'workspace-rail-right-closed'}`} aria-label="추가 기능 탐색">
+                    <button
+                        type="button"
+                        onClick={() => onRightRailToggle?.(!rightRailOpen)}
+                        className="workspace-rail-toggle"
+                        aria-label={rightRailOpen ? '우측 레일 닫기' : '우측 레일 열기'}
+                        title={rightRailOpen ? '닫기' : '열기'}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M13 7l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
                     <nav className="workspace-rail-nav">
                         {rightRailItems.map((item) => {
                             const accentClass = accentClassMap[item.accent ?? 'neutral'];

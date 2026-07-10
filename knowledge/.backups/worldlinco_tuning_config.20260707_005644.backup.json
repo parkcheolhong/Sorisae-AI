@@ -1,0 +1,81 @@
+{
+  "version": 6,
+  "updated_at": "2026-07-05T12:00:11Z",
+  "updated_by": "119cash@naver.com",
+  "calibration_notes": "[auto-calibrator] real-device telemetry quantile calibration | confidence=low | telemetry_items=0",
+  "voip": {
+    "silero_silence_ms": 1000,
+    "silero_speech_ms": 120,
+    "silero_min_segment_ms": 3000,
+    "silero_min_speech_span_ms": 1700,
+    "silero_safety_cap_ms": 7000,
+    "silero_post_flush_cooldown_ms": 1000,
+    "remote_echo_guard_ms": 4800,
+    "speaker_echo_guard_ms": 5800,
+    "remote_listen_hold_ms": 2600,
+    "post_playback_guard_ms": 550,
+    "vad_silence_flush_ms": 1000,
+    "vad_min_segment_ms": 3000,
+    "vad_max_segment_ms": 7000,
+    "speech_meter_min_db": -52,
+    "file_speech_rms_db": -52,
+    "meter_unavailable_fixed_flush_ms": 4000,
+    "fairness_barge_in_ms": 7000
+  },
+  "face_conversation": {
+    "silence_flush_ms": 1200,
+    "min_segment_ms": 2200,
+    "max_segment_ms": 12000,
+    "file_speech_rms_db": -50,
+    "meter_poll_every": 2,
+    "restart_ms": 290,
+    "playback_cap_ms": 50000,
+    "playback_drain_ms": 1400,
+    "tts_rate": 1.0
+  },
+  "voip_bridge": {
+    "silence_gap_ms": 600,
+    "min_speech_ms": 600,
+    "max_speech_ms": 7500,
+    "rms_gate": 580,
+    "min_segment_rms_for_stt": 500,
+    "asr_norm_floor_rms": 500,
+    "drop_no_speech_prob": 0.82,
+    "tts_guard_tail_ms": 1200,
+    "live_echo_guard_ms": 700,
+    "live_echo_forward_barge_in_rms": 1400,
+    "live_echo_return_window_ms": 1200,
+    "live_echo_return_barge_in_rms": 2400,
+    "tts_target_rms": 0.28,
+    "tts_target_peak": 0.99,
+    "tts_max_gain": 16.0,
+    "min_avg_logprob": -1.0,
+    "max_no_speech_prob": 0.8,
+    "downlink_queue_max_frames": 100
+  },
+  "sorisae_ai": {
+    "friend_min_lang_prob": 0.65,
+    "geo_accuracy_max_m": 2500,
+    "geo_accuracy_nearby_max_m": 800,
+    "geo_accuracy_overview_max_m": 5000,
+    "friend_timeout_sec": 18,
+    "friend_reply_max_tokens": 360,
+    "friend_realtime_max_tokens": 280,
+    "tourism_guide_tier": 3,
+    "tts_rate": 1.0
+  },
+  "pstn_assist": {
+    "call_connect_timeout_ms": 12000,
+    "turn_pause_ms": 1200,
+    "subtitle_commit_delay_ms": 500,
+    "stt_confidence_floor": 0.58,
+    "max_caption_chars": 84
+  },
+  "chat": {
+    "message_latency_budget_ms": 6000,
+    "stream_chunk_budget_ms": 180,
+    "translation_cache_ttl_sec": 180,
+    "typing_indicator_delay_ms": 280,
+    "auto_summary_turn_threshold": 0
+  }
+}

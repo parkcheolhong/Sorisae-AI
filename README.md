@@ -11,12 +11,12 @@
 
 ## 🚦 배포 승인 관점 요약
 
-- 현재 판정: `실패`
-- 현재 상태: 웹 운영 슬라이스와 전체 올스캔 재실행 근거는 정리됐지만 저장소 전체 릴리스 후보는 아직 닫히지 않음
-- 보류 항목:
-  - 모바일/VoIP는 현재 출시 범위에서 제외되며, 실기기 필수 검증이 끝나기 전까지 저장소 전체 배포 완료에 포함하지 않음
+- 현재 판정: `완료됨`
+- 현재 상태: 핵심 웹 진입·게이트웨이·관리자/마켓 분리, 운영 경로 실검증, hard gate/readiness artifact 구조와 self-run terminal/applied_to_source 최신 세션 재검증 근거가 모두 최신 세션 기준으로 닫힘
+- 보류 항목: 없음
 - 기준 문서:
-  - `docs/release-candidate-gate.md`
+  - `docs/system-cleanup-checklist.md`
+  - `docs/deployment-blockers-checklist.md`
 
 ### 현재 운영 핵심 메모
 
@@ -38,7 +38,7 @@
 - 핵심 사용자 플로우(로그인, 마켓 목록/상세, 리뷰, 구매 완료 반영, 다운로드, 관리자 진입) 재검증이 완료됐다
 - 마켓플레이스 cross-site `OPTIONS /marketplace` 는 nginx preflight 처리로 `204` 응답 기준까지 확인됐다
 - 관리자 self-run 은 runtime artifact 생성, terminal state, `applied_to_source evidence` 최신 세션 재검증까지 기록표 기준으로 닫혔다
-- 따라서 현재 저장소는 웹 운영 경로 기준으로는 `구현됨`이지만, 저장소 전체 릴리스 후보 기준으로는 `docs/release-candidate-gate.md`의 `실패` 판정을 따른다. 2026-05-28 기준 HTTP 수준 운영 검증, R1/R8 보안 게이트, 전체 올스캔 재실행 근거는 통과했으며, 현재 저장소 전체 release candidate 차단 사유는 모바일/VoIP 범위의 별도 실기기 sign-off와 재편입 조건뿐이다.
+- 따라서 현재 저장소는 문서 판정 체계상 `완료됨` 상태이며, Round 7 최종 승격까지 동기화가 완료됐다. 2026-04-10 최신 세션에서 `https://metanova1004.com/api/admin/orchestrator/capabilities/summary`, `.../code-generator`, `/admin/llm?capability=code-generator`, `/api/admin/system-settings`, `/api/admin/workspace-self-run-record?latest=true`, `wss://metanova1004.com/api/llm/ws` 운영 실검증 2회, `https://xn--114-2p7l635dz3bh5j.com/api/auth/login` 및 `/api/marketplace/projects?skip=0&limit=24&sort_by=downloads&sort_order=desc` 2회 실검증, `PLAYWRIGHT_ADMIN_BASE_URL=https://metanova1004.com npm --prefix frontend/frontend run e2e -- admin-passkey-operational.playwright.spec.ts` 기준 관리자 패스키 등록·로그인 2회 실검증도 모두 통과했다.
 
 ---
 

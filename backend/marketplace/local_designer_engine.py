@@ -2,6 +2,8 @@
 
 from dataclasses import asdict, dataclass
 from datetime import datetime
+
+from backend.time_utils import utcnow
 from base64 import b64encode
 from html import escape
 from io import BytesIO
@@ -1071,7 +1073,7 @@ def render_local_designer_sequence(payload: Dict[str, object]) -> Dict[str, obje
     segments = [segment for sentence in sentences for segment in _semantic_segments(sentence)] or [scenario_script]
     frame_allocations = _allocate_frames(duration_seconds * frames_per_second, segments)
 
-    run_id = f"designer-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
+    run_id = f"designer-{utcnow().strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
     output_dir = _output_root() / run_id
     output_dir.mkdir(parents=True, exist_ok=True)
 

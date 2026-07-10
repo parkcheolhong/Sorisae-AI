@@ -123,6 +123,13 @@ export function buildAdminDashboardBootstrapRequestMap(
             init: { headers },
             tolerateServerError: true,
         },
+        {
+            key: 'sorisae-failure-monitor',
+            label: '소리새 장애감지',
+            url: `${apiBaseUrl}/api/admin/sorisae-failure-monitor/latest`,
+            init: { headers },
+            tolerateServerError: true,
+        },
         ...(includeCapabilityBootstrap
             ? [
                 {
@@ -159,6 +166,7 @@ export function assertAdminDashboardBootstrapContract() {
         'ad-video-orders-settlement-dashboard',
         'capabilities-summary',
         'latest-self-run',
+        'sorisae-failure-monitor',
         'security-guard-detail',
     ];
     const requestKeys = new Set(requests.map((request) => request.key));

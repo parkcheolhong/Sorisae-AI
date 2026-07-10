@@ -111,6 +111,7 @@ export function useAdminPageState(): any {
     const [orchestratorCapabilitySummary, setOrchestratorCapabilitySummary] = useState(null);
     const [securityGuardDetail, setSecurityGuardDetail] = useState(null);
     const [dashboardSelfRunStatus, setDashboardSelfRunStatus] = useState(null);
+    const [sorisaeFailureStatus, setSorisaeFailureStatus] = useState(null);
 
     // ============================================================
     // Audio & Voice Alert
@@ -139,7 +140,7 @@ export function useAdminPageState(): any {
     // ============================================================
     // Auto Operations & Recovery
     // ============================================================
-    const [autoOpsEnabled, setAutoOpsEnabled] = useState(true);
+    const [autoOpsEnabled, setAutoOpsEnabled] = useState(false);
     const [autoOpsLastExecutedAt, setAutoOpsLastExecutedAt] = useState('');
     const [autoRecoveryHistory, setAutoRecoveryHistory] = useState([]);
     const [autoRecoveryRunning, setAutoRecoveryRunning] = useState(false);
@@ -278,6 +279,8 @@ export function useAdminPageState(): any {
         setSecurityGuardDetail,
         dashboardSelfRunStatus,
         setDashboardSelfRunStatus,
+        sorisaeFailureStatus,
+        setSorisaeFailureStatus,
 
         // Voice
         voiceAlertEnabled,

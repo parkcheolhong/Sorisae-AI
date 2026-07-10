@@ -20,8 +20,8 @@ def _probe_provider(name: str, base_url: str, retries: int = 2, timeout: float =
     allow_private_hosts = str(os.getenv("ALLOW_PRIVATE_UPSTREAM_HOSTS", "false")).strip().lower() in {"1", "true", "yes", "on"}
     try:
         parsed = parse_http_base_url(base_url, allow_private_hosts=allow_private_hosts)
-    except ValueError as exc:
-        return {'provider': name, 'reachable': False, 'latency_ms': None, 'mode': 'degraded', 'error': str(exc), 'base_url': str(base_url or ''), 'timeout_sec': timeout}
+    except ValueError:
+        return {'provider': name, 'reachable': False, 'latency_ms': None, 'mode': 'degraded', 'error': 'invalid_upstream_configuration', 'base_url': str(base_url or ''), 'timeout_sec': timeout}
     if parsed.placeholder:
         return {'provider': name, 'reachable': True, 'latency_ms': 28, 'mode': 'simulated', 'base_url': base_url, 'timeout_sec': timeout}
     last_error = None
@@ -30,8 +30,8 @@ def _probe_provider(name: str, base_url: str, retries: int = 2, timeout: float =
             response = httpx.get(parsed.normalized.rstrip('/') + '/health', timeout=timeout)
             response.raise_for_status()
             return {'provider': name, 'reachable': True, 'latency_ms': 20 + attempt, 'mode': 'live', 'base_url': parsed.normalized, 'timeout_sec': timeout}
-        except Exception as exc:
-            last_error = str(exc)
+        except Exception:
+            last_error = 'upstream_request_failed'
             time.sleep(min(0.2 * (attempt + 1), 0.5))
     return {'provider': name, 'reachable': False, 'latency_ms': None, 'mode': 'degraded', 'error': last_error, 'base_url': parsed.normalized, 'timeout_sec': timeout}
 

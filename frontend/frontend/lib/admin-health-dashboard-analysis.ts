@@ -1,3 +1,4 @@
+import type { SorisaeFailureMonitorStatus } from '@/lib/admin-dashboard-types';
 import type { HealthDiagnostics } from '@/lib/admin-health-analysis';
 import type { SystemResourceCard } from '@/lib/admin-dashboard-ui-types';
 import type { AdminAlertItem, LlmStatus } from '@/lib/admin-runtime-types';
@@ -109,6 +110,7 @@ export function buildAdminOpsAlerts(options: {
     healthDiagnostics: HealthDiagnostics | undefined;
     hasOrchestratorCapabilityError: boolean;
     hasOrchestratorCapabilityWarning: boolean;
+    sorisaeFailureStatus?: SorisaeFailureMonitorStatus | null;
 }): AdminAlertItem[] {
     const alerts: AdminAlertItem[] = [];
 
@@ -146,6 +148,19 @@ export function buildAdminOpsAlerts(options: {
         });
     }
 
+    if (options.sorisaeFailureStatus && options.sorisaeFailureStatus.classification !== 'ALL_PASS' && options.sorisaeFailureStatus.classification !== 'unknown') {
+        const classification = options.sorisaeFailureStatus.classification;
+        alerts.push({
+            id: 'sorisae-failure-monitor',
+            level: classification === 'API_ONLY_FAILURE' ? 'warning' : 'critical',
+            title: '소리새 장애감지',
+            message: `최신 스모크 결과가 ${classification} 상태입니다.`,
+            action: '관리자 대시보드의 소리새 장애감지 위젯에서 실패 페이지, 리포트, 푸시 발송 결과를 확인하세요.',
+            source: 'service',
+            apiPath: '/api/admin/sorisae-failure-monitor/latest',
+        });
+    }
+
     return alerts.sort((left, right) => {
         const weight = { critical: 2, warning: 1 };
         return weight[right.level] - weight[left.level];
@@ -165,6 +180,7 @@ export function assertAdminHealthDashboardAnalysisContract() {
         healthDiagnostics: undefined,
         hasOrchestratorCapabilityError: false,
         hasOrchestratorCapabilityWarning: true,
+        sorisaeFailureStatus: null,
     });
     if (labels !== 'CPU 전용' || cards.length !== 5 || alerts[0]?.id !== 'orchestrator-warning') {
         throw new Error('admin health dashboard analysis contract 누락: health dashboard 해석 기본 규칙 필요');

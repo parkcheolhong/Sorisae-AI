@@ -55,7 +55,7 @@ def read_text(path: Path) -> str:
 
 
 def parse_constant(text: str, name: str) -> str | None:
-    pattern = rf"const\s+{re.escape(name)}\s*=\s*['\"]([^'\"]+)['\"]"
+    pattern = rf"const\s+{re.escape(name)}\s*=\s*'([^']+)'"
     match = re.search(pattern, text)
     return match.group(1) if match else None
 
@@ -65,17 +65,7 @@ def parse_array_constant(text: str, name: str) -> list[str]:
     match = re.search(pattern, text, re.S)
     if not match:
         return []
-    return re.findall(r"['\"]([^'\"]+)['\"]", match.group(1))
-
-
-def parse_exported_route_methods(text: str) -> set[str]:
-    return {
-        method.upper()
-        for method in re.findall(
-            r"export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b",
-            text,
-        )
-    }
+    return re.findall(r"'([^']+)'", match.group(1))
 
 
 def parse_backend_routes(text: str) -> dict[str, str]:
@@ -225,14 +215,12 @@ def compose_has_explicit_admin_marketplace_split(compose_text: str) -> bool:
 
 def collect_findings(repo_root: Path) -> tuple[list[Finding], dict[str, Any]]:
     proxy_route_path = repo_root / "frontend" / "frontend" / "app" / "api" / "proxy" / "route.ts"
-    catchall_proxy_path = repo_root / "frontend" / "frontend" / "app" / "api" / "backend-proxy" / "[...path]" / "route.ts"
     canonical_path = repo_root / "frontend" / "frontend" / "lib" / "canonical-site.ts"
     proxy_host_path = repo_root / "frontend" / "frontend" / "proxy.ts"
     backend_router_path = repo_root / "backend" / "admin_router.py"
     compose_path = repo_root / "docker-compose.yml"
 
     proxy_route_text = read_text(proxy_route_path)
-    catchall_proxy_text = read_text(catchall_proxy_path) if catchall_proxy_path.exists() else ""
     canonical_text = read_text(canonical_path)
     proxy_host_text = read_text(proxy_host_path)
     backend_router_text = read_text(backend_router_path)
@@ -240,15 +228,12 @@ def collect_findings(repo_root: Path) -> tuple[list[Finding], dict[str, Any]]:
 
     frontend_actions = parse_frontend_actions(proxy_route_text)
     backend_routes = parse_backend_routes(backend_router_text)
-    catchall_methods = parse_exported_route_methods(catchall_proxy_text)
     services = parse_service_blocks(compose_text)
 
     findings: list[Finding] = []
 
     for action, (expected_method, expected_path) in EXPECTED_ACTIONS.items():
         actual = frontend_actions.get(action)
-        if actual is None and expected_method in catchall_methods:
-            actual = (expected_method, expected_path)
         if actual != (expected_method, expected_path):
             findings.append(
                 Finding(
@@ -321,15 +306,7 @@ def collect_findings(repo_root: Path) -> tuple[list[Finding], dict[str, Any]]:
             )
         )
 
-    if not any(
-        key in frontend_admin_env
-        for key in (
-            "ADMIN_ALLOWED_HOSTS",
-            "NEXT_PUBLIC_ADMIN_ALLOWED_HOSTS",
-            "BACKEND_PROXY_TARGET",
-            "LOCAL_API_BASE_URL",
-        )
-    ):
+    if not any(key in frontend_admin_env for key in ("ADMIN_ALLOWED_HOSTS", "NEXT_PUBLIC_ADMIN_ALLOWED_HOSTS")):
         findings.append(
             Finding(
                 severity="warning",
@@ -345,7 +322,6 @@ def collect_findings(repo_root: Path) -> tuple[list[Finding], dict[str, Any]]:
     facts = {
         "paths": {
             "proxy_route": str(proxy_route_path),
-            "catchall_proxy_route": str(catchall_proxy_path),
             "canonical_site": str(canonical_path),
             "proxy_host_gate": str(proxy_host_path),
             "backend_admin_router": str(backend_router_path),
@@ -363,7 +339,6 @@ def collect_findings(repo_root: Path) -> tuple[list[Finding], dict[str, Any]]:
             "default_local_admin_ports": parse_array_constant(proxy_host_text, "DEFAULT_LOCAL_ADMIN_PORTS"),
         },
         "frontend_actions": {action: {"method": method, "path": path} for action, (method, path) in sorted(frontend_actions.items())},
-        "catchall_proxy_methods": sorted(catchall_methods),
         "backend_routes": {path: method for path, method in sorted(backend_routes.items()) if path in {item[1] for item in EXPECTED_ACTIONS.values()}},
         "compose": {
             "services": services,

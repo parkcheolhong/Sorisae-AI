@@ -93,5 +93,6 @@
 - 운영 전환 체크: `docs/identity-provider-operations-transition-package.md`
 - 사업자 유형 판단: `docs/identity-provider-business-type-guide.md`
 - 상용화 계약/약관 기준: `docs/identity-provider-commercial-terms-checklist.md`
+- **상용값(env) 입력 체크리스트**: `docs/identity-provider-commercial-values-input-checklist.md`
 
-이 4개 문서를 관리자 화면에서 바로 열 수 있어야 상용화 전환 준비가 완료된 것으로 봅니다.
+이 5개 문서를 관리자 화면에서 바로 열 수 있어야 상용화 전환 준비가 완료된 것으로 봅니다.

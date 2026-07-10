@@ -188,6 +188,7 @@ class PaymentInitResult(BaseModel):
     payment_url: str
     order_id: str
     transaction_id: str
+    referral_discount: Optional[Dict[str, Any]] = None
 
 
 class PaymentCallbackResponse(BaseModel):
@@ -198,6 +199,12 @@ class PaymentCallbackResponse(BaseModel):
     payment_provider: str
     payment_simulation: bool
     payment_message: str
+    worldlinco_settlement: Optional[Dict[str, Any]] = None
+
+
+class MarketplacePurchaseConfirmRequest(BaseModel):
+    transaction_id: Optional[str] = None
+    status: str = "completed"
 
 
 class FileUploadResponse(BaseModel):
@@ -241,6 +248,8 @@ class MobileSubscriptionVerifyResponse(SubscriptionStatusResponse):
     source_original_id: Optional[str] = None
     verification_mode: str
     verification_simulated: bool
+    referral_discount: Optional[Dict[str, Any]] = None
+    referral_discount_applied: Optional[Dict[str, Any]] = None
 
 
 class CheckoutSessionCreateRequest(BaseModel):
@@ -258,6 +267,7 @@ class CheckoutSessionResponse(BaseModel):
     expires_in: int
     verification_mode: str
     verification_simulated: bool
+    referral_discount: Optional[Dict[str, Any]] = None
 
 
 class SubscriptionCatalogPlanSummary(BaseModel):

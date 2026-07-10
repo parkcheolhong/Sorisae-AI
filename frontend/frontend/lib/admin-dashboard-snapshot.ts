@@ -13,6 +13,7 @@ export type AdminDashboardSnapshot = {
 export type AdminDashboardSnapshotLogEvent = {
     level: LiveLogItem['level'];
     message: string;
+    meta?: Partial<LiveLogItem> & { capabilityId?: string };
 };
 
 export function buildAdminDashboardSnapshot(options: {

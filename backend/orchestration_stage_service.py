@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+
+from backend.time_utils import utcnow
 from pathlib import Path
 from secrets import token_urlsafe
 from typing import Any, Dict, List, Optional
@@ -91,7 +93,7 @@ def _build_stage_substeps(stage_id: str, current_stage_id: str, created_at: str)
 
 
 def _now_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    return utcnow().isoformat() + "Z"
 
 
 def _stage_run_path(run_id: str) -> Path:
