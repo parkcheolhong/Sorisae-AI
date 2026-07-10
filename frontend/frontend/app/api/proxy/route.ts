@@ -257,6 +257,17 @@ export async function GET(req: NextRequest) {
   if (!auth.trim()) {
     return jsonNoStore({ detail: 'Authorization 헤더가 필요합니다.' }, 401);
   }
+  if (process.env.ADMIN_REGRESSION_MOCK_BACKEND === '1') {
+    const token = auth.replace(/^Bearer\s+/i, '').trim();
+    if (token === 'admin-regression-mock-token') {
+      return jsonNoStore({
+        username: 'regression-mock-admin',
+        email: 'regression@mock.local',
+        is_admin: true,
+        is_superuser: false,
+      }, 200);
+    }
+  }
   try {
     const { target, response, bodyText, parsedBody, invalidHtml } = await fetchWithRetry('/api/auth/me', {
       headers: { Authorization: auth },
