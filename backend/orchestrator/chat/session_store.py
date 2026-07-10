@@ -7,7 +7,6 @@ import re
 import tempfile
 from pathlib import Path
 from typing import Any, Dict
-from uuid import uuid4
 
 
 _SAFE_SESSION_ID = re.compile(r"[^a-zA-Z0-9_.:-]+")
@@ -67,23 +66,14 @@ def save_chat_session_snapshot(session_id: str, snapshot: Dict[str, Any], *, ses
     path = _session_path(session_id, session_owner_id=session_owner_id)
     if path is None:
         return
-    snapshot_payload = dict(snapshot)
-    owner = _normalize_session_owner(session_owner_id)
-    if owner:
-        snapshot_payload["session_owner_id"] = owner
-    payload = json.dumps(snapshot_payload, ensure_ascii=False, indent=2, sort_keys=True)
-    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
+    payload = json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True)
+    tmp_path = path.with_suffix(f"{path.suffix}.tmp")
+    tmp_path.write_text(payload, encoding="utf-8")
     try:
-        tmp_path.write_text(payload, encoding="utf-8")
-        try:
-            os.chmod(tmp_path, 0o600)
-        except Exception:
-            pass
-        os.replace(tmp_path, path)
+        os.chmod(tmp_path, 0o600)
     except Exception:
-        if tmp_path.exists():
-            tmp_path.unlink(missing_ok=True)
-        raise
+        pass
+    os.replace(tmp_path, path)
     try:
         os.chmod(path, 0o600)
     except Exception:

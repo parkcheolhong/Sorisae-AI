@@ -16,11 +16,6 @@ from backend.orchestrator.chat.models import OrchestratorChatRequest
 from backend.orchestrator.chat import session_store
 
 
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
-
-
 def _request(path: str = "/api/llm/orchestrate/chat") -> Request:
     return Request(
         {

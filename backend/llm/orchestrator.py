@@ -198,13 +198,6 @@ ORCH_ALLOWED_OUTPUT_ROOTS = [
 ]
 
 
-def _chat_session_owner_id(current_user: Any) -> str | None:
-    user_id = getattr(current_user, "id", None)
-    if user_id is None:
-        return None
-    return f"user:{user_id}"
-
-
 def _is_relative_to(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)

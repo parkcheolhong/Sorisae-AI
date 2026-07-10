@@ -887,13 +887,6 @@ def _resolve_friend_reply_language(
     return _lang_primary(_detect_dominant_script_lang(transcript)) or "ko"
 
 
-def _chat_session_owner_id(current_user: Any) -> str | None:
-    user_id = getattr(current_user, "id", None)
-    if user_id is None:
-        return None
-    return f"user:{user_id}"
-
-
 def _resolve_voice_chat_model(agent_key: str, *, lightweight: bool) -> str:
     normalized = str(agent_key or 'chat').strip().lower()
     if normalized == 'voice_chat':
