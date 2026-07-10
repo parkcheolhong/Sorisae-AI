@@ -17,12 +17,13 @@ import tempfile
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from backend.auth import get_current_user
 from backend.voip_language_locales import (
     resolve_edge_tts_voice,
     resolve_whisper_initial_prompt,
@@ -1655,7 +1656,7 @@ async def voice_synthesize(request: VoiceSynthesizeRequest):
 
 
 @router.post("/voice/orchestrate", response_model=VoiceResponse)
-async def voice_orchestrate(request_context: Request, request: VoiceRequest):
+async def voice_orchestrate(request_context: Request, request: VoiceRequest, current_user: Any = Depends(get_current_user)):
     transcript = (request.transcript or "").strip()
     detected_language: Optional[str] = None
 
@@ -1761,6 +1762,7 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest):
                     logger=logger,
                     re_module=re,
                     session_factory=None,
+                    current_user=current_user,
                 )
             )
         )
