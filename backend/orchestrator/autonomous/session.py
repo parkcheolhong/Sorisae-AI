@@ -142,8 +142,6 @@ class AutonomousSession:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "output_dir": self.output_dir,
-            "model_routes": self.model_routes,
-            "extra": self.extra,
         }
 
     def save(self) -> None:
@@ -179,8 +177,6 @@ class AutonomousSession:
                 created_at=data.get("created_at", time.time()),
                 updated_at=data.get("updated_at", time.time()),
                 output_dir=data.get("output_dir"),
-                model_routes=data.get("model_routes", {}),
-                extra=data.get("extra", {}),
             )
             for turn_data in data.get("conversation", []):
                 session.conversation.append(ConversationTurn(**{
