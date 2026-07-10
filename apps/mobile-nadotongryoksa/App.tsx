@@ -10195,14 +10195,14 @@ function AppInner() {
                 visible={sorisaeWindowOpen}
                 animationType="slide"
                 statusBarTranslucent
-                onRequestClose={() => { void closeSorisaeWindow(); }}
+                onRequestClose={closeSorisaeWindow}
             >
                 <ImageBackground source={SKY_BG} resizeMode="cover" style={styles.skyBg}>
                 <SafeAreaView style={styles.sorisaeWindowRoot}>
                     <View style={styles.sorisaeWindowHeader}>
                         <Text style={styles.sorisaeWindowTitle}>🐦 {aiDisplayName}</Text>
                         <Pressable
-                            onPress={() => { void closeSorisaeWindow(); }}
+                            onPress={closeSorisaeWindow}
                             accessibilityRole="button"
                             accessibilityLabel="worldlinco-sorisae-window-close"
                             testID="worldlinco-sorisae-window-close"

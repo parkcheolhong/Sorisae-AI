@@ -10,6 +10,8 @@ from typing import Dict, List
 
 from backend.llm.orchestrator_scaffold_generators import _strip_generated_id_headers
 
+AI_ROUTER_PATH = "ai/router.py"
+
 
 def _compat_build_manifest_lookup(manifest: List[Dict[str, str]]) -> Dict[str, str]:
     lookup: Dict[str, str] = {}
@@ -138,7 +140,7 @@ def _compat_domain_required_files(order_profile: Dict[str, Any], validation_prof
                 "app/ops_routes.py",
                 "ai/adapters.py",
                 "ai/schemas.py",
-                "ai/router.py",
+                AI_ROUTER_PATH,
                 "tests/conftest.py",
                 "backend/service/strategy_service.py",
                 "backend/service/domain_adapter_service.py",
@@ -160,7 +162,7 @@ def _compat_domain_required_files(order_profile: Dict[str, Any], validation_prof
             "app/ops_routes.py",
             "ai/adapters.py",
             "ai/schemas.py",
-            "ai/router.py",
+            AI_ROUTER_PATH,
             "backend/service/strategy_service.py",
             "backend/service/domain_adapter_service.py",
             "backend/core/__init__.py",
@@ -326,7 +328,7 @@ def _compat_validate_implementation_normalization(
     profile_id = str(order_profile.get("profile_id") or "").strip()
     strategy_service = str(manifest_lookup.get("backend/service/strategy_service.py") or "")
     runtime_service = str(manifest_lookup.get("app/services/runtime_service.py") or "")
-    ai_router = str(manifest_lookup.get("ai/router.py") or "")
+    ai_router = str(manifest_lookup.get(AI_ROUTER_PATH) or "")
 
     if profile_id == "document_writer_suite":
         document_lifecycle_markers = [
@@ -454,7 +456,7 @@ def _compat_validate_ai_implementation(
     for marker in app_main_markers:
         if marker not in app_main:
             findings.append(f"app/main.py missing AI router binding marker: {marker}")
-    ai_router = manifest_lookup.get("ai/router.py", "")
+    ai_router = manifest_lookup.get(AI_ROUTER_PATH, "")
     ai_router_markers = [
         "router = APIRouter(prefix='/ai'",
         "@router.get('/health')",
@@ -467,7 +469,7 @@ def _compat_validate_ai_implementation(
     ]
     for marker in ai_router_markers:
         if marker not in ai_router:
-            findings.append(f"ai/router.py missing AI endpoint marker: {marker}")
+            findings.append(f"{AI_ROUTER_PATH} missing AI endpoint marker: {marker}")
     ai_schemas = manifest_lookup.get("ai/schemas.py", "")
     ai_schema_markers = ["class InferenceRequest", "class TrainingRequest", "class EvaluationRequest"]
     for marker in ai_schema_markers:

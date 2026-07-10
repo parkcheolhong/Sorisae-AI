@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List
 
+APP_ENV_EXAMPLE_PATH = "configs/app.env.example"
+
 
 def _build_trading_system_production_ai_template_candidates(
     project_name: str,
@@ -530,7 +532,7 @@ def _build_trading_system_production_ai_template_candidates(
         "docs/deployment.md": (
             "# deployment\n\n"
             "- install dependencies: `pip install -r requirements.txt`\n"
-            "- configure env: `copy configs/app.env.example .env`\n"
+            f"- configure env: `copy {APP_ENV_EXAMPLE_PATH} .env`\n"
             "- run api: `uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000`\n"
             "- build container: `docker build -t trading-runtime .`\n"
             "- container run: `docker run --rm -p 8000:8000 --env-file .env trading-runtime`\n"
@@ -560,7 +562,7 @@ def _build_trading_system_production_ai_template_candidates(
             "- DB 경로 손상 시 `runtime/data` 재생성 후 재기동\n"
             "- `runtime/logs/ops-events.jsonl`와 `/ops/logs`로 감사 로그 확인\n"
         ),
-        "configs/app.env.example": (
+        APP_ENV_EXAMPLE_PATH: (
             "APP_ENV=dev\n"
             "APP_PORT=8000\n"
             "DATABASE_URL=sqlite:///./runtime/data/trading.db\n"
@@ -634,7 +636,7 @@ def _build_trading_system_template_candidates(
             "- `frontend/app/page.tsx` 전략 상태, 리스크, 포트폴리오 검토 화면\n"
             "- `tests/test_ai_pipeline.py`, `tests/test_routes.py`, `tests/test_runtime.py`, `tests/test_security_runtime.py` 실거래 전 검증 시나리오\n\n"
             "## Operator Checklist\n\n"
-            "1. `configs/app.env.example`를 운영 값으로 치환\n"
+            f"1. `{APP_ENV_EXAMPLE_PATH}`를 운영 값으로 치환\n"
             "2. `pip install -r requirements.delivery.lock.txt` 실행\n"
             "3. `uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000` 기동\n"
             "4. `/health`, `/runtime`, `/ai/health`, `/ops/health`, `/auth/settings` 확인\n"
@@ -676,7 +678,7 @@ def _build_trading_system_template_candidates(
         "docs/deployment.md": (
             "# deployment\n\n"
             "- `docker build -t trading-runtime .`\n"
-            "- `docker run --rm -p 8000:8000 --env-file configs/app.env.example trading-runtime`\n"
+            f"- `docker run --rm -p 8000:8000 --env-file {APP_ENV_EXAMPLE_PATH} trading-runtime`\n"
             "- `docker compose -f infra/docker-compose.override.yml up --build`\n"
             "- container run verification: `/health`, `/ai/health`, `/ops/health`, `/auth/settings`\n"
             "- 부팅 후 `/health`, `/ai/health`, `/ops/health`, `/auth/settings`를 호출해 실검증\n"

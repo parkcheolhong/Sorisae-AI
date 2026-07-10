@@ -94,7 +94,7 @@ export default function AdminWorldlincoReferralPanel({ apiBaseUrl }: AdminWorldl
     }, [apiBaseUrl, applyPayload]);
 
     React.useEffect(() => {
-        void load();
+        load();
     }, [load]);
 
     const handleSaveDiscountPolicy = async () => {
@@ -139,7 +139,7 @@ export default function AdminWorldlincoReferralPanel({ apiBaseUrl }: AdminWorldl
         return (
             <div className="space-y-2">
                 <p className="text-sm text-destructive">{error}</p>
-                <button type="button" className="text-sm underline" onClick={() => { void load(); }}>다시 시도</button>
+                <button type="button" className="text-sm underline" onClick={() => { load(); }}>다시 시도</button>
             </div>
         );
     }

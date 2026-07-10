@@ -792,7 +792,7 @@ if ($result.api -ne $null) {
     $apiFail = [int]$result.api.summary.fail
 }
 $uiFail = 0
-if ($result.uiExitCode -ne $null -and [int]$result.uiExitCode -ne 0) {
+if ($null -ne $result.uiExitCode -and [int]$result.uiExitCode -ne 0) {
     $uiFail = 1
 }
 
