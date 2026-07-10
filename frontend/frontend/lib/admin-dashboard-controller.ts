@@ -24,6 +24,7 @@ import type {
     OrchestratorCapabilitySummaryResponse,
     OverviewStats,
     RevenueStats,
+    SorisaeFailureMonitorStatus,
     TopProject,
 } from '@/lib/admin-dashboard-types';
 import type { HealthStatus } from '@/lib/admin-health-analysis';
@@ -173,6 +174,7 @@ export async function loadAdminDashboardController(options: {
                 adSettlementData: null,
                 capabilityData: null,
                 selfRunData: null,
+                sorisaeFailureData: null,
                 securityGuardDetailData: null,
                 adMonitorUnavailable: options.adMonitorUnavailable,
                 adSettlementUnavailable: options.adSettlementUnavailable,
@@ -225,6 +227,7 @@ export async function loadAdminDashboardController(options: {
                     adSettlementData: null,
                     capabilityData: null,
                     selfRunData: null,
+                    sorisaeFailureData: null,
                     securityGuardDetailData: null,
                     adMonitorUnavailable: finalAdMonitorUnavailable,
                     adSettlementUnavailable: finalAdSettlementUnavailable,
@@ -280,6 +283,7 @@ export async function loadAdminDashboardController(options: {
                     adSettlementData: null,
                     capabilityData: null,
                     selfRunData: null,
+                    sorisaeFailureData: null,
                     securityGuardDetailData: null,
                     adMonitorUnavailable: finalAdMonitorUnavailable,
                     adSettlementUnavailable: finalAdSettlementUnavailable,
@@ -335,6 +339,7 @@ export async function loadAdminDashboardController(options: {
                     adSettlementData: null,
                     capabilityData: null,
                     selfRunData: null,
+                    sorisaeFailureData: null,
                     securityGuardDetailData: null,
                     adMonitorUnavailable: finalAdMonitorUnavailable,
                     adSettlementUnavailable: finalAdSettlementUnavailable,
@@ -390,6 +395,7 @@ export async function loadAdminDashboardController(options: {
                     adSettlementData: null,
                     capabilityData: null,
                     selfRunData: null,
+                    sorisaeFailureData: null,
                     securityGuardDetailData: null,
                     adMonitorUnavailable: finalAdMonitorUnavailable,
                     adSettlementUnavailable: finalAdSettlementUnavailable,
@@ -446,6 +452,7 @@ export async function loadAdminDashboardController(options: {
                     adSettlementData: null,
                     capabilityData: null,
                     selfRunData: null,
+                    sorisaeFailureData: null,
                     securityGuardDetailData: null,
                     adMonitorUnavailable: finalAdMonitorUnavailable,
                     adSettlementUnavailable: finalAdSettlementUnavailable,
@@ -471,6 +478,63 @@ export async function loadAdminDashboardController(options: {
             } satisfies AdminDashboardControllerResult;
         }
         selfRunData = refetchResult.data || selfRunData;
+    }
+
+    let sorisaeFailureData = parsedBootstrap.sorisaeFailureData;
+    if (!sorisaeFailureData) {
+        const refetchResult = await refetchAdminJson<SorisaeFailureMonitorStatus>({
+            apiBaseUrl: options.apiBaseUrl,
+            headers,
+            key: 'sorisae-failure-monitor-refetch',
+            label: '소리새 장애감지 재조회',
+            url: `${options.apiBaseUrl}/api/admin/sorisae-failure-monitor/latest`,
+            tolerateServerError: true,
+        });
+        if (refetchResult.unauthorized) {
+            return {
+                unauthorized: true,
+                overviewData: null,
+                revenueData: null,
+                topData: null,
+                healthData: null,
+                llmData: null,
+                assembledState: assembleAdminDashboardState({
+                    overviewData: null,
+                    revenueData: null,
+                    topData: null,
+                    healthData: null,
+                    llmData: null,
+                    adVideoData: null,
+                    adMonitorData: null,
+                    adSettlementData: null,
+                    capabilityData: null,
+                    selfRunData: null,
+                    sorisaeFailureData: null,
+                    securityGuardDetailData: null,
+                    adMonitorUnavailable: finalAdMonitorUnavailable,
+                    adSettlementUnavailable: finalAdSettlementUnavailable,
+                    buildFallbackAdOrderMonitorSummary: options.buildFallbackAdOrderMonitorSummary,
+                    buildFallbackAdSettlementDashboard: options.buildFallbackAdSettlementDashboard,
+                }),
+                failedMessages: parsedBootstrap.failedMessages,
+                adMonitorUnavailable: finalAdMonitorUnavailable,
+                adSettlementUnavailable: finalAdSettlementUnavailable,
+                liveLogEvents: parsedBootstrap.liveLogEvents,
+                nextSnapshot: options.previousSnapshot || buildAdminDashboardSnapshot({
+                    overviewData: null,
+                    revenueData: null,
+                    healthData: null,
+                    llmData: null,
+                    previousSnapshot: null,
+                    currentOverview: options.currentOverview,
+                    currentRevenue: options.currentRevenue,
+                    currentHealth: options.currentHealth,
+                    currentLlmStatus: options.currentLlmStatus,
+                }),
+                lastUpdated: new Date().toLocaleString('ko-KR'),
+            } satisfies AdminDashboardControllerResult;
+        }
+        sorisaeFailureData = refetchResult.data || sorisaeFailureData;
     }
 
     let securityGuardDetailData = parsedBootstrap.securityGuardDetailData;
@@ -501,6 +565,7 @@ export async function loadAdminDashboardController(options: {
                     adSettlementData: null,
                     capabilityData: null,
                     selfRunData: null,
+                    sorisaeFailureData: null,
                     securityGuardDetailData: null,
                     adMonitorUnavailable: finalAdMonitorUnavailable,
                     adSettlementUnavailable: finalAdSettlementUnavailable,
@@ -539,6 +604,7 @@ export async function loadAdminDashboardController(options: {
         adSettlementData: parsedBootstrap.adSettlementData,
         capabilityData,
         selfRunData,
+        sorisaeFailureData,
         securityGuardDetailData,
         adMonitorUnavailable: finalAdMonitorUnavailable,
         adSettlementUnavailable: finalAdSettlementUnavailable,

@@ -8,6 +8,7 @@ import os
 import time
 from urllib.parse import quote
 from uuid import uuid4
+from typing import Any
 
 from .base import AdapterCheckoutSession, AdapterWebhookResult, BillingAdapterConfigurationError
 from ..subscription_state_machine import SubscriptionEventType
@@ -57,6 +58,10 @@ class StripeBillingAdapter:
         price_lookup_key: str,
         success_url: str,
         cancel_url: str,
+        discount_percent: float | None = None,
+        discount_coupon_id: str | None = None,
+        original_amount_minor: int | None = None,
+        final_amount_minor: int | None = None,
     ) -> AdapterCheckoutSession:
         allow_simulation = (os.getenv("MARKETPLACE_BILLING_ALLOW_SIMULATED_CHECKOUT", "true") or "true").strip().lower() in {
             "1",
@@ -75,23 +80,41 @@ class StripeBillingAdapter:
         # 실연동: STRIPE_SECRET_KEY 존재 + 시뮬레이션 비활성화 시 실제 Stripe API 호출
         if not allow_simulation and stripe_secret_key:
             try:
-                import stripe as _stripe  # lazy import — stripe SDK 선택적 의존
+                import stripe as _stripe  # lazy import — stripe SDK 선택적 의존  # pyright: ignore[reportMissingImports]
             except ImportError as exc:
                 raise BillingAdapterConfigurationError(
                     "stripe 패키지가 설치되지 않았습니다. pip install 'stripe>=10.0.0'"
                 ) from exc
             _stripe.api_key = stripe_secret_key
-            session = _stripe.checkout.Session.create(
-                success_url=success_url,
-                cancel_url=cancel_url,
-                mode="subscription",
-                line_items=[{"price": price_lookup_key, "quantity": 1}],
-                metadata={
-                    "user_id": str(user_id),
-                    "product_code": product_code,
-                    "plan_code": plan_code,
-                },
-            )
+            metadata = {
+                "user_id": str(user_id),
+                "product_code": product_code,
+                "plan_code": plan_code,
+            }
+            if discount_percent:
+                metadata["referral_discount_percent"] = str(discount_percent)
+            if original_amount_minor is not None:
+                metadata["referral_original_amount_minor"] = str(original_amount_minor)
+            if final_amount_minor is not None:
+                metadata["referral_final_amount_minor"] = str(final_amount_minor)
+            session_kwargs: dict[str, Any] = {
+                "success_url": success_url,
+                "cancel_url": cancel_url,
+                "mode": "subscription",
+                "line_items": [{"price": price_lookup_key, "quantity": 1}],
+                "metadata": metadata,
+            }
+            coupon_id = str(discount_coupon_id or "").strip() or None
+            if discount_percent and not coupon_id:
+                coupon = _stripe.Coupon.create(
+                    percent_off=float(discount_percent),
+                    duration="once",
+                    name="WorldLinco Referral First Payment",
+                )
+                coupon_id = coupon.id
+            if coupon_id:
+                session_kwargs["discounts"] = [{"coupon": coupon_id}]
+            session = _stripe.checkout.Session.create(**session_kwargs)
             return AdapterCheckoutSession(
                 provider=self.provider,
                 checkout_url=session.url,
@@ -119,6 +142,24 @@ class StripeBillingAdapter:
             f"&success_url={quote(success_url, safe=':/?=&')}"
             f"&cancel_url={quote(cancel_url, safe=':/?=&')}"
         )
+        if discount_percent:
+            query += f"&referral_discount_percent={quote(str(discount_percent))}"
+        if original_amount_minor is not None:
+            query += f"&referral_original_amount_minor={int(original_amount_minor)}"
+        if final_amount_minor is not None:
+            query += f"&referral_final_amount_minor={int(final_amount_minor)}"
+        raw_payload = {
+            "user_id": user_id,
+            "product_code": product_code,
+            "plan_code": plan_code,
+            "price_lookup_key": price_lookup_key,
+        }
+        if discount_percent:
+            raw_payload["referral_discount_percent"] = float(discount_percent)
+        if original_amount_minor is not None:
+            raw_payload["referral_original_amount_minor"] = int(original_amount_minor)
+        if final_amount_minor is not None:
+            raw_payload["referral_final_amount_minor"] = int(final_amount_minor)
         return AdapterCheckoutSession(
             provider=self.provider,
             checkout_url=f"{base_url}?{query}",
@@ -126,12 +167,7 @@ class StripeBillingAdapter:
             expires_at=expires_at,
             verification_mode="simulation",
             verification_simulated=True,
-            raw={
-                "user_id": user_id,
-                "product_code": product_code,
-                "plan_code": plan_code,
-                "price_lookup_key": price_lookup_key,
-            },
+            raw=raw_payload,
         )
 
     def parse_webhook(self, *, payload: dict) -> AdapterWebhookResult:

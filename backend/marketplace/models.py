@@ -4,8 +4,8 @@ Database models for marketplace
 from datetime import datetime, timezone
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, UniqueConstraint, text  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import relationship  # pyright: ignore[reportMissingImports]
 
 from .database import Base
 
@@ -56,6 +56,9 @@ class User(Base):
     representative_name = Column(String(120))
     hashed_password = Column(String(255))
     avatar_url = Column(String(500))
+    preferred_language = Column(String(16), nullable=True)
+    country_code = Column(String(8), nullable=True)
+    phone_number = Column(String(40), nullable=True, index=True)
     credit_balance = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, nullable=False, default=False)
@@ -308,3 +311,395 @@ class FeatureRetryQueue(Base):
     retry_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=_utcnow_naive, index=True)
     updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
+
+
+class CallModeAuditLog(Base):
+    __tablename__ = 'call_mode_audit_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    call_id = Column(String(120), nullable=False, index=True)
+    session_id = Column(String(120), nullable=True, index=True)
+    event_type = Column(String(80), nullable=False, index=True)
+    requested_mode = Column(String(80), nullable=True)
+    resolved_mode = Column(String(80), nullable=True)
+    auto_relay_requested = Column(Boolean, nullable=False, default=False)
+    auto_relay_applied = Column(Boolean, nullable=False, default=False)
+    call_route = Column(String(80), nullable=True)
+    caller_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    callee_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    callee_phone = Column(String(40), nullable=True)
+    status = Column(String(40), nullable=True)
+    error_code = Column(String(120), nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    duration_sec = Column(Integer, nullable=True)
+    call_quality = Column(String(40), nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class UserActiveSession(Base):
+    """계정당 단일 활성 세션 강제. 로그인 시 새 session_id 를 기록(덮어쓰기)하고,
+    인증 시 토큰의 sid 가 이 값과 다르면 401 → 다른 단말/웹은 자동 로그아웃된다.
+    (DB 영속 → 백엔드 재시작에도 단일 세션 보장 유지)
+    """
+    __tablename__ = 'user_active_sessions'
+
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    session_id = Column(String(64), nullable=False)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
+
+
+class VoipDeviceToken(Base):
+    """계정(user_id)에 등록된 VoIP 착신용 FCM 토큰.
+
+    운영 정책은 사용자당 최신 1개 활성 토큰을 유지하는 것이다. 로그인/토큰 등록 시
+    최신 토큰을 남기고 이전 토큰은 정리해, 동일 계정 다중 단말 동시 링을 방지한다.
+    (DB 영속 → 백엔드 재시작 후에도 최신 활성 토큰 정책 유지)
+    """
+    __tablename__ = 'voip_device_tokens'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    fcm_token = Column(String(512), nullable=False, unique=True, index=True)
+    platform = Column(String(20), nullable=False, default='android')
+    created_at = Column(DateTime, default=_utcnow_naive)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
+
+
+class Friend(Base):
+    __tablename__ = 'friends'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    friend_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    friend_email = Column(String(255), nullable=True, index=True)
+    friend_username = Column(String(255), nullable=True)
+    friend_phone = Column(String(40), nullable=True)
+    added_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+    friend_user = relationship("User", foreign_keys=[friend_user_id])
+
+
+class FriendRequest(Base):
+    __tablename__ = 'friend_requests'
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(String(64), nullable=False, unique=True, index=True)
+    sender_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    receiver_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    sender_nickname = Column(String(120), nullable=True)
+    sender_gender = Column(String(20), nullable=True)
+    sender_country_code = Column(String(8), nullable=True)
+    sender_voice_id = Column(String(120), nullable=True)
+    status = Column(String(20), nullable=False, default='pending', index=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    responded_at = Column(DateTime, nullable=True)
+
+
+class FriendDiscoveryLocation(Base):
+    __tablename__ = 'friend_discovery_locations'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True, index=True)
+    nickname = Column(String(120), nullable=True)
+    gender = Column(String(20), nullable=True)
+    country_code = Column(String(8), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    accuracy = Column(Float, nullable=True)
+    share_on_map = Column(Boolean, nullable=False, default=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class ChatRoom(Base):
+    __tablename__ = 'chat_rooms'
+
+    id = Column(Integer, primary_key=True, index=True)
+    room_uuid = Column(String(64), nullable=False, unique=True, index=True)
+    room_type = Column(String(20), nullable=False, default='direct', index=True)
+    title = Column(String(200), nullable=True)
+    owner_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    default_source_lang = Column(String(16), nullable=True)
+    default_target_lang = Column(String(16), nullable=True)
+    translation_mode = Column(String(20), nullable=True)
+    allow_member_invites = Column(Boolean, nullable=False, default=False)
+    member_limit = Column(Integer, nullable=True)
+    is_archived = Column(Boolean, nullable=False, default=False, index=True)
+    last_message_id = Column(Integer, nullable=True)
+    last_message_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class ChatRoomMember(Base):
+    __tablename__ = 'chat_room_members'
+
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    role = Column(String(20), nullable=False, default='member')
+    membership_status = Column(String(20), nullable=False, default='active', index=True)
+    joined_at = Column(DateTime, default=_utcnow_naive, nullable=False)
+    left_at = Column(DateTime, nullable=True)
+    mute_notifications = Column(Boolean, nullable=False, default=False)
+    pinned_order = Column(Integer, nullable=True)
+    last_read_message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=True)
+    last_read_at = Column(DateTime, nullable=True)
+
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_uuid = Column(String(64), nullable=False, unique=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id'), nullable=False, index=True)
+    sender_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    message_type = Column(String(24), nullable=False, default='text')
+    body = Column(Text, nullable=False)
+    translated_body = Column(Text, nullable=True)
+    body_source_lang = Column(String(16), nullable=True)
+    body_target_lang = Column(String(16), nullable=True)
+    translation_engine = Column(String(40), nullable=True)
+    translation_status = Column(String(20), nullable=True)
+    reply_to_message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False, index=True)
+    # DB 컬럼이 NOT NULL 이므로 ORM 이 항상 기본값('{}')을 넣도록 모델에 매핑한다.
+    # (모델에 미정의 시 INSERT 가 컬럼을 생략 → NULL → NotNullViolation 으로 채팅 전송 500 발생했음)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class ChatMessageTranslation(Base):
+    __tablename__ = 'chat_message_translations'
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=False, index=True)
+    recipient_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    target_lang = Column(String(16), nullable=True)
+    translated_body = Column(Text, nullable=True)
+    translation_engine = Column(String(40), nullable=True)
+    translation_status = Column(String(20), nullable=True)
+    failure_code = Column(String(80), nullable=True)
+    failure_detail = Column(Text, nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
+
+
+class TripSession(Base):
+    __tablename__ = 'trip_sessions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(64), nullable=False, unique=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    status = Column(String(20), nullable=False, default='active', index=True)
+    origin_country = Column(String(8), nullable=True)
+    destination_country = Column(String(8), nullable=True)
+    destination_city = Column(String(32), nullable=True)
+    travel_start_date = Column(String(10), nullable=True)
+    travel_end_date = Column(String(10), nullable=True)
+    budget_min = Column(Float, nullable=True)
+    budget_max = Column(Float, nullable=True)
+    budget_currency = Column(String(8), nullable=True)
+    context_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class ConversationTurn(Base):
+    __tablename__ = 'conversation_turns'
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_session_id = Column(Integer, ForeignKey('trip_sessions.id'), nullable=False, index=True)
+    turn_index = Column(Integer, nullable=False)
+    role = Column(String(20), nullable=False)
+    utterance = Column(Text, nullable=False)
+    language_code = Column(String(16), nullable=True)
+    intent = Column(String(80), nullable=True, index=True)
+    confidence = Column(Float, nullable=True)
+    slots_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class TravelSlot(Base):
+    __tablename__ = 'travel_slots'
+    __table_args__ = (
+        UniqueConstraint('trip_session_id', 'slot_key', name='uq_travel_slots_session_key'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_session_id = Column(Integer, ForeignKey('trip_sessions.id'), nullable=False, index=True)
+    source_turn_id = Column(Integer, ForeignKey('conversation_turns.id'), nullable=True, index=True)
+    slot_key = Column(String(64), nullable=False, index=True)
+    slot_value = Column(Text, nullable=False)
+    confidence = Column(Float, nullable=True)
+    provenance = Column(String(40), nullable=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class FeedbackEvent(Base):
+    __tablename__ = 'feedback_events'
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_session_id = Column(Integer, ForeignKey('trip_sessions.id'), nullable=True, index=True)
+    conversation_turn_id = Column(Integer, ForeignKey('conversation_turns.id'), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    feedback_type = Column(String(40), nullable=False, index=True)
+    rating = Column(Integer, nullable=True)
+    comment = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class PartnerCatalog(Base):
+    __tablename__ = 'partner_catalog'
+
+    id = Column(Integer, primary_key=True, index=True)
+    partner_id = Column(String(80), nullable=False, unique=True, index=True)
+    name = Column(String(200), nullable=False)
+    category = Column(String(20), nullable=False, index=True)
+    integration_type = Column(String(40), nullable=False, default='affiliate')
+    active = Column(Boolean, nullable=False, default=True, index=True)
+    regions_json = Column(Text, nullable=False, default='[]', server_default=text("'[]'"))
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class PartnerConnector(Base):
+    __tablename__ = 'partner_connectors'
+
+    id = Column(Integer, primary_key=True, index=True)
+    connector_id = Column(String(80), nullable=False, unique=True, index=True)
+    partner_id = Column(String(80), ForeignKey('partner_catalog.partner_id'), nullable=False, index=True)
+    auth_type = Column(String(40), nullable=False, default='api_key')
+    secret_ref_id = Column(String(255), nullable=True)
+    endpoint_url = Column(String(500), nullable=True)
+    webhook_url = Column(String(500), nullable=True)
+    status = Column(String(20), nullable=False, default='inactive', index=True)
+    last_tested_at = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class RoutingPolicy(Base):
+    __tablename__ = 'routing_policies'
+
+    id = Column(Integer, primary_key=True, index=True)
+    policy_version = Column(String(32), nullable=False, default='v1')
+    country_code = Column(String(8), nullable=False, index=True)
+    city_code = Column(String(16), nullable=True, index=True)
+    category = Column(String(20), nullable=False, index=True)
+    primary_partner_id = Column(String(80), nullable=True, index=True)
+    fallback_partner_ids_json = Column(Text, nullable=False, default='[]', server_default=text("'[]'"))
+    priority = Column(Integer, nullable=False, default=100)
+    active = Column(Boolean, nullable=False, default=True, index=True)
+    updated_by = Column(String(120), nullable=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class RecommendationEvent(Base):
+    __tablename__ = 'recommendation_events'
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_session_id = Column(Integer, ForeignKey('trip_sessions.id'), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    category = Column(String(20), nullable=False, index=True)
+    partner_id = Column(String(80), nullable=True, index=True)
+    recommendation_rank = Column(Integer, nullable=True)
+    recommendation_payload_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class PartnerClickEvent(Base):
+    __tablename__ = 'partner_click_events'
+
+    id = Column(Integer, primary_key=True, index=True)
+    recommendation_event_id = Column(Integer, ForeignKey('recommendation_events.id'), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    partner_id = Column(String(80), nullable=False, index=True)
+    click_ref = Column(String(120), nullable=True, unique=True, index=True)
+    landing_url = Column(String(500), nullable=True)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class BookingEvent(Base):
+    __tablename__ = 'booking_events'
+
+    id = Column(Integer, primary_key=True, index=True)
+    partner_click_event_id = Column(Integer, ForeignKey('partner_click_events.id'), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    partner_id = Column(String(80), nullable=False, index=True)
+    booking_ref = Column(String(120), nullable=True, unique=True, index=True)
+    status = Column(String(40), nullable=False, default='initiated', index=True)
+    amount = Column(Float, nullable=True)
+    currency = Column(String(10), nullable=True)
+    raw_payload_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class AttributionLedger(Base):
+    __tablename__ = 'attribution_ledger'
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_event_id = Column(Integer, ForeignKey('booking_events.id'), nullable=True, index=True)
+    partner_id = Column(String(80), nullable=False, index=True)
+    ledger_type = Column(String(30), nullable=False, default='commission', index=True)
+    amount = Column(Float, nullable=False, default=0.0)
+    currency = Column(String(10), nullable=False, default='USD')
+    settlement_status = Column(String(30), nullable=False, default='pending', index=True)
+    settled_at = Column(DateTime, nullable=True)
+    note = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class Consent(Base):
+    __tablename__ = 'consents'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    consent_type = Column(String(40), nullable=False, index=True)
+    purpose = Column(String(120), nullable=False)
+    status = Column(String(20), nullable=False, default='granted', index=True)
+    policy_version = Column(String(32), nullable=True)
+    granted_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)
+
+
+class PrivacyAuditLog(Base):
+    __tablename__ = 'privacy_audit_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    actor_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    action = Column(String(80), nullable=False, index=True)
+    resource_type = Column(String(80), nullable=True, index=True)
+    resource_id = Column(String(120), nullable=True, index=True)
+    legal_basis = Column(String(120), nullable=True)
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    metadata_json = Column(Text, nullable=False, default='{}', server_default=text("'{}'"))
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+
+
+class WorldlincoJsonDocument(Base):
+    """WorldLinco referral/sales ledgers as JSONB documents (multi-instance SSOT)."""
+
+    __tablename__ = 'worldlinco_json_documents'
+
+    store_key = Column(String(64), primary_key=True)
+    payload_json = Column(Text, nullable=False)
+    version = Column(Integer, nullable=False, default=1)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, index=True)

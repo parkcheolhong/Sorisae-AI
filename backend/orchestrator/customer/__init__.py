@@ -7,6 +7,7 @@ from .finalization_service import (
 )
 from .preparation_service import prepare_customer_orchestration_context
 from .run_service import run_customer_orchestration
+from .validation_stages_service import run_customer_validation_stages
 
 __all__ = [
     "assemble_customer_orchestration_response",
@@ -14,4 +15,5 @@ __all__ = [
     "finalize_customer_validation_bundle",
     "prepare_customer_orchestration_context",
     "run_customer_orchestration",
+    "run_customer_validation_stages",
 ]

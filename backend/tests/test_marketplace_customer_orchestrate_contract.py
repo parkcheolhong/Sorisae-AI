@@ -364,7 +364,7 @@ def test_customer_orchestrate_stream_close_releases_lock_and_marks_failed(monkey
         lambda request, user_id: SimpleNamespace(stage_run_id=request.stage_run_id),
     )
 
-    async def _slow_orchestration(_request):
+    async def _slow_orchestration(_request, owner_id=None):
         await marketplace_router_module.asyncio.sleep(5)
         return {"completion_judge": {"product_ready": True}}
 

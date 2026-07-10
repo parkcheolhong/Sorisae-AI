@@ -99,9 +99,9 @@ _ensure_required_module("fastapi")
 _ensure_required_module("annotated_doc", package_name="annotated-doc")
 _ensure_required_module("uvicorn")
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, Response
+from fastapi import FastAPI, Request  # pyright: ignore[reportMissingImports]
+from fastapi.middleware.cors import CORSMiddleware  # pyright: ignore[reportMissingImports]
+from fastapi.responses import RedirectResponse, Response  # pyright: ignore[reportMissingImports]
 from backend.database import check_database_availability, ensure_traceability_schema, ensure_user_role_columns, SessionLocal
 from backend.models import User
 from backend.auth import get_password_hash, is_weak_secret_key, verify_password
@@ -156,6 +156,11 @@ def _enable_qdrant_rest_only_mode() -> None:
         raise RuntimeError("gRPC is disabled in REST-only Qdrant mode.")
 
     def _grpc_getattr(name: str) -> Any:
+        # dunder 속성(__file__, __path__, __loader__, __spec__ 등)은 실제 모듈처럼
+        # "없음"으로 동작해야 한다. 함수 객체를 반환하면 inspect/torch 등이 모듈 메타데이터를
+        # 훑을 때 `'function' object has no attribute 'endswith'` 류로 깨진다.
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
         if name == "Compression":
             return grpc_stub.__dict__["Compression"]
         if name == "StatusCode":
@@ -382,6 +387,39 @@ def _start_admin_capability_warmup_thread() -> None:
     ).start()
 
 
+def _start_admin_projects_cache_warmup_thread() -> None:
+    def _warmup() -> None:
+        try:
+            from backend.admin_router import warm_admin_projects_cache
+
+            warm_admin_projects_cache(skip=0, limit=100)
+            logger.info("[OK] admin projects cache warmup completed")
+        except Exception as exc:
+            logger.warning(f"[WARN] admin projects cache warmup failed: {exc}")
+
+    threading.Thread(
+        target=_warmup,
+        name="admin-projects-cache-warmup",
+        daemon=True,
+    ).start()
+
+
+def _start_voice_stt_warmup_thread() -> None:
+    def _warmup() -> None:
+        try:
+            from backend.llm.voice_gateway import warmup_faster_whisper_model
+
+            warmup_faster_whisper_model()
+        except Exception as exc:
+            logger.warning(f"[WARN] voice STT warmup failed: {exc}")
+
+    threading.Thread(
+        target=_warmup,
+        name="voice-stt-warmup",
+        daemon=True,
+    ).start()
+
+
 def _run_post_startup_bootstrap() -> None:
     started_at = _mark_bootstrap_stage_started(
         "post_startup_bootstrap",
@@ -525,6 +563,8 @@ def _run_post_startup_bootstrap() -> None:
     _start_ad_order_worker_thread()
     _start_self_run_video_worker_thread()
     _start_admin_capability_warmup_thread()
+    _start_admin_projects_cache_warmup_thread()
+    _start_voice_stt_warmup_thread()
     _bootstrap_status["completed_at"] = datetime.now(timezone.utc).isoformat()
     _bootstrap_status["duration_ms"] = round((time.perf_counter() - started_at) * 1000, 1)
     _mark_bootstrap_stage_completed(
@@ -583,8 +623,8 @@ app = FastAPI(
 
 # ── 프로브 엔드포인트 Rate Limiting (slowapi) ──
 try:
-    from slowapi import _rate_limit_exceeded_handler
-    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler  # pyright: ignore[reportMissingImports]
+    from slowapi.errors import RateLimitExceeded  # pyright: ignore[reportMissingImports]
     from backend.marketplace.probe_rate_limit import limiter as _probe_limiter
     app.state.limiter = _probe_limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -690,17 +730,33 @@ class _MemoryStatusEx(ctypes.Structure):
     ]
 
 
+def _cors_is_locked_down() -> bool:
+    """운영/스테이징 여부 — 켜지면 dev 전용(LAN/localhost/.local/임의 서브도메인) 출처를 CORS 에서 제외한다."""
+    return str(os.getenv("APP_ENV") or "dev").strip().lower() in {
+        "prod",
+        "production",
+        "stage",
+        "staging",
+    }
+
+
 def _build_cors_origin_regex() -> str:
-    patterns = [
-        r"https?://localhost(:\d+)?$",
-        r"https?://127\.0\.0\.1(:\d+)?$",
-        r"https?://\[::1\](:\d+)?$",
-        r"https?://host\.docker\.internal(:\d+)?$",
-        r"https?://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
-        r"https?://172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$",
-        r"https?://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
-        r"https?://[a-z0-9-]+\.local(:\d+)?$",
-    ]
+    # [보안 보강][LOW] dev 편의용 LAN/localhost/.local 패턴 + 임의 서브도메인 와일드카드는
+    # allow_credentials=True 와 결합 시 크리덴셜 동반 교차출처 노출 위험. 운영/스테이징에서는 제외하고
+    # 실제 도메인 '정확 일치'만 허용한다(로컬 개발에서는 기존 동작 유지).
+    locked = _cors_is_locked_down()
+    patterns: list[str] = []
+    if not locked:
+        patterns.extend([
+            r"https?://localhost(:\d+)?$",
+            r"https?://127\.0\.0\.1(:\d+)?$",
+            r"https?://\[::1\](:\d+)?$",
+            r"https?://host\.docker\.internal(:\d+)?$",
+            r"https?://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
+            r"https?://172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$",
+            r"https?://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
+            r"https?://[a-z0-9-]+\.local(:\d+)?$",
+        ])
     domains = [
         os.getenv("DOMAIN_NAME", "xn--114-2p7l635dz3bh5j.com").strip(),
         os.getenv("ADMIN_DOMAIN", "metanova1004.com").strip(),
@@ -712,11 +768,14 @@ def _build_cors_origin_regex() -> str:
         os.getenv("HOSTNAME", "").strip(),
     ]
     for domain_name in domains:
-        if domain_name:
-            escaped_domain = re.escape(domain_name)
-            patterns.append(
-                rf"https?://([a-z0-9-]+\.)?{escaped_domain}(:\d+)?$"
-            )
+        if not domain_name:
+            continue
+        escaped_domain = re.escape(domain_name)
+        if locked:
+            # 운영: 임의 서브도메인 와일드카드 제거 — 등록된 도메인 정확 일치만.
+            patterns.append(rf"https?://{escaped_domain}(:\d+)?$")
+        else:
+            patterns.append(rf"https?://([a-z0-9-]+\.)?{escaped_domain}(:\d+)?$")
     return "|".join(patterns)
 
 
@@ -727,7 +786,9 @@ def _build_cors_origins() -> List[str]:
         or ""
     )
     origins = [o.strip() for o in configured_origins.split(",") if o.strip()]
-    default_origins = [
+    # [보안 보강][LOW] localhost/host.docker 기본 출처는 dev 전용. 운영/스테이징에서는
+    # 명시 설정(CORS_ORIGINS) + 도메인 파생 출처만 사용한다.
+    default_origins = [] if _cors_is_locked_down() else [
         "http://localhost:3000",
         "http://localhost:3005",
         "http://127.0.0.1:3000",
@@ -1305,6 +1366,50 @@ app.add_middleware(
 )
 logger.info("[OK] cors origins loaded: %s", cors_origins)
 
+
+def _warn_if_multiworker_inmemory_state() -> None:
+    """[보안/운영][LOW] 다중 워커/레플리카 가드레일.
+
+    레이트리밋(security_gates)·OTP 세션(contact_verification)·발급토큰 레지스트리·FCM 등록은
+    프로세스-로컬 인메모리 상태다. 워커가 2개 이상이면 각 워커가 독립 카운터를 가져
+    레이트리밋이 워커 수만큼 헐거워지고 세션/쿼터가 워커 간 공유되지 않는다.
+    이를 조용히 두지 않고 기동 시 명확히 경고한다(향후 Redis 백킹으로 해소 예정).
+    """
+    candidates = [
+        os.getenv("WEB_CONCURRENCY", ""),
+        os.getenv("UVICORN_WORKERS", ""),
+        os.getenv("GUNICORN_WORKERS", ""),
+    ]
+    workers = 0
+    for raw in candidates:
+        try:
+            workers = max(workers, int(str(raw).strip() or "0"))
+        except (TypeError, ValueError):
+            continue
+    if workers > 1:
+        logger.warning(
+            "[STATE][SECURITY] 워커 %d개 감지 — 레이트리밋/OTP세션/발급토큰/FCM 등록이 "
+            "프로세스-로컬 인메모리라 워커 간 공유되지 않습니다. 레이트리밋이 최대 %d배 헐거워질 수 "
+            "있으니 운영 다중워커에서는 Redis 백킹(예정) 또는 단일워커+엣지 limit_req 를 사용하세요.",
+            workers,
+            workers,
+        )
+
+
+try:
+    _warn_if_multiworker_inmemory_state()
+except Exception:  # noqa: BLE001
+    logger.debug("[STATE] multiworker guardrail check skipped", exc_info=True)
+
+# ── OpenTelemetry 분산 트레이싱 (opt-in · 의존성 가드 · fail-open, 기술서 §0.22) ──
+# OTEL_TRACING_ENABLED 미설정/미설치/실패 시 no-op — 기동·요청 처리에 무영향.
+try:
+    from backend.observability.tracing import init_tracing
+    init_tracing(app)
+except Exception as _otel_err:
+    logger.warning("[WARN] otel tracing skipped: %s", _otel_err)
+
+
 # ── Prometheus Metrics ──
 try:
     from backend.marketplace.prometheus_metrics import PrometheusMiddleware, get_metrics
@@ -1439,6 +1544,30 @@ try:
 except Exception as e:
     logger.warning(f"[WARN] voice router skipped: {e}")
 
+# ── Tourism Human Review (사람검수) ──
+try:
+    from backend.api.tourism_review_router import router as tourism_review_router
+    app.include_router(tourism_review_router)
+    logger.info("[OK] tourism review router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] tourism review router skipped: {e}")
+
+# ── Carbon/Energy meter (ops) ──
+try:
+    from backend.api.carbon_router import router as carbon_router
+    app.include_router(carbon_router)
+    logger.info("[OK] carbon router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] carbon router skipped: {e}")
+
+# ── Tourism pilot beta feedback (NPS/A·B) ──
+try:
+    from backend.api.tourism_feedback_router import router as tourism_feedback_router
+    app.include_router(tourism_feedback_router)
+    logger.info("[OK] tourism feedback router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] tourism feedback router skipped: {e}")
+
 # ── Mobile Song Translation ──
 try:
     from backend.mobile.song_translation import router as mobile_song_translation_router
@@ -1446,6 +1575,44 @@ try:
     logger.info("[OK] mobile song translation router loaded")
 except Exception as e:
     logger.warning(f"[WARN] mobile song translation router skipped: {e}")
+
+# ── VoIP Interpretation Calls (WorldLinco) ──
+try:
+    from backend.marketplace.nadotongryoksa_voip_router import (
+        router as nadotongryoksa_voip_router,
+    )
+    app.include_router(nadotongryoksa_voip_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa voip router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa voip router skipped: {e}")
+
+# ── WorldLinco mobile: friends / chat / OCR ──
+try:
+    from backend.marketplace.nadotongryoksa_friends_router import (
+        router as nadotongryoksa_friends_router,
+    )
+    app.include_router(nadotongryoksa_friends_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa friends router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa friends router skipped: {e}")
+
+try:
+    from backend.marketplace.nadotongryoksa_chat_router import (
+        router as nadotongryoksa_chat_router,
+    )
+    app.include_router(nadotongryoksa_chat_router, prefix="/api")
+    logger.info("[OK] nadotongryoksa chat router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] nadotongryoksa chat router skipped: {e}")
+
+try:
+    from backend.mobile.image_translation.router import (
+        router as mobile_image_translation_router,
+    )
+    app.include_router(mobile_image_translation_router)
+    logger.info("[OK] mobile image translation router loaded")
+except Exception as e:
+    logger.warning(f"[WARN] mobile image translation router skipped: {e}")
 
 # ── Marketplace ──
 try:
@@ -1511,5 +1678,5 @@ except Exception as e:
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # pyright: ignore[reportMissingImports]
     uvicorn.run(app, host="0.0.0.0", port=8000)

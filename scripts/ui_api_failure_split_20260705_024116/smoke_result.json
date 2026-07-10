@@ -1,0 +1,46 @@
+﻿{
+    "startedAt":  "2026-07-05T02:41:16.6250601+09:00",
+    "outDir":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260705_024116",
+    "api":  {
+                "baseUrl":  "http://127.0.0.1:8000",
+                "startedAt":  "2026-07-05T02:41:16.6604655+09:00",
+                "probes":  [
+                               {
+                                   "name":  "friend_chat",
+                                   "url":  "http://127.0.0.1:8000/api/llm/voice/friend-chat",
+                                   "ok":  true,
+                                   "status":  200,
+                                   "elapsedMs":  5843.5,
+                                   "attempts":  1,
+                                   "error":  "",
+                                   "responseBody":  "{\"transcript\":\"?? ?? ?? ???\",\"response_text\":\"ìë\u0085? ë¬´ì¨ ì¼ì´ì¼?\",\"evidence_grade\":\"ë¯¸íì¸\",\"evidence_reason\":\"ì¸ë¶ ê·¼ê±°ê° ìê³  ë¶íì¤ì± ê³ ì§ë ìì\",\"uncertainty_disclosed\":false,\"grounded_items_count\":0,\"audio_base64\":null,\"audio_format\":null,\"safety_alert\":false,\"safety_alert_message\":null,\"high_risk_mode_blocked\":false,\"cache_hit\":false,\"output_dir\":null,\"run_id\":null,\"timing_ms\":{\"stt\":0.0,\"grounding\":0.3,\"llm\":3358.6,\"postprocess\":4.2,\"tts\":0.0,\"total\":6352.9},\"conversation\":[{\"role\":\"user\",\"content\":\"?? ?? ?? ???\"},{\"role\":\"assistant\",\"content\":\"ìë\u0085? ë¬´ì¨ ì¼ì´ì¼?\"}],\"trip_session_id\":\"sorisae-19858db58c8c4911\",\"detected_language\":null}"
+                               },
+                               {
+                                   "name":  "face_translate",
+                                   "url":  "http://127.0.0.1:8000/api/llm/face/voice-translate",
+                                   "ok":  true,
+                                   "status":  200,
+                                   "elapsedMs":  1593.8,
+                                   "attempts":  2,
+                                   "error":  "",
+                                   "responseBody":  "{\"original_text\":\"smoke fallback\",\"translated\":\"smoke fallback\",\"engine\":\"nado-voice\",\"from\":\"ko\",\"to\":\"en\",\"detected_language\":\"ko\",\"audio_url\":null,\"audio_base64\":null,\"audio_format\":null,\"tts_delivery\":\"device_speech\",\"emotion\":null,\"stt_trust\":\"high\",\"stt_avg_logprob\":null,\"correlation_id\":\"face.interpret-mr6nfadp-82df94\",\"utterance_id\":\"face.interpret-mr6nfadp-82df94\",\"seq_id\":null,\"chunk_index\":null}"
+                               }
+                           ],
+                "summary":  {
+                                "total":  2,
+                                "ok":  2,
+                                "fail":  0
+                            }
+            },
+    "uiExitCode":  0,
+    "uiHarExitCode":  null,
+    "uiHarDir":  "",
+    "adb":  null,
+    "alert":  null,
+    "notification":  null,
+    "classification":  "ALL_PASS",
+    "apiFail":  0,
+    "uiFail":  0,
+    "summaryPath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260705_024116\\smoke_summary.txt",
+    "resultJsonPath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\ui_api_failure_split_20260705_024116\\smoke_result.json"
+}

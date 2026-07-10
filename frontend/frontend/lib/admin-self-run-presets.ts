@@ -10,13 +10,13 @@ export const SELF_RUN_MODE_LABELS: Record<SelfPrepareMode, string> = {
 export const SELF_RUN_MODE_EXECUTION_MODE: Record<SelfPrepareMode, string> = {
     'self-diagnosis': 'review',
     'self-improvement': 'full',
-    'self-expansion': 'plan',
+    'self-expansion': 'full',
 };
 
 export const SELF_RUN_MODE_PIPELINES: Record<SelfPrepareMode, string[]> = {
     'self-diagnosis': ['reviewer'],
     'self-improvement': ['planner', 'coder', 'reviewer'],
-    'self-expansion': ['planner'],
+    'self-expansion': ['planner', 'coder', 'reviewer'],
 };
 
 export const SELF_RUN_DIRECTIVE_TEMPLATES: Array<{
@@ -40,6 +40,7 @@ export const SELF_RUN_DIRECTIVE_TEMPLATES: Array<{
     { value: 'admin_ops_efficiency', label: '관리자 운영 효율화', description: '반복 작업 절감, 운영 시간 단축 중심', category: '운영', estimateBiasMinutes: 5, resourceHint: 'VRAM 낮음 / CPU 낮음', recommendedMode: 'self-diagnosis', recommendedScope: 'diagnosis_only' },
     { value: 'marketplace_conversion', label: '마켓플레이스 전환 개선', description: '구매 흐름, 노출, 전환율 개선 중심', category: '서비스', estimateBiasMinutes: 8, resourceHint: 'VRAM 낮음 / CPU 중간', recommendedMode: 'self-expansion', recommendedScope: 'feature_expansion' },
     { value: 'llm_cost_latency', label: 'LLM 비용/지연 최적화', description: '응답 속도와 자원 점유 절감 중심', category: 'LLM', estimateBiasMinutes: 6, resourceHint: 'VRAM 낮음 / CPU 낮음', recommendedMode: 'self-diagnosis', recommendedScope: 'diagnosis_only' },
+    { value: 'tower_crane_expansion', label: 'Tower Crane 확장 실험', description: 'capability 진단 + A/B/C 옵션 + 웹 리서치 기반 self-expansion full 실험', category: '운영', estimateBiasMinutes: 15, resourceHint: 'VRAM 중간~높음 / CPU 중간', recommendedMode: 'self-expansion', recommendedScope: 'feature_expansion' },
 ];
 
 export const SELF_RUN_DIRECTIVE_SCOPES: Array<{ value: SelfRunDirectiveScope; label: string; description: string }> = [

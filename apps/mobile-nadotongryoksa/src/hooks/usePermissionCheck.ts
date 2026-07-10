@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Alert, Linking, PermissionsAndroid, Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import { Audio } from '../compat/expoAvAudio';
 import * as Location from 'expo-location';
+import { runExclusivePermissionTask } from './permissionRequestGate';
 
 export type PermissionType = 'RECORD_AUDIO' | 'ACCESS_FINE_LOCATION' | 'ACCESS_COARSE_LOCATION' | 'POST_NOTIFICATIONS';
 
@@ -34,6 +35,7 @@ export function usePermissionCheck() {
             featureName: string,
             onError?: (message: string) => void,
         ): Promise<boolean> => {
+            return runExclusivePermissionTask(async () => {
             setPermissionError('');
 
             try {
@@ -72,12 +74,22 @@ export function usePermissionCheck() {
                     switch (permission) {
                         case 'RECORD_AUDIO': {
                             try {
+                                const current = await Audio.getPermissionsAsync();
+                                if (current.granted) {
+                                    granted = true;
+                                    break;
+                                }
                                 const result = await Audio.requestPermissionsAsync();
                                 granted = result.granted;
                                 if (!granted) {
                                     const message = `${featureName}을(를) 위해 마이크 권한이 필요합니다.`;
                                     setPermissionError(message);
                                     if (onError) onError(message);
+                                    console.log('[PERMISSION_GATE]', JSON.stringify({
+                                        event: 'record_audio_denied',
+                                        feature: featureName,
+                                        canAskAgain: result.canAskAgain ?? null,
+                                    }));
 
                                     // 한 번 이상 거부했으므로 설정 오픈 권유
                                     Alert.alert(
@@ -91,7 +103,9 @@ export function usePermissionCheck() {
                                     return false;
                                 }
                             } catch (error) {
-                                console.error('Audio permission request failed:', error);
+                                console.error('[PERMISSION_GATE] Audio permission request failed:', error);
+                                const message = `${featureName}을(를) 위해 마이크 권한이 필요합니다.`;
+                                if (onError) onError(message);
                                 return false;
                             }
                             break;
@@ -110,6 +124,11 @@ export function usePermissionCheck() {
                                     const notificationPermission = (PermissionsAndroid.PERMISSIONS as any)
                                         .POST_NOTIFICATIONS;
                                     if (notificationPermission) {
+                                        const alreadyGranted = await PermissionsAndroid.check(notificationPermission);
+                                        if (alreadyGranted) {
+                                            granted = true;
+                                            break;
+                                        }
                                         const result = await PermissionsAndroid.request(
                                             notificationPermission,
                                             {
@@ -131,7 +150,7 @@ export function usePermissionCheck() {
                                         granted = true;
                                     }
                                 } catch (error) {
-                                    console.error('Notification permission request failed:', error);
+                                    console.error('[PERMISSION_GATE] Notification permission request failed:', error);
                                     return false;
                                 }
                             } else {
@@ -158,6 +177,7 @@ export function usePermissionCheck() {
                 console.error('Unexpected permission check error:', error);
                 return false;
             }
+            });
         },
         [],
     );

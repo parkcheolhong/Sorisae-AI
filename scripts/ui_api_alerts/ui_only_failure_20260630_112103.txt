@@ -1,0 +1,4 @@
+﻿event=UI_ONLY_FAILURE
+time=2026-06-30T11:21:03.5738981+09:00
+out_dir=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_112056
+result_json=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_112056\smoke_result.json

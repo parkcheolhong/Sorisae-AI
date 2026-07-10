@@ -5,6 +5,8 @@ import logging
 import os
 from datetime import datetime, timedelta
 
+from backend.time_utils import utcnow
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -99,7 +101,7 @@ def _bootstrap_validation_demo_data() -> None:
         if user is None:
             return
 
-        now = datetime.utcnow()
+        now = utcnow()
 
         if db.query(CustomerOrchestratorCompletion).count() == 0:
             db.add_all([

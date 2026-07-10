@@ -1,1 +1,1 @@
-export { api, resolveApiBaseUrl } from '@shared/api';
+export { api, resolveApiBaseUrl, resolveBackendDocsUrl } from '@shared/api';

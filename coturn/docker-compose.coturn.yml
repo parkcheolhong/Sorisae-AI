@@ -1,0 +1,61 @@
+# WorldLinco TURN relay (coturn) — LTE/5G 장거리 통화 미디어 릴레이
+#
+# 왜 필요한가: LTE/5G는 통신사 CGNAT(대칭 NAT)라 STUN만으론 직접 P2P가 막힌다.
+#             TURN 릴레이를 거쳐야 미디어(음성)가 양방향으로 흐른다.
+#
+# 멀티노드(#6): 노드마다 이 compose를 **각자의 호스트**에서 기동한다(coturn은 host 네트워크
+#             포트를 점유하므로 한 호스트에 N노드 불가). 모든 노드가 **동일 TURN_SECRET**을
+#             공유하면 백엔드 HMAC 시간제한 자격이 어느 노드에서도 검증된다(use-auth-secret).
+#             백엔드 .env 의 TURN_URLS 에 모든 노드를 CSV로 나열하면 클라가 모두 ICE 후보로 사용.
+#             자세한 절차는 coturn/README.md 참조.
+#
+# 실행:
+#   cd coturn
+#   cp .env.example .env   # TURN_SECRET / TURN_EXTERNAL_IP / TURN_NODE_NAME 설정
+#   docker compose -f docker-compose.coturn.yml up -d
+#
+# 사전 준비(필수):
+#   1) .env 의 TURN_EXTERNAL_IP 를 이 노드의 공인 IP로 설정
+#   2) 방화벽/공유기에서 아래 포트 외부 공개(포워딩):
+#        - ${TURN_LISTENING_PORT:-3478}/udp, /tcp     (TURN 시그널)
+#        - ${TURN_MIN_PORT:-49160}-${TURN_MAX_PORT:-49200}/udp  (미디어 릴레이 레인지)
+#   3) 백엔드 .env 의 TURN_URLS(모든 노드) / TURN_SECRET(공유) 활성화 후 backend 재시작
+services:
+  coturn:
+    image: coturn/coturn:4.6
+    container_name: ${TURN_NODE_NAME:-worldlinco-coturn}
+    restart: unless-stopped
+    # host 네트워킹이 미디어 릴레이 성능엔 더 낫지만, 기존 배포 모델(포트 매핑)을 유지한다.
+    # 단일 호스트 다중 노드가 필요하면 포트/레인지를 노드별로 분리(.env)하거나 host 네트워킹으로 전환.
+    ports:
+      - "${TURN_LISTENING_PORT:-3478}:${TURN_LISTENING_PORT:-3478}/udp"
+      - "${TURN_LISTENING_PORT:-3478}:${TURN_LISTENING_PORT:-3478}/tcp"
+      - "${TURN_MIN_PORT:-49160}-${TURN_MAX_PORT:-49200}:${TURN_MIN_PORT:-49160}-${TURN_MAX_PORT:-49200}/udp"
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=${TURN_LISTENING_PORT:-3478}
+      - --min-port=${TURN_MIN_PORT:-49160}
+      - --max-port=${TURN_MAX_PORT:-49200}
+      - --fingerprint
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET}
+      - --realm=${TURN_REALM:-metanova1004.com}
+      - --external-ip=${TURN_EXTERNAL_IP}
+      - --server-name=${TURN_NODE_NAME:-worldlinco-coturn}
+      # 하드닝: LAN/메타데이터 릴레이 차단, 멀티캐스트 피어 금지, nonce 회전, 쿼터.
+      - --no-multicast-peers
+      - --no-cli
+      - --stale-nonce=600
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --total-quota=${TURN_TOTAL_QUOTA:-1200}
+      - --bps-capacity=${TURN_BPS_CAPACITY:-0}
+    healthcheck:
+      # TURN 시그널 포트 LISTEN 여부로 노드 헬스 판정.
+      test: ["CMD-SHELL", "(ss -lun 2>/dev/null || netstat -lun 2>/dev/null) | grep -q ':${TURN_LISTENING_PORT:-3478}' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,217 @@
+{
+  "startedAt": "2026-07-04T17:38:20.288Z",
+  "outDir": "scripts/ui_api_failure_split_validation_3999",
+  "timeoutMs": 8000,
+  "harEnabled": false,
+  "harDir": "",
+  "pages": [
+    {
+      "pageLabel": "marketplace",
+      "url": "http://127.0.0.1:3000/marketplace",
+      "requestedUrl": "http://127.0.0.1:3999/marketplace",
+      "fallbackApplied": true,
+      "fallbackReason": "requested_unreachable_using_canonical_local_url:http://127.0.0.1:3000/marketplace",
+      "ok": true,
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:3000/marketplace",
+      "elapsedMs": 1324,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "requestFailed": [],
+      "requestFailedIgnored": [
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/quantum?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/security?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/game?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/music?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/ml-detectors?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/metrics?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/orchestrator?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/subscription?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/code-generator?_rsc=z5am6JhaMhBLOakp",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/quantum?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/security?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/game?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/iot?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/exp/predict?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/ml-detectors?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/metrics?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/orchestrator?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/subscription?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/marketplace/code-generator?_rsc=bNYhu5ssWzmTlGk8",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        }
+      ],
+      "apiHttpErrors": [],
+      "harPath": "",
+      "screenshot": "scripts\\ui_api_failure_split_validation_3999\\marketplace.png",
+      "htmlSnapshot": "scripts\\ui_api_failure_split_validation_3999\\marketplace.html"
+    },
+    {
+      "pageLabel": "admin_3000_login",
+      "url": "http://127.0.0.1:3000/admin/login",
+      "requestedUrl": "http://127.0.0.1:3000/admin/login",
+      "fallbackApplied": false,
+      "fallbackReason": "",
+      "ok": true,
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:3000/admin/login",
+      "elapsedMs": 1242,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "requestFailed": [],
+      "requestFailedIgnored": [
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?intent=passkey&_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?intent=passkey&_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3000/admin/recovery?_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        }
+      ],
+      "apiHttpErrors": [],
+      "harPath": "",
+      "screenshot": "scripts\\ui_api_failure_split_validation_3999\\admin_3000_login.png",
+      "htmlSnapshot": "scripts\\ui_api_failure_split_validation_3999\\admin_3000_login.html"
+    },
+    {
+      "pageLabel": "admin_3005_login",
+      "url": "http://127.0.0.1:3005/admin/login",
+      "requestedUrl": "http://127.0.0.1:3005/admin/login",
+      "fallbackApplied": false,
+      "fallbackReason": "",
+      "ok": true,
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:3005/admin/login",
+      "elapsedMs": 1251,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "requestFailed": [],
+      "requestFailedIgnored": [
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?intent=passkey&_rsc=PnHBPLeGHW2QbvP1",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/admin/recovery?intent=passkey&_rsc=WbcXL7ssmybYGXWz",
+          "method": "GET",
+          "errorText": "net::ERR_ABORTED"
+        }
+      ],
+      "apiHttpErrors": [],
+      "harPath": "",
+      "screenshot": "scripts\\ui_api_failure_split_validation_3999\\admin_3005_login.png",
+      "htmlSnapshot": "scripts\\ui_api_failure_split_validation_3999\\admin_3005_login.html"
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "ok": 3,
+    "fail": 0,
+    "totalConsoleErrors": 0,
+    "totalPageErrors": 0,
+    "totalRequestFailed": 0,
+    "totalApiHttpErrors": 0,
+    "totalRequestFailedIgnored": 27
+  }
+}

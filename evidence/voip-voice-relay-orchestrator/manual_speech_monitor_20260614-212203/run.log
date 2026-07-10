@@ -1,0 +1,11 @@
+[21:22:03] Monitor dir: c:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\manual_speech_monitor_20260614-212203
+[21:22:03] Clearing logcat on Tab + S10...
+[21:22:03] === 75s monitoring: S10에서 한국어 6초+ 발화 / Tab에서 영어 TTS 수신 ===
+[21:23:19] --- Tab ---
+[21:23:19] SILERO_END=1 SENT=0 PLAYBACK=2 FLUSH=1
+[21:23:19] flush: remote_listen_active=1 skip: 
+[21:23:19] --- S10 ---
+[21:23:19] SILERO_END=3 SENT=2 PLAYBACK=0 FLUSH=3
+[21:23:19] flush: segment_stop=1 skip: 
+[21:23:19] Verdict: RELAY_PASS | S10->Tab=True Tab->S10=False
+[21:23:19] Artifacts: c:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\manual_speech_monitor_20260614-212203
