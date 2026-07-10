@@ -438,6 +438,57 @@ def test_customer_orchestrate_progress_stream_rejects_foreign_stage_run(monkeypa
     assert response.status_code == 404
 
 
+def test_customer_orchestrate_progress_returns_owned_session_id(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    from backend.orchestrator.autonomous import session as session_module
+
+    monkeypatch.setattr(session_module, "AUTONOMOUS_SESSION_DIR", str(tmp_path / "sessions"))
+    session = session_module.AutonomousSession.create(owner_id="7", mode="semi_auto", project_name="demo")
+    session.save()
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    save_orchestration_progress(
+        session.session_id,
+        {
+            "run_id": session.session_id,
+            "session_id": session.session_id,
+            "task": "owned session task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get(f"/api/marketplace/customer-orchestrate/progress/{session.session_id}")
+
+    assert response.status_code == 200
+    assert response.json()["task"] == "owned session task"
+
+
+def test_customer_orchestrate_progress_rejects_foreign_session_id(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    from backend.orchestrator.autonomous import session as session_module
+
+    monkeypatch.setattr(session_module, "AUTONOMOUS_SESSION_DIR", str(tmp_path / "sessions"))
+    session = session_module.AutonomousSession.create(owner_id="8", mode="semi_auto", project_name="demo")
+    session.save()
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    save_orchestration_progress(
+        session.session_id,
+        {
+            "run_id": session.session_id,
+            "session_id": session.session_id,
+            "task": "foreign session secret task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get(f"/api/marketplace/customer-orchestrate/progress/{session.session_id}")
+
+    assert response.status_code == 404
+
+
 def test_customer_orchestrate_stream_close_releases_lock_and_marks_failed(monkeypatch):
     fake_db = _FakeDb()
     user = SimpleNamespace(id=7, email="customer@example.com")
