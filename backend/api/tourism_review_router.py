@@ -69,9 +69,13 @@ def review_labels(batch: ReviewLabelBatch) -> Any:
 @router.get("/stats")
 def review_stats() -> Any:
     _guard()
-    from backend.services.tourism_kb.review import get_review_store
+    try:
+        from backend.services.tourism_kb.review import get_review_store
 
-    return get_review_store().stats()
+        return get_review_store().stats()
+    except Exception:
+        logger.error("tourism review stats failed")
+        raise HTTPException(status_code=500, detail="review_stats_unavailable")
 
 
 @router.get("/console", response_class=HTMLResponse)

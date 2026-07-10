@@ -31,6 +31,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -51,6 +52,28 @@ from backend.orchestrator.autonomous.stage_definitions import (  # noqa: E402
 
 def _utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+
+
+def _mask_sensitive_text(value: str) -> str:
+    text = str(value or "")
+    masked = text
+    for marker in ("password", "passwd", "pwd", "token", "secret"):
+        masked = re.sub(rf"(?i)({marker}\s*[:=]\s*)([^,\s]+)", r"\1***", masked)
+    return masked
+
+
+def _sanitize_mapping(payload: Dict[str, Any]) -> Dict[str, Any]:
+    sanitized: Dict[str, Any] = {}
+    for key, raw_value in (payload or {}).items():
+        key_text = str(key).lower()
+        if any(marker in key_text for marker in ("password", "passwd", "pwd", "secret", "token")):
+            sanitized[key] = "***"
+            continue
+        if isinstance(raw_value, str):
+            sanitized[key] = _mask_sensitive_text(raw_value)
+        else:
+            sanitized[key] = raw_value
+    return sanitized
 
 
 def _build_command_sequence() -> List[Dict[str, str]]:
@@ -883,9 +906,10 @@ async def main() -> int:
         cli_email=args.email,
         cli_password=args.password,
     )
-    report["golden_login"] = golden_login
+    report["golden_login"] = _sanitize_mapping(golden_login)
     if not golden_login.get("ok") and golden_login.get("detail"):
-        print(f"  golden_login: SKIP — {golden_login.get('detail')[:120]}")
+        safe_detail = _mask_sensitive_text(str(golden_login.get("detail") or ""))[:120]
+        print(f"  golden_login: SKIP — {safe_detail}")
 
     try:
         golden = await _run_golden_tasks(

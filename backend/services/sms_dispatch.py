@@ -23,6 +23,13 @@ def _dev_mode() -> bool:
     return app_env not in {"prod", "production", "stage", "staging"}
 
 
+def _mask_text_summary(text: str) -> str:
+    normalized = str(text or "").strip()
+    if not normalized:
+        return "len=0"
+    return f"len={len(normalized)}"
+
+
 def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object]:
     """Send signup/friend OTP SMS. Returns delivery metadata for audit."""
     message_body = f"[WorldLinco] {purpose} 인증 코드: {code} (15분 유효)"
@@ -42,7 +49,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         logger.info(
             "[SMS_TEXT] provider=dev-log purpose=%s body=%s",
             purpose,
-            normalized_body[:120],
+            _mask_text_summary(normalized_body),
         )
         return {
             "provider": "dev-log",
@@ -91,7 +98,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
             "[SMS_TEXT] provider=twilio purpose=%s http=%s detail=%s",
             purpose,
             exc.code,
-            detail[:500],
+            _mask_text_summary(detail),
         )
         if _dev_mode():
             return {

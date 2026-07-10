@@ -3411,7 +3411,7 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
             status = int(getattr(response, "status", 200) or 200)
             return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
     except Exception:
-        return {"ok": False, "status": None, "url": url, "error": str(exc)}
+        return {"ok": False, "status": None, "url": url, "error": "probe_failed"}
 
 
 def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:

@@ -1278,7 +1278,6 @@ function AppInner() {
     const authDebugEmailFilled = Boolean(loginEmail.trim());
     const authDebugPasswordFilled = Boolean(loginPw.trim());
     const authDebugEmailLength = loginEmail.length;
-    const authDebugPasswordLength = loginPw.length;
     const authDebugSubmitPressedLabel = authDebugSubmitPressed ? 'PRESSED' : 'IDLE';
     const isInstantDemoSession = Boolean(userInfo?.email?.endsWith(`@${DEMO_SESSION_EMAIL_DOMAIN}`));
     const effectiveVoipPlan = activeVoipPlan ?? (isInstantDemoSession ? 'voip_lite' : null);
@@ -1525,6 +1524,9 @@ function AppInner() {
     }, []);
 
     const logAuthInputProbe = useCallback((event: string, details: Record<string, unknown> = {}) => {
+        const sanitizedDetails = Object.fromEntries(
+            Object.entries(details).filter(([key]) => !key.toLowerCase().includes('password')),
+        );
         const timestamp = new Date().toISOString();
         setAuthDebugLastInputEvent(`${event}@${timestamp}`);
         console.log('[AUTH_INPUT_PROBE]', JSON.stringify({
@@ -1532,10 +1534,10 @@ function AppInner() {
             timestamp,
             show_login: showLogin,
             focus_field: authDebugFocusField,
-            email_length: loginEmail.length,
-            ...details,
+            email_filled: Boolean(loginEmail.trim()),
+            ...sanitizedDetails,
         }));
-    }, [authDebugFocusField, loginEmail.length, loginPw.length, showLogin]);
+    }, [authDebugFocusField, loginEmail, showLogin]);
 
     useEffect(() => {
         setAuthDebugSubmitPressed(false);
@@ -8328,7 +8330,7 @@ function AppInner() {
                             <Text style={styles.authDebugLine}>AUTH_DEBUG_FOCUS_FIELD:{authDebugFocusField}</Text>
                             <Text style={styles.authDebugLine}>AUTH_DEBUG_LAST_INPUT_EVENT:{authDebugLastInputEvent}</Text>
                             <Text style={styles.authDebugLine}>AUTH_DEBUG_EMAIL_LEN:{authDebugEmailLength}</Text>
-                            <Text style={styles.authDebugLine}>AUTH_DEBUG_PASSWORD_LEN:{authDebugPasswordLength}</Text>
+                            <Text style={styles.authDebugLine}>AUTH_DEBUG_PASSWORD_LEN:hidden</Text>
                             <Text style={styles.authDebugLine}>AUTH_DEBUG_SUBMIT_PRESSED:{authDebugSubmitPressedLabel}</Text>
                         </View>
                     ) : null}
@@ -10354,7 +10356,7 @@ function AppInner() {
                     <Text style={styles.authDebugLine}>AUTH_DEBUG_FOCUS_FIELD:{authDebugFocusField}</Text>
                     <Text style={styles.authDebugLine}>AUTH_DEBUG_LAST_INPUT_EVENT:{authDebugLastInputEvent}</Text>
                     <Text style={styles.authDebugLine}>AUTH_DEBUG_EMAIL_LEN:{authDebugEmailLength}</Text>
-                    <Text style={styles.authDebugLine}>AUTH_DEBUG_PASSWORD_LEN:{authDebugPasswordLength}</Text>
+                    <Text style={styles.authDebugLine}>AUTH_DEBUG_PASSWORD_LEN:hidden</Text>
                     <Text style={styles.authDebugLine}>AUTH_DEBUG_SUBMIT_PRESSED:{authDebugSubmitPressedLabel}</Text>
                     {!userInfo && !showLogin ? (
                         <Pressable
@@ -10483,7 +10485,7 @@ function AppInner() {
                                 <Text style={styles.authDebugLine}>AUTH_DEBUG_FOCUS_FIELD:{authDebugFocusField}</Text>
                                 <Text style={styles.authDebugLine}>AUTH_DEBUG_LAST_INPUT_EVENT:{authDebugLastInputEvent}</Text>
                                 <Text style={styles.authDebugLine}>AUTH_DEBUG_EMAIL_LEN:{authDebugEmailLength}</Text>
-                                <Text style={styles.authDebugLine}>AUTH_DEBUG_PASSWORD_LEN:{authDebugPasswordLength}</Text>
+                                <Text style={styles.authDebugLine}>AUTH_DEBUG_PASSWORD_LEN:hidden</Text>
                                 <Text style={styles.authDebugLine}>AUTH_DEBUG_SUBMIT_PRESSED:{authDebugSubmitPressedLabel}</Text>
                             </View>
                         ) : null}

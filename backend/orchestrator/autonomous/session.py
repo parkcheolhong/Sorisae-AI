@@ -29,12 +29,20 @@ EXECUTION_MODES = {
 SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 
 
+def _session_storage_root() -> Path:
+    dir_path = Path(AUTONOMOUS_SESSION_DIR).expanduser().resolve()
+    dir_path.mkdir(parents=True, exist_ok=True)
+    return dir_path
+
+
 def _session_storage_path(session_id: str) -> Path:
     if not SESSION_ID_PATTERN.fullmatch(str(session_id or "")):
         raise ValueError("invalid autonomous session id")
-    dir_path = Path(AUTONOMOUS_SESSION_DIR).expanduser().resolve()
-    dir_path.mkdir(parents=True, exist_ok=True)
-    return dir_path / f"{session_id}.json"
+    dir_path = _session_storage_root()
+    candidate = (dir_path / f"{session_id}.json").resolve()
+    if candidate.parent != dir_path:
+        raise ValueError("invalid autonomous session id")
+    return candidate
 
 
 @dataclass

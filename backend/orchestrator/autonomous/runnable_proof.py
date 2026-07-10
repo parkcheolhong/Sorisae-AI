@@ -109,15 +109,11 @@ def evaluate_runnable_proof(
     if "\x00" in output_dir_text:
         result["detail"] = "output_dir 형식 오류"
         return result
-    path_parts = Path(output_dir_text).parts
-    if any(part in {"..", ""} for part in path_parts):
+    output_segments = [segment for segment in re.split(r"[\\/]+", output_dir_text) if segment]
+    if not output_segments or any(segment in {".", ".."} for segment in output_segments):
         result["detail"] = "output_dir 형식 오류"
         return result
-    try:
-        root = Path.cwd().resolve()
-    except OSError:
-        result["detail"] = "workspace 경로 해석 실패"
-        return result
+    root = Path.cwd()
 
     py_paths: List[Path] = []
     for rel in written:

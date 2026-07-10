@@ -42,7 +42,6 @@ _DISCUSS_MARKERS = re.compile(
     r"what|how|why|idea|suggest|recommend|search)",
     re.IGNORECASE,
 )
-_STAGE_NUMBER = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s*단계\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -66,11 +65,15 @@ def stage_index_from_number(stage_number: float) -> Optional[int]:
 
 def parse_stage_number(message: str) -> Optional[int]:
     normalized = str(message or "").strip()[:64]
-    match = _STAGE_NUMBER.search(normalized)
-    if not match:
+    marker = "단계"
+    marker_index = normalized.find(marker)
+    if marker_index <= 0:
+        return None
+    number_token = normalized[:marker_index].strip().split(" ")[-1]
+    if not re.fullmatch(r"\d{1,2}(?:\.\d)?", number_token):
         return None
     try:
-        return stage_index_from_number(float(match.group(1)))
+        return stage_index_from_number(float(number_token))
     except ValueError:
         return None
 

@@ -49,7 +49,7 @@ def _turn_token_ttl_sec() -> int:
 def dynamic_turn_credentials(user_key: Optional[str] = None, *, now: Optional[int] = None) -> Optional[Tuple[str, str]]:
     """P3-C: coturn `use-auth-secret`(TURN REST API) 방식의 시간제한 자격 생성.
 
-    username = "<expiry_unix>:<user_key>"
+    username = "<expiry_unix>:voip"
     credential = base64(HMAC-SHA1(secret, username))
     `VOIP_TURN_STATIC_AUTH_SECRET` 미설정 시 None(정적 자격 폴백).
     """
@@ -57,7 +57,7 @@ def dynamic_turn_credentials(user_key: Optional[str] = None, *, now: Optional[in
     if not secret:
         return None
     expiry = (now if now is not None else int(time.time())) + _turn_token_ttl_sec()
-    username = f"{expiry}:{user_key or 'voip'}"
+    username = f"{expiry}:voip"
     digest = hmac.new(secret.encode("utf-8"), username.encode("utf-8"), hashlib.sha1).digest()
     credential = base64.b64encode(digest).decode("ascii")
     return username, credential
