@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
+import threading
 from datetime import datetime, timedelta, timezone
 from secrets import randbelow
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -15,9 +17,89 @@ OTP_TTL = timedelta(minutes=15)
 MAX_VERIFY_ATTEMPTS = 5
 _SESSIONS: Dict[str, Dict[str, Any]] = {}
 
+# [보안 보강][2차 방어선] per-계정(대상 이메일/전화) 재발송 쿨다운 + 시간당 발송 상한.
+# IP 키 레이트리밋(security_gates)이 1차라면, 이쪽은 '분산 IP 가 한 피해자에게' OTP/복구 코드를
+# 폭탄 발송(비용+스팸+피싱 트리거)하는 것을 대상 단위로 차단하는 2차 방어선이다.
+_RESEND_LOCK = threading.Lock()
+_TARGET_SENDS: Dict[str, List[datetime]] = {}
+
+
+def _resend_cooldown_seconds() -> int:
+    try:
+        return max(0, int(os.getenv("OTP_RESEND_COOLDOWN_SEC", "60")))
+    except (TypeError, ValueError):
+        return 60
+
+
+def _target_send_window() -> timedelta:
+    try:
+        return timedelta(seconds=max(1, int(os.getenv("OTP_TARGET_SEND_WINDOW_SEC", "3600"))))
+    except (TypeError, ValueError):
+        return timedelta(seconds=3600)
+
+
+def _max_sends_per_target() -> int:
+    try:
+        return max(0, int(os.getenv("OTP_MAX_SENDS_PER_TARGET", "5")))
+    except (TypeError, ValueError):
+        return 5
+
+
+class ResendCooldownError(Exception):
+    """대상(이메일/전화) 단위 재발송 쿨다운/시간당 상한 초과. retry_after(초)를 동반한다."""
+
+    def __init__(self, message: str, *, retry_after: int) -> None:
+        super().__init__(message)
+        self.retry_after = max(1, int(retry_after))
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _enforce_target_send_quota(purpose: str, channel: str, target: str) -> None:
+    """대상 단위 재발송 쿨다운 + 시간당 상한을 적용하고, 통과 시 발송 시각을 기록한다.
+
+    - 최근 발송 후 `OTP_RESEND_COOLDOWN_SEC`(기본 60s) 이내 재요청 → 차단.
+    - `OTP_TARGET_SEND_WINDOW_SEC`(기본 1h) 내 `OTP_MAX_SENDS_PER_TARGET`(기본 5) 초과 → 차단.
+    - 두 임계값이 모두 0/비활성이면 no-op.
+    """
+    cooldown = _resend_cooldown_seconds()
+    max_sends = _max_sends_per_target()
+    if cooldown <= 0 and max_sends <= 0:
+        return
+    window = _target_send_window()
+    key = f"{purpose}:{channel}:{(target or '').strip().lower()}"
+    now = _utcnow()
+    with _RESEND_LOCK:
+        recent = [t for t in _TARGET_SENDS.get(key, []) if (now - t) < window]
+        if recent:
+            last = max(recent)
+            elapsed = (now - last).total_seconds()
+            if cooldown > 0 and elapsed < cooldown:
+                raise ResendCooldownError(
+                    "잠시 후 다시 코드를 요청해주세요.",
+                    retry_after=math.ceil(cooldown - elapsed),
+                )
+            if max_sends > 0 and len(recent) >= max_sends:
+                oldest = min(recent)
+                retry_after = (oldest + window - now).total_seconds()
+                raise ResendCooldownError(
+                    "코드 발송 한도를 초과했습니다. 잠시 후 다시 시도해주세요.",
+                    retry_after=math.ceil(retry_after),
+                )
+        recent.append(now)
+        _TARGET_SENDS[key] = recent
+        # 메모리 누수 방지 — 비어버린/오래된 키 정리.
+        for stale_key in [k for k, v in _TARGET_SENDS.items() if all((now - t) >= window for t in v)]:
+            _TARGET_SENDS.pop(stale_key, None)
+
+
+def reset_for_test() -> None:
+    """테스트 격리용: 프로세스 전역 OTP 세션/대상 발송 이력을 초기화한다."""
+    with _RESEND_LOCK:
+        _SESSIONS.clear()
+        _TARGET_SENDS.clear()
 
 
 def _dev_mode() -> bool:
@@ -114,6 +196,11 @@ def start_verification_session(
             raise ValueError("전화 인증을 위해 유효한 연락처가 필요합니다")
     else:
         raise ValueError("verificationChannel 은 email 또는 phone 이어야 합니다")
+
+    # [보안 보강][2차 방어선] 대상(이메일/전화) 단위 재발송 쿨다운/시간당 상한.
+    # 검증 통과 후·코드 생성/발송 전에 적용한다(차단된 시도는 코드 발송·세션 생성을 하지 않음).
+    target_value = email if normalized_channel == "email" else (phone or "")
+    _enforce_target_send_quota(purpose, normalized_channel, target_value)
 
     code = str(randbelow(1000000)).zfill(6)
     session_token = f"{purpose}_{uuid4().hex}"

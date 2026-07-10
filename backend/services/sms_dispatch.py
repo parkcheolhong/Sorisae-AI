@@ -18,17 +18,25 @@ def _dev_mode() -> bool:
 
 def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object]:
     """Send signup/friend OTP SMS. Returns delivery metadata for audit."""
+    message_body = f"[WorldLinco] {purpose} 인증 코드: {code} (15분 유효)"
+    return dispatch_sms_text(phone=phone, body=message_body, purpose=purpose)
+
+
+def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, object]:
+    """Send arbitrary SMS text (admin announcements, OTP, etc.)."""
     account_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
     auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     from_number = os.getenv("TWILIO_FROM_NUMBER", "").strip()
-    message_body = f"[WorldLinco] {purpose} 인증 코드: {code} (15분 유효)"
+    normalized_body = str(body or "").strip()
+    if not normalized_body:
+        raise ValueError("SMS 본문이 비어 있습니다.")
 
     if not (account_sid and auth_token and from_number):
         logger.info(
-            "[SMS_OTP] provider=dev-log purpose=%s target=%s code=%s",
+            "[SMS_TEXT] provider=dev-log purpose=%s target=%s body=%s",
             purpose,
             phone,
-            code,
+            normalized_body[:120],
         )
         return {
             "provider": "dev-log",
@@ -41,7 +49,7 @@ def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object
         {
             "To": phone,
             "From": from_number,
-            "Body": message_body,
+            "Body": normalized_body,
         },
     ).encode("utf-8")
     request = urllib.request.Request(
@@ -59,23 +67,23 @@ def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object
     )
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
-            body = json.loads(response.read().decode("utf-8"))
+            response_body = json.loads(response.read().decode("utf-8"))
         logger.info(
-            "[SMS_OTP] provider=twilio purpose=%s target=%s sid=%s",
+            "[SMS_TEXT] provider=twilio purpose=%s target=%s sid=%s",
             purpose,
             phone,
-            body.get("sid"),
+            response_body.get("sid"),
         )
         return {
             "provider": "twilio",
             "delivered": True,
             "phone": phone,
-            "message_sid": body.get("sid"),
+            "message_sid": response_body.get("sid"),
         }
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         logger.error(
-            "[SMS_OTP] provider=twilio purpose=%s target=%s http=%s detail=%s",
+            "[SMS_TEXT] provider=twilio purpose=%s target=%s http=%s detail=%s",
             purpose,
             phone,
             exc.code,

@@ -1,4 +1,4 @@
-import { NativeModules, Platform } from 'react-native';
+import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 
 /**
  * VoIP 통화용 네이티브 오디오 라우팅 브리지.
@@ -19,16 +19,74 @@ type VoipAudioEnableResult = {
     agc_supported: boolean;
 };
 
+export type VoipAudioRouteSnapshot = {
+    route: 'bluetooth' | 'wired' | 'speaker' | 'earpiece' | 'unknown';
+    reason?: string;
+    speakerphone: boolean;
+    bluetoothConnected: boolean;
+    wiredConnected: boolean;
+};
+
 type VoipAudioNativeModule = {
     enableVoipAudio: (speakerphone: boolean, maximizeVolume: boolean) => Promise<VoipAudioEnableResult>;
     disableVoipAudio: () => Promise<boolean>;
     setSpeakerphone: (speakerphone: boolean) => Promise<boolean>;
+    getCurrentAudioRoute: () => Promise<VoipAudioRouteSnapshot>;
+    addListener: (eventName: string) => void;
+    removeListeners: (count: number) => void;
 };
+
+const ROUTE_EVENT_NAME = 'voipAudioRouteChanged';
 
 const nativeModule = NativeModules.VoipAudio as VoipAudioNativeModule | undefined;
 
 export function isVoipAudioNativeAvailable(): boolean {
     return Platform.OS === 'android' && Boolean(nativeModule?.enableVoipAudio);
+}
+
+function normalizeRouteSnapshot(raw: Partial<VoipAudioRouteSnapshot> | null | undefined): VoipAudioRouteSnapshot {
+    const route = raw?.route;
+    const normalizedRoute: VoipAudioRouteSnapshot['route'] =
+        route === 'bluetooth' || route === 'wired' || route === 'speaker' || route === 'earpiece'
+            ? route
+            : 'unknown';
+    return {
+        route: normalizedRoute,
+        reason: raw?.reason,
+        speakerphone: Boolean(raw?.speakerphone),
+        bluetoothConnected: Boolean(raw?.bluetoothConnected),
+        wiredConnected: Boolean(raw?.wiredConnected),
+    };
+}
+
+export async function getCurrentVoipAudioRoute(): Promise<VoipAudioRouteSnapshot | null> {
+    if (Platform.OS !== 'android' || typeof nativeModule?.getCurrentAudioRoute !== 'function') {
+        return null;
+    }
+    try {
+        const snapshot = await nativeModule.getCurrentAudioRoute();
+        return normalizeRouteSnapshot(snapshot);
+    } catch {
+        return null;
+    }
+}
+
+export function subscribeVoipAudioRouteChanges(
+    listener: (snapshot: VoipAudioRouteSnapshot) => void,
+): () => void {
+    if (Platform.OS !== 'android' || typeof nativeModule?.getCurrentAudioRoute !== 'function') {
+        return () => { };
+    }
+    const emitter = new NativeEventEmitter(nativeModule as unknown as {
+        addListener: (eventName: string) => void;
+        removeListeners: (count: number) => void;
+    });
+    const subscription = emitter.addListener(ROUTE_EVENT_NAME, (payload: VoipAudioRouteSnapshot) => {
+        listener(normalizeRouteSnapshot(payload));
+    });
+    return () => {
+        subscription.remove();
+    };
 }
 
 export async function enableVoipAudio(

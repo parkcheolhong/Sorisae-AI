@@ -50,6 +50,7 @@ interface Props {
   autoCallVoiceId?: string | null;
   onAutoCallConsumed?: () => void;
   onFriendSelected?: (friend: Friend) => void;
+  onStartChat?: (friend: Friend) => void;
   onOpenMapDiscovery?: () => void;
 }
 
@@ -57,7 +58,7 @@ function logFriendFolderDiag(event: string, payload: Record<string, unknown>) {
   console.log('[FRIEND_FOLDER_DIAG]', JSON.stringify({ event, ...payload }));
 }
 
-export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected, onOpenMapDiscovery }: Props) {
+export function FriendFolderScreen({ userId, token, currentUserEmail, visible = true, embeddedInScrollView = false, autoCallVoiceId = null, onAutoCallConsumed, onFriendSelected, onStartChat, onOpenMapDiscovery }: Props) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isNarrowWidth = windowWidth < 380;
   const normalizedToken = token?.trim() ?? '';
@@ -420,6 +421,14 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
         onFriendSelected(item);
       }
     };
+    const canStartChat = Boolean(item.friendUserId);
+    const handlePressChat = () => {
+      if (!canStartChat) {
+        Alert.alert('채팅 불가', '앱 사용자 ID가 있는 친구만 1:1 번역 채팅을 열 수 있습니다.');
+        return;
+      }
+      onStartChat?.(item);
+    };
 
     return (
       <View
@@ -476,6 +485,16 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
             <Text style={[styles.voiceCallBtnText, !canStartVoiceCall && styles.voiceCallBtnTextDisabled]}>보이스톡 걸기</Text>
           </Pressable>
           <Pressable
+            style={[styles.chatBtn, !canStartChat && styles.chatBtnDisabled, isNarrowWidth && styles.friendActionBtnCompact]}
+            onPress={handlePressChat}
+            disabled={!canStartChat}
+            accessibilityRole="button"
+            accessibilityLabel={`채팅하기, ${item.friendUsername || item.friendEmail}`}
+            testID={item.friendUserId ? `worldlinco-friend-chat-${item.friendUserId}` : undefined}
+          >
+            <Text style={[styles.chatBtnText, !canStartChat && styles.voiceCallBtnTextDisabled]}>채팅</Text>
+          </Pressable>
+          <Pressable
             style={[styles.removeBtn, isNarrowWidth && styles.friendActionBtnCompact]}
             onPress={() => handleRemove(item)}
             accessibilityRole="button"
@@ -486,7 +505,7 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
         </View>
       </View>
     );
-  }, [handleMeasuredLayout, handleRemove, isNarrowWidth, onFriendSelected]);
+  }, [handleMeasuredLayout, handleRemove, isNarrowWidth, onFriendSelected, onStartChat]);
 
   const listViewportHeight = Math.max(300, Math.floor(windowHeight * 0.55));
 
@@ -762,11 +781,11 @@ export function FriendFolderScreen({ userId, token, currentUserEmail, visible = 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0f16',
+    backgroundColor: 'transparent',
     padding: 12,
   },
   containerEmbedded: {
-    backgroundColor: '#0b0f16',
+    backgroundColor: '#eef4fb',
     padding: 12,
   },
   containerCompact: {
@@ -777,20 +796,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#2a415e',
-    backgroundColor: '#111827',
+    borderColor: '#dce6f2',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginBottom: 6,
   },
   accordionTitle: {
-    color: '#dbeafe',
+    color: '#1e6fe0',
     fontSize: 12,
     fontWeight: '700',
   },
   accordionChevron: {
-    color: '#93c5fd',
+    color: '#1e6fe0',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -802,36 +821,36 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   listSectionTitle: {
-    color: '#eef7ff',
+    color: '#1a1f36',
     fontSize: 14,
     fontWeight: '800',
   },
   listSectionMeta: {
-    color: '#9eb3c9',
+    color: '#5f6b80',
     fontSize: 11,
     fontWeight: '600',
   },
   title: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#e2e8f0',
+    color: '#1a1f36',
     marginBottom: 8,
   },
   summaryCard: {
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#dce6f2',
     borderRadius: 8,
     padding: 8,
     marginBottom: 6,
   },
   summaryText: {
-    color: '#cbd5e1',
+    color: '#3a4356',
     fontSize: 11,
     marginBottom: 2,
   },
   manualSection: {
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#2563eb',
     borderRadius: 8,
@@ -840,12 +859,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   manualTitle: {
-    color: '#93c5fd',
+    color: '#1e6fe0',
     fontSize: 12,
     fontWeight: '700',
   },
   manualHint: {
-    color: '#94a3b8',
+    color: '#5f6b80',
     fontSize: 10,
     lineHeight: 14,
   },
@@ -857,22 +876,22 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#dce6f2',
     paddingVertical: 7,
     alignItems: 'center',
-    backgroundColor: '#1e2533',
+    backgroundColor: '#f4f9ff',
   },
   addModeBtnActive: {
-    borderColor: '#60a5fa',
-    backgroundColor: '#172554',
+    borderColor: '#1e6fe0',
+    backgroundColor: '#e3f0ff',
   },
   addModeBtnText: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontSize: 10,
     fontWeight: '600',
   },
   pickContactBtn: {
-    backgroundColor: '#1e3a5f',
+    backgroundColor: '#e8f1ff',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#2563eb',
@@ -880,29 +899,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickContactBtnText: {
-    color: '#bfdbfe',
+    color: '#1e6fe0',
     fontSize: 11,
     fontWeight: '600',
   },
   selectedContactLabel: {
-    color: '#cbd5e1',
+    color: '#3a4356',
     fontSize: 11,
     lineHeight: 15,
   },
   contactPickHint: {
-    color: '#64748b',
+    color: '#8a93a3',
     fontSize: 10,
     lineHeight: 14,
   },
   inputFull: {
-    backgroundColor: '#1e2533',
-    color: '#e2e8f0',
+    backgroundColor: '#f4f9ff',
+    color: '#1a1f36',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 7,
     fontSize: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#dce6f2',
   },
   addBtnFull: {
     backgroundColor: '#6ee7b7',
@@ -919,22 +938,22 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#dce6f2',
     paddingVertical: 7,
     alignItems: 'center',
-    backgroundColor: '#1e2533',
+    backgroundColor: '#f4f9ff',
   },
   channelBtnActive: {
-    borderColor: '#60a5fa',
-    backgroundColor: '#172554',
+    borderColor: '#1e6fe0',
+    backgroundColor: '#e3f0ff',
   },
   channelBtnText: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontSize: 11,
     fontWeight: '600',
   },
   verifyHint: {
-    color: '#cbd5e1',
+    color: '#3a4356',
     fontSize: 11,
     lineHeight: 15,
   },
@@ -943,7 +962,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backBtnText: {
-    color: '#93c5fd',
+    color: '#1e6fe0',
     fontSize: 13,
   },
   addRow: {
@@ -956,14 +975,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: '#1e2533',
-    color: '#e2e8f0',
+    backgroundColor: '#f4f9ff',
+    color: '#1a1f36',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#dce6f2',
   },
   inputCompact: {
     minWidth: '100%',
@@ -988,7 +1007,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   errorText: {
-    color: '#f87171',
+    color: '#e5484d',
     fontSize: 13,
     marginBottom: 8,
   },
@@ -996,65 +1015,65 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   missedSection: {
-    backgroundColor: '#161722',
+    backgroundColor: '#fff1f3',
     borderWidth: 1,
-    borderColor: '#3a2430',
+    borderColor: '#f5c6cf',
     borderRadius: 8,
     padding: 8,
     marginBottom: 8,
     gap: 6,
   },
   missedTitle: {
-    color: '#fda4af',
+    color: '#e5484d',
     fontSize: 12,
     fontWeight: '700',
   },
   missedRow: {
-    backgroundColor: '#20141b',
+    backgroundColor: '#fdecef',
     borderRadius: 6,
     padding: 7,
   },
   missedCaller: {
-    color: '#ffe4e6',
+    color: '#b42318',
     fontSize: 11,
     fontWeight: '600',
   },
   missedMeta: {
-    color: '#fbcfe8',
+    color: '#b06a86',
     fontSize: 10,
     marginTop: 1,
   },
   pendingSection: {
-    backgroundColor: '#13202c',
+    backgroundColor: '#eaf2fb',
     borderWidth: 1,
-    borderColor: '#1d4f73',
+    borderColor: '#bcd3f0',
     borderRadius: 8,
     padding: 8,
     marginBottom: 8,
     gap: 6,
   },
   pendingTitle: {
-    color: '#93c5fd',
+    color: '#1e6fe0',
     fontSize: 12,
     fontWeight: '700',
   },
   pendingRow: {
-    backgroundColor: '#162433',
+    backgroundColor: '#f4f9ff',
     borderRadius: 6,
     padding: 7,
   },
   pendingName: {
-    color: '#dbeafe',
+    color: '#1e6fe0',
     fontSize: 11,
     fontWeight: '600',
   },
   pendingMeta: {
-    color: '#bfdbfe',
+    color: '#1e6fe0',
     fontSize: 10,
     marginTop: 1,
   },
   emptyText: {
-    color: '#64748b',
+    color: '#8a93a3',
     textAlign: 'center',
     marginTop: 32,
     fontSize: 14,
@@ -1068,7 +1087,7 @@ const styles = StyleSheet.create({
   friendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e2533',
+    backgroundColor: '#f4f9ff',
     borderRadius: 8,
     padding: 8,
     marginBottom: 6,
@@ -1099,52 +1118,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   friendName: {
-    color: '#e2e8f0',
+    color: '#1a1f36',
     fontWeight: '600',
     fontSize: 13,
   },
   friendEmail: {
-    color: '#94a3b8',
+    color: '#5f6b80',
     fontSize: 11,
     marginTop: 1,
   },
   friendPhone: {
-    color: '#6ee7b7',
+    color: '#1f9d57',
     fontSize: 11,
     marginTop: 1,
   },
   friendVoiceId: {
-    color: '#79c0ff',
+    color: '#1e6fe0',
     fontSize: 11,
     marginTop: 1,
   },
   friendMeta: {
-    color: '#cbd5e1',
+    color: '#3a4356',
     fontSize: 10,
     marginTop: 1,
   },
   friendContract: {
-    color: '#7dd3fc',
+    color: '#1e6fe0',
     fontSize: 10,
     lineHeight: 14,
     marginTop: 2,
   },
   friendPhoneEmpty: {
-    color: '#64748b',
+    color: '#8a93a3',
     fontSize: 12,
     marginTop: 2,
   },
   removeBtn: {
-    backgroundColor: '#3f1f1f',
+    backgroundColor: '#fdecec',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     alignItems: 'center',
   },
   voiceCallBtn: {
-    backgroundColor: '#0d2a4a',
+    backgroundColor: '#e8f1ff',
     borderWidth: 1,
-    borderColor: '#3b82f6',
+    borderColor: '#1e6fe0',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -1152,19 +1171,38 @@ const styles = StyleSheet.create({
   },
   voiceCallBtnDisabled: {
     opacity: 0.45,
-    borderColor: '#334155',
-    backgroundColor: '#1f2937',
+    borderColor: '#dce6f2',
+    backgroundColor: '#e3eaf5',
   },
   voiceCallBtnText: {
-    color: '#bfdbfe',
+    color: '#1e6fe0',
     fontSize: 12,
     fontWeight: '800',
   },
   voiceCallBtnTextDisabled: {
-    color: '#94a3b8',
+    color: '#5f6b80',
+  },
+  chatBtn: {
+    backgroundColor: '#1e6fe0',
+    borderWidth: 1,
+    borderColor: '#1e6fe0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  chatBtnDisabled: {
+    opacity: 0.45,
+    borderColor: '#dce6f2',
+    backgroundColor: '#e3eaf5',
+  },
+  chatBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   removeBtnText: {
-    color: '#f87171',
+    color: '#e5484d',
     fontSize: 12,
     fontWeight: '600',
   },

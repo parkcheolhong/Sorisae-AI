@@ -7,6 +7,8 @@ from typing import Optional, Tuple
 from backend.mobile.song_translation.language import infer_language_from_text, normalize_language_code
 from backend.services.nadotongryoksa.translator import NadoTranslator, SUPPORTED_LANGUAGES
 
+from backend.services.nadotongryoksa.image_normalize import normalize_image_bytes_for_ocr
+
 logger = logging.getLogger(__name__)
 
 _ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".heic", ".heif"}
@@ -32,7 +34,7 @@ def validate_image_upload(filename: str, content_type: str | None) -> None:
         raise ValueError("지원하지 않는 이미지 확장자입니다. png/jpg/webp 등 이미지 파일만 업로드할 수 있습니다.")
 
 
-def extract_text_from_image(image_bytes: bytes) -> Tuple[str, int]:
+def extract_text_from_image(image_bytes: bytes, *, high_density: bool = False) -> Tuple[str, int]:
     """Extract OCR text from image bytes. Uses RapidOCR when available."""
     if not image_bytes:
         return "", 0
@@ -41,7 +43,16 @@ def extract_text_from_image(image_bytes: bytes) -> Tuple[str, int]:
         from rapidocr_onnxruntime import RapidOCR
 
         engine = RapidOCR()
-        result, _ = engine(image_bytes)
+        # rapidocr-onnxruntime 1.2.x: det_limit_side_len 등은 __init__ kwargs 로 넘기면
+        # config 병합 시 KeyError('model_path') 가 난다. 고밀도 튜닝은 __call__ 인자로만 적용.
+        ocr_kwargs: dict[str, float] = {}
+        if high_density:
+            ocr_kwargs = {
+                "text_score": 0.25,
+                "unclip_ratio": 1.8,
+                "box_thresh": 0.25,
+            }
+        result, _ = engine(image_bytes, **ocr_kwargs)
         lines = [str(item[1]).strip() for item in (result or []) if item and item[1]]
         lines = [line for line in lines if line]
         if not lines:
@@ -97,9 +108,11 @@ def build_image_translation_response(
     source_language: str,
     target_language: str,
     region_hint: str | None = None,
+    high_density: bool = False,
 ) -> dict:
     validate_image_upload(file_name, content_type)
-    original_text, line_count = extract_text_from_image(image_bytes)
+    image_bytes = normalize_image_bytes_for_ocr(image_bytes)
+    original_text, line_count = extract_text_from_image(image_bytes, high_density=high_density)
     if not original_text.strip():
         raise ValueError("이미지에서 텍스트를 추출하지 못했습니다")
 

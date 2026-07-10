@@ -1082,6 +1082,18 @@ class TurnController:
         from .progress_tracker import persist_autonomous_progress
 
         session.extra["last_intent"] = intent
+        # [버그 수정] llm_connected 는 '콜러블 구성 여부'가 아니라 '실제 LLM 연결 성공' 을 반영해야 한다.
+        # 에이전트 결과의 metadata.llm_connected(실제 호출 성공/stub)를 우선 사용하고, 에이전트가 없는
+        # 턴(인사 등)은 기존 구성 플래그로 폴백한다. dashboards/클라가 신뢰하는 값이므로 결과와 일치시킨다.
+        flagged_results = [
+            r for r in (agent_results or [])
+            if isinstance(getattr(r, "metadata", None), dict) and "llm_connected" in r.metadata
+        ]
+        if flagged_results:
+            llm_connected_actual = any(bool(r.metadata.get("llm_connected")) for r in flagged_results)
+            session.extra["llm_connected"] = llm_connected_actual
+        else:
+            llm_connected_actual = bool(session.extra.get("llm_connected"))
         advisory = dict(session.extra.get("advisory") or {})
         web_results = list(advisory.get("web_results") or session.extra.get("web_results") or [])
         evidence_highlights = list(advisory.get("evidence_highlights") or [])
@@ -1101,7 +1113,7 @@ class TurnController:
             ],
             "message_log": self.bus.get_message_log(session.session_id)[-10:],
             "requires_approval": session.approval_state == "pending",
-            "llm_connected": bool(session.extra.get("llm_connected")),
+            "llm_connected": llm_connected_actual,
             "stages_remaining": max(0, len(session.stages) - sum(1 for s in session.stages if s.status == "completed")),
             "stage_command": session.extra.get("active_stage_command"),
             "stage_number": session.extra.get("active_stage_number"),

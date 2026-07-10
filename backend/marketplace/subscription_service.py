@@ -11,6 +11,11 @@ from sqlalchemy.orm import Session
 
 from . import subscription_models
 from .provider_adapters import BillingAdapterConfigurationError, billing_adapter_registry
+from .worldlinco_billing_plans import worldlinco_subscription_catalog_items
+from .worldlinco_referral import (
+    apply_referral_discount_payment,
+    resolve_referral_discount_quote,
+)
 from .subscription_state_machine import (
     NormalizedSubscriptionEvent,
     SubscriptionEventType,
@@ -253,6 +258,130 @@ class SubscriptionService:
                 price.amount_minor = int(item["amount_minor"])
                 price.external_price_code = str(item.get("external_price_code") or price.external_price_code or "")
                 price.is_active = True
+
+        for item in worldlinco_subscription_catalog_items():
+            product_code = str(item["product_code"])
+            plan_code = str(item["plan_code"])
+            provider = str(item["provider"])
+
+            product = (
+                db.query(subscription_models.SubscriptionProduct)
+                .filter(subscription_models.SubscriptionProduct.code == product_code)
+                .first()
+            )
+            if product is None:
+                product = subscription_models.SubscriptionProduct(
+                    code=product_code,
+                    name=str(item["product_name"]),
+                    description=str(item.get("product_description") or ""),
+                    product_family=str(item.get("product_family") or "worldlinco"),
+                    billing_type="one_time" if item.get("billing_period") == "one_time" else "subscription",
+                    is_active=True,
+                )
+                db.add(product)
+                db.flush()
+            else:
+                product.name = str(item["product_name"])
+                product.description = str(item.get("product_description") or product.description or "")
+                product.product_family = str(item.get("product_family") or product.product_family or "worldlinco")
+                product.is_active = True
+
+            plan = (
+                db.query(subscription_models.SubscriptionPlan)
+                .filter(subscription_models.SubscriptionPlan.code == plan_code)
+                .first()
+            )
+            billing_period = str(item.get("billing_period") or "monthly")
+            if plan is None:
+                plan = subscription_models.SubscriptionPlan(
+                    product_id=int(product.id),
+                    code=plan_code,
+                    name=str(item["plan_name"]),
+                    billing_period=billing_period,
+                    device_limit=int(item.get("device_limit") or 1),
+                    is_active=True,
+                )
+                db.add(plan)
+                db.flush()
+            else:
+                plan.product_id = int(product.id)
+                plan.name = str(item["plan_name"])
+                plan.billing_period = billing_period
+                plan.device_limit = int(item.get("device_limit") or plan.device_limit or 1)
+                plan.is_active = True
+
+            existing_keys = {
+                str(row.entitlement_key): row
+                for row in db.query(subscription_models.SubscriptionEntitlement)
+                .filter(subscription_models.SubscriptionEntitlement.plan_id == int(plan.id))
+                .all()
+            }
+            for entitlement_key in [str(key) for key in item.get("entitlements") or []]:
+                if entitlement_key in existing_keys:
+                    continue
+                db.add(
+                    subscription_models.SubscriptionEntitlement(
+                        plan_id=int(plan.id),
+                        entitlement_key=entitlement_key,
+                        entitlement_value="true",
+                    )
+                )
+
+            price = (
+                db.query(subscription_models.SubscriptionPrice)
+                .filter(
+                    subscription_models.SubscriptionPrice.product_id == int(product.id),
+                    subscription_models.SubscriptionPrice.plan_id == int(plan.id),
+                    subscription_models.SubscriptionPrice.provider == provider,
+                    subscription_models.SubscriptionPrice.channel == "web",
+                    subscription_models.SubscriptionPrice.billing_period == billing_period,
+                )
+                .order_by(subscription_models.SubscriptionPrice.id.desc())
+                .first()
+            )
+            if price is None:
+                price = subscription_models.SubscriptionPrice(
+                    product_id=int(product.id),
+                    plan_id=int(plan.id),
+                    channel="web",
+                    provider=provider,
+                    currency=str(item["currency"]),
+                    amount_minor=int(item["amount_minor"]),
+                    billing_period=billing_period,
+                    external_price_code=str(item.get("external_price_code") or ""),
+                    is_active=True,
+                )
+                db.add(price)
+                db.flush()
+            else:
+                price.currency = str(item["currency"])
+                price.amount_minor = int(item["amount_minor"])
+                price.external_price_code = str(item.get("external_price_code") or price.external_price_code or "")
+                price.is_active = True
+
+            external_product_id = str(item.get("external_product_id") or item.get("external_price_code") or "").strip()
+            if external_product_id and provider in {"google", "apple"}:
+                mapping = (
+                    db.query(subscription_models.ProviderSkuMapping)
+                    .filter(
+                        subscription_models.ProviderSkuMapping.provider == provider,
+                        subscription_models.ProviderSkuMapping.external_product_id == external_product_id,
+                    )
+                    .first()
+                )
+                if mapping is None:
+                    db.add(
+                        subscription_models.ProviderSkuMapping(
+                            price_id=int(price.id),
+                            provider=provider,
+                            external_product_id=external_product_id,
+                            external_price_id=str(item.get("external_price_code") or external_product_id),
+                            is_active=True,
+                        )
+                    )
+                else:
+                    mapping.price_id = int(price.id)
+                    mapping.is_active = True
 
     @staticmethod
     def _guess_default_product_code_for_project(*, title: str, description: str, category_name: str) -> str | None:
@@ -913,6 +1042,11 @@ class SubscriptionService:
             plan_id=int(plan.id),
             provider=provider,
         )
+        quote = resolve_referral_discount_quote(
+            user_id=user_id,
+            amount_minor=int(getattr(price, "amount_minor", 0) or 0),
+            db=db,
+        )
         try:
             session = billing_adapter_registry.checkout_adapter_for_provider(provider).create_checkout_session(
                 user_id=user_id,
@@ -921,6 +1055,10 @@ class SubscriptionService:
                 price_lookup_key=str(getattr(price, "external_price_code", None) or getattr(price, "id")),
                 success_url=success_url,
                 cancel_url=cancel_url,
+                discount_percent=float(quote["percent"]) if quote.get("eligible") else None,
+                discount_coupon_id=str(quote.get("stripe_coupon_id") or "") or None,
+                original_amount_minor=int(quote.get("original_amount_minor") or 0) if quote.get("eligible") else None,
+                final_amount_minor=int(quote.get("final_amount_minor") or 0) if quote.get("eligible") else None,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -934,6 +1072,7 @@ class SubscriptionService:
             "expires_in": session.expires_in,
             "verification_mode": session.verification_mode,
             "verification_simulated": session.verification_simulated,
+            "referral_discount": quote if quote.get("eligible") else None,
         }
 
     def verify_mobile_subscription(
@@ -1081,6 +1220,44 @@ class SubscriptionService:
         db.commit()
         db.refresh(subscription)
 
+        quote = resolve_referral_discount_quote(
+            user_id=user_id,
+            amount_minor=int(getattr(price, "amount_minor", 0) or 0),
+            db=db,
+        )
+        referral_discount_applied = None
+        plan_row = None
+        if quote.get("eligible"):
+            from backend.marketplace.worldlinco_billing_plans import resolve_worldlinco_plan_by_amount
+
+            plan_row = resolve_worldlinco_plan_by_amount(int(getattr(price, "amount_minor", 0) or 0))
+            referral_discount_applied = apply_referral_discount_payment(
+                user_id=user_id,
+                provider=provider,
+                original_amount_minor=int(quote.get("original_amount_minor") or 0),
+                final_amount_minor=int(quote.get("final_amount_minor") or 0),
+                plan_key=str(plan_row.get("plan_key") if plan_row else ""),
+                transaction_id=verification.latest_transaction_id or transaction_id or event_id,
+                external_offer_id=str(quote.get("google_offer_id") if provider == "google" else quote.get("apple_offer_id") if provider == "apple" else "") or None,
+            )
+
+        from backend.marketplace.worldlinco_sales_commission import record_worldlinco_payment_settlements
+        from backend.marketplace.models import User
+
+        paid_minor = int(getattr(price, "amount_minor", 0) or 0)
+        if referral_discount_applied and quote.get("eligible"):
+            paid_minor = int(quote.get("final_amount_minor") or paid_minor)
+        user_row = db.get(User, user_id)
+        record_worldlinco_payment_settlements(
+            user_id=user_id,
+            payment_amount_minor=paid_minor,
+            currency=str(getattr(price, "currency", "") or "KRW"),
+            user_country_code=getattr(user_row, "country_code", None) if user_row else None,
+            provider=provider,
+            transaction_id=verification.latest_transaction_id or transaction_id or event_id,
+            plan_key=str(plan_row.get("plan_key") if plan_row else "") or None,
+        )
+
         payload = self._serialize_subscription(db, user_id, subscription)
         payload.update(
             {
@@ -1088,6 +1265,8 @@ class SubscriptionService:
                 "source_original_id": subscription.original_transaction_id,
                 "verification_mode": verification.verification_mode,
                 "verification_simulated": verification.verification_simulated,
+                "referral_discount": quote if quote.get("eligible") else None,
+                "referral_discount_applied": referral_discount_applied,
             }
         )
         return payload
@@ -1242,7 +1421,20 @@ class SubscriptionService:
         product_code: str,
         device_id: str,
     ) -> dict[str, Any]:
+        from backend.marketplace.worldlinco_billing_policy import worldlinco_free_access_grants_license
+
         status_payload = self.get_user_subscription_status(db, user_id=user_id, product_code=product_code)
+        if worldlinco_free_access_grants_license(product_code):
+            status_payload.update(
+                {
+                    "allowed": True,
+                    "reason_code": "free_access_policy",
+                    "device_registered": True,
+                    "free_access_bypass": True,
+                }
+            )
+            return status_payload
+
         status = str(status_payload.get("subscription_status") or SubscriptionStatus.NONE.value)
         allowed_statuses = {
             SubscriptionStatus.ACTIVE.value,

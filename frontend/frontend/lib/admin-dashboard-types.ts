@@ -313,6 +313,49 @@ export interface AdminDashboardSelfRunStatus {
     repair_tags?: string[];
 }
 
+export interface SorisaeFailureMonitorStatus {
+    status: 'ok' | 'warning' | 'critical' | 'unknown';
+    classification: 'ALL_PASS' | 'UI_ONLY_FAILURE' | 'API_ONLY_FAILURE' | 'BOTH_FAIL' | 'unknown';
+    message?: string;
+    started_at?: string | null;
+    out_dir?: string | null;
+    result_json_path?: string | null;
+    summary_path?: string | null;
+    ui_report_path?: string | null;
+    ui_har_dir?: string | null;
+    alert_file?: string | null;
+    alert_latest_file?: string | null;
+    api_fail?: number;
+    ui_fail?: number;
+    api_probe_ok?: number;
+    api_probe_total?: number;
+    page_top3?: string[];
+    request_failed_top3?: string[];
+    console_error_top3?: string[];
+    screenshots?: Array<{
+        page_label: string;
+        screenshot_path: string;
+        screenshot_url?: string;
+    }>;
+    slack_notified?: boolean;
+    teams_notified?: boolean;
+    admin_push?: {
+        attempted?: boolean;
+        success?: boolean;
+        classification?: string;
+        admin_user_count?: number;
+        success_user_count?: number;
+        failure_user_count?: number;
+        sent_at?: string | null;
+        skipped_reason?: string | null;
+        users?: Array<{
+            user_id: number;
+            email?: string;
+            success: boolean;
+        }>;
+    };
+}
+
 export interface SelfRunFailureInsight {
     severity: 'warning' | 'critical';
     category: 'python_compile_fail' | 'import_error' | 'dependency' | 'timeout' | 'output_shortage' | 'unknown';

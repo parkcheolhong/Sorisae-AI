@@ -535,6 +535,20 @@ export default function AdminSystemSettingsPanel({
 
                                 {isOpen && (
                                     <div className="border-t border-gray-200 px-4 py-4">
+                                        {section.id === 'worldlinco_public_portal' ? (
+                                            <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
+                                                <p className="font-semibold">입력 방법 안내</p>
+                                                <p className="mt-1">1. `공공데이터 포털 조회 사용 여부 (0/1)` 은 `1` 로 켭니다.</p>
+                                                <p className="mt-1">2. 공통 키/템플릿을 넣거나, 아래처럼 분기별로 따로 넣습니다.</p>
+                                                <p className="mt-1">3. 관광/문화/식당/숙소는 TourAPI 템플릿을 넣고, 약국·병원·교통은 각 포털 API를 별도 주입합니다.</p>
+                                                <p className="mt-1 break-all">지원 플레이스홀더: {`{service_key}`}, {`{latitude}`}, {`{longitude}`}, {`{radius_m}`}, {`{category}`}, {`{query}`}, {`{country_code}`}</p>
+                                                <p className="mt-1">TourAPI 기준 `{`{category}`}` 는 자동으로 contentTypeId 로 바뀝니다: 관광지=12, 문화시설=14, 숙박=32, 음식/카페=39.</p>
+                                                <p className="mt-1 break-all">TourAPI 예시 템플릿: https://apis.data.go.kr/B551011/KorWithService2/locationBasedList2?serviceKey={`{service_key}`}&MobileOS=ETC&MobileApp=SorisaeAI&_type=json&mapX={`{longitude}`}&mapY={`{latitude}`}&radius={`{radius_m}`}&arrange=E&numOfRows=10&pageNo=1&contentTypeId={`{category}`}</p>
+                                                <p className="mt-1 break-all">약국/병원 템플릿 예시: https://example-medical-api?serviceKey={`{service_key}`}&lat={`{latitude}`}&lng={`{longitude}`}&radius={`{radius_m}`}&q={`{query}`}&country={`{country_code}`}</p>
+                                                <p className="mt-1 break-all">교통/환승 템플릿 예시: https://example-transit-api?serviceKey={`{service_key}`}&startLat={`{latitude}`}&startLng={`{longitude}`}&radius={`{radius_m}`}&keyword={`{query}`}&country={`{country_code}`}</p>
+                                                <p className="mt-1">분기 권장: 관광/문화/식당/숙소는 `관광/문화/식당/숙소 포털 URL 템플릿`, 약국/병원은 `약국/병원 포털 URL 템플릿`, 교통은 `교통/환승 포털 URL 템플릿` 을 사용하세요.</p>
+                                            </div>
+                                        ) : null}
                                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                             {section.fields.map((field) => (
                                                 <label key={field.key} className="block">

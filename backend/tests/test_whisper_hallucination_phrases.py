@@ -24,6 +24,14 @@ from backend.llm.router import _is_whisper_hallucination_phrase
         "시청해 주셔서 감사합니다",
         "ご視聴ありがとうございました",
         "thank you for watching",
+        "请不吝点赞 订阅 转发 打赏 支持明镜与点点栏目",
+        "좋아요, 구독, 공유, 후원을 부탁드립니다",
+        "词曲 李宗盛",
+        "작사 작곡 김종성",
+        "多谢您收睇時局新聞,再會!",
+        "多谢您收睇時局新聞",
+        "시국 뉴스를 보시고 감사합니다, 다음에 또 만나요!",
+        "자막 · 좋아요, 구독, 공유, 후원을 부탁드립니다",
     ],
 )
 def test_blocks_near_silence_hallucinations(transcript: str) -> None:

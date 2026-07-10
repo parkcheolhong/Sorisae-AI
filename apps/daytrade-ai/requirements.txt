@@ -1,0 +1,27 @@
+# daytrade-ai — AI 주식 단타(스캘핑) 자동매매 시스템
+# 코어 런타임은 순수 표준 라이브러리 + numpy 만으로 동작한다(경량·이식성).
+# 선택 의존성(onnxruntime 등)은 설치 시에만 해당 어댑터가 활성화된다.
+
+numpy>=1.26
+
+# --- 선택(Optional) ---
+# AI 추론 ONNX 어댑터(OnnxModel/SequenceOnnxModel) 실행에 필요(미설치 시 기본 모델로 폴백).
+# onnxruntime>=1.17
+# M2 ONNX export(numpy 그래프 빌드/torch export 후처리)에 필요.
+# onnx>=1.16
+# M2 torch 백엔드(LSTM/Transformer 학습) + torch.onnx export 에 필요.
+# torch>=2.2
+# onnxscript           # 최신 torch.onnx export 경로에서 요구
+# M2 하이퍼파라미터 탐색(`tune`) TPE 백엔드. 미설치 시 순수 random 탐색으로 자동 폴백.
+# optuna>=3.6
+# 라이브 시세 캡처(CLI `record`/`events --live`, BinanceFeed 라이브)에 필요. 정규화/테스트는 불필요.
+# websockets>=12.0
+# RL 분산 학습(RLlib PPO 브리지, `train_ppo_rllib`) + Gymnasium 어댑터. 미설치 시 순수 numpy PPO 폴백.
+# gymnasium>=0.29
+# ray[rllib]>=2.9
+#
+# 참고: numpy 백엔드 학습(`train --backend numpy`)·NumpyLogRegModel 추론·RL(`rl --algo ppo`)은
+#       위 선택 의존성 없이도 동작한다(순수 numpy/JSON).
+
+# --- 개발/테스트 ---
+pytest>=8.0

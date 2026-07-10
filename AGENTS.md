@@ -1,5 +1,60 @@
 # AGENTS.md
 
+## Scope Lock (Constitution)
+
+- 사용자가 지시한 목표는 단순·직진 경로로 수행하며, 불필요한 구조 확장/우회/복잡화/헛작업을 금지한다.
+- 합의되지 않은 설계 변경·단계 추가·범위 확장은 금지하며, 필요한 최소 변경과 근거 검증만 허용한다.
+- 사용자가 `소리새 중심`을 지시한 작업은 소리새 기능 범위로만 수행한다.
+- 사용자 명시 지시가 없는 한 VoIP/인증/결제/마켓플레이스/기타 비소리새 경로 수정 및 실행을 금지한다.
+- 범위 밖 결함은 임의 수정하지 않고 근거만 수집해 보고 후 승인받아 처리한다.
+
+### Audio section SSOT (frozen baseline)
+
+- **1 device · 1 session:** `sorisae` 와 `voip` 동시 활성 금지. 공유: `voipSessionGuard.ts`, `voiceCaptureLease.ts`.
+- **오디오 freeze:** `knowledge/worldlinco_section_freeze.json` (운율·캡만 — 소리새/VoIP 섹션).
+- **APK baseline (분리):** `knowledge/worldlinco_apk_baseline.json` — VoIP APK 올릴 때 **이 파일만** 갱신. freeze 건드리지 말 것.
+- **Design doc:** `docs/worldlinco-v2/AUDIO_SECTION_SSOT.md`
+- **CI lock:** `check_worldlinco_section_ssot_lock.py` + `check_section_boundary_lock.py` — 교차 패치 차단.
+- **백엔드 결합 금지:** `media_bridge` → `backend/voip/bridge_voice_io.py` 만. `voice_gateway.py` friend-chat 본문은 VoIP PR에서 수정 금지.
+- 소리새/VoIP 튜닝을 서로의 파일에 양파 패치하지 말 것.
+
+### VoIP 작업 시 수정 가능 (화이트리스트)
+
+`backend/voip/*`, `VoIPCallScreen.tsx`, `voipCallClient.ts`, `voip-voice-relay/*`, `worldlinco_apk_baseline.json`, `tuning_config.json` → `voip`/`voip_bridge`
+
+### 소리새 작업 시 수정 가능 (화이트리스트)
+
+`features/sorisae/*`, `appFaceVoicePlayback.ts`, `face-interpretation/*`, `run_sorisae_friend_chat_probe.py`
+
+### 공유만 (양쪽 PR에서 허용)
+
+`voipSessionGuard.ts`, `voiceCaptureLease.ts`, `worldlinco_section_freeze.json`(오디오), CI 스크립트, `AUDIO_SECTION_SSOT.md`
+
+## 작업자 필수 절차 (전체 흐름 우선)
+
+코드 수정 **전** 아래를 읽고 섹션·데이터 흐름을 먼저 그린 뒤 손댄다. 한 파일만 고치고 끝내지 말 것.
+
+| 순서 | 읽을 것 | 목적 |
+|------|---------|------|
+| 1 | `docs/worldlinco-v2/AUDIO_SECTION_SSOT.md` §7 | 소리새 / VoIP / 공유 경계 |
+| 2 | `knowledge/worldlinco_section_freeze.json` | 고정 상수 |
+| 3 | VoIP 시 `knowledge/worldlinco_tuning_config.json` → `voip`·`voip_bridge` | 런타임 튜닝 SSOT |
+| 4 | VoIP 시 `TECHNICAL_REPORT_VOIP_ORCHESTRATOR.md` + `docs/VOIP_VOICE_RELAY_ORCHESTRATOR_ARCHITECTURE.md` | 통화·브리지·relay 흐름 |
+| 5 | 변경 파일의 **상·하류 2홉** (예: `media_bridge` ↔ `VoIPCallScreen` ↔ `voipCallClient`) | 부작용 계산 |
+
+**금지:** 기술서·튜닝 JSON 없는 추측 패치 · 섹션 밖 파일 수정 · `voipSessionGuard`/`voiceCaptureLease` 임의 변경 · VoIP에 `face.interpret` 운율 복사 · 미문서 PLC/주기 reapply/ICE 상수 변경.
+
+**VoIP 음성 경로:** `mic → WebRTC uplink → [server MCU 큐 20ms] → downlink → speaker` (ko=ko는 `forward_live`). 스피커 토글만으로 MCU 지터·큐 언더런은 해결되지 않음.
+
+**머지/배포 전 게이트:**
+
+```powershell
+make voip-gate      # VoIP·오디오 섹션 변경 시
+make sorisae-gate   # 소리새 변경 시
+```
+
+증적: `evidence/voip-*/accountability.md` — 실통화 call_id·로그·패치 책임 기록.
+
 ## Cursor Cloud specific instructions
 
 ### Architecture Overview
@@ -133,5 +188,5 @@ make check
 
 ### Coding conventions
 
-- **UTC time (Py 3.12+):** `datetime.utcnow()` is deprecated. Use the SSOT helper `from backend.time_utils import utcnow` — it returns a **naive** UTC `datetime` (drop-in: preserves DB-naive comparisons and `isoformat() + "Z"` output). Do **not** edit the `datetime.utcnow()` strings inside `backend/llm/orchestrator.py` code-generation templates or the generated reference app `app/`; they are kept in lockstep for golden-task consistency.
+- **UTC time (Py 3.12+):** `datetime.utcnow()` is deprecated. Use the SSOT helper `from backend.time_utils import utcnow` — it returns a **naive** UTC `datetime` (drop-in: preserves DB-naive comparisons and `isoformat() + "Z"` output). Do **not** edit the `datetime.utcnow()` strings inside the code-generation templates (now in `backend/llm/orchestrator_templates.py`, split out of `orchestrator.py`) or the generated reference app `app/`; they are kept in lockstep for golden-task consistency (byte-frozen). The template builders are re-imported into `orchestrator.py` so the public API (`from backend.llm.orchestrator import _build_customer_order_template_candidates`, etc.) is unchanged.
 - **Rate limiting:** Reuse `backend/security_gates.py` (`_InMemoryQuotaGate` + `require_*_quota` deps) for per-user/client quotas; it returns `429` + `Retry-After`. Tests reset global quota state via `backend/tests/conftest.py` autouse fixture (`reset_for_test()`).

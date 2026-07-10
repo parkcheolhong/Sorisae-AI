@@ -39,7 +39,13 @@
         "stop:all": "npm run stop:platform",
         "start": "npm run start:platform",
         "stop": "npm run stop:platform",
-        "health:ops": "npm run health:platform"
+        "health:ops": "npm run health:platform",
+        "smoke:ui-api-split": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run_ui_api_failure_split_smoke.ps1",
+        "smoke:ui-api-split:schedule:register": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\register_ui_api_smoke_task.ps1",
+        "smoke:ui-api-split:schedule:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\register_ui_api_smoke_task.ps1 -Remove",
+        "verify:flow-adm-dash": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_flow_adm_dash_playwright_once.ps1",
+        "smoke:ui-api-split:cron:install": "bash ./scripts/install_ui_api_smoke_cron.sh",
+        "smoke:ui-api-split:cron:remove": "bash ./scripts/uninstall_ui_api_smoke_cron.sh"
     },
     "dependencies": {
         "eslint-config-next": "^16.2.6",

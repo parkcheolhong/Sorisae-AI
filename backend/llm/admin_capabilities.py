@@ -11,7 +11,7 @@ from backend.time_utils import utcnow
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.auth import get_current_user, is_weak_secret_key
@@ -127,6 +127,10 @@ CAPABILITY_CACHE_TTL_SEC = max(5, int(os.getenv("ADMIN_CAPABILITY_CACHE_TTL_SEC"
 _CAPABILITY_CACHE_LOCK = threading.Lock()
 _CAPABILITY_CACHE_VALUE: Dict[str, Dict[str, Any]] | None = None
 _CAPABILITY_CACHE_EXPIRES_AT = 0.0
+CAPABILITY_SUMMARY_CACHE_TTL_SEC = max(5, int(os.getenv("ADMIN_CAPABILITY_SUMMARY_CACHE_TTL_SEC", "45")))
+_CAPABILITY_SUMMARY_CACHE_LOCK = threading.Lock()
+_CAPABILITY_SUMMARY_CACHE_VALUE: Dict[str, Any] | None = None
+_CAPABILITY_SUMMARY_CACHE_EXPIRES_AT = 0.0
 
 
 def require_admin(current_user: User = Depends(get_current_user)):
@@ -733,7 +737,10 @@ def _resolve_runtime_output_dir(runtime_diagnostics: Dict[str, Any]) -> Path | N
         return None
 
 
-def _candidate_validation_payload_paths(runtime_diagnostics: Dict[str, Any]) -> List[Path]:
+def _candidate_validation_payload_paths(
+    runtime_diagnostics: Dict[str, Any],
+    include_broad_scan: bool = True,
+) -> List[Path]:
     candidates: List[Path] = []
     output_dir = _resolve_runtime_output_dir(runtime_diagnostics)
     if output_dir is not None:
@@ -754,27 +761,28 @@ def _candidate_validation_payload_paths(runtime_diagnostics: Dict[str, Any]) -> 
         except Exception:
             continue
 
-    record_path_text = str(runtime_diagnostics.get("record_path") or "").strip()
-    if record_path_text:
-        try:
-            record_dir = Path(record_path_text).expanduser().resolve().parent
-            for pattern in ["**/docs/automatic_validation_result.json", "**/automatic_validation_result.json"]:
-                for path in sorted(record_dir.glob(pattern), key=lambda item: item.stat().st_mtime if item.exists() else 0, reverse=True):
-                    candidates.append(path.resolve())
-        except Exception:
-            pass
+    if include_broad_scan:
+        record_path_text = str(runtime_diagnostics.get("record_path") or "").strip()
+        if record_path_text:
+            try:
+                record_dir = Path(record_path_text).expanduser().resolve().parent
+                for pattern in ["**/docs/automatic_validation_result.json", "**/automatic_validation_result.json"]:
+                    for path in sorted(record_dir.glob(pattern), key=lambda item: item.stat().st_mtime if item.exists() else 0, reverse=True):
+                        candidates.append(path.resolve())
+            except Exception:
+                pass
 
-    project_runs_root = (REPO_ROOT / "uploads" / "projects").resolve()
-    if project_runs_root.exists() and project_runs_root.is_dir():
-        try:
-            for path in sorted(
-                project_runs_root.glob("*/docs/automatic_validation_result.json"),
-                key=lambda item: item.stat().st_mtime if item.exists() else 0,
-                reverse=True,
-            ):
-                candidates.append(path.resolve())
-        except Exception:
-            pass
+        project_runs_root = (REPO_ROOT / "uploads" / "projects").resolve()
+        if project_runs_root.exists() and project_runs_root.is_dir():
+            try:
+                for path in sorted(
+                    project_runs_root.glob("*/docs/automatic_validation_result.json"),
+                    key=lambda item: item.stat().st_mtime if item.exists() else 0,
+                    reverse=True,
+                ):
+                    candidates.append(path.resolve())
+            except Exception:
+                pass
 
     unique_paths: List[Path] = []
     seen: set[str] = set()
@@ -787,8 +795,11 @@ def _candidate_validation_payload_paths(runtime_diagnostics: Dict[str, Any]) -> 
     return unique_paths
 
 
-def _load_latest_validation_payload(runtime_diagnostics: Dict[str, Any]) -> tuple[Dict[str, Any], Path | None]:
-    candidates = _candidate_validation_payload_paths(runtime_diagnostics)
+def _load_latest_validation_payload(
+    runtime_diagnostics: Dict[str, Any],
+    include_broad_scan: bool = True,
+) -> tuple[Dict[str, Any], Path | None]:
+    candidates = _candidate_validation_payload_paths(runtime_diagnostics, include_broad_scan=include_broad_scan)
     best_payload: Dict[str, Any] = {}
     best_path: Path | None = None
     best_rank = (-1, -1, -1, -1.0)
@@ -847,10 +858,21 @@ def _capability_runtime_diagnostics(capability: Dict[str, Any]) -> Dict[str, Any
     return {}
 
 
-def _build_capability_evidence_context(capability: Dict[str, Any]) -> Dict[str, Any]:
+def _build_capability_evidence_context(
+    capability: Dict[str, Any],
+    *,
+    include_live_documentation_scan: bool = True,
+    include_broad_validation_scan: bool = True,
+) -> Dict[str, Any]:
     runtime_diagnostics = _capability_runtime_diagnostics(capability)
-    validation_payload_candidates = _candidate_validation_payload_paths(runtime_diagnostics)
-    validation_payload, validation_payload_path = _load_latest_validation_payload(runtime_diagnostics)
+    validation_payload_candidates = _candidate_validation_payload_paths(
+        runtime_diagnostics,
+        include_broad_scan=include_broad_validation_scan,
+    )
+    validation_payload, validation_payload_path = _load_latest_validation_payload(
+        runtime_diagnostics,
+        include_broad_scan=include_broad_validation_scan,
+    )
     output_dir = validation_payload_path.parent.parent.resolve() if validation_payload_path is not None else _resolve_runtime_output_dir(runtime_diagnostics)
 
     evidence_bundle = validation_payload.get("evidence_bundle")
@@ -862,15 +884,17 @@ def _build_capability_evidence_context(capability: Dict[str, Any]) -> Dict[str, 
     selective_apply = dict(evidence_bundle.get("selective_apply") or {})
     readiness_artifacts = validation_payload.get("readiness_artifacts") if isinstance(validation_payload, dict) else {}
     documentation_sync = dict(validation_payload.get("documentation_sync") or {})
-    try:
-        from backend.llm.orchestrator import _build_document_stale_scan
+    live_documentation_scan: Dict[str, Any] = {}
+    if include_live_documentation_scan:
+        try:
+            from backend.llm.orchestrator import _build_document_stale_scan
 
-        live_documentation_scan = _build_document_stale_scan(REPO_ROOT)
-        live_documentation_sync = dict((live_documentation_scan or {}).get("documentation_sync") or {})
-        if live_documentation_sync:
-            documentation_sync = live_documentation_sync
-    except Exception:
-        live_documentation_scan = {}
+            live_documentation_scan = _build_document_stale_scan(REPO_ROOT)
+            live_documentation_sync = dict((live_documentation_scan or {}).get("documentation_sync") or {})
+            if live_documentation_sync:
+                documentation_sync = live_documentation_sync
+        except Exception:
+            live_documentation_scan = {}
 
     if not contract.get("evidence_schema_version"):
         contract["evidence_schema_version"] = str((readiness_artifacts or {}).get("evidence_schema_version") or "v1")
@@ -1003,14 +1027,23 @@ def _build_capability_evidence_context(capability: Dict[str, Any]) -> Dict[str, 
     }
 
 
-def _attach_capability_evidence_context(capability_map: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def _attach_capability_evidence_context(
+    capability_map: Dict[str, Dict[str, Any]],
+    *,
+    include_live_documentation_scan: bool = True,
+    include_broad_validation_scan: bool = True,
+) -> Dict[str, Dict[str, Any]]:
     shared_evidence_context: Dict[str, Any] | None = None
     for capability_id in CAPABILITY_ORDER:
         capability = capability_map.get(capability_id)
         if not isinstance(capability, dict):
             continue
         if shared_evidence_context is None:
-            shared_evidence_context = _build_capability_evidence_context(capability)
+            shared_evidence_context = _build_capability_evidence_context(
+                capability,
+                include_live_documentation_scan=include_live_documentation_scan,
+                include_broad_validation_scan=include_broad_validation_scan,
+            )
         capability["evidence_context"] = copy.deepcopy(shared_evidence_context)
     return capability_map
 
@@ -2586,7 +2619,11 @@ def _build_capability_map() -> Dict[str, Dict[str, Any]]:
     security_guard = _security_guard(project_scan)
     model_control = _model_control()
     runtime_diagnostics = _build_runtime_diagnostics()
-    documentation_sync = _build_capability_evidence_context({"payload": {"runtime_diagnostics": runtime_diagnostics}}).get("documentation_sync") or {}
+    documentation_sync = _build_capability_evidence_context(
+        {"payload": {"runtime_diagnostics": runtime_diagnostics}},
+        include_live_documentation_scan=False,
+        include_broad_validation_scan=False,
+    ).get("documentation_sync") or {}
     project_scan["runtime_diagnostics"] = runtime_diagnostics
     project_scan["documentation_sync"] = documentation_sync
     self_healing = _self_healing(project_scan, security_guard, model_control, runtime_diagnostics)
@@ -3359,9 +3396,45 @@ def _build_actions(capability_id: str, capability: Dict[str, Any]) -> List[str]:
     return []
 
 
-def _build_capability_card(capability_id: str, capability: Dict[str, Any]) -> CapabilityCard:
-    raw_evidence_context = capability.get("evidence_context")
-    evidence_context = raw_evidence_context if isinstance(raw_evidence_context, dict) else _build_capability_evidence_context(capability)
+def _build_lightweight_evidence_digest(capability: Dict[str, Any]) -> Dict[str, Any]:
+    runtime_diagnostics = _capability_runtime_diagnostics(capability)
+    findings = runtime_diagnostics.get("findings") if isinstance(runtime_diagnostics.get("findings"), list) else []
+    warning_count = sum(
+        1
+        for item in findings
+        if isinstance(item, dict) and str(item.get("severity") or "").lower() == "warning"
+    )
+    error_count = sum(
+        1
+        for item in findings
+        if isinstance(item, dict) and str(item.get("severity") or "").lower() == "error"
+    )
+    return {
+        "completion_gate_ok": runtime_diagnostics.get("completion_gate_ok"),
+        "self_run_status": runtime_diagnostics.get("latest_status"),
+        "failure_tag_count": 0,
+        "target_file_id_count": 0,
+        "operational_target_count": 0,
+        "operational_verified_count": 0,
+        "operational_warning_count": warning_count,
+        "operational_failed_count": error_count,
+        "operational_max_latency_ms": None,
+    }
+
+
+def _build_capability_card(
+    capability_id: str,
+    capability: Dict[str, Any],
+    *,
+    lightweight_digest: bool = False,
+) -> CapabilityCard:
+    if lightweight_digest:
+        evidence_digest = _build_lightweight_evidence_digest(capability)
+    else:
+        raw_evidence_context = capability.get("evidence_context")
+        evidence_context = raw_evidence_context if isinstance(raw_evidence_context, dict) else _build_capability_evidence_context(capability)
+        evidence_digest = evidence_context["evidence_digest"]
+
     return CapabilityCard(
         id=capability_id,
         title=capability["title"],
@@ -3377,8 +3450,47 @@ def _build_capability_card(capability_id: str, capability: Dict[str, Any]) -> Ca
         last_run_started_at=capability.get("last_run_started_at"),
         last_run_finished_at=capability.get("last_run_finished_at"),
         last_run_age_hours=capability.get("last_run_age_hours"),
-        evidence_digest=evidence_context["evidence_digest"],
+        evidence_digest=evidence_digest,
     )
+
+
+def _build_capability_summary_payload() -> Dict[str, Any]:
+    capability_map = _build_capability_map()
+    capabilities = [
+        _build_capability_card(
+            capability_id,
+            capability_map[capability_id],
+            lightweight_digest=True,
+        ).model_dump()
+        for capability_id in CAPABILITY_ORDER
+    ]
+    groups = [group.model_dump() for group in _build_group_summaries(capability_map)]
+    return {
+        "generated_at": _now_iso(),
+        "evidence_snapshot_version": "v1",
+        "groups": groups,
+        "capabilities": capabilities,
+    }
+
+
+def _get_cached_capability_summary_payload(force_refresh: bool = False) -> Dict[str, Any]:
+    global _CAPABILITY_SUMMARY_CACHE_VALUE, _CAPABILITY_SUMMARY_CACHE_EXPIRES_AT
+
+    now_monotonic = time.monotonic()
+    with _CAPABILITY_SUMMARY_CACHE_LOCK:
+        if (
+            not force_refresh
+            and _CAPABILITY_SUMMARY_CACHE_VALUE is not None
+            and now_monotonic < _CAPABILITY_SUMMARY_CACHE_EXPIRES_AT
+        ):
+            return copy.deepcopy(_CAPABILITY_SUMMARY_CACHE_VALUE)
+
+    payload = _build_capability_summary_payload()
+
+    with _CAPABILITY_SUMMARY_CACHE_LOCK:
+        _CAPABILITY_SUMMARY_CACHE_VALUE = payload
+        _CAPABILITY_SUMMARY_CACHE_EXPIRES_AT = time.monotonic() + float(CAPABILITY_SUMMARY_CACHE_TTL_SEC)
+    return copy.deepcopy(payload)
 
 
 def _build_group_summaries(capability_map: Dict[str, Dict[str, Any]]) -> List[CapabilityGroupSummary]:
@@ -3419,21 +3531,34 @@ def _build_group_summaries(capability_map: Dict[str, Dict[str, Any]]) -> List[Ca
 
 
 @router.get("/capabilities/summary", response_model=CapabilitySummaryResponse)
-def get_capability_summary(_: User = Depends(require_admin)):
-    capability_map = _attach_capability_evidence_context(_build_capability_map())
-    return CapabilitySummaryResponse(
-        generated_at=_now_iso(),
-        groups=_build_group_summaries(capability_map),
-        capabilities=[
-            _build_capability_card(capability_id, capability_map[capability_id])
-            for capability_id in CAPABILITY_ORDER
-        ],
-    )
+def get_capability_summary(
+    _: User = Depends(require_admin),
+    _live: bool = Query(False),
+    _refresh: bool = Query(False),
+):
+    payload = _get_cached_capability_summary_payload(force_refresh=bool(_refresh))
+    return CapabilitySummaryResponse(**payload)
+
+
+@router.post("/capabilities/summary/prewarm")
+def prewarm_capability_summary(_: User = Depends(require_admin)):
+    payload = _get_cached_capability_summary_payload(force_refresh=True)
+    return {
+        "ok": True,
+        "generated_at": payload.get("generated_at"),
+        "cache_ttl_sec": CAPABILITY_SUMMARY_CACHE_TTL_SEC,
+        "group_count": len(payload.get("groups") or []),
+        "capability_count": len(payload.get("capabilities") or []),
+    }
 
 
 @router.get("/capabilities/{capability_id}", response_model=CapabilityDetailResponse)
 def get_capability_detail(capability_id: str, _: User = Depends(require_admin)):
-    capability_map = _attach_capability_evidence_context(_build_capability_map())
+    capability_map = _attach_capability_evidence_context(
+        _build_capability_map(),
+        include_live_documentation_scan=True,
+        include_broad_validation_scan=True,
+    )
     capability = capability_map.get(capability_id)
     if capability is None:
         raise HTTPException(status_code=404, detail="지원되지 않는 능력입니다")

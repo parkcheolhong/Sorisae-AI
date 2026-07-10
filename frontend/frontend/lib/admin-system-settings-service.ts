@@ -156,6 +156,12 @@ function joinApiUrl(baseUrl: string, path: string) {
     return `${baseUrl.replace(/\/$/, '')}${path}`;
 }
 
+function delayMs(ms: number) {
+    return new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 function isDirectLocalBackendUrl(value: string | undefined | null) {
     const normalized = String(value || '').trim().toLowerCase();
     return normalized.startsWith('http://localhost:8000') || normalized.startsWith('http://127.0.0.1:8000');
@@ -197,32 +203,44 @@ async function fetchAdminJsonWithAutoFallback<T>(options: {
 }) {
     const fetcher = options.fetchImpl || fetch;
     const attempts = buildAdminApiBaseUrlCandidates(options.apiBaseUrl);
+    const perBaseRetryDelays = [0, 250, 700];
     let lastResponse: Response | null = null;
     let lastPayload: any = null;
     let lastError: Error | null = null;
 
     for (const baseUrl of attempts) {
-        try {
-            const response = await fetcher(joinApiUrl(baseUrl, options.path), options.init);
-            if (isUnauthorized(response.status)) {
-                throw new Error('__ADMIN_SYSTEM_UNAUTHORIZED__');
+        for (let retryIndex = 0; retryIndex < perBaseRetryDelays.length; retryIndex += 1) {
+            const waitMs = perBaseRetryDelays[retryIndex];
+            if (waitMs > 0) {
+                await delayMs(waitMs);
             }
 
-            const data = await response.json().catch(() => null);
-            if (response.ok && data) {
-                return data as T;
-            }
+            try {
+                const response = await fetcher(joinApiUrl(baseUrl, options.path), options.init);
+                if (isUnauthorized(response.status)) {
+                    throw new Error('__ADMIN_SYSTEM_UNAUTHORIZED__');
+                }
 
-            lastResponse = response;
-            lastPayload = data;
-            if (!isRetryableStatus(response.status)) {
-                break;
+                const data = await response.json().catch(() => null);
+                if (response.ok && data) {
+                    return data as T;
+                }
+
+                lastResponse = response;
+                lastPayload = data;
+                if (!isRetryableStatus(response.status)) {
+                    break;
+                }
+            } catch (error: any) {
+                if (error?.message === '__ADMIN_SYSTEM_UNAUTHORIZED__') {
+                    throw error;
+                }
+                lastError = error instanceof Error ? error : new Error(String(error || '관리자 시스템 설정 요청 실패'));
             }
-        } catch (error: any) {
-            if (error?.message === '__ADMIN_SYSTEM_UNAUTHORIZED__') {
-                throw error;
-            }
-            lastError = error instanceof Error ? error : new Error(String(error || '관리자 시스템 설정 요청 실패'));
+        }
+
+        if (lastResponse && !isRetryableStatus(lastResponse.status)) {
+            break;
         }
     }
 

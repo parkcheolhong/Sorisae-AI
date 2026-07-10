@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+import json as _json
+import logging
 import math
-from typing import Any, Dict, List, Literal
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
+from typing import Any, Dict, List, Literal, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from backend.marketplace import models as marketplace_models
+from backend.marketplace.database import get_db
+from backend.security_gates import require_lbs_search_quota
 from backend.services.nadotongryoksa.translator import NadoTranslator
+
+logger = logging.getLogger(__name__)
 
 PlaceCategory = Literal["hotel", "airport", "restaurant", "attraction"]
 SearchCategory = Literal["all", "hotel", "airport", "restaurant", "attraction"]
@@ -81,6 +93,8 @@ class NearbyPlaceResponse(BaseModel):
     naver_map_url: str
     review_query: str
     maps_reviews_path: str
+    recommendation_id: Optional[int] = None
+    partner_id: Optional[str] = None
 
 
 class NearbySearchResponse(BaseModel):
@@ -91,6 +105,7 @@ class NearbySearchResponse(BaseModel):
     radius_m: int
     total: int
     places: List[NearbyPlaceResponse]
+    trip_session_id: Optional[str] = None
 
 
 class BookingRequest(BaseModel):
@@ -102,6 +117,81 @@ class BookingRequest(BaseModel):
     room_count: int = Field(default=1, ge=1, le=4)
     note: str = Field(default="", max_length=240)
     target_lang: str = Field(default="ko", min_length=2, max_length=5)
+    partner_click_ref: Optional[str] = Field(default=None, max_length=120)
+    partner_click_event_id: Optional[int] = Field(default=None, ge=1)
+
+
+class PartnerClickRequest(BaseModel):
+    recommendation_id: Optional[int] = Field(default=None, ge=1)
+    partner_id: Optional[str] = Field(default=None, max_length=80)
+    landing_url: Optional[str] = Field(default=None, max_length=500)
+    trip_session_id: Optional[str] = Field(default=None, max_length=64)
+
+
+class PartnerClickResponse(BaseModel):
+    status: Literal["ok"] = "ok"
+    click_ref: str
+    partner_id: str
+    recommendation_id: Optional[int] = None
+    click_event_id: Optional[int] = None
+
+
+class BookingLifecycleRequest(BaseModel):
+    booking_ref: str = Field(min_length=6, max_length=120)
+    status_note: str = Field(default="", max_length=240)
+
+
+class BookingLifecycleResponse(BaseModel):
+    status: Literal["ok"] = "ok"
+    booking_ref: str
+    booking_event_id: Optional[int] = None
+    stage: Literal["initiated", "confirmed", "completed"]
+    partner_id: str
+
+
+class BookingCancelRefundRequest(BaseModel):
+    booking_ref: str = Field(min_length=6, max_length=120)
+    reason: str = Field(default="", max_length=240)
+    refund_amount: Optional[float] = Field(default=None, ge=0.0)
+
+
+class BookingCancelRefundResponse(BaseModel):
+    status: Literal["ok"] = "ok"
+    booking_ref: str
+    booking_event_id: Optional[int] = None
+    stage: Literal["cancelled", "refunded"]
+    partner_id: str
+    ledger_adjusted: bool = False
+    adjustment_amount: float = 0.0
+    currency: str = "USD"
+
+
+class CommissionSettlementBatchRequest(BaseModel):
+    dry_run: bool = True
+    limit: int = Field(default=100, ge=1, le=500)
+    default_commission_amount: float = Field(default=12.0, ge=0.0)
+    commission_rate: float = Field(default=0.1, ge=0.0, le=1.0)
+    currency: str = Field(default="USD", min_length=3, max_length=10)
+
+
+class CommissionSettlementItem(BaseModel):
+    booking_ref: str
+    booking_event_id: Optional[int] = None
+    partner_id: str
+    amount: float
+    currency: str
+    settlement_status: str
+
+
+class CommissionSettlementBatchResponse(BaseModel):
+    status: Literal["ok"] = "ok"
+    dry_run: bool
+    scanned: int
+    created: int
+    skipped_existing: int
+    total_amount: float
+    currency: str
+    items: List[CommissionSettlementItem]
 
 
 class BookingResponse(BaseModel):
@@ -179,6 +269,435 @@ def _to_nearby_response(place: Dict[str, Any], *, target_lang: str, distance_m: 
     )
 
 
+_BOOKING_EVENT_FALLBACK: Dict[str, Dict[str, Any]] = {}
+_SETTLEMENT_LEDGER_FALLBACK: Dict[str, Dict[str, Any]] = {}
+
+
+def _db_ready(db: Any) -> bool:
+    return all(hasattr(db, attr) for attr in ("add", "commit", "rollback"))
+
+
+def _partner_id_for_place(place: NearbyPlaceResponse) -> str:
+    return f"partner-{place.category}-default"
+
+
+def _ensure_trip_session(
+    db: Any,
+    *,
+    requested_session_id: Optional[str],
+    user_id: Optional[int],
+    lat: float,
+    lon: float,
+) -> tuple[Optional[int], str]:
+    session_id = (requested_session_id or "").strip() or f"trip-{uuid4().hex[:16]}"
+    if not _db_ready(db):
+        return None, session_id
+    try:
+        existing = db.query(marketplace_models.TripSession).filter(
+            marketplace_models.TripSession.session_id == session_id,
+        ).first()
+        if existing is not None:
+            return int(existing.id), session_id
+        session = marketplace_models.TripSession(
+            session_id=session_id,
+            user_id=user_id,
+            status="active",
+            context_json=_json.dumps({"lat": lat, "lon": lon}, ensure_ascii=False),
+        )
+        db.add(session)
+        db.flush()
+        db.commit()
+        return int(session.id), session_id
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None, session_id
+
+
+def _record_recommendation_events(
+    db: Any,
+    *,
+    trip_session_pk: Optional[int],
+    user_id: Optional[int],
+    places: List[NearbyPlaceResponse],
+) -> None:
+    if not _db_ready(db):
+        return
+    try:
+        for rank, place in enumerate(places, start=1):
+            partner_id = _partner_id_for_place(place)
+            event = marketplace_models.RecommendationEvent(
+                trip_session_id=trip_session_pk,
+                user_id=user_id,
+                category=place.category,
+                partner_id=partner_id,
+                recommendation_rank=rank,
+                recommendation_payload_json=_json.dumps(
+                    {
+                        "place_id": place.id,
+                        "place_name": place.name,
+                        "distance_m": place.distance_m,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            db.add(event)
+            db.flush()
+            place.recommendation_id = int(event.id)
+            place.partner_id = partner_id
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def _create_booking_event(
+    db: Any,
+    *,
+    booking_ref: str,
+    user_id: Optional[int],
+    partner_id: str,
+    partner_click_event_id: Optional[int],
+    payload: Dict[str, Any],
+) -> Optional[int]:
+    _BOOKING_EVENT_FALLBACK[booking_ref] = {
+        "status": "initiated",
+        "partner_id": partner_id,
+        "payload": payload,
+    }
+    if not _db_ready(db):
+        return None
+    try:
+        event = marketplace_models.BookingEvent(
+            booking_ref=booking_ref,
+            user_id=user_id,
+            partner_id=partner_id,
+            partner_click_event_id=partner_click_event_id,
+            status="initiated",
+            raw_payload_json=_json.dumps(payload, ensure_ascii=False),
+        )
+        db.add(event)
+        db.flush()
+        db.commit()
+        return int(event.id)
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
+
+
+def _advance_booking_stage(db: Any, booking_ref: str, stage: Literal["confirmed", "completed"], note: str) -> tuple[Optional[int], str]:
+    current = _BOOKING_EVENT_FALLBACK.get(booking_ref) or {"status": "initiated", "partner_id": "partner-hotel-default"}
+    current["status"] = stage
+    if note:
+        current["status_note"] = note
+    _BOOKING_EVENT_FALLBACK[booking_ref] = current
+
+    if not _db_ready(db):
+        return None, str(current.get("partner_id") or "partner-hotel-default")
+
+    try:
+        event = db.query(marketplace_models.BookingEvent).filter(
+            marketplace_models.BookingEvent.booking_ref == booking_ref,
+        ).first()
+        if event is None:
+            return None, str(current.get("partner_id") or "partner-hotel-default")
+        event.status = stage
+        payload = _json.loads(event.raw_payload_json or "{}") if event.raw_payload_json else {}
+        payload["status_note"] = note
+        payload[f"{stage}_at"] = "now"
+        event.raw_payload_json = _json.dumps(payload, ensure_ascii=False)
+        db.add(event)
+        db.commit()
+        return int(event.id), str(event.partner_id)
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None, str(current.get("partner_id") or "partner-hotel-default")
+
+
+def _derive_commission_amount(
+    amount: Optional[float],
+    *,
+    default_commission_amount: float,
+    commission_rate: float,
+) -> float:
+    if amount is None or amount <= 0:
+        return round(default_commission_amount, 2)
+    return round(amount * commission_rate, 2)
+
+
+def _build_commission_batch_from_fallback(
+    *,
+    dry_run: bool,
+    limit: int,
+    default_commission_amount: float,
+    commission_rate: float,
+    currency: str,
+) -> CommissionSettlementBatchResponse:
+    candidates = [
+        (booking_ref, event)
+        for booking_ref, event in _BOOKING_EVENT_FALLBACK.items()
+        if str(event.get("status") or "") == "completed"
+    ]
+    candidates = candidates[:limit]
+
+    created = 0
+    skipped_existing = 0
+    total_amount = 0.0
+    items: List[CommissionSettlementItem] = []
+
+    for booking_ref, event in candidates:
+        if booking_ref in _SETTLEMENT_LEDGER_FALLBACK:
+            skipped_existing += 1
+            continue
+        amount = _derive_commission_amount(
+            event.get("amount"),
+            default_commission_amount=default_commission_amount,
+            commission_rate=commission_rate,
+        )
+        item = CommissionSettlementItem(
+            booking_ref=booking_ref,
+            booking_event_id=None,
+            partner_id=str(event.get("partner_id") or "partner-hotel-default"),
+            amount=amount,
+            currency=currency,
+            settlement_status="pending",
+        )
+        items.append(item)
+        total_amount += amount
+        if not dry_run:
+            _SETTLEMENT_LEDGER_FALLBACK[booking_ref] = item.model_dump()
+        created += 1
+
+    return CommissionSettlementBatchResponse(
+        dry_run=dry_run,
+        scanned=len(candidates),
+        created=created,
+        skipped_existing=skipped_existing,
+        total_amount=round(total_amount, 2),
+        currency=currency,
+        items=items,
+    )
+
+
+def _run_commission_settlement_batch(
+    db: Any,
+    *,
+    dry_run: bool,
+    limit: int,
+    default_commission_amount: float,
+    commission_rate: float,
+    currency: str,
+) -> CommissionSettlementBatchResponse:
+    if not _db_ready(db):
+        return _build_commission_batch_from_fallback(
+            dry_run=dry_run,
+            limit=limit,
+            default_commission_amount=default_commission_amount,
+            commission_rate=commission_rate,
+            currency=currency,
+        )
+
+    try:
+        candidates = db.query(marketplace_models.BookingEvent).filter(
+            marketplace_models.BookingEvent.status == "completed",
+        ).order_by(marketplace_models.BookingEvent.id.asc()).limit(limit).all()
+
+        created = 0
+        skipped_existing = 0
+        total_amount = 0.0
+        items: List[CommissionSettlementItem] = []
+
+        for event in candidates:
+            existing = db.query(marketplace_models.AttributionLedger).filter(
+                marketplace_models.AttributionLedger.booking_event_id == event.id,
+                marketplace_models.AttributionLedger.ledger_type == "commission",
+            ).first()
+            if existing is not None:
+                skipped_existing += 1
+                continue
+
+            amount = _derive_commission_amount(
+                getattr(event, "amount", None),
+                default_commission_amount=default_commission_amount,
+                commission_rate=commission_rate,
+            )
+            item = CommissionSettlementItem(
+                booking_ref=str(event.booking_ref or ""),
+                booking_event_id=int(event.id),
+                partner_id=str(event.partner_id),
+                amount=amount,
+                currency=currency,
+                settlement_status="pending",
+            )
+            items.append(item)
+            total_amount += amount
+
+            if not dry_run:
+                ledger = marketplace_models.AttributionLedger(
+                    booking_event_id=event.id,
+                    partner_id=str(event.partner_id),
+                    ledger_type="commission",
+                    amount=amount,
+                    currency=currency,
+                    settlement_status="pending",
+                    note="draft settlement batch",
+                    metadata_json=_json.dumps(
+                        {
+                            "booking_ref": event.booking_ref,
+                            "source": "nadotongryoksa-lbs-commission-batch",
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                db.add(ledger)
+            created += 1
+
+        if not dry_run:
+            db.commit()
+
+        return CommissionSettlementBatchResponse(
+            dry_run=dry_run,
+            scanned=len(candidates),
+            created=created,
+            skipped_existing=skipped_existing,
+            total_amount=round(total_amount, 2),
+            currency=currency,
+            items=items,
+        )
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return _build_commission_batch_from_fallback(
+            dry_run=dry_run,
+            limit=limit,
+            default_commission_amount=default_commission_amount,
+            commission_rate=commission_rate,
+            currency=currency,
+        )
+
+
+def _cancel_or_refund_booking(
+    db: Any,
+    *,
+    booking_ref: str,
+    stage: Literal["cancelled", "refunded"],
+    reason: str,
+    refund_amount: Optional[float],
+) -> BookingCancelRefundResponse:
+    fallback = _BOOKING_EVENT_FALLBACK.get(booking_ref)
+    if fallback is not None:
+        fallback["status"] = stage
+        if reason:
+            fallback["reason"] = reason
+        if stage == "refunded":
+            amount = float(refund_amount if refund_amount is not None else fallback.get("amount") or 0.0)
+            if amount > 0:
+                _SETTLEMENT_LEDGER_FALLBACK[f"refund:{booking_ref}"] = {
+                    "booking_ref": booking_ref,
+                    "ledger_type": "refund",
+                    "amount": -round(amount, 2),
+                    "currency": "USD",
+                    "settlement_status": "pending",
+                }
+            return BookingCancelRefundResponse(
+                booking_ref=booking_ref,
+                stage=stage,
+                partner_id=str(fallback.get("partner_id") or "partner-hotel-default"),
+                ledger_adjusted=amount > 0,
+                adjustment_amount=round(amount, 2),
+            )
+        return BookingCancelRefundResponse(
+            booking_ref=booking_ref,
+            stage=stage,
+            partner_id=str(fallback.get("partner_id") or "partner-hotel-default"),
+        )
+
+    if not _db_ready(db):
+        raise HTTPException(status_code=404, detail="booking_ref not found")
+
+    try:
+        event = db.query(marketplace_models.BookingEvent).filter(
+            marketplace_models.BookingEvent.booking_ref == booking_ref,
+        ).first()
+        if event is None:
+            raise HTTPException(status_code=404, detail="booking_ref not found")
+
+        event.status = stage
+        payload = _json.loads(event.raw_payload_json or "{}") if event.raw_payload_json else {}
+        if reason:
+            payload["reason"] = reason
+        payload[f"{stage}_at"] = "now"
+        event.raw_payload_json = _json.dumps(payload, ensure_ascii=False)
+        db.add(event)
+
+        adjusted = False
+        adjustment_amount = 0.0
+        currency = str(event.currency or "USD")
+        if stage == "refunded":
+            source_ledger = db.query(marketplace_models.AttributionLedger).filter(
+                marketplace_models.AttributionLedger.booking_event_id == event.id,
+                marketplace_models.AttributionLedger.ledger_type == "commission",
+            ).first()
+            if source_ledger is not None:
+                currency = str(source_ledger.currency or currency)
+            if refund_amount is not None:
+                adjustment_amount = round(float(refund_amount), 2)
+            elif source_ledger is not None:
+                adjustment_amount = round(float(source_ledger.amount or 0.0), 2)
+
+            if adjustment_amount > 0:
+                refund_ledger = marketplace_models.AttributionLedger(
+                    booking_event_id=event.id,
+                    partner_id=str(event.partner_id),
+                    ledger_type="refund",
+                    amount=-adjustment_amount,
+                    currency=currency,
+                    settlement_status="pending",
+                    note="refund adjustment",
+                    metadata_json=_json.dumps(
+                        {
+                            "booking_ref": booking_ref,
+                            "reason": reason,
+                            "source": "nadotongryoksa-lbs-refund",
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                db.add(refund_ledger)
+                adjusted = True
+
+        db.commit()
+        return BookingCancelRefundResponse(
+            booking_ref=booking_ref,
+            booking_event_id=int(event.id),
+            stage=stage,
+            partner_id=str(event.partner_id),
+            ledger_adjusted=adjusted,
+            adjustment_amount=adjustment_amount,
+            currency=currency,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail="failed to update cancellation/refund state")
+
+
 def _filter_places(*, lat: float, lon: float, category: SearchCategory, radius_m: int, limit: int, target_lang: str) -> List[NearbyPlaceResponse]:
     candidates: List[tuple[int, Dict[str, Any]]] = []
     for place in _POI_CATALOG:
@@ -191,6 +710,236 @@ def _filter_places(*, lat: float, lon: float, category: SearchCategory, radius_m
     return [_to_nearby_response(place, target_lang=target_lang, distance_m=distance) for distance, place in candidates[:limit]]
 
 
+# ---------------------------------------------------------------------------
+# 거리·지역 무관 실시간 장소 검색(전세계)
+# 정적 카탈로그(_POI_CATALOG)는 서울 8곳뿐이라 지방·해외는 0건이 되는 한계가 있다.
+# 따라서 외부 제공자 캐스케이드로 전세계 POI 를 채운다.
+#   1순위: SerpApi google_maps(이름·주소·전화·평점, 키 설정 시) — Redis 캐시로 레이트리밋/비용 완화
+#   2순위: OpenStreetMap Overpass(무료·전세계, 공개 미러 순회) — SerpApi 실패/빈결과 폴백
+#   최종 폴백: 정적 카탈로그(항상 포함)
+# 모든 단계는 graceful degradation: 외부 호출이 실패해도 엔드포인트는 정적 결과로 응답한다.
+# ---------------------------------------------------------------------------
+_LIVE_HTTP_UA = "worldlinco-lbs/1.0 (+https://worldlinco.app)"
+_OVERPASS_MIRRORS = (
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+)
+_LIVE_SERP_QUERY: Dict[str, str] = {
+    "hotel": "hotels",
+    "restaurant": "restaurants",
+    "attraction": "tourist attractions",
+    "airport": "airport",
+}
+# category="all" 일 때 대표 카테고리 다중 질의(맛집·숙소·명소). 공항은 통상 1~2곳뿐이라 제외.
+_LIVE_ALL_CATEGORIES = ("attraction", "restaurant", "hotel")
+# 단일 카테고리 검색용 셀렉터(상세). category="all" 은 _OVERPASS_SELECTORS_ALL(경량) 사용.
+_OVERPASS_SELECTORS: Dict[str, tuple] = {
+    "hotel": ('["tourism"="hotel"]', '["tourism"="guest_house"]', '["tourism"="hostel"]', '["tourism"="motel"]'),
+    "restaurant": ('["amenity"="restaurant"]', '["amenity"="cafe"]', '["amenity"="fast_food"]'),
+    "attraction": ('["tourism"="attraction"]', '["tourism"="museum"]', '["tourism"="viewpoint"]', '["historic"="monument"]'),
+    "airport": ('["aeroway"="aerodrome"]',),
+}
+# category="all" 은 합집합 쿼리가 무거워 Overpass 가 타임아웃하므로 카테고리당 대표 셀렉터 1개로 경량화.
+_OVERPASS_SELECTORS_ALL: Dict[str, tuple] = {
+    "hotel": ('["tourism"="hotel"]',),
+    "restaurant": ('["amenity"="restaurant"]',),
+    "attraction": ('["tourism"="attraction"]',),
+}
+
+
+def _live_provider_enabled() -> bool:
+    """라이브 외부 제공자 사용 여부. 테스트(pytest)에서는 기본 비활성(결정적·오프라인)."""
+    flag = os.getenv("NADO_LBS_LIVE_PROVIDER", "").strip().lower()
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return flag in {"1", "true", "on", "yes"}
+    return flag not in {"0", "false", "off", "no"}
+
+
+def _zoom_for_radius(radius_m: int) -> int:
+    """반경(m) → google_maps ll 줌 레벨(넓을수록 낮은 줌)."""
+    table = ((1500, 15), (3000, 14), (6000, 13), (12000, 12), (25000, 11),
+             (60000, 10), (120000, 9), (250000, 8), (600000, 7))
+    for limit_m, zoom in table:
+        if radius_m <= limit_m:
+            return zoom
+    return 6
+
+
+def _norm_name(name: str) -> str:
+    return "".join(ch for ch in str(name).lower() if ch.isalnum())
+
+
+def _classify_osm_category(tags: Dict[str, Any]) -> str:
+    tourism = str(tags.get("tourism", ""))
+    if tourism in {"hotel", "guest_house", "hostel", "motel", "apartment"}:
+        return "hotel"
+    if str(tags.get("amenity", "")) in {"restaurant", "cafe", "fast_food", "bar", "pub"}:
+        return "restaurant"
+    if str(tags.get("aeroway", "")) == "aerodrome":
+        return "airport"
+    if tourism in {"attraction", "museum", "viewpoint", "gallery", "theme_park", "zoo"} or tags.get("historic"):
+        return "attraction"
+    return ""
+
+
+def _osm_address(tags: Dict[str, Any]) -> str:
+    if tags.get("addr:full"):
+        return str(tags["addr:full"])
+    street = " ".join(p for p in (str(tags.get("addr:housenumber", "")), str(tags.get("addr:street", ""))) if p.strip())
+    parts = [street, str(tags.get("addr:city", "")), str(tags.get("addr:country", ""))]
+    return ", ".join(p for p in parts if p.strip())
+
+
+def _live_place_from_serp(item: Any, category: str) -> Optional[Dict[str, Any]]:
+    if not isinstance(item, dict):
+        return None
+    gps = item.get("gps_coordinates") or {}
+    lat = gps.get("latitude")
+    lon = gps.get("longitude")
+    name = str(item.get("title") or "").strip()
+    if lat is None or lon is None or not name:
+        return None
+    place_id = str(item.get("place_id") or item.get("data_id") or "").strip()
+    address = str(item.get("address") or item.get("type") or "").strip()
+    phone = str(item.get("phone") or "").strip()
+    rating = item.get("rating")
+    price = str(item.get("price") or "").strip()
+    summary_text = str(item.get("description") or item.get("type") or address or name)
+    return {
+        "id": f"serp-{place_id or abs(hash(name)) % (10 ** 12)}",
+        "category": category,
+        "name": name,
+        "lat": float(lat),
+        "lon": float(lon),
+        "address": address or name,
+        "rating": float(rating) if isinstance(rating, (int, float)) else 0.0,
+        "price_tier": price or "-",
+        "booking_supported": False,  # 외부 장소는 in-app 구조화 예약(카탈로그 전용) 대신 전화예약 경로 사용
+        "phone": phone,
+        "summary": {"en": summary_text},
+        "amenities": [],
+        "review_query": name,
+    }
+
+
+def _fetch_serpapi_places(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+    try:
+        from backend.api.external_search_router import _serpapi_call
+    except Exception:  # noqa: BLE001
+        return []
+    if not str(os.getenv("SERPAPI_API_KEY", "")).strip():
+        return []
+    cats = _LIVE_ALL_CATEGORIES if category == "all" else (category,)
+    zoom = _zoom_for_radius(radius_m)
+    ll = f"@{lat:.6f},{lon:.6f},{zoom}z"
+    out: List[Dict[str, Any]] = []
+    for cat in cats:
+        query = _LIVE_SERP_QUERY.get(cat)
+        if not query:
+            continue
+        try:
+            payload = _serpapi_call("google_maps", query, max(limit, 10), 12.0, ll=ll, type="search", hl=_normalize_lang(target_lang))
+        except Exception as exc:  # noqa: BLE001
+            logger.info("[lbs] serpapi(%s) 실패: %s", cat, exc)
+            continue
+        for item in (payload.get("local_results") or [])[: max(limit, 10)]:
+            place = _live_place_from_serp(item, cat)
+            if place:
+                out.append(place)
+    return out
+
+
+def _overpass_request(query: str) -> Dict[str, Any]:
+    data = ("data=" + query).encode("utf-8")
+    last_err: Optional[Exception] = None
+    for mirror in _OVERPASS_MIRRORS:
+        try:
+            req = urllib.request.Request(mirror, data=data, headers={"User-Agent": _LIVE_HTTP_UA})
+            with urllib.request.urlopen(req, timeout=22) as resp:
+                return _json.loads(resp.read().decode("utf-8", "replace"))
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            continue
+    if last_err is not None:
+        logger.info("[lbs] overpass 전 미러 실패: %s", last_err)
+    return {}
+
+
+def _fetch_overpass_places(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+    if category == "all":
+        cats = _LIVE_ALL_CATEGORIES
+        selector_map = _OVERPASS_SELECTORS_ALL
+    else:
+        cats = (category,)
+        selector_map = _OVERPASS_SELECTORS
+    selectors: List[str] = []
+    for cat in cats:
+        selectors.extend(selector_map.get(cat, ()))
+    if not selectors:
+        return []
+    around = f"(around:{radius_m},{lat:.6f},{lon:.6f})"
+    # nwr = node/way/relation 단축구문(쿼리 경량화). out center 로 way/relation 중심좌표 포함.
+    body = "".join(f"nwr{sel}{around};" for sel in selectors)
+    out_count = min(max(limit * 4, 20), 80)
+    query = f"[out:json][timeout:25];({body});out center {out_count};"
+    payload = _overpass_request(query)
+    elements = payload.get("elements") or []
+    out: List[Dict[str, Any]] = []
+    for el in elements:
+        if not isinstance(el, dict):
+            continue
+        tags = el.get("tags") or {}
+        name = str(tags.get("name") or tags.get("name:en") or "").strip()
+        if not name:
+            continue
+        cat = _classify_osm_category(tags)
+        if not cat:
+            continue
+        if el.get("type") == "node":
+            plat, plon = el.get("lat"), el.get("lon")
+        else:
+            center = el.get("center") or {}
+            plat, plon = center.get("lat"), center.get("lon")
+        if plat is None or plon is None:
+            continue
+        phone = str(tags.get("contact:phone") or tags.get("phone") or "").strip()
+        address = _osm_address(tags)
+        out.append({
+            "id": f"osm-{str(el.get('type', 'n'))[:1]}{el.get('id', '')}",
+            "category": cat,
+            "name": name,
+            "lat": float(plat),
+            "lon": float(plon),
+            "address": address or name,
+            "rating": 0.0,
+            "price_tier": "-",
+            "booking_supported": False,
+            "phone": phone,
+            "summary": {"en": address or name},
+            "amenities": [],
+            "review_query": name,
+        })
+    return out
+
+
+def _fetch_live_place_dicts(lat: float, lon: float, category: str, radius_m: int, limit: int, target_lang: str) -> List[Dict[str, Any]]:
+    """캐스케이드(SerpApi→Overpass) + Redis 캐시. 원시 dict 리스트 반환(직렬화 가능)."""
+    def _do() -> List[Dict[str, Any]]:
+        places = _fetch_serpapi_places(lat, lon, category, radius_m, limit, target_lang)
+        if places:
+            return places
+        return _fetch_overpass_places(lat, lon, category, radius_m, limit, target_lang)
+
+    # 좌표를 ~1km 격자로 버킷팅해 인접 검색이 캐시를 공유하도록 한다.
+    key = (round(lat, 2), round(lon, 2), category, radius_m, _normalize_lang(target_lang))
+    try:
+        from backend.services.realtime_cache import cached_fetch
+        return cached_fetch("osm", key, _do)
+    except Exception:  # noqa: BLE001
+        return _do()
+
+
 def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
     router = APIRouter(prefix="/nadotongryoksa/lbs", tags=["marketplace-nadotongryoksa-lbs"])
 
@@ -199,16 +948,253 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
         lat: float = Query(..., ge=-90, le=90),
         lon: float = Query(..., ge=-180, le=180),
         category: SearchCategory = Query("all"),
-        radius_m: int = Query(5000, ge=300, le=50000),
+        radius_m: int = Query(5000, ge=300, le=500000),
         limit: int = Query(8, ge=1, le=20),
         target_lang: str = Query("ko"),
+        trip_session_id: Optional[str] = Query(default=None),
+        # [보안 보강] 무인증 경로지만 live 시 SerpApi(유료)/Overpass 팬아웃을 유발하므로 IP 단위
+        # 레이트리밋으로 비용 증폭/업스트림 남용을 1차 차단(기본 40/분, 초과 시 429+Retry-After).
+        _lbs_quota: None = Depends(require_lbs_search_quota),
+        db: Session = Depends(get_db),
     ) -> NearbySearchResponse:
         normalized_lang = _normalize_lang(target_lang)
-        filtered = _filter_places(lat=lat, lon=lon, category=category, radius_m=radius_m, limit=limit, target_lang=normalized_lang)
-        return NearbySearchResponse(target_lang=normalized_lang, requested_category=category, radius_m=radius_m, total=len(filtered), places=filtered)
+        # 1) 정적 카탈로그(항상 포함, 서울권 보장 + 오프라인/테스트 결정성)
+        results: List[NearbyPlaceResponse] = list(
+            _filter_places(lat=lat, lon=lon, category=category, radius_m=radius_m, limit=limit, target_lang=normalized_lang)
+        )
+        # 2) 실시간 외부 제공자(전세계·거리무관) 병합 — 실패해도 정적 결과로 응답
+        if _live_provider_enabled():
+            try:
+                live = _fetch_live_place_dicts(lat, lon, category, radius_m, limit, normalized_lang)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[lbs] live provider 오류: %s", exc)
+                live = []
+            seen = {_norm_name(r.name) for r in results}
+            for place in live or []:
+                name_key = _norm_name(str(place.get("name", "")))
+                if not name_key or name_key in seen:
+                    continue
+                if category != "all" and place.get("category") != category:
+                    continue
+                try:
+                    distance_m = _haversine_distance_m(lat, lon, float(place["lat"]), float(place["lon"]))
+                except Exception:  # noqa: BLE001
+                    continue
+                if distance_m > radius_m:
+                    continue
+                try:
+                    results.append(_to_nearby_response(place, target_lang=normalized_lang, distance_m=distance_m))
+                except Exception:  # noqa: BLE001
+                    continue
+                seen.add(name_key)
+        results.sort(key=lambda r: r.distance_m)
+        results = results[:limit]
+        trip_session_pk, resolved_trip_session_id = _ensure_trip_session(
+            db,
+            requested_session_id=trip_session_id,
+            user_id=None,
+            lat=lat,
+            lon=lon,
+        )
+        _record_recommendation_events(
+            db,
+            trip_session_pk=trip_session_pk,
+            user_id=None,
+            places=results,
+        )
+        return NearbySearchResponse(
+            target_lang=normalized_lang,
+            requested_category=category,
+            radius_m=radius_m,
+            total=len(results),
+            places=results,
+            trip_session_id=resolved_trip_session_id,
+        )
+
+    @router.post("/clicks", response_model=PartnerClickResponse)
+    def create_partner_click(
+        payload: PartnerClickRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> PartnerClickResponse:
+        click_ref = f"CLK-{uuid4().hex[:12].upper()}"
+        partner_id = (payload.partner_id or "").strip()
+        if not partner_id and payload.recommendation_id and _db_ready(db):
+            try:
+                recommendation = db.query(marketplace_models.RecommendationEvent).filter(
+                    marketplace_models.RecommendationEvent.id == payload.recommendation_id,
+                ).first()
+                if recommendation is not None and recommendation.partner_id:
+                    partner_id = str(recommendation.partner_id)
+            except Exception:
+                partner_id = ""
+        partner_id = partner_id or "partner-hotel-default"
+
+        click_event_id: Optional[int] = None
+        if _db_ready(db):
+            try:
+                event = marketplace_models.PartnerClickEvent(
+                    recommendation_event_id=payload.recommendation_id,
+                    user_id=getattr(current_user, "id", None),
+                    partner_id=partner_id,
+                    click_ref=click_ref,
+                    landing_url=payload.landing_url,
+                    metadata_json=_json.dumps(
+                        {
+                            "trip_session_id": payload.trip_session_id,
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                db.add(event)
+                db.flush()
+                click_event_id = int(event.id)
+                db.commit()
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
+        return PartnerClickResponse(
+            click_ref=click_ref,
+            partner_id=partner_id,
+            recommendation_id=payload.recommendation_id,
+            click_event_id=click_event_id,
+        )
+
+    @router.post("/bookings/start", response_model=BookingLifecycleResponse)
+    def start_booking(
+        payload: BookingRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> BookingLifecycleResponse:
+        place = next((item for item in _POI_CATALOG if item["id"] == payload.place_id), None)
+        if not place:
+            raise HTTPException(status_code=404, detail="place_id not found")
+        if place["category"] != "hotel" or not place["booking_supported"]:
+            raise HTTPException(status_code=400, detail="예약은 호텔 카테고리에서만 지원됩니다.")
+
+        booking_ref = f"BK-{uuid4().hex[:12].upper()}"
+        partner_id = "partner-hotel-default"
+        booking_event_id = _create_booking_event(
+            db,
+            booking_ref=booking_ref,
+            user_id=getattr(current_user, "id", None),
+            partner_id=partner_id,
+            partner_click_event_id=payload.partner_click_event_id,
+            payload={
+                "place_id": payload.place_id,
+                "customer_name": payload.customer_name,
+                "checkin_date": payload.checkin_date,
+                "checkout_date": payload.checkout_date,
+                "guests": payload.guests,
+                "room_count": payload.room_count,
+                "partner_click_ref": payload.partner_click_ref,
+            },
+        )
+        return BookingLifecycleResponse(
+            booking_ref=booking_ref,
+            booking_event_id=booking_event_id,
+            stage="initiated",
+            partner_id=partner_id,
+        )
+
+    @router.post("/bookings/{booking_ref}/confirm", response_model=BookingLifecycleResponse)
+    def confirm_booking(
+        booking_ref: str,
+        payload: BookingLifecycleRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> BookingLifecycleResponse:
+        _ = current_user
+        if payload.booking_ref != booking_ref:
+            raise HTTPException(status_code=400, detail="booking_ref mismatch")
+        booking_event_id, partner_id = _advance_booking_stage(db, booking_ref, "confirmed", payload.status_note)
+        return BookingLifecycleResponse(
+            booking_ref=booking_ref,
+            booking_event_id=booking_event_id,
+            stage="confirmed",
+            partner_id=partner_id,
+        )
+
+    @router.post("/bookings/{booking_ref}/complete", response_model=BookingLifecycleResponse)
+    def complete_booking(
+        booking_ref: str,
+        payload: BookingLifecycleRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> BookingLifecycleResponse:
+        _ = current_user
+        if payload.booking_ref != booking_ref:
+            raise HTTPException(status_code=400, detail="booking_ref mismatch")
+        booking_event_id, partner_id = _advance_booking_stage(db, booking_ref, "completed", payload.status_note)
+        return BookingLifecycleResponse(
+            booking_ref=booking_ref,
+            booking_event_id=booking_event_id,
+            stage="completed",
+            partner_id=partner_id,
+        )
+
+    @router.post("/bookings/{booking_ref}/cancel", response_model=BookingCancelRefundResponse)
+    def cancel_booking(
+        booking_ref: str,
+        payload: BookingCancelRefundRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> BookingCancelRefundResponse:
+        _ = current_user
+        if payload.booking_ref != booking_ref:
+            raise HTTPException(status_code=400, detail="booking_ref mismatch")
+        return _cancel_or_refund_booking(
+            db,
+            booking_ref=booking_ref,
+            stage="cancelled",
+            reason=payload.reason,
+            refund_amount=None,
+        )
+
+    @router.post("/bookings/{booking_ref}/refund", response_model=BookingCancelRefundResponse)
+    def refund_booking(
+        booking_ref: str,
+        payload: BookingCancelRefundRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> BookingCancelRefundResponse:
+        _ = current_user
+        if payload.booking_ref != booking_ref:
+            raise HTTPException(status_code=400, detail="booking_ref mismatch")
+        return _cancel_or_refund_booking(
+            db,
+            booking_ref=booking_ref,
+            stage="refunded",
+            reason=payload.reason,
+            refund_amount=payload.refund_amount,
+        )
+
+    @router.post("/settlements/commission-batch", response_model=CommissionSettlementBatchResponse)
+    def run_commission_settlement_batch(
+        payload: CommissionSettlementBatchRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> CommissionSettlementBatchResponse:
+        _ = current_user
+        currency = payload.currency.upper()
+        return _run_commission_settlement_batch(
+            db,
+            dry_run=payload.dry_run,
+            limit=payload.limit,
+            default_commission_amount=payload.default_commission_amount,
+            commission_rate=payload.commission_rate,
+            currency=currency,
+        )
 
     @router.post("/bookings", response_model=BookingResponse)
-    def create_booking(payload: BookingRequest, current_user=Depends(contract.get_current_user)) -> BookingResponse:
+    def create_booking(
+        payload: BookingRequest,
+        current_user=Depends(contract.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> BookingResponse:
         _ = current_user
         target_lang = _normalize_lang(payload.target_lang)
         place = next((item for item in _POI_CATALOG if item["id"] == payload.place_id), None)
@@ -228,6 +1214,27 @@ def build_nadotongryoksa_lbs_router(contract: Any) -> APIRouter:
                 pass
 
         links = _build_map_links(str(place["name"]), float(place["lat"]), float(place["lon"]))
+        booking_ref = f"BK-{uuid4().hex[:12].upper()}"
+        _create_booking_event(
+            db,
+            booking_ref=booking_ref,
+            user_id=getattr(current_user, "id", None),
+            partner_id="partner-hotel-default",
+            partner_click_event_id=payload.partner_click_event_id,
+            payload={
+                "place_id": payload.place_id,
+                "customer_name": payload.customer_name,
+                "checkin_date": payload.checkin_date,
+                "checkout_date": payload.checkout_date,
+                "guests": payload.guests,
+                "room_count": payload.room_count,
+                "partner_click_ref": payload.partner_click_ref,
+                "legacy_booking_endpoint": True,
+            },
+        )
+        _advance_booking_stage(db, booking_ref, "confirmed", "legacy auto-confirm")
+        _advance_booking_stage(db, booking_ref, "completed", "legacy auto-complete")
+
         return BookingResponse(
             confirmation_id=f"NADO-{uuid4().hex[:10].upper()}",
             place_id=str(place["id"]),

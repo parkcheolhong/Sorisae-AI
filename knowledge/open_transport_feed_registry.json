@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "note": "무료 공개 GTFS/교통 피드 registry. feed_url 이 비어 있으면 feed_url_env 를 본다.",
+  "feeds": [
+    {
+      "id": "kr-free-gtfs",
+      "country_code": "KR",
+      "label": "Korea public GTFS",
+      "provider": "gtfs_schedule",
+      "mode": "rail_bus_ferry",
+      "feed_url_env": "OPEN_TRANSPORT_KR_GTFS_URL",
+      "website": "https://www.data.go.kr/",
+      "timezone": "Asia/Seoul",
+      "notes": "무료 공공 교통 GTFS zip URL 또는 로컬 파일 경로를 OPEN_TRANSPORT_KR_GTFS_URL 에 설정"
+    },
+    {
+      "id": "jp-open-gtfs",
+      "country_code": "JP",
+      "label": "Japan open GTFS",
+      "provider": "gtfs_schedule",
+      "mode": "rail_bus_ferry",
+      "feed_url_env": "OPEN_TRANSPORT_JP_GTFS_URL",
+      "website": "https://www.gtfs.jp/en/",
+      "timezone": "Asia/Tokyo",
+      "notes": "일본 공개 GTFS zip URL 또는 로컬 파일 경로를 OPEN_TRANSPORT_JP_GTFS_URL 에 설정"
+    }
+  ]
+}

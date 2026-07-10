@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from backend.marketplace.nadotongryoksa_voip_router import (
+    CallState,
     VALID_CALL_MODES,
     _append_mode_message,
     _build_tel_url,
@@ -16,7 +17,9 @@ from backend.marketplace.nadotongryoksa_voip_router import (
     _collapse_voice_relay_text,
     _normalize_call_mode,
     _resolve_call_language_hint,
+    _resolve_leg_languages,
     _serialize_voip_payload,
+    _should_send_incoming_push_invite,
     _should_reject_voice_translation_relay,
     _with_signal_role,
 )
@@ -145,6 +148,11 @@ def test_resolve_call_language_hint(values, expected):
     assert _resolve_call_language_hint(*values) == expected
 
 
+def test_resolve_call_language_hint_keeps_designated_output_language_priority():
+    # 일본어 지정 사용자가 한국어로 말해도(후순위 ko 힌트) 출력 언어 우선순위는 ja를 유지해야 한다.
+    assert _resolve_call_language_hint("ja", "ko", "ko") == "ja"
+
+
 def test_serialize_voip_payload_is_stable_json():
     payload = {"b": 2, "a": 1, "nested": {"z": 9, "y": 8}}
     serialized = _serialize_voip_payload(payload)
@@ -177,3 +185,96 @@ def test_build_voice_translation_relay_payload_accepts_valid_pair():
     assert payload["transcript"] == "안녕하세요"
     assert payload["translated_text"] == "Hello"
     assert payload["seq_id"] == 3
+
+
+def test_should_send_incoming_push_invite_skips_when_online_and_invited(
+    monkeypatch,
+):
+    monkeypatch.delenv("VOIP_ALWAYS_PUSH_INVITE", raising=False)
+    assert _should_send_incoming_push_invite(
+        callee_app_online=True,
+        invite_sent=True,
+    ) is False
+
+
+def test_should_send_incoming_push_invite_allows_fallback_when_ws_failed(
+    monkeypatch,
+):
+    monkeypatch.delenv("VOIP_ALWAYS_PUSH_INVITE", raising=False)
+    assert _should_send_incoming_push_invite(
+        callee_app_online=True,
+        invite_sent=False,
+    ) is True
+
+
+def test_should_send_incoming_push_invite_force_override(monkeypatch):
+    monkeypatch.setenv("VOIP_ALWAYS_PUSH_INVITE", "1")
+    assert _should_send_incoming_push_invite(
+        callee_app_online=True,
+        invite_sent=True,
+    ) is True
+
+
+def test_resolve_leg_languages_prefers_call_scoped_hints_without_db_lookup(
+    monkeypatch,
+):
+    def _unexpected_session_local():
+        raise AssertionError(
+            (
+                "SessionLocal should not be called when call-scoped hints are "
+                "complete"
+            )
+        )
+
+    monkeypatch.setattr(
+        "backend.marketplace.nadotongryoksa_voip_router.SessionLocal",
+        _unexpected_session_local,
+    )
+
+    state = CallState(
+        call_id="call-test-hints",
+        callee_phone=None,
+        caller_id="caller",
+        session_id=None,
+        caller_user_id=1,
+        callee_user_id=2,
+        caller_language_hint="ko",
+        callee_language_hint="ja",
+    )
+
+    assert _resolve_leg_languages(state) == {"caller": "ko", "callee": "ja"}
+
+
+def test_resolve_leg_languages_uses_incoming_display_language_as_caller_fallback(
+    monkeypatch,
+):
+    class _NoopSession:
+        def query(self, *_args, **_kwargs):
+            raise AssertionError(
+                (
+                    "DB query is not expected when role language is already "
+                    "resolved"
+                )
+            )
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(
+        "backend.marketplace.nadotongryoksa_voip_router.SessionLocal",
+        lambda: _NoopSession(),
+    )
+
+    state = CallState(
+        call_id="call-test-incoming",
+        callee_phone=None,
+        caller_id="caller",
+        session_id=None,
+        caller_user_id=None,
+        callee_user_id=None,
+        caller_language_hint=None,
+        callee_language_hint="ja",
+    )
+    state.incoming_payload = {"display_language": "ko"}
+
+    assert _resolve_leg_languages(state) == {"caller": "ko", "callee": "ja"}

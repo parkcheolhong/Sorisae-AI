@@ -93,6 +93,112 @@ def _post_fcm_v1(
         )
 
 
+def _persist_token_to_db(user_id: int, token: str, platform: str) -> None:
+    """FCM 토큰을 DB에 영속(upsert). best-effort — 실패해도 인메모리 등록은 유지."""
+    try:
+        from .database import SessionLocal
+        from . import models
+
+        db = SessionLocal()
+        try:
+            existing = (
+                db.query(models.VoipDeviceToken)
+                .filter(models.VoipDeviceToken.fcm_token == token)
+                .first()
+            )
+            if existing is None:
+                db.add(
+                    models.VoipDeviceToken(
+                        user_id=int(user_id),
+                        fcm_token=token,
+                        platform=platform,
+                    )
+                )
+            else:
+                # 같은 토큰이 다른 계정에서 재로그인된 경우 소유 계정을 갱신(단말 1 → 계정 1).
+                existing.user_id = int(user_id)
+                existing.platform = platform
+            db.commit()
+        finally:
+            db.close()
+    except Exception:  # noqa: BLE001
+        logger.warning("[fcm] token DB persist failed (kept in-memory)", exc_info=True)
+
+
+def _remove_token_from_db(token: str) -> None:
+    try:
+        from .database import SessionLocal
+        from . import models
+
+        db = SessionLocal()
+        try:
+            db.query(models.VoipDeviceToken).filter(
+                models.VoipDeviceToken.fcm_token == token
+            ).delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()
+    except Exception:  # noqa: BLE001
+        logger.warning("[fcm] token DB remove failed", exc_info=True)
+
+
+def _remove_other_tokens_for_user_from_db(user_id: int, keep_token: str) -> None:
+    """사용자당 1개 활성 토큰만 유지하도록 DB에서 나머지 토큰을 정리한다."""
+    try:
+        from .database import SessionLocal
+        from . import models
+
+        db = SessionLocal()
+        try:
+            db.query(models.VoipDeviceToken).filter(
+                models.VoipDeviceToken.user_id == int(user_id),
+                models.VoipDeviceToken.fcm_token != keep_token,
+            ).delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()
+    except Exception:  # noqa: BLE001
+        logger.warning("[fcm] extra token prune failed", exc_info=True)
+
+
+def hydrate_device_registrations_from_db() -> int:
+    """기동 시 DB의 토큰을 인메모리 레지스트리로 적재(재시작 후에도 푸시 대상 유지)."""
+    try:
+        from .database import SessionLocal
+        from . import models
+
+        db = SessionLocal()
+        try:
+            rows = db.query(models.VoipDeviceToken).all()
+            loaded = 0
+            for row in rows:
+                uid = int(row.user_id or 0)
+                token = str(row.fcm_token or "").strip()
+                if uid <= 0 or not token:
+                    continue
+                bucket = device_registrations.setdefault(uid, [])
+                if all(str(b.get("fcm_token") or "") != token for b in bucket):
+                    bucket.append(
+                        {
+                            "fcm_token": token,
+                            "platform": str(row.platform or "android"),
+                            "registered_at": (
+                                row.updated_at or row.created_at
+                            ).isoformat()
+                            if (row.updated_at or row.created_at)
+                            else datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
+                    loaded += 1
+            logger.info("[fcm] hydrated %d device token(s) from DB", loaded)
+            return loaded
+        finally:
+            db.close()
+    except Exception:  # noqa: BLE001
+        logger.warning("[fcm] device token hydrate failed", exc_info=True)
+        return 0
+
+
 def register_device_token(
     user_id: int,
     fcm_token: str,
@@ -101,10 +207,15 @@ def register_device_token(
     token = str(fcm_token or "").strip()
     if user_id <= 0 or not token:
         return 0
+    # 같은 토큰이 다른 계정에 남아 있으면 제거(단말은 한 번에 한 계정만 수신).
+    for other_uid, other_rows in list(device_registrations.items()):
+        if other_uid == user_id:
+            continue
+        other_rows[:] = [
+            row for row in other_rows if str(row.get("fcm_token") or "") != token
+        ]
     rows = device_registrations.setdefault(user_id, [])
-    rows[:] = [
-        row for row in rows if str(row.get("fcm_token") or "") != token
-    ]
+    rows[:] = []
     rows.append(
         {
             "fcm_token": token,
@@ -112,7 +223,24 @@ def register_device_token(
             "registered_at": datetime.now(timezone.utc).isoformat(),
         }
     )
+    _persist_token_to_db(user_id, token, platform)
+    _remove_other_tokens_for_user_from_db(user_id, token)
     return len(rows)
+
+
+def remove_device_token(fcm_token: str) -> bool:
+    """단말 토큰 해제(로그아웃 등). 인메모리 + DB 모두 제거."""
+    token = str(fcm_token or "").strip()
+    if not token:
+        return False
+    removed = False
+    for _uid, rows in list(device_registrations.items()):
+        before = len(rows)
+        rows[:] = [row for row in rows if str(row.get("fcm_token") or "") != token]
+        if len(rows) != before:
+            removed = True
+    _remove_token_from_db(token)
+    return removed
 
 
 def _collect_user_tokens(user_id: int) -> list[str]:
