@@ -4,12 +4,13 @@ import subprocess
 import sys
 import traceback
 from collections import Counter
+from copy import deepcopy
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import Response, StreamingResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request  # pyright: ignore[reportMissingImports]
+from fastapi.responses import Response, StreamingResponse  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
+from sqlalchemy import or_, func, case  # pyright: ignore[reportMissingImports]
+from pydantic import BaseModel, Field, ValidationError  # pyright: ignore[reportMissingImports]
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 import hashlib
@@ -24,9 +25,14 @@ import tempfile
 import time
 import threading
 from datetime import datetime, timedelta
-from urllib.parse import quote
-import httpx
-from backend.database import get_db
+from uuid import uuid4
+
+from backend.time_utils import utcnow
+from urllib.error import URLError
+from urllib.parse import quote, urlparse
+from urllib.request import urlopen
+import httpx  # pyright: ignore[reportMissingImports]
+from backend.database import SessionLocal, get_db
 from backend.models import User
 from backend.auth import get_current_user, get_password_hash, verify_password
 from backend.orchestration_stage_service import (
@@ -35,14 +41,20 @@ from backend.orchestration_stage_service import (
     update_stage_run,
 )
 from backend.llm.loader import llm_loader
+from backend.llm.model_config import get_available_ollama_models
 from backend.services.auth_identity_provider import resolve_identity_provider
 from backend.marketplace.minio_service import minio_service
 from backend.marketplace.models import (
     AdVideoOrder,
+    AttributionLedger,
+    BookingEvent,
     CustomerOrchestratorCompletion,
     FeatureExecutionLog,
     FeatureRetryQueue,
+    PartnerClickEvent,
     Project,
+    RecommendationEvent,
+    TripSession,
 )
 from backend.marketplace.subscription_models import (
     PaymentEvent,
@@ -83,15 +95,118 @@ from backend.admin.orchestrator.focused_self_healing_service import (
     build_focused_self_healing_decision,
     build_tower_crane_options,
 )
+from backend.admin.sorisae_failure_monitor_service import (
+    get_latest_sorisae_failure_status,
+    get_latest_sorisae_failure_result_json_payload,
+    push_latest_sorisae_failure_to_admins,
+)
+from backend.admin.llm_gateway_recovery_service import (
+    auto_recover_llm_gateway,
+    collect_llm_gateway_diagnostics,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
-_ADMIN_PROJECTS_CACHE_TTL_SEC = max(1.0, float(os.getenv("ADMIN_PROJECTS_CACHE_TTL_SEC", "3")))
+_ADMIN_PROJECTS_CACHE_TTL_SEC = max(1.0, float(os.getenv("ADMIN_PROJECTS_CACHE_TTL_SEC", "15")))
 _ADMIN_PROJECTS_RESPONSE_CACHE: Dict[str, Dict[str, Any]] = {}
 _ADMIN_PROJECTS_CACHE_LOCK = threading.Lock()
 _ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC = max(0.2, float(os.getenv("ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC", "1.5")))
 _ADMIN_PROJECTS_RATE_LIMIT_STATE: Dict[str, float] = {}
 _ADMIN_PROJECTS_RATE_LIMIT_LOCK = threading.Lock()
+_ADMIN_TRAVEL_KPI_CACHE_TTL_SEC = max(1.0, float(os.getenv("ADMIN_TRAVEL_KPI_CACHE_TTL_SEC", "10")))
+_ADMIN_TRAVEL_KPI_CACHE_LOCK = threading.Lock()
+_ADMIN_TRAVEL_KPI_RESPONSE_CACHE: Dict[str, Any] = {
+    "captured_at": 0.0,
+    "payload": None,
+    "invalidated_at": None,
+    "invalidate_reason": None,
+}
+_ADMIN_TRAVEL_KPI_CACHE_STATS: Dict[str, Any] = {
+    "hits": 0,
+    "misses": 0,
+    "last_status": "cold",
+    "last_reset_at": utcnow().isoformat() + "Z",
+}
+
+
+def _get_admin_travel_kpi_cache_snapshot() -> Dict[str, Any]:
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        return {
+            "hits": int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("hits") or 0),
+            "misses": int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("misses") or 0),
+            "last_status": str(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("last_status") or "cold"),
+            "invalidate_reason": _ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("invalidate_reason"),
+            "invalidated_at": _ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("invalidated_at"),
+        }
+
+
+def _admin_travel_kpi_cache_hit_rate(stats: Dict[str, Any]) -> float:
+    hits = int(stats.get("hits") or 0)
+    misses = int(stats.get("misses") or 0)
+    total = hits + misses
+    if total <= 0:
+        return 0.0
+    return round(hits / total, 4)
+
+
+def _get_admin_travel_kpi_cached_payload() -> Optional[Dict[str, Any]]:
+    now_ts = time.time()
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        cached_at = float(_ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("captured_at") or 0.0)
+        payload = _ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("payload")
+        if isinstance(payload, dict) and (now_ts - cached_at) < _ADMIN_TRAVEL_KPI_CACHE_TTL_SEC:
+            _ADMIN_TRAVEL_KPI_CACHE_STATS["hits"] = int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("hits") or 0) + 1
+            _ADMIN_TRAVEL_KPI_CACHE_STATS["last_status"] = "hit"
+            return deepcopy(payload)
+        _ADMIN_TRAVEL_KPI_CACHE_STATS["misses"] = int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("misses") or 0) + 1
+        _ADMIN_TRAVEL_KPI_CACHE_STATS["last_status"] = "miss"
+        return None
+
+
+def _set_admin_travel_kpi_cached_payload(payload: Dict[str, Any]) -> None:
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["captured_at"] = time.time()
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["payload"] = deepcopy(payload)
+
+
+def _invalidate_admin_travel_kpi_cache(reason: str) -> None:
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["captured_at"] = 0.0
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["payload"] = None
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["invalidated_at"] = utcnow().isoformat() + "Z"
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["invalidate_reason"] = str(reason or "unknown")
+
+
+def _attach_admin_travel_kpi_performance(
+    payload: Dict[str, Any],
+    *,
+    cache_status: str,
+    db_query_count: int,
+    build_elapsed_ms: float,
+) -> Dict[str, Any]:
+    next_payload = deepcopy(payload)
+    ops = next_payload.get("ops") if isinstance(next_payload.get("ops"), dict) else {}
+    cache_snapshot = _get_admin_travel_kpi_cache_snapshot()
+    cache_hit_rate = _admin_travel_kpi_cache_hit_rate(cache_snapshot)
+    perf_payload = {
+        "cache": {
+            "status": cache_status,
+            "ttl_sec": round(_ADMIN_TRAVEL_KPI_CACHE_TTL_SEC, 2),
+            "hits": int(cache_snapshot.get("hits") or 0),
+            "misses": int(cache_snapshot.get("misses") or 0),
+            "hit_rate": cache_hit_rate,
+            "hit_rate_percent": round(cache_hit_rate * 100.0, 2),
+            "invalidated_at": cache_snapshot.get("invalidated_at"),
+            "invalidate_reason": cache_snapshot.get("invalidate_reason"),
+        },
+        "db": {
+            "query_count": int(db_query_count),
+            "build_elapsed_ms": round(float(build_elapsed_ms), 2),
+        },
+    }
+    ops["performance"] = perf_payload
+    next_payload["ops"] = ops
+    return next_payload
 
 
 def _apply_short_admin_projects_cache_headers(response: Response, *, applied_limit: int) -> None:
@@ -148,6 +263,50 @@ def _build_admin_projects_degraded_payload(*, skip: int, requested_limit: int, a
     }
 
 
+def warm_admin_projects_cache(*, skip: int = 0, limit: int = 100) -> Dict[str, Any]:
+    """관리자 프로젝트 목록 캐시 워밍.
+
+    startup/background 작업에서 호출해 첫 관리자 진입의 DB burst를 줄인다.
+    """
+    safe_skip = max(0, int(skip))
+    safe_limit = max(1, min(int(limit), 500))
+    cache_key = f"{safe_skip}:{safe_limit}"
+    now_ts = time.time()
+
+    with _ADMIN_PROJECTS_CACHE_LOCK:
+        cached = _ADMIN_PROJECTS_RESPONSE_CACHE.get(cache_key)
+        if cached and (now_ts - float(cached.get("captured_at") or 0.0)) < _ADMIN_PROJECTS_CACHE_TTL_SEC:
+            return dict(cached.get("payload") or {})
+
+        db = SessionLocal()
+        try:
+            total = db.query(Project).count()
+            rows = (
+                db.query(Project)
+                .order_by(Project.created_at.desc())
+                .offset(safe_skip)
+                .limit(safe_limit)
+                .all()
+            )
+            serialized_rows = [_serialize_project_item(project) for project in rows]
+            payload = {
+                "items": serialized_rows,
+                "projects": serialized_rows,
+                "total": int(total),
+                "skip": safe_skip,
+                "limit": safe_limit,
+                "requested_limit": safe_limit,
+                "applied_limit": safe_limit,
+            }
+            _ADMIN_PROJECTS_RESPONSE_CACHE[cache_key] = {
+                "captured_at": now_ts,
+                "payload": payload,
+            }
+            return payload
+        finally:
+            db.close()
+
+
 def _is_legacy_admin_projects_request(limit: int) -> bool:
     return int(limit) >= 5000
 
@@ -158,6 +317,19 @@ def require_admin(current_user: User = Depends(get_current_user)):
     if not (is_admin or is_superuser):
         raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다")
     return current_user
+
+
+def require_admin_or_regional_manager(current_user: User = Depends(get_current_user)):
+    is_admin = bool(getattr(current_user, "is_admin", False))
+    is_superuser = bool(getattr(current_user, "is_superuser", False))
+    if is_admin or is_superuser:
+        return current_user
+    from backend.marketplace.worldlinco_sales_commission import resolve_regional_manager_for_user
+
+    manager = resolve_regional_manager_for_user(int(getattr(current_user, "id", 0) or 0))
+    if manager:
+        return current_user
+    raise HTTPException(status_code=403, detail="지역 관리자 또는 관리자 권한이 필요합니다")
 
 
 assert_debug_validation_job_contract()
@@ -263,6 +435,94 @@ class AdminSystemSettingsUpdateRequest(BaseModel):
     values: Dict[str, str]
 
 
+class AdminRailSlaSettings(BaseModel):
+    enabled: bool = True
+    availability_target_percent: float = 99.9
+    alert_on_breach: bool = True
+    auto_push_on_breach: bool = True
+    breach_cooldown_minutes: int = 15
+
+
+class AdminRailListSettings(BaseModel):
+    enabled: bool = True
+    auto_refresh_seconds: int = 30
+    show_failed_only: bool = False
+    include_raw_payload: bool = True
+    max_items: int = 20
+
+
+class AdminRailOpsSettings(BaseModel):
+    enabled: bool = True
+    auto_apply_global_mode: bool = True
+    healthcheck_on_open: bool = True
+    allow_runtime_restart: bool = False
+    deployment_gate_level: str = "strict"
+
+
+class AdminRailCoverSettings(BaseModel):
+    enabled: bool = True
+    target_fastpath_percent: int = 85
+    enforce_fastpath_guard: bool = True
+    auto_open_failures: bool = True
+    sample_size: int = 25
+
+
+class AdminRailLlmSettings(BaseModel):
+    enabled: bool = True
+    route_timeout_ms: int = 45000
+    prefer_fast_path: bool = True
+    auto_recover_on_timeout: bool = True
+    max_retry_count: int = 2
+
+
+class AdminRailPerformanceSettings(BaseModel):
+    enabled: bool = True
+    response_budget_ms: int = 600
+    db_query_budget_ms: int = 250
+    cache_ttl_seconds: int = 300
+    auto_collect_snapshot: bool = True
+
+
+class AdminRailLatencySettings(BaseModel):
+    enabled: bool = True
+    p50_budget_ms: int = 180
+    p95_budget_ms: int = 700
+    sampling_window_minutes: int = 15
+    alert_on_regression: bool = True
+
+
+class AdminRailDataSettings(BaseModel):
+    enabled: bool = True
+    metric_refresh_seconds: int = 20
+    include_zero_metrics: bool = False
+    selected_metric_key: str = "http_requests_total"
+    max_series_points: int = 120
+
+
+class AdminRailMonitoringSettings(BaseModel):
+    enabled: bool = True
+    grafana_base_url: str = "http://127.0.0.1:3000"
+    auto_refresh_seconds: int = 20
+    open_external_dashboard: bool = False
+    alert_channel: str = "admin"
+
+
+class AdminRailSettingsCollection(BaseModel):
+    sla: AdminRailSlaSettings = AdminRailSlaSettings()
+    list: AdminRailListSettings = AdminRailListSettings()
+    ops: AdminRailOpsSettings = AdminRailOpsSettings()
+    cover: AdminRailCoverSettings = AdminRailCoverSettings()
+    llm: AdminRailLlmSettings = AdminRailLlmSettings()
+    performance: AdminRailPerformanceSettings = AdminRailPerformanceSettings()
+    latency: AdminRailLatencySettings = AdminRailLatencySettings()
+    data: AdminRailDataSettings = AdminRailDataSettings()
+    monitoring: AdminRailMonitoringSettings = AdminRailMonitoringSettings()
+
+
+class AdminRailSettingsUpdateRequest(BaseModel):
+    rails: AdminRailSettingsCollection
+
+
 class AdminPasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
@@ -346,6 +606,100 @@ class AdminIdentityProviderSettingsResponse(BaseModel):
     complete_payload_contracts: List[Dict[str, Any]]
 
 
+class AdminThresholdAnalysisRequest(BaseModel):
+    health: Optional[Dict[str, Any]] = None
+    sorisae_failure: Optional[Dict[str, Any]] = None
+    rail_settings: Optional[Dict[str, Any]] = None
+
+
+class AdminThresholdApprovalRequest(BaseModel):
+    target: str
+    approved: bool = True
+
+
+class AdminThresholdWorldlincoFieldApplyRequest(BaseModel):
+    group: str
+    key: str
+
+
+class AdminWorldlincoTelemetryItem(BaseModel):
+    source: str
+    feature: str
+    metric: str
+    value: float
+    unit: Optional[str] = None
+    timestamp: Optional[str] = None
+    device_id: Optional[str] = None
+    run_id: Optional[str] = None
+    tags: Dict[str, str] = {}
+
+
+class AdminWorldlincoTelemetryUploadRequest(BaseModel):
+    note: Optional[str] = None
+    items: List[AdminWorldlincoTelemetryItem] = []
+
+
+class AdminTravelPartnerCreateRequest(BaseModel):
+    partner_id: Optional[str] = None
+    name: str
+    category: str
+    integration_type: str = "affiliate"
+    regions_supported: List[str] = []
+    commission_model: Optional[str] = None
+    base_url: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+
+
+class AdminTravelRoutingPolicyRule(BaseModel):
+    country_code: str
+    city_code: Optional[str] = None
+    hotel_partner_id: Optional[str] = None
+    tour_partner_id: Optional[str] = None
+    transport_partner_id: Optional[str] = None
+    fallback_partner_ids: List[str] = []
+    active: bool = True
+
+
+class AdminTravelRoutingPolicyRequest(BaseModel):
+    version: str = "v1"
+    default_hotel_partner_id: Optional[str] = None
+    default_tour_partner_id: Optional[str] = None
+    default_transport_partner_id: Optional[str] = None
+    rules: List[AdminTravelRoutingPolicyRule] = []
+
+
+class AdminTravelConnectorTestRequest(BaseModel):
+    test_url: Optional[str] = None
+    timeout_ms: int = 3000
+
+
+class AdminTravelPartnerConnectionUpdateRequest(BaseModel):
+    base_url: Optional[str] = None
+    connector_test_url: Optional[str] = None
+    booking_api_url: Optional[str] = None
+    webhook_url: Optional[str] = None
+
+
+class AdminTravelWebhookTestRequest(BaseModel):
+    webhook_url: Optional[str] = None
+    timeout_ms: int = 3000
+    event_type: str = "admin_webhook_probe"
+    sample_data: Optional[Dict[str, Any]] = None
+
+
+class AdminTravelKpiSettingsRequest(BaseModel):
+    ctr_min: float = 0.05
+    booking_confirm_rate_min: float = 0.5
+    cancel_rate_max: float = 0.2
+    rps_min: float = 5.0
+    partner_success_rate_min: float = 0.85
+    partner_error_rate_max: float = 0.1
+    partner_p95_processing_minutes_max: float = 30.0
+    fallback_country_ratio_max: float = 0.8
+    fallback_city_ratio_max: float = 0.8
+    default_partner_usage_ratio_max: float = 0.95
+
+
 def _identity_provider_guide_text() -> Dict[str, str]:
     return {
         "IDENTITY_PROVIDER": "pass, kmc, kcb 중 하나를 입력합니다. 저장 후 현재 provider가 해당 값으로 바뀌어야 합니다.",
@@ -369,6 +723,1149 @@ _ADMIN_SYSTEM_SETTINGS_CACHE: Dict[str, Any] = {
     "runtime_mtime": None,
     "payload": None,
 }
+_ADMIN_RAIL_SETTINGS_FILE_NAME = "admin_rail_settings.json"
+_ADMIN_THRESHOLD_ANALYSIS_FILE_NAME = "admin_threshold_analysis.json"
+_ADMIN_WORLDLINCO_TELEMETRY_FILE_NAME = "admin_worldlinco_telemetry.json"
+_ADMIN_TRAVEL_PARTNERS_FILE_NAME = "admin_travel_partners.json"
+_ADMIN_TRAVEL_ROUTING_POLICY_FILE_NAME = "admin_travel_routing_policy.json"
+_ADMIN_TRAVEL_KPI_SETTINGS_FILE_NAME = "admin_travel_kpi_settings.json"
+_ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS = 1000
+_ADMIN_TRAVEL_KPI_ENVIRONMENTS = {"dev", "stage", "prod"}
+
+
+def _admin_rail_settings_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_RAIL_SETTINGS_FILE_NAME).resolve()
+
+
+def _admin_worldlinco_telemetry_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_WORLDLINCO_TELEMETRY_FILE_NAME).resolve()
+
+
+def _admin_worldlinco_recommendation_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / "worldlinco_tuning_recommendation.json").resolve()
+
+
+def _admin_worldlinco_priority_csv_paths() -> List[Path]:
+    workspace_root = Path(__file__).resolve().parents[1]
+    runtime_dir = (workspace_root / ".runtime").resolve()
+    candidates = [
+        runtime_dir / "worldlinco_test_priority_plan.csv",
+        runtime_dir / "worldlinco_priority_checklist.csv",
+    ]
+    # Keep deterministic order while allowing custom CSV names under .runtime.
+    for path in sorted(runtime_dir.glob("worldlinco*priority*.csv")):
+        if path not in candidates:
+            candidates.append(path)
+    return candidates
+
+
+def _path_file_meta(path: Path) -> Dict[str, Any]:
+    exists = path.is_file()
+    if not exists:
+        return {
+            "path": str(path),
+            "exists": False,
+            "size_bytes": 0,
+            "modified_at": None,
+        }
+    stat = path.stat()
+    return {
+        "path": str(path),
+        "exists": True,
+        "size_bytes": int(stat.st_size),
+        "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+    }
+
+
+def _estimate_csv_rows(path: Path) -> int:
+    if not path.exists() or not path.is_file():
+        return 0
+    try:
+        with path.open("r", encoding="utf-8-sig") as fh:
+            line_count = sum(1 for _ in fh)
+        return max(0, line_count - 1)
+    except OSError:
+        return 0
+
+
+def _admin_travel_partners_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_TRAVEL_PARTNERS_FILE_NAME).resolve()
+
+
+def _admin_travel_routing_policy_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_TRAVEL_ROUTING_POLICY_FILE_NAME).resolve()
+
+
+def _admin_travel_kpi_settings_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_TRAVEL_KPI_SETTINGS_FILE_NAME).resolve()
+
+
+def _build_default_admin_rail_settings() -> Dict[str, Any]:
+    return AdminRailSettingsCollection().model_dump()
+
+
+def _build_admin_rail_settings_payload(override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    raw_payload = override or {}
+    raw_rails = raw_payload.get("rails") if isinstance(raw_payload.get("rails"), dict) else {}
+    try:
+        rails_payload = AdminRailSettingsCollection.model_validate(raw_rails).model_dump()
+    except Exception:
+        rails_payload = _build_default_admin_rail_settings()
+
+    return {
+        "settings_path": str(_admin_rail_settings_path()),
+        "updated_at": str(raw_payload.get("updated_at") or ""),
+        "rails": rails_payload,
+    }
+
+
+def _load_admin_rail_settings_payload() -> Dict[str, Any]:
+    settings_path = _admin_rail_settings_path()
+    if not settings_path.exists() or not settings_path.is_file():
+        return _build_admin_rail_settings_payload()
+    return _build_admin_rail_settings_payload(_load_json_file(settings_path))
+
+
+def _save_admin_rail_settings_payload(rails_payload: Dict[str, Any]) -> Dict[str, Any]:
+    serialized = {
+        "updated_at": utcnow().isoformat() + "Z",
+        "rails": AdminRailSettingsCollection.model_validate(rails_payload).model_dump(),
+    }
+    _write_json_file(_admin_rail_settings_path(), serialized)
+    return _build_admin_rail_settings_payload(serialized)
+
+
+def _admin_threshold_analysis_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_THRESHOLD_ANALYSIS_FILE_NAME).resolve()
+
+
+def _normalize_worldlinco_telemetry_item(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    try:
+        model = AdminWorldlincoTelemetryItem.model_validate(raw)
+    except Exception:
+        return None
+    payload = model.model_dump()
+    payload["source"] = str(payload.get("source") or "unknown").strip() or "unknown"
+    payload["feature"] = str(payload.get("feature") or "unknown").strip() or "unknown"
+    payload["metric"] = str(payload.get("metric") or "unknown").strip() or "unknown"
+    payload["timestamp"] = str(payload.get("timestamp") or utcnow().isoformat() + "Z")
+    tags = payload.get("tags") if isinstance(payload.get("tags"), dict) else {}
+    payload["tags"] = {str(key): str(value) for key, value in tags.items()}
+    return payload
+
+
+def _summarize_worldlinco_telemetry(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    grouped: Dict[str, Dict[str, List[float]]] = {}
+    for item in items:
+        feature = str(item.get("feature") or "unknown")
+        metric = str(item.get("metric") or "unknown")
+        value = item.get("value")
+        if not isinstance(value, (int, float)):
+            continue
+        feature_bucket = grouped.setdefault(feature, {})
+        metric_bucket = feature_bucket.setdefault(metric, [])
+        metric_bucket.append(float(value))
+
+    features: Dict[str, Any] = {}
+    for feature, metrics in grouped.items():
+        metric_summary: Dict[str, Any] = {}
+        for metric_name, values in metrics.items():
+            if not values:
+                continue
+            sorted_values = sorted(values)
+            p95_index = max(0, min(len(sorted_values) - 1, int(round((len(sorted_values) - 1) * 0.95))))
+            metric_summary[metric_name] = {
+                "count": len(sorted_values),
+                "avg": round(sum(sorted_values) / len(sorted_values), 2),
+                "min": round(sorted_values[0], 2),
+                "max": round(sorted_values[-1], 2),
+                "p95": round(sorted_values[p95_index], 2),
+            }
+        if metric_summary:
+            features[feature] = metric_summary
+
+    return {
+        "total_items": len(items),
+        "features": features,
+    }
+
+
+def _build_default_worldlinco_telemetry_payload() -> Dict[str, Any]:
+    return {
+        "updated_at": None,
+        "updated_by": "system",
+        "note": "",
+        "items": [],
+        "summary": _summarize_worldlinco_telemetry([]),
+    }
+
+
+def _normalize_worldlinco_telemetry_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    normalized_items: List[Dict[str, Any]] = []
+    raw_items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        normalized = _normalize_worldlinco_telemetry_item(item)
+        if normalized:
+            normalized_items.append(normalized)
+    if len(normalized_items) > _ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:
+        normalized_items = normalized_items[-_ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:]
+
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "note": str(payload.get("note") or ""),
+        "items": normalized_items,
+        "summary": _summarize_worldlinco_telemetry(normalized_items),
+    }
+
+
+def _build_default_travel_partners_payload() -> Dict[str, Any]:
+    return {
+        "updated_at": None,
+        "updated_by": "system",
+        "partners": [],
+    }
+
+
+def _normalize_partner_id(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9_-]+", "-", str(value or "").strip().lower())
+    slug = slug.strip("-")
+    return slug or f"partner-{uuid4().hex[:8]}"
+
+
+def _normalize_travel_partner_item(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not isinstance(raw, dict):
+        return None
+    name = str(raw.get("name") or "").strip()
+    if not name:
+        return None
+    category = str(raw.get("category") or "").strip().lower()
+    if category not in {"hotel", "tour", "transport"}:
+        return None
+    integration_type = str(raw.get("integration_type") or "affiliate").strip().lower() or "affiliate"
+    partner_id = _normalize_partner_id(str(raw.get("partner_id") or name))
+    regions = raw.get("regions_supported") if isinstance(raw.get("regions_supported"), list) else []
+    regions_supported = [str(item).strip().upper() for item in regions if str(item).strip()]
+    metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
+    return {
+        "partner_id": partner_id,
+        "name": name,
+        "category": category,
+        "integration_type": integration_type,
+        "regions_supported": regions_supported,
+        "commission_model": str(raw.get("commission_model") or "").strip(),
+        "base_url": str(raw.get("base_url") or "").strip(),
+        "active": bool(raw.get("active", True)),
+        "metadata": {str(key): value for key, value in metadata.items()},
+    }
+
+
+def _normalize_travel_partners_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    normalized_items: List[Dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    raw_items = payload.get("partners") if isinstance(payload.get("partners"), list) else []
+    for item in raw_items:
+        normalized = _normalize_travel_partner_item(item if isinstance(item, dict) else {})
+        if not normalized:
+            continue
+        if normalized["partner_id"] in seen_ids:
+            continue
+        seen_ids.add(normalized["partner_id"])
+        normalized_items.append(normalized)
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "partners": normalized_items,
+    }
+
+
+def _load_travel_partners_payload() -> Dict[str, Any]:
+    path = _admin_travel_partners_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_travel_partners_payload()
+    return _normalize_travel_partners_payload(_load_json_file(path))
+
+
+def _save_travel_partners_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_travel_partners_payload(payload)
+    _write_json_file(_admin_travel_partners_path(), normalized)
+    _invalidate_admin_travel_kpi_cache("travel_partners_updated")
+    return normalized
+
+
+def _build_default_travel_routing_policy_payload() -> Dict[str, Any]:
+    return {
+        "updated_at": None,
+        "updated_by": "system",
+        "version": "v1",
+        "default_hotel_partner_id": None,
+        "default_tour_partner_id": None,
+        "default_transport_partner_id": None,
+        "rules": [],
+    }
+
+
+def _normalize_travel_routing_policy_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    rules_raw = payload.get("rules") if isinstance(payload.get("rules"), list) else []
+    rules: List[Dict[str, Any]] = []
+    for item in rules_raw:
+        if not isinstance(item, dict):
+            continue
+        country_code = str(item.get("country_code") or "").strip().upper()
+        if not country_code:
+            continue
+        fallback_raw = item.get("fallback_partner_ids") if isinstance(item.get("fallback_partner_ids"), list) else []
+        fallback_partner_ids = [_normalize_partner_id(str(partner_id)) for partner_id in fallback_raw if str(partner_id).strip()]
+        rules.append(
+            {
+                "country_code": country_code,
+                "city_code": str(item.get("city_code") or "").strip().upper() or None,
+                "hotel_partner_id": _normalize_partner_id(str(item.get("hotel_partner_id"))) if str(item.get("hotel_partner_id") or "").strip() else None,
+                "tour_partner_id": _normalize_partner_id(str(item.get("tour_partner_id"))) if str(item.get("tour_partner_id") or "").strip() else None,
+                "transport_partner_id": _normalize_partner_id(str(item.get("transport_partner_id"))) if str(item.get("transport_partner_id") or "").strip() else None,
+                "fallback_partner_ids": fallback_partner_ids,
+                "active": bool(item.get("active", True)),
+            }
+        )
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "version": str(payload.get("version") or "v1"),
+        "default_hotel_partner_id": _normalize_partner_id(str(payload.get("default_hotel_partner_id"))) if str(payload.get("default_hotel_partner_id") or "").strip() else None,
+        "default_tour_partner_id": _normalize_partner_id(str(payload.get("default_tour_partner_id"))) if str(payload.get("default_tour_partner_id") or "").strip() else None,
+        "default_transport_partner_id": _normalize_partner_id(str(payload.get("default_transport_partner_id"))) if str(payload.get("default_transport_partner_id") or "").strip() else None,
+        "rules": rules,
+    }
+
+
+def _load_travel_routing_policy_payload() -> Dict[str, Any]:
+    path = _admin_travel_routing_policy_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_travel_routing_policy_payload()
+    return _normalize_travel_routing_policy_payload(_load_json_file(path))
+
+
+def _save_travel_routing_policy_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_travel_routing_policy_payload(payload)
+    _write_json_file(_admin_travel_routing_policy_path(), normalized)
+    _invalidate_admin_travel_kpi_cache("travel_routing_policy_updated")
+    return normalized
+
+
+def _validate_routing_policy_partner_refs(policy_payload: Dict[str, Any], partners_payload: Dict[str, Any]) -> None:
+    partners = partners_payload.get("partners") if isinstance(partners_payload.get("partners"), list) else []
+    allowed_ids = {str(item.get("partner_id") or "") for item in partners if isinstance(item, dict)}
+    missing_ids: List[str] = []
+
+    def _check_partner_id(value: Optional[str]) -> None:
+        if value and value not in allowed_ids and value not in missing_ids:
+            missing_ids.append(value)
+
+    _check_partner_id(policy_payload.get("default_hotel_partner_id"))
+    _check_partner_id(policy_payload.get("default_tour_partner_id"))
+    _check_partner_id(policy_payload.get("default_transport_partner_id"))
+
+    for rule in policy_payload.get("rules") if isinstance(policy_payload.get("rules"), list) else []:
+        if not isinstance(rule, dict):
+            continue
+        _check_partner_id(rule.get("hotel_partner_id"))
+        _check_partner_id(rule.get("tour_partner_id"))
+        _check_partner_id(rule.get("transport_partner_id"))
+        fallback_ids = rule.get("fallback_partner_ids") if isinstance(rule.get("fallback_partner_ids"), list) else []
+        for fallback_partner_id in fallback_ids:
+            _check_partner_id(str(fallback_partner_id or ""))
+
+    if missing_ids:
+        raise HTTPException(status_code=400, detail="라우팅 정책에 등록되지 않은 파트너 ID가 포함되어 있습니다: " + ", ".join(sorted(missing_ids)))
+
+
+def _resolve_travel_connector_test_url(partner: Dict[str, Any], payload: Optional[AdminTravelConnectorTestRequest]) -> str:
+    candidate_urls: List[str] = []
+    if payload and isinstance(payload.test_url, str):
+        candidate_urls.append(payload.test_url)
+    metadata = partner.get("metadata") if isinstance(partner.get("metadata"), dict) else {}
+    candidate_urls.append(str(metadata.get("connector_test_url") or ""))
+    candidate_urls.append(str(partner.get("base_url") or ""))
+
+    for candidate in candidate_urls:
+        normalized = str(candidate or "").strip()
+        if not normalized:
+            continue
+        parsed = urlparse(normalized)
+        if parsed.scheme.lower() in {"http", "https"} and parsed.netloc:
+            return normalized
+
+    raise HTTPException(status_code=400, detail="커넥터 테스트 URL이 없습니다. base_url 또는 connector_test_url(metadata)을 설정하세요.")
+
+
+def _resolve_travel_webhook_test_url(partner: Dict[str, Any], payload: Optional[AdminTravelWebhookTestRequest]) -> str:
+    candidate_urls: List[str] = []
+    if payload and isinstance(payload.webhook_url, str):
+        candidate_urls.append(payload.webhook_url)
+    metadata = partner.get("metadata") if isinstance(partner.get("metadata"), dict) else {}
+    candidate_urls.append(str(metadata.get("webhook_url") or ""))
+
+    for candidate in candidate_urls:
+        normalized = str(candidate or "").strip()
+        if not normalized:
+            continue
+        parsed = urlparse(normalized)
+        if parsed.scheme.lower() in {"http", "https"} and parsed.netloc:
+            return normalized
+
+    raise HTTPException(status_code=400, detail="Webhook URL이 없습니다. webhook_url(metadata) 또는 요청 payload에 URL을 설정하세요.")
+
+
+def _build_default_travel_kpi_settings_payload() -> Dict[str, Any]:
+    default_profiles = {
+        "dev": AdminTravelKpiSettingsRequest(
+            ctr_min=0.03,
+            booking_confirm_rate_min=0.45,
+            cancel_rate_max=0.3,
+            rps_min=2.0,
+            partner_success_rate_min=0.75,
+            partner_error_rate_max=0.2,
+            partner_p95_processing_minutes_max=45.0,
+            fallback_country_ratio_max=0.95,
+            fallback_city_ratio_max=0.95,
+            default_partner_usage_ratio_max=1.0,
+        ).model_dump(),
+        "stage": AdminTravelKpiSettingsRequest(
+            ctr_min=0.05,
+            booking_confirm_rate_min=0.55,
+            cancel_rate_max=0.2,
+            rps_min=4.0,
+            partner_success_rate_min=0.85,
+            partner_error_rate_max=0.12,
+            partner_p95_processing_minutes_max=35.0,
+            fallback_country_ratio_max=0.85,
+            fallback_city_ratio_max=0.85,
+            default_partner_usage_ratio_max=0.98,
+        ).model_dump(),
+        "prod": AdminTravelKpiSettingsRequest(
+            ctr_min=0.08,
+            booking_confirm_rate_min=0.65,
+            cancel_rate_max=0.15,
+            rps_min=7.0,
+            partner_success_rate_min=0.9,
+            partner_error_rate_max=0.08,
+            partner_p95_processing_minutes_max=25.0,
+            fallback_country_ratio_max=0.7,
+            fallback_city_ratio_max=0.7,
+            default_partner_usage_ratio_max=0.9,
+        ).model_dump(),
+    }
+    current_env = _resolve_travel_kpi_environment(None)
+    return {
+        "settings_path": str(_admin_travel_kpi_settings_path()),
+        "updated_at": None,
+        "updated_by": "system",
+        "environment": current_env,
+        "profiles": default_profiles,
+        "thresholds": default_profiles.get(current_env) or default_profiles["dev"],
+    }
+
+
+def _resolve_travel_kpi_environment(environment: Optional[str]) -> str:
+    candidate = str(environment or "").strip().lower()
+    if candidate in _ADMIN_TRAVEL_KPI_ENVIRONMENTS:
+        return candidate
+    for env_key in ("ADMIN_TRAVEL_KPI_ENV", "APP_ENV", "ENVIRONMENT"):
+        env_value = str(os.getenv(env_key, "")).strip().lower()
+        if env_value in _ADMIN_TRAVEL_KPI_ENVIRONMENTS:
+            return env_value
+    return "dev"
+
+
+def _normalize_travel_kpi_profiles(raw_profiles: Any) -> Dict[str, Dict[str, Any]]:
+    defaults = _build_default_travel_kpi_settings_payload().get("profiles") or {}
+    normalized_profiles: Dict[str, Dict[str, Any]] = {}
+    for env_name in sorted(_ADMIN_TRAVEL_KPI_ENVIRONMENTS):
+        raw_env_payload = raw_profiles.get(env_name) if isinstance(raw_profiles, dict) else None
+        candidate_payload = raw_env_payload if isinstance(raw_env_payload, dict) else defaults.get(env_name)
+        try:
+            normalized_profiles[env_name] = AdminTravelKpiSettingsRequest.model_validate(candidate_payload).model_dump()
+        except Exception:
+            normalized_profiles[env_name] = AdminTravelKpiSettingsRequest().model_dump()
+    return normalized_profiles
+
+
+def _normalize_travel_kpi_settings_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    default_payload = _build_default_travel_kpi_settings_payload()
+    environment = _resolve_travel_kpi_environment(payload.get("environment"))
+    profiles = _normalize_travel_kpi_profiles(payload.get("profiles"))
+
+    # Backward compatibility: legacy payload had flat `thresholds` only.
+    thresholds_raw = payload.get("thresholds") if isinstance(payload.get("thresholds"), dict) else None
+    if thresholds_raw is not None:
+        try:
+            profiles[environment] = AdminTravelKpiSettingsRequest.model_validate(thresholds_raw).model_dump()
+        except Exception:
+            pass
+
+    thresholds = profiles.get(environment) or default_payload.get("thresholds") or AdminTravelKpiSettingsRequest().model_dump()
+    return {
+        "settings_path": str(_admin_travel_kpi_settings_path()),
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "environment": environment,
+        "profiles": profiles,
+        "thresholds": thresholds,
+    }
+
+
+def _load_travel_kpi_settings_payload() -> Dict[str, Any]:
+    path = _admin_travel_kpi_settings_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_travel_kpi_settings_payload()
+    return _normalize_travel_kpi_settings_payload(_load_json_file(path))
+
+
+def _save_travel_kpi_settings_payload(payload: Dict[str, Any], *, updated_by: str, environment: Optional[str] = None) -> Dict[str, Any]:
+    normalized = _normalize_travel_kpi_settings_payload(payload)
+    current_environment = _resolve_travel_kpi_environment(environment or normalized.get("environment"))
+    profiles = _normalize_travel_kpi_profiles(normalized.get("profiles"))
+    incoming_thresholds = normalized.get("thresholds") if isinstance(normalized.get("thresholds"), dict) else None
+    if incoming_thresholds is not None:
+        profiles[current_environment] = AdminTravelKpiSettingsRequest.model_validate(incoming_thresholds).model_dump()
+
+    saved = {
+        "updated_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "environment": current_environment,
+        "profiles": profiles,
+        "thresholds": profiles.get(current_environment) or AdminTravelKpiSettingsRequest().model_dump(),
+    }
+    _write_json_file(_admin_travel_kpi_settings_path(), saved)
+    _invalidate_admin_travel_kpi_cache("travel_kpi_settings_updated")
+    return _normalize_travel_kpi_settings_payload(saved)
+
+
+def _safe_ratio(numerator: float, denominator: float) -> float:
+    if denominator <= 0:
+        return 0.0
+    return round(numerator / denominator, 4)
+
+
+def _p95(values: List[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    rank = max(0, int(len(ordered) * 0.95) - 1)
+    return round(float(ordered[min(rank, len(ordered) - 1)]), 2)
+
+
+def _compute_travel_fallback_payload(
+    rules: List[Dict[str, Any]],
+    *,
+    default_partner_recommendation_total: int,
+    recommendation_total: int,
+) -> Dict[str, Any]:
+    active_rules = [rule for rule in rules if isinstance(rule, dict) and bool(rule.get("active", True))]
+    country_rules = [rule for rule in active_rules if str(rule.get("country_code") or "").strip()]
+    city_rules = [rule for rule in active_rules if str(rule.get("city_code") or "").strip()]
+    country_fallback_rules = [rule for rule in country_rules if len(rule.get("fallback_partner_ids") or []) > 0]
+    city_fallback_rules = [rule for rule in city_rules if len(rule.get("fallback_partner_ids") or []) > 0]
+
+    return {
+        "country_rule_count": len(country_rules),
+        "country_fallback_ratio": _safe_ratio(len(country_fallback_rules), len(country_rules)),
+        "city_rule_count": len(city_rules),
+        "city_fallback_ratio": _safe_ratio(len(city_fallback_rules), len(city_rules)),
+        "default_partner_usage_ratio": _safe_ratio(default_partner_recommendation_total, recommendation_total),
+    }
+
+
+def _build_travel_fallback_alerts(fallback_payload: Dict[str, Any], thresholds: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": "country_fallback_ratio",
+            "severity": "warning" if fallback_payload["country_fallback_ratio"] > float(thresholds.get("fallback_country_ratio_max", 0.8)) else "ok",
+            "label": "Fallback(국가)",
+            "value": fallback_payload["country_fallback_ratio"],
+            "threshold": float(thresholds.get("fallback_country_ratio_max", 0.8)),
+            "operator": "lte",
+        },
+        {
+            "id": "city_fallback_ratio",
+            "severity": "warning" if fallback_payload["city_fallback_ratio"] > float(thresholds.get("fallback_city_ratio_max", 0.8)) else "ok",
+            "label": "Fallback(도시)",
+            "value": fallback_payload["city_fallback_ratio"],
+            "threshold": float(thresholds.get("fallback_city_ratio_max", 0.8)),
+            "operator": "lte",
+        },
+        {
+            "id": "default_partner_usage_ratio",
+            "severity": "warning" if fallback_payload["default_partner_usage_ratio"] > float(thresholds.get("default_partner_usage_ratio_max", 0.95)) else "ok",
+            "label": "기본 파트너 사용률",
+            "value": fallback_payload["default_partner_usage_ratio"],
+            "threshold": float(thresholds.get("default_partner_usage_ratio_max", 0.95)),
+            "operator": "lte",
+        },
+    ]
+
+
+def _build_admin_travel_kpi_payload(db: Session) -> Dict[str, Any]:
+    build_started_at = time.perf_counter()
+    db_query_count = 0
+    kpi_settings = _load_travel_kpi_settings_payload()
+    thresholds = kpi_settings.get("thresholds") if isinstance(kpi_settings.get("thresholds"), dict) else AdminTravelKpiSettingsRequest().model_dump()
+
+    recommendation_agg = db.query(
+        func.count(RecommendationEvent.id),
+        func.coalesce(
+            func.sum(
+                case(
+                    (
+                        (RecommendationEvent.partner_id.isnot(None))
+                        & RecommendationEvent.partner_id.like("%-default"),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ),
+            0,
+        ),
+    ).one()
+    db_query_count += 1
+    recommendation_total = int(recommendation_agg[0] or 0)
+    default_partner_recommendation_total = int(recommendation_agg[1] or 0)
+
+    click_total = int(db.query(PartnerClickEvent).count())
+    db_query_count += 1
+
+    rows = db.query(
+        BookingEvent.partner_id,
+        BookingEvent.status,
+        BookingEvent.created_at,
+        BookingEvent.updated_at,
+    ).all()
+    db_query_count += 1
+    booking_total = len(rows)
+
+    booking_confirmed_total = 0
+    booking_completed_total = 0
+    booking_cancelled_total = 0
+    booking_refunded_total = 0
+    for _partner_id, status, _created_at, _updated_at in rows:
+        status_normalized = str(status or "").lower()
+        if status_normalized in {"confirmed", "completed", "refunded"}:
+            booking_confirmed_total += 1
+        if status_normalized == "completed":
+            booking_completed_total += 1
+        if status_normalized == "cancelled":
+            booking_cancelled_total += 1
+        if status_normalized == "refunded":
+            booking_refunded_total += 1
+
+    commission_total = float(
+        db.query(func.coalesce(func.sum(AttributionLedger.amount), 0.0))
+        .filter(AttributionLedger.ledger_type == "commission")
+        .scalar()
+        or 0.0
+    )
+    db_query_count += 1
+    trip_session_total = int(db.query(TripSession).count())
+    db_query_count += 1
+
+    rule_payload = _load_travel_routing_policy_payload()
+    rules = [rule for rule in (rule_payload.get("rules") or []) if isinstance(rule, dict)]
+
+    partner_agg: Dict[str, Dict[str, Any]] = {}
+    for partner_id, status, created_at, updated_at in rows:
+        pid = str(partner_id or "partner-unknown")
+        slot = partner_agg.setdefault(
+            pid,
+            {
+                "total": 0,
+                "success": 0,
+                "error": 0,
+                "latencies": [],
+            },
+        )
+        slot["total"] += 1
+        st = str(status or "").lower()
+        if st in {"completed", "refunded"}:
+            slot["success"] += 1
+        if st in {"cancelled", "failed"}:
+            slot["error"] += 1
+        if created_at and updated_at:
+            latency_minutes = max(0.0, (updated_at - created_at).total_seconds() / 60.0)
+            slot["latencies"].append(latency_minutes)
+
+    partner_sla = []
+    for partner_id, stats in partner_agg.items():
+        total = int(stats["total"])
+        success = int(stats["success"])
+        error = int(stats["error"])
+        partner_sla.append(
+            {
+                "partner_id": partner_id,
+                "success_rate": _safe_ratio(success, total),
+                "error_rate": _safe_ratio(error, total),
+                "p95_processing_minutes": _p95(list(stats["latencies"])),
+                "total_events": total,
+            }
+        )
+
+    partner_sla.sort(key=lambda item: item["total_events"], reverse=True)
+
+    funnel_payload = {
+        "ctr": _safe_ratio(click_total, recommendation_total),
+        "booking_confirm_rate": _safe_ratio(booking_confirmed_total, booking_total),
+        "cancel_rate": _safe_ratio(booking_cancelled_total + booking_refunded_total, booking_completed_total + booking_cancelled_total + booking_refunded_total),
+        "commission_total": round(commission_total, 2),
+        "rps": round(_safe_ratio(commission_total, trip_session_total), 2),
+        "counts": {
+            "recommendations": recommendation_total,
+            "clicks": click_total,
+            "bookings": booking_total,
+            "confirmed": booking_confirmed_total,
+            "completed": booking_completed_total,
+            "cancelled": booking_cancelled_total,
+            "refunded": booking_refunded_total,
+            "trip_sessions": trip_session_total,
+        },
+    }
+
+    fallback_payload = _compute_travel_fallback_payload(
+        rules,
+        default_partner_recommendation_total=default_partner_recommendation_total,
+        recommendation_total=recommendation_total,
+    )
+
+    funnel_alerts = [
+        {
+            "id": "ctr",
+            "severity": "critical" if funnel_payload["ctr"] < float(thresholds.get("ctr_min", 0.05)) else "ok",
+            "label": "CTR",
+            "value": funnel_payload["ctr"],
+            "threshold": float(thresholds.get("ctr_min", 0.05)),
+            "operator": "gte",
+        },
+        {
+            "id": "booking_confirm_rate",
+            "severity": "critical" if funnel_payload["booking_confirm_rate"] < float(thresholds.get("booking_confirm_rate_min", 0.5)) else "ok",
+            "label": "예약확정률",
+            "value": funnel_payload["booking_confirm_rate"],
+            "threshold": float(thresholds.get("booking_confirm_rate_min", 0.5)),
+            "operator": "gte",
+        },
+        {
+            "id": "cancel_rate",
+            "severity": "warning" if funnel_payload["cancel_rate"] > float(thresholds.get("cancel_rate_max", 0.2)) else "ok",
+            "label": "취소율",
+            "value": funnel_payload["cancel_rate"],
+            "threshold": float(thresholds.get("cancel_rate_max", 0.2)),
+            "operator": "lte",
+        },
+        {
+            "id": "rps",
+            "severity": "warning" if funnel_payload["rps"] < float(thresholds.get("rps_min", 5.0)) else "ok",
+            "label": "RPS",
+            "value": funnel_payload["rps"],
+            "threshold": float(thresholds.get("rps_min", 5.0)),
+            "operator": "gte",
+        },
+    ]
+
+    fallback_alerts = _build_travel_fallback_alerts(fallback_payload, thresholds)
+
+    sla_alerts: List[Dict[str, Any]] = []
+    if partner_sla:
+        top = partner_sla[0]
+        sla_alerts.append(
+            {
+                "id": "partner_success_rate",
+                "severity": "critical" if top["success_rate"] < float(thresholds.get("partner_success_rate_min", 0.85)) else "ok",
+                "label": f"SLA 성공률({top['partner_id']})",
+                "value": top["success_rate"],
+                "threshold": float(thresholds.get("partner_success_rate_min", 0.85)),
+                "operator": "gte",
+            }
+        )
+        sla_alerts.append(
+            {
+                "id": "partner_error_rate",
+                "severity": "warning" if top["error_rate"] > float(thresholds.get("partner_error_rate_max", 0.1)) else "ok",
+                "label": f"SLA 오류율({top['partner_id']})",
+                "value": top["error_rate"],
+                "threshold": float(thresholds.get("partner_error_rate_max", 0.1)),
+                "operator": "lte",
+            }
+        )
+        sla_alerts.append(
+            {
+                "id": "partner_p95_processing_minutes",
+                "severity": "warning" if top["p95_processing_minutes"] > float(thresholds.get("partner_p95_processing_minutes_max", 30.0)) else "ok",
+                "label": f"SLA p95 분({top['partner_id']})",
+                "value": top["p95_processing_minutes"],
+                "threshold": float(thresholds.get("partner_p95_processing_minutes_max", 30.0)),
+                "operator": "lte",
+            }
+        )
+
+    alerts = funnel_alerts + sla_alerts + fallback_alerts
+    critical_count = len([item for item in alerts if item.get("severity") == "critical"])
+    warning_count = len([item for item in alerts if item.get("severity") == "warning"])
+
+    payload = {
+        "generated_at": utcnow().isoformat() + "Z",
+        "funnel": funnel_payload,
+        "sla": partner_sla[:10],
+        "fallback": fallback_payload,
+        "ops": {
+            "settings": kpi_settings,
+            "alert_summary": {
+                "critical_count": critical_count,
+                "warning_count": warning_count,
+                "ok_count": len([item for item in alerts if item.get("severity") == "ok"]),
+                "overall": "critical" if critical_count > 0 else ("warning" if warning_count > 0 else "ok"),
+            },
+            "alerts": alerts,
+        },
+    }
+    build_elapsed_ms = (time.perf_counter() - build_started_at) * 1000.0
+    return _attach_admin_travel_kpi_performance(
+        payload,
+        cache_status="miss",
+        db_query_count=db_query_count,
+        build_elapsed_ms=build_elapsed_ms,
+    )
+
+
+def _load_worldlinco_telemetry_payload() -> Dict[str, Any]:
+    path = _admin_worldlinco_telemetry_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_worldlinco_telemetry_payload()
+    return _normalize_worldlinco_telemetry_payload(_load_json_file(path))
+
+
+def _save_worldlinco_telemetry_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_worldlinco_telemetry_payload(payload)
+    _write_json_file(_admin_worldlinco_telemetry_path(), normalized)
+    return normalized
+
+
+def _build_default_worldlinco_analysis_groups() -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import load_worldlinco_tuning
+
+    current = load_worldlinco_tuning()
+    return {
+        "voip": dict(current.get("voip") or {}),
+        "face_conversation": dict(current.get("face_conversation") or {}),
+        "voip_bridge": dict(current.get("voip_bridge") or {}),
+        "sorisae_ai": dict(current.get("sorisae_ai") or {}),
+        "pstn_assist": dict(current.get("pstn_assist") or {}),
+        "chat": dict(current.get("chat") or {}),
+    }
+
+
+def _round_up_step(value: float, step: int, minimum: int, maximum: int) -> int:
+    bounded = max(float(minimum), min(float(maximum), float(value)))
+    rounded = int((bounded + step - 1) // step) * step
+    return max(minimum, min(maximum, rounded))
+
+
+def _percentile_from_request_histogram(quantile: float) -> Optional[float]:
+    try:
+        from backend.marketplace.prometheus_metrics import REQUEST_DURATION
+
+        buckets: Dict[float, float] = {}
+        for metric in REQUEST_DURATION.collect():
+            for sample in metric.samples:
+                if not sample.name.endswith("_bucket"):
+                    continue
+                le_value = str(sample.labels.get("le") or "").strip()
+                if not le_value or le_value == "+Inf":
+                    continue
+                try:
+                    bucket_upper = float(le_value)
+                except ValueError:
+                    continue
+                buckets[bucket_upper] = buckets.get(bucket_upper, 0.0) + float(sample.value)
+        if not buckets:
+            return None
+        ordered = sorted(buckets.items(), key=lambda item: item[0])
+        total_count = ordered[-1][1]
+        if total_count <= 0:
+            return None
+        threshold = total_count * quantile
+        for upper_bound, cumulative_count in ordered:
+            if cumulative_count >= threshold:
+                return round(upper_bound * 1000.0, 1)
+        return round(ordered[-1][0] * 1000.0, 1)
+    except Exception:
+        return None
+
+
+def _collect_metrics_summary_snapshot() -> Dict[str, Any]:
+    try:
+        from backend.marketplace.prometheus_metrics import (
+            ACTIVE_CONNECTIONS,
+            CACHE_HITS,
+            CACHE_MISSES,
+            DB_QUERIES,
+            FILE_UPLOADS,
+            PURCHASES,
+            REQUEST_COUNT,
+        )
+
+        def _counter_total(counter: Any) -> float:
+            total = 0.0
+            for metric in counter.collect():
+                for sample in metric.samples:
+                    if sample.name.endswith("_total"):
+                        total += float(sample.value)
+            return total
+
+        def _gauge_value(gauge: Any) -> float:
+            for metric in gauge.collect():
+                for sample in metric.samples:
+                    return float(sample.value)
+            return 0.0
+
+        requests_total = _counter_total(REQUEST_COUNT)
+        cache_hits_total = _counter_total(CACHE_HITS)
+        cache_misses_total = _counter_total(CACHE_MISSES)
+        db_queries_total = _counter_total(DB_QUERIES)
+        return {
+            "http_requests_total": requests_total,
+            "active_connections": _gauge_value(ACTIVE_CONNECTIONS),
+            "cache_hits_total": cache_hits_total,
+            "cache_misses_total": cache_misses_total,
+            "db_queries_total": db_queries_total,
+            "file_uploads_total": _counter_total(FILE_UPLOADS),
+            "purchases_total": _counter_total(PURCHASES),
+            "cache_hit_ratio": round(cache_hits_total / max(1.0, cache_hits_total + cache_misses_total), 4),
+            "db_queries_per_request": round(db_queries_total / max(1.0, requests_total), 4),
+            "p50_latency_ms": _percentile_from_request_histogram(0.50),
+            "p95_latency_ms": _percentile_from_request_histogram(0.95),
+        }
+    except Exception:
+        return {
+            "http_requests_total": 0.0,
+            "active_connections": 0.0,
+            "cache_hits_total": 0.0,
+            "cache_misses_total": 0.0,
+            "db_queries_total": 0.0,
+            "file_uploads_total": 0.0,
+            "purchases_total": 0.0,
+            "cache_hit_ratio": 0.0,
+            "db_queries_per_request": 0.0,
+            "p50_latency_ms": None,
+            "p95_latency_ms": None,
+        }
+
+
+def _threshold_analysis_fingerprint(payload: Dict[str, Any]) -> str:
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _build_threshold_recommendations(request_payload: AdminThresholdAnalysisRequest) -> Dict[str, Any]:
+    metrics = _collect_metrics_summary_snapshot()
+    telemetry_payload = _load_worldlinco_telemetry_payload()
+    telemetry_summary = telemetry_payload.get("summary") if isinstance(telemetry_payload.get("summary"), dict) else {"total_items": 0, "features": {}}
+    telemetry_features = telemetry_summary.get("features") if isinstance(telemetry_summary.get("features"), dict) else {}
+    rail_defaults = _build_default_admin_rail_settings()
+    rail_current_raw = request_payload.rail_settings if isinstance(request_payload.rail_settings, dict) else rail_defaults
+    try:
+        rail_current = AdminRailSettingsCollection.model_validate(rail_current_raw).model_dump()
+    except Exception:
+        rail_current = rail_defaults
+
+    health_payload = request_payload.health if isinstance(request_payload.health, dict) else {}
+    diagnostics = health_payload.get("diagnostics") if isinstance(health_payload.get("diagnostics"), dict) else {}
+    resources = diagnostics.get("resources") if isinstance(diagnostics.get("resources"), dict) else {}
+    sorisae_failure = request_payload.sorisae_failure if isinstance(request_payload.sorisae_failure, dict) else {}
+    sorisae_classification = str(sorisae_failure.get("classification") or "unknown")
+
+    p50_latency_ms = metrics.get("p50_latency_ms")
+    p95_latency_ms = metrics.get("p95_latency_ms")
+    cpu_usage_percent = ((resources.get("cpu") or {}) if isinstance(resources.get("cpu"), dict) else {}).get("usage_percent")
+    memory_usage_percent = ((resources.get("memory") or {}) if isinstance(resources.get("memory"), dict) else {}).get("usage_percent")
+    queue_depth = ((resources.get("redis_queue") or {}) if isinstance(resources.get("redis_queue"), dict) else {}).get("queue_depth")
+    cache_hit_ratio = float(metrics.get("cache_hit_ratio") or 0.0)
+    db_queries_per_request = float(metrics.get("db_queries_per_request") or 0.0)
+
+    recommended_p50 = _round_up_step((float(p50_latency_ms or 140.0) * 1.15), 10, 80, 2500)
+    recommended_p95 = _round_up_step((float(p95_latency_ms or 340.0) * 1.20), 10, max(recommended_p50 + 100, 250), 6000)
+
+    chat_metrics = telemetry_features.get("chat") if isinstance(telemetry_features.get("chat"), dict) else {}
+    chat_latency_metric = chat_metrics.get("message_latency_ms") if isinstance(chat_metrics.get("message_latency_ms"), dict) else {}
+    chat_latency_p95 = chat_latency_metric.get("p95") if isinstance(chat_latency_metric.get("p95"), (int, float)) else None
+    if isinstance(chat_latency_p95, (int, float)):
+        recommended_p95 = max(recommended_p95, _round_up_step(float(chat_latency_p95) * 1.1, 10, 250, 6000))
+    recommended_response_budget = _round_up_step(max(float(recommended_p95), float(p95_latency_ms or 340.0) * 1.10), 10, 250, 8000)
+    recommended_db_budget = _round_up_step(320 if db_queries_per_request >= 2.5 else 180 if db_queries_per_request <= 1.2 else 250, 10, 80, 2000)
+    recommended_cache_ttl = 600 if cache_hit_ratio < 0.40 else 300 if cache_hit_ratio < 0.70 else 180
+    recommended_sla_target = 99.5 if sorisae_classification not in {"ALL_PASS", "unknown"} or str(health_payload.get("status") or "") not in {"ok", "healthy"} else 99.9
+    recommended_sla_cooldown = 30 if sorisae_classification not in {"ALL_PASS", "unknown"} else 15
+
+    rails_recommendation = deepcopy(rail_current)
+    rails_recommendation["sla"]["availability_target_percent"] = recommended_sla_target
+    rails_recommendation["sla"]["breach_cooldown_minutes"] = recommended_sla_cooldown
+    rails_recommendation["latency"]["p50_budget_ms"] = recommended_p50
+    rails_recommendation["latency"]["p95_budget_ms"] = recommended_p95
+    rails_recommendation["performance"]["response_budget_ms"] = recommended_response_budget
+    rails_recommendation["performance"]["db_query_budget_ms"] = recommended_db_budget
+    rails_recommendation["performance"]["cache_ttl_seconds"] = recommended_cache_ttl
+
+    worldlinco_recommendation = _build_default_worldlinco_analysis_groups()
+    cpu_hot = isinstance(cpu_usage_percent, (int, float)) and float(cpu_usage_percent) >= 80.0
+    memory_hot = isinstance(memory_usage_percent, (int, float)) and float(memory_usage_percent) >= 85.0
+    queue_hot = isinstance(queue_depth, (int, float)) and float(queue_depth) >= 5.0
+    latency_hot = isinstance(p95_latency_ms, (int, float)) and float(p95_latency_ms) >= 900.0
+
+    if latency_hot and not cpu_hot:
+        worldlinco_recommendation["voip_bridge"]["silence_gap_ms"] = max(400, int(worldlinco_recommendation["voip_bridge"].get("silence_gap_ms", 600)) - 100)
+        worldlinco_recommendation["voip_bridge"]["max_speech_ms"] = max(5000, int(worldlinco_recommendation["voip_bridge"].get("max_speech_ms", 8000)) - 500)
+        worldlinco_recommendation["face_conversation"]["restart_ms"] = min(400, int(worldlinco_recommendation["face_conversation"].get("restart_ms", 250)) + 50)
+        worldlinco_recommendation["chat"]["message_latency_budget_ms"] = recommended_p95
+        worldlinco_recommendation["chat"]["stream_chunk_budget_ms"] = min(500, max(180, recommended_p50))
+
+    if cpu_hot or memory_hot or queue_hot:
+        worldlinco_recommendation["voip"]["silero_min_segment_ms"] = min(3200, int(worldlinco_recommendation["voip"].get("silero_min_segment_ms", 2400)) + 200)
+        worldlinco_recommendation["face_conversation"]["min_segment_ms"] = min(3000, int(worldlinco_recommendation["face_conversation"].get("min_segment_ms", 2200)) + 200)
+        worldlinco_recommendation["voip_bridge"]["rms_gate"] = min(700, int(worldlinco_recommendation["voip_bridge"].get("rms_gate", 420)) + 40)
+        worldlinco_recommendation["pstn_assist"]["turn_pause_ms"] = min(1800, int(worldlinco_recommendation["pstn_assist"].get("turn_pause_ms", 1200)) + 150)
+
+    if sorisae_classification not in {"ALL_PASS", "unknown"}:
+        worldlinco_recommendation["sorisae_ai"]["friend_min_lang_prob"] = max(0.65, float(worldlinco_recommendation["sorisae_ai"].get("friend_min_lang_prob", 0.60)))
+        worldlinco_recommendation["sorisae_ai"]["geo_accuracy_max_m"] = min(2500, int(worldlinco_recommendation["sorisae_ai"].get("geo_accuracy_max_m", 3000)))
+
+    observations_complete = bool(isinstance(p50_latency_ms, (int, float)) and isinstance(p95_latency_ms, (int, float)))
+    recommendation_payload = {
+        "rails": rails_recommendation,
+        "worldlinco": worldlinco_recommendation,
+        "observation_summary": {
+            "metrics": metrics,
+            "cpu_usage_percent": cpu_usage_percent,
+            "memory_usage_percent": memory_usage_percent,
+            "queue_depth": queue_depth,
+            "health_status": str(health_payload.get("status") or "unknown"),
+            "sorisae_classification": sorisae_classification,
+            "observations_complete": observations_complete,
+            "telemetry_summary": telemetry_summary,
+        },
+    }
+    return recommendation_payload
+
+
+def _build_default_threshold_analysis_payload() -> Dict[str, Any]:
+    recommendation_payload = {
+        "rails": _build_default_admin_rail_settings(),
+        "worldlinco": _build_default_worldlinco_analysis_groups(),
+        "observation_summary": {
+            "metrics": _collect_metrics_summary_snapshot(),
+            "health_status": "unknown",
+            "sorisae_classification": "unknown",
+            "observations_complete": False,
+        },
+    }
+    fingerprint = _threshold_analysis_fingerprint(recommendation_payload)
+    return {
+        "analysis_mode_enabled": True,
+        "last_analyzed_at": None,
+        "recommendations": recommendation_payload,
+        "approvals": {
+            "rails": {"approved": False, "approved_at": None, "approved_by": None, "fingerprint": fingerprint},
+            "worldlinco": {"approved": False, "approved_at": None, "approved_by": None, "fingerprint": fingerprint},
+        },
+        "safe_gate": {
+            "threshold_recovery_allowed": False,
+            "worldlinco_auto_apply_allowed": False,
+            "reason": "승인된 권장 임계치가 아직 없습니다.",
+        },
+        "worldlinco_partial_applied": [],
+    }
+
+
+def _normalize_threshold_analysis_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    base = _build_default_threshold_analysis_payload()
+    payload = raw_payload or {}
+    recommendations = payload.get("recommendations") if isinstance(payload.get("recommendations"), dict) else base["recommendations"]
+    fingerprint = _threshold_analysis_fingerprint(recommendations)
+    approvals = payload.get("approvals") if isinstance(payload.get("approvals"), dict) else {}
+    rails_approval = approvals.get("rails") if isinstance(approvals.get("rails"), dict) else {}
+    worldlinco_approval = approvals.get("worldlinco") if isinstance(approvals.get("worldlinco"), dict) else {}
+    rails_approved = bool(rails_approval.get("approved")) and str(rails_approval.get("fingerprint") or "") == fingerprint
+    worldlinco_approved = bool(worldlinco_approval.get("approved")) and str(worldlinco_approval.get("fingerprint") or "") == fingerprint
+    safe_gate = {
+        "threshold_recovery_allowed": rails_approved and bool((recommendations.get("observation_summary") or {}).get("observations_complete")),
+        "worldlinco_auto_apply_allowed": worldlinco_approved and bool((recommendations.get("observation_summary") or {}).get("observations_complete")),
+        "reason": "승인된 권장 임계치와 최근 관측값이 있어 자동복구에 사용할 수 있습니다." if (rails_approved or worldlinco_approved) else "승인 전까지는 추천 임계치와 추천 튜닝값을 자동복구에 사용할 수 없습니다.",
+    }
+    raw_partial_applied = payload.get("worldlinco_partial_applied") if isinstance(payload.get("worldlinco_partial_applied"), list) else []
+    partial_applied: List[Dict[str, Any]] = []
+    for item in raw_partial_applied:
+        if not isinstance(item, dict):
+            continue
+        group = str(item.get("group") or "").strip()
+        key = str(item.get("key") or "").strip()
+        value = item.get("value")
+        if not group or not key or not isinstance(value, (int, float)):
+            continue
+        partial_applied.append(
+            {
+                "group": group,
+                "key": key,
+                "value": float(value),
+                "applied_at": str(item.get("applied_at") or ""),
+                "applied_by": str(item.get("applied_by") or ""),
+            }
+        )
+    if len(partial_applied) > 500:
+        partial_applied = partial_applied[-500:]
+
+    return {
+        "analysis_mode_enabled": bool(payload.get("analysis_mode_enabled", True)),
+        "last_analyzed_at": payload.get("last_analyzed_at"),
+        "recommendations": recommendations,
+        "approvals": {
+            "rails": {
+                "approved": rails_approved,
+                "approved_at": rails_approval.get("approved_at"),
+                "approved_by": rails_approval.get("approved_by"),
+                "fingerprint": fingerprint,
+            },
+            "worldlinco": {
+                "approved": worldlinco_approved,
+                "approved_at": worldlinco_approval.get("approved_at"),
+                "approved_by": worldlinco_approval.get("approved_by"),
+                "fingerprint": fingerprint,
+            },
+        },
+        "safe_gate": safe_gate,
+        "worldlinco_partial_applied": partial_applied,
+    }
+
+
+def _load_threshold_analysis_payload() -> Dict[str, Any]:
+    path = _admin_threshold_analysis_path()
+    if not path.exists() or not path.is_file():
+        return _normalize_threshold_analysis_payload()
+    return _normalize_threshold_analysis_payload(_load_json_file(path))
+
+
+def _save_threshold_analysis_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_threshold_analysis_payload(payload)
+    _write_json_file(_admin_threshold_analysis_path(), normalized)
+    return normalized
 
 
 def _classify_gate_status(verification_items: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -475,7 +1972,9 @@ def get_admin_identity_provider_settings(
 
     for provider_name in provider_names:
         provider = resolve_identity_provider(provider_name)
-        provider_statuses.append(provider.build_mapping_status(env_values))
+        provider_status = provider.build_mapping_status(env_values)
+        provider_status["env_keys"] = list(_resolve_identity_provider_env_keys(provider_name).values())
+        provider_statuses.append(provider_status)
         contract = provider.build_complete_payload_contract()
         complete_payload_contracts.append(
             {
@@ -889,7 +2388,7 @@ def _build_admin_subscription_monitor_summary_payload(
     period_days: int = 30,
     status_filter: Optional[str] = None,
 ) -> Dict[str, Any]:
-    now = datetime.utcnow()
+    now = utcnow()
     period_days = max(1, min(int(period_days), 90))
     period_since = now - timedelta(days=period_days)
     normalized_status_filter = str(status_filter or "").strip() or None
@@ -1111,6 +2610,11 @@ class AdminAutoConnectRetryQueueItem(BaseModel):
     connection_id: Optional[str] = None
 
 
+class AdminLlmGatewayRecoverRequest(BaseModel):
+    mode: str = Field(default="port_shift_shadow")
+    dry_run: bool = Field(default=False)
+
+
 @router.get("/users")
 def list_admin_users(
     skip: int = Query(default=0, ge=0),
@@ -1149,6 +2653,57 @@ def list_admin_users(
         "skip": int(skip),
         "limit": int(limit),
     }
+
+
+@router.get("/sorisae-failure-monitor/latest")
+def get_admin_sorisae_failure_monitor_status(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return get_latest_sorisae_failure_status()
+
+
+@router.get("/sorisae-failure-monitor/latest/result-json")
+def get_admin_sorisae_failure_monitor_result_json(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    try:
+        return get_latest_sorisae_failure_result_json_payload()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/sorisae-failure-monitor/latest/push")
+async def post_admin_sorisae_failure_monitor_push(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    try:
+        return await push_latest_sorisae_failure_to_admins()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/llm-gateway/diagnostics")
+def get_admin_llm_gateway_diagnostics(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return collect_llm_gateway_diagnostics()
+
+
+@router.post("/llm-gateway/auto-recover")
+def post_admin_llm_gateway_auto_recover(
+    payload: AdminLlmGatewayRecoverRequest,
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return auto_recover_llm_gateway(mode=str(payload.mode or "port_shift_shadow"), dry_run=bool(payload.dry_run))
 
 
 @router.put("/users/{user_id}")
@@ -1594,6 +3149,7 @@ ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
         "usage": "부팅 기본 모델 환경값 점검 / 교체",
         "description": "부팅 시 참조되는 역할별 기본 모델 환경값입니다.",
         "fields": [
+            "OLLAMA_BASE",
             "LLM_MODEL_DEFAULT",
             "LLM_MODEL_REASONING",
             "LLM_MODEL_CODING",
@@ -1675,6 +3231,23 @@ ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
             "KCB_CALLBACK_URL",
         ],
     },
+    {
+        "id": "worldlinco_public_portal",
+        "title": "소리새 공공데이터 포털 주입",
+        "usage": "관광/문화/식당/약국/병원/교통 API 키와 URL 템플릿 주입",
+        "description": "소리새 AI가 국가별 공공데이터 포털 API를 직접 조회할 수 있도록 서비스키와 URL 템플릿을 관리자 화면에서 저장합니다. URL 템플릿은 {service_key}, {latitude}, {longitude}, {radius_m}, {category}, {query}, {country_code} 플레이스홀더를 지원합니다.",
+        "fields": [
+            "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING",
+            "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY",
+        ],
+    },
 ]
 ADMIN_SYSTEM_ENV_SENSITIVE_KEYS = {
     "POSTGRES_PASSWORD",
@@ -1683,11 +3256,31 @@ ADMIN_SYSTEM_ENV_SENSITIVE_KEYS = {
     "PASS_CLIENT_SECRET",
     "KMC_CLIENT_SECRET",
     "KCB_CLIENT_SECRET",
+    "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY",
 }
 ADMIN_SYSTEM_ENV_MULTILINE_KEYS = {
     "ALLOWED_ORIGINS",
     "ORCH_REQUIRED_FILES",
     "SELF_ENGINE_GENERATIVE_STATUS_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE",
+}
+
+ADMIN_SYSTEM_ENV_FIELD_LABELS: Dict[str, str] = {
+    "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING": "공공데이터 포털 조회 사용 여부 (0/1)",
+    "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY": "공공데이터 포털 API 키 주입",
+    "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE": "공공데이터 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE": "관광/문화/식당/숙소 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY": "관광/문화/식당/숙소 포털 API 키",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE": "약국/병원 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY": "약국/병원 포털 API 키",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE": "교통/환승 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY": "교통/환승 포털 API 키",
 }
 
 
@@ -1778,7 +3371,11 @@ def _write_postgres_password_secret(password: str, env_values: Optional[Dict[str
 def _load_runtime_config_summary() -> Dict[str, Any]:
     config_path = _admin_orchestrator_runtime_config_path()
     if not config_path.exists():
-        return {}
+        try:
+            from backend.llm.orchestrator import _load_runtime_config_from_disk
+            return _load_runtime_config_from_disk()
+        except Exception:
+            return {}
     try:
         return json.loads(config_path.read_text(encoding="utf-8"))
     except Exception:
@@ -1790,6 +3387,202 @@ def _safe_mtime(path: Path) -> float | None:
         return path.stat().st_mtime if path.exists() else None
     except Exception:
         return None
+
+
+ADMIN_LLM_ENV_ROUTE_KEYS: Dict[str, str] = {
+    "LLM_MODEL_DEFAULT": "default",
+    "LLM_MODEL_REASONING": "reasoning",
+    "LLM_MODEL_CODING": "coding",
+    "LLM_MODEL_CHAT": "chat",
+    "LLM_MODEL_VOICE_CHAT": "voice_chat",
+    "LLM_MODEL_PLANNER": "planner",
+    "LLM_MODEL_CODER": "coder",
+    "LLM_MODEL_REVIEWER": "reviewer",
+    "LLM_MODEL_DESIGNER": "designer",
+    "LLM_MODEL_SMART_PLANNER": "smart_planner",
+    "LLM_MODEL_SMART_EXECUTOR": "smart_executor",
+    "LLM_MODEL_SMART_DESIGNER": "smart_designer",
+}
+
+
+def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
+    try:
+        with urlopen(url, timeout=timeout_sec) as response:
+            status = int(getattr(response, "status", 200) or 200)
+            return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
+    except Exception as exc:
+        return {"ok": False, "status": None, "url": url, "error": str(exc)}
+
+
+def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
+    display = _resolve_admin_summary_display_values(env_values)
+    admin_domain = display["admin_domain"] or "metanova1004.com"
+    model_routes = runtime_config.get("model_routes") or {}
+    defaults: Dict[str, str] = {
+        "LOCAL_API_BASE_URL": display["local_api_base_url"],
+        "ADMIN_DOMAIN": admin_domain,
+        "MARKETPLACE_API_DOMAIN": str(env_values.get("MARKETPLACE_API_DOMAIN") or admin_domain).strip() or admin_domain,
+        "MARKETPLACE_HOST_ROOT": display["marketplace_host_root"],
+        "MARKETPLACE_UPLOAD_ROOT": display["marketplace_upload_root"],
+        "POSTGRES_HOST": "postgres",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "devanalysis114",
+        "POSTGRES_USER": str(env_values.get("POSTGRES_USER") or "admin").strip() or "admin",
+        "NGINX_HTTP_PORT": "8080",
+        "NGINX_HTTPS_PORT": "8443",
+        "ALLOWED_ORIGINS": f"https://{admin_domain},http://127.0.0.1:3000,http://127.0.0.1:3005,http://localhost:3000,http://localhost:3005",
+        "ORCH_FORCE_COMPLETE": "false",
+        "ORCH_MIN_FILES": str(runtime_config.get("min_files") or 9),
+        "ORCH_MIN_DIRS": str(runtime_config.get("min_dirs") or 3),
+        "ORCH_MAX_FORCE_RETRIES": str(runtime_config.get("max_force_retries") or 3),
+        "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "true",
+        "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "true",
+        "VIDEO_REQUIRE_GENERATIVE_ENGINE": "false",
+        "SELF_ENGINE_MAX_RETRY": "2",
+        "KMC_CALLBACK_URL": f"https://{admin_domain}/api/auth/identity/providers/kmc/callback",
+        "KCB_CALLBACK_URL": f"https://{admin_domain}/api/auth/identity/providers/kcb/callback",
+    }
+    for env_key, route_key in ADMIN_LLM_ENV_ROUTE_KEYS.items():
+        route_value = str(model_routes.get(route_key) or env_values.get(env_key) or env_values.get("LLM_MODEL_DEFAULT") or "").strip()
+        if route_value:
+            defaults[env_key] = route_value
+    recommended: Dict[str, str] = {}
+    for key, value in defaults.items():
+        if not str(env_values.get(key) or "").strip():
+            recommended[key] = str(value)
+    return recommended
+
+
+def _effective_env_field_value(key: str, env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> str:
+    current = str(env_values.get(key) or "").strip()
+    if current:
+        return current
+    route_key = ADMIN_LLM_ENV_ROUTE_KEYS.get(key)
+    if route_key:
+        route_value = str((runtime_config.get("model_routes") or {}).get(route_key) or "").strip()
+        if route_value:
+            return route_value
+    recommended = _compute_recommended_env_defaults(env_values, runtime_config)
+    return str(recommended.get(key) or "").strip()
+
+
+def _build_admin_integration_checks(
+    env_values: Dict[str, str],
+    display_values: Dict[str, str],
+    runtime_config: Dict[str, Any],
+    available_models: List[str],
+) -> Dict[str, Any]:
+    api_base = display_values["local_api_base_url"]
+    health_probe = _probe_http_reachable(f"{api_base}/api/health")
+    docs_probe = _probe_http_reachable(f"{api_base}/docs")
+    ollama_base = str(env_values.get("OLLAMA_BASE") or "http://host.docker.internal:8008/v1").strip().rstrip("/")
+    ollama_probe = _probe_http_reachable(f"{ollama_base}/models")
+    runtime_path = _admin_orchestrator_runtime_config_path()
+    runtime_ok = runtime_path.exists() and bool(runtime_config)
+    upload_root = Path(display_values["marketplace_host_root"])
+    if not upload_root.is_absolute():
+        upload_root = (_admin_workspace_root() / upload_root).resolve()
+    upload_ok = upload_root.exists() and upload_root.is_dir()
+    identity_doc = _admin_workspace_root() / "docs" / "identity-provider-integration-contract.md"
+    identity_doc_ok = identity_doc.exists() and identity_doc.is_file()
+    database_url = str(env_values.get("DATABASE_URL") or "").strip()
+    postgres_host = str(env_values.get("POSTGRES_HOST") or "").strip()
+    postgres_aligned = (not database_url) or (postgres_host and postgres_host in database_url)
+    items = [
+        {
+            "id": "backend_health",
+            "label": "백엔드 API /health",
+            "ok": bool(health_probe.get("ok")),
+            "url": health_probe.get("url"),
+            "detail": f"HTTP {health_probe.get('status')}" if health_probe.get("ok") else str(health_probe.get("error") or "연결 실패"),
+        },
+        {
+            "id": "swagger_docs",
+            "label": "Swagger UI /docs",
+            "ok": bool(docs_probe.get("ok")),
+            "url": docs_probe.get("url"),
+            "detail": f"HTTP {docs_probe.get('status')}" if docs_probe.get("ok") else str(docs_probe.get("error") or "연결 실패"),
+        },
+        {
+            "id": "ollama_models",
+            "label": "LLM 엔진 /models",
+            "ok": bool(ollama_probe.get("ok")) or len(available_models) > 0,
+            "url": f"{ollama_base}/models",
+            "detail": f"모델 {len(available_models)}개" if available_models else str(ollama_probe.get("error") or "모델 목록 없음"),
+        },
+        {
+            "id": "runtime_config",
+            "label": "orchestrator runtime config",
+            "ok": runtime_ok,
+            "url": str(runtime_path),
+            "detail": "runtime JSON 로드 OK" if runtime_ok else "runtime config 없음",
+        },
+        {
+            "id": "identity_docs",
+            "label": "PASS/KMC/KCB 계약 문서",
+            "ok": identity_doc_ok,
+            "url": "/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md",
+            "detail": str(identity_doc) if identity_doc_ok else "docs/identity-provider-integration-contract.md 없음",
+        },
+        {
+            "id": "upload_root",
+            "label": "마켓플레이스 저장 루트",
+            "ok": upload_ok,
+            "url": str(upload_root),
+            "detail": "디렉터리 확인" if upload_ok else "저장 루트 없음",
+        },
+        {
+            "id": "postgres_env",
+            "label": "PostgreSQL env 정렬",
+            "ok": postgres_aligned,
+            "url": database_url or "-",
+            "detail": f"POSTGRES_HOST={postgres_host or '-'}" if postgres_aligned else "DATABASE_URL과 POSTGRES_HOST 불일치",
+        },
+    ]
+    connected_count = sum(1 for item in items if item.get("ok"))
+    return {
+        "items": items,
+        "connected_count": connected_count,
+        "total_count": len(items),
+        "all_connected": connected_count == len(items),
+    }
+
+
+def _resolve_admin_available_models(llm_status: Dict[str, Any]) -> List[str]:
+    merged: List[str] = []
+    installed = llm_status.get("models") or []
+    if isinstance(installed, list) and installed:
+        merged.extend(str(name).strip() for name in installed if str(name).strip())
+    if not merged:
+        merged.extend(get_available_ollama_models())
+    configured = llm_status.get("configured_models") or {}
+    if isinstance(configured, dict):
+        merged.extend(str(name).strip() for name in configured.values() if str(name).strip())
+    return sorted(set(name for name in merged if name))
+
+
+def _resolve_admin_summary_display_values(env_values: Dict[str, str]) -> Dict[str, str]:
+    admin_domain = str(
+        env_values.get("ADMIN_DOMAIN")
+        or env_values.get("DOMAIN_NAME")
+        or env_values.get("MARKETPLACE_API_DOMAIN")
+        or ""
+    ).strip()
+    local_api_base_url = str(env_values.get("LOCAL_API_BASE_URL") or "").strip().rstrip("/")
+    if not local_api_base_url:
+        local_api_base_url = "http://127.0.0.1:8000"
+    marketplace_host_root = str(env_values.get("MARKETPLACE_HOST_ROOT") or "").strip()
+    if not marketplace_host_root:
+        marketplace_host_root = "./uploads"
+    marketplace_upload_root = str(env_values.get("MARKETPLACE_UPLOAD_ROOT") or "").strip()
+    if not marketplace_upload_root:
+        marketplace_upload_root = marketplace_host_root
+    return {
+        "admin_domain": admin_domain,
+        "local_api_base_url": local_api_base_url,
+        "marketplace_host_root": marketplace_host_root,
+        "marketplace_upload_root": marketplace_upload_root,
+    }
 
 
 def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
@@ -1811,16 +3604,21 @@ def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str,
 
     env_values = env_values_override or _read_admin_env_values(env_path)
     runtime_config = _load_runtime_config_summary()
+    recommended_env_updates = _compute_recommended_env_defaults(env_values, runtime_config)
     sections: List[Dict[str, Any]] = []
     for section in ADMIN_SYSTEM_ENV_SECTIONS:
         fields = []
         for key in section["fields"]:
             key_text = str(key)
+            raw_value = str(env_values.get(key_text, ""))
+            effective_value = _effective_env_field_value(key_text, env_values, runtime_config)
             fields.append(
                 {
                     "key": key_text,
-                    "label": key_text,
-                    "value": str(env_values.get(key_text, "")),
+                    "label": ADMIN_SYSTEM_ENV_FIELD_LABELS.get(key_text, key_text),
+                    "value": raw_value,
+                    "effective_value": effective_value if not raw_value.strip() and effective_value else "",
+                    "needs_attention": not raw_value.strip(),
                     "sensitive": key_text in ADMIN_SYSTEM_ENV_SENSITIVE_KEYS,
                     "multiline": key_text in ADMIN_SYSTEM_ENV_MULTILINE_KEYS,
                 }
@@ -1836,7 +3634,12 @@ def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str,
         )
     model_routes = runtime_config.get("model_routes") or {}
     llm_status = llm_loader.get_cached_status()
-    available_models = llm_status.get("models") or []
+    available_models = _resolve_admin_available_models(llm_status if isinstance(llm_status, dict) else {})
+    display_values = _resolve_admin_summary_display_values(env_values)
+    local_api_base_url = display_values["local_api_base_url"]
+    local_api_base_url_warning = ""
+    if str(env_values.get("LOCAL_API_BASE_URL") or "").strip().endswith(":8001"):
+        local_api_base_url_warning = "LOCAL_API_BASE_URL 포트 8001은 백엔드 기본 포트(8000)와 다릅니다. .env를 8000으로 맞추세요."
     generator_profiles = [
         {"id": "python_fastapi", "label": "Python FastAPI", "generator": "python_code_generator", "runtime_role": "backend api"},
         {"id": "python_worker", "label": "Python Worker", "generator": "python_code_generator", "runtime_role": "background worker"},
@@ -1847,14 +3650,25 @@ def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str,
         "env_path": str(env_path),
         "runtime_config_path": str(_admin_orchestrator_runtime_config_path()),
         "sections": sections,
+        "integration_checks": _build_admin_integration_checks(env_values, display_values, runtime_config, available_models),
+        "recommended_env_updates": recommended_env_updates,
+        "empty_field_count": sum(1 for section in sections for field in section["fields"] if field.get("needs_attention")),
         "summary": {
-            "admin_domain": str(env_values.get("ADMIN_DOMAIN", "")),
-            "api_domain": str(env_values.get("MARKETPLACE_API_DOMAIN", "")),
-            "local_api_base_url": str(env_values.get("LOCAL_API_BASE_URL", "")),
-            "marketplace_host_root": str(env_values.get("MARKETPLACE_HOST_ROOT", "")),
-            "marketplace_upload_root": str(env_values.get("MARKETPLACE_UPLOAD_ROOT", "")),
+            "admin_domain": display_values["admin_domain"],
+            "api_domain": str(env_values.get("MARKETPLACE_API_DOMAIN") or display_values["admin_domain"]),
+            "local_api_base_url": local_api_base_url,
+            "local_api_base_url_warning": local_api_base_url_warning,
+            "api_docs_url": f"{local_api_base_url}/docs",
+            "marketplace_host_root": display_values["marketplace_host_root"],
+            "marketplace_upload_root": display_values["marketplace_upload_root"],
+            "nginx_http_port": str(env_values.get("NGINX_HTTP_PORT") or "8080"),
+            "nginx_https_port": str(env_values.get("NGINX_HTTPS_PORT") or "8443"),
             "selected_profile": str(runtime_config.get("selected_profile") or ""),
             "code_generation_strategy": str(runtime_config.get("code_generation_strategy") or ""),
+            "min_files": int(runtime_config.get("min_files") or 9),
+            "min_dirs": int(runtime_config.get("min_dirs") or 3),
+            "stage11_min_files": int(runtime_config.get("stage11_min_files") or 32),
+            "stage11_min_dirs": int(runtime_config.get("stage11_min_dirs") or 11),
             "default_model": str(model_routes.get("default") or ""),
             "chat_model": str(model_routes.get("chat") or ""),
             "voice_chat_model": str(model_routes.get("voice_chat") or ""),
@@ -1886,7 +3700,7 @@ def _coerce_env_int(value: Any, default: int, minimum: int = 0) -> int:
 
 def _build_global_automatic_env_updates(env_values: Dict[str, str]) -> Dict[str, str]:
     current_retry = _coerce_env_int(env_values.get("SELF_ENGINE_MAX_RETRY"), 1, minimum=1)
-    current_min_files = _coerce_env_int(env_values.get("ORCH_MIN_FILES"), 27, minimum=1)
+    current_min_files = _coerce_env_int(env_values.get("ORCH_MIN_FILES"), 9, minimum=1)
     current_min_dirs = _coerce_env_int(env_values.get("ORCH_MIN_DIRS"), 3, minimum=0)
     generative_ready = any(
         str(env_values.get(key) or "").strip()
@@ -1894,7 +3708,7 @@ def _build_global_automatic_env_updates(env_values: Dict[str, str]) -> Dict[str,
     )
     return {
         "ORCH_FORCE_COMPLETE": "false",
-        "ORCH_MIN_FILES": str(max(27, current_min_files)),
+        "ORCH_MIN_FILES": str(max(9, current_min_files)),
         "ORCH_MIN_DIRS": str(max(3, current_min_dirs)),
         "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "true",
         "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "true",
@@ -1928,7 +3742,7 @@ async def _apply_global_automatic_mode() -> AdminGlobalAutomaticModeResponse:
         force_complete=False,
         allow_synthetic_fallback=True,
         max_force_retries=max(2, _coerce_env_int(current_runtime.get("max_force_retries"), 2, 1)),
-        min_files=max(27, _coerce_env_int(current_runtime.get("min_files"), 27, 1)),
+        min_files=max(9, _coerce_env_int(current_runtime.get("min_files"), 9, 1)),
         min_dirs=max(3, _coerce_env_int(current_runtime.get("min_dirs"), 3, 0)),
         model_tuning_level=0,
         token_tuning_level=0,
@@ -2596,7 +4410,7 @@ def _self_run_execution_mode(requested_mode: str, directive_template: str = "", 
     if requested_mode == "self-improvement":
         return "full"
     if requested_mode == "self-expansion":
-        return "plan"
+        return "full"
     return "review"
 
 
@@ -2614,6 +4428,7 @@ def _self_run_directive_template_label(template_key: str) -> str:
         "marketplace_conversion": "마켓플레이스 전환 개선",
         "llm_cost_latency": "LLM 비용/지연 최적화",
         "focused-self-healing": "원인 집중 자가치유",
+        "tower_crane_expansion": "Tower Crane 확장 실험",
     }
     return template_labels.get(template, "직접 주문")
 
@@ -2647,6 +4462,21 @@ def _build_self_run_directive_block(directive_template: str, directive_scope: st
     return "\n".join(lines)
 
 
+def _build_self_expansion_protocol_block(requested_mode: str) -> str:
+    if requested_mode != "self-expansion":
+        return ""
+    return "\n".join(
+        [
+            "[자가확장 full 실험 프로토콜]",
+            "- 1단계 발견: capability 진단, Tower Crane A/B/C 옵션, 웹 리서치 근거를 작업문에 반영",
+            "- 2단계 실험: 실험 복제본에서 Autonomous TurnController 11단계 또는 지정 범위 full 실행",
+            "- 3단계 검증: py_compile, pytest, semantic audit, 11단계 probe 근거 수집",
+            "- 4단계 승인: 원본 반영은 workspace-self-run/approve 승인 후에만 수행",
+            "- plan-only 금지: 설계만 남기지 말고 복제본에 실제 코드/구조 변경을 생성할 것",
+        ]
+    )
+
+
 def _build_debug_remediation_protocol_block(requested_mode: str, directive_request: str) -> str:
     if requested_mode != "self-improvement":
         return ""
@@ -2667,7 +4497,7 @@ def _suggested_self_mode(requested_mode: str) -> str:
     if requested_mode == "self-improvement":
         return "full"
     if requested_mode == "self-expansion":
-        return "plan"
+        return "full"
     return "review"
 
 
@@ -2724,6 +4554,7 @@ def _build_self_run_task(requested_mode: str, source_dir: Path, experiment_clone
     content_bundle = _build_self_task_content_bundle(bundle_result)
     directive_block = _build_self_run_directive_block(directive_template, directive_scope, directive_request)
     debug_protocol_block = _build_debug_remediation_protocol_block(requested_mode, directive_request)
+    expansion_protocol_block = _build_self_expansion_protocol_block(requested_mode)
     return (
         f"{title}\n\n"
         f"원본 대상 경로: {source_dir}\n"
@@ -2732,6 +4563,7 @@ def _build_self_run_task(requested_mode: str, source_dir: Path, experiment_clone
         f"[반드시 지킬 원칙]\n- " + "\n- ".join(action_lines) + "\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n"
         + (f"{directive_block}\n\n" if directive_block else "")
         + (f"{debug_protocol_block}\n\n" if debug_protocol_block else "")
+        + (f"{expansion_protocol_block}\n\n" if expansion_protocol_block else "")
         + "[대상 구조 요약]\n"
         + f"- 디렉터리 수: {scan_result['total_directories']}\n"
         + f"- 파일 수: {scan_result['total_files']}\n"
@@ -3114,6 +4946,23 @@ def _stabilize_running_self_run_record(record_path: Path, approval_payload: Dict
     return _force_fail_running_self_run_record(record_path, stale_reason=stale_reason, detail=stale_detail)
 
 
+@router.post("/system-settings/fill-missing-defaults")
+def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_admin)):
+    del admin
+    env_path = _admin_env_path()
+    env_values = _read_admin_env_values(env_path)
+    runtime_config = _load_runtime_config_summary()
+    updates = _compute_recommended_env_defaults(env_values, runtime_config)
+    if not updates:
+        payload = _build_admin_system_settings_payload(env_values_override=env_values)
+        payload["applied_env_update_count"] = 0
+        return payload
+    updated_env_values = _write_admin_env_values(env_path, updates)
+    payload = _build_admin_system_settings_payload(env_values_override=updated_env_values)
+    payload["applied_env_update_count"] = len(updates)
+    return payload
+
+
 @router.get("/system-settings")
 def get_admin_system_settings(admin: User = Depends(require_admin)):
     del admin
@@ -3130,6 +4979,437 @@ def update_admin_system_settings(payload: AdminSystemSettingsUpdateRequest, admi
         raise HTTPException(status_code=400, detail="관리자 대시보드에서 허용되지 않은 설정 키가 포함되었습니다: " + ", ".join(unknown_keys))
     env_values = _write_admin_env_values(_admin_env_path(), {key: str(value) for key, value in updates.items()})
     return _build_admin_system_settings_payload(env_values_override=env_values)
+
+
+@router.get("/rail-settings")
+def get_admin_rail_settings(admin: User = Depends(require_admin)):
+    del admin
+    return _load_admin_rail_settings_payload()
+
+
+@router.put("/rail-settings")
+def update_admin_rail_settings(payload: AdminRailSettingsUpdateRequest, admin: User = Depends(require_admin)):
+    del admin
+    return _save_admin_rail_settings_payload(payload.rails.model_dump())
+
+
+@router.get("/threshold-analysis")
+def get_admin_threshold_analysis(admin: User = Depends(require_admin)):
+    del admin
+    return _load_threshold_analysis_payload()
+
+
+@router.post("/threshold-analysis/analyze")
+def analyze_admin_thresholds(payload: AdminThresholdAnalysisRequest, admin: User = Depends(require_admin)):
+    del admin
+    recommendation_payload = _build_threshold_recommendations(payload)
+    current = _load_threshold_analysis_payload()
+    next_payload = {
+        **current,
+        "last_analyzed_at": utcnow().isoformat() + "Z",
+        "recommendations": recommendation_payload,
+    }
+    return _save_threshold_analysis_payload(next_payload)
+
+
+@router.put("/threshold-analysis/approve")
+def approve_admin_threshold_analysis(payload: AdminThresholdApprovalRequest, admin: User = Depends(require_admin)):
+    current = _load_threshold_analysis_payload()
+    target = str(payload.target or "").strip().lower()
+    if target not in {"rails", "worldlinco"}:
+        raise HTTPException(status_code=400, detail="target 은 rails 또는 worldlinco 여야 합니다.")
+    fingerprint = _threshold_analysis_fingerprint(current.get("recommendations") or {})
+    next_payload = deepcopy(current)
+    approval_state = {
+        "approved": bool(payload.approved),
+        "approved_at": utcnow().isoformat() + "Z" if payload.approved else None,
+        "approved_by": getattr(admin, "email", None) or str(getattr(admin, "id", "admin")),
+        "fingerprint": fingerprint,
+    }
+    next_payload.setdefault("approvals", {})[target] = approval_state
+    return _save_threshold_analysis_payload(next_payload)
+
+
+@router.post("/threshold-analysis/apply-worldlinco-approved")
+def apply_admin_threshold_worldlinco_recommendations(admin: User = Depends(require_admin)):
+    current = _load_threshold_analysis_payload()
+    safe_gate = current.get("safe_gate") if isinstance(current.get("safe_gate"), dict) else {}
+    if not safe_gate.get("worldlinco_auto_apply_allowed"):
+        raise HTTPException(status_code=409, detail="승인된 월드린코 추천값이 없어 자동 적용할 수 없습니다.")
+
+    from backend.marketplace.worldlinco_tuning import (
+        WorldlincoTuningUpdate,
+        apply_worldlinco_tuning_update,
+    )
+
+    worldlinco_payload = ((current.get("recommendations") or {}).get("worldlinco") or {}) if isinstance((current.get("recommendations") or {}).get("worldlinco"), dict) else {}
+    try:
+        update = WorldlincoTuningUpdate.model_validate(worldlinco_payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=f"승인된 월드린코 추천값 검증 실패: {exc}") from exc
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    applied = apply_worldlinco_tuning_update(update, updated_by=updated_by)
+    return {
+        "applied": True,
+        "applied_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "worldlinco": applied,
+        "safe_gate": current.get("safe_gate") or {},
+    }
+
+
+
+@router.post("/threshold-analysis/apply-worldlinco-field")
+def apply_admin_threshold_worldlinco_field(
+    payload: AdminThresholdWorldlincoFieldApplyRequest,
+    admin: User = Depends(require_admin),
+):
+    current = _load_threshold_analysis_payload()
+    recommendation_worldlinco = ((current.get("recommendations") or {}).get("worldlinco") or {})
+    if not isinstance(recommendation_worldlinco, dict):
+        raise HTTPException(status_code=409, detail="적용 가능한 월드린코 추천값이 없습니다.")
+
+    group = str(payload.group or "").strip()
+    key = str(payload.key or "").strip()
+    if not group or not key:
+        raise HTTPException(status_code=400, detail="group/key 는 필수입니다.")
+
+    group_payload = recommendation_worldlinco.get(group)
+    if not isinstance(group_payload, dict):
+        raise HTTPException(status_code=404, detail=f"추천값 group 을 찾을 수 없습니다: {group}")
+    value = group_payload.get(key)
+    if not isinstance(value, (int, float)):
+        raise HTTPException(status_code=404, detail=f"추천값 key 를 찾을 수 없습니다: {group}.{key}")
+
+    from backend.marketplace.worldlinco_tuning import (
+        WorldlincoTuningUpdate,
+        apply_worldlinco_tuning_update,
+    )
+
+    update_payload = {group: {key: value}}
+    try:
+        update = WorldlincoTuningUpdate.model_validate(update_payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"필드 적용 검증 실패: {exc}")
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    applied_worldlinco = apply_worldlinco_tuning_update(update, updated_by=updated_by)
+
+    next_payload = deepcopy(current)
+    partial_applied = next_payload.get("worldlinco_partial_applied") if isinstance(next_payload.get("worldlinco_partial_applied"), list) else []
+    partial_applied = [item for item in partial_applied if isinstance(item, dict)]
+    partial_applied.append(
+        {
+            "group": group,
+            "key": key,
+            "value": value,
+            "applied_at": utcnow().isoformat() + "Z",
+            "applied_by": updated_by,
+        }
+    )
+    next_payload["worldlinco_partial_applied"] = partial_applied[-500:]
+    saved_threshold = _save_threshold_analysis_payload(next_payload)
+
+    return {
+        "applied": True,
+        "group": group,
+        "key": key,
+        "value": value,
+        "updated_by": updated_by,
+        "applied_at": utcnow().isoformat() + "Z",
+        "worldlinco": applied_worldlinco,
+        "threshold_analysis": saved_threshold,
+    }
+
+
+@router.get("/travel-partners")
+def get_admin_travel_partners(admin: User = Depends(require_admin)):
+    del admin
+    partners_payload = _load_travel_partners_payload()
+    routing_policy = _load_travel_routing_policy_payload()
+    return {
+        "partners_path": str(_admin_travel_partners_path()),
+        "routing_policy_path": str(_admin_travel_routing_policy_path()),
+        "updated_at": partners_payload.get("updated_at"),
+        "updated_by": partners_payload.get("updated_by"),
+        "partners": partners_payload.get("partners") or [],
+        "routing_policy": routing_policy,
+    }
+
+
+@router.get("/travel-partners/kpi")
+def get_admin_travel_partner_kpi(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    del admin
+    cached = _get_admin_travel_kpi_cached_payload()
+    if isinstance(cached, dict):
+        return _attach_admin_travel_kpi_performance(
+            cached,
+            cache_status="hit",
+            db_query_count=0,
+            build_elapsed_ms=0.0,
+        )
+
+    payload = _build_admin_travel_kpi_payload(db)
+    _set_admin_travel_kpi_cached_payload(payload)
+    return payload
+
+
+@router.get("/travel-partners/kpi-settings")
+def get_admin_travel_partner_kpi_settings(admin: User = Depends(require_admin)):
+    del admin
+    return _load_travel_kpi_settings_payload()
+
+
+@router.put("/travel-partners/kpi-settings")
+def update_admin_travel_partner_kpi_settings(
+    payload: AdminTravelKpiSettingsRequest,
+    environment: Optional[str] = Query(default=None, description="target environment profile: dev|stage|prod"),
+    admin: User = Depends(require_admin),
+):
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    return _save_travel_kpi_settings_payload({"thresholds": payload.model_dump(), "environment": environment}, updated_by=updated_by, environment=environment)
+
+
+@router.post("/travel-partners")
+def create_admin_travel_partner(
+    payload: AdminTravelPartnerCreateRequest,
+    admin: User = Depends(require_admin),
+):
+    current = _load_travel_partners_payload()
+    next_items = [item for item in (current.get("partners") or []) if isinstance(item, dict)]
+    normalized_item = _normalize_travel_partner_item(payload.model_dump())
+    if not normalized_item:
+        raise HTTPException(status_code=400, detail="파트너 payload 검증에 실패했습니다.")
+
+    partner_id = str(normalized_item.get("partner_id") or "")
+    if any(str(item.get("partner_id") or "") == partner_id for item in next_items):
+        raise HTTPException(status_code=409, detail=f"이미 존재하는 partner_id 입니다: {partner_id}")
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    next_items.append(normalized_item)
+    saved_partners = _save_travel_partners_payload(
+        {
+            **current,
+            "updated_at": utcnow().isoformat() + "Z",
+            "updated_by": updated_by,
+            "partners": next_items,
+        }
+    )
+    routing_policy = _load_travel_routing_policy_payload()
+    return {
+        "created": True,
+        "partner": normalized_item,
+        "partners": saved_partners.get("partners") or [],
+        "routing_policy": routing_policy,
+        "updated_at": saved_partners.get("updated_at"),
+        "updated_by": saved_partners.get("updated_by"),
+    }
+
+
+@router.put("/travel-partners/{partner_id}/connection")
+def update_admin_travel_partner_connection(
+    partner_id: str,
+    payload: AdminTravelPartnerConnectionUpdateRequest,
+    admin: User = Depends(require_admin),
+):
+    normalized_partner_id = _normalize_partner_id(partner_id)
+    current = _load_travel_partners_payload()
+    partners = [item for item in (current.get("partners") or []) if isinstance(item, dict)]
+    partner_index = next((idx for idx, item in enumerate(partners) if str(item.get("partner_id") or "") == normalized_partner_id), -1)
+    if partner_index < 0:
+        raise HTTPException(status_code=404, detail=f"파트너를 찾을 수 없습니다: {normalized_partner_id}")
+
+    target = dict(partners[partner_index])
+    metadata = target.get("metadata") if isinstance(target.get("metadata"), dict) else {}
+    next_metadata = {str(key): value for key, value in metadata.items()}
+
+    base_url = str(payload.base_url or "").strip()
+    connector_test_url = str(payload.connector_test_url or "").strip()
+    booking_api_url = str(payload.booking_api_url or "").strip()
+    webhook_url = str(payload.webhook_url or "").strip()
+
+    target["base_url"] = base_url
+    next_metadata["connector_test_url"] = connector_test_url
+    next_metadata["booking_api_url"] = booking_api_url
+    next_metadata["webhook_url"] = webhook_url
+    target["metadata"] = next_metadata
+
+    normalized_target = _normalize_travel_partner_item(target)
+    if not normalized_target:
+        raise HTTPException(status_code=400, detail="연결 URL 업데이트 payload 검증에 실패했습니다.")
+
+    partners[partner_index] = normalized_target
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    saved_partners = _save_travel_partners_payload(
+        {
+            **current,
+            "updated_at": utcnow().isoformat() + "Z",
+            "updated_by": updated_by,
+            "partners": partners,
+        }
+    )
+    routing_policy = _load_travel_routing_policy_payload()
+    return {
+        "updated": True,
+        "partner": normalized_target,
+        "partners": saved_partners.get("partners") or [],
+        "routing_policy": routing_policy,
+        "updated_at": saved_partners.get("updated_at"),
+        "updated_by": saved_partners.get("updated_by"),
+    }
+
+
+@router.put("/travel-routing-policy")
+def update_admin_travel_routing_policy(
+    payload: AdminTravelRoutingPolicyRequest,
+    admin: User = Depends(require_admin),
+):
+    partners_payload = _load_travel_partners_payload()
+    normalized_policy = _normalize_travel_routing_policy_payload(payload.model_dump())
+    _validate_routing_policy_partner_refs(normalized_policy, partners_payload)
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    saved_policy = _save_travel_routing_policy_payload(
+        {
+            **normalized_policy,
+            "updated_at": utcnow().isoformat() + "Z",
+            "updated_by": updated_by,
+        }
+    )
+    return {
+        "saved": True,
+        "routing_policy": saved_policy,
+        "partners": partners_payload.get("partners") or [],
+        "updated_at": saved_policy.get("updated_at"),
+        "updated_by": saved_policy.get("updated_by"),
+    }
+
+
+@router.post("/travel-connectors/{connector_id}/test")
+def test_admin_travel_connector(
+    connector_id: str,
+    payload: Optional[AdminTravelConnectorTestRequest] = None,
+    admin: User = Depends(require_admin),
+):
+    partners_payload = _load_travel_partners_payload()
+    partners = [item for item in (partners_payload.get("partners") or []) if isinstance(item, dict)]
+    normalized_connector_id = _normalize_partner_id(connector_id)
+    partner = next((item for item in partners if str(item.get("partner_id") or "") == normalized_connector_id), None)
+    if not partner:
+        raise HTTPException(status_code=404, detail=f"등록되지 않은 connector_id 입니다: {normalized_connector_id}")
+
+    test_url = _resolve_travel_connector_test_url(partner, payload)
+    timeout_ms = payload.timeout_ms if payload else 3000
+    timeout_ms = max(500, min(int(timeout_ms), 15000))
+
+    tested_at = utcnow().isoformat() + "Z"
+    tested_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    started_at = time.perf_counter()
+    try:
+        response = httpx.get(test_url, timeout=timeout_ms / 1000.0, follow_redirects=True)
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        reachable = response.status_code < 500
+        return {
+            "tested": True,
+            "connector_id": normalized_connector_id,
+            "partner": partner,
+            "test_url": test_url,
+            "reachable": reachable,
+            "status_code": response.status_code,
+            "response_time_ms": elapsed_ms,
+            "error": None,
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        return {
+            "tested": True,
+            "connector_id": normalized_connector_id,
+            "partner": partner,
+            "test_url": test_url,
+            "reachable": False,
+            "status_code": None,
+            "response_time_ms": elapsed_ms,
+            "error": str(exc),
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+
+
+@router.post("/travel-partners/{partner_id}/webhook/test")
+def test_admin_travel_partner_webhook(
+    partner_id: str,
+    payload: Optional[AdminTravelWebhookTestRequest] = None,
+    admin: User = Depends(require_admin),
+):
+    partners_payload = _load_travel_partners_payload()
+    partners = [item for item in (partners_payload.get("partners") or []) if isinstance(item, dict)]
+    normalized_partner_id = _normalize_partner_id(partner_id)
+    partner = next((item for item in partners if str(item.get("partner_id") or "") == normalized_partner_id), None)
+    if not partner:
+        raise HTTPException(status_code=404, detail=f"등록되지 않은 partner_id 입니다: {normalized_partner_id}")
+
+    webhook_url = _resolve_travel_webhook_test_url(partner, payload)
+    timeout_ms = payload.timeout_ms if payload else 3000
+    timeout_ms = max(500, min(int(timeout_ms), 15000))
+    event_type = str(payload.event_type if payload else "admin_webhook_probe").strip() or "admin_webhook_probe"
+    sample_data = payload.sample_data if payload and isinstance(payload.sample_data, dict) else {
+        "booking_ref": f"probe-{uuid4().hex[:8]}",
+        "status": "confirmed",
+        "amount": 120000,
+        "currency": "KRW",
+    }
+
+    tested_at = utcnow().isoformat() + "Z"
+    tested_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    started_at = time.perf_counter()
+    request_payload = {
+        "source": "admin_dashboard",
+        "event_type": event_type,
+        "partner_id": normalized_partner_id,
+        "tested_at": tested_at,
+        "tested_by": tested_by,
+        "probe": {
+            "kind": "webhook_connectivity",
+            "ok": True,
+        },
+        "sample_data": sample_data,
+    }
+    try:
+        response = httpx.post(webhook_url, json=request_payload, timeout=timeout_ms / 1000.0, follow_redirects=True)
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        reachable = response.status_code < 500
+        return {
+            "tested": True,
+            "partner_id": normalized_partner_id,
+            "partner": partner,
+            "webhook_url": webhook_url,
+            "reachable": reachable,
+            "status_code": response.status_code,
+            "response_time_ms": elapsed_ms,
+            "error": None,
+            "event_type": event_type,
+            "request_payload": request_payload,
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        return {
+            "tested": True,
+            "partner_id": normalized_partner_id,
+            "partner": partner,
+            "webhook_url": webhook_url,
+            "reachable": False,
+            "status_code": None,
+            "response_time_ms": elapsed_ms,
+            "error": str(exc),
+            "event_type": event_type,
+            "request_payload": request_payload,
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
 
 
 @router.post("/system-settings/postgres-password")
@@ -3452,3 +5732,586 @@ async def apply_focused_self_healing_plan(payload: FocusedSelfHealingApplyReques
         'execution': executed,
         'message': 'focused self-healing 이 실제 workspace self-run 재실행까지 연결되었습니다.',
     }
+
+
+from backend.marketplace.worldlinco_tuning import WorldlincoTuningUpdate
+
+
+@router.get("/worldlinco/tuning")
+async def admin_get_worldlinco_tuning(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import worldlinco_tuning_admin_payload
+
+    _ = admin
+    return worldlinco_tuning_admin_payload()
+
+
+@router.put("/worldlinco/tuning")
+async def admin_update_worldlinco_tuning(
+    update: WorldlincoTuningUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import (
+        apply_worldlinco_tuning_update,
+        worldlinco_tuning_admin_payload,
+    )
+
+    _ = admin
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_worldlinco_tuning_update(update, updated_by=updated_by)
+    return worldlinco_tuning_admin_payload()
+
+
+from backend.marketplace.worldlinco_billing_policy import WorldlincoBillingPolicyUpdate
+
+
+@router.get("/worldlinco/billing-policy")
+async def admin_get_worldlinco_billing_policy(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_billing_policy import worldlinco_billing_policy_admin_payload
+
+    _ = admin
+    return worldlinco_billing_policy_admin_payload()
+
+
+@router.put("/worldlinco/billing-policy")
+async def admin_update_worldlinco_billing_policy(
+    update: WorldlincoBillingPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_billing_policy import (
+        apply_worldlinco_billing_policy_update,
+        worldlinco_billing_policy_admin_payload,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_worldlinco_billing_policy_update(update, updated_by=updated_by)
+    return worldlinco_billing_policy_admin_payload()
+
+
+from backend.marketplace.worldlinco_tourism_promo import TourismCountryPromoUpdate
+from backend.marketplace.worldlinco_referral import ReferralDiscountPolicyUpdate
+from backend.marketplace.worldlinco_sales_commission import (
+    SalesAgentCreate,
+    SalesAgentUpdate,
+    SalesCommissionPolicyUpdate,
+    LocalRevenueSettlementPolicyUpdate,
+    SalesSettlementApproveRequest,
+    OfficeBankAccountUpdate,
+    SalesAutoSettlementRunRequest,
+    RegionalManagerCreate,
+    RegionalManagerUpdate,
+)
+
+
+@router.get("/worldlinco/referrals")
+async def admin_get_worldlinco_referrals(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_referral import admin_referral_dashboard_payload
+
+    _ = admin
+    return admin_referral_dashboard_payload()
+
+
+@router.put("/worldlinco/referrals/discount-policy")
+async def admin_update_worldlinco_referral_discount_policy(
+    update: ReferralDiscountPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_referral import (
+        admin_referral_dashboard_payload,
+        apply_referral_discount_policy_update,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_referral_discount_policy_update(update, updated_by=updated_by)
+    return admin_referral_dashboard_payload()
+
+
+@router.get("/worldlinco/sales-commission")
+async def admin_get_worldlinco_sales_commission(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import admin_sales_commission_dashboard_payload
+
+    _ = admin
+    return admin_sales_commission_dashboard_payload()
+
+
+@router.put("/worldlinco/sales-commission/policy")
+async def admin_update_worldlinco_sales_commission_policy(
+    update: SalesCommissionPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        apply_sales_commission_policy_update,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_sales_commission_policy_update(update, updated_by=updated_by)
+    return admin_sales_commission_dashboard_payload()
+
+
+@router.put("/worldlinco/sales-commission/local-revenue-policy")
+async def admin_update_worldlinco_local_revenue_policy(
+    update: LocalRevenueSettlementPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        apply_local_revenue_settlement_policy_update,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_local_revenue_settlement_policy_update(update, updated_by=updated_by)
+    return admin_sales_commission_dashboard_payload()
+
+
+@router.post("/worldlinco/sales-commission/agents")
+async def admin_create_worldlinco_sales_agent(
+    payload: SalesAgentCreate,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        create_sales_agent,
+        sales_agent_admin_payload,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    agent = create_sales_agent(payload, created_by=updated_by)
+    api_base = str(request.base_url).rstrip("/")
+    return sales_agent_admin_payload(agent_id=str(agent["agent_id"]), api_base=api_base)
+
+
+@router.put("/worldlinco/sales-commission/agents/{agent_id}")
+async def admin_update_worldlinco_sales_agent(
+    agent_id: str,
+    payload: SalesAgentUpdate,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        sales_agent_admin_payload,
+        update_sales_agent,
+    )
+
+    _ = admin
+    try:
+        update_sales_agent(agent_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    api_base = str(request.base_url).rstrip("/")
+    return sales_agent_admin_payload(agent_id=agent_id, api_base=api_base)
+
+
+@router.get("/worldlinco/sales-commission/agents/{agent_id}")
+async def admin_get_worldlinco_sales_agent(
+    agent_id: str,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import sales_agent_admin_payload
+
+    _ = admin
+    try:
+        return sales_agent_admin_payload(agent_id=agent_id, api_base=str(request.base_url).rstrip("/"))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/worldlinco/sales-commission/bank-accounts")
+async def admin_upsert_worldlinco_office_bank_account(
+    payload: OfficeBankAccountUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        upsert_office_bank_account,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    account = upsert_office_bank_account(payload, updated_by=updated_by)
+    return {
+        "bank_account": account,
+        "dashboard": admin_sales_commission_dashboard_payload(),
+    }
+
+
+@router.post("/worldlinco/sales-commission/settlements/run-auto")
+async def admin_run_worldlinco_auto_settlement(
+    payload: SalesAutoSettlementRunRequest,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        run_auto_office_payout,
+        run_auto_settlement_all,
+        run_auto_local_revenue_payout,
+        run_auto_local_revenue_settlement_all,
+        load_local_revenue_settlement_policy,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    if load_local_revenue_settlement_policy().get("enabled"):
+        if payload.country_code:
+            settlement = run_auto_local_revenue_payout(
+                country_code=payload.country_code,
+                region_code=payload.region_code,
+                triggered_by=updated_by,
+            )
+        else:
+            settlement = run_auto_local_revenue_settlement_all(triggered_by=updated_by)
+    elif payload.country_code:
+        settlement = run_auto_office_payout(
+            country_code=payload.country_code,
+            region_code=payload.region_code,
+            triggered_by=updated_by,
+        )
+    else:
+        settlement = run_auto_settlement_all(triggered_by=updated_by)
+    return {
+        "settlement": settlement,
+        "dashboard": admin_sales_commission_dashboard_payload(),
+    }
+
+
+@router.post("/worldlinco/sales-commission/settlements/approve")
+async def admin_approve_worldlinco_sales_settlement(
+    payload: SalesSettlementApproveRequest,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        approve_sales_settlement,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    settlement = approve_sales_settlement(
+        country_code=payload.country_code,
+        agent_id=payload.agent_id,
+        event_ids=payload.event_ids,
+        approved_by=updated_by,
+        note=payload.note,
+    )
+    return {
+        "settlement": settlement,
+        "dashboard": admin_sales_commission_dashboard_payload(),
+    }
+
+
+def _resolve_worldlinco_regional_scope(
+    current_user: User,
+    *,
+    country_code: Optional[str] = None,
+    region_code: Optional[str] = None,
+) -> Dict[str, str]:
+    from backend.marketplace.worldlinco_sales_commission import resolve_regional_scope_for_access
+
+    is_admin = bool(getattr(current_user, "is_admin", False)) or bool(getattr(current_user, "is_superuser", False))
+    try:
+        return resolve_regional_scope_for_access(
+            is_admin=is_admin,
+            user_id=int(getattr(current_user, "id", 0) or 0),
+            country_code=country_code,
+            region_code=region_code,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code == "country_code_required":
+            raise HTTPException(status_code=400, detail="country_code 가 필요합니다.") from exc
+        raise HTTPException(status_code=403, detail="지역 관리자 권한이 없습니다.") from exc
+
+
+@router.get("/worldlinco/regional/me")
+async def admin_get_worldlinco_regional_me(
+    current_user: User = Depends(require_admin_or_regional_manager),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import resolve_regional_manager_for_user
+
+    is_admin = bool(getattr(current_user, "is_admin", False)) or bool(getattr(current_user, "is_superuser", False))
+    manager = resolve_regional_manager_for_user(int(getattr(current_user, "id", 0) or 0))
+    return {
+        "user_id": int(getattr(current_user, "id", 0) or 0),
+        "email": getattr(current_user, "email", None),
+        "is_admin": is_admin,
+        "is_regional_manager": bool(manager),
+        "regional_manager": manager,
+    }
+
+
+@router.get("/worldlinco/regional/managers")
+async def admin_list_worldlinco_regional_managers(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import list_regional_managers_public
+
+    _ = admin
+    managers = list_regional_managers_public()
+    return {"managers": managers, "total": len(managers)}
+
+
+@router.post("/worldlinco/regional/managers")
+async def admin_create_worldlinco_regional_manager(
+    payload: RegionalManagerCreate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import create_regional_manager, list_regional_managers_public
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    try:
+        manager = create_regional_manager(payload, created_by=updated_by)
+    except ValueError as exc:
+        if str(exc) == "regional_manager_user_already_assigned":
+            raise HTTPException(status_code=409, detail="이미 다른 지역에 배정된 사용자입니다.") from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"manager": manager, "managers": list_regional_managers_public()}
+
+
+@router.put("/worldlinco/regional/managers/{manager_id}")
+async def admin_update_worldlinco_regional_manager(
+    manager_id: str,
+    payload: RegionalManagerUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import list_regional_managers_public, update_regional_manager
+
+    _ = admin
+    try:
+        manager = update_regional_manager(manager_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"manager": manager, "managers": list_regional_managers_public()}
+
+
+@router.get("/worldlinco/regional/dashboard")
+async def admin_get_worldlinco_regional_dashboard(
+    country_code: Optional[str] = None,
+    region_code: Optional[str] = None,
+    current_user: User = Depends(require_admin_or_regional_manager),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import regional_manager_dashboard_payload
+
+    scope = _resolve_worldlinco_regional_scope(current_user, country_code=country_code, region_code=region_code)
+    return regional_manager_dashboard_payload(
+        country_code=scope["country_code"],
+        region_code=scope["region_code"],
+        scope_meta=scope,
+    )
+
+
+@router.get("/worldlinco/regional/users")
+async def admin_get_worldlinco_regional_users(
+    country_code: Optional[str] = None,
+    region_code: Optional[str] = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_regional_manager),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import regional_manager_users_payload
+
+    scope = _resolve_worldlinco_regional_scope(current_user, country_code=country_code, region_code=region_code)
+    payload = regional_manager_users_payload(
+        country_code=scope["country_code"],
+        region_code=scope["region_code"],
+        skip=skip,
+        limit=limit,
+    )
+    user_ids = [int(row.get("user_id") or 0) for row in payload.get("users") or [] if int(row.get("user_id") or 0) > 0]
+    db_rows: List[Dict[str, Any]] = []
+    if user_ids:
+        rows = db.query(User).filter(User.id.in_(user_ids)).all()
+        db_rows = [
+            {
+                "id": int(row.id),
+                "username": str(row.username or ""),
+                "email": str(row.email or ""),
+                "full_name": getattr(row, "full_name", None),
+                "country_code": getattr(row, "country_code", None),
+                "preferred_language": getattr(row, "preferred_language", None),
+                "is_active": bool(row.is_active),
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in rows
+        ]
+    enriched = regional_manager_users_payload(
+        country_code=scope["country_code"],
+        region_code=scope["region_code"],
+        skip=skip,
+        limit=limit,
+        db_user_rows=db_rows,
+    )
+    enriched["scope"] = scope
+    return enriched
+
+
+@router.get("/worldlinco/tourism-promo")
+async def admin_get_worldlinco_tourism_promo(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tourism_promo import tourism_country_promo_admin_payload
+
+    _ = admin
+    return tourism_country_promo_admin_payload()
+
+
+@router.put("/worldlinco/tourism-promo")
+async def admin_update_worldlinco_tourism_promo(
+    update: TourismCountryPromoUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tourism_promo import (
+        apply_tourism_country_promo_update,
+        tourism_country_promo_admin_payload,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_tourism_country_promo_update(update, updated_by=updated_by)
+    return tourism_country_promo_admin_payload()
+
+
+class AdminBulkChatPreviewRequest(BaseModel):
+    source_text: str = Field(min_length=1, max_length=500)
+    source_lang: str = Field(default="ko", max_length=16)
+    active_only: bool = True
+    country_codes: Optional[List[str]] = None
+
+
+class AdminBulkChatSendRequest(AdminBulkChatPreviewRequest):
+    dry_run: bool = False
+    confirm_send: bool = False
+
+
+@router.post("/worldlinco/bulk-chat/preview")
+async def admin_preview_worldlinco_bulk_chat(
+    payload: AdminBulkChatPreviewRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.services.admin_bulk_chat import preview_bulk_chat_campaign
+
+    _ = admin
+    try:
+        return preview_bulk_chat_campaign(
+            db,
+            source_text=payload.source_text,
+            source_lang=payload.source_lang,
+            active_only=payload.active_only,
+            country_codes=payload.country_codes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/worldlinco/bulk-chat/send")
+async def admin_send_worldlinco_bulk_chat(
+    payload: AdminBulkChatSendRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.services.admin_bulk_chat import send_bulk_chat_campaign
+
+    if not payload.dry_run and not payload.confirm_send:
+        raise HTTPException(status_code=422, detail="실발송은 confirm_send=true 가 필요합니다.")
+    initiated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    try:
+        return send_bulk_chat_campaign(
+            db,
+            source_text=payload.source_text,
+            source_lang=payload.source_lang,
+            active_only=payload.active_only,
+            country_codes=payload.country_codes,
+            dry_run=payload.dry_run,
+            initiated_by=initiated_by,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/worldlinco/bulk-chat/history")
+async def admin_list_worldlinco_bulk_chat_history(
+    limit: int = Query(default=20, ge=1, le=40),
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.services.admin_bulk_chat import list_bulk_chat_campaign_history
+
+    _ = admin
+    items = list_bulk_chat_campaign_history(limit=limit)
+    return {"items": items, "count": len(items)}
+
+
+@router.get("/worldlinco/telemetry")
+async def admin_get_worldlinco_telemetry(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    del admin
+    return _load_worldlinco_telemetry_payload()
+
+
+@router.get("/worldlinco/calibration-artifacts")
+async def admin_get_worldlinco_calibration_artifacts(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    del admin
+    telemetry_payload = _load_worldlinco_telemetry_payload()
+    recommendation_path = _admin_worldlinco_recommendation_path()
+
+    recommendation_payload: Dict[str, Any] = {}
+    if recommendation_path.is_file():
+        recommendation_payload = _load_json_file(recommendation_path)
+        if not isinstance(recommendation_payload, dict):
+            recommendation_payload = {}
+
+    csv_paths = _admin_worldlinco_priority_csv_paths()
+    csv_entries: List[Dict[str, Any]] = []
+    for csv_path in csv_paths:
+        meta = _path_file_meta(csv_path)
+        if meta.get("exists"):
+            meta["rows"] = _estimate_csv_rows(csv_path)
+        csv_entries.append(meta)
+
+    return {
+        "generated_at": utcnow().isoformat() + "Z",
+        "artifacts": {
+            "telemetry": {
+                **_path_file_meta(_admin_worldlinco_telemetry_path()),
+                "total_items": int((telemetry_payload.get("summary") or {}).get("total_items") or 0),
+                "updated_at": telemetry_payload.get("updated_at"),
+            },
+            "recommendation": {
+                **_path_file_meta(recommendation_path),
+                "confidence": (recommendation_payload.get("meta") or {}).get("confidence"),
+                "warnings": (recommendation_payload.get("meta") or {}).get("warnings") or [],
+                "sample_coverage": recommendation_payload.get("sample_coverage") or {},
+                "has_test_priority_plan": bool(recommendation_payload.get("test_priority_plan")),
+            },
+            "priority_csv": csv_entries,
+        },
+    }
+
+
+@router.post("/worldlinco/telemetry/upload")
+async def admin_upload_worldlinco_telemetry(
+    payload: AdminWorldlincoTelemetryUploadRequest,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    current = _load_worldlinco_telemetry_payload()
+    current_items = current.get("items") if isinstance(current.get("items"), list) else []
+    next_items = [item for item in current_items if isinstance(item, dict)]
+    accepted = 0
+    for item in payload.items:
+        normalized = _normalize_worldlinco_telemetry_item(item.model_dump())
+        if not normalized:
+            continue
+        next_items.append(normalized)
+        accepted += 1
+
+    if len(next_items) > _ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:
+        next_items = next_items[-_ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:]
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    updated_payload = {
+        **current,
+        "updated_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "note": str(payload.note or current.get("note") or ""),
+        "items": next_items,
+    }
+    saved = _save_worldlinco_telemetry_payload(updated_payload)
+    return {
+        "accepted": accepted,
+        "total_items": len(saved.get("items") or []),
+        "updated_at": saved.get("updated_at"),
+        "updated_by": saved.get("updated_by"),
+        "summary": saved.get("summary") or {},
+    }
+

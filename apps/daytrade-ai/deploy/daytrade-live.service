@@ -1,0 +1,38 @@
+# daytrade-ai 라이브 상시운영 systemd 유닛(설계서 §6/§10-5).
+# 설치:
+#   sudo cp deploy/daytrade-live.service /etc/systemd/system/
+#   sudo cp deploy/daytrade-live.env     /etc/daytrade/daytrade-live.env   # 값 편집
+#   sudo systemctl daemon-reload && sudo systemctl enable --now daytrade-live
+#   journalctl -u daytrade-live -f      # heartbeat/리포트 JSON 로그 추적
+[Unit]
+Description=daytrade-ai live operations runner (scalping paper/live)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trader
+Group=trader
+WorkingDirectory=/opt/daytrade-ai
+EnvironmentFile=/etc/daytrade/daytrade-live.env
+ExecStart=/opt/daytrade-ai/.venv/bin/python scripts/live_ops.py \
+  --feed ${FEED} --symbol ${SYMBOL} \
+  --metrics-host 0.0.0.0 --metrics-port ${METRICS_PORT} \
+  --heartbeat ${HEARTBEAT} \
+  --db ${DB_PATH} --audit ${AUDIT_PATH} --report-dir ${REPORT_DIR}
+
+# 자동 복구: 비정상 종료 시 재시작(상주). 그레이스풀 종료는 SIGTERM.
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# 보안 하드닝.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/daytrade
+
+[Install]
+WantedBy=multi-user.target

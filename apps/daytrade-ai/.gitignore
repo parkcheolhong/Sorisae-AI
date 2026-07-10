@@ -1,0 +1,20 @@
+# 캡처된 시세 데이터(회귀셋) — 크기가 커질 수 있어 기본 제외. 필요 시 강제 추가(git add -f).
+data/*.csv
+
+# 학습/탐색 산출물
+artifacts/
+*.onnx
+model.json
+best.json
+
+# C++ 코어(M3) 빌드 산출물
+cpp/build/
+*.pyd
+*.so
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.last.xml
+*.egg-info/

@@ -1,10 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { postOrchestratorChat } from '@/lib/orchestrator-chat-client';
+import { postAdminOrchestratorChat } from '@/lib/orchestrator-chat-client';
+import {
+    buildLiveFlowSnapshotFromDiagnostics,
+    mergeLiveFlowWithProgress,
+} from '@/lib/orchestrator-live-flow';
+import { useOrchestratorLiveProgress } from '@/lib/use-orchestrator-live-progress';
 import {
     dedupeConversationMessages,
     type OrchestratorConversationMessage,
 } from '@/lib/orchestrator-chat-normalizer';
+import { speakOrchestratorReply } from '@/lib/orchestrator-speech';
+import {
+    buildVoiceContextTags,
+    buildVoiceDiagnosticsPatch,
+    enrichVoiceMessageForStage,
+    normalizeVoiceTranscript,
+    resolveVoiceSpeaker,
+} from '@/lib/orchestrator-voice-entry';
+import { useOrchestratorVoiceStt } from '@/lib/use-orchestrator-voice-stt';
 
 export type { OrchestratorConversationMessage } from '@/lib/orchestrator-chat-normalizer';
 
@@ -155,7 +169,8 @@ export interface SuggestedSelfRunPreview {
     | 'video_ad_new_tech'
     | 'admin_ops_efficiency'
     | 'marketplace_conversion'
-    | 'llm_cost_latency';
+    | 'llm_cost_latency'
+    | 'tower_crane_expansion';
     directiveScope: 'preset_default' | 'diagnosis_only' | 'targeted_implementation' | 'feature_expansion' | 'modernization';
     directiveRequest: string;
 }
@@ -189,7 +204,10 @@ export interface OrchestratorChatResponse {
     technology_recommendations?: TechnologyRecommendation[];
     target_patch_hints?: TargetPatchHint[];
     session_id?: string | null;
+    diagnostics?: Record<string, unknown>;
 }
+
+export type { OrchestratorLiveFlowSnapshot } from '@/lib/orchestrator-live-flow';
 
 export interface VoiceResponse {
     transcript: string;
@@ -303,7 +321,6 @@ interface UseOrchestratorChatOptions {
 }
 
 export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
-    const recognitionRef = useRef<any>(null);
     const [chatSessionId, setChatSessionId] = useState(() => {
         if (typeof window === 'undefined') {
             return `admin-chat-${Date.now()}`;
@@ -337,7 +354,6 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     });
     const [chatInput, setChatInput] = useState('');
     const [chatLoading, setChatLoading] = useState(false);
-    const [voiceListening, setVoiceListening] = useState(false);
     const [chatAgentKey, setChatAgentKey] = useState<OrchestratorAgentKey>('chat');
     const [voiceAgentKey, setVoiceAgentKey] = useState<OrchestratorAgentKey>('reasoner');
     const [textFeatureAgents, setTextFeatureAgents] = useState<Record<RoutedTextFeatureKey, OrchestratorAgentKey>>(DEFAULT_ROUTED_TEXT_AGENTS);
@@ -358,6 +374,29 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
     const [newTechnologyCandidates, setNewTechnologyCandidates] = useState<string[]>([]);
     const [technologyRecommendations, setTechnologyRecommendations] = useState<TechnologyRecommendation[]>([]);
     const [targetPatchHints, setTargetPatchHints] = useState<TargetPatchHint[]>([]);
+    const [liveFlowDiagnostics, setLiveFlowDiagnostics] = useState<Record<string, unknown> | null>(null);
+    const progressRunId = String(chatSessionId || options.liveRunIdRef.current || '').trim();
+    const progressUrl = progressRunId
+        ? `${options.apiBaseUrl}/api/llm/orchestrate/progress/${encodeURIComponent(progressRunId)}`
+        : null;
+    const progressPollingEnabled = chatLoading
+        || (typeof liveFlowDiagnostics?.execution_state === 'string' && liveFlowDiagnostics.execution_state === 'executing')
+        || liveFlowDiagnostics?.progress_status === 'running';
+    const adminAccessToken = typeof window !== 'undefined' ? (options.getAdminToken() || null) : null;
+    const liveProgressSnapshot = useOrchestratorLiveProgress({
+        enabled: Boolean(progressPollingEnabled && progressUrl && adminAccessToken),
+        progressUrl,
+        accessToken: adminAccessToken,
+        authHeaders: adminAccessToken
+            ? { Authorization: `Bearer ${adminAccessToken}` }
+            : undefined,
+        preferStream: true,
+    }).snapshot;
+    const liveFlowSnapshot = mergeLiveFlowWithProgress(
+        buildLiveFlowSnapshotFromDiagnostics(liveFlowDiagnostics, { chatLoading }),
+        liveProgressSnapshot,
+        { chatLoading },
+    );
     const [conversationAssistExpanded, setConversationAssistExpanded] = useState(false);
     const [suggestedSelfRunPreview, setSuggestedSelfRunPreview] = useState<SuggestedSelfRunPreview | null>(null);
 
@@ -380,133 +419,6 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         const content = chatInput.trim();
         setChatInput('');
         await sendChatMessage(content);
-    };
-
-    const playReturnedAudio = (audioBase64?: string, audioFormat?: string) => {
-        if (!audioBase64 || !audioFormat || !audioFormat.startsWith('audio/')) {
-            return false;
-        }
-        const audio = new Audio(`data:${audioFormat};base64,${audioBase64}`);
-        void audio.play().catch(() => null);
-        return true;
-    };
-
-    const pushVoiceMessage = async (transcript: string) => {
-        if (!transcript.trim()) return;
-        const userMessage: OrchestratorConversationMessage = {
-            role: 'user',
-            speaker: '관리자(음성)',
-            content: transcript.trim(),
-            timestamp: new Date().toISOString(),
-        };
-        const nextConversation = [...conversation, userMessage];
-        setConversation(nextConversation);
-        const nextTask = getEffectiveTaskInput() || transcript.trim();
-        if (!options.task.trim()) {
-            options.setTask(transcript.trim());
-        }
-        setChatLoading(true);
-        try {
-            const data = await postOrchestratorChat<VoiceResponse>(
-                `${options.apiBaseUrl}/api/llm/voice/orchestrate`,
-                options.getAdminToken(),
-                {
-                    transcript: transcript.trim(),
-                    agent_key: voiceAgentKey,
-                    tts: true,
-                    auto_apply: false,
-                    task: nextTask,
-                    mode: options.manualMode ? 'manual_9step' : options.mode,
-                    manual_mode: options.manualMode,
-                    companion_mode: 'hybrid',
-                    output_dir: resolveReusableOutputDir(),
-                    run_id: options.liveRunIdRef.current || undefined,
-                    session_id: chatSessionId,
-                    max_tokens: getConversationRequestMaxTokens(),
-                    conversation: nextConversation,
-                },
-            );
-            if (Array.isArray(data.conversation) && data.conversation.length > 0) {
-                setConversation(dedupeConversationMessages(data.conversation));
-            } else {
-                appendConversationMessage({
-                    role: 'assistant',
-                    speaker: '오케스트레이터',
-                    step_title: '음성 응답',
-                    content: data.response_text,
-                    timestamp: new Date().toISOString(),
-                });
-            }
-            if (data.output_dir) {
-                options.setWorkOutputDir(data.output_dir);
-            } else if (data.failed_output_dir) {
-                options.setLiveOutputDir(data.failed_output_dir);
-            }
-            // chatSessionId is generated/persisted locally and sent as session_id; do not overwrite it from run_id.
-            if (!playReturnedAudio(data.audio_base64, data.audio_format)) {
-                options.speakText?.(data.response_text);
-            }
-        } catch (e: any) {
-            appendConversationMessage({
-                role: 'assistant',
-                speaker: '오케스트레이터',
-                step_title: '음성 오류',
-                content: `음성 응답 실패: ${e.message}`,
-                timestamp: new Date().toISOString(),
-            });
-        } finally {
-            setChatLoading(false);
-        }
-    };
-
-    const startVoiceInput = () => {
-        if (voiceListening) {
-            recognitionRef.current?.stop();
-            return;
-        }
-        if (typeof window === 'undefined') {
-            return;
-        }
-        const SpeechRecognitionCtor = (
-            (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-        );
-        if (!SpeechRecognitionCtor) {
-            appendConversationMessage({
-                role: 'assistant',
-                speaker: '오케스트레이터',
-                step_title: '음성 안내',
-                content: '이 브라우저는 음성 인식을 지원하지 않습니다. 크롬 계열 브라우저에서 관리자 페이지를 열어 사용해 주세요.',
-                timestamp: new Date().toISOString(),
-            });
-            return;
-        }
-        const recognition = new SpeechRecognitionCtor();
-        recognition.lang = 'ko-KR';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-        recognition.onresult = async (event: any) => {
-            const transcript = String(event?.results?.[0]?.[0]?.transcript || '').trim();
-            if (transcript) {
-                await pushVoiceMessage(transcript);
-            }
-        };
-        recognition.onerror = (event: any) => {
-            const detail = String(event?.error || 'unknown');
-            appendConversationMessage({
-                role: 'assistant',
-                speaker: '오케스트레이터',
-                step_title: '음성 오류',
-                content: `음성 인식 실패: ${detail}`,
-                timestamp: new Date().toISOString(),
-            });
-        };
-        recognition.onend = () => {
-            setVoiceListening(false);
-            recognitionRef.current = null;
-        };
-        recognitionRef.current = recognition;
-        setVoiceListening(true);
-        recognition.start();
     };
 
     const pushAssistantNotice = (stepTitle: string, content: string) => {
@@ -562,8 +474,16 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         return candidate;
     };
 
-    const sendChatMessage = async (content: string) => {
+    const sendChatMessage = async (
+        content: string,
+        sendOptions?: { userSpeaker?: string; speakReply?: boolean; fromVoice?: boolean },
+    ) => {
         if (!content) return;
+        const isVoice = Boolean(sendOptions?.fromVoice)
+            || (sendOptions?.userSpeaker || '').includes('음성');
+        const effectiveContent = isVoice
+            ? enrichVoiceMessageForStage(content, { stageNumber: liveFlowSnapshot.stageNumber })
+            : content;
         const routedFeature = chatFunctionMode !== 'auto'
             ? chatFunctionMode
             : detectRoutedTextFeature(content);
@@ -574,28 +494,38 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         const tonePresetPayload = resolveTonePresetPayload(conversationTonePreset);
         const userMessage: OrchestratorConversationMessage = {
             role: 'user',
-            speaker: '관리자',
-            content,
+            speaker: sendOptions?.userSpeaker || '관리자',
+            content: effectiveContent,
             timestamp: new Date().toISOString(),
         };
         const nextConversation = [...conversation, userMessage];
         setConversation(nextConversation);
-        const nextTask = getEffectiveTaskInput() || content;
+        const nextTask = getEffectiveTaskInput() || effectiveContent;
         if (!options.task.trim()) {
-            options.setTask(content);
+            options.setTask(effectiveContent);
         }
         setChatInput('');
         setChatLoading(true);
+        setLiveFlowDiagnostics((prev) => ({
+            ...(prev || {}),
+            ...(isVoice ? buildVoiceDiagnosticsPatch('admin') : {}),
+            orchestrator_core: prev?.orchestrator_core,
+            stages_completed: prev?.stages_completed,
+            stages_total: prev?.stages_total,
+            autonomous_intent: prev?.autonomous_intent,
+            stage_command_hint: prev?.stage_command_hint,
+        }));
         const requestStartedAt = Date.now();
         const controller = new AbortController();
         const abortTimer = window.setTimeout(() => controller.abort(), ORCHESTRATOR_CHAT_ABORT_MS);
+        const voiceTags = isVoice ? buildVoiceContextTags() : [];
         try {
-            const data = await postOrchestratorChat<OrchestratorChatResponse>(
-                `${options.apiBaseUrl}/api/llm/orchestrate/chat`,
+            const data = await postAdminOrchestratorChat<OrchestratorChatResponse>(
+                options.apiBaseUrl,
                 options.getAdminToken(),
                 {
                     task: nextTask,
-                    message: content,
+                    message: effectiveContent,
                     agent_key: effectiveAgentKey,
                     mode: options.manualMode ? 'manual_9step' : options.mode,
                     manual_mode: options.manualMode,
@@ -609,7 +539,7 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                     session_id: chatSessionId,
                     max_tokens: getConversationRequestMaxTokens(),
                     conversation: nextConversation,
-                    context_tags: ['admin-orchestrator', 'free-dialogue', tonePresetPayload.tag],
+                    context_tags: ['admin-orchestrator', 'free-dialogue', tonePresetPayload.tag, ...voiceTags],
                 },
                 controller.signal,
             );
@@ -632,6 +562,14 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
             setNewTechnologyCandidates(Array.isArray(data.new_technology_candidates) ? data.new_technology_candidates : []);
             setTechnologyRecommendations(Array.isArray(data.technology_recommendations) ? data.technology_recommendations : []);
             setTargetPatchHints(Array.isArray(data.target_patch_hints) ? data.target_patch_hints : []);
+            setLiveFlowDiagnostics(
+                data.diagnostics && typeof data.diagnostics === 'object'
+                    ? {
+                        ...(data.diagnostics as Record<string, unknown>),
+                        ...(isVoice ? buildVoiceDiagnosticsPatch('admin') : {}),
+                    }
+                    : (isVoice ? buildVoiceDiagnosticsPatch('admin') : null),
+            );
             if (data.session_id) {
                 setChatSessionId(data.session_id);
             }
@@ -639,6 +577,16 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
                 options.setWorkOutputDir(data.output_dir);
             } else if (data.failed_output_dir) {
                 options.setLiveOutputDir(data.failed_output_dir);
+            }
+            if (sendOptions?.speakReply) {
+                const replyText = data.reply?.content
+                    || [...(Array.isArray(data.conversation) ? data.conversation : [])]
+                        .reverse()
+                        .find((message) => message.role === 'assistant')?.content
+                    || '';
+                if (replyText) {
+                    void speakOrchestratorReply(replyText);
+                }
             }
         } catch (e: any) {
             const elapsedMs = Math.max(0, Date.now() - requestStartedAt);
@@ -660,6 +608,40 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
             setChatLoading(false);
         }
     };
+
+    const pushVoiceMessage = async (transcript: string) => {
+        const normalized = normalizeVoiceTranscript(transcript);
+        if (!normalized) {
+            return;
+        }
+        await sendChatMessage(normalized, {
+            userSpeaker: resolveVoiceSpeaker('admin'),
+            speakReply: true,
+            fromVoice: true,
+        });
+    };
+
+    const { listening: voiceListening, startListening: startVoiceInput } = useOrchestratorVoiceStt({
+        onTranscript: pushVoiceMessage,
+        onUnsupported: () => {
+            appendConversationMessage({
+                role: 'assistant',
+                speaker: '오케스트레이터',
+                step_title: '음성 안내',
+                content: '이 브라우저는 음성 인식을 지원하지 않습니다. 크롬 계열 브라우저에서 관리자 페이지를 열어 사용해 주세요.',
+                timestamp: new Date().toISOString(),
+            });
+        },
+        onError: (detail) => {
+            appendConversationMessage({
+                role: 'assistant',
+                speaker: '오케스트레이터',
+                step_title: '음성 오류',
+                content: `음성 인식 실패: ${detail}`,
+                timestamp: new Date().toISOString(),
+            });
+        },
+    });
 
     return {
         conversation,
@@ -686,12 +668,11 @@ export function useOrchestratorChat(options: UseOrchestratorChatOptions) {
         newTechnologyCandidates,
         technologyRecommendations,
         targetPatchHints,
+        liveFlowSnapshot,
         conversationAssistExpanded,
         suggestedSelfRunPreview,
-        recognitionRef,
         setConversation,
         setChatInput,
-        setVoiceListening,
         setChatAgentKey,
         setVoiceAgentKey,
         setTextFeatureAgents,

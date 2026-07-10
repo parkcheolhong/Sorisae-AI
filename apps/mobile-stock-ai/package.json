@@ -25,13 +25,13 @@
     "eas:submit:ios:production": "npm run eas:project:ensure && npm run release:gate:production && eas submit --platform ios --profile production"
   },
   "dependencies": {
-    "expo": "~56.0.4",
+    "expo": "~56.0.8",
     "expo-asset": "~11.0.5",
     "expo-build-properties": "~0.13.3",
-    "expo-constants": "~17.0.3",
+    "expo-constants": "~17.0.8",
     "expo-file-system": "~18.0.12",
-    "expo-secure-store": "~14.0.0",
-    "expo-sharing": "~13.0.0",
+    "expo-secure-store": "~14.0.1",
+    "expo-sharing": "~13.0.1",
     "expo-status-bar": "~2.0.1",
     "expo-updates": "~0.27.5",
     "react": "18.3.1",

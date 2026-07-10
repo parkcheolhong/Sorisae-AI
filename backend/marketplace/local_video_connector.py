@@ -1,6 +1,8 @@
 ﻿from __future__ import annotations
 
 from datetime import datetime
+
+from backend.time_utils import utcnow
 from pathlib import Path
 import json
 import shutil
@@ -60,7 +62,7 @@ def plan_local_video_connector(payload: Dict[str, object]) -> Dict[str, object]:
     frames = list(payload.get("frames") or [])
     subtitle_cues = list(payload.get("subtitle_cues") or [])
 
-    run_id = f"video-connector-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
+    run_id = f"video-connector-{utcnow().strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
     output_dir = _output_root() / run_id
     output_dir.mkdir(parents=True, exist_ok=True)
     frames_dir = output_dir / "frames"

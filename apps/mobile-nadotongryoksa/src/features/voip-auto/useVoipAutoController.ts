@@ -15,6 +15,9 @@ type VoipAutoCallInitPayload = {
     session_id: string;
     mode?: string; // 'voip_full_auto'
     auto_relay?: boolean;
+    caller_preferred_language?: string;
+    callee_preferred_language?: string;
+    client_network_context?: Record<string, string | boolean | null>;
 };
 
 type VoipAutoCallInitResponse = {
@@ -122,6 +125,9 @@ export function useVoipAutoController(apiBaseUrl: string, authToken: string): Vo
                     session_id: payload.session_id,
                     mode: payload.mode || 'voip_full_auto',
                     auto_relay: payload.auto_relay ?? false,
+                    caller_preferred_language: payload.caller_preferred_language,
+                    callee_preferred_language: payload.callee_preferred_language,
+                    client_network_context: payload.client_network_context,
                 }),
             });
 

@@ -1,0 +1,46 @@
+{
+  "trusted_domains": [
+    "mofa.go.kr",
+    "overseas.mofa.go.kr",
+    "travel.state.gov",
+    "state.gov",
+    "gov.uk",
+    "smarttraveller.gov.au",
+    "canada.ca",
+    "travel.gc.ca",
+    "diplomatie.gouv.fr",
+    "auswaertiges-amt.de",
+    "bmeia.gv.at",
+    "mofa.go.jp",
+    "mofa.go.th",
+    "mfa.gov.sg",
+    "gov.cn",
+    "gov.hk",
+    "gov.mo",
+    "gov.tw"
+  ],
+  "zones": [
+    {
+      "name": "sample-high-risk-zone-osaka-port",
+      "country_code": "JP",
+      "risk_level": "high",
+      "center": {
+        "lat": 34.638,
+        "lon": 135.41
+      },
+      "radius_km": 1.8,
+      "guidance": "인적이 적은 항만 외곽 구역은 피하고, 야간에는 메인 도로/역세권 위주로 이동하세요."
+    },
+    {
+      "name": "sample-caution-zone-bangkok-outskirt",
+      "country_code": "TH",
+      "risk_level": "medium",
+      "center": {
+        "lat": 13.756,
+        "lon": 100.502
+      },
+      "radius_km": 2.5,
+      "guidance": "혼잡시간대 소매치기 주의, 귀중품 분산 보관, 공식 교통수단 우선 이용."
+    }
+  ]
+}

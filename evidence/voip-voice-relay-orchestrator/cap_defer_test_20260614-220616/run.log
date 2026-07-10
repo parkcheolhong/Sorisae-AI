@@ -1,0 +1,15 @@
+[22:06:16] Cap/defer test dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-220616
+[22:06:16] Expected build 1.0.39 code 64
+[22:06:16] Using existing connected call
+[22:06:16] Waiting for S10 voice relay segment...
+[22:06:54] === Phase A (40s): S10 짧은 burst (defer 유도) ===
+[22:06:54] Defer: 5s probe -> flush -> 0.35s burst within cooldown (post_flush_cooldown)
+[22:07:08] Defer short burst #1
+[22:07:19] Defer short burst #2
+[22:07:29] Defer short burst #3
+[22:07:39] Defer short burst #4
+[22:07:50] === Phase B (90s): S10 15초+ 연속 발화 (14s cap 확인) ===
+[22:07:50] Cap phase: 22s probe + return to VoIP foreground
+[22:08:58] Defer phase: flush_false=0 defer= PASS=False
+[22:08:58] Cap phase: max_duration=1 elapsed_ms=0 PASS=False
+[22:08:58] Artifacts: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-220616
