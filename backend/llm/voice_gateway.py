@@ -768,7 +768,122 @@ def _friend_is_noise_or_hallucination(transcript: str) -> bool:
             return True
     except Exception:
         pass
+    words = text.split()
+    if len(words) >= 20:
+        unique_ratio = len(set(words)) / max(1, len(words))
+        if unique_ratio <= 0.2:
+            return True
     return False
+
+
+def _guess_audio_input_suffix(audio_bytes: bytes) -> str:
+    if audio_bytes[:4] == b"RIFF":
+        return ".wav"
+    if b"ftyp" in audio_bytes[:32]:
+        return ".m4a"
+    if audio_bytes[:3] == b"ID3" or audio_bytes[:2] == b"\xff\xfb":
+        return ".mp3"
+    return ".dat"
+
+
+def _voice_stt_exc_http_status(message: str) -> int:
+    lowered = str(message or "").strip().lower()
+    if "음성이 감지되지 않았습니다" in str(message or "") or "no speech" in lowered:
+        return 422
+    return 400
+
+
+def _friend_accept_despite_low_stt_trust(
+    transcript: str,
+    detected_language: Optional[str],
+    language_probability: float,
+    stt_trust: str,
+) -> bool:
+    if str(stt_trust or "").strip().lower() != "low":
+        return False
+    text = str(transcript or "").strip()
+    if len(text) < 2:
+        return False
+    if _lang_primary(detected_language) == "ko":
+        return True
+    has_hangul = any("가" <= char <= "힣" for char in text)
+    return has_hangul and float(language_probability or 0.0) >= 0.4
+
+
+def _friend_is_tourism_guide_query(transcript: str) -> bool:
+    normalized = " ".join(str(transcript or "").strip().split()).lower()
+    if not normalized:
+        return False
+    guide_keywords = (
+        "역사", "탐방", "맛집", "숙소", "관광", "명소", "가볼만", "가 볼 만",
+        "hotel", "restaurant", "museum", "attraction", "things to do",
+    )
+    return any(keyword.lower() in normalized for keyword in guide_keywords)
+
+
+def _resolve_friend_reply_budget(
+    transcript: str,
+    config: dict[str, object],
+) -> dict[str, object]:
+    is_guide_query = _friend_is_tourism_guide_query(transcript)
+    tier = int(config.get("tourism_guide_tier", 1) or 1)
+    reply_tokens = int(config.get("friend_reply_max_tokens", 256) or 256)
+    realtime_tokens = int(config.get("friend_realtime_max_tokens", 192) or 192)
+    max_len_ko = 320
+    if is_guide_query:
+        if tier >= 3:
+            max_len_ko = 900
+        elif tier == 2:
+            max_len_ko = 700
+        else:
+            max_len_ko = 520
+    return {
+        "is_guide_query": is_guide_query,
+        "tourism_guide_tier": tier,
+        "friend_reply_max_tokens": reply_tokens,
+        "friend_realtime_max_tokens": realtime_tokens,
+        "max_len_ko": max_len_ko,
+    }
+
+
+def _trim_friend_reply_for_speed(text: str, profile_language: Optional[str], transcript: str) -> str:
+    cleaned = _sanitize_friend_reply_for_speech(text)
+    budget = _resolve_friend_reply_budget(transcript, {})
+    max_len_ko = int(budget.get("max_len_ko", 320) or 320)
+    if _lang_primary(profile_language) == "ko" and len(cleaned) > max_len_ko:
+        return cleaned[:max_len_ko].rstrip()
+    return cleaned
+
+
+def _normalize_friend_reply_output_language(text: str, target_lang: Optional[str]) -> str:
+    cleaned = _sanitize_friend_reply_for_speech(text)
+    if _lang_primary(target_lang) != "ja":
+        return cleaned
+    if not any("가" <= char <= "힣" for char in cleaned):
+        return cleaned
+    try:
+        from backend.services.nadotongryoksa.translator import NadoTranslator
+
+        translator = NadoTranslator.get_instance()
+        return str(translator.translate(cleaned, from_lang="ko", to_lang="ja") or cleaned).strip()
+    except Exception:
+        return cleaned
+
+
+def _resolve_friend_reply_language(
+    profile_language: Optional[str],
+    detected_language: Optional[str],
+    language_probability: float,
+    transcript: str,
+    min_lang_prob: float,
+) -> str:
+    profile = _lang_primary(profile_language)
+    if profile:
+        return profile
+    detected = _lang_primary(detected_language)
+    if detected and float(language_probability or 0.0) >= float(min_lang_prob or 0.0):
+        return detected
+    return _lang_primary(_detect_dominant_script_lang(transcript)) or "ko"
 
 
 def _resolve_voice_chat_model(agent_key: str, *, lightweight: bool) -> str:
@@ -906,7 +1021,7 @@ def _normalize_voice_audio_bytes(audio_bytes: bytes) -> bytes:
         raise RuntimeError("오디오 데이터가 비어 있습니다")
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        src = Path(temp_dir) / "voice_input.bin"
+        src = Path(temp_dir) / f"voice_input{_guess_audio_input_suffix(audio_bytes)}"
         dst = Path(temp_dir) / "voice_normalized.wav"
         src.write_bytes(audio_bytes)
         audio_filter = os.getenv(
