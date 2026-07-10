@@ -12,6 +12,7 @@ env:
 
 jobs:
     constitution-hard-gate:
+        name: constitution-hard-gate / constitution-hard-gate
         runs-on: ubuntu-latest
         steps:
             - name: Checkout

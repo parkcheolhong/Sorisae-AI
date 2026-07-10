@@ -25,6 +25,7 @@ env:
 
 jobs:
   sorisae-unit-gate:
+    name: sorisae-friend-chat-gate / sorisae-unit-gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

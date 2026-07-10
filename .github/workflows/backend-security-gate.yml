@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   backend-security-gate:
+    name: backend-security-gate / backend-security-gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
