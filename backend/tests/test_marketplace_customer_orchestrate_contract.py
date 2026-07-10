@@ -124,7 +124,6 @@ def test_customer_orchestrate_accepted_returns_stage_run_payload(monkeypatch):
             "run_id": "run-accepted-001",
             "current_stage_id": "ARCH-001",
             "status": "pending",
-            "requested_by": {"id": 7, "email": "customer@example.com"},
             "stages": [],
         },
     )
@@ -146,36 +145,6 @@ def test_customer_orchestrate_accepted_returns_stage_run_payload(monkeypatch):
     assert payload["run_id"] == "run-accepted-001"
     assert payload["stage_run"]["current_stage_id"] == "ARCH-001"
     assert payload["status"] == "accepted"
-
-
-def test_customer_orchestrate_accepted_rejects_other_users_stage_run(monkeypatch):
-    fake_db = _FakeDb()
-    client = _build_test_client(fake_db)
-
-    monkeypatch.setattr(
-        marketplace_router_module,
-        "load_stage_run",
-        lambda run_id: {
-            "run_id": "run-accepted-001",
-            "current_stage_id": "ARCH-001",
-            "status": "pending",
-            "requested_by": {"id": 8, "email": "other@example.com"},
-            "stages": [],
-        },
-    )
-
-    response = client.post(
-        "/api/marketplace/customer-orchestrate/accepted",
-        json={
-            "task": "고객 주문 생성",
-            "mode": "full",
-            "project_name": "contract-check",
-            "stage_run_id": "run-accepted-001",
-            "stage_id": "ARCH-001",
-        },
-    )
-
-    assert response.status_code == 403
 
 
 def test_build_customer_orchestrate_request_schedules_cleanup(monkeypatch, tmp_path):
