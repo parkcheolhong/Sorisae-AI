@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-MIN_APK_BUILD = int(os.getenv("SORISAE_PROBE_MIN_APK_BUILD", "296"))
+MIN_APK_BUILD = int(os.getenv("SORISAE_PROBE_MIN_APK_BUILD", "323"))
 PROBE_SPEECH_TEXT = os.getenv("SORISAE_PROBE_SPEECH_TEXT", "춘천 맛집 추천해줘")
 DOCKER_CONTAINER = os.getenv("SORISAE_PROBE_DOCKER_CONTAINER", "devanalysis114-backend")
 FIXTURE_M4A = ROOT / "scripts" / "fixtures" / "sorisae_probe_ko_speech.m4a"

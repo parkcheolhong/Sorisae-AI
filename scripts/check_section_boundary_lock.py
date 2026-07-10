@@ -20,7 +20,6 @@ VOIP_PREFIXES = (
     "apps/mobile-nadotongryoksa/src/native/voipAudio",
     "apps/mobile-nadotongryoksa/src/features/voip-auto/",
     "apps/mobile-nadotongryoksa/src/features/voip-voice-relay/",
-    "knowledge/worldlinco_apk_baseline.json",
 )
 
 # 소리새 전용 — VoIP 작업 시 수정 금지
@@ -33,11 +32,12 @@ SORISAE_PREFIXES = (
     "scripts/check_sorisae_regression_lock.py",
 )
 
-# 양쪽 작업에서 공통으로 허용 (세션 헌법·문서·게이트만)
+# 양쪽 작업에서 공통으로 허용 (세션 헌법·문서·게이트·APK baseline)
 SHARED_PREFIXES = (
     "apps/mobile-nadotongryoksa/src/services/voipSessionGuard.ts",
     "apps/mobile-nadotongryoksa/src/services/voiceCaptureLease.ts",
     "knowledge/worldlinco_section_freeze.json",
+    "knowledge/worldlinco_apk_baseline.json",
     "knowledge/worldlinco_tuning_config.json",
     "backend/marketplace/worldlinco_section_freeze.py",
     "backend/voip/voip_tts_prosody.py",
@@ -138,7 +138,7 @@ def main() -> int:
             f"voip={buckets['voip'][:5]} sorisae={buckets['sorisae'][:5]}"
         )
 
-    if buckets["voice_gateway"]:
+    if buckets["voip"] and buckets["voice_gateway"]:
         hits = _voice_gateway_voip_touched_sorisae()
         if hits:
             errors.append(
