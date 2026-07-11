@@ -43,7 +43,7 @@ assert.ok(
     'WorldLinco purchases must resolve a real marketplace project id',
 );
 assert.ok(
-    pageSource.includes('resolveNadotongryoksaProjectId'),
+    pageSource.includes('resolveWorldLincoProjectId'),
     'WorldLinco payment flow should resolve the seeded marketplace project',
 );
 assert.ok(
