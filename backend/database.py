@@ -1,7 +1,27 @@
 """공용 백엔드 데이터베이스 호환 레이어"""
+import re
+
 from sqlalchemy import inspect, text
 
 from backend.marketplace.database import Base, SessionLocal, check_database_availability, engine, get_db
+
+
+def add_missing_columns(connection, table_name: str, column_specs: dict[str, str], *, inspector) -> set[str]:
+    existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+    added_columns: set[str] = set()
+    is_sqlite = connection.dialect.name == "sqlite"
+
+    for column_name, column_type in column_specs.items():
+        if column_name in existing_columns:
+            continue
+        ddl_type = column_type
+        if is_sqlite:
+            # SQLite cannot add a column with an inline UNIQUE constraint.
+            ddl_type = re.sub(r"\s+UNIQUE\b", "", ddl_type, flags=re.IGNORECASE)
+        connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl_type}"))
+        added_columns.add(column_name)
+
+    return added_columns
 
 
 def ensure_user_role_columns() -> None:
@@ -11,7 +31,7 @@ def ensure_user_role_columns() -> None:
         return
 
     with engine.begin() as connection:
-        add_missing_columns(
+        added_columns = add_missing_columns(
             connection,
             "users",
             {
@@ -22,6 +42,10 @@ def ensure_user_role_columns() -> None:
                 "business_name": "VARCHAR(200)",
                 "business_registration_number": "VARCHAR(50)",
                 "representative_name": "VARCHAR(120)",
+                "preferred_language": "VARCHAR(16)",
+                "country_code": "VARCHAR(8)",
+                "phone_number": "VARCHAR(40)",
+                "is_staff": "BOOLEAN NOT NULL DEFAULT FALSE",
                 "passkey_enabled": "BOOLEAN NOT NULL DEFAULT FALSE",
                 "passkey_credential_id": "VARCHAR(255) UNIQUE",
                 "passkey_public_key": "TEXT",
@@ -33,80 +57,13 @@ def ensure_user_role_columns() -> None:
             },
             inspector=inspector,
         )
-    if "is_admin" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE"
-        )
-    if "is_superuser" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT FALSE"
-        )
-    if "member_type" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN member_type VARCHAR(30) NOT NULL DEFAULT 'individual'"
-        )
-    if "business_name" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN business_name VARCHAR(200)"
-        )
-    if "business_registration_number" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN business_registration_number VARCHAR(50)"
-        )
-    if "representative_name" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN representative_name VARCHAR(120)"
-        )
-    if "preferred_language" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(16)"
-        )
-    if "country_code" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN country_code VARCHAR(8)"
-        )
-    if "phone_number" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN phone_number VARCHAR(40)"
-        )
-        statements.append(
-            "CREATE INDEX IF NOT EXISTS ix_users_phone_number ON users (phone_number)"
-        )
-    if "is_staff" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN is_staff BOOLEAN NOT NULL DEFAULT FALSE"
-        )
-    if "passkey_enabled" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN passkey_enabled BOOLEAN NOT NULL DEFAULT FALSE"
-        )
-    if "passkey_credential_id" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN passkey_credential_id VARCHAR(255) UNIQUE"
-        )
-    if "passkey_public_key" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN passkey_public_key TEXT"
-        )
-    if "passkey_device_label" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN passkey_device_label VARCHAR(120)"
-        )
-    if "passkey_sign_count" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN passkey_sign_count INTEGER NOT NULL DEFAULT 0"
-        )
-    if "passkey_registered_at" not in columns:
-        statements.append(
-            "ALTER TABLE users ADD COLUMN passkey_registered_at TIMESTAMP"
-        )
-
-    if not statements:
-        return
-
-    with engine.begin() as connection:
-        for statement in statements:
-            connection.execute(text(statement))
+        if "phone_number" in added_columns:
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_users_phone_number ON users (phone_number)"))
+        if connection.dialect.name == "sqlite" and "passkey_credential_id" in added_columns:
+            connection.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_passkey_credential_id "
+                "ON users (passkey_credential_id)"
+            ))
 
 
 def ensure_traceability_schema() -> None:
