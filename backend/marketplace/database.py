@@ -63,6 +63,11 @@ def _host_accepts_tcp(host: str, port: int, timeout: float = 0.35) -> bool:
         return False
 
 
+def _enable_implicit_localhost_fallback() -> bool:
+    raw = _read_plain_env_value("POSTGRES_IMPLICIT_LOCALHOST_FALLBACK", "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _is_unusable_container_sqlite_url(database_url: str) -> bool:
     try:
         parsed = make_url(database_url)
@@ -116,11 +121,10 @@ def _resolve_database_url() -> str:
     user = _read_plain_env_value("POSTGRES_USER", "admin") or "admin"
     password = read_secret_env("POSTGRES_PASSWORD", _read_plain_env_value("POSTGRES_PASSWORD", "changeme"))
     configured_host = _read_plain_env_value("POSTGRES_HOST", "postgres") or "postgres"
-    host_aliases = [
-        value.strip()
-        for value in _read_plain_env_value("POSTGRES_HOST_ALIASES", "localhost,host.docker.internal").split(",")
-        if value.strip()
-    ]
+    host_aliases_raw = _read_plain_env_value("POSTGRES_HOST_ALIASES", "")
+    host_aliases = [value.strip() for value in host_aliases_raw.split(",") if value.strip()]
+    if not host_aliases and _enable_implicit_localhost_fallback():
+        host_aliases = ["localhost", "host.docker.internal"]
     port = _read_plain_env_value("POSTGRES_PORT", "5432") or "5432"
     candidate_hosts = []
     for candidate in [configured_host, *host_aliases]:
