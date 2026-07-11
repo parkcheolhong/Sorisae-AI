@@ -129,8 +129,15 @@ export async function callMeApi(token: string): Promise<UserInfo> {
     const res = await fetch(`${API_BASE}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error('내 정보 조회 실패');
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const superseded = res.headers.get('X-Session-Superseded') === '1';
+        if (superseded) {
+            throw new Error('다른 기기에서 로그인되어 이 세션이 만료되었습니다. 다시 로그인해 주세요.');
+        }
+        throw new Error(extractApiErrorMessage(data.detail, `내 정보 조회 실패 (HTTP ${res.status})`));
+    }
+    return data as UserInfo;
 }
 
 export async function callUpdateMeApi(token: string, payload: UserProfileUpdatePayload): Promise<UserInfo> {
