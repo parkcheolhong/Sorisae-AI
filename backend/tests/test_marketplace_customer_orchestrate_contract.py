@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import backend.marketplace.router as marketplace_router_module
-from backend.auth import get_current_user
+from backend.auth import get_current_user, get_current_user_flexible
+from backend.llm.orchestrator_progress_tracker import save_orchestration_progress
 
 
 class _FakeDb:
@@ -22,7 +23,9 @@ class _FakeDb:
 def _build_test_client(fake_db: _FakeDb, *, user_id: int = 7, email: str = "customer@example.com") -> TestClient:
     app = FastAPI()
     app.include_router(marketplace_router_module.router, prefix="/api/marketplace")
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user_id, email=email)
+    current_user = SimpleNamespace(id=user_id, email=email)
+    app.dependency_overrides[get_current_user] = lambda: current_user
+    app.dependency_overrides[get_current_user_flexible] = lambda: current_user
     app.dependency_overrides[marketplace_router_module.get_db] = lambda: fake_db
     return TestClient(app)
 
@@ -341,6 +344,151 @@ def test_customer_orchestrate_chat_rejects_foreign_stage_run(monkeypatch):
     assert response.status_code == 404
 
 
+def test_customer_orchestrate_progress_returns_owned_stage_run(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "stage_run_owned",
+            "current_stage_id": "ARCH-001",
+            "status": "running",
+            "requested_by": {"id": 7, "email": "customer@example.com"},
+            "stages": [],
+        },
+    )
+    save_orchestration_progress(
+        "stage_run_owned",
+        {
+            "run_id": "stage_run_owned",
+            "session_id": "0123456789abcdef",
+            "task": "owned customer task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get("/api/marketplace/customer-orchestrate/progress/stage_run_owned")
+
+    assert response.status_code == 200
+    assert response.json()["task"] == "owned customer task"
+
+
+def test_customer_orchestrate_progress_rejects_foreign_stage_run(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "stage_run_foreign",
+            "current_stage_id": "ARCH-001",
+            "status": "running",
+            "requested_by": {"id": 8, "email": "other@example.com"},
+            "stages": [],
+        },
+    )
+    save_orchestration_progress(
+        "stage_run_foreign",
+        {
+            "run_id": "stage_run_foreign",
+            "session_id": "0123456789abcdef",
+            "task": "foreign customer secret task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get("/api/marketplace/customer-orchestrate/progress/stage_run_foreign")
+
+    assert response.status_code == 404
+
+
+def test_customer_orchestrate_progress_stream_rejects_foreign_stage_run(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "load_stage_run",
+        lambda run_id: {
+            "run_id": "stage_run_foreign",
+            "current_stage_id": "ARCH-001",
+            "status": "running",
+            "requested_by": {"id": 8, "email": "other@example.com"},
+            "stages": [],
+        },
+    )
+    save_orchestration_progress(
+        "stage_run_foreign",
+        {
+            "run_id": "stage_run_foreign",
+            "session_id": "0123456789abcdef",
+            "task": "foreign customer secret task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get("/api/marketplace/customer-orchestrate/progress/stream/stage_run_foreign")
+
+    assert response.status_code == 404
+
+
+def test_customer_orchestrate_progress_returns_owned_session_id(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    from backend.orchestrator.autonomous import session as session_module
+
+    monkeypatch.setattr(session_module, "AUTONOMOUS_SESSION_DIR", str(tmp_path / "sessions"))
+    session = session_module.AutonomousSession.create(owner_id="7", mode="semi_auto", project_name="demo")
+    session.save()
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    save_orchestration_progress(
+        session.session_id,
+        {
+            "run_id": session.session_id,
+            "session_id": session.session_id,
+            "task": "owned session task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get(f"/api/marketplace/customer-orchestrate/progress/{session.session_id}")
+
+    assert response.status_code == 200
+    assert response.json()["task"] == "owned session task"
+
+
+def test_customer_orchestrate_progress_rejects_foreign_session_id(monkeypatch, tmp_path):
+    monkeypatch.setenv("ADMIN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    from backend.orchestrator.autonomous import session as session_module
+
+    monkeypatch.setattr(session_module, "AUTONOMOUS_SESSION_DIR", str(tmp_path / "sessions"))
+    session = session_module.AutonomousSession.create(owner_id="8", mode="semi_auto", project_name="demo")
+    session.save()
+    fake_db = _FakeDb()
+    client = _build_test_client(fake_db, user_id=7)
+
+    save_orchestration_progress(
+        session.session_id,
+        {
+            "run_id": session.session_id,
+            "session_id": session.session_id,
+            "task": "foreign session secret task",
+            "execution_state": "executing",
+        },
+    )
+
+    response = client.get(f"/api/marketplace/customer-orchestrate/progress/{session.session_id}")
+
+    assert response.status_code == 404
+
+
 def test_customer_orchestrate_stream_close_releases_lock_and_marks_failed(monkeypatch):
     fake_db = _FakeDb()
     user = SimpleNamespace(id=7, email="customer@example.com")
@@ -384,9 +532,13 @@ def test_customer_orchestrate_stream_close_releases_lock_and_marks_failed(monkey
         _capture_execution_metadata,
     )
 
+    candidate_routes = []
+    for route in marketplace_router_module.router.routes:
+        candidate_routes.append(route)
+        candidate_routes.extend(getattr(getattr(route, "original_router", None), "routes", []) or [])
     stream_endpoint = next(
         route.endpoint
-        for route in marketplace_router_module.router.routes
+        for route in candidate_routes
         if getattr(route, "path", "") == "/customer-orchestrate/stream"
     )
     request_model = marketplace_router_module.CustomerOrchestrateRequest(

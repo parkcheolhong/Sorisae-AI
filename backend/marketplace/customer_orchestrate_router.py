@@ -4,11 +4,36 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
-from backend.auth import ALGORITHM, SECRET_KEY, get_current_user_flexible
+from backend.auth import _resolve_current_user_from_token, get_current_user_flexible, resolve_ws_token
 
 
 def build_customer_orchestrate_router(contract: Any) -> APIRouter:
     router = APIRouter()
+
+    def _load_customer_progress_for_user(run_id: str, current_user: Any) -> dict[str, Any]:
+        from backend.orchestrator.autonomous.progress_tracker import load_progress_for_run
+        from backend.orchestrator.autonomous.session import AutonomousSession
+
+        normalized_run_id = str(run_id or "").strip()
+        if not normalized_run_id:
+            raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
+
+        if normalized_run_id.startswith("stage_run_"):
+            contract._load_customer_stage_run_for_user(normalized_run_id, current_user)
+
+        payload = load_progress_for_run(normalized_run_id)
+        if not payload:
+            raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
+
+        session_id = str(payload.get("session_id") or "").strip()
+        if session_id and not normalized_run_id.startswith("stage_run_"):
+            owner_id = str(getattr(current_user, "id", "") or "").strip()
+            if not owner_id or AutonomousSession.load(session_id, owner_id) is None:
+                raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
+        elif not normalized_run_id.startswith("stage_run_"):
+            raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
+
+        return payload
 
     @router.post("/customer-orchestrate/chat", response_model=contract.OrchestratorChatResponse)
     async def customer_orchestrator_chat(
@@ -101,12 +126,7 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         run_id: str,
         current_user=Depends(contract.get_current_user),
     ):
-        from backend.orchestrator.autonomous.progress_tracker import load_progress_for_run
-
-        payload = load_progress_for_run(run_id)
-        if not payload:
-            raise HTTPException(status_code=404, detail="orchestration progress를 찾을 수 없습니다.")
-        return payload
+        return _load_customer_progress_for_user(run_id, current_user)
 
     @router.get("/customer-orchestrate/progress/stream/{run_id}")
     async def stream_customer_orchestrate_progress(
@@ -114,6 +134,8 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
         current_user=Depends(get_current_user_flexible),
     ):
         from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_sse
+
+        _load_customer_progress_for_user(run_id, current_user)
 
         async def _event_stream():
             async for frame in iter_orchestration_progress_sse(run_id):
@@ -124,8 +146,6 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
     @router.websocket("/customer-orchestrate/progress/ws/{run_id}")
     async def websocket_customer_orchestrate_progress(websocket: WebSocket, run_id: str):
         from backend.orchestrator.autonomous.progress_stream import iter_orchestration_progress_ws
-        from jose import jwt as _jwt
-        from backend.auth import resolve_ws_token
 
         # [#6] Sec-WebSocket-Protocol 우선, ?token= 폴백(점진 전환·무중단).
         token, accept_subprotocol = resolve_ws_token(websocket)
@@ -133,9 +153,14 @@ def build_customer_orchestrate_router(contract: Any) -> APIRouter:
             await websocket.close(code=4401, reason="token required")
             return
         try:
-            _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            current_user = _resolve_current_user_from_token(token)
         except Exception:
             await websocket.close(code=4401, reason="인증 실패")
+            return
+        try:
+            _load_customer_progress_for_user(run_id, current_user)
+        except HTTPException:
+            await websocket.close(code=4404, reason="orchestration progress not found")
             return
 
         await websocket.accept(subprotocol=accept_subprotocol)
