@@ -90,3 +90,58 @@ $h2=(Get-FileHash $latest -Algorithm SHA256).Hash.ToLower()
 
 ## Linked Report
 - docs/technical/worldlinco-312-validation-report-20260717.md
+
+## Review Comment Templates
+
+### Approve/Request changes Criteria Table
+
+| Review Item | Approve if | Request changes if |
+| --- | --- | --- |
+| Scope and intent | PR scope is clearly limited to distribution-state verification for build 312 | Scope is ambiguous or implies broader feature changes |
+| Version lock integrity | app.json, build.gradle, and manifest are all 312 | Any one of the three is not 312 |
+| Marketplace manifest check | /api/marketplace/apk/worldlinco/manifest returns 200 and versionCode 312 | Endpoint fails or versionCode is not 312 |
+| Artifact parity | latest.apk byte size and SHA256 match canonical APK | Size or SHA256 mismatch |
+| Evidence quality | Validation report includes reproducible values and matches rerun output | Evidence is missing, stale, or non-reproducible |
+| Rollback readiness | Rollback procedure is concrete and executable | Rollback is vague or unverified |
+
+### Approve Comment Template
+
+```markdown
+Approve
+
+Reason
+- Scope is appropriately constrained to WorldLinco build 312 distribution-state verification.
+- Version lock is consistent across app.json, build.gradle, and marketplace manifest.
+- Marketplace manifest endpoint and latest artifact parity checks pass.
+- Evidence and rollback guidance are sufficient for operational safety.
+
+Verified checkpoints
+- manifest_http=200
+- manifest_versionCode=312
+- latest_hash_match=true
+- sha256=52438446af49c4baee69193f663dce36c86a49318e584797e408015aeb56319d
+
+Conclusion
+- Approved.
+```
+
+### Request changes Comment Template
+
+```markdown
+Request changes
+
+Blocking findings
+- [ ] Scope mismatch: PR body must remain strictly distribution-state verification for build 312.
+- [ ] Version mismatch detected in one or more lock files (app.json, build.gradle, manifest).
+- [ ] Manifest endpoint validation failed (non-200 or wrong versionCode).
+- [ ] latest.apk parity failed (byte size or SHA256 mismatch).
+- [ ] Evidence/rollback instructions are incomplete or not reproducible.
+
+Required fixes
+1. Re-run version lock and parity checks, then paste fresh results in the PR body.
+2. Update verified values and align all lock targets to 312.
+3. Ensure rollback steps are executable and explicitly ordered.
+
+Re-review condition
+- Convert every blocking item above to pass state with reproducible output.
+```
