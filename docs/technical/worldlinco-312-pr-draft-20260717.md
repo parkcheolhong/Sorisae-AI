@@ -95,6 +95,8 @@ $h2=(Get-FileHash $latest -Algorithm SHA256).Hash.ToLower()
 
 ### Approve/Request changes Criteria Table
 
+Hard-gate rule: if even one review item is fail, the review outcome is automatically Request changes.
+
 | Review Item | Approve if | Request changes if |
 | --- | --- | --- |
 | Scope and intent | PR scope is clearly limited to distribution-state verification for build 312 | Scope is ambiguous or implies broader feature changes |
@@ -103,6 +105,10 @@ $h2=(Get-FileHash $latest -Algorithm SHA256).Hash.ToLower()
 | Artifact parity | latest.apk byte size and SHA256 match canonical APK | Size or SHA256 mismatch |
 | Evidence quality | Validation report includes reproducible values and matches rerun output | Evidence is missing, stale, or non-reproducible |
 | Rollback readiness | Rollback procedure is concrete and executable | Rollback is vague or unverified |
+
+Decision policy:
+- All items pass: Approve.
+- One or more items fail: Request changes (automatic, no exception).
 
 ### Approve Comment Template
 
