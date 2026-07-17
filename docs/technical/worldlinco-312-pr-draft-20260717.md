@@ -14,24 +14,64 @@ chore(worldlinco): lock marketplace install state to build 312 and attach verifi
 
 ## Reviewer Checklist
 
-### 1) Scope and Intent
+### E1) Scope and Intent
 - [ ] This PR is interpreted as distribution-state verification for build 312 only.
 - [ ] Out-of-scope features are not required for approval.
 
-### 2) Version Lock Integrity
+### E2) Version Lock Integrity
 - [ ] apps/mobile-nadotongryoksa/app.json shows expo.android.versionCode = 312.
 - [ ] apps/mobile-nadotongryoksa/android/app/build.gradle shows defaultConfig.versionCode = 312.
 - [ ] uploads/marketplace_local/apk/nadotongryoksa-v1.manifest.json shows versionCode = 312.
 
-### 3) Marketplace Runtime Integrity
+### E3) Marketplace Runtime Integrity
 - [ ] GET /api/marketplace/apk/worldlinco/manifest returns 200.
 - [ ] Manifest versionCode is 312.
 - [ ] /api/marketplace/latest.apk byte size equals canonical APK byte size.
 - [ ] SHA256(latest.apk) equals SHA256(canonical APK).
 
-### 4) Evidence and Traceability
+### E4) Evidence and Traceability
 - [ ] Validation report exists and is readable.
 - [ ] Hash and byte-size evidence in report matches local reproduction output.
+
+## Maintainer Execution Status (Checklist-Based)
+
+### E5) Review Thread Closure
+- [x] Copilot unresolved review thread on PR draft doc is resolved.
+- 근거: review thread PRRT_kwDOR_seGs6RwqQX resolved via GitHub GraphQL mutation.
+- [x] Copilot unresolved review thread on validation report doc is resolved.
+- 근거: review thread PRRT_kwDOR_seGs6RwqQ2 resolved via GitHub GraphQL mutation.
+
+Status: completed
+
+### 1) Scope and Intent
+- [x] This PR is interpreted as distribution-state verification for build 312 only.
+- 근거: PR title and current body both target build 312 distribution-state verification only.
+- [x] Out-of-scope features are not required for approval.
+- 근거: PR changed files are docs-only (2 files): docs/technical/worldlinco-312-pr-draft-20260717.md, docs/technical/worldlinco-312-validation-report-20260717.md.
+
+### 2) Version Lock Integrity
+- [x] apps/mobile-nadotongryoksa/app.json shows expo.android.versionCode = 312.
+- 근거: pass1=true, pass2=true.
+- [x] apps/mobile-nadotongryoksa/android/app/build.gradle shows defaultConfig.versionCode = 312.
+- 근거: pass1=true, pass2=true.
+- [x] uploads/marketplace_local/apk/nadotongryoksa-v1.manifest.json shows versionCode = 312.
+- 근거: pass1=true, pass2=true.
+
+### 3) Marketplace Runtime Integrity
+- [x] GET /api/marketplace/apk/worldlinco/manifest returns 200.
+- 근거: pass1 manifest_http=200, pass2 manifest_http=200.
+- [x] Manifest versionCode is 312.
+- 근거: pass1 manifest_versionCode=312, pass2 manifest_versionCode=312.
+- [x] /api/marketplace/latest.apk byte size equals canonical APK byte size.
+- 근거: pass1 latest_bytes=88096654 and canonical_bytes=88096654, pass2 latest_bytes=88096654 and canonical_bytes=88096654.
+- [x] SHA256(latest.apk) equals SHA256(canonical APK).
+- 근거: pass1 latest_hash_match=true, pass2 latest_hash_match=true.
+
+### 4) Evidence and Traceability
+- [x] Validation report exists and is readable.
+- 근거: docs/technical/worldlinco-312-validation-report-20260717.md present and readable.
+- [x] Hash and byte-size evidence in report matches local reproduction output.
+- 근거: pass1/pass2 sha256=52438446af49c4baee69193f663dce36c86a49318e584797e408015aeb56319d, latest_bytes=88096654, canonical_bytes=88096654.
 
 ## Verified Values (Current Run)
 - manifest_http: 200
