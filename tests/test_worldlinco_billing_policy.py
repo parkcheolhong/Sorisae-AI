@@ -75,9 +75,10 @@ def test_billing_policy_update_persists(isolated_billing_policy_path):
     )
     assert updated["access_mode"] == "paid"
     assert updated["show_pricing_ui"] is True
-    assert updated["updated_by"] == "test-admin"
+    assert updated["updated_by"].startswith("hashed:")
     persisted = json.loads(isolated_billing_policy_path.read_text(encoding="utf-8"))
     assert persisted["access_mode"] == "paid"
+    assert persisted["updated_by"].startswith("hashed:")
 
 
 def test_billing_policy_public_payload():

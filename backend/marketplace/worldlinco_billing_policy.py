@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -131,10 +132,15 @@ def load_worldlinco_billing_policy() -> Dict[str, Any]:
 
 
 def save_worldlinco_billing_policy(payload: Dict[str, Any]) -> Dict[str, Any]:
+    sanitized = deepcopy(payload)
+    updated_by = str(sanitized.get("updated_by") or "").strip()
+    if updated_by and updated_by not in {"system", "admin"}:
+        sanitized["updated_by"] = f"hashed:{hashlib.sha256(updated_by.encode('utf-8')).hexdigest()[:12]}"
+
     path = WORLDLINGCO_BILLING_POLICY_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    return payload
+    path.write_text(json.dumps(sanitized, ensure_ascii=False, indent=2), encoding="utf-8")
+    return sanitized
 
 
 def apply_worldlinco_billing_policy_update(
