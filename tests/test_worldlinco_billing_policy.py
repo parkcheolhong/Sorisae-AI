@@ -1,4 +1,5 @@
 import json
+import hashlib
 from datetime import datetime, timezone
 
 import pytest  # pyright: ignore[reportMissingImports]
@@ -73,12 +74,24 @@ def test_billing_policy_update_persists(isolated_billing_policy_path):
         WorldlincoBillingPolicyUpdate(access_mode="paid", show_pricing_ui=True),
         updated_by="test-admin",
     )
+    expected_hash = f"hashed:{hashlib.sha256('test-admin'.encode('utf-8')).hexdigest()[:16]}"
     assert updated["access_mode"] == "paid"
     assert updated["show_pricing_ui"] is True
-    assert updated["updated_by"].startswith("hashed:")
+    assert updated["updated_by"] == expected_hash
     persisted = json.loads(isolated_billing_policy_path.read_text(encoding="utf-8"))
     assert persisted["access_mode"] == "paid"
-    assert persisted["updated_by"].startswith("hashed:")
+    assert persisted["updated_by"] == expected_hash
+
+
+@pytest.mark.parametrize("updated_by", ["system", "admin"])
+def test_billing_policy_system_admin_updated_by_not_hashed(isolated_billing_policy_path, updated_by):
+    updated = apply_worldlinco_billing_policy_update(
+        WorldlincoBillingPolicyUpdate(access_mode="paid"),
+        updated_by=updated_by,
+    )
+    assert updated["updated_by"] == updated_by
+    persisted = json.loads(isolated_billing_policy_path.read_text(encoding="utf-8"))
+    assert persisted["updated_by"] == updated_by
 
 
 def test_billing_policy_public_payload():
