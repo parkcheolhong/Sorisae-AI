@@ -135,7 +135,7 @@ def save_worldlinco_billing_policy(payload: Dict[str, Any]) -> Dict[str, Any]:
     sanitized = deepcopy(payload)
     updated_by = str(sanitized.get("updated_by") or "").strip()
     if updated_by and updated_by not in {"system", "admin"}:
-        sanitized["updated_by"] = f"hashed:{hashlib.sha256(updated_by.encode('utf-8')).hexdigest()[:16]}"
+        sanitized["updated_by"] = f"hashed:{hashlib.sha256(updated_by.encode('utf-8')).hexdigest()[:32]}"
 
     path = WORLDLINGCO_BILLING_POLICY_PATH
     path.parent.mkdir(parents=True, exist_ok=True)

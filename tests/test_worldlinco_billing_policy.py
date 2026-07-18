@@ -74,7 +74,7 @@ def test_billing_policy_update_persists(isolated_billing_policy_path):
         WorldlincoBillingPolicyUpdate(access_mode="paid", show_pricing_ui=True),
         updated_by="test-admin",
     )
-    expected_hash = f"hashed:{hashlib.sha256('test-admin'.encode('utf-8')).hexdigest()[:16]}"
+    expected_hash = f"hashed:{hashlib.sha256('test-admin'.encode('utf-8')).hexdigest()[:32]}"
     assert updated["access_mode"] == "paid"
     assert updated["show_pricing_ui"] is True
     assert updated["updated_by"] == expected_hash
