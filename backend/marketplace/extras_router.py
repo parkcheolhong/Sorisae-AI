@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import logging
 import os
 import time
 from datetime import datetime
@@ -25,6 +26,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from backend.services.shinsegye.extras.hybrid_iot_controller import HybridIoTController
 from backend.services.shinsegye.extras.sorisae_game_economy_system import GameEconomyEngine
+
+logger = logging.getLogger(__name__)
 
 # ── Circuit Breaker ────────────────────────────────────────────────────────
 _CB_THRESHOLD = 3       # 연속 실패 횟수 임계값
@@ -1087,9 +1090,14 @@ def build_extras_router(contract: Any) -> APIRouter:
                 result["executed"] = False
                 result["message"] = "dry_run 모드 — import만 완료"
         except Exception as exc:
+            logger.exception(
+                "Engine execution failed: slot=%s file=%s dry_run=%s",
+                req.slot,
+                target_file.name,
+                req.dry_run,
+            )
             result["status"] = "error"
-            result["error"] = str(exc)
-            result["traceback"] = traceback.format_exc(limit=5)
+            result["error"] = "엔진 실행 중 내부 오류가 발생했습니다."
 
         return result
 

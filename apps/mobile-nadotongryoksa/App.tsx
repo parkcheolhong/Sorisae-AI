@@ -517,6 +517,16 @@ function buildInstantDemoCredentials(seed: string) {
     };
 }
 
+function secureRandomHex(byteLength: number): string {
+    const cryptoApi = globalThis.crypto;
+    if (!cryptoApi?.getRandomValues) {
+        throw new Error('secure_random_unavailable');
+    }
+    const bytes = new Uint8Array(Math.max(1, byteLength));
+    cryptoApi.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+}
+
 const AUTO_RELAY_DELAY_OPTIONS_MS = [2000, 2500, 3000] as const;
 const DEFAULT_AUTO_RELAY_DELAY_MS = 2500;
 // [기능 분리 Phase5.1a] 대면통역 타이밍 상수(FACE_CONVERSATION_*/FACE_OUTPUT_ECHO_GUARD_MS)는
@@ -1492,10 +1502,9 @@ function AppInner() {
             show_login: showLogin,
             focus_field: authDebugFocusField,
             email_length: loginEmail.length,
-            password_length: loginPw.length,
             ...details,
         }));
-    }, [authDebugFocusField, loginEmail.length, loginPw.length, showLogin]);
+    }, [authDebugFocusField, loginEmail.length, showLogin]);
 
     useEffect(() => {
         setAuthDebugSubmitPressed(false);
@@ -1659,7 +1668,7 @@ function AppInner() {
             let lastError: Error | null = null;
 
             for (let attempt = 0; attempt < 2; attempt += 1) {
-                const seed = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}${attempt}`;
+                const seed = `${Date.now().toString(36)}${secureRandomHex(6)}${attempt}`;
                 const demoCreds = buildInstantDemoCredentials(seed);
 
                 try {

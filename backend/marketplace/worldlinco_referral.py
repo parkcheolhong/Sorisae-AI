@@ -5,8 +5,10 @@ import io
 import json
 import secrets
 from copy import deepcopy
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 
 from pydantic import BaseModel, Field
 
@@ -186,11 +188,11 @@ def _count_signups_for_user(user_id: int) -> int:
 
 def build_invite_url(*, api_base: str, code: str) -> str:
     base = str(api_base or "").rstrip("/")
-    return f"{base}/api/marketplace/worldlinco/invite/{code}"
+    return f"{base}/api/marketplace/worldlinco/invite/{quote(str(code or '').strip(), safe='')}"
 
 
 def build_invite_deeplink(code: str) -> str:
-    return f"worldlingo://invite?ref={code}"
+    return f"worldlingo://invite?ref={quote(str(code or '').strip(), safe='')}"
 
 
 def referral_me_payload(*, user_id: int, username: str, api_base: str) -> Dict[str, Any]:
@@ -220,16 +222,18 @@ def build_invite_landing_html(*, code: str, api_base: str, referrer_username: st
             "<body style='font-family:sans-serif;padding:24px;'><h1>추천 링크를 찾을 수 없습니다</h1>"
             "<p>코드가 만료되었거나 잘못되었습니다.</p></body></html>"
         )
-    name = str(referrer_username or referrer.get("username") or "친구").strip()
-    invite_url = build_invite_url(api_base=api_base, code=code)
-    deeplink = build_invite_deeplink(code)
-    apk_url = f"{str(api_base).rstrip('/')}/api/marketplace/latest.apk"
+    canonical_code = _normalize_code(str(referrer.get("code") or code)) or "WORLDLINCO"
+    name = escape(str(referrer_username or referrer.get("username") or "친구").strip())
+    safe_code = escape(canonical_code)
+    invite_url = build_invite_url(api_base=api_base, code=canonical_code)
+    deeplink = escape(build_invite_deeplink(canonical_code))
+    apk_url = escape(f"{str(api_base).rstrip('/')}/api/marketplace/latest.apk")
     return f"""<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WorldLinco 초대 · {code}</title>
+  <title>WorldLinco 초대 · {safe_code}</title>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#e3f0ff; margin:0; padding:24px; color:#1a1f36; }}
     .card {{ max-width:420px; margin:0 auto; background:#fff; border-radius:16px; padding:24px; box-shadow:0 8px 24px rgba(30,111,224,.12); }}
@@ -245,10 +249,10 @@ def build_invite_landing_html(*, code: str, api_base: str, referrer_username: st
   <div class="card">
     <h1>WorldLinco 초대</h1>
     <p><strong>{name}</strong>님이 WorldLinco 앱을 추천했습니다.<br/>50개국 실시간 통번역 채팅·통화 앱입니다.</p>
-    <p>추천 코드: <code>{code}</code></p>
+    <p>추천 코드: <code>{safe_code}</code></p>
     <a class="btn primary" href="{apk_url}">Android APK 설치</a>
     <a class="btn secondary" href="{deeplink}">앱에서 열기 (설치 후)</a>
-    <p style="font-size:12px;margin-top:16px;">설치 후 위 버튼을 누르거나, 가입 시 추천 코드 <code>{code}</code>가 자동 적용됩니다.</p>
+    <p style="font-size:12px;margin-top:16px;">설치 후 위 버튼을 누르거나, 가입 시 추천 코드 <code>{safe_code}</code>가 자동 적용됩니다.</p>
   </div>
 </body>
 </html>"""

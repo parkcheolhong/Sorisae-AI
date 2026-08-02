@@ -7,8 +7,10 @@ import os
 import secrets
 import uuid
 from copy import deepcopy
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 from pydantic import BaseModel, Field
 
@@ -1351,11 +1353,11 @@ def approve_sales_settlement(
 
 def build_sales_invite_url(*, api_base: str, code: str) -> str:
     base = str(api_base or "").rstrip("/")
-    return f"{base}/api/marketplace/worldlinco/sales/invite/{code}"
+    return f"{base}/api/marketplace/worldlinco/sales/invite/{quote(str(code or '').strip(), safe='')}"
 
 
 def build_sales_invite_deeplink(code: str) -> str:
-    return f"worldlingo://sales?ref={code}"
+    return f"worldlingo://sales?ref={quote(str(code or '').strip(), safe='')}"
 
 
 def build_sales_invite_landing_html(*, code: str, api_base: str) -> str:
@@ -1365,19 +1367,20 @@ def build_sales_invite_landing_html(*, code: str, api_base: str) -> str:
             "<!doctype html><html><head><meta charset='utf-8'><title>WorldLinco</title></head>"
             "<body style='font-family:sans-serif;padding:24px;'><h1>영업 QR을 찾을 수 없습니다</h1></body></html>"
         )
-    name = str(agent.get("name") or "영업 담당")
-    office = str(agent.get("office_name") or agent.get("country_code") or "")
-    invite_url = build_sales_invite_url(api_base=api_base, code=code)
-    deeplink = build_sales_invite_deeplink(code)
-    apk_url = f"{str(api_base).rstrip('/')}/api/marketplace/latest.apk"
+    canonical_code = str(agent.get("code") or code).strip().upper()
+    safe_code = escape(canonical_code)
+    name = escape(str(agent.get("name") or "영업 담당"))
+    office = escape(str(agent.get("office_name") or agent.get("country_code") or ""))
+    deeplink = escape(build_sales_invite_deeplink(canonical_code))
+    apk_url = escape(f"{str(api_base).rstrip('/')}/api/marketplace/latest.apk")
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>WorldLinco 영업 초대 · {code}</title></head>
+<title>WorldLinco 영업 초대 · {safe_code}</title></head>
 <body style="font-family:sans-serif;background:#eef5ff;padding:24px;">
 <div style="max-width:420px;margin:0 auto;background:#fff;border-radius:16px;padding:24px;">
 <h1>WorldLinco 영업 초대</h1>
 <p><strong>{name}</strong>{f' · {office}' if office else ''} 담당 QR입니다.</p>
-<p>코드: <code>{code}</code></p>
+<p>코드: <code>{safe_code}</code></p>
 <a href="{apk_url}" style="display:block;margin-top:12px;padding:14px;background:#1E6FE0;color:#fff;text-align:center;border-radius:12px;text-decoration:none;font-weight:700;">Android APK 설치</a>
 <a href="{deeplink}" style="display:block;margin-top:10px;padding:14px;background:#f4f7fd;color:#1E6FE0;text-align:center;border-radius:12px;text-decoration:none;font-weight:700;">앱에서 열기</a>
 </div></body></html>"""

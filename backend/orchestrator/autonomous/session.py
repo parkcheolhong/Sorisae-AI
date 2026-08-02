@@ -29,6 +29,22 @@ EXECUTION_MODES = {
 SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 
 
+def _session_dir_path() -> Path:
+    return Path(AUTONOMOUS_SESSION_DIR).expanduser().resolve()
+
+
+def _session_file_path(session_id: str) -> Optional[Path]:
+    if not SESSION_ID_PATTERN.fullmatch(session_id):
+        return None
+    dir_path = _session_dir_path()
+    try:
+        path = (dir_path / f"{session_id}.json").resolve(strict=False)
+        path.relative_to(dir_path)
+        return path
+    except (OSError, ValueError):
+        return None
+
+
 @dataclass
 class ConversationTurn:
     role: str  # user, agent, system
@@ -145,17 +161,19 @@ class AutonomousSession:
         }
 
     def save(self) -> None:
-        dir_path = Path(AUTONOMOUS_SESSION_DIR)
+        dir_path = _session_dir_path()
         dir_path.mkdir(parents=True, exist_ok=True)
-        path = dir_path / f"{self.session_id}.json"
+        path = _session_file_path(self.session_id)
+        if path is None:
+            raise ValueError(f"Invalid autonomous session id format: {self.session_id}")
         path.write_text(json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
 
     @classmethod
     def load(cls, session_id: str, owner_id: str) -> Optional["AutonomousSession"]:
-        if not SESSION_ID_PATTERN.fullmatch(session_id):
+        path = _session_file_path(session_id)
+        if path is None:
             logger.warning("Invalid autonomous session id format: %s", session_id)
             return None
-        path = Path(AUTONOMOUS_SESSION_DIR) / f"{session_id}.json"
         if not path.exists():
             return None
         try:
