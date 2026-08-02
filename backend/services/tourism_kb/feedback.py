@@ -239,7 +239,7 @@ class TourismFeedbackStore:
                 by_variant = {v: self._variant_block(conn, v) for v in sorted(_VALID_VARIANTS)}
         except Exception as exc:
             logger.warning("[tourism_kb.feedback] stats 실패: %s", exc)
-            return {"available": True, "error": str(exc)}
+            return {"available": True, "error": "stats_unavailable"}
         return {"available": True, "overall": overall, "by_variant": by_variant}
 
 

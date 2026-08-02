@@ -208,7 +208,7 @@ class TourismReviewStore:
                 ).fetchall())
         except Exception as exc:
             logger.warning("[tourism_kb.review] stats 실패: %s", exc)
-            return {"available": True, "error": str(exc)}
+            return {"available": True, "error": "stats_unavailable"}
 
         rel = int(by_verdict.get("relevant", 0))
         irr = int(by_verdict.get("irrelevant", 0))

@@ -45,6 +45,7 @@ SELF_ROOM_TITLE = "번역 보관함"
 GROUP_ROOM_MIN_MEMBER_LIMIT = 3
 GROUP_ROOM_MAX_MEMBER_LIMIT = 10
 DEFAULT_GROUP_ROOM_MEMBER_LIMIT = 10
+TRANSLATION_FAILURE_PUBLIC_DETAIL = "번역 처리 중 오류가 발생했습니다."
 
 
 class ChatRoomWebSocketHub:
@@ -600,7 +601,11 @@ def _serialize_viewer_translation(
         "translated_body": translation_row.translated_body,
         "translation_status": translation_row.translation_status,
         "failure_code": translation_row.failure_code,
-        "failure_detail": translation_row.failure_detail,
+        "failure_detail": (
+            TRANSLATION_FAILURE_PUBLIC_DETAIL
+            if translation_row.failure_code
+            else None
+        ),
     }
 
 
@@ -686,7 +691,7 @@ def _build_group_viewer_translation_fallback(
             "translated_body": None,
             "translation_status": "failed",
             "failure_code": "translation_error",
-            "failure_detail": str(exc),
+            "failure_detail": TRANSLATION_FAILURE_PUBLIC_DETAIL,
         }
 
     return {
@@ -757,7 +762,7 @@ def _append_group_message_translations(
                 )
                 translation_status = "failed"
                 failure_code = "translation_error"
-                failure_detail = str(exc)
+                failure_detail = TRANSLATION_FAILURE_PUBLIC_DETAIL
                 delivered_at = None
 
         translation_rows.append(
