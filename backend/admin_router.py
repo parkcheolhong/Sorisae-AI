@@ -3309,7 +3309,7 @@ def _admin_system_env_allowed_keys() -> set[str]:
 
 def _read_admin_env_entries(path: Path) -> List[Dict[str, Any]]:
     if not path.exists() or not path.is_file():
-        raise HTTPException(status_code=404, detail=".env 파일을 찾을 수 없습니다.")
+        return []
     lines = path.read_text(encoding="utf-8").splitlines()
     entries: List[Dict[str, Any]] = []
     for line in lines:
@@ -3331,6 +3331,7 @@ def _read_admin_env_values(path: Path) -> Dict[str, str]:
 
 
 def _write_admin_env_values(path: Path, updates: Dict[str, str]) -> Dict[str, str]:
+    path.parent.mkdir(parents=True, exist_ok=True)
     entries = _read_admin_env_entries(path)
     rendered_lines: List[str] = []
     seen_keys: set[str] = set()
@@ -6314,4 +6315,3 @@ async def admin_upload_worldlinco_telemetry(
         "updated_by": saved.get("updated_by"),
         "summary": saved.get("summary") or {},
     }
-

@@ -3,6 +3,8 @@ import type { SectionRailKey } from '../features/navigation/sectionRegistry';
 import type { HybridGpsMode } from '../utils/hybridGps';
 import type { LangCode } from '../features/language/languageCatalog';
 
+export type SocialAuthProvider = 'google' | 'kakao' | 'naver';
+
 export type VoipParticipantProfile = {
     nickname: string;
     genderLabel: string;
@@ -85,6 +87,12 @@ export type AppEntryDeepLinkTarget =
     | { type: 'invite'; referralCode: string }
     | { type: 'sales'; salesAgentCode: string }
     | { type: 'voip'; action: 'open' | 'validation' | 'demo' | 'incoming'; callId?: string; calleeVoiceId?: string; forceRetry?: boolean; preferredLanguage?: string; calleePreferredLanguage?: string };
+
+export type SocialAuthDeepLinkTarget = {
+    provider: SocialAuthProvider;
+    accessToken: string;
+    returnTo?: string;
+};
 
 export type SignupRequestCodeResponse = {
     signupSessionToken: string;

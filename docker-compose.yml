@@ -405,8 +405,8 @@ services:
       NEXT_PUBLIC_SITE_URL: https://xn--114-2p7l635dz3bh5j.com
       MARKETPLACE_VALIDATOR_BASE_URL: ${MARKETPLACE_VALIDATOR_BASE_URL:-}
       MULTI_PROGRAM_VALIDATOR_BASE_URL: ${MULTI_PROGRAM_VALIDATOR_BASE_URL:-}
-      BACKEND_PROXY_TARGET: http://backend:8000
-      LOCAL_API_BASE_URL: http://backend:8000
+      BACKEND_PROXY_TARGET: http://devanalysis114-backend:8000
+      LOCAL_API_BASE_URL: http://devanalysis114-backend:8000
     depends_on:
       backend:
         condition: service_started
@@ -434,8 +434,8 @@ services:
       NEXT_PUBLIC_SITE_URL: https://metanova1004.com
       MARKETPLACE_VALIDATOR_BASE_URL: ${MARKETPLACE_VALIDATOR_BASE_URL:-}
       MULTI_PROGRAM_VALIDATOR_BASE_URL: ${MULTI_PROGRAM_VALIDATOR_BASE_URL:-}
-      BACKEND_PROXY_TARGET: http://backend:8000
-      LOCAL_API_BASE_URL: http://backend:8000
+      BACKEND_PROXY_TARGET: http://devanalysis114-backend:8000
+      LOCAL_API_BASE_URL: http://devanalysis114-backend:8000
     depends_on:
       backend:
         condition: service_started
@@ -661,4 +661,3 @@ volumes:
 networks:
   devanalysis114-network:
     driver: bridge
-

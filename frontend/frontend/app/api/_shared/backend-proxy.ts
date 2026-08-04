@@ -5,6 +5,12 @@ const RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const RETRY_ATTEMPTS_PER_TARGET = 2;
 const RETRY_DELAY_MS = 400;
 const STATUS_WITHOUT_RESPONSE_BODY = new Set([204, 205, 304]);
+const FALLBACK_INTERNAL_BACKEND_TARGETS = [
+    'http://backend:8000',
+    'http://devanalysis114-backend:8000',
+    'http://host.docker.internal:8000',
+    'http://host.docker.internal:18000',
+];
 
 function resolveTimeoutMs(raw: unknown, fallbackMs: number, minMs: number, maxMs: number): number {
     const parsed = Number(raw);
@@ -100,8 +106,7 @@ export function collectBackendTargets(): string[] {
     const rawTargets = [
         process.env.BACKEND_PROXY_TARGET,
         process.env.LOCAL_API_BASE_URL,
-        'http://backend:8000',
-        'http://host.docker.internal:8000',
+        ...FALLBACK_INTERNAL_BACKEND_TARGETS,
         process.env.NEXT_PUBLIC_API_URL,
         ...(isContainerLikeRuntime() ? [] : ['http://localhost:8000']),
     ];
@@ -115,7 +120,10 @@ export function collectBackendTargets(): string[] {
     // In containerized runtime, localhost usually points to frontend-admin itself.
     const internalTargets = uniqueTargets.filter((value) => {
         const lowered = value.toLowerCase();
-        return lowered.includes('backend:8000') || lowered.includes('host.docker.internal:8000');
+        return lowered.includes('backend:8000')
+            || lowered.includes('devanalysis114-backend:8000')
+            || lowered.includes('host.docker.internal:8000')
+            || lowered.includes('host.docker.internal:18000');
     });
     const nonLocalTargets = uniqueTargets.filter((value) => !isLocalhostTarget(value));
     const localhostTargets = allowLocalhostFallback

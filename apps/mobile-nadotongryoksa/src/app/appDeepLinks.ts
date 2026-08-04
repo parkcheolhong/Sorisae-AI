@@ -1,5 +1,6 @@
 // App.tsx 에서 분리한 딥링크 URL 파서(순수 함수, 런타임 상태 비의존).
 import type { AppEntryDeepLinkTarget } from './appTypes';
+import type { SocialAuthDeepLinkTarget } from './appTypes';
 import { parseSectionRailKey } from '../features/navigation/sectionRegistry';
 import type { CallInitResponse } from '../services/voipCallClient';
 import { getDefaultVoipTurnServers, normalizeTurnServers } from '../features/voip/voipSignaling';
@@ -11,6 +12,7 @@ import {
     APP_ENTRY_VOIP_LINK_PATH,
     APP_ENTRY_INVITE_LINK_PATH,
     APP_ENTRY_SALES_LINK_PATH,
+    APP_ENTRY_SOCIAL_AUTH_CALLBACK_PATH,
 } from './appConstants';
 
 export function parseSalesAgentFromUrl(url: string): string | null {
@@ -107,6 +109,38 @@ export function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | nul
             return { type: 'voip', action: 'demo', forceRetry, preferredLanguage, calleePreferredLanguage };
         }
         return { type: 'voip', action: 'open', calleeVoiceId, forceRetry, preferredLanguage, calleePreferredLanguage };
+    } catch {
+        return null;
+    }
+}
+
+export function parseSocialAuthDeepLink(url: string): SocialAuthDeepLinkTarget | null {
+    try {
+        const parsed = new URL(url);
+        const scheme = parsed.protocol.replace(':', '').toLowerCase();
+        if (!VOIP_INCOMING_LINK_SCHEMES.includes(scheme)) {
+            return null;
+        }
+
+        const resolvedPath = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+/, '').toLowerCase();
+        if (resolvedPath !== APP_ENTRY_SOCIAL_AUTH_CALLBACK_PATH) {
+            return null;
+        }
+
+        const fragment = String(parsed.hash || '').replace(/^#/, '');
+        const fragmentParams = new URLSearchParams(fragment);
+        const accessToken = String(fragmentParams.get('access_token') || '').trim();
+        const provider = String(fragmentParams.get('provider') || '').trim().toLowerCase();
+        if (!accessToken || !['google', 'kakao', 'naver'].includes(provider)) {
+            return null;
+        }
+
+        const returnTo = String(fragmentParams.get('return_to') || '').trim();
+        return {
+            provider: provider as SocialAuthDeepLinkTarget['provider'],
+            accessToken,
+            returnTo: returnTo || undefined,
+        };
     } catch {
         return null;
     }
