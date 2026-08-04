@@ -47,7 +47,7 @@ def test_build_admin_integration_checks_structure():
 
     checks = _build_admin_integration_checks(
         {"OLLAMA_BASE": "http://127.0.0.1:8008/v1", "DATABASE_URL": "postgresql://admin@postgres:5432/devanalysis114", "POSTGRES_HOST": "postgres"},
-        {"local_api_base_url": "http://127.0.0.1:8000", "marketplace_host_root": "./uploads", "marketplace_upload_root": "./uploads", "admin_domain": "metanova1004.com"},
+        {"local_api_base_url": "http://127.0.0.1:8000", "marketplace_host_root": "./uploads", "marketplace_upload_root": "./uploads", "admin_domain": "xn--114-2p7l635dz3bh5j.com"},
         {"min_files": 9, "min_dirs": 3},
         ["Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"],
     )

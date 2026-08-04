@@ -759,7 +759,7 @@ def _build_cors_origin_regex() -> str:
         ])
     domains = [
         os.getenv("DOMAIN_NAME", "xn--114-2p7l635dz3bh5j.com").strip(),
-        os.getenv("ADMIN_DOMAIN", "metanova1004.com").strip(),
+        os.getenv("ADMIN_DOMAIN", "xn--114-2p7l635dz3bh5j.com").strip(),
         os.getenv(
             "MARKETPLACE_API_DOMAIN",
             "api.xn--114-2p7l635dz3bh5j.com",
