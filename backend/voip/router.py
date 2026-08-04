@@ -37,6 +37,16 @@ def _mint_ws_token(*, username: str, user_id: Optional[int], call_id: str, role:
     )
 
 
+def _require_call_participant(room, user_id: Optional[int]) -> str:
+    if user_id is None:
+        raise HTTPException(status_code=403, detail="통화 참가자만 접근할 수 있습니다.")
+    if room.caller.user_id == user_id:
+        return "caller"
+    if room.callee.user_id == user_id:
+        return "callee"
+    raise HTTPException(status_code=403, detail="통화 참가자만 접근할 수 있습니다.")
+
+
 @router.post("/devices/register")
 async def register_device(payload: DeviceRegisterRequest, user=Depends(get_current_user)) -> Dict[str, Any]:
     """P3-A: 콜리 착신용 FCM 디바이스 토큰 등록 + presence 갱신."""
@@ -54,7 +64,14 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
     caller_user_id = getattr(user, "id", None)
     caller_username = getattr(user, "username", None) or getattr(user, "email", None) or "caller"
 
-    has_app_target = bool(payload.callee_user_id or payload.callee_voice_id or payload.friend_id)
+    has_unmapped_app_target = bool(payload.callee_voice_id or payload.friend_id)
+    if has_unmapped_app_target and payload.callee_user_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "missing_callee_user_id", "message": "앱 통화 대상에는 callee_user_id가 필요합니다."},
+        )
+
+    has_app_target = payload.callee_user_id is not None
 
     # PSTN-only 요청은 P3-B 공급자 어댑터로 처리(기본: 다이얼러 폴백).
     if not has_app_target:
@@ -126,12 +143,18 @@ async def initiate_call(payload: CallInitiateRequest, request: Request, user=Dep
             caller_label=str(caller_username),
             data={"caller_user_id": caller_user_id, "session_id": room.session_id or ""},
         )
+        push_sent = int(push_result.get("sent", 0) or 0)
+        push_event_type = "push_skipped" if push_result.get("skipped") else ("push_sent" if push_sent > 0 else "push_failed")
         await store.add_event(
             room.call_id,
-            "push_skipped" if push_result.get("skipped") else "push_sent",
+            push_event_type,
             "caller",
-            {"sent": push_result.get("sent", 0), "reason": push_result.get("reason"),
-             "callee_online": callee_online, "device_count": len(tokens)},
+            {
+                "sent": push_sent,
+                "reason": push_result.get("reason"),
+                "callee_online": callee_online,
+                "device_count": len(tokens),
+            },
         )
 
     return CallInitResponse(
@@ -196,6 +219,7 @@ async def audit_call(call_id: str, user=Depends(get_current_user)) -> AuditRespo
     room = await get_store().get(call_id)
     if room is None:
         raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
+    _require_call_participant(room, getattr(user, "id", None))
     return AuditResponse(
         call_id=room.call_id,
         status=room.status,
@@ -209,7 +233,12 @@ async def audit_call(call_id: str, user=Depends(get_current_user)) -> AuditRespo
 
 @router.post("/calls/{call_id}/end")
 async def end_call(call_id: str, user=Depends(get_current_user)) -> Dict[str, Any]:
-    room = await get_store().end(call_id, role=None)
+    store = get_store()
+    room = await store.get(call_id)
+    if room is None:
+        raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
+    role = _require_call_participant(room, getattr(user, "id", None))
+    room = await store.end(call_id, role=role)
     if room is None:
         raise HTTPException(status_code=404, detail="해당 call_id의 통화를 찾을 수 없습니다.")
     # 연결된 참가자에게 hangup 통지.
@@ -250,11 +279,9 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
         await websocket.close(code=1008)
         return
 
-    relay = get_relay()
-    # register(구독)을 accept보다 먼저 수행 → 클라이언트가 메시지를 보내기 전에
-    # 릴레이 구독이 활성화되도록 보장(Redis pub/sub 메시지 유실 방지).
-    await relay.register(call_id, role, websocket)
     await websocket.accept()
+    relay = get_relay()
+    await relay.register(call_id, role, websocket)
     await store.mark_connected(call_id, role)
     voip_metrics.ws_connected(role)
     # 콜리 합류 지연(룸 생성→callee WS) = 통화 셋업 프록시(off-path, best-effort).
@@ -285,6 +312,11 @@ async def voip_signaling(websocket: WebSocket, call_id: str) -> None:
 
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong", "call_id": call_id})
+                if uid is not None:
+                    try:
+                        await get_presence().mark_online(int(uid))
+                    except (TypeError, ValueError):
+                        pass
                 continue
 
             if msg_type == "hangup":

@@ -190,6 +190,47 @@ end
 return 0
 """
 
+_ACCEPT_CALLEE_LUA = """
+local room_key = KEYS[1]
+local incoming_key = KEYS[2]
+local events_key = KEYS[3]
+local call_id = ARGV[1]
+local user_id = ARGV[2]
+local username = ARGV[3]
+local now = ARGV[4]
+local ttl = tonumber(ARGV[5])
+
+local raw = redis.call('HGET', room_key, 'callee')
+local status = redis.call('HGET', room_key, 'status')
+if raw == false or status == 'ended' then
+  return 0
+end
+
+local callee = cjson.decode(raw)
+if callee['user_id'] == nil then
+  return 0
+end
+if tostring(callee['user_id']) ~= user_id then
+  return 0
+end
+
+callee['user_id'] = tonumber(user_id)
+callee['username'] = (username ~= '' and username or cjson.null)
+redis.call('HSET', room_key, 'callee', cjson.encode(callee))
+redis.call('SREM', incoming_key, call_id)
+
+local event = {
+  ts = tonumber(now),
+  type = 'accept',
+  role = 'callee',
+  detail = { user_id = tonumber(user_id), via = 'push' }
+}
+redis.call('RPUSH', events_key, cjson.encode(event))
+redis.call('EXPIRE', room_key, ttl)
+redis.call('EXPIRE', events_key, ttl)
+return 1
+"""
+
 
 class RedisCallStore:
     """CallRegistry와 동일한 비동기 API를 Redis로 구현.
@@ -260,6 +301,9 @@ class RedisCallStore:
                     await self._push_event(cid, "accept", "callee", {"user_id": caller_user_id})
                     room.events.append({"ts": _now(), "type": "accept", "role": "callee", "detail": {"user_id": caller_user_id}})
                     return room, "callee"
+                if room is not None and room.status == "ringing" and room.callee.user_id is not None:
+                    await client.sadd(_incoming_key(room.callee.user_id), cid)
+                    await client.expire(_incoming_key(room.callee.user_id), ROOM_TTL_SEC)
 
         # 2) 새 통화 생성.
         call_id = "c_" + uuid.uuid4().hex[:12]
@@ -318,18 +362,20 @@ class RedisCallStore:
 
     async def accept_callee(self, call_id: str, user_id: int, username: Optional[str]) -> Optional[CallRoom]:
         client = get_client()
-        raw = await client.hget(_room_key(call_id), "callee")
-        status = await client.hget(_room_key(call_id), "status")
-        if raw is None or status == "ended":
+        accepted = await client.eval(
+            _ACCEPT_CALLEE_LUA,
+            3,
+            _room_key(call_id),
+            _incoming_key(user_id),
+            _events_key(call_id),
+            call_id,
+            str(user_id),
+            username or "",
+            str(_now()),
+            ROOM_TTL_SEC,
+        )
+        if int(accepted or 0) != 1:
             return None
-        callee = json.loads(raw)
-        if callee.get("user_id") not in (None, user_id):
-            return None
-        callee["user_id"] = user_id
-        callee["username"] = username
-        await client.hset(_room_key(call_id), "callee", json.dumps(callee))
-        await client.srem(_incoming_key(user_id), call_id)
-        await self._push_event(call_id, "accept", "callee", {"user_id": user_id, "via": "push"})
         return await self._load(call_id)
 
     async def add_event(
@@ -394,6 +440,16 @@ class RedisRelay:
         self._subs: Dict[Tuple[str, str, int], Tuple[Any, asyncio.Task]] = {}
 
     async def register(self, call_id: str, role: str, websocket: Any) -> None:
+        for key, (pubsub, task) in list(self._subs.items()):
+            existing_call_id, existing_role, _ = key
+            if existing_call_id == call_id and existing_role == role:
+                self._subs.pop(key, None)
+                task.cancel()
+                try:
+                    await pubsub.unsubscribe(_relay_channel(call_id))
+                    await pubsub.aclose()
+                except Exception:  # noqa: BLE001
+                    pass
         pubsub = get_client().pubsub()
         await pubsub.subscribe(_relay_channel(call_id))
         task = asyncio.create_task(self._listen(pubsub, role, websocket))

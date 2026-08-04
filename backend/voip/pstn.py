@@ -43,12 +43,13 @@ class SimulatedPstnProvider:
 
     async def dial(self, *, callee_phone: str, call_id: str = "", caller_label: str = "") -> Dict[str, Any]:
         return {
-            "call_route": "pstn",
-            "phone_dialer_required": False,
-            "status": "dialing",
-            "resolved_mode": "pstn",
+            "call_route": "pstn_fallback",
+            "phone_dialer_required": True,
+            "fallback_dial_url": f"tel:{callee_phone}",
+            "status": "dialer_required",
+            "resolved_mode": "pstn_fallback",
             "provider_call_id": "sim_" + uuid.uuid4().hex[:12],
-            "user_message": "전화망으로 발신을 시작합니다(시뮬레이션).",
+            "user_message": "전화망 시뮬레이션은 다이얼러로 전환됩니다.",
         }
 
 

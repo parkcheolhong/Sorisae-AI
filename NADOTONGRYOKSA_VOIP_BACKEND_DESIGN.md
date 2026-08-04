@@ -200,7 +200,7 @@ class CallRoom:
 - **단위**: `CallRegistry` 생성/종료/감사 이벤트; initiate 분기(app vs pstn_fallback); ws 토큰 검증.
 - **통합(WebSocket relay)**: FastAPI `TestClient`로 **2개의 ws 클라이언트(caller/callee)** 접속 → caller가 `offer` 전송 → callee가 동일 sdp 수신 → `answer`/`candidate` 역방향 relay 검증 → `ping`→`pong` → `hangup` 룸 종료. (pytest-asyncio 사용)
 - **계약**: initiate 응답 JSON에 모바일 `CallInitResponse` 필수 키 존재 검증(`call_id`,`signaling_server`,`turn_servers`,`participant_role`).
-- **수동(실기기/시뮬)**: `VOIP_PUBLIC_WS_BASE=ws://<dev-host>:8000`로 2 디바이스 통화 → `VOIP_START_CALL_PRESS`,`[VoIP] Offer sent`,`Answer applied`,`Connection state: connected` 로그 확인(voip-retest-checklist 게이트).
+- **수동(실기기/시뮬)**: `VOIP_PUBLIC_WS_BASE=wss://<dev-host>:8000`로 2 디바이스 통화 → `VOIP_START_CALL_PRESS`,`[VoIP] Offer sent`,`Answer applied`,`Connection state: connected` 로그 확인(voip-retest-checklist 게이트).
 
 ## 11. 결정 필요(오픈 이슈)
 1. **TURN 서버 제공 주체**: 자체 coturn 호스팅 vs 관리형(Twilio/메타지원). STUN만으로는 대칭 NAT에서 연결 실패율 높음 → P1 검증은 동일망/STUN로 가능하나, 실사용엔 TURN 필수.
