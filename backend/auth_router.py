@@ -924,10 +924,17 @@ def social_login_start(
     frontend_return_to = _resolve_social_return_to_path(return_to)
     callback_uri = str(request.url_for("social_login_callback", provider=config.provider))
     frontend_callback_url = _resolve_social_callback_url(callback_url)
+
+    now = datetime.now(timezone.utc)
+    for stored_state, stored_entry in list(_SOCIAL_AUTH_STATE_STORE.items()):
+        created_at = stored_entry.get("created_at")
+        if not isinstance(created_at, datetime) or now - created_at > _SOCIAL_AUTH_STATE_TTL:
+            _SOCIAL_AUTH_STATE_STORE.pop(stored_state, None)
+
     _SOCIAL_AUTH_STATE_STORE[state] = {
         "provider": config.provider,
         "return_to": frontend_return_to,
-        "created_at": datetime.now(timezone.utc),
+        "created_at": now,
         "callback_uri": callback_uri,
         "frontend_callback_url": frontend_callback_url,
     }
