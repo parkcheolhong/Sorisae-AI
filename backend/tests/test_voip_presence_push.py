@@ -36,10 +36,11 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-def _reset():
+def _reset(monkeypatch):
     import asyncio
     from backend.voip.registry import registry
     from backend.voip.signaling import hub
+    monkeypatch.delenv("VOIP_REDIS_URL", raising=False)
     registry._rooms.clear()
     hub._rooms.clear()
     # 인메모리 presence 초기화

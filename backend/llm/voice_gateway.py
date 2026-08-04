@@ -549,7 +549,26 @@ def _friend_chat_base_url() -> str:
         raw = raw.replace("://127.0.0.1", "://host.docker.internal").replace(
             "://localhost", "://host.docker.internal"
         )
-    return raw
+    try:
+        import httpx
+
+        response = httpx.get(f"{raw}/models", timeout=5)
+        if response.status_code == 200:
+            return raw
+        logger.warning(
+            "[voice/friend-chat] dedicated base unavailable status=%s base=%s; falling back to translate base",
+            response.status_code,
+            raw,
+        )
+    except Exception as exc:
+        logger.warning(
+            "[voice/friend-chat] dedicated base probe failed base=%s; falling back to translate base: %s",
+            raw,
+            exc,
+        )
+    from backend.services.nadotongryoksa.translator import _llm_translate_base_url
+
+    return _llm_translate_base_url()
 
 
 def _friend_chat_dedicated_instance() -> str:
@@ -932,6 +951,7 @@ class VoiceResponse(BaseModel):
     output_dir: Optional[str] = None
     run_id: Optional[str] = None
     conversation: list[dict] = []
+    detected_language: Optional[str] = None  # Whisper 감지 언어(zh, ja, ko, en 등) — 모바일 자동 언어전환에 사용
 
 
 def _run_whisper_cpp(audio_bytes: bytes) -> str:
@@ -1792,7 +1812,7 @@ async def voice_orchestrate(request_context: Request, request: VoiceRequest, cur
         output_dir=output_dir,
         run_id=run_id,
         conversation=conversation,
-        detected_language=detected_language, # pyright: ignore[reportCallIssue]
+        detected_language=detected_language,
     )
 
 

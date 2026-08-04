@@ -25,6 +25,7 @@ class _FakeUser:
 _USERS = {
     "alice": _FakeUser(1001, "alice"),
     "bob": _FakeUser(1002, "bob"),
+    "mallory": _FakeUser(1003, "mallory"),
 }
 
 
@@ -91,6 +92,20 @@ def test_pstn_only_falls_back_to_dialer(client):
     assert resp["call_route"] == "pstn_fallback"
     assert resp["phone_dialer_required"] is True
     assert resp["fallback_dial_url"] == "tel:+821012345678"
+
+
+@pytest.mark.parametrize("body", [
+    {"callee_voice_id": "voice_only"},
+    {"friend_id": 9001},
+])
+def test_initiate_requires_callee_user_id_for_app_targets(client, body):
+    resp = client.post(
+        "/api/v1/voip/calls/initiate",
+        json=body,
+        headers={"X-Test-User": "alice"},
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "missing_callee_user_id"
 
 
 def test_initiate_response_has_turn_servers(client):
@@ -172,3 +187,17 @@ def test_ws_rejects_invalid_token(client):
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect(f"/api/v1/voip/ws/{call_id}?token=bogus&role=caller") as ws:
             ws.receive_json()
+
+
+def test_audit_forbids_non_participant(client):
+    caller = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
+    resp = client.get(f"/api/v1/voip/calls/{caller['call_id']}/audit", headers={"X-Test-User": "mallory"})
+    assert resp.status_code == 403
+
+
+def test_end_forbids_non_participant(client):
+    caller = _initiate(client, as_user="alice", body={"callee_user_id": 1002})
+    resp = client.post(f"/api/v1/voip/calls/{caller['call_id']}/end", headers={"X-Test-User": "mallory"})
+    assert resp.status_code == 403
+    audit = client.get(f"/api/v1/voip/calls/{caller['call_id']}/audit", headers={"X-Test-User": "alice"}).json()
+    assert audit["status"] == "ringing"

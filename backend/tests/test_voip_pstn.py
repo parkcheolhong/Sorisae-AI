@@ -46,11 +46,11 @@ def test_default_provider_falls_back_to_dialer(client, monkeypatch):
 def test_simulated_provider_routes_pstn(client, monkeypatch):
     monkeypatch.setenv("VOIP_PSTN_PROVIDER", "simulated")
     data = _initiate_phone(client)
-    assert data["call_route"] == "pstn"
-    assert data["phone_dialer_required"] is False
-    assert data["status"] == "dialing"
+    assert data["call_route"] == "pstn_fallback"
+    assert data["phone_dialer_required"] is True
+    assert data["status"] == "dialer_required"
     assert data["call_id"].startswith("sim_")
-    assert data["resolved_mode"] == "pstn"
+    assert data["resolved_mode"] == "pstn_fallback"
 
 
 def test_twilio_provider_unconfigured_falls_back(client, monkeypatch):

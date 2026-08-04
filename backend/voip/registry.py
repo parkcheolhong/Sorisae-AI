@@ -165,7 +165,7 @@ class CallRegistry:
             room = self._rooms.get(call_id)
             if room is None or room.status == "ended":
                 return None
-            if room.callee.user_id not in (None, user_id):
+            if room.callee.user_id is None or room.callee.user_id != user_id:
                 return None
             room.callee.user_id = user_id
             room.callee.username = username

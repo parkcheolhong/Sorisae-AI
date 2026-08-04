@@ -6,13 +6,17 @@ import os
 
 logger = logging.getLogger(__name__)
 from urllib.parse import urlparse
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status  # pyright: ignore[reportMissingImports]
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status  # pyright: ignore[reportMissingImports]
 from fastapi.security import OAuth2PasswordRequestForm  # pyright: ignore[reportMissingImports]
+from fastapi.responses import RedirectResponse  # pyright: ignore[reportMissingImports]
 from typing import Any, Optional
 import re
 from pydantic import BaseModel, ConfigDict, EmailStr  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
+from backend.time_utils import utcnow
 from webauthn import (  # pyright: ignore[reportMissingImports]
     generate_authentication_options,
     generate_registration_options,
@@ -116,6 +120,12 @@ class Token(BaseModel):
     token_type: str
 
 
+class SocialLoginStartResponse(BaseModel):
+    provider: str
+    authorization_url: str
+    callback_url: str
+
+
 class PasskeyRegistrationStartRequest(BaseModel):
     email: EmailStr
     device_label: str | None = None
@@ -149,6 +159,9 @@ class PasskeyLoginFinishRequest(BaseModel):
 
 _passkey_registration_store: dict[str, dict[str, object]] = {}
 _passkey_login_store: dict[str, dict[str, object]] = {}
+_social_login_providers = {"google", "naver", "kakao"}
+_social_login_callback_path = "auth/callback"
+_social_login_state_store: dict[str, dict[str, object]] = {}
 
 
 def _user_may_use_admin_portal(user: Any) -> bool:
@@ -202,6 +215,357 @@ def _build_authentication_credential(payload: dict) -> AuthenticationCredential:
         ),
         type="public-key",
     )
+
+
+def _normalize_social_login_provider(provider: str) -> str:
+    normalized = str(provider or "").strip().lower()
+    if normalized not in _social_login_providers:
+        raise HTTPException(status_code=404, detail="지원하지 않는 소셜 로그인 제공자입니다")
+    return normalized
+
+
+def _resolve_social_login_redirect_uri(redirect_uri: str) -> str:
+    normalized = str(redirect_uri or "").strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="redirect_uri 가 필요합니다")
+
+    parsed = urlparse(normalized)
+    scheme = parsed.scheme.lower()
+    resolved_path = f"{parsed.hostname or ''}{parsed.path}".lstrip("/").lower()
+    if scheme not in {"worldlinco", "worldlingo", "com.parkcheolhong.worldlinco"} or resolved_path != _social_login_callback_path:
+        raise HTTPException(status_code=400, detail="허용되지 않은 redirect_uri 입니다")
+    return normalized
+
+
+def _resolve_social_callback_base_url(request: Request) -> str:
+    configured = str(os.getenv("SOCIAL_LOGIN_CALLBACK_BASE_URL") or "").strip().rstrip("/")
+    if configured:
+        return configured
+    forwarded_proto = str(request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip()
+    forwarded_host = str(request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc or "").split(",")[0].strip()
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    return f"{request.url.scheme}://{request.url.netloc}".rstrip("/")
+
+
+def _social_provider_config(provider: str) -> dict[str, str]:
+    normalized = _normalize_social_login_provider(provider)
+    if normalized == "google":
+        return {
+            "client_id_env": "GOOGLE_CLIENT_ID",
+            "client_secret_env": "GOOGLE_CLIENT_SECRET",
+            "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo",
+            "scope": "openid email profile",
+        }
+    if normalized == "naver":
+        return {
+            "client_id_env": "NAVER_CLIENT_ID",
+            "client_secret_env": "NAVER_CLIENT_SECRET",
+            "authorization_url": "https://nid.naver.com/oauth2.0/authorize",
+            "token_url": "https://nid.naver.com/oauth2.0/token",
+            "userinfo_url": "https://openapi.naver.com/v1/nid/me",
+            "scope": "name email profile",
+        }
+    return {
+        "client_id_env": "KAKAO_CLIENT_ID",
+        "client_secret_env": "KAKAO_CLIENT_SECRET",
+        "authorization_url": "https://kauth.kakao.com/oauth/authorize",
+        "token_url": "https://kauth.kakao.com/oauth/token",
+        "userinfo_url": "https://kapi.kakao.com/v2/user/me",
+        "scope": "account_email profile_nickname profile_image",
+    }
+
+
+def _resolve_social_provider_credentials(provider: str) -> tuple[str, str]:
+    config = _social_provider_config(provider)
+    client_id = str(os.getenv(config["client_id_env"]) or "").strip()
+    client_secret = str(os.getenv(config["client_secret_env"]) or "").strip()
+    if not client_id or not client_secret:
+        raise HTTPException(
+            status_code=503,
+            detail=f"{provider.upper()} 소셜 로그인 운영값이 없습니다. {config['client_id_env']} / {config['client_secret_env']} 를 설정하세요.",
+        )
+    return client_id, client_secret
+
+
+def _build_social_callback_url(request: Request, provider: str) -> str:
+    base_url = _resolve_social_callback_base_url(request)
+    return f"{base_url}/api/auth/social/{provider}/callback"
+
+
+def _build_social_authorization_url(provider: str, *, client_id: str, callback_url: str, state: str) -> str:
+    config = _social_provider_config(provider)
+    params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": callback_url,
+        "scope": config["scope"],
+        "state": state,
+    }
+    if provider == "google":
+        params["access_type"] = "offline"
+        params["prompt"] = "consent"
+    return f"{config['authorization_url']}?{urlencode(params)}"
+
+
+def _store_social_login_state(provider: str, redirect_uri: str, callback_url: str) -> str:
+    state = token_urlsafe(24)
+    _social_login_state_store[state] = {
+        "provider": provider,
+        "redirect_uri": redirect_uri,
+        "callback_url": callback_url,
+        "created_at": utcnow().isoformat(),
+    }
+    return state
+
+
+def _pop_social_login_state(state: str) -> dict[str, object]:
+    stored = _social_login_state_store.pop(state, None)
+    if not stored:
+        raise HTTPException(status_code=404, detail="소셜 로그인 state 를 찾을 수 없습니다")
+    return stored
+
+
+def _cleanup_social_login_state_store() -> None:
+    if not _social_login_state_store:
+        return
+    cutoff = utcnow() - timedelta(minutes=15)
+    stale_states = []
+    for state, payload in _social_login_state_store.items():
+        created_raw = str(payload.get("created_at") or "").strip()
+        try:
+            created_at = datetime.fromisoformat(created_raw)
+        except Exception:
+            stale_states.append(state)
+            continue
+        if created_at < cutoff:
+            stale_states.append(state)
+    for state in stale_states:
+        _social_login_state_store.pop(state, None)
+
+
+def _request_form_encoded(client: httpx.Client, method: str, url: str, data: dict[str, str], headers: dict[str, str]) -> dict[str, Any]:
+    response = client.request(method, url, data=data, headers=headers)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=502, detail="소셜 로그인 provider 응답 형식이 올바르지 않습니다")
+    return payload
+
+
+def _fetch_social_provider_userinfo(provider: str, access_token: str, token_payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    config = _social_provider_config(provider)
+    with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = client.get(config["userinfo_url"], headers=headers)
+        response.raise_for_status()
+        payload = response.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=502, detail="소셜 로그인 사용자 정보를 해석할 수 없습니다")
+    if provider == "naver":
+        return dict(payload.get("response") or {})
+    if provider == "kakao":
+        profile = dict((payload.get("kakao_account") or {}).get("profile") or {})
+        account = dict(payload.get("kakao_account") or {})
+        return {
+            "id": payload.get("id"),
+            "email": account.get("email"),
+            "name": profile.get("nickname") or profile.get("name") or account.get("profile_nickname"),
+            "nickname": profile.get("nickname"),
+            "profile_image": profile.get("profile_image_url") or profile.get("thumbnail_image_url"),
+        }
+    return payload
+
+
+def _extract_social_identity(provider: str, userinfo: dict[str, Any], token_payload: dict[str, Any]) -> tuple[str, str, str]:
+    provider_user_id = str(
+        userinfo.get("id")
+        or userinfo.get("sub")
+        or userinfo.get("response", {}).get("id")
+        or token_payload.get("id_token")
+        or token_payload.get("access_token")
+        or token_urlsafe(8)
+    ).strip()
+    email = str(
+        userinfo.get("email")
+        or userinfo.get("response", {}).get("email")
+        or f"{provider}.{provider_user_id}@worldlinco.social"
+    ).strip().lower()
+    display_name = str(
+        userinfo.get("name")
+        or userinfo.get("nickname")
+        or userinfo.get("display_name")
+        or userinfo.get("response", {}).get("name")
+        or userinfo.get("response", {}).get("nickname")
+        or provider_user_id
+    ).strip()
+    base_username = re.sub(r"[^a-zA-Z0-9_]+", "_", f"{provider}_{provider_user_id or email.split('@')[0]}").strip("_").lower()
+    if not base_username:
+        base_username = f"{provider}_social_user"
+    return email, base_username[:96], display_name
+
+
+def _get_or_create_social_login_user(
+    db: Session,
+    provider: str,
+    email: str,
+    username: str,
+    display_name: str,
+) -> User:
+    user = db.query(User).filter((User.email == email) | (User.username == username)).first()
+    if user is None:
+        existing_username_count = db.query(User).filter(User.username.like(f"{username}%")).count()
+        if existing_username_count:
+            username = f"{username}{existing_username_count + 1}"
+        user = User(
+            email=email,
+            username=username,
+            full_name=display_name,
+            member_type="individual",
+            hashed_password=get_password_hash(token_urlsafe(24)),
+            is_active=True,
+            is_admin=False,
+            is_staff=False,
+            is_superuser=False,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    if display_name and not str(user.full_name or "").strip():
+        user.full_name = display_name
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def _build_social_login_callback_url(
+    redirect_uri: str,
+    *,
+    provider: str,
+    access_token: str,
+    refresh_token: str,
+    id_token: str,
+    expires_in: int,
+    user: User,
+) -> str:
+    params = {
+        "provider": provider,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "id_token": id_token,
+        "expires_in": str(expires_in),
+        "email": str(user.email or ""),
+        "user_id": str(int(user.id)),
+        "username": str(user.username or ""),
+        "display_name": str(user.full_name or user.username or provider),
+    }
+    separator = "&" if "?" in redirect_uri else "?"
+    return f"{redirect_uri}{separator}{urlencode(params)}"
+
+
+@router.get("/social/{provider}/start")
+def start_social_login(
+    provider: str,
+    request: Request,
+    redirect_uri: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_provider = _normalize_social_login_provider(provider)
+    normalized_redirect_uri = _resolve_social_login_redirect_uri(redirect_uri)
+    client_id, _client_secret = _resolve_social_provider_credentials(normalized_provider)
+    callback_url = _build_social_callback_url(request, normalized_provider)
+    _cleanup_social_login_state_store()
+    state = _store_social_login_state(normalized_provider, normalized_redirect_uri, callback_url)
+    authorization_url = _build_social_authorization_url(
+        normalized_provider,
+        client_id=client_id,
+        callback_url=callback_url,
+        state=state,
+    )
+    logger.info("[%s] 소셜 로그인 시작 → %s", normalized_provider, authorization_url)
+    return RedirectResponse(url=authorization_url, status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/social/{provider}/callback")
+def finish_social_login(
+    provider: str,
+    code: str = Query(default=""),
+    state: str = Query(default=""),
+    error: str | None = Query(default=None),
+    error_description: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    normalized_provider = _normalize_social_login_provider(provider)
+    if error:
+        raise HTTPException(status_code=400, detail=f"소셜 로그인 provider 오류: {error_description or error}")
+    if not code.strip():
+        raise HTTPException(status_code=400, detail="authorization code 가 필요합니다")
+    if not state.strip():
+        raise HTTPException(status_code=400, detail="state 가 필요합니다")
+
+    state_payload = _pop_social_login_state(state.strip())
+    if str(state_payload.get("provider") or "") != normalized_provider:
+        raise HTTPException(status_code=400, detail="소셜 로그인 provider state 가 일치하지 않습니다")
+    redirect_uri = _resolve_social_login_redirect_uri(str(state_payload.get("redirect_uri") or ""))
+    callback_url = str(state_payload.get("callback_url") or "").strip()
+    if not callback_url:
+        raise HTTPException(status_code=500, detail="소셜 로그인 callback_url 을 찾을 수 없습니다")
+    client_id, client_secret = _resolve_social_provider_credentials(normalized_provider)
+    provider_config = _social_provider_config(normalized_provider)
+
+    with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+        token_payload = _request_form_encoded(
+            client,
+            "POST",
+            provider_config["token_url"],
+            {
+                "grant_type": "authorization_code",
+                "code": code.strip(),
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": callback_url,
+            },
+            {"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+    access_token = str(token_payload.get("access_token") or "").strip()
+    if not access_token:
+        raise HTTPException(status_code=502, detail="provider access_token 이 비어 있습니다")
+    refresh_token = str(token_payload.get("refresh_token") or "").strip()
+    id_token = str(token_payload.get("id_token") or "").strip()
+    expires_in_raw = token_payload.get("expires_in")
+    try:
+        expires_in = int(expires_in_raw) if expires_in_raw is not None else ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    except Exception:
+        expires_in = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
+    userinfo = _fetch_social_provider_userinfo(normalized_provider, access_token, token_payload)
+    email, username, display_name = _extract_social_identity(normalized_provider, userinfo, token_payload)
+    user = _get_or_create_social_login_user(db, normalized_provider, email=email, username=username, display_name=display_name)
+
+    session_id = token_urlsafe(24)
+    app_access_token = create_access_token(
+        data={"sub": str(user.email or user.username or normalized_provider), "sid": session_id},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        no_expiry=_should_issue_non_expiring_admin_token(user),
+    )
+    set_active_session(int(user.id), session_id)
+    register_issued_token(app_access_token, str(user.email or user.username or ""))
+    final_url = _build_social_login_callback_url(
+        redirect_uri,
+        provider=normalized_provider,
+        access_token=app_access_token,
+        refresh_token=refresh_token,
+        id_token=id_token,
+        expires_in=expires_in,
+        user=user,
+    )
+    logger.info("[%s] 소셜 로그인 완료 → %s", normalized_provider, final_url)
+    return RedirectResponse(url=final_url, status_code=status.HTTP_302_FOUND)
 
 
 def _resolve_passkey_rp_id() -> str:

@@ -3,6 +3,7 @@
 VOIP_REDIS_URL 활성화 시: 룸 메타데이터/감사가 Redis에 저장되고, 시그널링 릴레이가
 pub/sub 채널로 브리지되는지 라이브 Redis로 검증한다(라이브 Redis 미가용 시 skip).
 """
+import os
 import time
 from urllib.parse import urlparse
 
@@ -10,7 +11,7 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-REDIS_TEST_URL = "redis://127.0.0.1:6380/5"
+REDIS_TEST_URL = os.getenv("VOIP_TEST_REDIS_URL", "redis://127.0.0.1:6380/5")
 
 
 def _redis_available() -> bool:
