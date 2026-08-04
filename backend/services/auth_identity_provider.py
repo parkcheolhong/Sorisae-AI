@@ -75,7 +75,12 @@ class CarrierIdentityProviderBase:
         configured = self._resolve_env_value(self.callback_env)
         if configured:
             return configured
-        return f"https://metanova1004.com/api/auth/identity/providers/{self.provider_name}/callback"
+        admin_domain = (
+            self._resolve_env_value("ADMIN_DOMAIN")
+            or self._resolve_env_value("DOMAIN_NAME")
+            or "xn--114-2p7l635dz3bh5j.com"
+        )
+        return f"https://{admin_domain}/api/auth/identity/providers/{self.provider_name}/callback"
 
     def _resolve_provider_endpoint(self) -> str:
         configured = self._resolve_env_value(self.provider_endpoint_env)

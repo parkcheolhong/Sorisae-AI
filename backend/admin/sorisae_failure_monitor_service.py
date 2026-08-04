@@ -16,6 +16,8 @@ from backend.time_utils import utcnow
 _MONITOR_DIR_PREFIX = "ui_api_failure_split_"
 _FAILURE_CLASSIFICATIONS = {"UI_ONLY_FAILURE", "BOTH_FAIL"}
 _PUSH_CHANNEL_ID = "worldlinco_chat_message"
+_RESULT_FILE_NAMES = ("smoke_result.json", "ui_smoke_report.json")
+_SUMMARY_FILE_NAMES = ("smoke_summary.txt", "ui_smoke_summary.txt")
 
 
 def _repo_root() -> Path:
@@ -106,6 +108,22 @@ def _resolve_latest_monitor_dir_across_roots(roots: List[Path]) -> Optional[Path
     return candidates[0]
 
 
+def _resolve_monitor_result_path(result_dir: Path) -> Optional[Path]:
+    for file_name in _RESULT_FILE_NAMES:
+        candidate = result_dir / file_name
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _resolve_monitor_summary_path(result_dir: Path) -> Optional[Path]:
+    for file_name in _SUMMARY_FILE_NAMES:
+        candidate = result_dir / file_name
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _normalize_screenshot_items(result: Dict[str, Any]) -> List[Dict[str, str]]:
     ui_top_summary = result.get("uiTopSummary") or {}
     rows = ui_top_summary.get("screenshotTop3Items") or []
@@ -125,18 +143,44 @@ def _normalize_screenshot_items(result: Dict[str, Any]) -> List[Dict[str, str]]:
     return normalized
 
 
+def _infer_classification(result: Dict[str, Any], summary: Dict[str, Any], api_summary: Dict[str, Any]) -> str:
+    classification = str(result.get("classification") or summary.get("classification") or "").strip()
+    if classification:
+        return classification
+
+    ui_fail = _coerce_int(result.get("uiFail", summary.get("ui_fail")))
+    api_fail = _coerce_int(result.get("apiFail", api_summary.get("fail")))
+    ui_total = _coerce_int(summary.get("ui_total", api_summary.get("total")))
+    ui_ok = _coerce_int(summary.get("ui_ok"))
+    ui_console_errors = _coerce_int(summary.get("ui_console_errors"))
+    ui_page_errors = _coerce_int(summary.get("ui_page_errors"))
+    ui_request_failed = _coerce_int(summary.get("ui_request_failed"))
+    ui_api_http_errors = _coerce_int(summary.get("ui_api_http_errors"))
+
+    any_ui_failure_signal = any(
+        value > 0 for value in (ui_fail, ui_console_errors, ui_page_errors, ui_request_failed, ui_api_http_errors)
+    )
+    if api_fail > 0 and any_ui_failure_signal:
+        return "BOTH_FAIL"
+    if api_fail > 0:
+        return "API_ONLY_FAILURE"
+    if any_ui_failure_signal:
+        return "UI_ONLY_FAILURE"
+    if ui_total > 0 or ui_ok > 0:
+        return "ALL_PASS"
+    return "unknown"
+
+
 def load_sorisae_failure_result(result_json_path: str | Path) -> Dict[str, Any]:
     result_path = Path(result_json_path).expanduser().resolve()
     result_dir = result_path.parent
     result = _load_json(result_path)
-    summary = _parse_summary_file(result_dir / "smoke_summary.txt")
+    summary_path = _resolve_monitor_summary_path(result_dir)
+    summary = _parse_summary_file(summary_path) if summary_path else {}
     ui_report_path = result_dir / "ui_smoke_report.json"
+    api_summary = ((result.get("api") or {}).get("summary") or {}) if isinstance(result.get("api"), dict) else {}
 
-    classification = str(
-        result.get("classification")
-        or summary.get("classification")
-        or "unknown"
-    ).strip() or "unknown"
+    classification = _infer_classification(result, summary, api_summary)
     status = (
         "critical" if classification in _FAILURE_CLASSIFICATIONS else
         "warning" if classification == "API_ONLY_FAILURE" else
@@ -147,7 +191,6 @@ def load_sorisae_failure_result(result_json_path: str | Path) -> Dict[str, Any]:
     admin_push = result.get("adminPush") if isinstance(result.get("adminPush"), dict) else {}
     notification = result.get("notification") if isinstance(result.get("notification"), dict) else {}
     alert = result.get("alert") if isinstance(result.get("alert"), dict) else {}
-    api_summary = ((result.get("api") or {}).get("summary") or {}) if isinstance(result.get("api"), dict) else {}
     ui_top_summary = result.get("uiTopSummary") if isinstance(result.get("uiTopSummary"), dict) else {}
 
     return {
@@ -156,7 +199,7 @@ def load_sorisae_failure_result(result_json_path: str | Path) -> Dict[str, Any]:
         "started_at": result.get("startedAt"),
         "out_dir": str(result.get("outDir") or result_dir),
         "result_json_path": str(result_path),
-        "summary_path": str(result_dir / "smoke_summary.txt"),
+        "summary_path": str(summary_path or result_dir / "smoke_summary.txt"),
         "ui_report_path": str(ui_report_path),
         "ui_har_dir": str(result.get("uiHarDir") or ""),
         "alert_file": str(alert.get("alertFile") or ""),
@@ -198,12 +241,12 @@ def get_latest_sorisae_failure_status() -> Dict[str, Any]:
             "monitor_roots": [str(root) for root in monitor_roots],
         }
 
-    result_path = latest_dir / "smoke_result.json"
-    if not result_path.exists():
+    result_path = _resolve_monitor_result_path(latest_dir)
+    if result_path is None:
         return {
             "status": "unknown",
             "classification": "unknown",
-            "message": "최신 소리새 장애감지 결과 디렉터리에 smoke_result.json 이 없습니다.",
+            "message": "최신 소리새 장애감지 결과 디렉터리에 smoke_result.json 또는 ui_smoke_report.json 이 없습니다.",
             "monitor_root": str(monitor_root),
             "monitor_roots": [str(root) for root in monitor_roots],
             "out_dir": str(latest_dir),
@@ -223,11 +266,11 @@ def get_latest_sorisae_failure_result_json_payload() -> Dict[str, Any]:
 
     result_path = Path(result_json_path).expanduser().resolve()
     if not result_path.exists():
-        raise FileNotFoundError("최신 소리새 장애감지 smoke_result.json 파일이 없습니다.")
+        raise FileNotFoundError("최신 소리새 장애감지 result 파일이 없습니다.")
 
     payload = _load_json(result_path)
     if not payload:
-        raise ValueError("최신 소리새 장애감지 smoke_result.json 을 파싱하지 못했습니다.")
+        raise ValueError("최신 소리새 장애감지 result 파일을 파싱하지 못했습니다.")
 
     return {
         "result_json_path": str(result_path),

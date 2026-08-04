@@ -1,10 +1,10 @@
 {
     "downloadPath":  "/api/marketplace/apk/nadotongryoksa-v1.apk",
-    "publishedAt":  "2026-07-09T08:41:33.0679234Z",
-    "versionName":  "1.0.241",
+    "publishedAt":  "2026-08-04T04:15:37Z",
+    "versionName":  "1.0.246",
     "apkFilename":  "nadotongryoksa-v1.apk",
-    "versionCode":  319,
+    "versionCode":  331,
     "sizeBytes":  87968394,
     "package":  "com.parkcheolhong.worldlinco",
-    "versionedFilename":  "nadotongryoksa-v1.0.241-build319-current.apk"
+    "versionedFilename":  "nadotongryoksa-v1.0.246-build331-current.apk"
 }

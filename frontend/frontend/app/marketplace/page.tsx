@@ -6,6 +6,7 @@ import FeatureLauncherGrid from '@/components/marketplace/feature-launcher-grid'
 import FeatureOrchestratorPopup from '@/components/marketplace/feature-orchestrator-popup';
 import { buildMarketplaceWorkspaceRailItems } from '@/components/marketplace/marketplace-rails';
 import { resolveApiBaseUrl } from '@/lib/api';
+import { buildSocialLoginStartUrl, type SocialProvider } from '@/lib/social-auth';
 import { useFeatureOrchestrator } from '@/hooks/use-feature-orchestrator';
 import WorkspaceChrome from '@/components/ui/workspace-chrome';
 
@@ -205,6 +206,20 @@ type CustomerMe = {
 };
 
 type CustomerMemberType = 'individual' | 'sole_proprietor' | 'corporation';
+type SignupStep = 'form' | 'verify';
+
+type SignupDraft = {
+    email: string;
+    username: string;
+    password: string;
+    fullName: string;
+    memberType: CustomerMemberType;
+    businessName: string;
+    businessRegistrationNumber: string;
+    representativeName: string;
+    nativeLanguage: string;
+    signupCountry: string;
+};
 
 const MEMBER_TYPE_LABELS: Record<CustomerMemberType, string> = {
     individual: '개인',
@@ -243,6 +258,12 @@ export default function MarketplacePage() {
     const [password, setPassword] = React.useState('');
     const [nativeLanguage, setNativeLanguage] = React.useState('');
     const [signupCountry, setSignupCountry] = React.useState('');
+    const [signupVerificationCode, setSignupVerificationCode] = React.useState('');
+    const [signupSessionToken, setSignupSessionToken] = React.useState('');
+    const [signupMaskedTarget, setSignupMaskedTarget] = React.useState('');
+    const [signupDevOtpHint, setSignupDevOtpHint] = React.useState('');
+    const [signupDraft, setSignupDraft] = React.useState<SignupDraft | null>(null);
+    const [signupStep, setSignupStep] = React.useState<SignupStep>('form');
     const [authLoading, setAuthLoading] = React.useState(false);
     const [authMessage, setAuthMessage] = React.useState('');
     const [rightRailOpen, setRightRailOpen] = React.useState(true);
@@ -258,6 +279,23 @@ export default function MarketplacePage() {
         }
         const payload = await response.json();
         setMe(payload);
+    }, [apiBaseUrl]);
+
+    const resetSignupFlow = React.useCallback(() => {
+        setSignupVerificationCode('');
+        setSignupSessionToken('');
+        setSignupMaskedTarget('');
+        setSignupDevOtpHint('');
+        setSignupDraft(null);
+        setSignupStep('form');
+    }, []);
+
+    const handleSocialLogin = React.useCallback((provider: SocialProvider) => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const returnTo = window.location.pathname || '/marketplace';
+        window.location.href = buildSocialLoginStartUrl(apiBaseUrl, provider, returnTo);
     }, [apiBaseUrl]);
 
     const loadMarketplace = React.useCallback(async () => {
@@ -360,31 +398,87 @@ export default function MarketplacePage() {
         setAuthMessage('');
         try {
             if (authMode === 'signup') {
-                const signupResponse = await fetch(`${apiBaseUrl}/api/auth/signup`, {
+                const draft = signupDraft ?? {
+                    email: email.trim(),
+                    username: username.trim(),
+                    password,
+                    fullName: fullName.trim(),
+                    memberType,
+                    businessName: businessName.trim(),
+                    businessRegistrationNumber: businessRegistrationNumber.trim(),
+                    representativeName: representativeName.trim(),
+                    nativeLanguage,
+                    signupCountry,
+                };
+
+                if (signupStep === 'form') {
+                    const signupResponse = await fetch(`${apiBaseUrl}/api/auth/signup/request-code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: draft.username,
+                            email: draft.email,
+                            password: draft.password,
+                            full_name: draft.fullName || null,
+                            member_type: draft.memberType,
+                            business_name: draft.memberType === 'individual' ? null : draft.businessName,
+                            business_registration_number: draft.memberType === 'individual' ? null : draft.businessRegistrationNumber,
+                            representative_name: draft.memberType === 'corporation' ? draft.representativeName : null,
+                            preferred_language: draft.nativeLanguage || null,
+                            country_code: draft.signupCountry || null,
+                            verificationChannel: 'email',
+                        }),
+                    });
+                    const requestPayload = await signupResponse.json().catch(() => null);
+                    if (!signupResponse.ok) {
+                        throw new Error(requestPayload?.detail || '회원가입 인증 코드 발송에 실패했습니다.');
+                    }
+
+                    setSignupDraft(draft);
+                    setSignupSessionToken(String(requestPayload?.signupSessionToken || ''));
+                    setSignupMaskedTarget(String(requestPayload?.maskedTarget || ''));
+                    setSignupDevOtpHint(String(requestPayload?.devOtpHint || ''));
+                    setSignupVerificationCode('');
+                    setSignupStep('verify');
+                    setAuthMessage(
+                        `${requestPayload?.maskedTarget || '등록된 연락처'}로 인증 코드를 보냈습니다. ` +
+                        '개발 환경에서는 아래 힌트를 사용할 수 있습니다.'
+                    );
+                    return;
+                }
+
+                if (!signupSessionToken) {
+                    throw new Error('먼저 회원가입 인증 코드를 받아야 합니다.');
+                }
+                if (signupVerificationCode.trim().length < 6) {
+                    throw new Error('6자리 인증 코드를 입력하세요.');
+                }
+
+                const confirmResponse = await fetch(`${apiBaseUrl}/api/auth/signup/confirm`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: username.trim(),
-                        email: email.trim(),
-                        password,
-                        full_name: fullName.trim(),
-                        member_type: memberType,
-                        business_name: memberType === 'individual' ? null : businessName.trim(),
-                        business_registration_number: memberType === 'individual' ? null : businessRegistrationNumber.trim(),
-                        representative_name: memberType === 'corporation' ? representativeName.trim() : null,
-                        native_language: nativeLanguage || null,
-                        country: signupCountry || null,
+                        signupSessionToken,
+                        verificationCode: signupVerificationCode.trim(),
+                        full_name: draft.fullName || null,
+                        preferred_language: draft.nativeLanguage || null,
+                        country_code: draft.signupCountry || null,
                     }),
                 });
-                const signupPayload = await signupResponse.json().catch(() => null);
-                if (!signupResponse.ok) {
-                    throw new Error(signupPayload?.detail || '회원가입에 실패했습니다.');
+                const confirmPayload = await confirmResponse.json().catch(() => null);
+                if (!confirmResponse.ok) {
+                    throw new Error(confirmPayload?.detail || '회원가입 확인에 실패했습니다.');
                 }
             }
 
+            const loginSource = signupDraft ?? {
+                email: email.trim(),
+                username: username.trim(),
+                password,
+            };
             const formData = new URLSearchParams();
-            formData.set('username', email.trim());
-            formData.set('password', password);
+            formData.set('username', loginSource.email);
+            formData.set('password', loginSource.password);
 
             const loginResponse = await fetch(`${apiBaseUrl}/api/auth/login`, {
                 method: 'POST',
@@ -400,13 +494,14 @@ export default function MarketplacePage() {
             }
             setToken(loginPayload.access_token);
             await loadMyInfo(loginPayload.access_token);
+            resetSignupFlow();
             setAuthMessage(authMode === 'signup' ? '회원가입과 로그인이 완료되었습니다.' : '로그인되었습니다.');
         } catch (authError: any) {
             setAuthMessage(authError?.message || '인증 처리 중 오류가 발생했습니다.');
         } finally {
             setAuthLoading(false);
         }
-    }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadMyInfo, memberType, nativeLanguage, password, representativeName, signupCountry, username]);
+    }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadMyInfo, memberType, nativeLanguage, password, representativeName, resetSignupFlow, signupCountry, signupDraft, signupSessionToken, signupStep, signupVerificationCode, username]);
 
     const handleLogout = React.useCallback(() => {
         if (typeof window !== 'undefined') {
@@ -432,8 +527,33 @@ export default function MarketplacePage() {
                 {!me ? (
                     <form className="workspace-form-stack mt-4" onSubmit={(event) => { event.preventDefault(); void handleAuth(); }}>
                         <div className="workspace-auth-switch text-sm">
-                            <button type="button" onClick={() => setAuthMode('login')} className={authMode === 'login' ? 'active' : ''}>로그인</button>
-                            <button type="button" onClick={() => setAuthMode('signup')} className={authMode === 'signup' ? 'active' : ''}>회원가입</button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAuthMode('login');
+                                    resetSignupFlow();
+                                    setAuthMessage('');
+                                }}
+                                className={authMode === 'login' ? 'active' : ''}
+                            >
+                                로그인
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAuthMode('signup');
+                                    resetSignupFlow();
+                                    setAuthMessage('');
+                                }}
+                                className={authMode === 'signup' ? 'active' : ''}
+                            >
+                                회원가입
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                            <button type="button" onClick={() => handleSocialLogin('google')} className="workspace-topbar-chip">Google로 계속</button>
+                            <button type="button" onClick={() => handleSocialLogin('kakao')} className="workspace-topbar-chip">카카오로 계속</button>
+                            <button type="button" onClick={() => handleSocialLogin('naver')} className="workspace-topbar-chip">네이버로 계속</button>
                         </div>
                         <input id="marketplace-email" name="email" autoComplete={authMode === 'signup' ? 'email' : 'username'} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="이메일" className="workspace-input" />
                         {authMode === 'signup' && (
@@ -484,11 +604,47 @@ export default function MarketplacePage() {
                                         <option key={c.code} value={c.code}>{c.label}</option>
                                     ))}
                                 </select>
+                                {signupStep === 'verify' && (
+                                    <>
+                                        <input
+                                            id="marketplace-signup-verification-code"
+                                            name="verificationCode"
+                                            inputMode="numeric"
+                                            maxLength={6}
+                                            value={signupVerificationCode}
+                                            onChange={(event) => setSignupVerificationCode(event.target.value)}
+                                            placeholder="인증 코드 6자리"
+                                            className="workspace-input"
+                                        />
+                                        <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-xs text-slate-300">
+                                            <div className="font-semibold text-slate-100">인증 코드가 필요합니다.</div>
+                                            <p className="mt-1">
+                                                {signupMaskedTarget ? `${signupMaskedTarget}로 발송된 코드를 입력하세요.` : '발송된 코드를 입력하세요.'}
+                                            </p>
+                                            {signupDevOtpHint ? (
+                                                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-amber-300">
+                                                    개발 환경 힌트: {signupDevOtpHint}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                    </>
+                                )}
+                                <p className="text-xs text-slate-400">
+                                    회원가입은 이메일 인증 코드 확인이 필요합니다. 자국어와 국가를 선택한 뒤 인증 코드를 받아 진행하세요.
+                                </p>
                             </>
                         )}
                         <input type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호" className="workspace-input" />
-                        <button type="submit" disabled={authLoading} className="workspace-primary-button w-full justify-center text-center">
-                            {authLoading ? '처리 중...' : authMode === 'signup' ? '회원가입 후 시작' : '로그인 후 시작'}
+                        <button
+                            type="submit"
+                            disabled={
+                                authLoading
+                                || (authMode === 'signup' && signupStep === 'form' && (!email.trim() || !username.trim() || !password || !nativeLanguage || !signupCountry || (memberType !== 'individual' && (!businessName.trim() || !businessRegistrationNumber.trim())) || (memberType === 'corporation' && !representativeName.trim())))
+                                || (authMode === 'signup' && signupStep === 'verify' && signupVerificationCode.trim().length < 6)
+                            }
+                            className="workspace-primary-button w-full justify-center text-center"
+                        >
+                            {authLoading ? '처리 중...' : authMode === 'signup' && signupStep === 'verify' ? '회원가입 완료' : authMode === 'signup' ? '인증 코드 받기' : '로그인 후 시작'}
                         </button>
                         {authMessage ? <p className="workspace-card-copy">{authMessage}</p> : null}
                     </form>

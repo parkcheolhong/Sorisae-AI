@@ -32,6 +32,7 @@ import { getAdminToken } from '@/lib/admin-session';
 import OrchestratorVoiceMicButton from '@/components/orchestrator/OrchestratorVoiceMicButton';
 import { postCustomerOrchestratorChat } from '@/lib/orchestrator-chat-client';
 import { useOrchestratorLiveProgress } from '@/lib/use-orchestrator-live-progress';
+import { buildSocialLoginStartUrl, type SocialProvider } from '@/lib/social-auth';
 import { speakOrchestratorReply } from '@/lib/orchestrator-speech';
 import {
     buildVoiceContextTags,
@@ -417,6 +418,17 @@ type Props = {
 const CUSTOMER_TOKEN_KEY = 'customer_token';
 
 type CustomerMemberType = 'individual' | 'sole_proprietor' | 'corporation';
+type SignupStep = 'form' | 'verify';
+type SignupDraft = {
+    email: string;
+    username: string;
+    password: string;
+    fullName: string;
+    memberType: CustomerMemberType;
+    businessName: string;
+    businessRegistrationNumber: string;
+    representativeName: string;
+};
 
 const MEMBER_TYPE_LABELS: Record<CustomerMemberType, string> = {
     individual: '개인',
@@ -545,6 +557,12 @@ export default function MarketplaceOrchestratorClient({
     const [businessRegistrationNumber, setBusinessRegistrationNumber] = React.useState('');
     const [representativeName, setRepresentativeName] = React.useState('');
     const [password, setPassword] = React.useState('');
+    const [signupVerificationCode, setSignupVerificationCode] = React.useState('');
+    const [signupSessionToken, setSignupSessionToken] = React.useState('');
+    const [signupMaskedTarget, setSignupMaskedTarget] = React.useState('');
+    const [signupDevOtpHint, setSignupDevOtpHint] = React.useState('');
+    const [signupDraft, setSignupDraft] = React.useState<SignupDraft | null>(null);
+    const [signupStep, setSignupStep] = React.useState<SignupStep>('form');
     const [authLoading, setAuthLoading] = React.useState(false);
     const [authMessage, setAuthMessage] = React.useState('');
     const [projectName, setProjectName] = React.useState(initialProjectName);
@@ -1109,6 +1127,23 @@ export default function MarketplaceOrchestratorClient({
         }
     }, [apiBaseUrl, token]);
 
+    const resetSignupFlow = React.useCallback(() => {
+        setSignupVerificationCode('');
+        setSignupSessionToken('');
+        setSignupMaskedTarget('');
+        setSignupDevOtpHint('');
+        setSignupDraft(null);
+        setSignupStep('form');
+    }, []);
+
+    const handleSocialLogin = React.useCallback((provider: SocialProvider) => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const returnTo = window.location.pathname || '/marketplace/orchestrator';
+        window.location.href = buildSocialLoginStartUrl(apiBaseUrl, provider, returnTo);
+    }, [apiBaseUrl]);
+
     const replayRetryQueueItem = React.useCallback(async (queueItemId: number) => {
         if (!authHeaders) {
             setErrorText('로그인 후 재시도 큐를 다시 실행할 수 있습니다.');
@@ -1293,29 +1328,84 @@ export default function MarketplaceOrchestratorClient({
         setAuthMessage('');
         try {
             if (authMode === 'signup') {
-                const signupResponse = await fetch(`${apiBaseUrl}/api/auth/signup`, {
+                const draft = signupDraft ?? {
+                    email: email.trim(),
+                    username: username.trim(),
+                    password,
+                    fullName: fullName.trim(),
+                    memberType,
+                    businessName: businessName.trim(),
+                    businessRegistrationNumber: businessRegistrationNumber.trim(),
+                    representativeName: representativeName.trim(),
+                };
+
+                if (signupStep === 'form') {
+                    const signupResponse = await fetch(`${apiBaseUrl}/api/auth/signup/request-code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: draft.username,
+                            email: draft.email,
+                            password: draft.password,
+                            full_name: draft.fullName || null,
+                            member_type: draft.memberType,
+                            business_name: draft.memberType === 'individual' ? null : draft.businessName,
+                            business_registration_number: draft.memberType === 'individual' ? null : draft.businessRegistrationNumber,
+                            representative_name: draft.memberType === 'corporation' ? draft.representativeName : null,
+                            preferred_language: 'ko',
+                            country_code: 'KR',
+                            verificationChannel: 'email',
+                        }),
+                    });
+                    const requestPayload = await signupResponse.json().catch(() => null);
+                    if (!signupResponse.ok) {
+                        throw new Error(requestPayload?.detail || '회원가입 인증 코드 발송에 실패했습니다.');
+                    }
+                    setSignupDraft(draft);
+                    setSignupSessionToken(String(requestPayload?.signupSessionToken || ''));
+                    setSignupMaskedTarget(String(requestPayload?.maskedTarget || ''));
+                    setSignupDevOtpHint(String(requestPayload?.devOtpHint || ''));
+                    setSignupVerificationCode('');
+                    setSignupStep('verify');
+                    setAuthMessage(
+                        `${requestPayload?.maskedTarget || '등록된 연락처'}로 인증 코드를 보냈습니다. ` +
+                        '개발 환경에서는 아래 힌트를 사용할 수 있습니다.'
+                    );
+                    return;
+                }
+
+                if (!signupSessionToken) {
+                    throw new Error('먼저 회원가입 인증 코드를 받아야 합니다.');
+                }
+                if (signupVerificationCode.trim().length < 6) {
+                    throw new Error('6자리 인증 코드를 입력하세요.');
+                }
+
+                const confirmResponse = await fetch(`${apiBaseUrl}/api/auth/signup/confirm`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: username.trim(),
-                        email: email.trim(),
-                        password,
-                        full_name: fullName.trim(),
-                        member_type: memberType,
-                        business_name: memberType === 'individual' ? null : businessName.trim(),
-                        business_registration_number: memberType === 'individual' ? null : businessRegistrationNumber.trim(),
-                        representative_name: memberType === 'corporation' ? representativeName.trim() : null,
+                        signupSessionToken,
+                        verificationCode: signupVerificationCode.trim(),
+                        full_name: draft.fullName || null,
+                        preferred_language: 'ko',
+                        country_code: 'KR',
                     }),
                 });
-                const signupPayload = await signupResponse.json().catch(() => null);
-                if (!signupResponse.ok) {
-                    throw new Error(signupPayload?.detail || '회원가입에 실패했습니다.');
+                const confirmPayload = await confirmResponse.json().catch(() => null);
+                if (!confirmResponse.ok) {
+                    throw new Error(confirmPayload?.detail || '회원가입 확인에 실패했습니다.');
                 }
             }
 
+            const loginSource = signupDraft ?? {
+                email: email.trim(),
+                username: username.trim(),
+                password,
+            };
             const formData = new URLSearchParams();
-            formData.set('username', email.trim());
-            formData.set('password', password);
+            formData.set('username', loginSource.email);
+            formData.set('password', loginSource.password);
 
             const loginResponse = await fetch(`${apiBaseUrl}/api/auth/login`, {
                 method: 'POST',
@@ -1332,13 +1422,14 @@ export default function MarketplaceOrchestratorClient({
             setToken(loginPayload.access_token);
             await loadMyInfo(loginPayload.access_token);
             await loadHistory(loginPayload.access_token);
+            resetSignupFlow();
             setAuthMessage(authMode === 'signup' ? '회원가입과 로그인이 완료되었습니다.' : '로그인되었습니다.');
         } catch (error: any) {
             setAuthMessage(error?.message || '인증 처리 중 오류가 발생했습니다.');
         } finally {
             setAuthLoading(false);
         }
-    }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadHistory, loadMyInfo, memberType, password, representativeName, username]);
+    }, [apiBaseUrl, authMode, businessName, businessRegistrationNumber, email, fullName, loadHistory, loadMyInfo, memberType, password, representativeName, resetSignupFlow, signupDraft, signupSessionToken, signupStep, signupVerificationCode, username]);
 
     const createStageRun = React.useCallback(async (taskOverride?: string) => {
         if (!authHeaders) {
@@ -2237,8 +2328,13 @@ export default function MarketplaceOrchestratorClient({
                                                     }}
                                                 >
                                                     <div className="flex gap-2 text-sm">
-                                                        <button type="button" onClick={() => setAuthMode('login')} className={`rounded-xl px-4 py-2 ${authMode === 'login' ? 'bg-[#2a7cff] text-white' : 'bg-[#0d1117] text-[#c9d1d9]'}`}>로그인</button>
-                                                        <button type="button" onClick={() => setAuthMode('signup')} className={`rounded-xl px-4 py-2 ${authMode === 'signup' ? 'bg-[#2a7cff] text-white' : 'bg-[#0d1117] text-[#c9d1d9]'}`}>회원가입</button>
+                                                        <button type="button" onClick={() => { setAuthMode('login'); resetSignupFlow(); setAuthMessage(''); }} className={`rounded-xl px-4 py-2 ${authMode === 'login' ? 'bg-[#2a7cff] text-white' : 'bg-[#0d1117] text-[#c9d1d9]'}`}>로그인</button>
+                                                        <button type="button" onClick={() => { setAuthMode('signup'); resetSignupFlow(); setAuthMessage(''); }} className={`rounded-xl px-4 py-2 ${authMode === 'signup' ? 'bg-[#2a7cff] text-white' : 'bg-[#0d1117] text-[#c9d1d9]'}`}>회원가입</button>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2 text-xs">
+                                                        <button type="button" onClick={() => handleSocialLogin('google')} className="rounded-xl border border-[#30363d] bg-[#0d1117] px-3 py-2 text-[#c9d1d9]">Google로 계속</button>
+                                                        <button type="button" onClick={() => handleSocialLogin('kakao')} className="rounded-xl border border-[#30363d] bg-[#0d1117] px-3 py-2 text-[#c9d1d9]">카카오로 계속</button>
+                                                        <button type="button" onClick={() => handleSocialLogin('naver')} className="rounded-xl border border-[#30363d] bg-[#0d1117] px-3 py-2 text-[#c9d1d9]">네이버로 계속</button>
                                                     </div>
                                                     <input id="orch-email" name="email" autoComplete={authMode === 'signup' ? 'email' : 'username'} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="이메일" className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
                                                     {authMode === 'signup' && (
@@ -2257,11 +2353,45 @@ export default function MarketplaceOrchestratorClient({
                                                                 </>
                                                             )}
                                                             {memberType === 'corporation' && <input id="orch-repname" name="representativeName" autoComplete="name" value={representativeName} onChange={(e) => setRepresentativeName(e.target.value)} placeholder="대표자명" className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />}
+                                                            {signupStep === 'verify' && (
+                                                                <>
+                                                                    <input
+                                                                        id="orch-signup-verification-code"
+                                                                        name="verificationCode"
+                                                                        inputMode="numeric"
+                                                                        maxLength={6}
+                                                                        value={signupVerificationCode}
+                                                                        onChange={(e) => setSignupVerificationCode(e.target.value)}
+                                                                        placeholder="인증 코드 6자리"
+                                                                        className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white"
+                                                                    />
+                                                                    <div className="rounded-xl border border-[#30363d] bg-[#101826] px-4 py-3 text-xs text-[#c9d1d9]">
+                                                                        <div className="font-semibold text-white">인증 코드가 필요합니다.</div>
+                                                                        <p className="mt-1">
+                                                                            {signupMaskedTarget ? `${signupMaskedTarget}로 발송된 코드를 입력하세요.` : '발송된 코드를 입력하세요.'}
+                                                                        </p>
+                                                                        {signupDevOtpHint ? (
+                                                                            <p className="mt-2 rounded-lg bg-[#f59e0b1a] px-3 py-2 text-[#fbbf24]">
+                                                                                개발 환경 힌트: {signupDevOtpHint}
+                                                                            </p>
+                                                                        ) : null}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                            <p className="text-xs text-[#93a4bf]">회원가입은 이메일 인증 코드 확인이 필요합니다.</p>
                                                         </>
                                                     )}
                                                     <input type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호" className="w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-4 py-3 text-sm text-white" />
-                                                    <button type="submit" disabled={authLoading} className="w-full rounded-2xl bg-[#19c3f3] px-5 py-3 text-base font-bold text-[#041018]">
-                                                        {authLoading ? '처리 중...' : authMode === 'signup' ? '회원가입 후 시작' : '로그인 후 시작'}
+                                                    <button
+                                                        type="submit"
+                                                        disabled={
+                                                            authLoading
+                                                            || (authMode === 'signup' && signupStep === 'form' && (!email.trim() || !username.trim() || !password || (memberType !== 'individual' && (!businessName.trim() || !businessRegistrationNumber.trim())) || (memberType === 'corporation' && !representativeName.trim())))
+                                                            || (authMode === 'signup' && signupStep === 'verify' && signupVerificationCode.trim().length < 6)
+                                                        }
+                                                        className="w-full rounded-2xl bg-[#19c3f3] px-5 py-3 text-base font-bold text-[#041018]"
+                                                    >
+                                                        {authLoading ? '처리 중...' : authMode === 'signup' && signupStep === 'verify' ? '회원가입 완료' : authMode === 'signup' ? '인증 코드 받기' : '로그인 후 시작'}
                                                     </button>
                                                     {authMessage && <p className="text-sm text-[#d2d9e3]">{authMessage}</p>}
                                                 </form>

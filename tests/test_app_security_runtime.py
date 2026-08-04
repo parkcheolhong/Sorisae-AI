@@ -19,11 +19,11 @@ def test_app_security_defaults_are_explicit(monkeypatch):
 
 
 def test_app_security_env_values_are_explicit(monkeypatch):
-    monkeypatch.setenv('ALLOWED_HOSTS', 'metanova1004.com,admin.metanova1004.com')
-    monkeypatch.setenv('CORS_ALLOW_ORIGINS', 'https://metanova1004.com,https://admin.metanova1004.com')
+    monkeypatch.setenv('ALLOWED_HOSTS', 'xn--114-2p7l635dz3bh5j.com,admin.xn--114-2p7l635dz3bh5j.com')
+    monkeypatch.setenv('CORS_ALLOW_ORIGINS', 'https://xn--114-2p7l635dz3bh5j.com,https://admin.xn--114-2p7l635dz3bh5j.com')
 
-    assert get_allowed_hosts() == ['metanova1004.com', 'admin.metanova1004.com']
-    assert get_cors_allow_origins() == ['https://metanova1004.com', 'https://admin.metanova1004.com']
+    assert get_allowed_hosts() == ['xn--114-2p7l635dz3bh5j.com', 'admin.xn--114-2p7l635dz3bh5j.com']
+    assert get_cors_allow_origins() == ['https://xn--114-2p7l635dz3bh5j.com', 'https://admin.xn--114-2p7l635dz3bh5j.com']
 
 
 def test_app_security_rejects_wildcards(monkeypatch):

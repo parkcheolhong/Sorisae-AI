@@ -5,8 +5,8 @@ export async function GET() {
     {
       provider: "DevAnalysis114 Admin",
       passkey: true,
-      rpId: "metanova1004.com",
-      origins: ["https://metanova1004.com"],
+      rpId: "xn--114-2p7l635dz3bh5j.com",
+      origins: ["https://xn--114-2p7l635dz3bh5j.com"],
     },
     {
       headers: {

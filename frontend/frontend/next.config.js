@@ -3,7 +3,7 @@ const nextDistDir = process.env.NEXT_DIST_DIR || '.next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['metanova1004.com', 'localhost', '127.0.0.1'],
+  allowedDevOrigins: ['xn--114-2p7l635dz3bh5j.com', 'localhost', '127.0.0.1'],
   distDir: nextDistDir,
   pageExtensions: ['ts', 'tsx'],
   experimental: {

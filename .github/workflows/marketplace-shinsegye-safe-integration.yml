@@ -27,7 +27,7 @@ jobs:
                 working-directory: frontend/frontend
         env:
             CI: "1"
-            PLAYWRIGHT_ADMIN_BASE_URL: "https://metanova1004.com"
+            PLAYWRIGHT_ADMIN_BASE_URL: "https://xn--114-2p7l635dz3bh5j.com"
             PLAYWRIGHT_API_BASE_URL: "https://xn--114-2p7l635dz3bh5j.com"
         steps:
             - name: Checkout

@@ -270,7 +270,7 @@ import { installGlobalAlertI18n } from './src/features/i18n/globalAlertI18n';
 import { installGlobalToastI18n } from './src/features/i18n/globalToastI18n';
 import { C, SECTION_TAB_COLORS } from './src/app/appTheme';
 import { styles } from './App.styles';
-import { parseAppEntryDeepLink, parseIncomingVoipDeepLink } from './src/app/appDeepLinks';
+import { parseAppEntryDeepLink, parseIncomingVoipDeepLink, parseSocialAuthDeepLink } from './src/app/appDeepLinks';
 import type {
     VoipParticipantProfile,
     DevicePhoneContact,
@@ -285,6 +285,7 @@ import type {
     SignupRequestCodeResponse,
     SignupSelectionModal,
     HybridGpsResult,
+    SocialAuthProvider,
     SongSubtitleEntry,
     SongFileJobStatus,
     SongFileTimelineSegment,
@@ -328,6 +329,7 @@ import {
     VOICE_LICENSE_OPTIONS,
     VOICE_OUTPUT_SCOPE_OPTIONS,
 } from './src/app/appConstants';
+import { buildSocialAuthStartUrl, SOCIAL_AUTH_CALLBACK_URL } from './src/auth/socialAuth';
 
 // [전역 글꼴 확대] "대체적으로 글씨가 작다"는 피드백 반영. 화면마다 하드코딩된 수백 개의
 // fontSize 를 일괄 키우는 대신, Text/TextInput 의 render 를 한 번만 패치해 명시적으로
@@ -1231,6 +1233,7 @@ function AppInner() {
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPw, setLoginPw] = useState('');
     const [showLoginPw, setShowLoginPw] = useState(false);
+    const [socialAuthProvider, setSocialAuthProvider] = useState<SocialAuthProvider | null>(null);
     const [signupUsername, setSignupUsername] = useState('');
     const [signupFullName, setSignupFullName] = useState('');
     // [Phase6.0] 가입 필수: 나의 AI 이름 → "OOOO AI" 표시명으로 자동 치환(온디바이스 SSOT).
@@ -4361,6 +4364,66 @@ function AppInner() {
         await handleSignupRequestCode();
     }, [handleSignupConfirm, handleSignupRequestCode, signupStep]);
 
+    const handleSocialAuthCallback = useCallback(async (payload: { provider: SocialAuthProvider; accessToken: string; returnTo?: string }, source: string) => {
+        const tokenValue = payload.accessToken.trim();
+        if (!tokenValue) {
+            setLoginError('소셜 로그인 토큰을 받지 못했습니다.');
+            return;
+        }
+
+        setLoginLoading(true);
+        setLoginError('');
+        try {
+            const me = await callMeApi(tokenValue);
+            applyAuthenticatedSession(tokenValue, me);
+            await saveStoredAuthState(tokenValue, me);
+            setLoginEmail(me.email);
+            setLoginPw('');
+            setShowLogin(false);
+            setAuthModalMode('login');
+            setSocialAuthProvider(null);
+            logUiPressProbe('SOCIAL_AUTH_CALLBACK_SUCCESS', {
+                source,
+                provider: payload.provider,
+                user_id: me.id,
+                user_email: me.email,
+                return_to: payload.returnTo || null,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '소셜 로그인 처리에 실패했습니다.';
+            setLoginError(message);
+            logUiPressProbe('SOCIAL_AUTH_CALLBACK_FAIL', {
+                source,
+                provider: payload.provider,
+                return_to: payload.returnTo || null,
+                error: message,
+            });
+        } finally {
+            setLoginLoading(false);
+        }
+    }, [applyAuthenticatedSession, logUiPressProbe]);
+
+    const handleSocialLoginPress = useCallback(async (provider: SocialAuthProvider) => {
+        if (loginLoading || socialAuthProvider) {
+            return;
+        }
+
+        setLoginError('');
+        setSocialAuthProvider(provider);
+        logUiPressProbe('SOCIAL_AUTH_PRESS', { provider });
+
+        try {
+            const startUrl = buildSocialAuthStartUrl(provider, '/marketplace', SOCIAL_AUTH_CALLBACK_URL);
+            await Linking.openURL(startUrl);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '소셜 로그인 화면을 열 수 없습니다.';
+            setLoginError(message);
+            logUiPressProbe('SOCIAL_AUTH_PRESS_FAIL', { provider, error: message });
+        } finally {
+            setSocialAuthProvider(null);
+        }
+    }, [loginLoading, logUiPressProbe, socialAuthProvider]);
+
     const signupSubmitLabel = authModalMode === 'login'
         ? '로그인'
         : signupStep === 'verify'
@@ -5332,6 +5395,12 @@ function AppInner() {
                 return;
             }
 
+            const socialAuthPayload = parseSocialAuthDeepLink(url);
+            if (socialAuthPayload) {
+                void handleSocialAuthCallback(socialAuthPayload, source);
+                return;
+            }
+
             const entryTarget = parseAppEntryDeepLink(url);
             if (!entryTarget) {
                 return;
@@ -5379,7 +5448,7 @@ function AppInner() {
             subscription.remove();
             appStateSubscription.remove();
         };
-    }, [autoAcceptIncomingVoipDeepLink, handleAppEntryDeepLink]);
+    }, [autoAcceptIncomingVoipDeepLink, handleAppEntryDeepLink, handleSocialAuthCallback]);
 
     const handlePhoneOnlyDialFallback = useCallback(async (phone: string, source: string, reason?: string) => {
         logUiPressProbe('VOIP_PHONE_ONLY_DIAL_FALLBACK_START', { phone, source, reason: reason || null });
@@ -10339,6 +10408,51 @@ function AppInner() {
                                 <Text style={styles.loginPrimaryBtnText}>{signupSubmitLabel}</Text>
                             )}
                         </Pressable>
+                        <Text style={styles.loginOrDividerText}>또는 SNS 계정으로 바로 시작</Text>
+                        <View style={styles.socialHubRow}>
+                            <Pressable
+                                style={[styles.socialHubBtn, styles.socialHubBtnPassive, socialAuthProvider === 'google' && styles.socialHubBtnActive]}
+                                onPress={() => { void handleSocialLoginPress('google'); }}
+                                disabled={loginLoading || socialAuthProvider !== null}
+                                accessibilityRole="button"
+                                accessibilityLabel="worldlinco-social-google-button"
+                                testID="worldlinco-social-google-button"
+                            >
+                                <Text style={styles.socialHubIcon}>G</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.socialHubTitle}>Google</Text>
+                                    <Text style={styles.socialHubMeta}>구글 계정으로 계속</Text>
+                                </View>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.socialHubBtn, styles.socialHubBtnPassive, socialAuthProvider === 'kakao' && styles.socialHubBtnActive]}
+                                onPress={() => { void handleSocialLoginPress('kakao'); }}
+                                disabled={loginLoading || socialAuthProvider !== null}
+                                accessibilityRole="button"
+                                accessibilityLabel="worldlinco-social-kakao-button"
+                                testID="worldlinco-social-kakao-button"
+                            >
+                                <Text style={styles.socialHubIcon}>K</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.socialHubTitle}>Kakao</Text>
+                                    <Text style={styles.socialHubMeta}>카카오 계정으로 계속</Text>
+                                </View>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.socialHubBtn, styles.socialHubBtnPassive, socialAuthProvider === 'naver' && styles.socialHubBtnActive]}
+                                onPress={() => { void handleSocialLoginPress('naver'); }}
+                                disabled={loginLoading || socialAuthProvider !== null}
+                                accessibilityRole="button"
+                                accessibilityLabel="worldlinco-social-naver-button"
+                                testID="worldlinco-social-naver-button"
+                            >
+                                <Text style={styles.socialHubIcon}>N</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.socialHubTitle}>Naver</Text>
+                                    <Text style={styles.socialHubMeta}>네이버 계정으로 계속</Text>
+                                </View>
+                            </Pressable>
+                        </View>
                         {authModalMode === 'login' ? (
                             <View style={styles.loginUtilityRow}>
                                 {biometricLoginReady && biometricLoginEnabled ? (

@@ -8,18 +8,41 @@ async function issueCustomerToken(request: import('@playwright/test').APIRequest
     const email = `${username}@example.com`;
     const password = 'P@ssw0rd!23456';
 
-    const signupResponse = await request.post(`${API_BASE_URL}/api/auth/signup`, {
+    const signupResponse = await request.post(`${API_BASE_URL}/api/auth/signup/request-code`, {
         data: {
-            email,
             username,
+            email,
             password,
             member_type: 'individual',
+            preferred_language: 'ko',
+            country_code: 'KR',
+            verificationChannel: 'email',
         },
     });
 
     if (!signupResponse.ok()) {
         const body = await signupResponse.text();
         throw new Error(`signup failed: ${signupResponse.status()} ${body}`);
+    }
+
+    const signupPayload = await signupResponse.json().catch(() => ({}));
+    const verificationCode = String(signupPayload.devOtpHint || '').trim();
+    if (!verificationCode) {
+        throw new Error('signup verification code is missing');
+    }
+
+    const confirmResponse = await request.post(`${API_BASE_URL}/api/auth/signup/confirm`, {
+        data: {
+            signupSessionToken: signupPayload.signupSessionToken,
+            verificationCode,
+            preferred_language: 'ko',
+            country_code: 'KR',
+        },
+    });
+
+    if (!confirmResponse.ok()) {
+        const body = await confirmResponse.text();
+        throw new Error(`signup confirm failed: ${confirmResponse.status()} ${body}`);
     }
 
     const formData = new URLSearchParams();

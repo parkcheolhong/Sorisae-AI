@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
 import base64
@@ -6,8 +7,11 @@ import os
 
 logger = logging.getLogger(__name__)
 from urllib.parse import urlparse
+from urllib.parse import urlencode
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status  # pyright: ignore[reportMissingImports]
+from fastapi.responses import RedirectResponse  # pyright: ignore[reportMissingImports]
 from fastapi.security import OAuth2PasswordRequestForm  # pyright: ignore[reportMissingImports]
 from typing import Any, Optional
 import re
@@ -114,6 +118,222 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+@dataclass(frozen=True)
+class SocialProviderConfig:
+    provider: str
+    auth_url: str
+    token_url: str
+    userinfo_url: str
+    client_id_env: str
+    client_secret_env: str
+    scope: str
+
+
+SOCIAL_PROVIDER_CONFIGS: dict[str, SocialProviderConfig] = {
+    "google": SocialProviderConfig(
+        provider="google",
+        auth_url="https://accounts.google.com/o/oauth2/v2/auth",
+        token_url="https://oauth2.googleapis.com/token",
+        userinfo_url="https://www.googleapis.com/oauth2/v2/userinfo",
+        client_id_env="GOOGLE_CLIENT_ID",
+        client_secret_env="GOOGLE_CLIENT_SECRET",
+        scope="openid email profile",
+    ),
+    "kakao": SocialProviderConfig(
+        provider="kakao",
+        auth_url="https://kauth.kakao.com/oauth/authorize",
+        token_url="https://kauth.kakao.com/oauth/token",
+        userinfo_url="https://kapi.kakao.com/v2/user/me",
+        client_id_env="KAKAO_CLIENT_ID",
+        client_secret_env="KAKAO_CLIENT_SECRET",
+        scope="account_email profile_nickname",
+    ),
+    "naver": SocialProviderConfig(
+        provider="naver",
+        auth_url="https://nid.naver.com/oauth2.0/authorize",
+        token_url="https://nid.naver.com/oauth2.0/token",
+        userinfo_url="https://openapi.naver.com/v1/nid/me",
+        client_id_env="NAVER_CLIENT_ID",
+        client_secret_env="NAVER_CLIENT_SECRET",
+        scope="name email profile",
+    ),
+}
+
+_SOCIAL_AUTH_STATE_STORE: dict[str, dict[str, object]] = {}
+_SOCIAL_AUTH_STATE_TTL = timedelta(minutes=10)
+
+
+def _resolve_social_provider(provider: str) -> SocialProviderConfig:
+    normalized = str(provider or "").strip().lower()
+    config = SOCIAL_PROVIDER_CONFIGS.get(normalized)
+    if config is None:
+        raise HTTPException(status_code=404, detail="지원하지 않는 소셜 로그인 제공자입니다")
+    return config
+
+
+def _resolve_social_client_id(config: SocialProviderConfig) -> str:
+    value = str(os.getenv(config.client_id_env) or "").strip()
+    if not value:
+        raise HTTPException(status_code=503, detail=f"{config.provider} 로그인 설정이 준비되지 않았습니다")
+    return value
+
+
+def _resolve_social_client_secret(config: SocialProviderConfig) -> str:
+    value = str(os.getenv(config.client_secret_env) or "").strip()
+    if not value:
+        raise HTTPException(status_code=503, detail=f"{config.provider} 로그인 설정이 준비되지 않았습니다")
+    return value
+
+
+def _resolve_social_frontend_callback_url() -> str:
+    value = str(os.getenv("SOCIAL_AUTH_FRONTEND_CALLBACK_URL") or "").strip()
+    if value:
+        return value.rstrip("/")
+    return "http://127.0.0.1:3000/auth/social/callback"
+
+
+def _resolve_social_callback_url(callback_url: str | None) -> str:
+    candidate = str(callback_url or "").strip().rstrip("/")
+    frontend_callback = _resolve_social_frontend_callback_url()
+    if not candidate:
+        return frontend_callback
+
+    if candidate == frontend_callback:
+        return candidate
+
+    parsed = urlparse(candidate)
+    scheme = parsed.scheme.lower()
+    resolved_path = f"{parsed.hostname or ''}{parsed.path}".lstrip("/")
+    if scheme in {"worldlingo", "worldlinco", "com.parkcheolhong.worldlinco"} and resolved_path == "auth/social/callback":
+        return candidate
+
+    return frontend_callback
+
+
+def _resolve_social_return_to_path(value: str | None) -> str:
+    candidate = str(value or "").strip()
+    if not candidate.startswith("/"):
+        return "/marketplace"
+    return candidate
+
+
+def _social_state_is_expired(created_at: datetime) -> bool:
+    return datetime.now(timezone.utc) - created_at > _SOCIAL_AUTH_STATE_TTL
+
+
+def _derive_social_username(provider: str, provider_user_id: str, email: str) -> str:
+    base = re.sub(r"[^a-zA-Z0-9._-]+", "-", f"{provider}-{provider_user_id or email.split('@', 1)[0] or 'user'}").strip("-")
+    return base[:100] or f"{provider}-user"
+
+
+def _extract_social_profile(provider: str, payload: dict[str, Any]) -> dict[str, str]:
+    normalized = provider.lower()
+    if normalized == "google":
+        return {
+            "provider_user_id": str(payload.get("id") or ""),
+            "email": str(payload.get("email") or "").strip().lower(),
+            "full_name": str(payload.get("name") or "").strip(),
+            "avatar_url": str(payload.get("picture") or "").strip(),
+        }
+    if normalized == "kakao":
+        kakao_account = payload.get("kakao_account") if isinstance(payload.get("kakao_account"), dict) else {}
+        profile = kakao_account.get("profile") if isinstance(kakao_account, dict) else {}
+        return {
+            "provider_user_id": str(payload.get("id") or ""),
+            "email": str(kakao_account.get("email") or "").strip().lower(),
+            "full_name": str(profile.get("nickname") or kakao_account.get("name") or "").strip(),
+            "avatar_url": str(profile.get("profile_image_url") or "").strip(),
+        }
+    if normalized == "naver":
+        response = payload.get("response") if isinstance(payload.get("response"), dict) else {}
+        return {
+            "provider_user_id": str(response.get("id") or ""),
+            "email": str(response.get("email") or "").strip().lower(),
+            "full_name": str(response.get("name") or response.get("nickname") or "").strip(),
+            "avatar_url": str(response.get("profile_image") or response.get("profile_image_url") or "").strip(),
+        }
+    raise HTTPException(status_code=404, detail="지원하지 않는 소셜 로그인 제공자입니다")
+
+
+def _upsert_social_user(db: Session, provider: str, profile: dict[str, str]):
+    from backend.models import User
+
+    email = str(profile.get("email") or "").strip().lower()
+    provider_user_id = str(profile.get("provider_user_id") or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="소셜 로그인에 이메일 권한이 필요합니다")
+    if not provider_user_id:
+        raise HTTPException(status_code=400, detail="소셜 로그인 식별 정보를 가져오지 못했습니다")
+
+    existing = db.query(User).filter(User.email == email).first()
+    if existing is not None:
+        if not getattr(existing, "full_name", None) and profile.get("full_name"):
+            existing.full_name = profile["full_name"]
+        if profile.get("avatar_url"):
+            existing.avatar_url = profile["avatar_url"]
+        db.add(existing)
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    username = _derive_social_username(provider, provider_user_id, email)
+    suffix = 1
+    while db.query(User).filter(User.username == username).first() is not None:
+        suffix += 1
+        username = f"{_derive_social_username(provider, provider_user_id, email)}-{suffix}"
+
+    user = User(
+        email=email,
+        username=username,
+        full_name=profile.get("full_name") or email.split("@", 1)[0],
+        member_type="individual",
+        hashed_password=get_password_hash(token_urlsafe(24)),
+        avatar_url=profile.get("avatar_url") or None,
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+async def _exchange_social_code(config: SocialProviderConfig, code: str, redirect_uri: str) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "grant_type": "authorization_code",
+        "client_id": _resolve_social_client_id(config),
+        "client_secret": _resolve_social_client_secret(config),
+        "redirect_uri": redirect_uri,
+        "code": code,
+    }
+    if config.provider == "kakao":
+        data["scope"] = config.scope
+    headers = {"Content-Type": "application/x-www-form-urlencoded;charset=utf-8"}
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        response = await client.post(config.token_url, data=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+
+async def _fetch_social_profile(config: SocialProviderConfig, access_token: str) -> dict[str, Any]:
+    headers = {"Authorization": f"Bearer {access_token}"}
+    if config.provider == "kakao":
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/x-www-form-urlencoded;charset=utf-8"}
+    if config.provider == "naver":
+        headers = {"Authorization": f"Bearer {access_token}"}
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        response = await client.get(config.userinfo_url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+
+def _build_social_callback_fragment(token: str, provider: str, return_to: str) -> str:
+    return urlencode({
+        "access_token": token,
+        "provider": provider,
+        "return_to": return_to,
+    })
 
 
 class PasskeyRegistrationStartRequest(BaseModel):
@@ -690,6 +910,92 @@ def login(
     set_active_session(int(user.id), session_id)
     register_issued_token(token, str(user.email or user.username or ""))
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/oauth/{provider}/start")
+def social_login_start(
+    provider: str,
+    request: Request,
+    return_to: str = "/marketplace",
+    callback_url: str | None = None,
+):
+    config = _resolve_social_provider(provider)
+    state = token_urlsafe(24)
+    frontend_return_to = _resolve_social_return_to_path(return_to)
+    callback_uri = str(request.url_for("social_login_callback", provider=config.provider))
+    frontend_callback_url = _resolve_social_callback_url(callback_url)
+
+    now = datetime.now(timezone.utc)
+    for stored_state, stored_entry in list(_SOCIAL_AUTH_STATE_STORE.items()):
+        created_at = stored_entry.get("created_at")
+        if not isinstance(created_at, datetime) or now - created_at > _SOCIAL_AUTH_STATE_TTL:
+            _SOCIAL_AUTH_STATE_STORE.pop(stored_state, None)
+
+    _SOCIAL_AUTH_STATE_STORE[state] = {
+        "provider": config.provider,
+        "return_to": frontend_return_to,
+        "created_at": now,
+        "callback_uri": callback_uri,
+        "frontend_callback_url": frontend_callback_url,
+    }
+    auth_query = urlencode({
+        "client_id": _resolve_social_client_id(config),
+        "redirect_uri": callback_uri,
+        "response_type": "code",
+        "scope": config.scope,
+        "state": state,
+    })
+    return RedirectResponse(url=f"{config.auth_url}?{auth_query}", status_code=302)
+
+
+@router.get("/oauth/{provider}/callback", name="social_login_callback")
+async def social_login_callback(
+    provider: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+    db: Session = Depends(get_db),
+):
+    if error:
+        detail = error_description or error
+        raise HTTPException(status_code=400, detail=f"소셜 로그인 실패: {detail}")
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="소셜 로그인 code/state 가 필요합니다")
+
+    config = _resolve_social_provider(provider)
+    state_entry = _SOCIAL_AUTH_STATE_STORE.pop(state, None)
+    if not state_entry or state_entry.get("provider") != config.provider:
+        raise HTTPException(status_code=400, detail="소셜 로그인 state 가 유효하지 않습니다")
+    created_at = state_entry.get("created_at")
+    if not isinstance(created_at, datetime) or _social_state_is_expired(created_at):
+        raise HTTPException(status_code=410, detail="소셜 로그인 세션이 만료되었습니다")
+
+    callback_uri = str(state_entry.get("callback_uri") or "")
+    if not callback_uri:
+        raise HTTPException(status_code=500, detail="소셜 로그인 callback URI 를 확인할 수 없습니다")
+
+    token_payload = await _exchange_social_code(config, code, callback_uri)
+    access_token = str(token_payload.get("access_token") or "").strip()
+    if not access_token:
+        raise HTTPException(status_code=502, detail="소셜 로그인 토큰을 가져오지 못했습니다")
+
+    profile_payload = await _fetch_social_profile(config, access_token)
+    profile = _extract_social_profile(config.provider, profile_payload)
+    user = _upsert_social_user(db, config.provider, profile)
+
+    session_id = token_urlsafe(24)
+    token = create_access_token(
+        data={"sub": user.email, "sid": session_id},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        no_expiry=_should_issue_non_expiring_admin_token(user),
+    )
+    set_active_session(int(user.id), session_id)
+    register_issued_token(token, str(user.email or user.username or ""))
+
+    fragment = _build_social_callback_fragment(token, config.provider, str(state_entry.get("return_to") or "/marketplace"))
+    frontend_callback = f"{str(state_entry.get('frontend_callback_url') or _resolve_social_frontend_callback_url())}#{fragment}"
+    return RedirectResponse(url=frontend_callback, status_code=302)
 
 
 @router.post("/passkey/register/start", response_model=PasskeyRegistrationStartResponse)

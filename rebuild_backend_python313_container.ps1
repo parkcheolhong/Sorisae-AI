@@ -57,6 +57,31 @@ function Resolve-EnvFilePath {
     return ""
 }
 
+function Add-FallbackBackendEnvironment {
+    param()
+
+    $fallbackEnv = @(
+        @{ Name = "POSTGRES_USER"; Value = "admin" },
+        @{ Name = "POSTGRES_PASSWORD"; Value = "" },
+        @{ Name = "POSTGRES_DB"; Value = "devanalysis114" },
+        @{ Name = "POSTGRES_HOST"; Value = "postgres" },
+        @{ Name = "POSTGRES_PORT"; Value = "5432" },
+        @{ Name = "REDIS_URL"; Value = "redis://redis:6379/0" },
+        @{ Name = "QDRANT_URL"; Value = "http://qdrant:6333" },
+        @{ Name = "MINIO_ENDPOINT"; Value = "minio:9000" },
+        @{ Name = "ENABLE_AD_ORDER_WORKER_BOOTSTRAP"; Value = "true" },
+        @{ Name = "ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP"; Value = "false" },
+        @{ Name = "NVIDIA_VISIBLE_DEVICES"; Value = "all" },
+        @{ Name = "NVIDIA_DRIVER_CAPABILITIES"; Value = "compute,utility,video" }
+    )
+
+    $result = @()
+    foreach ($item in $fallbackEnv) {
+        $result += @("-e", "$($item.Name)=$($item.Value)")
+    }
+    return $result
+}
+
 function Remove-ContainerIfExists {
     param([string]$Name)
 
@@ -88,7 +113,7 @@ $networkName = Resolve-BackendNetworkName
 $envFilePath = Resolve-EnvFilePath
 
 Write-Host "[INFO] building image: $ImageName"
-& docker build -t $ImageName $PSScriptRoot
+& docker build -f (Join-Path $PSScriptRoot "Dockerfile.backend") -t $ImageName $PSScriptRoot
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
@@ -100,7 +125,8 @@ $dockerRunArgs = @(
     "run",
     "-d",
     "--name", $ContainerName,
-    "-p", "${PublishedPort}:8000"
+    "-p", "${PublishedPort}:8000",
+    "--gpus", "all"
 )
 
 if (-not [string]::IsNullOrWhiteSpace($networkName)) {
@@ -109,6 +135,8 @@ if (-not [string]::IsNullOrWhiteSpace($networkName)) {
 
 if (-not [string]::IsNullOrWhiteSpace($envFilePath)) {
     $dockerRunArgs += @("--env-file", $envFilePath)
+} else {
+    $dockerRunArgs += Add-FallbackBackendEnvironment
 }
 
 $dockerRunArgs += $ImageName

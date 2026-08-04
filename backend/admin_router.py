@@ -3293,7 +3293,32 @@ def _admin_runtime_root() -> Path:
 
 
 def _admin_env_path() -> Path:
-    return _admin_workspace_root() / ".env"
+    primary = _admin_workspace_root() / ".env"
+    fallback = _admin_runtime_root() / "admin.env"
+    if primary.exists():
+        try:
+            if os.access(primary, os.W_OK):
+                return primary
+        except OSError:
+            pass
+        if fallback.exists():
+            return fallback
+        return primary
+    if fallback.exists():
+        return fallback
+    return primary
+
+
+def _admin_env_write_path() -> Path:
+    primary = _admin_workspace_root() / ".env"
+    if not primary.exists():
+        return primary
+    try:
+        if os.access(primary, os.W_OK):
+            return primary
+    except OSError:
+        pass
+    return _admin_runtime_root() / "admin.env"
 
 
 def _admin_orchestrator_runtime_config_path() -> Path:
@@ -3309,7 +3334,7 @@ def _admin_system_env_allowed_keys() -> set[str]:
 
 def _read_admin_env_entries(path: Path) -> List[Dict[str, Any]]:
     if not path.exists() or not path.is_file():
-        raise HTTPException(status_code=404, detail=".env 파일을 찾을 수 없습니다.")
+        return []
     lines = path.read_text(encoding="utf-8").splitlines()
     entries: List[Dict[str, Any]] = []
     for line in lines:
@@ -3331,6 +3356,7 @@ def _read_admin_env_values(path: Path) -> Dict[str, str]:
 
 
 def _write_admin_env_values(path: Path, updates: Dict[str, str]) -> Dict[str, str]:
+    path.parent.mkdir(parents=True, exist_ok=True)
     entries = _read_admin_env_entries(path)
     rendered_lines: List[str] = []
     seen_keys: set[str] = set()
@@ -3349,8 +3375,14 @@ def _write_admin_env_values(path: Path, updates: Dict[str, str]) -> Dict[str, st
         rendered_lines.append("# Admin dashboard appended settings")
         for key in missing_keys:
             rendered_lines.append(f"{key}={updates[key]}")
-    path.write_text("\n".join(rendered_lines) + "\n", encoding="utf-8")
-    return _read_admin_env_values(path)
+    try:
+        path.write_text("\n".join(rendered_lines) + "\n", encoding="utf-8")
+        return _read_admin_env_values(path)
+    except PermissionError:
+        fallback_path = _admin_runtime_root() / "admin.env"
+        fallback_path.parent.mkdir(parents=True, exist_ok=True)
+        fallback_path.write_text("\n".join(rendered_lines) + "\n", encoding="utf-8")
+        return _read_admin_env_values(fallback_path)
 
 
 def _resolve_windows_postgres_secret_path(env_values: Optional[Dict[str, str]] = None) -> Path:
@@ -3416,7 +3448,7 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
 
 def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
     display = _resolve_admin_summary_display_values(env_values)
-    admin_domain = display["admin_domain"] or "metanova1004.com"
+    admin_domain = display["admin_domain"] or "xn--114-2p7l635dz3bh5j.com"
     model_routes = runtime_config.get("model_routes") or {}
     defaults: Dict[str, str] = {
         "LOCAL_API_BASE_URL": display["local_api_base_url"],
@@ -3720,7 +3752,7 @@ def _build_global_automatic_env_updates(env_values: Dict[str, str]) -> Dict[str,
 
 
 async def _apply_global_automatic_mode() -> AdminGlobalAutomaticModeResponse:
-    env_path = _admin_env_path()
+    env_path = _admin_env_write_path()
     current_env_values = _read_admin_env_values(env_path)
     env_updates = _build_global_automatic_env_updates(current_env_values)
     updated_env_values = _write_admin_env_values(env_path, env_updates)
@@ -6314,4 +6346,3 @@ async def admin_upload_worldlinco_telemetry(
         "updated_by": saved.get("updated_by"),
         "summary": saved.get("summary") or {},
     }
-

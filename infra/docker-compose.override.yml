@@ -19,8 +19,8 @@ services:
       - JWT_EXPIRE_MINUTES=30
       JWT_SECRET: replace-with-32-char-random-secret
       - JWT_SECRET=replace-with-32-char-random-secret
-      - ALLOWED_HOSTS=localhost,127.0.0.1,metanova1004.com
-      - CORS_ALLOW_ORIGINS=https://metanova1004.com
+      - ALLOWED_HOSTS=localhost,127.0.0.1,xn--114-2p7l635dz3bh5j.com
+      - CORS_ALLOW_ORIGINS=https://xn--114-2p7l635dz3bh5j.com
       - OPS_LOG_PATH=logs/ops-events.jsonl
       - REQUEST_TIMEOUT_SEC=5
     healthcheck:

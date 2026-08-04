@@ -157,7 +157,7 @@ services:
       ORCH_MAX_FORCE_RETRIES: ${ORCH_MAX_FORCE_RETRIES:-60}
       ORCH_REQUIRED_FILES: ${ORCH_REQUIRED_FILES:-README.md,requirements.txt,app/main.py,app/routes.py,tests/test_health.py,.gitignore}
       ADMIN_PROBE_BASE_URL: ${ADMIN_PROBE_BASE_URL:-https://nginx}
-      ADMIN_PROBE_HOST: ${ADMIN_PROBE_HOST:-metanova1004.com}
+      ADMIN_PROBE_HOST: ${ADMIN_PROBE_HOST:-xn--114-2p7l635dz3bh5j.com}
       ADMIN_PROBE_VERIFY_SSL: ${ADMIN_PROBE_VERIFY_SSL:-false}
       PASSKEY_RP_ID: ${PASSKEY_RP_ID:-xn--114-2p7l635dz3bh5j.com}
       PASSKEY_EXPECTED_ORIGIN: ${PASSKEY_EXPECTED_ORIGIN:-https://xn--114-2p7l635dz3bh5j.com}
@@ -405,8 +405,8 @@ services:
       NEXT_PUBLIC_SITE_URL: https://xn--114-2p7l635dz3bh5j.com
       MARKETPLACE_VALIDATOR_BASE_URL: ${MARKETPLACE_VALIDATOR_BASE_URL:-}
       MULTI_PROGRAM_VALIDATOR_BASE_URL: ${MULTI_PROGRAM_VALIDATOR_BASE_URL:-}
-      BACKEND_PROXY_TARGET: http://backend:8000
-      LOCAL_API_BASE_URL: http://backend:8000
+      BACKEND_PROXY_TARGET: http://devanalysis114-backend:8000
+      LOCAL_API_BASE_URL: http://devanalysis114-backend:8000
     depends_on:
       backend:
         condition: service_started
@@ -434,8 +434,8 @@ services:
       NEXT_PUBLIC_SITE_URL: https://metanova1004.com
       MARKETPLACE_VALIDATOR_BASE_URL: ${MARKETPLACE_VALIDATOR_BASE_URL:-}
       MULTI_PROGRAM_VALIDATOR_BASE_URL: ${MULTI_PROGRAM_VALIDATOR_BASE_URL:-}
-      BACKEND_PROXY_TARGET: http://backend:8000
-      LOCAL_API_BASE_URL: http://backend:8000
+      BACKEND_PROXY_TARGET: http://devanalysis114-backend:8000
+      LOCAL_API_BASE_URL: http://devanalysis114-backend:8000
     depends_on:
       backend:
         condition: service_started
@@ -661,4 +661,3 @@ volumes:
 networks:
   devanalysis114-network:
     driver: bridge
-
