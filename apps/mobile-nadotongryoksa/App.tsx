@@ -1541,6 +1541,9 @@ function AppInner() {
         setLoginPw('');
         setLoginError('');
         setDemoSessionError('');
+        void saveStoredAuthState(nextToken, nextUserInfo).catch((error) => {
+            console.log('[AuthStorage] save failed', error);
+        });
         const pair = pairFromCountry(
             nextUserInfo.country_code || gpsCountryCode || resolveLocaleCountryCode() || 'KR',
         );
