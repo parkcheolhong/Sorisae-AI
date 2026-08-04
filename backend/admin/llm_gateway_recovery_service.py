@@ -248,11 +248,12 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
         return {
             "status": "error",
             "root_causes": ["docker_daemon_unavailable"],
-            "message": "Docker 데몬에 접근할 수 없어 llm gateway 진단을 수행할 수 없습니다.",
+            "message": "llm Gateway 근본원인 자동복구: Docker 데몬에 접근할 수 없습니다.",
             "containers": {},
             "recommendations": [
-                "Docker Desktop/Engine 상태를 먼저 복구하세요.",
-                "관리자 API가 도커 명령을 실행할 권한(그룹/소켓)에 포함되는지 확인하세요.",
+                "근본원인: docker_daemon_unavailable",
+                "자동 안내: Docker Desktop/Engine 상태를 먼저 복구하세요.",
+                "자동 안내: 관리자 API가 도커 명령을 실행할 수 있도록 그룹/소켓 권한에 포함되어 있는지 확인하세요.",
             ],
         }
 

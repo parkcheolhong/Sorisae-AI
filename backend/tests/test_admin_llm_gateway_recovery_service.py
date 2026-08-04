@@ -56,6 +56,18 @@ def test_collect_llm_gateway_diagnostics_uses_running_operating_container(monkey
     assert result["containers"]["gateway"]["health_http_code"] == 200
 
 
+def test_collect_llm_gateway_diagnostics_reports_docker_daemon_unavailable(monkeypatch):
+    monkeypatch.setattr(svc, "_docker_available", lambda: False)
+
+    result = svc.collect_llm_gateway_diagnostics()
+
+    assert result["status"] == "error"
+    assert result["root_causes"] == ["docker_daemon_unavailable"]
+    assert "Docker 데몬에 접근할 수 없습니다" in result["message"]
+    assert "근본원인: docker_daemon_unavailable" in result["recommendations"]
+    assert any("그룹/소켓 권한" in item for item in result["recommendations"])
+
+
 def test_auto_recover_dry_run_includes_gateway_network_reattach(monkeypatch):
     monkeypatch.setattr(
         svc,
