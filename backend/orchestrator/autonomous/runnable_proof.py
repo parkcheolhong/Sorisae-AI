@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -13,6 +14,11 @@ _HEALTH_ROUTE_MARKERS = (
     '@router.get("/health"',
     "@app.get(\"/health\"",
     "@app.get('/health'",
+)
+
+_SAFE_OUTPUT_ROOTS = (
+    Path.cwd().resolve(),
+    (Path(tempfile.gettempdir()).resolve() / "codeai_autonomous_output"),
 )
 
 
@@ -77,6 +83,30 @@ def _detect_health_route(paths: List[Path]) -> bool:
     return False
 
 
+def _resolve_safe_output_dir(output_dir: str) -> Optional[Path]:
+    candidate = Path(str(output_dir or "").strip()).expanduser()
+    try:
+        resolved = candidate.resolve(strict=False)
+    except OSError:
+        return None
+    for root in _SAFE_OUTPUT_ROOTS:
+        try:
+            resolved.relative_to(root)
+            return resolved
+        except ValueError:
+            continue
+    return None
+
+
+def _resolve_safe_child(root: Path, relative_path: str) -> Optional[Path]:
+    try:
+        candidate = (root / relative_path).resolve(strict=False)
+        candidate.relative_to(root)
+        return candidate
+    except (OSError, ValueError):
+        return None
+
+
 def evaluate_runnable_proof(
     *,
     output_dir: Optional[str],
@@ -101,7 +131,10 @@ def evaluate_runnable_proof(
         result["detail"] = "output_dir 없음 — runnable proof 미충족"
         return result
 
-    root = Path(output_dir)
+    root = _resolve_safe_output_dir(output_dir)
+    if root is None:
+        result["detail"] = "허용되지 않은 output_dir"
+        return result
     if not root.exists():
         result["detail"] = f"output_dir 미존재: {root}"
         return result
@@ -110,7 +143,9 @@ def evaluate_runnable_proof(
     for rel in written:
         if not rel.endswith(".py"):
             continue
-        candidate = root / rel
+        candidate = _resolve_safe_child(root, rel)
+        if candidate is None:
+            continue
         if candidate.is_file():
             py_paths.append(candidate)
     if not py_paths:

@@ -23,11 +23,13 @@ endpoints:
 from __future__ import annotations
 
 import importlib
-import traceback
+import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 # ── 완제품 패키지 레지스트리 ──────────────────────────────────────
 # key: URL 키, slots: 포함된 engines120 슬롯 목록, lead_slot/lead_class: 대표 엔진
@@ -268,10 +270,15 @@ def _safe_demo(product: Dict[str, Any], params: Optional[Dict[str, Any]]) -> Dic
                     call_result = method(*method_args, **method_kwargs)
                     result["method_result"] = call_result
 
-    except Exception as exc:
+    except Exception:
+        logger.exception(
+            "Shinsegye demo failed: key=%s slot=%s class=%s",
+            product.get("key"),
+            slot,
+            class_name,
+        )
         result["init_status"] = "error"
-        result["error"] = str(exc)
-        result["traceback"] = traceback.format_exc()[-1000:]  # 마지막 1000자만
+        result["error"] = "데모 실행 중 내부 오류가 발생했습니다."
 
     return result
 

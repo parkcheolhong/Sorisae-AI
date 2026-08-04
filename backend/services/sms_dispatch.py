@@ -16,6 +16,13 @@ def _dev_mode() -> bool:
     return app_env not in {"prod", "production", "stage", "staging"}
 
 
+def _mask_phone(phone: str) -> str:
+    digits = "".join(ch for ch in str(phone or "") if ch.isdigit())
+    if len(digits) < 4:
+        return "***"
+    return f"***{digits[-4:]}"
+
+
 def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object]:
     """Send signup/friend OTP SMS. Returns delivery metadata for audit."""
     message_body = f"[WorldLinco] {purpose} 인증 코드: {code} (15분 유효)"
@@ -33,10 +40,10 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
 
     if not (account_sid and auth_token and from_number):
         logger.info(
-            "[SMS_TEXT] provider=dev-log purpose=%s target=%s body=%s",
+            "[SMS_TEXT] provider=dev-log purpose=%s target=%s body_length=%s",
             purpose,
-            phone,
-            normalized_body[:120],
+            _mask_phone(phone),
+            len(normalized_body),
         )
         return {
             "provider": "dev-log",
@@ -71,7 +78,7 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         logger.info(
             "[SMS_TEXT] provider=twilio purpose=%s target=%s sid=%s",
             purpose,
-            phone,
+            _mask_phone(phone),
             response_body.get("sid"),
         )
         return {
@@ -83,11 +90,10 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         logger.error(
-            "[SMS_TEXT] provider=twilio purpose=%s target=%s http=%s detail=%s",
+            "[SMS_TEXT] provider=twilio purpose=%s target=%s http=%s",
             purpose,
-            phone,
+            _mask_phone(phone),
             exc.code,
-            detail[:500],
         )
         if _dev_mode():
             return {
