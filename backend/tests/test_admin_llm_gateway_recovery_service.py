@@ -68,6 +68,37 @@ def test_collect_llm_gateway_diagnostics_reports_docker_daemon_unavailable(monke
     assert any("그룹/소켓 권한" in item for item in result["recommendations"])
 
 
+def test_build_safe_shadow_mount_args_keeps_nginx_certs():
+    mounts = [
+        {
+            "Type": "bind",
+            "Source": "C:/repo/nginx/nginx.conf/nginx.conf",
+            "Destination": "/etc/nginx/templates/nginx.conf.template",
+            "RW": False,
+        },
+        {
+            "Type": "bind",
+            "Source": "C:/repo/certbot/local-certs",
+            "Destination": "/etc/nginx/local-certs",
+            "RW": False,
+        },
+        {
+            "Type": "bind",
+            "Source": "C:/repo/certbot/www",
+            "Destination": "/var/www/certbot",
+            "RW": False,
+        },
+    ]
+
+    args = svc._build_safe_shadow_mount_args(mounts)
+
+    assert "-v" in args
+    assert "C:/repo/nginx/nginx.conf/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro" in args
+    assert "C:/repo/certbot/local-certs:/etc/nginx/local-certs:ro" in args
+    assert "C:/repo/certbot/www:/var/www/certbot:ro" in args
+    assert not any(item.endswith("/etc/nginx/nginx.conf:ro") for item in args)
+
+
 def test_auto_recover_dry_run_includes_gateway_network_reattach(monkeypatch):
     monkeypatch.setattr(
         svc,
@@ -133,6 +164,55 @@ def test_auto_recover_real_run_reattaches_gateway_network(monkeypatch):
     assert reattach_steps
     assert reattach_steps[0].get("ok") is True
     assert svc.DEFAULT_LLM_NETWORK in (reattach_steps[0].get("networks_after") or [])
+
+
+def test_auto_recover_connects_shadow_to_gateway_side_networks(monkeypatch):
+    monkeypatch.setattr(
+        svc,
+        "collect_llm_gateway_diagnostics",
+        lambda: {"status": "critical", "root_causes": ["host_port_80_conflict_risk"]},
+    )
+
+    state = {"shadow_running": True}
+
+    def fake_inspect(container_name: str):
+        if container_name == svc.DEFAULT_GATEWAY_CONTAINER:
+            return {
+                "Config": {"Image": "nginx:alpine", "Env": []},
+                "Mounts": [],
+                "NetworkSettings": {"Networks": {"codeai_devanalysis114-network": {}, svc.DEFAULT_LLM_NETWORK: {}}},
+                "State": {"Running": True},
+            }
+        if container_name == svc.DEFAULT_SHADOW_CONTAINER:
+            return {
+                "Config": {"Image": "nginx:alpine", "Env": []},
+                "Mounts": [],
+                "NetworkSettings": {"Networks": {svc.DEFAULT_LLM_NETWORK: {}}},
+                "State": {"Running": state["shadow_running"]},
+            }
+        return None
+
+    attached_networks: list[str] = []
+
+    def fake_run_command(args, *, timeout=25):
+        key = tuple(args)
+        if key[:3] == ("docker", "rm", "-f") and key[-1] == svc.DEFAULT_SHADOW_CONTAINER:
+            return svc.CommandResult(ok=True, code=0, stdout=svc.DEFAULT_SHADOW_CONTAINER, stderr="")
+        if key[:3] == ("docker", "run", "-d") and svc.DEFAULT_SHADOW_CONTAINER in key:
+            return svc.CommandResult(ok=True, code=0, stdout="shadow-created", stderr="")
+        if key[:3] == ("docker", "network", "connect") and key[-1] == svc.DEFAULT_SHADOW_CONTAINER:
+            attached_networks.append(key[3])
+            return svc.CommandResult(ok=True, code=0, stdout="connected", stderr="")
+        return svc.CommandResult(ok=True, code=0, stdout="", stderr="")
+
+    monkeypatch.setattr(svc, "_docker_inspect", fake_inspect)
+    monkeypatch.setattr(svc, "_run_command", fake_run_command)
+    monkeypatch.setattr(svc, "_docker_exec_http_status", lambda *_args, **_kwargs: 200)
+
+    result = svc.auto_recover_llm_gateway(mode="port_shift_shadow", dry_run=False)
+
+    assert "codeai_devanalysis114-network" in attached_networks
+    assert result["actions"][-1]["step"] == "shadow_smoke"
 
 
 def test_auto_recover_recreates_gateway_on_port_conflict(monkeypatch):

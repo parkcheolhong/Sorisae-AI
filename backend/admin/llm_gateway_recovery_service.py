@@ -217,19 +217,24 @@ def _find_template_mount_source(mounts: List[Dict[str, Any]]) -> Optional[str]:
 
 
 def _build_safe_shadow_mount_args(mounts: List[Dict[str, Any]]) -> List[str]:
+    args: List[str] = []
     template_source = _find_template_mount_source(mounts)
     if template_source:
-        return ["-v", f"{template_source}:/etc/nginx/templates/nginx.conf.template:ro"]
+        args.extend(["-v", f"{template_source}:/etc/nginx/templates/nginx.conf.template:ro"])
 
-    args: List[str] = []
     for mount in mounts:
         destination = str(mount.get("Destination") or "").strip()
+        source = str(mount.get("Source") or "").strip()
+        if not source:
+            continue
+        if destination in {"/etc/nginx/local-certs", "/var/www/certbot"}:
+            mode = "ro" if not bool(mount.get("RW")) else "rw"
+            args.extend(["-v", f"{source}:{destination}:{mode}"])
+            continue
         if destination.startswith("/etc/nginx/conf.d"):
             continue
-        if destination == "/etc/nginx/nginx.conf":
-            source = str(mount.get("Source") or "").strip()
-            if source:
-                args.extend(["-v", f"{source}:/etc/nginx/nginx.conf:ro"])
+        if destination == "/etc/nginx/nginx.conf" and not template_source:
+            args.extend(["-v", f"{source}:/etc/nginx/nginx.conf:ro"])
     return args
 
 
@@ -241,6 +246,10 @@ def _build_env_args(env_values: List[str]) -> List[str]:
             continue
         args.extend(["-e", value])
     return args
+
+
+def _connect_container_network(container_name: str, network_name: str) -> CommandResult:
+    return _run_command(["docker", "network", "connect", network_name, container_name], timeout=15)
 
 
 def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
@@ -671,6 +680,23 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             "command": " ".join(shlex.quote(part) for part in run_cmd),
         }
     )
+
+    base_network_names = sorted(str(name) for name in (base_inspect.get("NetworkSettings", {}) or {}).get("Networks", {}).keys())
+    for network_name in base_network_names:
+        if network_name == DEFAULT_LLM_NETWORK:
+            continue
+        connect_result = _connect_container_network(DEFAULT_SHADOW_CONTAINER, network_name)
+        actions.append(
+            {
+                "step": "connect_shadow_network",
+                "container": DEFAULT_SHADOW_CONTAINER,
+                "network": network_name,
+                "ok": connect_result.ok,
+                "code": connect_result.code,
+                "stdout": connect_result.stdout,
+                "stderr": connect_result.stderr,
+            }
+        )
 
     shadow_health = _docker_exec_http_status(DEFAULT_SHADOW_CONTAINER, "http://127.0.0.1/health")
     shadow_proxy = _docker_exec_http_status(DEFAULT_SHADOW_CONTAINER, "http://127.0.0.1/api/v1/models")
