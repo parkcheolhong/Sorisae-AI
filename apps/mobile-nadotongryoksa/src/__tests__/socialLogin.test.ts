@@ -11,7 +11,7 @@ describe('socialLogin', () => {
 
     it('builds a provider start url that returns to the app callback', () => {
         const url = buildSocialLoginStartUrl('kakao', 'https://api.example.com');
-        expect(url).toBe('https://api.example.com/api/auth/social/kakao/start?redirect_uri=worldlinco%3A%2F%2Fauth%2Fcallback');
+        expect(url).toBe('https://api.example.com/api/auth/social/kakao/start?redirect_uri=worldlingo%3A%2F%2Fauth%2Fcallback');
     });
 
     it('prefers an explicit provider url override when configured', () => {

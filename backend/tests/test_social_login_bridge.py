@@ -99,7 +99,7 @@ def test_social_login_start_redirects_to_provider_authorization_url(monkeypatch)
 
     response = client.get(
         '/api/auth/social/google/start',
-        params={'redirect_uri': 'worldlinco://auth/callback'},
+        params={'redirect_uri': 'worldlingo://auth/callback'},
         follow_redirects=False,
     )
 
@@ -123,7 +123,7 @@ def test_social_login_callback_issues_app_token_and_updates_user(monkeypatch):
 
     start_response = client.get(
         '/api/auth/social/google/start',
-        params={'redirect_uri': 'worldlinco://auth/callback'},
+        params={'redirect_uri': 'worldlingo://auth/callback'},
         follow_redirects=False,
     )
     start_location = urlparse(start_response.headers['location'])
@@ -138,7 +138,7 @@ def test_social_login_callback_issues_app_token_and_updates_user(monkeypatch):
 
     assert callback_response.status_code == 302, callback_response.text
     final_location = urlparse(callback_response.headers['location'])
-    assert f'{final_location.scheme}://{final_location.netloc}{final_location.path}' == 'worldlinco://auth/callback'
+    assert f'{final_location.scheme}://{final_location.netloc}{final_location.path}' == 'worldlingo://auth/callback'
 
     final_query = parse_qs(final_location.query)
     app_access_token = final_query['access_token'][0]

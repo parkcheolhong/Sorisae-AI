@@ -58,50 +58,66 @@ export function createVoipMessagingAdapter(
         },
 
         subscribe: (handler) => {
+            let unsubscribe: () => void = () => {};
 
-            return messaging().onMessage(async (remoteMessage) => {
-
-                const data = remoteMessage?.data as Record<string, unknown> | undefined;
-
-                if (!data || Object.keys(data).length === 0) {
-
+            void ensureFirebaseReady().then((ready) => {
+                if (!ready) {
                     return;
-
                 }
 
                 try {
+                    unsubscribe = messaging().onMessage(async (remoteMessage) => {
+                        const data = remoteMessage?.data as Record<string, unknown> | undefined;
 
-                    await handleWorldlincoPushData(data, 'foreground');
+                        if (!data || Object.keys(data).length === 0) {
+                            return;
+                        }
 
+                        try {
+                            await handleWorldlincoPushData(data, 'foreground');
+                        } catch (error) {
+                            console.log('[WorldlincoFCM] foreground push handler failed', error);
+                        }
+
+                        if (parseIncomingCallFcmData(data)) {
+                            handler(data);
+                        }
+                    });
                 } catch (error) {
-
-                    console.log('[WorldlincoFCM] foreground push handler failed', error);
-
+                    console.log('[VoIPFCM] subscribe bootstrap failed', error);
                 }
-
-                if (parseIncomingCallFcmData(data)) {
-
-                    handler(data);
-
-                }
-
             });
+
+            return () => {
+                unsubscribe();
+            };
 
         },
 
         onNotificationOpened: (handler) => {
+            let unsubscribe: () => void = () => {};
 
-            return messaging().onNotificationOpenedApp((remoteMessage) => {
-
-                const data = remoteMessage?.data as Record<string, unknown> | undefined;
-
-                if (data && Object.keys(data).length > 0) {
-
-                    handler(data);
-
+            void ensureFirebaseReady().then((ready) => {
+                if (!ready) {
+                    return;
                 }
 
+                try {
+                    unsubscribe = messaging().onNotificationOpenedApp((remoteMessage) => {
+                        const data = remoteMessage?.data as Record<string, unknown> | undefined;
+
+                        if (data && Object.keys(data).length > 0) {
+                            handler(data);
+                        }
+                    });
+                } catch (error) {
+                    console.log('[VoIPFCM] notification-open bootstrap failed', error);
+                }
             });
+
+            return () => {
+                unsubscribe();
+            };
 
         },
 
@@ -188,4 +204,3 @@ export function createVoipMessagingAdapter(
     };
 
 }
-

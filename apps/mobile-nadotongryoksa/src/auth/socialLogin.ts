@@ -10,7 +10,7 @@ export type SocialLoginProviderConfig = {
     accentColor: string;
 };
 
-export const SOCIAL_LOGIN_REDIRECT_URI = 'worldlinco://auth/callback';
+export const SOCIAL_LOGIN_REDIRECT_URI = 'worldlingo://auth/callback';
 
 export const SOCIAL_LOGIN_PROVIDER_CONFIGS: SocialLoginProviderConfig[] = [
     {
