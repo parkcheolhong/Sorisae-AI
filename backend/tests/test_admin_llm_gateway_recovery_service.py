@@ -14,6 +14,48 @@ def _base_gateway_inspect(networks: dict[str, Any] | None = None) -> dict[str, A
     }
 
 
+def test_collect_llm_gateway_diagnostics_uses_running_operating_container(monkeypatch):
+    monkeypatch.setattr(svc, "DEFAULT_GATEWAY_CONTAINER", "llm-nginx")
+    monkeypatch.setattr(svc, "DEFAULT_PRIMARY_INGRESS_CONTAINER", "devanalysis114-nginx")
+    monkeypatch.setattr(
+        svc,
+        "_docker_ps_rows",
+        lambda: [
+            {
+                "Names": "devanalysis114-nginx",
+                "Status": "Up 2 hours",
+                "Ports": "127.0.0.1:80->80/tcp, 127.0.0.1:443->443/tcp",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        svc,
+        "_docker_ps_row",
+        lambda container_name: {
+            "Names": container_name,
+            "Status": "Up 2 hours",
+            "Ports": "127.0.0.1:80->80/tcp, 127.0.0.1:443->443/tcp",
+        }
+        if container_name == "devanalysis114-nginx"
+        else {},
+    )
+    monkeypatch.setattr(
+        svc,
+        "_docker_inspect",
+        lambda container_name: _base_gateway_inspect(networks={svc.DEFAULT_LLM_NETWORK: {}})
+        if container_name == "devanalysis114-nginx"
+        else None,
+    )
+    monkeypatch.setattr(svc, "_docker_exec_http_status", lambda container_name, _url: 200 if container_name == "devanalysis114-nginx" else 0)
+    monkeypatch.setattr(svc, "_docker_available", lambda: True)
+
+    result = svc.collect_llm_gateway_diagnostics()
+
+    assert result["containers"]["gateway"]["name"] == "devanalysis114-nginx"
+    assert result["containers"]["gateway"]["running"] is True
+    assert result["containers"]["gateway"]["health_http_code"] == 200
+
+
 def test_auto_recover_dry_run_includes_gateway_network_reattach(monkeypatch):
     monkeypatch.setattr(
         svc,

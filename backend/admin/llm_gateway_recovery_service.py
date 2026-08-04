@@ -92,6 +92,57 @@ def _docker_ps_row(container_name: str) -> Dict[str, Any]:
     return row if isinstance(row, dict) else {}
 
 
+def _docker_ps_rows() -> List[Dict[str, Any]]:
+    result = _run_command(
+        [
+            "docker",
+            "ps",
+            "-a",
+            "--format",
+            "{{json .}}",
+        ],
+        timeout=10,
+    )
+    if not result.ok or not result.stdout:
+        return []
+    rows: List[Dict[str, Any]] = []
+    for line in result.stdout.splitlines():
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            row = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _container_row_name(row: Dict[str, Any]) -> str:
+    return str(row.get("Names") or row.get("Name") or "").strip()
+
+
+def _resolve_operating_container_name(preferred_names: Sequence[str]) -> str:
+    candidates = [str(name).strip() for name in preferred_names if str(name).strip()]
+    rows = _docker_ps_rows()
+    row_map = {_container_row_name(row): row for row in rows if _container_row_name(row)}
+
+    for candidate in candidates:
+        if candidate in row_map:
+            return candidate
+
+    for row in rows:
+        name = _container_row_name(row)
+        if not name:
+            continue
+        lowered = name.lower()
+        if any(candidate.lower() in lowered for candidate in candidates):
+            return name
+
+    return candidates[0] if candidates else ""
+
+
 def _docker_exec_http_status(container_name: str, url: str) -> int:
     cmd = (
         "wget -qSO- "
@@ -205,11 +256,23 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
             ],
         }
 
-    gateway_row = _docker_ps_row(DEFAULT_GATEWAY_CONTAINER)
+    gateway_container = _resolve_operating_container_name(
+        [
+            os.getenv("ADMIN_LLM_GATEWAY_CONTAINER", "").strip(),
+            DEFAULT_GATEWAY_CONTAINER,
+            DEFAULT_PRIMARY_INGRESS_CONTAINER,
+            "devanalysis114-nginx",
+            "llm-nginx",
+        ]
+    )
+    if not gateway_container:
+        gateway_container = DEFAULT_GATEWAY_CONTAINER
+
+    gateway_row = _docker_ps_row(gateway_container)
     shadow_row = _docker_ps_row(DEFAULT_SHADOW_CONTAINER)
     ingress_row = _docker_ps_row(DEFAULT_PRIMARY_INGRESS_CONTAINER)
 
-    gateway_inspect = _docker_inspect(DEFAULT_GATEWAY_CONTAINER)
+    gateway_inspect = _docker_inspect(gateway_container)
     shadow_inspect = _docker_inspect(DEFAULT_SHADOW_CONTAINER)
 
     gateway_networks = (
@@ -231,18 +294,18 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
     gateway_network_attached = bool(gateway_networks)
     shadow_network_attached = bool(shadow_networks)
 
-    gateway_health_code = _docker_exec_http_status(DEFAULT_GATEWAY_CONTAINER, "http://127.0.0.1/health") if gateway_running else 0
-    gateway_proxy_code = _docker_exec_http_status(DEFAULT_GATEWAY_CONTAINER, "http://127.0.0.1/api/v1/models") if gateway_running else 0
+    gateway_health_code = _docker_exec_http_status(gateway_container, "http://127.0.0.1/health") if gateway_running else 0
+    gateway_proxy_code = _docker_exec_http_status(gateway_container, "http://127.0.0.1/api/v1/models") if gateway_running else 0
 
     root_causes: List[str] = []
     recommendations: List[str] = []
 
     if not gateway_running:
         root_causes.append("gateway_not_running")
-        recommendations.append(f"{DEFAULT_GATEWAY_CONTAINER}을(를) 정식 compose 또는 shadow 포트(18080/18443)로 재생성하세요.")
+        recommendations.append(f"{gateway_container}을(를) 정식 compose 또는 shadow 포트(18080/18443)로 재생성하세요.")
     if gateway_running and not gateway_network_attached:
         root_causes.append("gateway_network_detached")
-        recommendations.append(f"{DEFAULT_GATEWAY_CONTAINER}를 {DEFAULT_LLM_NETWORK} 네트워크에 재연결하세요.")
+        recommendations.append(f"{gateway_container}를 {DEFAULT_LLM_NETWORK} 네트워크에 재연결하세요.")
     if gateway_running and gateway_health_code != 200:
         root_causes.append("gateway_healthcheck_failed")
         recommendations.append("nginx config mount 경로와 컨테이너 내부 nginx -T 결과를 다시 정합화하세요.")
@@ -252,7 +315,7 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
 
     if "80" in ingress_ports and ("80" in gateway_ports or (not gateway_ports and gateway_running)):
         root_causes.append("host_port_80_conflict_risk")
-        recommendations.append(f"무중단 우선으로 {DEFAULT_GATEWAY_CONTAINER}을(를) 18080/18443 포트로 재배치하세요.")
+        recommendations.append(f"무중단 우선으로 {gateway_container}을(를) 18080/18443 포트로 재배치하세요.")
 
     if shadow_running and shadow_network_attached:
         recommendations.append("shadow 컨테이너가 정상 구동 중이면 운영 트래픽 전환 전에 health/proxy smoke를 먼저 확인하세요.")
@@ -267,7 +330,7 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
         "message": "근본 원인 기반 진단 결과입니다. 포트/네트워크/업스트림 상태를 함께 확인했습니다.",
         "containers": {
             "gateway": {
-                "name": DEFAULT_GATEWAY_CONTAINER,
+                "name": gateway_container,
                 "running": gateway_running,
                 "ports": str(gateway_row.get("Ports") or ""),
                 "status": str(gateway_row.get("Status") or ""),
@@ -370,9 +433,20 @@ def _build_gateway_recreate_command(
 def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool = False) -> Dict[str, Any]:
     diagnostics_before = collect_llm_gateway_diagnostics()
     actions: List[Dict[str, Any]] = []
+    gateway_container = _resolve_operating_container_name(
+        [
+            os.getenv("ADMIN_LLM_GATEWAY_CONTAINER", "").strip(),
+            DEFAULT_GATEWAY_CONTAINER,
+            DEFAULT_PRIMARY_INGRESS_CONTAINER,
+            "devanalysis114-nginx",
+            "llm-nginx",
+        ]
+    )
+    if not gateway_container:
+        gateway_container = DEFAULT_GATEWAY_CONTAINER
 
     if mode == "disable_nonessential":
-        for container in (DEFAULT_GATEWAY_CONTAINER, DEFAULT_SHADOW_CONTAINER):
+        for container in (gateway_container, DEFAULT_SHADOW_CONTAINER):
             if dry_run:
                 actions.append({"step": "dry_run_stop", "container": container, "command": f"docker rm -f {container}"})
                 continue
@@ -394,7 +468,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             "actions": actions,
             "diagnostics_before": diagnostics_before,
             "diagnostics_after": diagnostics_after,
-            "message": f"{DEFAULT_GATEWAY_CONTAINER} 경로를 운영 트래픽에서 분리(비활성)했습니다.",
+            "message": f"{gateway_container} 경로를 운영 트래픽에서 분리(비활성)했습니다.",
         }
 
     if mode != "port_shift_shadow":
@@ -407,7 +481,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             "message": "지원하지 않는 복구 모드입니다.",
         }
 
-    base_inspect = _docker_inspect(DEFAULT_GATEWAY_CONTAINER)
+    base_inspect = _docker_inspect(gateway_container)
     if not base_inspect:
         return {
             "mode": mode,
@@ -415,19 +489,19 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             "actions": actions,
             "diagnostics_before": diagnostics_before,
             "diagnostics_after": diagnostics_before,
-            "message": f"기준 컨테이너 {DEFAULT_GATEWAY_CONTAINER}을(를) 찾을 수 없어 shadow 재생성을 진행할 수 없습니다.",
+            "message": f"운영 컨테이너 {gateway_container}을(를) 찾을 수 없어 shadow 재생성을 진행할 수 없습니다.",
         }
 
     image = str(base_inspect.get("Config", {}).get("Image") or "nginx:alpine")
     mounts = [m for m in (base_inspect.get("Mounts") or []) if isinstance(m, dict)]
 
     if dry_run:
-        if DEFAULT_AUTO_REATTACH_GATEWAY_NETWORK and not _container_has_network(DEFAULT_GATEWAY_CONTAINER, DEFAULT_LLM_NETWORK):
+        if DEFAULT_AUTO_REATTACH_GATEWAY_NETWORK and not _container_has_network(gateway_container, DEFAULT_LLM_NETWORK):
             actions.append(
                 {
                     "step": "dry_run_gateway_network_reattach",
-                    "container": DEFAULT_GATEWAY_CONTAINER,
-                    "command": f"docker network connect {DEFAULT_LLM_NETWORK} {DEFAULT_GATEWAY_CONTAINER}",
+                    "container": gateway_container,
+                    "command": f"docker network connect {DEFAULT_LLM_NETWORK} {gateway_container}",
                 }
             )
         cmd_preview = _build_shadow_run_command(
@@ -449,13 +523,13 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
         }
 
     if DEFAULT_AUTO_REATTACH_GATEWAY_NETWORK:
-        gateway_networks_before = _container_network_names(DEFAULT_GATEWAY_CONTAINER)
+        gateway_networks_before = _container_network_names(gateway_container)
         if DEFAULT_LLM_NETWORK not in gateway_networks_before:
             attach_result = _run_command(
-                ["docker", "network", "connect", DEFAULT_LLM_NETWORK, DEFAULT_GATEWAY_CONTAINER],
+                ["docker", "network", "connect", DEFAULT_LLM_NETWORK, gateway_container],
                 timeout=15,
             )
-            gateway_networks_after = _container_network_names(DEFAULT_GATEWAY_CONTAINER)
+            gateway_networks_after = _container_network_names(gateway_container)
             attach_ok = bool(attach_result.ok or DEFAULT_LLM_NETWORK in gateway_networks_after)
             conflict_recreated = False
             conflict_detected = (
@@ -464,7 +538,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             )
 
             if conflict_detected:
-                recreate_remove = _run_command(["docker", "rm", "-f", DEFAULT_GATEWAY_CONTAINER], timeout=20)
+                recreate_remove = _run_command(["docker", "rm", "-f", gateway_container], timeout=20)
                 recreate_cmd = _build_gateway_recreate_command(
                     image=image,
                     network=DEFAULT_LLM_NETWORK,
@@ -472,13 +546,13 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
                     env_values=list(base_inspect.get("Config", {}).get("Env") or []),
                 )
                 recreate_run = _run_command(recreate_cmd, timeout=25)
-                gateway_networks_after = _container_network_names(DEFAULT_GATEWAY_CONTAINER)
+                gateway_networks_after = _container_network_names(gateway_container)
                 attach_ok = bool(recreate_run.ok and DEFAULT_LLM_NETWORK in gateway_networks_after)
                 conflict_recreated = attach_ok
                 actions.append(
                     {
                         "step": "recreate_gateway_without_host_ports",
-                        "container": DEFAULT_GATEWAY_CONTAINER,
+                        "container": gateway_container,
                         "network": DEFAULT_LLM_NETWORK,
                         "remove_ok": recreate_remove.ok,
                         "remove_code": recreate_remove.code,
@@ -494,7 +568,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             actions.append(
                 {
                     "step": "reattach_gateway_network",
-                    "container": DEFAULT_GATEWAY_CONTAINER,
+                    "container": gateway_container,
                     "network": DEFAULT_LLM_NETWORK,
                     "ok": attach_ok,
                     "code": attach_result.code,
@@ -508,10 +582,10 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
         else:
             gateway_state = (base_inspect.get("State") or {}) if isinstance(base_inspect, dict) else {}
             gateway_running = bool(gateway_state.get("Running"))
-            gateway_health = _docker_exec_http_status(DEFAULT_GATEWAY_CONTAINER, "http://127.0.0.1/health") if gateway_running else 0
+            gateway_health = _docker_exec_http_status(gateway_container, "http://127.0.0.1/health") if gateway_running else 0
             gateway_unhealthy = (not gateway_running) or gateway_health != 200
             if gateway_unhealthy:
-                recreate_remove = _run_command(["docker", "rm", "-f", DEFAULT_GATEWAY_CONTAINER], timeout=20)
+                recreate_remove = _run_command(["docker", "rm", "-f", gateway_container], timeout=20)
                 recreate_cmd = _build_gateway_recreate_command(
                     image=image,
                     network=DEFAULT_LLM_NETWORK,
@@ -519,11 +593,11 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
                     env_values=list(base_inspect.get("Config", {}).get("Env") or []),
                 )
                 recreate_run = _run_command(recreate_cmd, timeout=25)
-                gateway_networks_after = _container_network_names(DEFAULT_GATEWAY_CONTAINER)
+                gateway_networks_after = _container_network_names(gateway_container)
                 actions.append(
                     {
                         "step": "recreate_gateway_on_unhealthy",
-                        "container": DEFAULT_GATEWAY_CONTAINER,
+                        "container": gateway_container,
                         "network": DEFAULT_LLM_NETWORK,
                         "health_before": gateway_health,
                         "running_before": gateway_running,
@@ -542,7 +616,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
                 actions.append(
                     {
                         "step": "reattach_gateway_network",
-                        "container": DEFAULT_GATEWAY_CONTAINER,
+                        "container": gateway_container,
                         "network": DEFAULT_LLM_NETWORK,
                         "ok": bool(recreate_run.ok and DEFAULT_LLM_NETWORK in gateway_networks_after),
                         "skipped": True,
@@ -555,7 +629,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
                 actions.append(
                     {
                         "step": "reattach_gateway_network",
-                        "container": DEFAULT_GATEWAY_CONTAINER,
+                        "container": gateway_container,
                         "network": DEFAULT_LLM_NETWORK,
                         "ok": True,
                         "skipped": True,
@@ -611,7 +685,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
 
     diagnostics_after = collect_llm_gateway_diagnostics()
     message = (
-        f"{DEFAULT_GATEWAY_CONTAINER} shadow를 18080/18443으로 재배치했습니다. 본 운영 인입(80/443)은 중단 없이 유지됩니다."
+        f"{gateway_container} shadow를 18080/18443으로 재배치했습니다. 본 운영 인입(80/443)은 중단 없이 유지됩니다."
         if run_result.ok
         else "포트 재배치 shadow 생성에 실패했습니다. actions 항목의 stderr를 확인하세요."
     )
