@@ -3,6 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+const DEFAULT_RETURN_TO = '/marketplace';
+const ALLOWED_RETURN_TO = new Set([
+    '/marketplace',
+]);
+
+function sanitizeReturnTo(value: string | null | undefined) {
+    const candidate = String(value || '').trim();
+    return ALLOWED_RETURN_TO.has(candidate) ? candidate : DEFAULT_RETURN_TO;
+}
+
 function parseHashParams() {
     if (typeof window === 'undefined') {
         return new URLSearchParams();
@@ -17,16 +27,13 @@ export default function SocialAuthCallbackPage() {
     const [message, setMessage] = useState('소셜 로그인 처리를 확인하는 중입니다.');
     const [error, setError] = useState('');
 
-    const returnTo = useMemo(() => {
-        const value = searchParams.get('return_to') || '/marketplace';
-        return value.startsWith('/') ? value : '/marketplace';
-    }, [searchParams]);
+    const returnTo = useMemo(() => sanitizeReturnTo(searchParams.get('return_to')), [searchParams]);
 
     useEffect(() => {
         const params = parseHashParams();
         const accessToken = String(params.get('access_token') || '').trim();
         const provider = String(params.get('provider') || '').trim();
-        const finalReturnTo = String(params.get('return_to') || returnTo || '/marketplace');
+        const finalReturnTo = sanitizeReturnTo(params.get('return_to') || returnTo);
 
         if (!accessToken) {
             setError('소셜 로그인 토큰을 받지 못했습니다.');
@@ -42,7 +49,7 @@ export default function SocialAuthCallbackPage() {
             return;
         }
 
-        window.location.replace(finalReturnTo.startsWith('/') ? finalReturnTo : '/marketplace');
+        window.location.replace(finalReturnTo);
         setMessage(provider ? `${provider} 로그인 완료` : '소셜 로그인 완료');
     }, [returnTo]);
 
