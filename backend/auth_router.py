@@ -6,9 +6,11 @@ import os
 
 logger = logging.getLogger(__name__)
 from urllib.parse import urlparse
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status  # pyright: ignore[reportMissingImports]
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status  # pyright: ignore[reportMissingImports]
 from fastapi.security import OAuth2PasswordRequestForm  # pyright: ignore[reportMissingImports]
+from fastapi.responses import RedirectResponse  # pyright: ignore[reportMissingImports]
 from typing import Any, Optional
 import re
 from pydantic import BaseModel, ConfigDict, EmailStr  # pyright: ignore[reportMissingImports]
@@ -116,6 +118,13 @@ class Token(BaseModel):
     token_type: str
 
 
+class SocialLoginStartResponse(BaseModel):
+    access_token: str
+    token_type: str
+    provider: str
+    callback_url: str
+
+
 class PasskeyRegistrationStartRequest(BaseModel):
     email: EmailStr
     device_label: str | None = None
@@ -149,6 +158,8 @@ class PasskeyLoginFinishRequest(BaseModel):
 
 _passkey_registration_store: dict[str, dict[str, object]] = {}
 _passkey_login_store: dict[str, dict[str, object]] = {}
+_social_login_providers = {"google", "naver", "kakao"}
+_social_login_callback_path = "auth/callback"
 
 
 def _user_may_use_admin_portal(user: Any) -> bool:
@@ -202,6 +213,136 @@ def _build_authentication_credential(payload: dict) -> AuthenticationCredential:
         ),
         type="public-key",
     )
+
+
+def _normalize_social_login_provider(provider: str) -> str:
+    normalized = str(provider or "").strip().lower()
+    if normalized not in _social_login_providers:
+        raise HTTPException(status_code=404, detail="지원하지 않는 소셜 로그인 제공자입니다")
+    return normalized
+
+
+def _resolve_social_login_redirect_uri(redirect_uri: str) -> str:
+    normalized = str(redirect_uri or "").strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="redirect_uri 가 필요합니다")
+
+    parsed = urlparse(normalized)
+    scheme = parsed.scheme.lower()
+    resolved_path = f"{parsed.hostname or ''}{parsed.path}".lstrip("/").lower()
+    if scheme not in {"worldlinco", "worldlingo", "com.parkcheolhong.worldlinco"} or resolved_path != _social_login_callback_path:
+        raise HTTPException(status_code=400, detail="허용되지 않은 redirect_uri 입니다")
+    return normalized
+
+
+def _get_or_create_social_login_user(
+    db: Session,
+    provider: str,
+    email: str | None,
+    username: str | None,
+    display_name: str | None,
+) -> User:
+    fallback_email = f"{provider}.social@worldlinco.dev"
+    normalized_email = str(email or fallback_email).strip().lower()
+    normalized_username = str(username or f"{provider}_social_user").strip()
+    normalized_display_name = str(display_name or normalized_username).strip()
+
+    user = db.query(User).filter((User.email == normalized_email) | (User.username == normalized_username)).first()
+    if user is None:
+        existing_username_count = (
+            db.query(User)
+            .filter(User.username.like(f"{normalized_username}%"))
+            .count()
+        )
+        if existing_username_count:
+            normalized_username = f"{normalized_username}{existing_username_count + 1}"
+
+        user = User(
+            email=normalized_email,
+            username=normalized_username,
+            full_name=normalized_display_name,
+            member_type="individual",
+            hashed_password=get_password_hash(token_urlsafe(24)),
+            is_active=True,
+            is_admin=False,
+            is_staff=False,
+            is_superuser=False,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif normalized_display_name and not str(user.full_name or "").strip():
+        user.full_name = normalized_display_name
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def _build_social_login_callback_url(
+    redirect_uri: str,
+    *,
+    provider: str,
+    access_token: str,
+    refresh_token: str,
+    id_token: str,
+    expires_in: int,
+    user: User,
+) -> str:
+    params = {
+        "provider": provider,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "id_token": id_token,
+        "expires_in": str(expires_in),
+        "email": str(user.email or ""),
+        "user_id": str(int(user.id)),
+        "username": str(user.username or ""),
+        "display_name": str(user.full_name or user.username or provider),
+    }
+    separator = "&" if "?" in redirect_uri else "?"
+    return f"{redirect_uri}{separator}{urlencode(params)}"
+
+
+@router.get("/social/{provider}/start")
+def start_social_login(
+    provider: str,
+    redirect_uri: str = Query(...),
+    email: str | None = Query(default=None),
+    username: str | None = Query(default=None),
+    display_name: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    normalized_provider = _normalize_social_login_provider(provider)
+    normalized_redirect_uri = _resolve_social_login_redirect_uri(redirect_uri)
+    user = _get_or_create_social_login_user(
+        db,
+        normalized_provider,
+        email=email,
+        username=username,
+        display_name=display_name,
+    )
+    session_id = token_urlsafe(24)
+    access_token = create_access_token(
+        data={"sub": str(user.email or user.username or normalized_provider), "sid": session_id},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        no_expiry=_should_issue_non_expiring_admin_token(user),
+    )
+    refresh_token = token_urlsafe(24)
+    id_token = token_urlsafe(24)
+    set_active_session(int(user.id), session_id)
+    register_issued_token(access_token, str(user.email or user.username or ""))
+    callback_url = _build_social_login_callback_url(
+        normalized_redirect_uri,
+        provider=normalized_provider,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        id_token=id_token,
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=user,
+    )
+    logger.info("[%s] 소셜 로그인 시작 → %s", normalized_provider, callback_url)
+    return RedirectResponse(url=callback_url, status_code=status.HTTP_302_FOUND)
 
 
 def _resolve_passkey_rp_id() -> str:

@@ -89,6 +89,8 @@ export const APP_ENTRY_VOIP_LINK_PATH = 'voip/open';
 export const APP_ENTRY_CHAT_LINK_PATH = 'chat/open';
 export const APP_ENTRY_INVITE_LINK_PATH = 'invite';
 export const APP_ENTRY_SALES_LINK_PATH = 'sales';
+export const APP_ENTRY_AUTH_LINK_PATH = 'auth/callback';
+export const SOCIAL_LOGIN_REDIRECT_URI = 'worldlinco://auth/callback';
 export const DEMO_SESSION_EMAIL_DOMAIN = 'instant-demo.worldlinco.dev';
 export const AUTH_DEBUG_MARKER_ENABLED = __DEV__ || (process.env.EXPO_PUBLIC_AUTH_DEBUG_MARKER || '').trim() === '1';
 export const OCR_DEBUG_IMAGE_URI =
