@@ -10,9 +10,12 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
 
-DEFAULT_GATEWAY_CONTAINER = os.getenv("ADMIN_LLM_GATEWAY_CONTAINER", "llm-nginx").strip() or "llm-nginx"
-DEFAULT_SHADOW_CONTAINER = os.getenv("ADMIN_LLM_GATEWAY_SHADOW_CONTAINER", "llm-nginx-shadow").strip() or "llm-nginx-shadow"
 DEFAULT_PRIMARY_INGRESS_CONTAINER = os.getenv("ADMIN_LLM_PRIMARY_INGRESS_CONTAINER", "devanalysis114-nginx").strip() or "devanalysis114-nginx"
+DEFAULT_GATEWAY_CONTAINER = os.getenv("ADMIN_LLM_GATEWAY_CONTAINER", DEFAULT_PRIMARY_INGRESS_CONTAINER).strip() or DEFAULT_PRIMARY_INGRESS_CONTAINER
+DEFAULT_SHADOW_CONTAINER = os.getenv(
+    "ADMIN_LLM_GATEWAY_SHADOW_CONTAINER",
+    f"{DEFAULT_GATEWAY_CONTAINER}-shadow",
+).strip() or f"{DEFAULT_GATEWAY_CONTAINER}-shadow"
 DEFAULT_LLM_NETWORK = os.getenv("ADMIN_LLM_NETWORK", "gpu-llm-server_llm-network").strip() or "gpu-llm-server_llm-network"
 DEFAULT_SHIFT_HTTP_PORT = int(os.getenv("ADMIN_LLM_SHIFT_HTTP_PORT", "18080"))
 DEFAULT_SHIFT_HTTPS_PORT = int(os.getenv("ADMIN_LLM_SHIFT_HTTPS_PORT", "18443"))
@@ -236,7 +239,7 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
 
     if not gateway_running:
         root_causes.append("gateway_not_running")
-        recommendations.append("llm-nginx를 정식 compose 또는 shadow 포트(18080/18443)로 재생성하세요.")
+        recommendations.append(f"{DEFAULT_GATEWAY_CONTAINER}을(를) 정식 compose 또는 shadow 포트(18080/18443)로 재생성하세요.")
     if gateway_running and not gateway_network_attached:
         root_causes.append("gateway_network_detached")
         recommendations.append(f"{DEFAULT_GATEWAY_CONTAINER}를 {DEFAULT_LLM_NETWORK} 네트워크에 재연결하세요.")
@@ -249,7 +252,7 @@ def collect_llm_gateway_diagnostics() -> Dict[str, Any]:
 
     if "80" in ingress_ports and ("80" in gateway_ports or (not gateway_ports and gateway_running)):
         root_causes.append("host_port_80_conflict_risk")
-        recommendations.append("무중단 우선으로 llm-nginx를 18080/18443 포트로 재배치하세요.")
+        recommendations.append(f"무중단 우선으로 {DEFAULT_GATEWAY_CONTAINER}을(를) 18080/18443 포트로 재배치하세요.")
 
     if shadow_running and shadow_network_attached:
         recommendations.append("shadow 컨테이너가 정상 구동 중이면 운영 트래픽 전환 전에 health/proxy smoke를 먼저 확인하세요.")
@@ -391,7 +394,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             "actions": actions,
             "diagnostics_before": diagnostics_before,
             "diagnostics_after": diagnostics_after,
-            "message": "llm-nginx 경로를 운영 트래픽에서 분리(비활성)했습니다.",
+            "message": f"{DEFAULT_GATEWAY_CONTAINER} 경로를 운영 트래픽에서 분리(비활성)했습니다.",
         }
 
     if mode != "port_shift_shadow":
@@ -412,7 +415,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
             "actions": actions,
             "diagnostics_before": diagnostics_before,
             "diagnostics_after": diagnostics_before,
-            "message": "기준 컨테이너 llm-nginx를 찾을 수 없어 shadow 재생성을 진행할 수 없습니다.",
+            "message": f"기준 컨테이너 {DEFAULT_GATEWAY_CONTAINER}을(를) 찾을 수 없어 shadow 재생성을 진행할 수 없습니다.",
         }
 
     image = str(base_inspect.get("Config", {}).get("Image") or "nginx:alpine")
@@ -608,7 +611,7 @@ def auto_recover_llm_gateway(*, mode: str = "port_shift_shadow", dry_run: bool =
 
     diagnostics_after = collect_llm_gateway_diagnostics()
     message = (
-        "llm-nginx shadow를 18080/18443으로 재배치했습니다. 본 운영 인입(80/443)은 중단 없이 유지됩니다."
+        f"{DEFAULT_GATEWAY_CONTAINER} shadow를 18080/18443으로 재배치했습니다. 본 운영 인입(80/443)은 중단 없이 유지됩니다."
         if run_result.ok
         else "포트 재배치 shadow 생성에 실패했습니다. actions 항목의 stderr를 확인하세요."
     )
