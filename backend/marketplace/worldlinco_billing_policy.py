@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +18,7 @@ def _project_root() -> Path:
 
 
 WORLDLINGCO_BILLING_POLICY_PATH = _project_root() / "knowledge" / "worldlinco_billing_policy.json"
+WORLDLINCO_BILLING_POLICY_SYSTEM_IDENTIFIERS = frozenset({"system", "admin"})
 
 AccessMode = Literal["free", "paid"]
 
@@ -130,11 +132,21 @@ def load_worldlinco_billing_policy() -> Dict[str, Any]:
         return defaults
 
 
+def _hash_updated_by_identifier(identifier: str) -> str:
+    # Prefix allows consumers to distinguish hashed values from reserved system identifiers.
+    return f"hashed:{hashlib.sha256(identifier.encode('utf-8')).hexdigest()}"
+
+
 def save_worldlinco_billing_policy(payload: Dict[str, Any]) -> Dict[str, Any]:
+    sanitized = deepcopy(payload)
+    updated_by = str(sanitized.get("updated_by") or "").strip()
+    if updated_by and updated_by not in WORLDLINCO_BILLING_POLICY_SYSTEM_IDENTIFIERS:
+        sanitized["updated_by"] = _hash_updated_by_identifier(updated_by)
+
     path = WORLDLINGCO_BILLING_POLICY_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    return payload
+    path.write_text(json.dumps(sanitized, ensure_ascii=False, indent=2), encoding="utf-8")
+    return sanitized
 
 
 def apply_worldlinco_billing_policy_update(
