@@ -81,7 +81,6 @@ export function humanizeOrchestratorSpeech(text: string): string {
             const [integerPart, decimalPart] = raw.split('.');
             return `${speakStageNumber(raw, integerPart, decimalPart)} 단계`;
         })
-        .replace(/진행할까요\?/g, '진행할까요?')
         .replace(/반영하고/g, '반영해서')
         .replace(/\.{2,}/g, '.')
         .replace(/\s+/g, ' ')
