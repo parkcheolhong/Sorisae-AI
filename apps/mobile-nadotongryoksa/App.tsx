@@ -271,6 +271,7 @@ import { installGlobalToastI18n } from './src/features/i18n/globalToastI18n';
 import { C, SECTION_TAB_COLORS } from './src/app/appTheme';
 import { styles } from './App.styles';
 import { parseAppEntryDeepLink, parseIncomingVoipDeepLink } from './src/app/appDeepLinks';
+import { buildSocialLoginStartUrl, SOCIAL_LOGIN_PROVIDER_CONFIGS, type SocialLoginProvider } from './src/auth/socialLogin';
 import type {
     VoipParticipantProfile,
     DevicePhoneContact,
@@ -1250,6 +1251,7 @@ function AppInner() {
     const [signupPhone, setSignupPhone] = useState('');
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginError, setLoginError] = useState('');
+    const [socialLoginBusyProvider, setSocialLoginBusyProvider] = useState<SocialLoginProvider | null>(null);
     const [demoSessionLoading, setDemoSessionLoading] = useState(false);
     const [demoSessionError, setDemoSessionError] = useState('');
     const [demoSessionMessage, setDemoSessionMessage] = useState('');
@@ -1541,6 +1543,9 @@ function AppInner() {
         setLoginPw('');
         setLoginError('');
         setDemoSessionError('');
+        void saveStoredAuthState(nextToken, nextUserInfo).catch((error) => {
+            console.log('[AuthStorage] save failed', error);
+        });
         const pair = pairFromCountry(
             nextUserInfo.country_code || gpsCountryCode || resolveLocaleCountryCode() || 'KR',
         );
@@ -3286,6 +3291,13 @@ function AppInner() {
             const nextTopic = userInfo ? buildVoipTopic(buildVoiceId(userInfo.id)) : null;
             const previousTopic = voipTopicRef.current;
 
+            if (Platform.OS === 'android') {
+                const firebaseReady = await ensureFirebaseDefaultApp();
+                if (!firebaseReady) {
+                    return;
+                }
+            }
+
             if (previousTopic && previousTopic !== nextTopic) {
                 try {
                     await messaging().unsubscribeFromTopic(previousTopic);
@@ -3299,13 +3311,6 @@ function AppInner() {
 
             if (!nextTopic) {
                 return;
-            }
-
-            if (Platform.OS === 'android') {
-                const firebaseReady = await ensureFirebaseDefaultApp();
-                if (!firebaseReady) {
-                    return;
-                }
             }
 
             try {
@@ -4214,6 +4219,68 @@ function AppInner() {
             setLoginLoading(false);
         }
     }, [applyAuthenticatedSession, logUiPressProbe, loginEmail, loginPw]);
+
+    const handleSocialAuthCallback = useCallback(async (target: Extract<AppEntryDeepLinkTarget, { type: 'auth' }>, source: string) => {
+        logUiPressProbe('SOCIAL_LOGIN_CALLBACK', {
+            source,
+            provider: target.provider || null,
+            has_token: Boolean(target.accessToken),
+        });
+        if (!target.accessToken.trim()) {
+            setLoginError('소셜 로그인 토큰이 비어 있습니다.');
+            return;
+        }
+        setLoginLoading(true);
+        setLoginError('');
+        try {
+            let me: UserInfo | null = null;
+            try {
+                me = await callMeApi(target.accessToken.trim());
+            } catch (error) {
+                if (target.userId && target.email) {
+                    me = {
+                        id: target.userId,
+                        email: target.email,
+                        username: target.username || target.displayName || target.provider,
+                    };
+                } else {
+                    throw error;
+                }
+            }
+            applyAuthenticatedSession(target.accessToken.trim(), me);
+            setDemoSessionMessage('');
+            setAuthModalMode('login');
+            setShowLogin(false);
+            logUiPressProbe('SOCIAL_LOGIN_CALLBACK_SUCCESS', {
+                provider: target.provider || null,
+                user_id: me.id,
+                user_email: me.email,
+            });
+        } catch (error: any) {
+            setLoginError(error?.message || '소셜 로그인 복원에 실패했습니다.');
+            logUiPressProbe('SOCIAL_LOGIN_CALLBACK_FAIL', {
+                provider: target.provider || null,
+                error: error?.message || '소셜 로그인 복원 실패',
+            });
+        } finally {
+            setLoginLoading(false);
+        }
+    }, [applyAuthenticatedSession, logUiPressProbe]);
+
+    const handleSocialLoginPress = useCallback(async (provider: SocialLoginProvider) => {
+        logUiPressProbe('SOCIAL_LOGIN_PRESS', { provider });
+        setLoginError('');
+        setSocialLoginBusyProvider(provider);
+        try {
+            const startUrl = buildSocialLoginStartUrl(provider);
+            await Linking.openURL(startUrl);
+            setDemoSessionMessage('소셜 로그인 화면을 열었습니다. 완료 후 앱으로 돌아오면 계정이 복원됩니다.');
+        } catch (error: any) {
+            setLoginError(error?.message || '소셜 로그인 화면을 열 수 없습니다.');
+        } finally {
+            setSocialLoginBusyProvider(null);
+        }
+    }, [logUiPressProbe]);
 
     const handleSignupRequestCode = useCallback(async () => {
         const normalizedUsername = signupUsername.trim();
@@ -5212,6 +5279,11 @@ function AppInner() {
             return;
         }
 
+        if (target.type === 'auth') {
+            void handleSocialAuthCallback(target, source);
+            return;
+        }
+
         if (target.type === 'chat') {
             void handleOpenChatRoomById(target.roomId, source);
             return;
@@ -5317,7 +5389,7 @@ function AppInner() {
         }
 
         handleOpenVoipTester();
-    }, [handleOpenChatRoomById, handleOpenServiceRail, handleOpenVoipTester, handleStartInstantDemoSession, handleVoipValidationOpenPress, fetchPendingIncomingVoipCall, logUiPressProbe, persistVoipValidationFriendCallBypass, setShowFriendFolder, setShowFriendMapDiscovery, token, userInfo]);
+    }, [fetchPendingIncomingVoipCall, handleOpenChatRoomById, handleOpenServiceRail, handleOpenVoipTester, handleSocialAuthCallback, handleStartInstantDemoSession, handleVoipValidationOpenPress, logUiPressProbe, persistVoipValidationFriendCallBypass, setShowFriendFolder, setShowFriendMapDiscovery, token, userInfo]);
 
     useEffect(() => {
         let active = true;
@@ -8205,6 +8277,27 @@ function AppInner() {
                                     <Text style={styles.translateBtnText}>로그인 / 회원가입</Text>
                                 </Pressable>
                             </View>
+                            <Text style={styles.loginOrDividerText}>소셜 로그인</Text>
+                            <View style={styles.socialHubRow}>
+                                {SOCIAL_LOGIN_PROVIDER_CONFIGS.map((provider) => {
+                                    const busy = socialLoginBusyProvider === provider.provider || loginLoading;
+                                    return (
+                                        <Pressable
+                                            key={`inline-social-login-${provider.provider}`}
+                                            style={[styles.socialHubBtn, busy && styles.socialHubBtnActive]}
+                                            disabled={busy}
+                                            onPress={() => { void handleSocialLoginPress(provider.provider); }}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`worldlinco-inline-social-login-${provider.provider}`}
+                                            testID={`worldlinco-inline-social-login-${provider.provider}`}
+                                        >
+                                            <Text style={styles.socialHubIcon}>{provider.icon}</Text>
+                                            <Text style={styles.socialHubTitle}>{busy ? '연결 중...' : provider.label}</Text>
+                                            <Text style={styles.socialHubMeta}>{provider.hint}</Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
                         </View>
                     ) : null}
                     {showMyInfo && userInfo && (
@@ -10339,6 +10432,29 @@ function AppInner() {
                                 <Text style={styles.loginPrimaryBtnText}>{signupSubmitLabel}</Text>
                             )}
                         </Pressable>
+                        <>
+                            <Text style={styles.loginOrDividerText}>소셜 로그인</Text>
+                            <View style={styles.socialHubRow}>
+                                {SOCIAL_LOGIN_PROVIDER_CONFIGS.map((provider) => {
+                                    const busy = socialLoginBusyProvider === provider.provider || loginLoading;
+                                    return (
+                                        <Pressable
+                                            key={`social-login-${provider.provider}`}
+                                            style={[styles.socialHubBtn, busy && styles.socialHubBtnActive]}
+                                            disabled={busy}
+                                            onPress={() => { void handleSocialLoginPress(provider.provider); }}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`worldlinco-social-login-${provider.provider}`}
+                                            testID={`worldlinco-social-login-${provider.provider}`}
+                                        >
+                                            <Text style={styles.socialHubIcon}>{provider.icon}</Text>
+                                            <Text style={styles.socialHubTitle}>{busy ? '연결 중...' : provider.label}</Text>
+                                            <Text style={styles.socialHubMeta}>{provider.hint}</Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </>
                         {authModalMode === 'login' ? (
                             <View style={styles.loginUtilityRow}>
                                 {biometricLoginReady && biometricLoginEnabled ? (

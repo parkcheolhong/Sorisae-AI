@@ -84,6 +84,18 @@ export type AppEntryDeepLinkTarget =
     | { type: 'chat'; roomId: string }
     | { type: 'invite'; referralCode: string }
     | { type: 'sales'; salesAgentCode: string }
+    | {
+        type: 'auth';
+        provider?: string;
+        accessToken: string;
+        refreshToken?: string;
+        idToken?: string;
+        expiresInSec?: number;
+        email?: string;
+        userId?: number;
+        username?: string;
+        displayName?: string;
+    }
     | { type: 'voip'; action: 'open' | 'validation' | 'demo' | 'incoming'; callId?: string; calleeVoiceId?: string; forceRetry?: boolean; preferredLanguage?: string; calleePreferredLanguage?: string };
 
 export type SignupRequestCodeResponse = {

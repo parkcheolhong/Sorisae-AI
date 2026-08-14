@@ -11,6 +11,7 @@ import {
     APP_ENTRY_VOIP_LINK_PATH,
     APP_ENTRY_INVITE_LINK_PATH,
     APP_ENTRY_SALES_LINK_PATH,
+    APP_ENTRY_AUTH_LINK_PATH,
 } from './appConstants';
 
 export function parseSalesAgentFromUrl(url: string): string | null {
@@ -84,6 +85,29 @@ export function parseAppEntryDeepLink(url: string): AppEntryDeepLinkTarget | nul
         if (resolvedPath === APP_ENTRY_CHAT_LINK_PATH) {
             const roomId = String(parsed.searchParams.get('room_id') || '').trim();
             return roomId ? { type: 'chat', roomId } : null;
+        }
+
+        if (resolvedPath === APP_ENTRY_AUTH_LINK_PATH) {
+            const accessToken = String(parsed.searchParams.get('access_token') || parsed.searchParams.get('token') || '').trim();
+            if (!accessToken) {
+                return null;
+            }
+            const userIdRaw = String(parsed.searchParams.get('user_id') || parsed.searchParams.get('uid') || '').trim();
+            const parsedUserId = userIdRaw ? Number(userIdRaw) : NaN;
+            const expiresInRaw = String(parsed.searchParams.get('expires_in') || '').trim();
+            const parsedExpiresIn = expiresInRaw ? Number(expiresInRaw) : NaN;
+            return {
+                type: 'auth',
+                provider: String(parsed.searchParams.get('provider') || '').trim().toLowerCase() || undefined,
+                accessToken,
+                refreshToken: String(parsed.searchParams.get('refresh_token') || '').trim() || undefined,
+                idToken: String(parsed.searchParams.get('id_token') || '').trim() || undefined,
+                expiresInSec: Number.isFinite(parsedExpiresIn) ? parsedExpiresIn : undefined,
+                email: String(parsed.searchParams.get('email') || '').trim() || undefined,
+                userId: Number.isFinite(parsedUserId) ? parsedUserId : undefined,
+                username: String(parsed.searchParams.get('username') || '').trim() || undefined,
+                displayName: String(parsed.searchParams.get('display_name') || parsed.searchParams.get('name') || '').trim() || undefined,
+            };
         }
 
         if (resolvedPath !== APP_ENTRY_VOIP_LINK_PATH) {
