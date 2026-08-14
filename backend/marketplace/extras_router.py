@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import time
+import logging
 from datetime import datetime
 import threading
 import importlib.util
@@ -25,6 +26,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from backend.services.shinsegye.extras.hybrid_iot_controller import HybridIoTController
 from backend.services.shinsegye.extras.sorisae_game_economy_system import GameEconomyEngine
+
+logger = logging.getLogger(__name__)
 
 # ── Circuit Breaker ────────────────────────────────────────────────────────
 _CB_THRESHOLD = 3       # 연속 실패 횟수 임계값
@@ -303,9 +306,9 @@ def _run_module_experiment(target_file: Path, user_input: str, timeout_sec: floa
             else:
                 holder["output_preview"] = _safe_preview(result)
         except Exception as exc:
+            logger.warning("extras module experiment failed file=%s err=%s", target_file, exc)
             holder["status"] = "error"
-            holder["error"] = str(exc)
-            holder["traceback"] = traceback.format_exc(limit=5)
+            holder["error"] = "모듈 실행에 실패했습니다."
 
     t = threading.Thread(target=_worker, daemon=True)
     t.start()
@@ -998,10 +1001,11 @@ def build_extras_router(contract: Any) -> APIRouter:
         try:
             category_result = _run_category_experiment(category, user_input)
         except Exception as exc:
+            logger.warning("extras category experiment failed category=%s err=%s", category, exc)
             category_result = {
                 "status": "error",
                 "experiment_type": "category_execution_error",
-                "error": str(exc),
+                "error": "카테고리 실험에 실패했습니다.",
             }
 
         if category_result.get("status") == "ok":
@@ -1087,9 +1091,9 @@ def build_extras_router(contract: Any) -> APIRouter:
                 result["executed"] = False
                 result["message"] = "dry_run 모드 — import만 완료"
         except Exception as exc:
+            logger.warning("extras engine launch failed file=%s err=%s", target_file, exc)
             result["status"] = "error"
-            result["error"] = str(exc)
-            result["traceback"] = traceback.format_exc(limit=5)
+            result["error"] = "엔진 실행에 실패했습니다."
 
         return result
 

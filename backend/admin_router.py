@@ -3411,7 +3411,8 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
             status = int(getattr(response, "status", 200) or 200)
             return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
     except Exception as exc:
-        return {"ok": False, "status": None, "url": url, "error": str(exc)}
+        logger.warning("admin integration probe failed url=%s err=%s", url, exc)
+        return {"ok": False, "status": None, "url": url, "error": "연결 실패"}
 
 
 def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
@@ -5323,6 +5324,11 @@ def test_admin_travel_connector(
         }
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        logger.warning(
+            "travel partner connector test failed connector_id=%s err=%s",
+            normalized_connector_id,
+            exc,
+        )
         return {
             "tested": True,
             "connector_id": normalized_connector_id,
@@ -5331,7 +5337,7 @@ def test_admin_travel_connector(
             "reachable": False,
             "status_code": None,
             "response_time_ms": elapsed_ms,
-            "error": str(exc),
+            "error": "연결 테스트에 실패했습니다.",
             "tested_at": tested_at,
             "tested_by": tested_by,
         }
@@ -5396,6 +5402,11 @@ def test_admin_travel_partner_webhook(
         }
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        logger.warning(
+            "travel partner webhook test failed partner_id=%s err=%s",
+            normalized_partner_id,
+            exc,
+        )
         return {
             "tested": True,
             "partner_id": normalized_partner_id,
@@ -5404,7 +5415,7 @@ def test_admin_travel_partner_webhook(
             "reachable": False,
             "status_code": None,
             "response_time_ms": elapsed_ms,
-            "error": str(exc),
+            "error": "웹훅 테스트에 실패했습니다.",
             "event_type": event_type,
             "request_payload": request_payload,
             "tested_at": tested_at,
@@ -6314,4 +6325,3 @@ async def admin_upload_worldlinco_telemetry(
         "updated_by": saved.get("updated_by"),
         "summary": saved.get("summary") or {},
     }
-
