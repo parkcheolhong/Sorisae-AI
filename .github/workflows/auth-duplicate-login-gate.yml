@@ -1,0 +1,149 @@
+name: auth-duplicate-login-gate
+
+on:
+  pull_request:
+    paths:
+      - "backend/auth.py"
+      - "backend/auth_router.py"
+      - "app/auth_routes.py"
+      - "backend/marketplace/models.py"
+      - "scripts/run_auth_duplicate_login_e2e.py"
+      - "docker-compose.yml"
+      - "Dockerfile.backend"
+      - ".github/workflows/auth-duplicate-login-gate.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: auth-duplicate-login-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auth-duplicate-login-gate:
+    name: auth-duplicate-login-gate / enforce-single-session
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      AUTH_E2E_EMAIL: ${{ secrets.AUTH_E2E_EMAIL }}
+      AUTH_E2E_PASSWORD: ${{ secrets.AUTH_E2E_PASSWORD }}
+      E2E_BASE_URL: http://127.0.0.1:8000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${AUTH_E2E_EMAIL:-}" ] || [ -z "${AUTH_E2E_PASSWORD:-}" ]; then
+            echo "AUTH_E2E_EMAIL / AUTH_E2E_PASSWORD GitHub secrets are required." >&2
+            exit 1
+          fi
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build and start backend stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Clamp backend CPU limit to the current runner capacity, capped at 4 cores.
+          HOST_CPUS="$(getconf _NPROCESSORS_ONLN || nproc || echo 2)"
+          if [ "${HOST_CPUS}" -lt 1 ]; then
+            HOST_CPUS=1
+          fi
+          if [ "${HOST_CPUS}" -gt 4 ]; then
+            HOST_CPUS=4
+          fi
+          export BACKEND_CPU_LIMIT_CORES="${HOST_CPUS}.0"
+          echo "Using BACKEND_CPU_LIMIT_CORES=${BACKEND_CPU_LIMIT_CORES}"
+          docker compose up -d --build backend
+
+      - name: Wait for backend health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -fsS "${E2E_BASE_URL}/api/health" >/dev/null; then
+              echo "Backend healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend health check timed out" >&2
+          docker logs --tail 200 devanalysis114-backend || true
+          exit 1
+
+      - name: Ensure test user and clear active session baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker exec \
+            -e AUTH_E2E_EMAIL="${AUTH_E2E_EMAIL}" \
+            -e AUTH_E2E_PASSWORD="${AUTH_E2E_PASSWORD}" \
+            devanalysis114-backend sh -lc '
+              cd /app
+            python - <<"PY"
+            import os
+            import backend.marketplace.database as d
+            from backend.auth import get_password_hash
+            from backend.models import User
+            from backend.marketplace.models import UserActiveSession
+
+            d._get_or_create_engine()
+            db = d.SessionLocal()
+            try:
+              email = str(os.getenv("AUTH_E2E_EMAIL") or "").strip().lower()
+              password = str(os.getenv("AUTH_E2E_PASSWORD") or "")
+              if not email or not password:
+                raise RuntimeError("Missing AUTH_E2E_EMAIL or AUTH_E2E_PASSWORD")
+
+              user = db.query(User).filter(User.email == email).first()
+              if user is None:
+                user = User(
+                  email=email,
+                  username=email,
+                  hashed_password=get_password_hash(password),
+                  is_active=True,
+                  is_admin=True,
+                  is_superuser=True,
+                  is_staff=True,
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+              else:
+                user.username = email
+                user.hashed_password = get_password_hash(password)
+                user.is_active = True
+                db.add(user)
+                db.commit()
+
+              rows = db.query(UserActiveSession).filter(UserActiveSession.user_id == int(user.id)).all()
+              for row in rows:
+                db.delete(row)
+              db.commit()
+              print("CLEARED_ACTIVE_SESSIONS", len(rows), "USER_ID", int(user.id))
+            finally:
+              db.close()
+            PY'
+
+      - name: Run duplicate-login E2E gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_auth_duplicate_login_e2e.py \
+            --base-url "${E2E_BASE_URL}" \
+            --email "${AUTH_E2E_EMAIL}" \
+            --password "${AUTH_E2E_PASSWORD}"
+
+      - name: Upload backend logs on failure
+        if: failure()
+        shell: bash
+        run: docker logs --tail 400 devanalysis114-backend
+
+      - name: Teardown stack
+        if: always()
+        shell: bash
+        run: docker compose down --remove-orphans

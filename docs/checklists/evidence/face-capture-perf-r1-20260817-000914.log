@@ -1,0 +1,11 @@
+[00:09:15] logcat cleared
+[00:09:25] pre-reset complete: force-stop + cooldown + home
+[00:09:31] app launch requested: com.parkcheolhong.worldlinco
+[00:09:35] foreground confirmed: com.parkcheolhong.worldlinco
+[00:09:39] permission dialog handled if present
+ERROR: null root node returned by UiTestAutomationBridge.
+[00:11:58] login state: ok=False attempted=True reason=login_timeout_probe
+[00:11:58] blocked early: login not ready
+FAIL: login not ready (reason=login_timeout_probe)
+TRACE: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-perf-r1-20260817-000914-20260817-000914\face-capture-trace.txt
+SUMMARY: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-perf-r1-20260817-000914-20260817-000914\summary.json

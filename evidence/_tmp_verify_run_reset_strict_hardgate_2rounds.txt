@@ -1,0 +1,3 @@
+[verify-mobile-login] device=172.30.1.15:5555 package=com.parkcheolhong.worldlinco rounds=2 reset_session=True strict_reset_session_mode=True
+[verify-mobile-login] looking for admin password in .runtime/secrets/fixed_admin_password.txt
+--- round 1/2 ---

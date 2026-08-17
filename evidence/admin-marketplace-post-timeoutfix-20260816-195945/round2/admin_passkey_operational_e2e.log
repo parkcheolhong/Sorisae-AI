@@ -1,0 +1,95 @@
+
+> devanalysis114-frontend@1.0.0 e2e
+> playwright test -c playwright.config.ts tests/admin-passkey-operational.playwright.spec.ts --project chromium
+
+
+Running 3 tests using 1 worker
+
+  ✓  1 [setup] › tests\admin.setup.playwright.spec.ts:133:5 › create admin storage state (1.2s)
+[admin-passkey-operational-evidence] C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\test-results\admin-passkey-operational.-068ea--operational-flow-attempt-1-chromium\admin-passkey-operational-evidence-attempt-1.json
+  ✘  2 [chromium] › tests\admin-passkey-operational.playwright.spec.ts:435:13 › admin passkey operational verification › passkey register + login closes operational flow attempt 1 (17.4s)
+[admin-passkey-operational-evidence] C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\test-results\admin-passkey-operational.-d09d6--operational-flow-attempt-2-chromium\admin-passkey-operational-evidence-attempt-2.json
+  ✘  3 [chromium] › tests\admin-passkey-operational.playwright.spec.ts:435:13 › admin passkey operational verification › passkey register + login closes operational flow attempt 2 (17.5s)
+
+
+  1) [chromium] › tests\admin-passkey-operational.playwright.spec.ts:435:13 › admin passkey operational verification › passkey register + login closes operational flow attempt 1 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeEnabled[2m([22m[2m)[22m failed
+
+    Locator:  getByTestId('admin-login-passkey-register')
+    Expected: enabled
+    Received: disabled
+    Timeout:  15000ms
+
+    Call log:
+    [2m  - Expect "toBeEnabled" with timeout 15000ms[22m
+    [2m  - waiting for getByTestId('admin-login-passkey-register')[22m
+    [2m    33 × locator resolved to <button disabled type="button" data-testid="admin-login-passkey-register" class="mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors cursor-not-allowed border-[#d8d8e8] bg-[#f4f4f8] text-[#9c9cb0] ">🪪 이 기기 패스키 등록</button>[22m
+    [2m       - unexpected value "disabled"[22m
+
+
+      226 |     await page.getByTestId('admin-login-email').fill(ADMIN_EMAIL);
+      227 |     await page.getByTestId('admin-login-password').fill(ADMIN_PASSWORD);
+    > 228 |     await expect(page.getByTestId('admin-login-passkey-register')).toBeEnabled({ timeout: 15000 });
+          |                                                                    ^
+      229 |
+      230 |     const capture = createPasskeyNetworkCapture(page, 'register');
+      231 |     try {
+        at registerPasskey (C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin-passkey-operational.playwright.spec.ts:228:68)
+        at C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin-passkey-operational.playwright.spec.ts:457:40
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin-passkey-operational.-068ea--operational-flow-attempt-1-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\admin-passkey-operational.-068ea--operational-flow-attempt-1-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin-passkey-operational.-068ea--operational-flow-attempt-1-chromium\error-context.md
+
+  2) [chromium] › tests\admin-passkey-operational.playwright.spec.ts:435:13 › admin passkey operational verification › passkey register + login closes operational flow attempt 2 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeEnabled[2m([22m[2m)[22m failed
+
+    Locator:  getByTestId('admin-login-passkey-register')
+    Expected: enabled
+    Received: disabled
+    Timeout:  15000ms
+
+    Call log:
+    [2m  - Expect "toBeEnabled" with timeout 15000ms[22m
+    [2m  - waiting for getByTestId('admin-login-passkey-register')[22m
+    [2m    33 × locator resolved to <button disabled type="button" data-testid="admin-login-passkey-register" class="mt-3 w-full rounded-lg border px-4 py-[14px] text-base font-semibold transition-colors cursor-not-allowed border-[#d8d8e8] bg-[#f4f4f8] text-[#9c9cb0] ">🪪 이 기기 패스키 등록</button>[22m
+    [2m       - unexpected value "disabled"[22m
+
+
+      226 |     await page.getByTestId('admin-login-email').fill(ADMIN_EMAIL);
+      227 |     await page.getByTestId('admin-login-password').fill(ADMIN_PASSWORD);
+    > 228 |     await expect(page.getByTestId('admin-login-passkey-register')).toBeEnabled({ timeout: 15000 });
+          |                                                                    ^
+      229 |
+      230 |     const capture = createPasskeyNetworkCapture(page, 'register');
+      231 |     try {
+        at registerPasskey (C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin-passkey-operational.playwright.spec.ts:228:68)
+        at C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin-passkey-operational.playwright.spec.ts:457:40
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin-passkey-operational.-d09d6--operational-flow-attempt-2-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\admin-passkey-operational.-d09d6--operational-flow-attempt-2-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin-passkey-operational.-d09d6--operational-flow-attempt-2-chromium\error-context.md
+
+  2 failed
+    [chromium] › tests\admin-passkey-operational.playwright.spec.ts:435:13 › admin passkey operational verification › passkey register + login closes operational flow attempt 1 
+    [chromium] › tests\admin-passkey-operational.playwright.spec.ts:435:13 › admin passkey operational verification › passkey register + login closes operational flow attempt 2 
+  1 passed (37.9s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m

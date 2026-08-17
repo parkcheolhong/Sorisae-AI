@@ -1,0 +1,1008 @@
+{
+  "task": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+  "mode": "full",
+  "project_name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4",
+  "validation_profile": "nextjs_app",
+  "written_files": [
+    ".codeai-template.json",
+    ".gitignore",
+    "README.md",
+    "addons/node_service/README.md",
+    "addons/node_service/package.json",
+    "addons/node_service/src/config.ts",
+    "addons/node_service/src/http/handlers/health.go",
+    "addons/node_service/src/http/handlers/inventory.go",
+    "addons/node_service/src/http/router.go",
+    "addons/node_service/src/lib/runtimeStore.ts",
+    "addons/node_service/src/repositories/orderRepository.ts",
+    "addons/node_service/src/services/orderService.ts",
+    "addons/node_service/src/types.ts",
+    "addons/node_service/tsconfig.json",
+    "app/api/brief/route.ts",
+    "app/api/health/route.ts",
+    "app/dashboard/page.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/page.tsx",
+    "components/dashboardclient.tsx",
+    "components/executionboard.tsx",
+    "components/focusrail.tsx",
+    "components/heropanel.tsx",
+    "components/insighttimeline.tsx",
+    "components/metriccluster.tsx",
+    "components/signalmatrix.tsx",
+    "components/themetoggle.tsx",
+    "configs/app.env.example",
+    "docs/architecture.md",
+    "docs/deployment.md",
+    "docs/file_manifest.md",
+    "docs/flow_map.md",
+    "docs/flow_registry.json",
+    "docs/id_registry.json",
+    "docs/id_registry.schema.json",
+    "docs/multi_generator_matrix.json",
+    "docs/orchestrator_artifacts.json",
+    "docs/orchestrator_checklist.md",
+    "docs/order_profile.md",
+    "docs/output_audit.json",
+    "docs/product_identity.json",
+    "docs/python_security_policy_report.json",
+    "docs/runtime.md",
+    "docs/scaffold_inventory.md",
+    "docs/semantic_completion_audit.md",
+    "docs/stage_progress.json",
+    "docs/stage_progress.md",
+    "docs/testing.md",
+    "docs/traceability_map.json",
+    "docs/usage.md",
+    "lib/data.ts",
+    "lib/types.ts",
+    "next-env.d.ts",
+    "next.config.js",
+    "package.json",
+    "scripts/check.sh",
+    "tsconfig.json"
+  ],
+  "written_file_count": 59,
+  "python_files": [],
+  "anchor_path": "README.md",
+  "semantic_audit_score": 82,
+  "semantic_audit_ok": false,
+  "target_patch_registry": {
+    "registry_version": 1,
+    "capability_ids": [
+      "code-generator",
+      "self-healing-engine",
+      "project-scanner"
+    ],
+    "candidate_paths": [
+      "README.md",
+      "package.json",
+      "tsconfig.json",
+      "next-env.d.ts",
+      "app/page.tsx",
+      "app/layout.tsx",
+      "configs/app.env.example",
+      "scripts/check.sh",
+      "docs/architecture.md",
+      "docs/order_profile.md",
+      "docs/flow_map.md",
+      "docs/flow_registry.json",
+      "docs/usage.md",
+      "docs/runtime.md",
+      "docs/deployment.md",
+      "docs/testing.md",
+      "docs/scaffold_inventory.md",
+      "docs/stage_progress.md",
+      "docs/stage_progress.json",
+      ".gitignore",
+      "next.config.js",
+      "app/loading.tsx",
+      "app/dashboard/page.tsx",
+      "app/api/health/route.ts",
+      "app/api/brief/route.ts",
+      "app/globals.css",
+      "components/dashboardclient.tsx",
+      "components/heropanel.tsx",
+      "components/metriccluster.tsx",
+      "components/signalmatrix.tsx",
+      "components/focusrail.tsx",
+      "components/insighttimeline.tsx",
+      "components/executionboard.tsx",
+      "components/themetoggle.tsx",
+      "lib/types.ts",
+      "lib/data.ts",
+      "addons/node_service/README.md",
+      "addons/node_service/package.json",
+      "addons/node_service/tsconfig.json",
+      "addons/node_service/src/types.ts",
+      "addons/node_service/src/config.ts",
+      "addons/node_service/src/lib/runtimeStore.ts",
+      "addons/node_service/src/repositories/orderRepository.ts",
+      "addons/node_service/src/services/orderService.ts",
+      "addons/node_service/src/http/handlers/health.go",
+      "addons/node_service/src/http/handlers/inventory.go",
+      "addons/node_service/src/http/router.go",
+      "docs/multi_generator_matrix.json",
+      "backend/llm/admin_capabilities.py",
+      "frontend/frontend/app/admin/llm/page.tsx"
+    ],
+    "matched_entries": [
+      {
+        "file_id": "FILE-ADMIN-CAPABILITIES",
+        "path": "backend/llm/admin_capabilities.py",
+        "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "summary": "capability가 output audit / traceability / hard gate evidence를 읽어 수정 대상 ID를 노출하는 조각입니다.",
+        "reuse_ready": true,
+        "capability_ids": [
+          "code-generator",
+          "self-healing-engine",
+          "project-scanner"
+        ]
+      },
+      {
+        "file_id": "FILE-ADMIN-LLM-PAGE",
+        "path": "frontend/frontend/app/admin/llm/page.tsx",
+        "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+        "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+        "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+        "summary": "관리자 오케스트레이터 화면에서 AI 추론, hard gate, evidence, 타겟 수정 힌트를 보여주는 조각입니다.",
+        "reuse_ready": true,
+        "capability_ids": [
+          "code-generator",
+          "self-healing-engine",
+          "admin-command-interface"
+        ]
+      }
+    ],
+    "reusable_patch_units": [
+      {
+        "file_id": "FILE-ADMIN-CAPABILITIES",
+        "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "path": "backend/llm/admin_capabilities.py",
+        "failure_tags": [],
+        "repair_tags": []
+      },
+      {
+        "file_id": "FILE-ADMIN-LLM-PAGE",
+        "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+        "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+        "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+        "path": "frontend/frontend/app/admin/llm/page.tsx",
+        "failure_tags": [],
+        "repair_tags": []
+      }
+    ],
+    "target_file_ids": [
+      "FILE-ADMIN-CAPABILITIES",
+      "FILE-ADMIN-LLM-PAGE"
+    ],
+    "target_section_ids": [
+      "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+      "SECTION-CHAT-ADVISORY-PANEL"
+    ],
+    "target_feature_ids": [
+      "FEATURE-ID-BASED-TARGET-EXPOSURE",
+      "FEATURE-EVIDENCE-FIRST-UX"
+    ],
+    "target_chunk_ids": [
+      "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+      "CHUNK-ADMIN-CHAT-UI-001"
+    ],
+    "failure_tags": [],
+    "repair_tags": [],
+    "matched_count": 2,
+    "reusable_count": 2,
+    "selective_apply_ready": true
+  },
+  "target_patch_candidates": [
+    {
+      "file_id": "FILE-ADMIN-CAPABILITIES",
+      "path": "backend/llm/admin_capabilities.py",
+      "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+      "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+      "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+      "summary": "capability가 output audit / traceability / hard gate evidence를 읽어 수정 대상 ID를 노출하는 조각입니다.",
+      "reuse_ready": true,
+      "capability_ids": [
+        "code-generator",
+        "self-healing-engine",
+        "project-scanner"
+      ]
+    },
+    {
+      "file_id": "FILE-ADMIN-LLM-PAGE",
+      "path": "frontend/frontend/app/admin/llm/page.tsx",
+      "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+      "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+      "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+      "summary": "관리자 오케스트레이터 화면에서 AI 추론, hard gate, evidence, 타겟 수정 힌트를 보여주는 조각입니다.",
+      "reuse_ready": true,
+      "capability_ids": [
+        "code-generator",
+        "self-healing-engine",
+        "admin-command-interface"
+      ]
+    }
+  ],
+  "target_file_ids": [
+    "FILE-ADMIN-CAPABILITIES",
+    "FILE-ADMIN-LLM-PAGE"
+  ],
+  "target_section_ids": [
+    "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+    "SECTION-CHAT-ADVISORY-PANEL"
+  ],
+  "target_feature_ids": [
+    "FEATURE-ID-BASED-TARGET-EXPOSURE",
+    "FEATURE-EVIDENCE-FIRST-UX"
+  ],
+  "target_chunk_ids": [
+    "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+    "CHUNK-ADMIN-CHAT-UI-001"
+  ],
+  "failure_tags": [],
+  "repair_tags": [],
+  "product_identity_path": "docs/product_identity.json",
+  "completion_gate_ok": false,
+  "canonical_evidence_identity": {
+    "evidence_schema_version": "v1",
+    "profile_id": "nextjs_app",
+    "evidence_run_id": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+    "evidence_generated_at": "2026-04-22T19:53:34.966900Z",
+    "self_run_status": "not_applicable",
+    "completion_gate_ok": false,
+    "failure_tags": [],
+    "target_file_ids": [
+      "FILE-ADMIN-CAPABILITIES",
+      "FILE-ADMIN-LLM-PAGE"
+    ]
+  },
+  "product_readiness_hard_gate": {
+    "validation_profile": "nextjs_app",
+    "ok": false,
+    "stages": [
+      {
+        "id": "packaging_audit",
+        "ok": true,
+        "summary": "패키징 필수 파일이 준비되었는지 확인합니다.",
+        "evidence": {
+          "missing_packaging_files": [],
+          "required_packaging_files": [
+            "README.md",
+            "docs/usage.md",
+            "docs/deployment.md",
+            "docs/testing.md",
+            "configs/app.env.example",
+            "docs/runbook.md",
+            "infra/prometheus.yml",
+            "infra/deploy/security.md"
+          ]
+        }
+      },
+      {
+        "id": "dependency_install",
+        "ok": false,
+        "summary": "생성 직후 의존성 설치와 가상환경 구성이 성공해야 합니다.",
+        "evidence": {
+          "checks_run": [],
+          "failures": []
+        }
+      },
+      {
+        "id": "standalone_boot",
+        "ok": false,
+        "summary": "생성 산출물이 단독 기동되어야 합니다.",
+        "evidence": {
+          "checks_run": [],
+          "failures": []
+        }
+      },
+      {
+        "id": "api_smoke",
+        "ok": false,
+        "summary": "핵심 API 스모크 검증이 성공해야 합니다.",
+        "evidence": {
+          "checks_run": [],
+          "failures": []
+        }
+      },
+      {
+        "id": "pytest",
+        "ok": false,
+        "summary": "핵심 테스트가 통과해야 합니다.",
+        "evidence": {
+          "checks_run": [],
+          "failures": []
+        }
+      },
+      {
+        "id": "framework_contract",
+        "ok": true,
+        "summary": "프레임워크 구조와 실행 계약이 맞아야 합니다.",
+        "evidence": {
+          "checks_run": [
+            "package.json contract inspection",
+            "exists:app/layout.tsx",
+            "exists:app/page.tsx",
+            "exists:scripts/check.sh"
+          ],
+          "failures": []
+        }
+      },
+      {
+        "id": "external_integration",
+        "ok": true,
+        "summary": "외부 연동 경계 파일과 커넥터가 존재해야 합니다.",
+        "evidence": {
+          "checks_run": [
+            "exists:backend/app/external_adapters/status_client.py",
+            "exists:backend/app/connectors/base.py"
+          ],
+          "failures": []
+        }
+      },
+      {
+        "id": "zip_reproduction",
+        "ok": false,
+        "summary": "출고 ZIP 압축 해제 후 재현 검증이 성공해야 합니다.",
+        "evidence": {
+          "checks_run": [
+            "extract_zip",
+            "validation_profile_unsupported"
+          ],
+          "failures": [
+            "zip reproduction validator not implemented for profile: nextjs_app"
+          ],
+          "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+          "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376"
+        }
+      }
+    ],
+    "failed_stages": [
+      "dependency_install",
+      "standalone_boot",
+      "api_smoke",
+      "pytest",
+      "zip_reproduction"
+    ],
+    "summary": "product readiness hard gate failed: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+    "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+  },
+  "shipping_zip_validation": {
+    "engine": "shipping-zip-reproduction-validator",
+    "validation_profile": "nextjs_app",
+    "ok": false,
+    "checks_run": [
+      "extract_zip",
+      "validation_profile_unsupported"
+    ],
+    "failures": [
+      "zip reproduction validator not implemented for profile: nextjs_app"
+    ],
+    "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376",
+    "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+  },
+  "packaging_audit": {
+    "required_packaging_files": [
+      "README.md",
+      "docs/usage.md",
+      "docs/deployment.md",
+      "docs/testing.md",
+      "configs/app.env.example",
+      "docs/runbook.md",
+      "infra/prometheus.yml",
+      "infra/deploy/security.md"
+    ],
+    "missing_packaging_files": [],
+    "packaging_ready": true,
+    "operations_guides": [
+      "docs/runtime.md",
+      "docs/deployment.md",
+      "docs/testing.md"
+    ],
+    "shipping_readme_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\docs\\shipping_readme.md",
+    "operations_guide_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\docs\\operations_guide.md",
+    "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+    "archive_name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+    "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+    "validation_result_json_path": "docs/automatic_validation_result.json",
+    "validation_result_md_path": "docs/automatic_validation_result.md",
+    "failure_report_path": "docs/failure_report.md",
+    "root_cause_report_path": "docs/root_cause_analysis.md",
+    "output_audit_path": "docs/output_audit.json",
+    "traceability_map_path": "docs/traceability_map.json",
+    "artifact_paths": {
+      "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+      "automatic_validation_result_path": "docs/automatic_validation_result.json",
+      "automatic_validation_markdown_path": "docs/automatic_validation_result.md",
+      "failure_report_path": "docs/failure_report.md",
+      "root_cause_report_path": "docs/root_cause_analysis.md",
+      "output_audit_path": "docs/output_audit.json",
+      "traceability_map_path": "docs/traceability_map.json"
+    },
+    "integration_test_engine_ok": true,
+    "shipping_zip_validation": {
+      "engine": "shipping-zip-reproduction-validator",
+      "validation_profile": "nextjs_app",
+      "ok": false,
+      "checks_run": [
+        "extract_zip",
+        "validation_profile_unsupported"
+      ],
+      "failures": [
+        "zip reproduction validator not implemented for profile: nextjs_app"
+      ],
+      "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376",
+      "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+    },
+    "product_readiness_hard_gate": {
+      "validation_profile": "nextjs_app",
+      "ok": false,
+      "stages": [
+        {
+          "id": "packaging_audit",
+          "ok": true,
+          "summary": "패키징 필수 파일이 준비되었는지 확인합니다.",
+          "evidence": {
+            "missing_packaging_files": [],
+            "required_packaging_files": [
+              "README.md",
+              "docs/usage.md",
+              "docs/deployment.md",
+              "docs/testing.md",
+              "configs/app.env.example",
+              "docs/runbook.md",
+              "infra/prometheus.yml",
+              "infra/deploy/security.md"
+            ]
+          }
+        },
+        {
+          "id": "dependency_install",
+          "ok": false,
+          "summary": "생성 직후 의존성 설치와 가상환경 구성이 성공해야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "standalone_boot",
+          "ok": false,
+          "summary": "생성 산출물이 단독 기동되어야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "api_smoke",
+          "ok": false,
+          "summary": "핵심 API 스모크 검증이 성공해야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "pytest",
+          "ok": false,
+          "summary": "핵심 테스트가 통과해야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "framework_contract",
+          "ok": true,
+          "summary": "프레임워크 구조와 실행 계약이 맞아야 합니다.",
+          "evidence": {
+            "checks_run": [
+              "package.json contract inspection",
+              "exists:app/layout.tsx",
+              "exists:app/page.tsx",
+              "exists:scripts/check.sh"
+            ],
+            "failures": []
+          }
+        },
+        {
+          "id": "external_integration",
+          "ok": true,
+          "summary": "외부 연동 경계 파일과 커넥터가 존재해야 합니다.",
+          "evidence": {
+            "checks_run": [
+              "exists:backend/app/external_adapters/status_client.py",
+              "exists:backend/app/connectors/base.py"
+            ],
+            "failures": []
+          }
+        },
+        {
+          "id": "zip_reproduction",
+          "ok": false,
+          "summary": "출고 ZIP 압축 해제 후 재현 검증이 성공해야 합니다.",
+          "evidence": {
+            "checks_run": [
+              "extract_zip",
+              "validation_profile_unsupported"
+            ],
+            "failures": [
+              "zip reproduction validator not implemented for profile: nextjs_app"
+            ],
+            "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+            "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376"
+          }
+        }
+      ],
+      "failed_stages": [
+        "dependency_install",
+        "standalone_boot",
+        "api_smoke",
+        "pytest",
+        "zip_reproduction"
+      ],
+      "summary": "product readiness hard gate failed: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+      "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+    },
+    "target_patch_registry": {
+      "registry_version": 1,
+      "capability_ids": [
+        "code-generator",
+        "self-healing-engine",
+        "project-scanner"
+      ],
+      "candidate_paths": [
+        "README.md",
+        "package.json",
+        "tsconfig.json",
+        "next-env.d.ts",
+        "app/page.tsx",
+        "app/layout.tsx",
+        "configs/app.env.example",
+        "scripts/check.sh",
+        "docs/architecture.md",
+        "docs/order_profile.md",
+        "docs/flow_map.md",
+        "docs/flow_registry.json",
+        "docs/usage.md",
+        "docs/runtime.md",
+        "docs/deployment.md",
+        "docs/testing.md",
+        "docs/scaffold_inventory.md",
+        "docs/stage_progress.md",
+        "docs/stage_progress.json",
+        ".gitignore",
+        "next.config.js",
+        "app/loading.tsx",
+        "app/dashboard/page.tsx",
+        "app/api/health/route.ts",
+        "app/api/brief/route.ts",
+        "app/globals.css",
+        "components/dashboardclient.tsx",
+        "components/heropanel.tsx",
+        "components/metriccluster.tsx",
+        "components/signalmatrix.tsx",
+        "components/focusrail.tsx",
+        "components/insighttimeline.tsx",
+        "components/executionboard.tsx",
+        "components/themetoggle.tsx",
+        "lib/types.ts",
+        "lib/data.ts",
+        "addons/node_service/README.md",
+        "addons/node_service/package.json",
+        "addons/node_service/tsconfig.json",
+        "addons/node_service/src/types.ts",
+        "addons/node_service/src/config.ts",
+        "addons/node_service/src/lib/runtimeStore.ts",
+        "addons/node_service/src/repositories/orderRepository.ts",
+        "addons/node_service/src/services/orderService.ts",
+        "addons/node_service/src/http/handlers/health.go",
+        "addons/node_service/src/http/handlers/inventory.go",
+        "addons/node_service/src/http/router.go",
+        "docs/multi_generator_matrix.json",
+        "backend/llm/admin_capabilities.py",
+        "frontend/frontend/app/admin/llm/page.tsx"
+      ],
+      "matched_entries": [
+        {
+          "file_id": "FILE-ADMIN-CAPABILITIES",
+          "path": "backend/llm/admin_capabilities.py",
+          "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+          "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+          "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+          "summary": "capability가 output audit / traceability / hard gate evidence를 읽어 수정 대상 ID를 노출하는 조각입니다.",
+          "reuse_ready": true,
+          "capability_ids": [
+            "code-generator",
+            "self-healing-engine",
+            "project-scanner"
+          ]
+        },
+        {
+          "file_id": "FILE-ADMIN-LLM-PAGE",
+          "path": "frontend/frontend/app/admin/llm/page.tsx",
+          "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+          "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+          "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+          "summary": "관리자 오케스트레이터 화면에서 AI 추론, hard gate, evidence, 타겟 수정 힌트를 보여주는 조각입니다.",
+          "reuse_ready": true,
+          "capability_ids": [
+            "code-generator",
+            "self-healing-engine",
+            "admin-command-interface"
+          ]
+        }
+      ],
+      "reusable_patch_units": [
+        {
+          "file_id": "FILE-ADMIN-CAPABILITIES",
+          "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+          "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+          "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+          "path": "backend/llm/admin_capabilities.py",
+          "failure_tags": [],
+          "repair_tags": []
+        },
+        {
+          "file_id": "FILE-ADMIN-LLM-PAGE",
+          "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+          "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+          "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+          "path": "frontend/frontend/app/admin/llm/page.tsx",
+          "failure_tags": [],
+          "repair_tags": []
+        }
+      ],
+      "target_file_ids": [
+        "FILE-ADMIN-CAPABILITIES",
+        "FILE-ADMIN-LLM-PAGE"
+      ],
+      "target_section_ids": [
+        "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "SECTION-CHAT-ADVISORY-PANEL"
+      ],
+      "target_feature_ids": [
+        "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "FEATURE-EVIDENCE-FIRST-UX"
+      ],
+      "target_chunk_ids": [
+        "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "CHUNK-ADMIN-CHAT-UI-001"
+      ],
+      "failure_tags": [],
+      "repair_tags": [],
+      "matched_count": 2,
+      "reusable_count": 2,
+      "selective_apply_ready": true
+    },
+    "operational_evidence": {
+      "profile_id": "commerce_platform",
+      "integration_status": "partial",
+      "verified_target_count": 3,
+      "required_target_count": 5,
+      "warning_target_count": 0,
+      "failed_target_count": 2,
+      "warning_targets": [
+        "system_settings",
+        "workspace_self_run_record"
+      ],
+      "max_latency_ms": 185.8,
+      "summary": {
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "max_latency_ms": 185.8
+      },
+      "targets_by_id": {
+        "websocket": {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        "admin": {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        "marketplace": {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        "system_settings": {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        "workspace_self_run_record": {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        }
+      },
+      "websocket": {
+        "id": "websocket",
+        "target": "/api/llm/ws",
+        "protocol": "websocket",
+        "verification_method": "websocket-handshake-and-ping-pong",
+        "note": "runtime websocket probe ok",
+        "warning_threshold_ms": 150.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 101,
+        "latency_ms": 23.9,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:36.805495Z",
+        "source": "runtime-probe"
+      },
+      "admin": {
+        "id": "admin",
+        "target": "/admin/llm",
+        "protocol": "https",
+        "verification_method": "http-response-and-page-render",
+        "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+        "warning_threshold_ms": 150.0,
+        "ok": false,
+        "status": "failed",
+        "status_code": null,
+        "latency_ms": null,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:39.511079Z",
+        "source": "runtime-probe"
+      },
+      "marketplace": {
+        "id": "marketplace",
+        "target": "/marketplace/orchestrator",
+        "protocol": "https",
+        "verification_method": "http-response-and-page-render",
+        "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+        "warning_threshold_ms": 200.0,
+        "ok": false,
+        "status": "failed",
+        "status_code": null,
+        "latency_ms": null,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:42.210471Z",
+        "source": "runtime-probe"
+      },
+      "system_settings": {
+        "id": "system_settings",
+        "target": "/api/admin/system-settings",
+        "protocol": "https",
+        "verification_method": "http-response-json",
+        "note": "body-bytes=15382",
+        "warning_threshold_ms": 120.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 200,
+        "latency_ms": 168.6,
+        "latency_warning": true,
+        "verified_at": "2026-04-19T18:49:42.379221Z",
+        "source": "runtime-probe"
+      },
+      "workspace_self_run_record": {
+        "id": "workspace_self_run_record",
+        "target": "/api/admin/workspace-self-run-record?latest=true",
+        "protocol": "https",
+        "verification_method": "http-response-latest-record",
+        "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+        "warning_threshold_ms": 120.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 200,
+        "latency_ms": 185.8,
+        "latency_warning": true,
+        "verified_at": "2026-04-19T18:49:42.565062Z",
+        "source": "runtime-probe"
+      },
+      "targets": [
+        {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        }
+      ]
+    },
+    "operational_latency_summary": {
+      "latency_warning": true,
+      "warning_targets": [
+        "system_settings",
+        "workspace_self_run_record"
+      ],
+      "warning_threshold_ms": {
+        "websocket": 150.0,
+        "admin": 150.0,
+        "marketplace": 200.0,
+        "system_settings": 120.0,
+        "workspace_self_run_record": 120.0
+      },
+      "max_latency_ms": 185.8,
+      "verified_count": 3,
+      "warning_count": 0,
+      "failed_count": 2,
+      "required_count": 5
+    }
+  },
+  "validation_artifacts": {
+    "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+    "validation_result_json_path": "docs/automatic_validation_result.json",
+    "validation_result_md_path": "docs/automatic_validation_result.md",
+    "failure_report_path": "docs/failure_report.md",
+    "root_cause_report_path": "docs/root_cause_analysis.md",
+    "output_audit_path": "docs/output_audit.json",
+    "traceability_map_path": "docs/traceability_map.json"
+  },
+  "artifact_paths": {
+    "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+    "automatic_validation_result_path": "docs/automatic_validation_result.json",
+    "automatic_validation_markdown_path": "docs/automatic_validation_result.md",
+    "failure_report_path": "docs/failure_report.md",
+    "root_cause_report_path": "docs/root_cause_analysis.md",
+    "output_audit_path": "docs/output_audit.json",
+    "traceability_map_path": "docs/traceability_map.json"
+  },
+  "operational_latency_summary": {
+    "latency_warning": true,
+    "warning_targets": [
+      "system_settings",
+      "workspace_self_run_record"
+    ],
+    "warning_threshold_ms": {
+      "websocket": 150.0,
+      "admin": 150.0,
+      "marketplace": 200.0,
+      "system_settings": 120.0,
+      "workspace_self_run_record": 120.0
+    },
+    "max_latency_ms": 185.8,
+    "verified_count": 3,
+    "warning_count": 0,
+    "failed_count": 2,
+    "required_count": 5
+  },
+  "evidence_reference": {
+    "canonical_snapshot_path": "docs/automatic_validation_result.json",
+    "evidence_schema_version": "v1",
+    "evidence_generated_at": "2026-04-22T19:53:34.966900Z",
+    "evidence_run_id": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+    "self_run_status": "not_applicable",
+    "target_file_ids": [
+      "FILE-ADMIN-CAPABILITIES",
+      "FILE-ADMIN-LLM-PAGE"
+    ],
+    "failure_tags": []
+  }
+}

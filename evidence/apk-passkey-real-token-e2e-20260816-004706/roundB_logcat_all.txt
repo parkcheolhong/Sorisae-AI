@@ -1,0 +1,1057 @@
+--------- beginning of main
+08-16 01:17:41.886 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.003124
+08-16 01:17:41.886 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.003124
+08-16 01:17:41.886 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:41.887 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:41.903 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.020478
+08-16 01:17:41.903 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18595 ] when=319539.020478
+08-16 01:17:41.904 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:41.904 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:41.904 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:41.904 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:41.905 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 951372278 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:41.905 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 951372278 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:41.921 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 238216732
+08-16 01:17:41.921 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 238216732
+08-16 01:17:42.037 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.153759
+08-16 01:17:42.037 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.153759
+08-16 01:17:42.037 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.038 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.053 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.169951
+08-16 01:17:42.053 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18596 ] when=319539.169951
+08-16 01:17:42.053 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.054 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.054 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.054 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.054 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 538899971 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.055 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 538899971 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.071 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 1069529760
+08-16 01:17:42.071 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 1069529760
+08-16 01:17:42.150 I/adbd    ( 7994): adbd service requested 'shell,v2,TERM=xterm-256color,raw:am start -W -a android.intent.action.VIEW -d worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe%20B'
+08-16 01:17:42.202 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-16 01:17:42.202 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-16 01:17:42.203 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.203 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+08-16 01:17:42.203 I/mtkpower_client( 1170): ret_hdl:11658
+08-16 01:17:42.204 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.204 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:11658 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11658
+--------- beginning of system
+08-16 01:17:42.204 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=13433) has no WPC
+08-16 01:17:42.205 I/mtkpower_client( 1170): ret_hdl:11659
+08-16 01:17:42.205 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.205 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 01:17:42.205 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:11659 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11659
+08-16 01:17:42.205 I/mtkpower_client( 1170): ret_hdl:11660
+08-16 01:17:42.205 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:11660 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11660
+08-16 01:17:42.205 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.205 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 01:17:42.206 I/mtkpower_client( 1170): ret_hdl:11661
+08-16 01:17:42.206 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.206 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:11661 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11661
+08-16 01:17:42.206 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 01:17:42.206 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 01:17:42.206 I/mtkpower_client( 1170): ret_hdl:11662
+08-16 01:17:42.207 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:11662 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11662
+08-16 01:17:42.207 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 01:17:42.208 D/WindowManager( 1673): Transition is created, t=TransitionRecord{5117d9e id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 01:17:42.208 D/WindowManager( 1673): SyncGroup is created, id=499, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-16 01:17:42.208 W/WindowManager( 1673): setSyncMethod, id=499, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-16 01:17:42.208 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{5117d9e id=499 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 01:17:42.209 V/WindowManager( 1673): Collecting in transition 499: ActivityRecord{2ecd07f u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-16 01:17:42.209 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{2ecd07f u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-16 01:17:42.209 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{828b295 #10941 type=standard A=10513:com.parkcheolhong.worldlinco} activity=ActivityRecord{2ecd07f u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-16 01:17:42.210 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_START/1673@17, type = -999
+08-16 01:17:42.210 D/ActivityManagerPerformance( 1673): AMP_acquire() ACT_START
+08-16 01:17:42.210 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1428912  [1673 / 17]    HINT : AMS_ACT_START    list : 
+08-16 01:17:42.210 I/mtkpower_client( 1170): perf_lock_rel, hdl:11660, tid:1201
+08-16 01:17:42.211 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.211 I/libPowerHal( 1177): [perfLockRel] hdl:11660, idx:2
+08-16 01:17:42.211 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 01:17:42.212 I/mtkpower_client( 1170): ret_hdl:11663
+08-16 01:17:42.212 I/mtkpower_client( 1170): perf_lock_rel, hdl:11659, tid:1201
+08-16 01:17:42.212 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:11663 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11663
+08-16 01:17:42.212 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 01:17:42.212 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.212 I/libPowerHal( 1177): [perfLockRel] hdl:11659, idx:1
+08-16 01:17:42.213 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{5117d9e id=499 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 01:17:42.213 I/mtkpower_client( 1170): ret_hdl:11664
+08-16 01:17:42.213 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.213 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 01:17:42.213 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:11664 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11664
+08-16 01:17:42.214 I/mtkpower_client( 1170): ret_hdl:11665
+08-16 01:17:42.214 I/mtkpower_client( 1170): perf_lock_rel, hdl:11661, tid:1201
+08-16 01:17:42.214 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:11665 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11665
+08-16 01:17:42.214 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 1
+08-16 01:17:42.214 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-16 01:17:42.214 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-16 01:17:42.214 I/Pageboost( 1673): stop alp
+08-16 01:17:42.215 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.215 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@42a2fd5 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10941 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.errors.DevLauncherErrorActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=2 lastActiveTime=319522280 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@44773ea} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{8b9d6db com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 01:17:42.215 I/libPowerHal( 1177): [perfLockRel] hdl:11661, idx:3
+08-16 01:17:42.215 E/pageboostd( 3280): Received HALT command code 2
+08-16 01:17:42.215 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 01:17:42.216 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 01:17:42.216 I/mtkpower_client( 1170): ret_hdl:11666
+08-16 01:17:42.216 I/mtkpower_client( 1170): perf_lock_rel, hdl:11662, tid:1201
+08-16 01:17:42.216 I/libPowerHal( 1177): [perfLockAcq] idx:6 hdl:11666 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11666
+08-16 01:17:42.216 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 01:17:42.216 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 01:17:42.217 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:42.217 V/WindowManager( 1673): Starting Transition 499, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-16 01:17:42.217 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-16 01:17:42.218 I/libPowerHal( 1177): [perfLockRel] hdl:11662, idx:4
+08-16 01:17:42.218 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 01:17:42.218 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-16 01:17:42.219 I/mtkpower_client( 1170): ret_hdl:11667
+08-16 01:17:42.219 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:11667 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11667
+08-16 01:17:42.220 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 01:17:42.220 V/WindowManager( 1673): SyncGroup 499: Finished!
+08-16 01:17:42.220 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{5117d9e id=499 type=OPEN flags=0x0}
+08-16 01:17:42.221 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{2ecd07f u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-16 01:17:42.221 V/WindowManager( 1673):   Final targets: []
+08-16 01:17:42.221 V/WindowManager( 1673): Calling onTransitionReady: {id=499 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 01:17:42.222 V/WindowManager( 1673): Sent Transition #499 createdAt=08-16 01:17:42.208 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10941 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.errors.DevLauncherErrorActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=2 lastActiveTime=319522280 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{9ad70e0 Task{828b295 #10941 type=standard A=10513:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{142b91a com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 01:17:42.222 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-16 01:17:42.222 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@42a2fd5: {id=499 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 01:17:42.222 V/WindowManager( 1673):     info={id=499 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 01:17:42.222 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-16 01:17:42.222 V/WindowManagerShell( 2424): No transition roots in (#499)android.os.BinderProxy@42a2fd5@0 so abort
+08-16 01:17:42.223 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<499>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-16 01:17:42.224 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#499)android.os.BinderProxy@42a2fd5@0
+08-16 01:17:42.224 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<499>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-16 01:17:42.225 V/WindowManager( 1673): Finish Transition: TransitionRecord{5117d9e id=499 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-16 01:17:42.226 D/IMGMemtrackHAL( 1167): hal_get_memory: memtrack cache rebuild was required
+08-16 01:17:42.226 V/WindowManager( 1673): Finish Transition #499: created at 08-16 01:17:42.208 collect-started=0.652ms request-sent=5.497ms started=9.949ms ready=9.84ms sent=13.415ms finished=17.932ms
+08-16 01:17:42.227 V/WindowManagerShell( 2424): Track 0 became idle
+08-16 01:17:42.227 V/WindowManagerShell( 2424): All active transition animations finished
+08-16 01:17:42.231 I/SurfaceFlinger( 1209): SFWD update time=319539348340429
+08-16 01:17:42.233 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-16 01:17:42.337 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319539453
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [                 contacts = {contacts=1251, raw_contacts=1721, data=13098, account={secphone(1)=0, google(2)=1146, sim(3)=0, agg(4)=0, google(5)=0, samsung(6)=325, mobileservice(7)=0, duo(9)=250}, trash=0, trash_acc={}, trash_sync=0, database=contacts2.db} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [               aggregated = {[2,2,6,9]=2, [2,2,6]=1, [2,2,9]=5, [2,2]=8, [2,6,6,9]=1, [2,6,9]=40, [2,6]=159, [2,9]=176, [2]=738, [6,9]=26, [6]=95} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [                  request = {} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [                    calls = {types={[100]=3, [200]=16, [300]=4, [1000]=25}, database=calllog.db} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [                  profile = {contacts=0, raw_contacts=0, data=0, account={secphone(1)=0, google(2)=0, sim(3)=0, agg(4)=0, google(5)=0, samsung(6)=0, mobileservice(7)=0, duo(8)=0}, trash=0, trash_acc={}, trash_sync=0, database=profile.db} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [               sa_profile = {contacts=1, raw_contacts=1, data=2, account={secphone(1)=1, google(2)=0, sim(3)=0, agg(4)=0, google(5)=0, samsung(6)=0, mobileservice(7)=0, duo(8)=0}, trash=0, trash_acc={}, trash_sync=0, database=profile_sa.db} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: [                      etc = {binders=0, country_iso=KR, version=15.0.65, db_version=1708, csc=KOO/KOR} ]
+08-16 01:17:42.360 V/CpEventLog(u0)( 3667): cp_state: ------------------------------------------------------------------------------
+08-16 01:17:42.386 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.502721
+08-16 01:17:42.386 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.502721
+08-16 01:17:42.386 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.386 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.403 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18596
+08-16 01:17:42.403 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18596
+08-16 01:17:42.403 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.519911
+08-16 01:17:42.403 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18597 ] when=319539.519911
+08-16 01:17:42.403 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.403 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.404 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.404 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 433847838 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.404 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.405 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 433847838 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.420 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 1073249439
+08-16 01:17:42.420 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 1073249439
+08-16 01:17:42.469 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.586624
+08-16 01:17:42.470 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.586624
+08-16 01:17:42.470 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.470 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.485 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18597
+08-16 01:17:42.486 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.602615
+08-16 01:17:42.486 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18598 ] when=319539.602615
+08-16 01:17:42.486 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.486 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.486 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.487 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.487 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 467543575 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.487 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 467543575 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.503 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 455796183
+08-16 01:17:42.503 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 455796183
+08-16 01:17:42.536 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.653124
+08-16 01:17:42.536 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.653124
+08-16 01:17:42.536 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.537 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.553 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18598
+08-16 01:17:42.553 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.669735
+08-16 01:17:42.553 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18599 ] when=319539.669735
+08-16 01:17:42.553 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.553 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.553 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.554 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 429142437 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.554 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.554 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 429142437 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.570 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 974525842
+08-16 01:17:42.570 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 974525842
+08-16 01:17:42.603 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.719765
+08-16 01:17:42.603 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.719765
+08-16 01:17:42.603 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.604 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.619 W/InputReader( 1673): Received unexpected event (0x35, 0x9c) for slot 0 with tracking id 18599
+08-16 01:17:42.619 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18599
+08-16 01:17:42.619 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.736266
+08-16 01:17:42.619 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18600 ] when=319539.736266
+08-16 01:17:42.619 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.620 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.620 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.620 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.620 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 405498269 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.621 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 405498269 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.636 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.752722
+08-16 01:17:42.636 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.752722
+08-16 01:17:42.636 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.636 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.636 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 204429387
+08-16 01:17:42.637 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 204429387
+08-16 01:17:42.653 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.769716
+08-16 01:17:42.653 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18601 ] when=319539.769716
+08-16 01:17:42.653 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.653 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.653 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.654 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.654 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 741419708 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.654 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 741419708 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.670 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 986767421
+08-16 01:17:42.670 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 986767421
+08-16 01:17:42.735 D/InputReader( 1673): Btn_touch(4): value=0 when=319539.852292
+08-16 01:17:42.735 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319539.852292
+08-16 01:17:42.736 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.736 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:42.752 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18601
+08-16 01:17:42.752 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18601
+08-16 01:17:42.752 D/InputReader( 1673): Btn_touch(4): value=1 when=319539.869394
+08-16 01:17:42.752 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18602 ] when=319539.869394
+08-16 01:17:42.752 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:42.753 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:42.753 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:42.754 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:42.754 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 336767850 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.754 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 336767850 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:42.770 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 271973022
+08-16 01:17:42.770 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 271973022
+08-16 01:17:43.215 E/Watchdog( 1673): !@Sync: 10643 heap: 103 / 122 FD: 968 [2026-08-16 01:17:43.215]
+08-16 01:17:43.267 I/wpa_supplicant( 2197): Heartbeat 31908
+08-16 01:17:43.402 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319540518
+08-16 01:17:43.468 D/InputReader( 1673): Btn_touch(4): value=0 when=319540.585206
+08-16 01:17:43.468 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319540.585206
+08-16 01:17:43.468 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.469 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:43.485 D/InputReader( 1673): Btn_touch(4): value=1 when=319540.601828
+08-16 01:17:43.485 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18603 ] when=319540.601828
+08-16 01:17:43.485 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:43.485 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:43.485 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.486 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:43.486 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 101999874 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.486 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 101999874 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.502 D/InputReader( 1673): Btn_touch(4): value=0 when=319540.618735
+08-16 01:17:43.502 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319540.618735
+08-16 01:17:43.502 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.502 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 57022436
+08-16 01:17:43.503 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 57022436
+08-16 01:17:43.503 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:43.516 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:43.518 W/InputReader( 1673): Received unexpected event (0x35, 0x9c) for slot 0 with tracking id 18603
+08-16 01:17:43.518 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18603
+08-16 01:17:43.518 D/InputReader( 1673): Btn_touch(4): value=1 when=319540.635164
+08-16 01:17:43.518 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18604 ] when=319540.635164
+08-16 01:17:43.518 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:43.519 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:43.519 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.520 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:43.520 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 563538247 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.520 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 563538247 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.535 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 405156093
+08-16 01:17:43.535 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 405156093
+08-16 01:17:43.551 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:43.611 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:43.634 D/InputReader( 1673): Btn_touch(4): value=0 when=319540.751730
+08-16 01:17:43.635 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319540.751730
+08-16 01:17:43.635 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.635 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:43.648 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:43.651 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18604
+08-16 01:17:43.651 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18604
+08-16 01:17:43.651 D/InputReader( 1673): Btn_touch(4): value=1 when=319540.768536
+08-16 01:17:43.651 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18605 ] when=319540.768536
+08-16 01:17:43.652 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:43.652 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:43.652 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.653 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 448800425 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.653 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:43.653 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 448800425 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.668 D/InputReader( 1673): Btn_touch(4): value=0 when=319540.784927
+08-16 01:17:43.668 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319540.784927
+08-16 01:17:43.668 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.669 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:43.669 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 369399883
+08-16 01:17:43.669 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 369399883
+08-16 01:17:43.684 W/InputReader( 1673): Received unexpected event (0x35, 0x9f) for slot 0 with tracking id 18605
+08-16 01:17:43.684 W/InputReader( 1673): Received unexpected event (0x36, 0xa7) for slot 0 with tracking id 18605
+08-16 01:17:43.685 D/InputReader( 1673): Btn_touch(4): value=1 when=319540.801740
+08-16 01:17:43.685 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18606 ] when=319540.801740
+08-16 01:17:43.685 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:43.685 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:43.685 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.686 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:43.686 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 553579618 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.686 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 553579618 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.702 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 858728724
+08-16 01:17:43.702 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 858728724
+08-16 01:17:43.707 I/mtkpower_client( 1170): perf_lock_rel, hdl:11658, tid:13436
+08-16 01:17:43.707 I/mtkpower_client( 1170): perf_lock_rel, hdl:11664, tid:13436
+08-16 01:17:43.707 I/libPowerHal( 1177): [perfLockRel] hdl:11658, idx:0
+08-16 01:17:43.708 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:13436
+08-16 01:17:43.708 I/libPowerHal( 1177): [perfLockRel] hdl:11664, idx:1
+08-16 01:17:43.708 I/mtkpower_client( 1170): ret_hdl:11668
+08-16 01:17:43.708 I/mtkpower_client( 1170): perf_lock_rel, hdl:11663, tid:13436
+08-16 01:17:43.708 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 01:17:43.708 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:11668 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11668
+08-16 01:17:43.709 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:13436
+08-16 01:17:43.709 I/libPowerHal( 1177): [perfLockRel] hdl:11663, idx:5
+08-16 01:17:43.709 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 01:17:43.709 I/mtkpower_client( 1170): ret_hdl:11669
+08-16 01:17:43.710 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:11669 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11669
+08-16 01:17:43.710 I/mtkpower_client( 1170): perf_lock_rel, hdl:11666, tid:13436
+08-16 01:17:43.710 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1138000 -1
+08-16 01:17:43.710 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:13436
+08-16 01:17:43.710 I/libPowerHal( 1177): [perfLockRel] hdl:11666, idx:6
+08-16 01:17:43.710 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 01:17:43.710 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 01:17:43.711 I/mtkpower_client( 1170): ret_hdl:11670
+08-16 01:17:43.711 I/mtkpower_client( 1170): perf_lock_rel, hdl:11667, tid:13436
+08-16 01:17:43.711 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:11670 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11670
+08-16 01:17:43.711 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:1
+08-16 01:17:43.711 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:1
+08-16 01:17:43.711 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:13436
+08-16 01:17:43.711 I/libPowerHal( 1177): [perfLockRel] hdl:11667, idx:3
+08-16 01:17:43.712 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1138000 -1
+08-16 01:17:43.712 I/mtkpower_client( 1170): ret_hdl:11671
+08-16 01:17:43.712 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1422154
+08-16 01:17:43.712 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:11671 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11671
+08-16 01:17:43.712 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-16 01:17:43.756 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 0
+08-16 01:17:43.767 D/InputReader( 1673): Btn_touch(4): value=0 when=319540.884298
+08-16 01:17:43.767 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319540.884298
+08-16 01:17:43.768 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.768 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:43.784 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18606
+08-16 01:17:43.784 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18606
+08-16 01:17:43.784 D/InputReader( 1673): Btn_touch(4): value=1 when=319540.901536
+08-16 01:17:43.784 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18607 ] when=319540.901536
+08-16 01:17:43.784 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:43.785 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:43.785 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.785 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:43.786 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 1069550068 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.786 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 1069550068 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:43.794 I/thermal_repeater( 1385): socket -1
+08-16 01:17:43.802 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 444163774
+08-16 01:17:43.802 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 444163774
+08-16 01:17:43.968 D/InputReader( 1673): Btn_touch(4): value=0 when=319541.084740
+08-16 01:17:43.968 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319541.084740
+08-16 01:17:43.968 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:43.968 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:44.000 D/InputReader( 1673): Btn_touch(4): value=1 when=319541.117505
+08-16 01:17:44.001 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18608 ] when=319541.117505
+08-16 01:17:44.001 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:44.001 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:44.001 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.002 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:44.002 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 660623649 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.002 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 660623649 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.018 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 551321966
+08-16 01:17:44.018 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 551321966
+08-16 01:17:44.046 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 105973, isSameBssidAndFreq true
+08-16 01:17:44.046 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (53) / 390 / -33.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 01:17:44.150 D/InputReader( 1673): Btn_touch(4): value=0 when=319541.267580
+08-16 01:17:44.150 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319541.267580
+08-16 01:17:44.151 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.151 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:44.184 D/InputReader( 1673): Btn_touch(4): value=1 when=319541.300891
+08-16 01:17:44.184 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18609 ] when=319541.300891
+08-16 01:17:44.184 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:44.184 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:44.184 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.185 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:44.185 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 845480062 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.186 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 845480062 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.202 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 784825191
+08-16 01:17:44.202 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 784825191
+08-16 01:17:44.212 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_RESUME_TAIL/1673@19, type = -999
+08-16 01:17:44.213 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_LAZY/1673@20, type = -999
+08-16 01:17:44.213 D/ActivityManagerPerformance( 1673): AMP_acquire() TAIL
+08-16 01:17:44.213 D/ActivityManagerPerformance( 1673): AMP_release() ACT_START
+08-16 01:17:44.213 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1432297  [1673 / 19]    HINT : AMS_RESUME_TAIL    list : 
+08-16 01:17:44.213 I/mtkpower_client( 1170): perf_lock_rel, hdl:11669, tid:1201
+08-16 01:17:44.214 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.214 I/libPowerHal( 1177): [perfLockRel] hdl:11669, idx:1
+08-16 01:17:44.214 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 -1 -1
+08-16 01:17:44.215 I/mtkpower_client( 1170): ret_hdl:11672
+08-16 01:17:44.215 I/mtkpower_client( 1170): perf_lock_rel, hdl:11668, tid:1201
+08-16 01:17:44.215 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:11672 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11672
+08-16 01:17:44.215 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-16 01:17:44.215 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.215 I/libPowerHal( 1177): [perfLockRel] hdl:11668, idx:0
+08-16 01:17:44.216 I/mtkpower_client( 1170): ret_hdl:11673
+08-16 01:17:44.216 I/mtkpower_client( 1170): perf_lock_rel, hdl:11670, tid:1201
+08-16 01:17:44.216 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 01:17:44.216 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:11673 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11673
+08-16 01:17:44.216 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.216 I/libPowerHal( 1177): [perfLockRel] hdl:11670, idx:4
+08-16 01:17:44.216 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 01:17:44.217 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 01:17:44.217 I/mtkpower_client( 1170): ret_hdl:11674
+08-16 01:17:44.217 I/mtkpower_client( 1170): perf_lock_rel, hdl:11671, tid:1201
+08-16 01:17:44.217 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:11674 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11674
+08-16 01:17:44.217 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:1
+08-16 01:17:44.217 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:1
+08-16 01:17:44.217 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.218 I/libPowerHal( 1177): [perfLockRel] hdl:11671, idx:3
+08-16 01:17:44.218 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1138000 -1
+08-16 01:17:44.218 I/mtkpower_client( 1170): ret_hdl:11675
+08-16 01:17:44.218 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:11675 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11675
+08-16 01:17:44.218 I/mtkpower_client( 1170): perf_lock_rel, hdl:11672, tid:1201
+08-16 01:17:44.219 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-16 01:17:44.219 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.219 I/libPowerHal( 1177): [perfLockRel] hdl:11672, idx:5
+08-16 01:17:44.219 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 -1 -1
+08-16 01:17:44.220 I/mtkpower_client( 1170): ret_hdl:11676
+08-16 01:17:44.220 I/mtkpower_client( 1170): perf_lock_rel, hdl:11673, tid:1201
+08-16 01:17:44.220 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:11676 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11676
+08-16 01:17:44.220 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-16 01:17:44.220 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.220 I/libPowerHal( 1177): [perfLockRel] hdl:11673, idx:0
+08-16 01:17:44.221 I/mtkpower_client( 1170): ret_hdl:11677
+08-16 01:17:44.221 I/mtkpower_client( 1170): perf_lock_rel, hdl:11665, tid:1201
+08-16 01:17:44.221 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 01:17:44.221 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:11677 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11677
+08-16 01:17:44.221 I/mtkpower_client( 1170): perf_lock_rel, hdl:11674, tid:1201
+08-16 01:17:44.221 I/libPowerHal( 1177): [perfLockRel] hdl:11665, idx:2
+08-16 01:17:44.221 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 2
+08-16 01:17:44.221 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-16 01:17:44.222 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.222 I/libPowerHal( 1177): [perfLockRel] hdl:11674, idx:1
+08-16 01:17:44.222 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 01:17:44.222 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 01:17:44.222 I/mtkpower_client( 1170): ret_hdl:11678
+08-16 01:17:44.222 I/mtkpower_client( 1170): perf_lock_rel, hdl:11675, tid:1201
+08-16 01:17:44.222 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:11678 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11678
+08-16 01:17:44.223 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:1
+08-16 01:17:44.223 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:1
+08-16 01:17:44.223 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 01:17:44.223 I/libPowerHal( 1177): [perfLockRel] hdl:11675, idx:3
+08-16 01:17:44.223 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1138000 -1
+08-16 01:17:44.224 I/mtkpower_client( 1170): ret_hdl:11679
+08-16 01:17:44.224 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1428912
+08-16 01:17:44.224 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:11679 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:11679
+08-16 01:17:44.224 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1750000 -1 1138000 -1
+08-16 01:17:44.384 D/InputReader( 1673): Btn_touch(4): value=0 when=319541.500939
+08-16 01:17:44.384 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319541.500939
+08-16 01:17:44.384 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.385 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:44.401 D/InputReader( 1673): Btn_touch(4): value=1 when=319541.517716
+08-16 01:17:44.401 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18610 ] when=319541.517716
+08-16 01:17:44.401 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:44.401 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:44.401 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.402 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:44.402 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 729446911 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.402 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 729446911 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.418 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319541534
+08-16 01:17:44.418 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 532891917
+08-16 01:17:44.418 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 532891917
+08-16 01:17:44.519 I/mtkpower_client( 1170): perf_lock_rel, hdl:11676, tid:13449
+08-16 01:17:44.519 I/mtkpower_client( 1170): perf_lock_rel, hdl:11677, tid:13449
+08-16 01:17:44.519 I/libPowerHal( 1177): [perfLockRel] hdl:11676, idx:4
+08-16 01:17:44.519 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 1750000 -1 -1 -1
+08-16 01:17:44.520 I/mtkpower_client( 1170): perf_lock_rel, hdl:11678, tid:13449
+08-16 01:17:44.520 I/libPowerHal( 1177): [perfLockRel] hdl:11677, idx:5
+08-16 01:17:44.521 I/mtkpower_client( 1170): perf_lock_rel, hdl:11679, tid:13449
+08-16 01:17:44.521 I/libPowerHal( 1177): [perfLockRel] hdl:11678, idx:0
+08-16 01:17:44.521 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 01:17:44.521 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 01:17:44.521 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1432297
+08-16 01:17:44.521 I/libPowerHal( 1177): [perfLockRel] hdl:11679, idx:1
+08-16 01:17:44.522 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 -1 -1
+08-16 01:17:44.783 D/InputReader( 1673): Btn_touch(4): value=0 when=319541.900419
+08-16 01:17:44.783 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319541.900419
+08-16 01:17:44.784 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.784 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:44.800 W/InputReader( 1673): Received unexpected event (0x35, 0x9c) for slot 0 with tracking id 18610
+08-16 01:17:44.800 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18610
+08-16 01:17:44.800 D/InputReader( 1673): Btn_touch(4): value=1 when=319541.917281
+08-16 01:17:44.800 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18611 ] when=319541.917281
+08-16 01:17:44.800 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:44.801 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:44.801 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:44.802 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:44.802 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 216757999 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.802 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 216757999 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:44.817 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 226444453
+08-16 01:17:44.817 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 226444453
+08-16 01:17:45.432 D/InputReader( 1673): Btn_touch(4): value=0 when=319542.549191
+08-16 01:17:45.432 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319542.549191
+08-16 01:17:45.433 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:45.433 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319542549
+08-16 01:17:45.433 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:45.449 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18611
+08-16 01:17:45.449 D/InputReader( 1673): Btn_touch(4): value=1 when=319542.566373
+08-16 01:17:45.449 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18612 ] when=319542.566373
+08-16 01:17:45.449 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:45.450 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:45.450 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:45.451 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:45.451 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 175507015 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:45.452 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 175507015 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:45.466 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 485392284
+08-16 01:17:45.466 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 485392284
+08-16 01:17:45.774 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 0
+08-16 01:17:46.148 D/InputReader( 1673): Btn_touch(4): value=0 when=319543.265381
+08-16 01:17:46.148 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319543.265381
+08-16 01:17:46.149 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:46.149 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:46.165 D/InputReader( 1673): Btn_touch(4): value=1 when=319543.282249
+08-16 01:17:46.165 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18613 ] when=319543.282249
+08-16 01:17:46.165 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:46.166 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:46.166 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:46.167 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:46.167 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 966202729 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:46.167 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 966202729 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:46.182 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 183191217
+08-16 01:17:46.182 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 183191217
+08-16 01:17:46.447 D/InputReader( 1673): Btn_touch(4): value=0 when=319543.564323
+08-16 01:17:46.447 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319543.564323
+08-16 01:17:46.448 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:46.449 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:46.465 W/InputReader( 1673): Received unexpected event (0x35, 0x9c) for slot 0 with tracking id 18613
+08-16 01:17:46.465 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18613
+08-16 01:17:46.465 D/InputReader( 1673): Btn_touch(4): value=1 when=319543.581761
+08-16 01:17:46.465 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18614 ] when=319543.581761
+08-16 01:17:46.465 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:46.465 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:46.465 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:46.466 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:46.466 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 139381685 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:46.466 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 139381685 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:46.482 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319543598
+08-16 01:17:46.482 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 441819416
+08-16 01:17:46.482 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 441819416
+08-16 01:17:46.564 D/InputReader( 1673): Btn_touch(4): value=0 when=319543.680876
+08-16 01:17:46.564 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319543.680876
+08-16 01:17:46.564 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:46.565 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:46.581 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18614
+08-16 01:17:46.581 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18614
+08-16 01:17:46.581 D/InputReader( 1673): Btn_touch(4): value=1 when=319543.698193
+08-16 01:17:46.581 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18615 ] when=319543.698193
+08-16 01:17:46.581 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:46.582 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:46.582 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:46.582 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:46.582 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 50991042 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:46.583 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 50991042 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:46.597 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 319533372
+08-16 01:17:46.597 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 319533372
+08-16 01:17:47.051 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 105974, isSameBssidAndFreq true
+08-16 01:17:47.114 D/InputReader( 1673): Btn_touch(4): value=0 when=319544.230639
+08-16 01:17:47.114 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319544.230639
+08-16 01:17:47.114 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.114 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:47.147 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18615
+08-16 01:17:47.147 D/InputReader( 1673): Btn_touch(4): value=1 when=319544.263935
+08-16 01:17:47.147 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18616 ] when=319544.263935
+08-16 01:17:47.147 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:47.147 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:47.148 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.148 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 264211739 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.148 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:47.148 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 264211739 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.164 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 159214220
+08-16 01:17:47.165 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 159214220
+08-16 01:17:47.196 D/InputReader( 1673): Btn_touch(4): value=0 when=319544.313274
+08-16 01:17:47.196 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319544.313274
+08-16 01:17:47.197 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.197 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:47.213 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18616
+08-16 01:17:47.213 D/InputReader( 1673): Btn_touch(4): value=1 when=319544.329965
+08-16 01:17:47.213 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18617 ] when=319544.329965
+08-16 01:17:47.213 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:47.213 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:47.213 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.214 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:47.214 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 632363613 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.215 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 632363613 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.231 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 85387210
+08-16 01:17:47.231 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 85387210
+08-16 01:17:47.547 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319544663
+08-16 01:17:47.603 D/SensorService( 1673): [SO] 3.668 -0.422 8.917
+08-16 01:17:47.729 D/InputReader( 1673): Btn_touch(4): value=0 when=319544.846217
+08-16 01:17:47.729 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319544.846217
+08-16 01:17:47.730 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.730 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:47.746 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18617
+08-16 01:17:47.746 D/InputReader( 1673): Btn_touch(4): value=1 when=319544.863503
+08-16 01:17:47.747 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18618 ] when=319544.863503
+08-16 01:17:47.747 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:47.747 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:47.747 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.748 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:47.748 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 198052473 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.748 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 198052473 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.763 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 678516506
+08-16 01:17:47.763 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 678516506
+08-16 01:17:47.791 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 0
+08-16 01:17:47.862 D/InputReader( 1673): Btn_touch(4): value=0 when=319544.979590
+08-16 01:17:47.862 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319544.979590
+08-16 01:17:47.863 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.863 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:47.880 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18618
+08-16 01:17:47.880 D/InputReader( 1673): Btn_touch(4): value=1 when=319544.996827
+08-16 01:17:47.880 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18619 ] when=319544.996827
+08-16 01:17:47.880 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:47.880 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:47.880 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:47.881 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:47.881 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 40436953 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.882 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 40436953 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:47.896 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 41045521
+08-16 01:17:47.896 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 41045521
+08-16 01:17:48.176 D/io_stats(  565): !@ 179,0 r 4134193 107211866 w 5208273 38487536 d 332447 48594344 f 0 0 iot 3847640 0 th 0 0 0 pt 0 inp 0 0 319545.293
+08-16 01:17:48.229 D/InputReader( 1673): Btn_touch(4): value=0 when=319545.346237
+08-16 01:17:48.229 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319545.346237
+08-16 01:17:48.230 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.230 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:48.245 D/InputReader( 1673): Btn_touch(4): value=1 when=319545.362550
+08-16 01:17:48.246 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18620 ] when=319545.362550
+08-16 01:17:48.246 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:48.246 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:48.246 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.247 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:48.247 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 527171913 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.247 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 527171913 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.263 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 324537542
+08-16 01:17:48.263 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 324537542
+08-16 01:17:48.295 D/InputReader( 1673): Btn_touch(4): value=0 when=319545.411912
+08-16 01:17:48.295 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319545.411912
+08-16 01:17:48.295 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.296 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:48.312 D/InputReader( 1673): Btn_touch(4): value=1 when=319545.429592
+08-16 01:17:48.313 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18621 ] when=319545.429592
+08-16 01:17:48.313 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:48.313 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:48.313 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.314 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:48.314 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 188285734 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.314 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 188285734 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.330 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 750212972
+08-16 01:17:48.330 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 750212972
+08-16 01:17:48.462 D/InputReader( 1673): Btn_touch(4): value=0 when=319545.579030
+08-16 01:17:48.462 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319545.579030
+08-16 01:17:48.462 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.463 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:48.479 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18621
+08-16 01:17:48.479 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18621
+08-16 01:17:48.479 D/InputReader( 1673): Btn_touch(4): value=1 when=319545.596087
+08-16 01:17:48.479 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18622 ] when=319545.596087
+08-16 01:17:48.479 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:48.480 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:48.480 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.481 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:48.481 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 309325960 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.481 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 309325960 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.496 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 418886965
+08-16 01:17:48.496 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 418886965
+08-16 01:17:48.579 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319545695
+08-16 01:17:48.704 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:48.738 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:48.789 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:48.795 I/thermal_repeater( 1385): socket -1
+08-16 01:17:48.822 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:48.845 D/InputReader( 1673): Btn_touch(4): value=0 when=319545.961836
+08-16 01:17:48.845 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319545.961836
+08-16 01:17:48.845 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.846 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:48.861 D/InputReader( 1673): Btn_touch(4): value=1 when=319545.978544
+08-16 01:17:48.862 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18623 ] when=319545.978544
+08-16 01:17:48.862 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:48.862 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:48.862 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:48.863 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 499213755 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.863 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:48.863 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 499213755 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:48.879 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 455968351
+08-16 01:17:48.879 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 455968351
+08-16 01:17:49.645 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319546761
+08-16 01:17:49.677 D/InputReader( 1673): Btn_touch(4): value=0 when=319546.794484
+08-16 01:17:49.678 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319546.794484
+08-16 01:17:49.678 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:49.678 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:49.694 D/InputReader( 1673): Btn_touch(4): value=1 when=319546.811290
+08-16 01:17:49.694 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18624 ] when=319546.811290
+08-16 01:17:49.694 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:49.695 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:49.695 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:49.696 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:49.696 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 62816182 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:49.696 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 62816182 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:49.711 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 18860149
+08-16 01:17:49.711 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 18860149
+08-16 01:17:49.803 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 0
+08-16 01:17:49.898 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''
+08-16 01:17:49.927 D/InputReader( 1673): Btn_touch(4): value=0 when=319547.043842
+08-16 01:17:49.927 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319547.043842
+08-16 01:17:49.927 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:49.928 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:49.943 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18624
+08-16 01:17:49.943 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18624
+08-16 01:17:49.943 D/InputReader( 1673): Btn_touch(4): value=1 when=319547.060447
+08-16 01:17:49.943 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18625 ] when=319547.060447
+08-16 01:17:49.944 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:49.944 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:49.944 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:49.945 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:49.945 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 508113071 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:49.945 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 508113071 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:49.961 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 353204680
+08-16 01:17:49.961 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 353204680
+08-16 01:17:50.057 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 105975, isSameBssidAndFreq true
+08-16 01:17:50.057 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (123) / 390 / -32.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 01:17:50.410 D/InputReader( 1673): Btn_touch(4): value=0 when=319547.526855
+08-16 01:17:50.410 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319547.526855
+08-16 01:17:50.410 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.411 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:50.426 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18625
+08-16 01:17:50.426 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18625
+08-16 01:17:50.426 D/InputReader( 1673): Btn_touch(4): value=1 when=319547.542826
+08-16 01:17:50.426 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18626 ] when=319547.542826
+08-16 01:17:50.426 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:50.426 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:50.427 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.427 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:50.428 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 751551753 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.428 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 751551753 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.443 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 97152587
+08-16 01:17:50.443 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 97152587
+08-16 01:17:50.459 W/DeviceStorageMonitorService( 1673): updateBroadcasts(/data) oldLevel:0, newLevel:0, seq:1
+08-16 01:17:50.460 D/DeviceStorageMonitorService( 1673): Available File Node Number is [13181608]
+08-16 01:17:50.460 W/DeviceStorageMonitorService( 1673): updateBroadcasts_filenode(/data) fn_oldLevel:0, fn_newLevel:0, seq:1
+08-16 01:17:50.560 D/InputReader( 1673): Btn_touch(4): value=0 when=319547.676758
+08-16 01:17:50.560 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319547.676758
+08-16 01:17:50.560 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.561 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:50.576 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18626
+08-16 01:17:50.576 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18626
+08-16 01:17:50.576 D/InputReader( 1673): Btn_touch(4): value=1 when=319547.693117
+08-16 01:17:50.576 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18627 ] when=319547.693117
+08-16 01:17:50.576 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:50.577 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:50.577 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.577 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:50.578 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 750763974 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.578 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 750763974 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.593 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 754752425
+08-16 01:17:50.593 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 754752425
+08-16 01:17:50.760 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319547876
+08-16 01:17:50.809 D/InputReader( 1673): Btn_touch(4): value=0 when=319547.926395
+08-16 01:17:50.809 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319547.926395
+08-16 01:17:50.810 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.810 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:50.825 D/InputReader( 1673): Btn_touch(4): value=1 when=319547.942347
+08-16 01:17:50.825 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18628 ] when=319547.942347
+08-16 01:17:50.825 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:50.826 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:50.826 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.827 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:50.827 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 1008627865 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.827 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 1008627865 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.842 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 780775684
+08-16 01:17:50.842 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 780775684
+08-16 01:17:50.859 D/InputReader( 1673): Btn_touch(4): value=0 when=319547.976085
+08-16 01:17:50.859 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319547.976085
+08-16 01:17:50.859 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.860 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:50.893 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18628
+08-16 01:17:50.893 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18628
+08-16 01:17:50.893 D/InputReader( 1673): Btn_touch(4): value=1 when=319548.009741
+08-16 01:17:50.893 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18629 ] when=319548.009741
+08-16 01:17:50.893 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:50.893 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:50.893 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:50.894 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:50.894 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 151716655 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.894 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 151716655 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:50.909 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 67937500
+08-16 01:17:50.910 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 67937500
+08-16 01:17:51.342 D/InputReader( 1673): Btn_touch(4): value=0 when=319548.458753
+08-16 01:17:51.342 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319548.458753
+08-16 01:17:51.342 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:51.343 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:51.358 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18629
+08-16 01:17:51.358 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18629
+08-16 01:17:51.358 D/InputReader( 1673): Btn_touch(4): value=1 when=319548.475398
+08-16 01:17:51.358 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18630 ] when=319548.475398
+08-16 01:17:51.359 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:51.359 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:51.359 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:51.360 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 278026771 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:51.360 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:51.360 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 278026771 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:51.376 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 886270151
+08-16 01:17:51.376 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 886270151
+08-16 01:17:51.575 D/InputReader( 1673): Btn_touch(4): value=0 when=319548.692104
+08-16 01:17:51.575 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319548.692104
+08-16 01:17:51.576 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:51.576 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:51.591 W/InputReader( 1673): Received unexpected event (0x35, 0x9c) for slot 0 with tracking id 18630
+08-16 01:17:51.592 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18630
+08-16 01:17:51.592 D/InputReader( 1673): Btn_touch(4): value=1 when=319548.708599
+08-16 01:17:51.592 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18631 ] when=319548.708599
+08-16 01:17:51.592 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:51.592 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:51.592 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:51.593 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:51.593 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 984682706 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:51.593 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 984682706 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:51.608 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 607273582
+08-16 01:17:51.608 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 607273582
+08-16 01:17:51.691 D/InputReader( 1673): Btn_touch(4): value=0 when=319548.808353
+08-16 01:17:51.691 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319548.808353
+08-16 01:17:51.692 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:51.692 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:51.708 D/InputReader( 1673): Btn_touch(4): value=1 when=319548.824826
+08-16 01:17:51.708 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18632 ] when=319548.824826
+08-16 01:17:51.708 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:51.708 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:51.709 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:51.709 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 637273177 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:51.709 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:51.710 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 637273177 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:51.725 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 119974215
+08-16 01:17:51.725 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 119974215
+08-16 01:17:51.792 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319548908
+08-16 01:17:51.819 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 0
+08-16 01:17:52.158 D/InputReader( 1673): Btn_touch(4): value=0 when=319549.274669
+08-16 01:17:52.158 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319549.274669
+08-16 01:17:52.158 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.159 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:52.173 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18632
+08-16 01:17:52.173 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18632
+08-16 01:17:52.174 D/InputReader( 1673): Btn_touch(4): value=1 when=319549.290525
+08-16 01:17:52.174 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18633 ] when=319549.290525
+08-16 01:17:52.174 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:52.174 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:52.174 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.175 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 902163477 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.175 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:52.175 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 902163477 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.190 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 1008705495
+08-16 01:17:52.191 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 1008705495
+08-16 01:17:52.257 D/InputReader( 1673): Btn_touch(4): value=0 when=319549.374494
+08-16 01:17:52.257 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319549.374494
+08-16 01:17:52.258 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.258 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:52.274 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18633
+08-16 01:17:52.274 D/InputReader( 1673): Btn_touch(4): value=1 when=319549.390900
+08-16 01:17:52.274 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18634 ] when=319549.390900
+08-16 01:17:52.274 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:52.274 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:52.275 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.275 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:52.275 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 19575719 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.276 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 19575719 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.291 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 396701058
+08-16 01:17:52.291 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 396701058
+08-16 01:17:52.474 D/InputReader( 1673): Btn_touch(4): value=0 when=319549.590788
+08-16 01:17:52.474 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319549.590788
+08-16 01:17:52.474 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.475 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:52.491 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18634
+08-16 01:17:52.491 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18634
+08-16 01:17:52.491 D/InputReader( 1673): Btn_touch(4): value=1 when=319549.607662
+08-16 01:17:52.491 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18635 ] when=319549.607662
+08-16 01:17:52.491 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:52.491 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:52.492 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.492 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:52.492 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 150607696 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.493 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 150607696 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.508 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 395787916
+08-16 01:17:52.508 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 395787916
+08-16 01:17:52.524 D/InputReader( 1673): Btn_touch(4): value=0 when=319549.640739
+08-16 01:17:52.524 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319549.640739
+08-16 01:17:52.524 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.525 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:52.540 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18635
+08-16 01:17:52.540 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18635
+08-16 01:17:52.540 D/InputReader( 1673): Btn_touch(4): value=1 when=319549.657609
+08-16 01:17:52.541 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18636 ] when=319549.657609
+08-16 01:17:52.541 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:52.541 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:52.541 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.542 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:52.542 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 224997880 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.542 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 224997880 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.558 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 763716092
+08-16 01:17:52.558 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 763716092
+08-16 01:17:52.773 D/InputReader( 1673): Btn_touch(4): value=0 when=319549.890597
+08-16 01:17:52.774 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319549.890597
+08-16 01:17:52.774 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.775 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:52.790 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18636
+08-16 01:17:52.790 D/InputReader( 1673): Btn_touch(4): value=1 when=319549.907030
+08-16 01:17:52.790 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18637 ] when=319549.907030
+08-16 01:17:52.790 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:52.791 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:52.791 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.791 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:52.792 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 849707279 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.792 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 849707279 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.807 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 925404682
+08-16 01:17:52.807 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 925404682
+08-16 01:17:52.824 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319549940
+08-16 01:17:52.906 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.023644
+08-16 01:17:52.907 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.023644
+08-16 01:17:52.907 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.908 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:52.923 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18637
+08-16 01:17:52.923 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.040303
+08-16 01:17:52.923 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18638 ] when=319550.040303
+08-16 01:17:52.923 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:52.924 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:52.924 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:52.924 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:52.925 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 190363982 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.925 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 190363982 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:52.940 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 646544039
+08-16 01:17:52.941 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 646544039
+08-16 01:17:53.062 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 105976, isSameBssidAndFreq true
+08-16 01:17:53.063 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (3) / 390 / -32.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 01:17:53.073 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.189901
+08-16 01:17:53.073 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.189901
+08-16 01:17:53.073 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.074 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.090 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.206795
+08-16 01:17:53.090 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18639 ] when=319550.206795
+08-16 01:17:53.090 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.090 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.090 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.091 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.091 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 335222525 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.092 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 335222525 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.107 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 3965809
+08-16 01:17:53.107 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 3965809
+08-16 01:17:53.223 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.339786
+08-16 01:17:53.223 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.339786
+08-16 01:17:53.223 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.224 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.240 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.356859
+08-16 01:17:53.240 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18640 ] when=319550.356859
+08-16 01:17:53.240 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.240 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.241 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.241 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.241 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 198077781 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.242 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 198077781 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.256 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 570237889
+08-16 01:17:53.256 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 570237889
+08-16 01:17:53.275 I/wpa_supplicant( 2197): Heartbeat 31909
+08-16 01:17:53.289 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.406234
+08-16 01:17:53.289 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.406234
+08-16 01:17:53.289 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.290 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.306 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18640
+08-16 01:17:53.306 W/InputReader( 1673): Received unexpected event (0x36, 0xa7) for slot 0 with tracking id 18640
+08-16 01:17:53.306 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.422851
+08-16 01:17:53.306 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18641 ] when=319550.422851
+08-16 01:17:53.306 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.306 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.306 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.307 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.307 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 737713362 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.307 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 737713362 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.322 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.439628
+08-16 01:17:53.323 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.439628
+08-16 01:17:53.323 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.324 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 585074589
+08-16 01:17:53.324 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.324 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 1 id: 585074589
+08-16 01:17:53.339 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18641
+08-16 01:17:53.339 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.456583
+08-16 01:17:53.340 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18642 ] when=319550.456583
+08-16 01:17:53.340 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.340 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.340 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.341 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 165628062 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.341 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.341 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 165628062 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.357 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 991541410
+08-16 01:17:53.357 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 991541410
+08-16 01:17:53.606 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.722895
+08-16 01:17:53.606 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.722895
+08-16 01:17:53.606 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.607 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.622 W/InputReader( 1673): Received unexpected event (0x35, 0x9d) for slot 0 with tracking id 18642
+08-16 01:17:53.622 W/InputReader( 1673): Received unexpected event (0x36, 0xa4) for slot 0 with tracking id 18642
+08-16 01:17:53.622 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.739485
+08-16 01:17:53.623 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18643 ] when=319550.739485
+08-16 01:17:53.623 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.623 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.624 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.624 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.624 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 1040829695 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.625 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 1040829695 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.639 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 51779988
+08-16 01:17:53.639 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 51779988
+08-16 01:17:53.672 D/InputReader( 1673): Btn_touch(4): value=0 when=319550.789410
+08-16 01:17:53.672 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319550.789410
+08-16 01:17:53.673 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.673 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.689 W/InputReader( 1673): Received unexpected event (0x35, 0x9c) for slot 0 with tracking id 18643
+08-16 01:17:53.689 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18643
+08-16 01:17:53.689 D/InputReader( 1673): Btn_touch(4): value=1 when=319550.806013
+08-16 01:17:53.689 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18644 ] when=319550.806013
+08-16 01:17:53.689 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.690 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.690 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.690 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.690 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 170430767 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.690 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 170430767 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.706 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 130697315
+08-16 01:17:53.706 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 130697315
+08-16 01:17:53.795 I/thermal_repeater( 1385): socket -1
+08-16 01:17:53.834 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 0
+08-16 01:17:53.922 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:53.938 D/InputReader( 1673): Btn_touch(4): value=0 when=319551.054855
+08-16 01:17:53.938 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319551.054855
+08-16 01:17:53.938 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.938 D/PowerManagerService( 1673): [api] userActivityFromNative : touch displayId=0 eventTime=319551054
+08-16 01:17:53.939 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:53.955 W/InputReader( 1673): Received unexpected event (0x35, 0x9e) for slot 0 with tracking id 18644
+08-16 01:17:53.955 W/InputReader( 1673): Received unexpected event (0x36, 0xa6) for slot 0 with tracking id 18644
+08-16 01:17:53.955 D/InputReader( 1673): Btn_touch(4): value=1 when=319551.072322
+08-16 01:17:53.955 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18645 ] when=319551.072322
+08-16 01:17:53.955 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:53.956 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:53.956 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:53.956 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:53.957 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 26263510 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.957 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 26263510 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:53.972 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 303100192
+08-16 01:17:53.972 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 303100192
+08-16 01:17:53.998 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 01:17:54.037 D/InputReader( 1673): Btn_touch(4): value=0 when=319551.154675
+08-16 01:17:54.037 I/InputReader( 1673): Touch event's action is 0x1 (id=6, t=0) [pCnt=1, s=] when=319551.154675
+08-16 01:17:54.038 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x1, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:54.038 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 1
+08-16 01:17:54.055 W/InputReader( 1673): Received unexpected event (0x36, 0xa5) for slot 0 with tracking id 18645
+08-16 01:17:54.055 D/InputReader( 1673): Btn_touch(4): value=1 when=319551.172225
+08-16 01:17:54.055 I/InputReader( 1673): Touch event's action is 0x0 (id=6, t=0) [pCnt=1, s=0.18646 ] when=319551.172225
+08-16 01:17:54.055 D/InputDispatcher( 1673): Received a new pointer down event, stop waiting for events to process and just send the pending key event to the focused window.
+08-16 01:17:54.056 I/InputDispatcher( 1673): Delivering touch to (3068): action: 0x4, f=0x0, d=0, 'c934651', t=1 
+08-16 01:17:54.056 I/InputDispatcher( 1673): Delivering touch to (13237): action: 0x0, f=0x0, d=0, '678680d', t=1 
+08-16 01:17:54.056 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 489734414 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:204 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:54.057 I/ViewRootImpl@fe2bd0d[MainActivity](13237): ViewPostIme pointer 0
+08-16 01:17:54.057 I/GestureDetector( 1673): obtain mCurrentDownEvent. id: 489734414 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:53 android.view.InputEventReceiver.dispatchInputEvent:337 
+08-16 01:17:54.072 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 468019950
+08-16 01:17:54.072 I/GestureDetector( 1673): obtain mCurrentMotionEventRaw. action: 2 id: 468019950
+08-16 01:17:54.450 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''

@@ -1,0 +1,4 @@
+﻿api_total=2
+api_ok=2
+api_fail=0
+api_report=C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\ui_api_failure_split_20260630_111054\api_probe_report.json

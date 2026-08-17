@@ -1,0 +1,10 @@
+[23:42:36] logcat cleared
+[23:42:44] pre-reset complete: force-stop + cooldown + home
+[23:42:50] app launch requested: com.parkcheolhong.worldlinco
+[23:42:54] foreground confirmed: com.parkcheolhong.worldlinco
+[23:42:58] permission dialog handled if present
+[23:45:35] login state: ok=False attempted=False reason=ui_surface_unrecognized
+[23:45:35] blocked early: login not ready
+FAIL: login not ready (reason=ui_surface_unrecognized)
+TRACE: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-20260816-234236\face-capture-trace.txt
+SUMMARY: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-20260816-234236\summary.json

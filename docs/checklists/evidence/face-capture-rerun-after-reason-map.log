@@ -1,0 +1,14 @@
+[23:51:34] logcat cleared
+[23:51:42] existing live session detected; preserving current login state
+[23:51:42] foreground confirmed: com.parkcheolhong.worldlinco
+[23:51:46] permission dialog handled if present
+[23:51:50] login state: ok=True attempted=False reason=session_restored
+[23:51:55] face home open: True
+[23:53:17] peer lang picker open: False
+[23:53:17] peer lang selected: False
+[23:53:49] face mic tapped: True
+[23:54:07] capture wait complete (18s)
+[23:54:07] result: FAIL missingLegacy=start_tap,capture_started,payload_prepared,post_start,response_received
+FAIL: missing legacy events -> start_tap, capture_started, payload_prepared, post_start, response_received
+TRACE: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-20260816-235133\face-capture-trace.txt
+SUMMARY: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-20260816-235133\summary.json

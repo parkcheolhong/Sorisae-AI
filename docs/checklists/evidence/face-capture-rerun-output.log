@@ -1,0 +1,11 @@
+[23:35:26] logcat cleared
+[23:35:35] pre-reset complete: force-stop + cooldown + home
+[23:35:40] app launch requested: com.parkcheolhong.worldlinco
+[23:35:43] foreground confirmed: com.parkcheolhong.worldlinco
+[23:35:46] permission dialog handled if present
+adb.exe: device 'R83W70QY11H' not found
+Exception: C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\collect_face_capture_evidence.ps1:107:9
+Line |
+ 107 |          throw "adb cat window_dump failed"
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | adb cat window_dump failed

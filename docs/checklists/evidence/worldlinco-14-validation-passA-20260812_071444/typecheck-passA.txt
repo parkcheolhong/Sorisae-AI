@@ -1,0 +1,6 @@
+mobile-nadotongryoksa 1-4 validation passA
+Command: npm run typecheck
+Result: PASS
+Output:
+> mobile-nadotongryoksa@1.0.3 typecheck
+> tsc --noEmit

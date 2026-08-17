@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/regionHints.test.ts
+Result: PASS
+Notes: Location-adjacent region-hint utilities passed after the location service migration.

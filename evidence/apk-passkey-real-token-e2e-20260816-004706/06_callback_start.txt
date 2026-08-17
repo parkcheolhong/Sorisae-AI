@@ -1,0 +1,7 @@
+Starting: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... }
+Status: ok
+LaunchState: COLD
+Activity: com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity
+TotalTime: 8110
+WaitTime: 8123
+Complete

@@ -1,0 +1,19 @@
+﻿status: PASS
+objective: same real-token callback reinjection x2 with PASSKEY_LOGIN_CALLBACK_SUCCESS and SOCIAL_LOGIN_CALLBACK_SUCCESS (logcat-only source of truth)
+run_dir: c:/Users/WORK/source/repos/parkcheolhong/codeAI/evidence/apk-passkey-real-token-e2e-20260816-rerun12-after-reinstall
+
+round_results:
+- round 1: passkey_success=True social_success=True error_activity=False passkey_success_count=2 passkey_fail_count=0 social_success_count=1 social_fail_count=0 show_login_true_count=0 show_login_false_count=18 sorisae_fab_eval_count=3
+- round 2: passkey_success=True social_success=True error_activity=False passkey_success_count=2 passkey_fail_count=0 social_success_count=1 social_fail_count=0 show_login_true_count=0 show_login_false_count=12 sorisae_fab_eval_count=1
+
+notes:
+- callback path: worldlingo://auth/callback
+- app launch path: am start -W -a android.intent.action.VIEW -d exp+nadotongryoksa://expo-development-client/?url=http%3A%2F%2F10.202.94.134%3A8092
+- runtime_ready_before_rounds: True
+- callback reinjection policy: per-round double start (initial + retry)
+- verdict rule: each round must have passkey/social success event and zero passkey/social fail events (logcat-only)
+- fab_gate_status: PASS (actual SORISAE_FAB_VISIBLE_EVAL preferred; temp alt evidence uses callback success + show_login=false + token/user ready + VOIP_PRESENCE_CONNECTED)
+- temp_fab_alt_evidence_allowed: true until the actual FAB event is observed in released runtime
+- token_preflight_passed: True
+- token_jwt_like: True
+- auth_api_base: https://metanova1004.com

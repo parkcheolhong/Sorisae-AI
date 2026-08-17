@@ -1,0 +1,20 @@
+
+> mobile-nadotongryoksa@1.0.3 test
+> jest --runInBand src/__tests__/userLanguageWiring.test.ts
+
+PASS src/__tests__/userLanguageWiring.test.ts
+  user language wiring SSOT
+    √ required i18n SSOT files exist in repo (not doc-only) (4 ms)
+    √ bootstrapUiLang resolves supported lang on cold start (16 ms)
+    √ featureUiCatalog serves non-Korean text for en/ja uiLang (1 ms)
+    √ language pair uses human labels not raw codes (1 ms)
+    √ flag+name prefix does not duplicate flag
+    √ service country drives catalog display lang over preferred_language
+    √ catalog includes VoIP/Chat/PSTN/Home keys used on user screens
+    √ App.tsx keeps my-language SSOT in settings/signup only (no scattered overrides) (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        0.38 s, estimated 1 s
+Ran all test suites matching /src\\__tests__\\userLanguageWiring.test.ts/i.

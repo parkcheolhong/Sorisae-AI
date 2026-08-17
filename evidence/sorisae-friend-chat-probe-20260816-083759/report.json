@@ -1,0 +1,229 @@
+{
+  "probe": "sorisae-friend-chat",
+  "timestamp_utc": "2026-08-16T08:39:40.947769+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "min_apk_build": 323,
+  "probe_speech_text": "춘천 맛집 추천해줘",
+  "fixture_m4a": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\fixtures\\sorisae_probe_ko_speech.m4a",
+  "passed": false,
+  "checks": [
+    {
+      "name": "health",
+      "ok": false,
+      "detail": "status=200",
+      "body": {
+        "status": "warning",
+        "version": "2.2.0",
+        "modules": {
+          "api": "ok",
+          "memory": "ok",
+          "cpu": "ok",
+          "gpu": "ok",
+          "redis_queue": "ok",
+          "ad_worker": "warning"
+        },
+        "runtime": {
+          "bootstrap": {
+            "scheduled_at": "2026-08-16T08:19:24.637504+00:00",
+            "started_at": "2026-08-16T08:19:24.637694+00:00",
+            "completed_at": "2026-08-16T08:19:24.678517+00:00",
+            "duration_ms": 40.8,
+            "stages": {
+              "startup": {
+                "stage_id": "startup",
+                "scheduled_at": "2026-08-16T08:19:24.637473+00:00",
+                "started_at": "2026-08-16T08:19:24.637487+00:00",
+                "completed_at": "2026-08-16T08:19:24.638138+00:00",
+                "duration_ms": 0.7,
+                "blocking_dependencies": [],
+                "state": "completed",
+                "notes": [
+                  "startup stage only performs baseline guards and schedules post_startup_bootstrap",
+                  "startup guard completed and post_startup_bootstrap scheduled"
+                ]
+              },
+              "post_startup_bootstrap": {
+                "stage_id": "post_startup_bootstrap",
+                "scheduled_at": "2026-08-16T08:19:24.637507+00:00",
+                "started_at": "2026-08-16T08:19:24.637685+00:00",
+                "completed_at": "2026-08-16T08:19:24.678536+00:00",
+                "duration_ms": 40.8,
+                "blocking_dependencies": [
+                  "startup"
+                ],
+                "state": "completed",
+                "notes": [
+                  "baseline readiness complete -> post_startup_bootstrap scheduled",
+                  "database schema checks and fixed admin bootstrap only",
+                  "database unavailable: database unavailable via postgresql://admin:***@postgres:5432/devanalysis114?application_name=codeai-backend&connect_timeout=5 :: (psycopg2.OperationalError) connection to server at \"postgres\" (172.19.0.4), port 5432 failed: FATAL:  password authentication failed for user \"admin\"\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+                  "heavy DB schema correction stays in post_startup_bootstrap stage",
+                  "fixed admin account bootstrap runs only after schema bootstrap",
+                  "post-startup bootstrap completed; runtime_recovery and capability_warmup dispatched independently"
+                ]
+              },
+              "capability_warmup": {
+                "stage_id": "capability_warmup",
+                "scheduled_at": "2026-08-16T08:19:24.665564+00:00",
+                "started_at": "2026-08-16T08:19:24.665737+00:00",
+                "completed_at": "2026-08-16T08:19:33.815306+00:00",
+                "duration_ms": 9149.6,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "admin capability cache warmup scheduled after post-startup bootstrap",
+                  "capability warmup started; cache fill only, no runtime recovery work allowed",
+                  "admin capability cache warmup completed via capability map prebuild"
+                ]
+              },
+              "runtime_recovery": {
+                "stage_id": "runtime_recovery",
+                "scheduled_at": "2026-08-16T08:19:24.665140+00:00",
+                "started_at": null,
+                "completed_at": null,
+                "duration_ms": null,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "scheduled",
+                "notes": [
+                  "marketplace ad queue recovery and worker bootstrap scheduled after post-startup bootstrap",
+                  "database unavailable -> recovery skipped"
+                ]
+              }
+            }
+          }
+        },
+        "diagnostics": {
+          "generated_at": "2026-08-16T08:37:59.027443+00:00",
+          "resources": {
+            "memory": {
+              "available": true,
+              "state": "ok",
+              "note": "메모리 사용량이 정상 범위입니다.",
+              "total_mb": 63108.1,
+              "used_mb": 14382.5,
+              "available_mb": 48725.6,
+              "usage_percent": 22.8
+            },
+            "cpu": {
+              "available": true,
+              "state": "ok",
+              "note": "CPU 부하가 정상 범위입니다.",
+              "cpu_count": 32,
+              "load_1m": 0.41,
+              "load_ratio_percent": 1.3,
+              "usage_percent": 1.5
+            },
+            "gpu": {
+              "available": true,
+              "state": "ok",
+              "note": "VRAM 상주 비중은 높지만 실제 GPU 연산 부하는 매우 낮습니다. 로드된 모델 또는 캐시 상주 상태로 해석합니다.",
+              "devices": [
+                {
+                  "name": "NVIDIA GeForce RTX 5090",
+                  "memory_total_mb": 32607,
+                  "memory_used_mb": 30124,
+                  "utilization_gpu": 5,
+                  "memory_usage_percent": 92.4
+                }
+              ],
+              "device_count": 1,
+              "peak_memory_usage_percent": 92.4,
+              "peak_utilization_percent": 5.0
+            },
+            "redis_queue": {
+              "available": true,
+              "state": "ok",
+              "note": "redis:video_render_queue 연결 정상, queue=video_render_queue, depth=0",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "error": null
+            },
+            "ad_worker": {
+              "available": false,
+              "state": "warning",
+              "note": "광고 주문 worker heartbeat가 오래됐습니다. 장시간 렌더 중인지와 worker 루프 상태를 확인하세요.",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "bootstrap_enabled": true,
+              "started": false,
+              "heartbeat_age_sec": null,
+              "last_order_id": null
+            }
+          },
+          "alerts": [
+            {
+              "id": "ad_worker",
+              "severity": "warning",
+              "title": "광고 주문 worker 경고",
+              "message": "광고 주문 worker heartbeat가 오래됐습니다. 장시간 렌더 중인지와 worker 루프 상태를 확인하세요.",
+              "action": "worker 실행 진입점과 heartbeat를 점검하세요.",
+              "source_path": "backend.marketplace.router:get_ad_queue_runtime_status",
+              "diagnostic_detail": "worker_id=ad-render-worker-001 connection_id=redis:video_render_queue heartbeat_age_sec=None last_order_id=None",
+              "root_cause": "worker heartbeat가 멈췄거나 주문 소비가 지연돼 실행 파이프라인이 정상 순환하지 못하고 있습니다.",
+              "metrics": {
+                "worker_id": "ad-render-worker-001",
+                "connection_id": "redis:video_render_queue",
+                "heartbeat_age_sec": null,
+                "last_order_id": null
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "marketplace_manifest",
+      "ok": true,
+      "detail": "status=200 build=331 min=323",
+      "versionName": "1.0.246"
+    },
+    {
+      "name": "friend_chat_model_route",
+      "ok": true,
+      "detail": "base=http://host.docker.internal:8008/v1 model=Qwen/Qwen2.5-Coder-14B-Instruct-AWQ served=['Qwen/Qwen2.5-Coder-14B-Instruct-AWQ']"
+    },
+    {
+      "name": "friend_chat_text_llm",
+      "ok": true,
+      "detail": "status=200 response_len=115",
+      "response_preview": "춘천 맛집으로는 \"김밥천국\"이 추천돼요. 전통 한식 김밥을 맛볼 수 있어요. 주소는 춘천시 서원로 108번길 17-32, 1층에 위치해 있고, 평균적으로 10,000원 정도가 필요합니다. 맛있게 식사하세요!"
+    },
+    {
+      "name": "m4a_normalize_ssot",
+      "ok": true,
+      "detail": "docker normalized_bytes=84042 transcript_len=10",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "stt_trust": "high"
+    },
+    {
+      "name": "friend_chat_audio_silent_graceful",
+      "ok": true,
+      "detail": "status=422 detail=음성이 감지되지 않았습니다. 다시 말씀해 주세요."
+    },
+    {
+      "name": "friend_chat_audio_speech_m4a",
+      "ok": true,
+      "detail": "",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "response_preview": "춘천의 맛집 중 한 곳을 추천해 드릴게요. \"춘천 한옥 마을\"이라는 곳이 있어요. 이곳에서는 다양한 한식 음식을 맛볼 수 있습니다. 주소는 춘천시 서원동 1032-1, (서원동) 한옥마을 한옥마을 한옥마을 한옥마을 "
+    },
+    {
+      "name": "adb_apk_build",
+      "ok": true,
+      "detail": "device=R83W70QY11H build=331 min=323"
+    },
+    {
+      "name": "adb_sorisae_runtime",
+      "ok": false,
+      "detail": "segment_200=False tight_preupload_loop=False hallucination_422=False login_modal_open=False login_modal_closed=False tap_by_accessibility_id=False",
+      "log_tail": "08-16 17:38:24.793  3134  3173 I ReactNativeJS:   hasMediaDevices: true }\n08-16 17:38:24.807  3134  3173 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 17:38:24.808  3134  3173 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.\n08-16 17:38:24.809  3134  3173 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 17:38:24.809  3134  3173 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.\n08-16 17:38:24.828  3134  3173 I ReactNativeJS: Running \"main\"\n08-16 17:38:25.041  3134  3173 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"NETWORK_TRANSPORT_CHANGED\",\"timestamp\":\"2026-08-16T08:38:25.041Z\",\"token_ready\":false,\"user_ready\":false,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"transport\":\"unknown\",\"cellular_generation\":null,\"label\":\"알 수 없음\",\"is_connected\":false,\"is_internet_reachable\":null,\"carrier\":null,\"ssid\":null,\"is_accurate_voip_test_ready\":false,\"previous_label\":null}'\n08-16 17:38:25.045  3134  3173 I ReactNativeJS: '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'\n08-16 17:38:25.050  3134  3173 I ReactNativeJS: [VoIPToneService] AudioContext not available (React Native environment)\n08-16 17:38:25.054  3134  3173 I ReactNativeJS: '[FACE_CONVERSATION]', '{\"event\":\"silero_probe\",\"supported\":false}'\n08-16 17:38:25.069  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"initial_url\",\"outcome\":\"empty_url\"}'\n08-16 17:38:25.150  3134  3173 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 17:38:25.317  3134  3173 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 17:38:25.506  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"initial_url\",\"outcome\":\"empty_url\"}'\n08-16 17:38:25.564  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"active_initial_url\",\"outcome\":\"empty_url\"}'\n08-16 17:38:25.872  3134  3173 I ReactNativeJS: '[WORLDLINGCO_TUNING]', '{\"event\":\"remote_loaded\",\"updated_at\":\"2026-08-14T06:06:31Z\",\"version\":6}'\n08-16 17:38:26.198  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_600\",\"outcome\":\"empty_url\"}'\n08-16 17:38:27.219  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_1600\",\"outcome\":\"empty_url\"}'\n08-16 17:38:28.811  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_3200\",\"outcome\":\"empty_url\"}'\n08-16 17:38:30.822  3134  3173 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_5200\",\"outcome\":\"empty_url\"}'"
+    }
+  ]
+}

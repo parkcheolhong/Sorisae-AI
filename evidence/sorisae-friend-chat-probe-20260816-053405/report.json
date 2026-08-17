@@ -1,0 +1,212 @@
+{
+  "probe": "sorisae-friend-chat",
+  "timestamp_utc": "2026-08-16T05:35:34.851520+00:00",
+  "base_url": "https://metanova1004.com",
+  "min_apk_build": 323,
+  "probe_speech_text": "춘천 맛집 추천해줘",
+  "fixture_m4a": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\fixtures\\sorisae_probe_ko_speech.m4a",
+  "passed": false,
+  "checks": [
+    {
+      "name": "health",
+      "ok": true,
+      "detail": "status=200",
+      "body": {
+        "status": "ok",
+        "version": "2.2.0",
+        "modules": {
+          "api": "ok",
+          "memory": "ok",
+          "cpu": "ok",
+          "gpu": "ok",
+          "redis_queue": "ok",
+          "ad_worker": "ok"
+        },
+        "runtime": {
+          "bootstrap": {
+            "scheduled_at": "2026-08-16T05:05:11.013634+00:00",
+            "started_at": "2026-08-16T05:05:11.013913+00:00",
+            "completed_at": "2026-08-16T05:05:11.281078+00:00",
+            "duration_ms": 267.2,
+            "stages": {
+              "startup": {
+                "stage_id": "startup",
+                "scheduled_at": "2026-08-16T05:05:11.013589+00:00",
+                "started_at": "2026-08-16T05:05:11.013603+00:00",
+                "completed_at": "2026-08-16T05:05:11.014629+00:00",
+                "duration_ms": 1.0,
+                "blocking_dependencies": [],
+                "state": "completed",
+                "notes": [
+                  "startup stage only performs baseline guards and schedules post_startup_bootstrap",
+                  "startup guard completed and post_startup_bootstrap scheduled"
+                ]
+              },
+              "post_startup_bootstrap": {
+                "stage_id": "post_startup_bootstrap",
+                "scheduled_at": "2026-08-16T05:05:11.013643+00:00",
+                "started_at": "2026-08-16T05:05:11.013900+00:00",
+                "completed_at": "2026-08-16T05:05:11.281094+00:00",
+                "duration_ms": 267.2,
+                "blocking_dependencies": [
+                  "startup"
+                ],
+                "state": "completed",
+                "notes": [
+                  "baseline readiness complete -> post_startup_bootstrap scheduled",
+                  "database schema checks and fixed admin bootstrap only",
+                  "heavy DB schema correction stays in post_startup_bootstrap stage",
+                  "fixed admin account bootstrap runs only after schema bootstrap",
+                  "post-startup bootstrap completed; runtime_recovery and capability_warmup dispatched independently"
+                ]
+              },
+              "capability_warmup": {
+                "stage_id": "capability_warmup",
+                "scheduled_at": "2026-08-16T05:05:11.279139+00:00",
+                "started_at": "2026-08-16T05:05:11.279357+00:00",
+                "completed_at": "2026-08-16T05:05:19.550929+00:00",
+                "duration_ms": 8268.3,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "admin capability cache warmup scheduled after post-startup bootstrap",
+                  "capability warmup started; cache fill only, no runtime recovery work allowed",
+                  "admin capability cache warmup completed via capability map prebuild"
+                ]
+              },
+              "runtime_recovery": {
+                "stage_id": "runtime_recovery",
+                "scheduled_at": "2026-08-16T05:05:11.278094+00:00",
+                "started_at": "2026-08-16T05:05:11.278357+00:00",
+                "completed_at": "2026-08-16T05:05:11.293574+00:00",
+                "duration_ms": 15.2,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "marketplace ad queue recovery and worker bootstrap scheduled after post-startup bootstrap",
+                  "runtime recovery started; heavy runtime import allowed only in runtime_recovery stage",
+                  "runtime recovery completed; recovered=0"
+                ]
+              }
+            }
+          }
+        },
+        "diagnostics": {
+          "generated_at": "2026-08-16T05:34:05.867770+00:00",
+          "resources": {
+            "memory": {
+              "available": true,
+              "state": "ok",
+              "note": "메모리 사용량이 정상 범위입니다.",
+              "total_mb": 63108.1,
+              "used_mb": 14036.2,
+              "available_mb": 49071.9,
+              "usage_percent": 22.2
+            },
+            "cpu": {
+              "available": true,
+              "state": "ok",
+              "note": "CPU 부하가 정상 범위입니다.",
+              "cpu_count": 32,
+              "load_1m": 0.63,
+              "load_ratio_percent": 2.0,
+              "usage_percent": 2.2
+            },
+            "gpu": {
+              "available": true,
+              "state": "ok",
+              "note": "VRAM 상주 비중은 높지만 실제 GPU 연산 부하는 매우 낮습니다. 로드된 모델 또는 캐시 상주 상태로 해석합니다.",
+              "devices": [
+                {
+                  "name": "NVIDIA GeForce RTX 5090",
+                  "memory_total_mb": 32607,
+                  "memory_used_mb": 29974,
+                  "utilization_gpu": 4,
+                  "memory_usage_percent": 91.9
+                }
+              ],
+              "device_count": 1,
+              "peak_memory_usage_percent": 91.9,
+              "peak_utilization_percent": 4.0
+            },
+            "redis_queue": {
+              "available": true,
+              "state": "ok",
+              "note": "redis:video_render_queue 연결 정상, queue=video_render_queue, depth=0",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "error": null
+            },
+            "ad_worker": {
+              "available": true,
+              "state": "ok",
+              "note": "worker_id=ad-render-worker-001 heartbeat 정상, last_order_id=-",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "bootstrap_enabled": true,
+              "started": true,
+              "heartbeat_age_sec": 2.6,
+              "last_order_id": null
+            }
+          },
+          "alerts": []
+        }
+      }
+    },
+    {
+      "name": "marketplace_manifest",
+      "ok": true,
+      "detail": "status=200 build=331 min=323",
+      "versionName": "1.0.246"
+    },
+    {
+      "name": "friend_chat_model_route",
+      "ok": true,
+      "detail": "base=http://host.docker.internal:8008/v1 model=Qwen/Qwen2.5-Coder-14B-Instruct-AWQ served=['Qwen/Qwen2.5-Coder-14B-Instruct-AWQ']"
+    },
+    {
+      "name": "friend_chat_text_llm",
+      "ok": true,
+      "detail": "status=200 response_len=395",
+      "response_preview": "춘천에서 맛있는 곳이 많아요! 먼저 \"춘천 양식\"을 검색해 보세요. \"춘천 양식\"으로 검색하면 다양한 중국 요리 집들이 나옵니다. 예를 들어, \"춘천 양식\"으로 검색해보면 \"춘천 양식당\"이라는 곳이 나오는데, 주소는"
+    },
+    {
+      "name": "m4a_normalize_ssot",
+      "ok": true,
+      "detail": "docker normalized_bytes=84042 transcript_len=10",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "stt_trust": "high"
+    },
+    {
+      "name": "friend_chat_audio_silent_graceful",
+      "ok": false,
+      "detail": "status=200 detail="
+    },
+    {
+      "name": "friend_chat_audio_speech_m4a",
+      "ok": true,
+      "detail": "",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "response_preview": "춘천에서 맛있는 곳이 많아요! 한강공원 주변에 있는 '한강갈비'를 추천해요. 매콤한 갈비와 함께 한강의 아름다운 경치를 즐길 수 있어요. 주소는 춘천시 서문대로 100 한강공원, 전화번호는 031-233-0300이에"
+    },
+    {
+      "name": "adb_apk_build",
+      "ok": true,
+      "detail": "device=R83W70QY11H build=331 min=323"
+    },
+    {
+      "name": "adb_sorisae_runtime",
+      "ok": false,
+      "detail": "segment_200=False tight_preupload_loop=False hallucination_422=False",
+      "log_tail": "08-16 14:35:29.136 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_RESULT\",\"source\":\"pending_call_poll\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"status\":401,\"ok\":false}'\n08-16 14:35:29.136 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401\n08-16 14:35:30.638 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CONNECT_ATTEMPT\",\"timestamp\":\"2026-08-16T05:35:30.638Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\",\"api_base\":\"https://metanova1004.com\"}'\n08-16 14:35:30.823 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_ERROR\",\"timestamp\":\"2026-08-16T05:35:30.823Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\"}'\n08-16 14:35:30.823 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CLOSED\",\"timestamp\":\"2026-08-16T05:35:30.823Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\",\"code\":1006}'\n08-16 14:35:30.824 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_RETRY_SCHEDULED\",\"timestamp\":\"2026-08-16T05:35:30.824Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"close:1006\"}'\n08-16 14:35:31.360 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_START\",\"source\":\"pending_call_poll\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"has_pending_call\":false,\"has_active_call\":false}'\n08-16 14:35:31.570 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_RESULT\",\"source\":\"pending_call_poll\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"status\":401,\"ok\":false}'\n08-16 14:35:31.570 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401\n08-16 14:35:32.516 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CONNECT_ATTEMPT\",\"timestamp\":\"2026-08-16T05:35:32.515Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\",\"api_base\":\"https://metanova1004.com\"}'\n08-16 14:35:32.736 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_ERROR\",\"timestamp\":\"2026-08-16T05:35:32.735Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\"}'\n08-16 14:35:32.736 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CLOSED\",\"timestamp\":\"2026-08-16T05:35:32.736Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\",\"code\":1006}'\n08-16 14:35:32.736 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_RETRY_SCHEDULED\",\"timestamp\":\"2026-08-16T05:35:32.736Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"close:1006\"}'\n08-16 14:35:33.858 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_START\",\"source\":\"pending_call_poll\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"has_pending_call\":false,\"has_active_call\":false}'\n08-16 14:35:34.069 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_RESULT\",\"source\":\"pending_call_poll\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"status\":401,\"ok\":false}'\n08-16 14:35:34.070 15082 15176 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401\n08-16 14:35:34.436 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CONNECT_ATTEMPT\",\"timestamp\":\"2026-08-16T05:35:34.436Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\",\"api_base\":\"https://metanova1004.com\"}'\n08-16 14:35:34.630 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_ERROR\",\"timestamp\":\"2026-08-16T05:35:34.629Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\"}'\n08-16 14:35:34.630 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CLOSED\",\"timestamp\":\"2026-08-16T05:35:34.630Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"retry:close:1006\",\"code\":1006}'\n08-16 14:35:34.630 15082 15176 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_RETRY_SCHEDULED\",\"timestamp\":\"2026-08-16T05:35:34.630Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"close:1006\"}'"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "startedAt": "2026-08-09T18:00:38.8243757+09:00",
+  "outDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\backend\\tmp\\ui_api_failure_split_20260809_180038",
+  "api": {
+    "baseUrl": "http://127.0.0.1:8000",
+    "startedAt": "2026-08-09T18:00:38.8304974+09:00",
+    "probes": [
+      {
+        "name": "friend_chat",
+        "url": "http://127.0.0.1:8000/api/llm/voice/friend-chat",
+        "ok": false,
+        "status": 502,
+        "elapsedMs": 163.8,
+        "attempts": 2,
+        "error": "Response status code does not indicate success: 502 (Bad Gateway).",
+        "responseBody": ""
+      },
+      {
+        "name": "face_translate",
+        "url": "http://127.0.0.1:8000/api/llm/face/voice-translate",
+        "ok": true,
+        "status": 200,
+        "elapsedMs": 285.5,
+        "attempts": 1,
+        "error": "",
+        "responseBody": "{\"original_text\":\"안녕 스모크\",\"translated\":\"Hello Smoke\",\"engine\":\"nado-voice\",\"from\":\"ko\",\"to\":\"en\",\"detected_language\":\"ko\",\"audio_url\":null,\"audio_base64\":null,\"audio_format\":null,\"tts_delivery\":\"device_speech\",\"emotion\":null,\"stt_trust\":\"high\",\"stt_avg_logprob\":null,\"correlation_id\":\"face.interpret-mslkoq5s-b9a1db\",\"utterance_id\":\"face.interpret-mslkoq5s-b9a1db\",\"seq_id\":null,\"chunk_index\":null}"
+      }
+    ],
+    "summary": {
+      "total": 2,
+      "ok": 1,
+      "fail": 1
+    }
+  },
+  "uiExitCode": 1,
+  "uiHarExitCode": null,
+  "uiHarDir": "",
+  "adb": null,
+  "alert": null,
+  "notification": null,
+  "classification": "BOTH_FAIL",
+  "apiFail": 1,
+  "uiFail": 1,
+  "summaryPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\backend\\tmp\\ui_api_failure_split_20260809_180038\\smoke_summary.txt",
+  "resultJsonPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\backend\\tmp\\ui_api_failure_split_20260809_180038\\smoke_result.json",
+  "uiTopSummary": {
+    "reportPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\backend\\tmp\\ui_api_failure_split_20260809_180038\\ui_smoke_report.json",
+    "hasReport": false,
+    "pageTop3": [
+      "none"
+    ],
+    "requestFailedTop3": [
+      "none"
+    ],
+    "consoleErrorTop3": [
+      "none"
+    ],
+    "screenshotTop3": [
+      "none"
+    ],
+    "screenshotTop3Items": []
+  },
+  "adminPush": {
+    "attempted": true,
+    "success": false,
+    "classification": "BOTH_FAIL",
+    "admin_user_count": 2,
+    "success_user_count": 0,
+    "failure_user_count": 2,
+    "sent_at": "2026-08-09T09:00:56.279082Z",
+    "skipped_reason": null,
+    "users": [
+      {
+        "user_id": 1,
+        "email": "ui.admin.round@devanalysis.local",
+        "success": false
+      },
+      {
+        "user_id": 3,
+        "email": "119cash@naver.com",
+        "success": false
+      }
+    ]
+  }
+}

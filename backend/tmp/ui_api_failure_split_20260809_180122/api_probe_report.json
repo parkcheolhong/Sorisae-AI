@@ -1,0 +1,31 @@
+﻿{
+    "baseUrl":  "http://127.0.0.1:8000",
+    "startedAt":  "2026-08-09T18:01:22.2908036+09:00",
+    "probes":  [
+                   {
+                       "name":  "friend_chat",
+                       "url":  "http://127.0.0.1:8000/api/llm/voice/friend-chat",
+                       "ok":  false,
+                       "status":  502,
+                       "elapsedMs":  220.9,
+                       "attempts":  2,
+                       "error":  "The remote server returned an error: (502) Bad Gateway.",
+                       "responseBody":  ""
+                   },
+                   {
+                       "name":  "face_translate",
+                       "url":  "http://127.0.0.1:8000/api/llm/face/voice-translate",
+                       "ok":  true,
+                       "status":  200,
+                       "elapsedMs":  56.9,
+                       "attempts":  2,
+                       "error":  "",
+                       "responseBody":  "{\"original_text\":\"smoke fallback\",\"translated\":\"smoke fallback\",\"engine\":\"nado-voice\",\"from\":\"ko\",\"to\":\"en\",\"detected_language\":\"ko\",\"audio_url\":null,\"audio_base64\":null,\"audio_format\":null,\"tts_delivery\":\"device_speech\",\"emotion\":null,\"stt_trust\":\"high\",\"stt_avg_logprob\":null,\"correlation_id\":\"face.interpret-mslkpns3-c74036\",\"utterance_id\":\"face.interpret-mslkpns3-c74036\",\"seq_id\":null,\"chunk_index\":null}"
+                   }
+               ],
+    "summary":  {
+                    "total":  2,
+                    "ok":  1,
+                    "fail":  1
+                }
+}

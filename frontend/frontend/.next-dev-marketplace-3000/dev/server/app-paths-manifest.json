@@ -1,0 +1,5 @@
+{
+  "/[...adminOnly]/page": "app/[...adminOnly]/page.js",
+  "/admin/recovery/page": "app/admin/recovery/page.js",
+  "/api/proxy/route": "app/api/proxy/route.js"
+}

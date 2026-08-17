@@ -1,0 +1,891 @@
+--------- beginning of main
+08-15 20:29:53.017  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.024  7994  7994 I adbd    : adbd service requested 'shell,v2,raw:am start -W -a android.intent.action.VIEW -d 'worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe''
+08-15 20:29:53.035  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.050  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.068  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.078  1673  1709 I SemDvfsHyPerManager: acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-15 20:29:53.079  1170  1201 I HYPER-HAL: [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-15 20:29:53.080  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.080  1673  1701 I ChimeraSystemEventListener: Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+--------- beginning of system
+08-15 20:29:53.081  1673  2549 W ActivityTaskManager: callingPackage for (uid=2000, pid=27169) has no WPC
+08-15 20:29:53.081  1170  1201 I mtkpower_client: ret_hdl:10628
+08-15 20:29:53.081  1177  1239 I libPowerHal: [perfLockAcq] idx:0 hdl:10628 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10628
+08-15 20:29:53.081  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.082  1170  1201 I mtkpower_client: ret_hdl:10629
+08-15 20:29:53.082  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.082  1177  1239 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-15 20:29:53.082  1177  1239 I libPowerHal: [perfLockAcq] idx:1 hdl:10629 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10629
+08-15 20:29:53.082  1170  1201 I mtkpower_client: ret_hdl:10630
+08-15 20:29:53.082  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.082  1177  1239 I libPowerHal: [perfLockAcq] idx:2 hdl:10630 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10630
+08-15 20:29:53.083  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-15 20:29:53.084  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.084  1170  1201 I mtkpower_client: ret_hdl:10631
+08-15 20:29:53.084  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.084  1177  1239 I libPowerHal: [perfLockAcq] idx:3 hdl:10631 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10631
+08-15 20:29:53.084  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000, param:0
+08-15 20:29:53.084  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000 param:0
+08-15 20:29:53.085  1170  1201 I mtkpower_client: ret_hdl:10632
+08-15 20:29:53.085  1673  2549 D WindowManager: Transition is created, t=TransitionRecord{59703b4 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-15 20:29:53.085  1177  1239 I libPowerHal: [perfLockAcq] idx:4 hdl:10632 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10632
+08-15 20:29:53.085  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-15 20:29:53.085  1673  2549 D WindowManager: SyncGroup is created, id=443, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-15 20:29:53.085  1673  2549 W WindowManager: setSyncMethod, id=443, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-15 20:29:53.086  1673  2549 V WindowManager: Start collecting in Transition: TransitionRecord{59703b4 id=443 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-15 20:29:53.086  1673  2549 V WindowManager: Collecting in transition 443: ActivityRecord{5a59bdd u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-15 20:29:53.086  1673  2549 D ActivityTaskManager: TaskLaunchParamsModifier:task=null activity=ActivityRecord{5a59bdd u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-15 20:29:53.087  1673  2549 D ActivityTaskManager: TaskLaunchParamsModifier:task=Task{56d27ed #10924 type=standard A=10513:com.parkcheolhong.worldlinco} activity=ActivityRecord{5a59bdd u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-15 20:29:53.088  1673  2549 I SemDvfsHyPerManager: acquire hyper - AMS_ACT_START/1673@17, type = -999
+08-15 20:29:53.088  1673  2549 D ActivityManagerPerformance: AMP_acquire() ACT_START
+08-15 20:29:53.088  1170  1201 I HYPER-HAL: [RequestManager.cpp]acquire(): Acquired ID : 1428912  [1673 / 17]    HINT : AMS_ACT_START    list : 
+08-15 20:29:53.088  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10630, tid:1201
+08-15 20:29:53.089  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.089  1177  1239 I libPowerHal: [perfLockRel] hdl:10630, idx:2
+08-15 20:29:53.089  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-15 20:29:53.090  1170  1201 I mtkpower_client: ret_hdl:10633
+08-15 20:29:53.090  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10629, tid:1201
+08-15 20:29:53.090  1177  1239 I libPowerHal: [perfLockAcq] idx:5 hdl:10633 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10633
+08-15 20:29:53.090  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-15 20:29:53.091  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.091  1177  1239 I libPowerHal: [perfLockRel] hdl:10629, idx:1
+08-15 20:29:53.091  1673  2549 V WindowManager: Requesting StartTransition: TransitionRecord{59703b4 id=443 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-15 20:29:53.091  1170  1201 I mtkpower_client: ret_hdl:10634
+08-15 20:29:53.091  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.092  1177  1239 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-15 20:29:53.092  1177  1239 I libPowerHal: [perfLockAcq] idx:1 hdl:10634 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10634
+08-15 20:29:53.092  1170  1201 I mtkpower_client: ret_hdl:10635
+08-15 20:29:53.092  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10631, tid:1201
+08-15 20:29:53.092  1177  1239 I libPowerHal: [perfLockAcq] idx:2 hdl:10635 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10635
+08-15 20:29:53.092  1177  1239 I libPowerHal: vendor.samsung.: set gpu opp level: 1
+08-15 20:29:53.093  1673  2549 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-15 20:29:53.093  1673  2549 I Pageboost: stop alp
+08-15 20:29:53.093  3280  3280 E pageboostd: Received HALT command code 2
+08-15 20:29:53.094  2424  2484 V WindowManagerShell: Transition requested: android.os.BinderProxy@d4ef724 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10924 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=302244213 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@3c4628d} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{6b31c42 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-15 20:29:53.095  1177  1239 I libPowerHal: vendor.samsung.: set gpu opp level max: 0
+08-15 20:29:53.095  1673  2561 V WindowManager: Starting Transition 443, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-15 20:29:53.095  1673  2561 V Transition:  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-15 20:29:53.096 25848 25848 W unknown:BridgelessReact: ReactHost{0}.onHostPause(activity)
+08-15 20:29:53.097  2424  2484 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-15 20:29:53.097  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.098  1177  1239 I libPowerHal: [perfLockRel] hdl:10631, idx:3
+08-15 20:29:53.098  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000, param:-1
+08-15 20:29:53.098 25848 25848 D SensorManager: unregisterListener
+08-15 20:29:53.098  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000 param:-1
+08-15 20:29:53.099  1170  1201 I mtkpower_client: ret_hdl:10636
+08-15 20:29:53.099  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10632, tid:1201
+08-15 20:29:53.099  1673  1702 V WindowManager: SyncGroup 443: Finished!
+08-15 20:29:53.099  1177  1239 I libPowerHal: [perfLockAcq] idx:6 hdl:10636 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10636
+08-15 20:29:53.099  1673  1702 D ChangeTransitionController: onTransactionReady: TransitionRecord{59703b4 id=443 type=OPEN flags=0x0}
+08-15 20:29:53.099  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000, param:0
+08-15 20:29:53.099  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000 param:0
+08-15 20:29:53.099  1673  1702 V WindowManager: Start calculating TransitionInfo based on participants: {ActivityRecord{5a59bdd u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-15 20:29:53.100  1673  1702 V WindowManager:   Final targets: []
+08-15 20:29:53.100  1177  1239 I libPowerHal: [perfLockRel] hdl:10632, idx:4
+08-15 20:29:53.100  1673  1702 V WindowManager: Calling onTransitionReady: {id=443 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-15 20:29:53.100  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:53.100 25848 25848 W unknown:BridgelessReact: ReactHost{0}.ReactContext.onHostPause()
+08-15 20:29:53.100  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-15 20:29:53.100  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.101  2424  2484 V WindowManagerShell: onTransitionReady android.os.BinderProxy@d4ef724: {id=443 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-15 20:29:53.101  2424  2484 V WindowManagerShell: No transition roots in (#443)android.os.BinderProxy@d4ef724@0 so abort
+08-15 20:29:53.101  1673  1698 V WindowManager: Sent Transition #443 createdAt=08-15 20:29:53.084 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10924 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=302244213 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{bae9c85 Task{56d27ed #10924 type=standard A=10513:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{b4c5ae0 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-15 20:29:53.101  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-15 20:29:53.101  1673  1698 V WindowManager:     info={id=443 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-15 20:29:53.101  2424  2484 I SurfaceControl: apply is called, name=StartTransaction_SyncId<443>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-15 20:29:53.102  2424  2484 V WindowManagerShell: Transition animation finished (aborted=true), notifying core (#443)android.os.BinderProxy@d4ef724@0
+08-15 20:29:53.103  2424  2484 I SurfaceControl: apply is called, name=FinishTransaction_SyncId<443>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-15 20:29:53.103  1320 18491 I CameraService: onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-15 20:29:53.103  1177  1239 I libPowerHal: [perfLockAcq] idx:3 hdl:10637 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10637
+08-15 20:29:53.104  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-15 20:29:53.104  1673  2561 V WindowManager: Finish Transition: TransitionRecord{59703b4 id=443 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-15 20:29:53.104  1170  1201 I mtkpower_client: ret_hdl:10637
+08-15 20:29:53.105  1673  1698 V WindowManager: Finish Transition #443: created at 08-15 20:29:53.084 collect-started=1.121ms request-sent=7.192ms started=11.3ms ready=11.173ms sent=15.621ms finished=19.884ms
+08-15 20:29:53.108  2424  2484 V WindowManagerShell: Track 0 became idle
+08-15 20:29:53.108  2424  2484 V WindowManagerShell: All active transition animations finished
+08-15 20:29:53.109 25848 25848 W unknown:BridgelessReact: ReactHost{0}.onHostResume(activity)
+08-15 20:29:53.112  1365  1365 I Accelerometer: flush, flushCnt:1
+08-15 20:29:53.112  1320 18491 I CameraService: onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-15 20:29:53.115 25848 25848 D SensorManager: registerListener :: 1, mc3419, 66667, 0, 
+08-15 20:29:53.115  1365  1405 I Accelerometer: flush complete, flushCnt:0
+08-15 20:29:53.115  1673  1809 I SensorService: [SO] SENSOR_TYPE_META_DATA: 1
+08-15 20:29:53.115  1673  1809 I SensorService: [SO] Send Meta Event for AR
+08-15 20:29:53.117  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.118 25848 25848 W unknown:BridgelessReact: ReactHost{0}.ReactContext.onHostResume()
+08-15 20:29:53.125  1673  2561 V WindowManager: Relayout Window{d4e08d3 u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=800x1340 ty=1 d0
+08-15 20:29:53.126 25848 25848 I BLASTBufferQueue_Java: update, w= 800 h= 1340 mName = ViewRootImpl@71ba93c[MainActivity] mNativeObject= 0xb400007728950180 sc.mNativeObject= 0xb4000077288005c0 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3017 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 
+08-15 20:29:53.126 25848 25848 I ViewRootImpl@71ba93c[MainActivity]: Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=true req=(800,1340)0 dur=0 res=0x0 s={true 0xb4000077287f3800} ch=false seqId=0
+08-15 20:29:53.130 25848 25848 I ViewRootImpl@71ba93c[MainActivity]: registerCallbackForPendingTransactions
+08-15 20:29:53.130  1673  2561 V WindowManager: Relayout hash=d4e08d3, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030303
+08-15 20:29:53.130  1673  2561 V WindowManager:   fl=81810180
+08-15 20:29:53.130  1673  2561 V WindowManager:   pfl=16008040
+08-15 20:29:53.130  1673  2561 V WindowManager:   vsysui=1100
+08-15 20:29:53.130  1673  2561 V WindowManager:   apr=LIGHT_STATUS_BARS
+08-15 20:29:53.130  1673  2561 V WindowManager:   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-15 20:29:53.130  1673  2561 V WindowManager:   fitSides= naviIconColor=0}
+08-15 20:29:53.131 25848 25957 I ViewRootImpl@71ba93c[MainActivity]: mWNT: t=0xb4000074015ee680 mBlastBufferQueue=0xb400007728950180 fn= 72 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$6.onFrameDraw:5635 android.view.ViewRootImpl$2.onFrameDraw:2146 android.view.ThreadedRenderer$1.onFrameDraw:792 
+08-15 20:29:53.133  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.143  7994  7994 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:screencap -p /sdcard/after_bundle_ready_callback.png'
+08-15 20:29:53.143  1209  1209 I BufferQueueProducer: [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_25848#8184](this:0xb400007bc4c0e790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=1.24 dur=1614.66 max=1598.02 min=16.64
+08-15 20:29:53.146  1161  1161 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:3.313759,dur:2112.40,max:1598.65,min:14.73  
+08-15 20:29:53.151  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.168  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.200  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.217  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.218  1673  1848 D PowerManagerService: [api] userActivityFromNative : touch displayId=0 eventTime=302270334
+08-15 20:29:53.234  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.236  1673  2176 D NetdEventListenerService: DNS Requested by 101, 10513, 1
+08-15 20:29:53.251  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.284  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.288 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:53.301   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:53.301  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.303   592  5498 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:53.351  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.367  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.383  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.400  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.416  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.434  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.450  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.466  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.484  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.499  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.516  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.534  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.550  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.567  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.584  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.600  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.617  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.632  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.650  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.667  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.683  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.700  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.716  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.734  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.750  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.750 27174 27174 W BpBinder: Linking to death on android.gui.ISurfaceComposer but there are no threads (yet?) listening to incoming transactions. See ProcessState::startThreadPool and ProcessState::setThreadPoolMaxThreadCount. Generally you should setup the binder threadpool before other initialization steps.
+08-15 20:29:53.752  1673  2561 I EDMNativeHelperService: isScreenCaptureEnabled
+08-15 20:29:53.752  1673  2561 D RestrictionPolicy: isScreenCaptureEnabled : ret=true userId=0
+08-15 20:29:53.767  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.782  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.800  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.817  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.849  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.859 14311 19056 V MediaProvider: isAppCloneUserPair failed. Users: 0 and 0
+08-15 20:29:53.859 14311 19056 W MediaProvider: isAppCloneUserPair for user 0: false
+08-15 20:29:53.867  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.881  1673  2561 D SyncManager: userId - 0 auto - true
+08-15 20:29:53.882  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.889 27174 27174 W ProcessState: Extra binder thread started, but 0 threads requested. Do not use *startThreadPool when zero threads are requested.
+08-15 20:29:53.900  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.900 24712 24736 D MediaSync: loaded: 19ms, 0
+08-15 20:29:53.902 24712 24735 D SecMediaProvider: UPDATE /local/metadata 23785, 23791
+08-15 20:29:53.917  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.933  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.948 27174 27179 E ion     : ioctl c0044901 failed with code -1: Invalid argument
+08-15 20:29:53.949  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.961 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:53.967  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.971   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:53.972 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-08-15T11:29:53.969Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006"}'
+08-15 20:29:53.974   592  5459 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:53.975 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-08-15T11:29:53.973Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006","code":1006}'
+08-15 20:29:53.977 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_RETRY_SCHEDULED","timestamp":"2026-08-15T11:29:53.975Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"close:1006"}'
+08-15 20:29:53.980 25848 26993 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-15 20:29:53.983  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:53.992 25848 26993 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-15 20:29:53.995 25848 26993 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-15 20:29:54.000  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.002 25848 26993 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-15 20:29:54.010 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-15 20:29:54.012 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401
+08-15 20:29:54.017  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.033  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.035 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_background","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-15 20:29:54.040  7994  7994 I adbd    : adbd service requested 'shell,v2,raw:echo ping'
+08-15 20:29:54.050  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.057 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T11:29:54.056Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe"}'
+08-15 20:29:54.066  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.069 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T11:29:54.067Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"app_active","api_base":"https://metanova1004.com"}'
+08-15 20:29:54.083  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.116  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.124  7994  7994 I adbd    : adbd service requested 'shell,v2,raw:echo ping'
+08-15 20:29:54.133  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.165  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.183  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.200  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.215  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.229  1673  3429 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 100227, isSameBssidAndFreq true
+08-15 20:29:54.230  1673  2128 I SemWifiLinkQualityMonitor: Link stat: 0 / 0 / 1.00 (104) / 390 / -30.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-15 20:29:54.233  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.249  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.249  1673  1848 D PowerManagerService: [api] userActivityFromNative : touch displayId=0 eventTime=302271365
+08-15 20:29:54.265  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.282  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.300  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.304  1673  2561 I ActivityManager: Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }
+08-15 20:29:54.305  1673  2561 I ActivityManager: Enqueued broadcast Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }: 0
+08-15 20:29:54.307 14311 14311 I MediaServiceV2: Creating work for intent Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x1400010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaServiceV2 }
+08-15 20:29:54.308 14311 14311 I MediaServiceV2: Work enqueued for intent: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x1400010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaServiceV2 }
+08-15 20:29:54.309  1673  1698 I ActivityManager: Broadcast completed: result=0
+08-15 20:29:54.314 27174 27174 E IMGSRV  : :2631: GrallocUnregisterBuffer: Cannot free a locked buffer (ID=79747)
+08-15 20:29:54.314 27174 27174 E IMGMapper: freeBuffer:64 Failed to unregister native handle
+08-15 20:29:54.314 27174 27174 E Gralloc4: freeBuffer(0xb4000071b101a2a0) failed with 2
+08-15 20:29:54.315  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.328   565   565 D io_stats: !@ 179,0 r 3993198 104136854 w 5156723 37549504 d 317622 47578332 f 0 0 iot 3783736 0 th 0 0 0 pt 0 inp 0 0 302271.445
+08-15 20:29:54.330 27174 27174 W RefBase : RefBase: Explicit destruction, weak count = 0 (in 0x72365a6048). Use sp<> to manage this object.
+08-15 20:29:54.333  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.342 27174 27174 D RefBase :   #00 pc 0000000000107140  /apex/com.android.runtime/lib64/bionic/libc.so (__cxa_finalize+144) (BuildId: a099b7763756694a6e367b727ca5eb6d)
+08-15 20:29:54.342 27174 27174 D RefBase :   #01 pc 00000000000f8c38  /apex/com.android.runtime/lib64/bionic/libc.so (exit+24) (BuildId: a099b7763756694a6e367b727ca5eb6d)
+08-15 20:29:54.342 27174 27174 D RefBase :   #02 pc 000000000008d60c  /apex/com.android.runtime/lib64/bionic/libc.so (__libc_init+108) (BuildId: a099b7763756694a6e367b727ca5eb6d)
+08-15 20:29:54.348  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.360 14311 14821 D WM-SystemJobScheduler: Scheduling work ID 414bf238-782d-48b6-9e6b-e3dc25b95727Job ID 2266
+08-15 20:29:54.366  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.369 14311 14311 D WM-SystemJobService: onStartJob for WorkGenerationalId(workSpecId=414bf238-782d-48b6-9e6b-e3dc25b95727, generation=0)
+08-15 20:29:54.371 14311 14821 D WM-GreedyScheduler: Ignoring {WorkSpec: 947daf2d-0901-4fd9-8b46-985fac683950}. Requires device idle.
+08-15 20:29:54.371 14311 14821 D WM-GreedyScheduler: Ignoring {WorkSpec: c1beb874-c483-43af-9e66-91c679f173b0}. Requires device idle.
+08-15 20:29:54.371 14311 14821 D WM-GreedyScheduler: Ignoring {WorkSpec: 8fc894be-894b-4e23-90ae-33baef3b2d83}. Requires device idle.
+08-15 20:29:54.372 14311 14821 D WM-GreedyScheduler: Starting work for 414bf238-782d-48b6-9e6b-e3dc25b95727
+08-15 20:29:54.377 14311 14821 D WM-Processor: Processor: processing WorkGenerationalId(workSpecId=414bf238-782d-48b6-9e6b-e3dc25b95727, generation=0)
+08-15 20:29:54.380 14311 14821 D WM-Processor: Work WorkGenerationalId(workSpecId=414bf238-782d-48b6-9e6b-e3dc25b95727, generation=0) is already enqueued for processing
+08-15 20:29:54.382  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.391 14311 14311 D WM-WorkerWrapper: Starting work for com.android.providers.media.MediaServiceV2
+08-15 20:29:54.392 14311 27192 I MediaServiceV2: Work initiated for action [ android.intent.action.MEDIA_SCANNER_SCAN_FILE ]
+08-15 20:29:54.396  7994  7994 I adbd    : adbd service requested 'sync:'
+08-15 20:29:54.398  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.399 26027 26027 I SCS@AiSearch user 0: (ObserverWorker::AOSP_MP) [main] entering in startWork triggered by [content://media/external/file/1000004297]():  
+08-15 20:29:54.400 26027 26027 I SCS@AiSearch user 0: (BaseCollector::AOSP_MP) [main] entering in onChange():  
+08-15 20:29:54.400 26027 26071 I SCS@AiSearch user 0: (BaseCollector::AOSP_MP) [AOSP_MP-0] entering in collectChanges():  
+08-15 20:29:54.404  1673  2561 D PackageManager: setEnabledSetting : userId = 0 packageName = com.samsung.android.scs cmp = androidx.work.impl.background.systemalarm.RescheduleReceiver newState = 1 callingPackage = com.samsung.android.scs
+08-15 20:29:54.405  1673  2561 D ApplicationPolicy: getApplicationStateEnabled : pkg = com.samsung.android.scs userId : 0
+08-15 20:29:54.407  1673  2561 D ApplicationPolicy: getApplicationComponentState : pkg = com.samsung.android.scs userId : 0
+08-15 20:29:54.416  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.432  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.444  1673 19704 D SyncManager: userId - 0 auto - true
+08-15 20:29:54.449 14311 27192 I MediaServiceV2: Work ended for action [ android.intent.action.MEDIA_SCANNER_SCAN_FILE ]
+08-15 20:29:54.449  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.452 14311 14886 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=414bf238-782d-48b6-9e6b-e3dc25b95727, tags={ com.android.providers.media.MediaServiceV2 } ]
+08-15 20:29:54.457 14311 14311 D WM-Processor: Processor 414bf238-782d-48b6-9e6b-e3dc25b95727 executed; reschedule = false
+08-15 20:29:54.457 14311 14311 D WM-SystemJobService: 414bf238-782d-48b6-9e6b-e3dc25b95727 executed on JobScheduler
+08-15 20:29:54.466 26027 26071 I SCS@AiSearch user 0: (BaseCollector::AOSP_MP) fetchInternal values : maxSyncId: 1000004296 indexCount: 3391 sourceCount: 3391
+08-15 20:29:54.466  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.472 24712 24736 D MediaSync: loaded: 28ms, 1
+08-15 20:29:54.473  1673  2549 D SyncManager: userId - 0 auto - true
+08-15 20:29:54.473 24650 24703 I BaseThreadPoolExecutor: [#CMH#] Task com.samsung.cmh.core.task.MediaContentSyncTask@9b67282 is submitted
+08-15 20:29:54.478  7994  7994 I adbd    : adbd service requested 'shell,v2,raw:uiautomator dump /sdcard/after_bundle_ready_callback.xml'
+08-15 20:29:54.482  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.488 24712 26113 D MediaParseTask: scanItem: 1
+08-15 20:29:54.490 14311 14886 D WM-SystemJobScheduler: Scheduling work ID b00b30d5-443e-45cd-a46f-ab417822a9e1Job ID 2267
+08-15 20:29:54.491 24712 24735 D SecMediaProvider: UPDATE /local/metadata 23791, 23792
+08-15 20:29:54.493 24650 27195 I MediaContentSyncTask: [#CMH#] No of Row (SEC MP :  288, Max Id : 2147484520) (CMH : 287, Max Id : 2147484519) - Time :6
+08-15 20:29:54.497  1673  2561 D SyncManager: userId - 0 auto - true
+08-15 20:29:54.499  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.507 24712 27198 D LocationService: Begin: com.samsung.intent.action.UPDATE_LOCATION
+08-15 20:29:54.508 14311 14886 D WM-GreedyScheduler: Ignoring {WorkSpec: 947daf2d-0901-4fd9-8b46-985fac683950}. Requires device idle.
+08-15 20:29:54.508 14311 14886 D WM-GreedyScheduler: Ignoring {WorkSpec: c1beb874-c483-43af-9e66-91c679f173b0}. Requires device idle.
+08-15 20:29:54.508 14311 14886 D WM-GreedyScheduler: Ignoring {WorkSpec: 8fc894be-894b-4e23-90ae-33baef3b2d83}. Requires device idle.
+08-15 20:29:54.509 24712 27198 D LocationTask: delete null addr: 0
+08-15 20:29:54.511 24712 27198 D ModernSamsungCoreService: applyPending()
+08-15 20:29:54.511 14311 14886 D WM-GreedyScheduler: Cancelling work ID 414bf238-782d-48b6-9e6b-e3dc25b95727
+08-15 20:29:54.512 24712 27198 D LocationTask: LocationTask: 5ms
+08-15 20:29:54.512 24712 27198 D LocationService: End: com.samsung.intent.action.UPDATE_LOCATION
+08-15 20:29:54.513 24650 27195 I MediaContentSyncTask: [#CMH#] Rebuilding contents count 1
+08-15 20:29:54.513  1673 19704 D SyncManager: userId - 0 auto - true
+08-15 20:29:54.516  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.519 14311 14886 D WM-GreedyScheduler: Ignoring {WorkSpec: 947daf2d-0901-4fd9-8b46-985fac683950}. Requires device idle.
+08-15 20:29:54.520 14311 14886 D WM-GreedyScheduler: Ignoring {WorkSpec: c1beb874-c483-43af-9e66-91c679f173b0}. Requires device idle.
+08-15 20:29:54.520 14311 14886 D WM-GreedyScheduler: Ignoring {WorkSpec: 8fc894be-894b-4e23-90ae-33baef3b2d83}. Requires device idle.
+08-15 20:29:54.521 26027 26071 I SCS@AiSearch user 0: (IndexManager) [AOSP_MP-0] entering in addIndex():  
+08-15 20:29:54.523 26027 26071 I SCS@AiSearch user 0: (IndexManager) [INSERT] index=[com.google.android.providers.media], size=1
+08-15 20:29:54.523 26027 26071 I SCS@AiSearch user 0: (IndexManager) getIndexWriter(): indexName com.google.android.providers.media
+08-15 20:29:54.525 24650 27195 I MediaContentSyncTask: [#CMH#] Insert ITEM :  1
+08-15 20:29:54.532  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.534 24650 27195 I MediaContentSyncLocation: [#CMH#] Location Count MP :  0, CMH : 0
+08-15 20:29:54.534 24650 27195 I BaseThreadPoolExecutor: [#CMH#] afterExecute FutureTask
+08-15 20:29:54.534 24650 27195 I ControllerEventHandler: [#CMH#] New Task for wait content sync job 
+08-15 20:29:54.534 24650 27195 I BaseThreadPoolExecutor: [#CMH#] Task com.samsung.cmh.core.task.MediaContentSyncTask@9b67282 is submitted
+08-15 20:29:54.545 26027 26071 I SCS@AiSearch user 0: (IndexManager) [INSERT] Done
+08-15 20:29:54.545 26027 26071 I SCS@AiSearch user 0: (IndexSearcherManager) [AOSP_MP-0] entering in refreshSearcherManager():  refreshSearcherManager for com.google.android.providers.media
+08-15 20:29:54.547 24650 27195 I MediaContentSyncTask: [#CMH#] No of Row (SEC MP :  288, Max Id : 2147484520) (CMH : 288, Max Id : 2147484520) - Time :4
+08-15 20:29:54.549  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.561 24650 27195 I MediaContentSyncTask: [#CMH#] MP time stamp :  1786793394485, CMH time stamp : 1786793372223
+08-15 20:29:54.566  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.570 24650 27195 I MediaContentSyncTask: [#CMH#] Update ITEM  :  1
+08-15 20:29:54.578 24650 27195 I MediaContentSyncTask: [#CMH#] Update Cursor Count (1=>1), Time: 8 
+08-15 20:29:54.580 24650 27195 I MediaContentSyncTask: [#CMH#] Update ITEM :  1
+08-15 20:29:54.583  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.585  1170 27172 I mtkpower_client: perf_lock_rel, hdl:10628, tid:27172
+08-15 20:29:54.585  1177  1239 I libPowerHal: [perfLockRel] hdl:10628, idx:0
+08-15 20:29:54.586  1170 27172 I mtkpower_client: perf_lock_rel, hdl:10634, tid:27172
+08-15 20:29:54.586  1170 27172 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:27172
+08-15 20:29:54.587  1177  1239 I libPowerHal: [perfLockRel] hdl:10634, idx:1
+08-15 20:29:54.587  1170 27172 I mtkpower_client: ret_hdl:10638
+08-15 20:29:54.588  1170 27172 I mtkpower_client: perf_lock_rel, hdl:10633, tid:27172
+08-15 20:29:54.588  1177  1239 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-15 20:29:54.588  1177  1239 I libPowerHal: [perfLockAcq] idx:0 hdl:10638 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10638
+08-15 20:29:54.588  1170 27172 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:27172
+08-15 20:29:54.588  1177  1239 I libPowerHal: [perfLockRel] hdl:10633, idx:5
+08-15 20:29:54.589  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-15 20:29:54.589  1170 27172 I mtkpower_client: ret_hdl:10639
+08-15 20:29:54.590  1170 27172 I mtkpower_client: perf_lock_rel, hdl:10636, tid:27172
+08-15 20:29:54.590  1177  1239 I libPowerHal: [perfLockAcq] idx:1 hdl:10639 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10639
+08-15 20:29:54.590  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1138000 -1
+08-15 20:29:54.591  1170 27172 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:27172
+08-15 20:29:54.591  1177  1239 I libPowerHal: [perfLockRel] hdl:10636, idx:6
+08-15 20:29:54.591  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000, param:-1
+08-15 20:29:54.592  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000 param:-1
+08-15 20:29:54.592  1170 27172 I mtkpower_client: ret_hdl:10640
+08-15 20:29:54.592  1170 27172 I mtkpower_client: perf_lock_rel, hdl:10637, tid:27172
+08-15 20:29:54.592  1177  1239 I libPowerHal: [perfLockAcq] idx:4 hdl:10640 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10640
+08-15 20:29:54.593  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000, param:1
+08-15 20:29:54.593 24650 27195 I MediaContentSyncLocation: [#CMH#] Location Count MP :  0, CMH : 0
+08-15 20:29:54.593  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000 param:1
+08-15 20:29:54.593 24650 27195 I BaseThreadPoolExecutor: [#CMH#] afterExecute FutureTask
+08-15 20:29:54.593  1170 27172 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:27172
+08-15 20:29:54.593  1177  1239 I libPowerHal: [perfLockRel] hdl:10637, idx:3
+08-15 20:29:54.593 24650 24697 I ControllerEventHandler: [#CMH#] POI Feature is False 
+08-15 20:29:54.593 24650 27195 I ControllerEventHandler: [#CMH#] Alive Privacy Ignored Policy Called:  false
+08-15 20:29:54.593  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1138000 -1
+08-15 20:29:54.594  1170 27172 I mtkpower_client: ret_hdl:10641
+08-15 20:29:54.594  1170 27172 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 1422154
+08-15 20:29:54.594  1177  1239 I libPowerHal: [perfLockAcq] idx:3 hdl:10641 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10641
+08-15 20:29:54.594  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-15 20:29:54.599  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.605 26027 26071 I SCS@AiSearch user 0: (IndexSearcherManager) [AOSP_MP-0] leaving from refreshSearcherManager():  
+08-15 20:29:54.605 26027 26814 I SCS@AiSearch user 0: (IndexManager) [pool-12-thread-1] entering in commitIndexWriter():  
+08-15 20:29:54.605 26027 26071 I SCS@AiSearch user 0: (IndexManager) [AOSP_MP-0] entering in waitUntilCommitTaskFinished (idx=com.google.android.providers.media)():  
+08-15 20:29:54.616  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.632  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.640 26027 26814 I SCS@AiSearch user 0: (IndexManager) [pool-12-thread-1] leaving from commitIndexWriter():  
+08-15 20:29:54.640 26027 26071 I SCS@AiSearch user 0: (IndexManager) [AOSP_MP-0] leaving from waitUntilCommitTaskFinished (idx=com.google.android.providers.media)():  
+08-15 20:29:54.640 26027 26071 I SCS@AiSearch user 0: (IndexManager) addIndex(): done
+08-15 20:29:54.643 26027 26071 I SCS@AiSearch user 0: (BaseCollector::AOSP_MP) fetch: fetching took  215 ms
+08-15 20:29:54.643 26027 26071 I SCS@AiSearch user 0: (BaseCollector::AOSP_MP) fetchChanges: applied 1 items
+08-15 20:29:54.649  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.666  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.683  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.699  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.715  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.733  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.748  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.765  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.782  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.784 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:54.795   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:54.798   592  5498 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:54.799  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.816  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.824  1209  1209 I BufferQueueProducer: [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_25848#8184](this:0xb400007bc4c0e790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=1.78 dur=1681.07 max=1412.33 min=19.09
+08-15 20:29:54.827  1161  1161 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.784770,dur:1680.89,max:1412.90,min:19.17  
+08-15 20:29:54.848  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.865  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.882  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.898  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.916  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.931  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.949  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.966  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:54.982  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.006 27196 27196 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+08-15 20:29:55.014  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.021 27196 27196 I AndroidRuntime: Using default boot image
+08-15 20:29:55.021 27196 27196 I AndroidRuntime: Leaving lock profiling enabled
+08-15 20:29:55.022 27196 27196 D SecNativeFeatureCppIf: encoded
+08-15 20:29:55.022 27196 27196 D SecNativeFeatureCppIf: decoding and unzip finish
+08-15 20:29:55.022 27196 27196 D SecNativeFeatureCppIf: use unCompDataBuff. encoded
+08-15 20:29:55.023 27196 27196 D SecNativeFeatureCppIf: Free unCompDataBuff
+08-15 20:29:55.023 27196 27196 D AndroidRuntime: addProductProperty not brand or 7
+08-15 20:29:55.032  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.034 27196 27196 I app_process: Using non-generational CollectorTypeCC GC.
+08-15 20:29:55.048  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.065  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.082  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.090  1673  3228 I SemDvfsHyPerManager: acquire hyper - AMS_RESUME_TAIL/1673@19, type = -999
+08-15 20:29:55.091  1673  3228 I SemDvfsHyPerManager: acquire hyper - AMS_ACT_LAZY/1673@20, type = -999
+08-15 20:29:55.091  1673  3228 D ActivityManagerPerformance: AMP_acquire() TAIL
+08-15 20:29:55.091  1673  3228 D ActivityManagerPerformance: AMP_release() ACT_START
+08-15 20:29:55.091  1170  1201 I HYPER-HAL: [RequestManager.cpp]acquire(): Acquired ID : 1432297  [1673 / 19]    HINT : AMS_RESUME_TAIL    list : 
+08-15 20:29:55.092  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10639, tid:1201
+08-15 20:29:55.092  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.093  1177  1239 I libPowerHal: [perfLockRel] hdl:10639, idx:1
+08-15 20:29:55.093  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 -1 -1
+08-15 20:29:55.094  1170  1201 I mtkpower_client: ret_hdl:10642
+08-15 20:29:55.094  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10638, tid:1201
+08-15 20:29:55.094  1177  1239 I libPowerHal: [perfLockAcq] idx:5 hdl:10642 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10642
+08-15 20:29:55.094  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-15 20:29:55.095  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.095  1177  1239 I libPowerHal: [perfLockRel] hdl:10638, idx:0
+08-15 20:29:55.096  1170  1201 I mtkpower_client: ret_hdl:10643
+08-15 20:29:55.096  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10640, tid:1201
+08-15 20:29:55.096  1177  1239 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-15 20:29:55.096  1177  1239 I libPowerHal: [perfLockAcq] idx:1 hdl:10643 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10643
+08-15 20:29:55.096  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.096  1177  1239 I libPowerHal: [perfLockRel] hdl:10640, idx:4
+08-15 20:29:55.097  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000, param:-1
+08-15 20:29:55.097  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000 param:-1
+08-15 20:29:55.098  1170  1201 I mtkpower_client: ret_hdl:10644
+08-15 20:29:55.098  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10641, tid:1201
+08-15 20:29:55.098  1177  1239 I libPowerHal: [perfLockAcq] idx:0 hdl:10644 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10644
+08-15 20:29:55.098  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000, param:1
+08-15 20:29:55.098  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000 param:1
+08-15 20:29:55.098  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.099  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.099  1177  1239 I libPowerHal: [perfLockRel] hdl:10641, idx:3
+08-15 20:29:55.099  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1138000 -1
+08-15 20:29:55.100  1170  1201 I mtkpower_client: ret_hdl:10645
+08-15 20:29:55.100  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10642, tid:1201
+08-15 20:29:55.100  1177  1239 I libPowerHal: [perfLockAcq] idx:3 hdl:10645 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10645
+08-15 20:29:55.100  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-15 20:29:55.101  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.101  1177  1239 I libPowerHal: [perfLockRel] hdl:10642, idx:5
+08-15 20:29:55.101  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 -1 -1
+08-15 20:29:55.102  1170  1201 I mtkpower_client: ret_hdl:10646
+08-15 20:29:55.102  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10643, tid:1201
+08-15 20:29:55.102  1177  1239 I libPowerHal: [perfLockAcq] idx:4 hdl:10646 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10646
+08-15 20:29:55.102  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1944000 -1 1138000 -1
+08-15 20:29:55.103  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.103  1177  1239 I libPowerHal: [perfLockRel] hdl:10643, idx:1
+08-15 20:29:55.104  1170  1201 I mtkpower_client: ret_hdl:10647
+08-15 20:29:55.104  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10635, tid:1201
+08-15 20:29:55.104  1177  1239 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-15 20:29:55.104  1177  1239 I libPowerHal: [perfLockAcq] idx:1 hdl:10647 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10647
+08-15 20:29:55.104  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10644, tid:1201
+08-15 20:29:55.104  1177  1239 I libPowerHal: [perfLockRel] hdl:10635, idx:2
+08-15 20:29:55.104  1177  1239 I libPowerHal: vendor.samsung.: set gpu opp level: 2
+08-15 20:29:55.106  1177  1239 I libPowerHal: vendor.samsung.: set gpu opp level max: 0
+08-15 20:29:55.108  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.108  1177  1239 I libPowerHal: [perfLockRel] hdl:10644, idx:0
+08-15 20:29:55.108  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000, param:-1
+08-15 20:29:55.109  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000 param:-1
+08-15 20:29:55.109  1170  1201 I mtkpower_client: ret_hdl:10648
+08-15 20:29:55.109  1170  1201 I mtkpower_client: perf_lock_rel, hdl:10645, tid:1201
+08-15 20:29:55.109  1177  1239 I libPowerHal: [perfLockAcq] idx:0 hdl:10648 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10648
+08-15 20:29:55.109  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000, param:1
+08-15 20:29:55.109  1177  1239 I libPowerHal: [PE] vendor.samsung. update cmd:1000000 param:1
+08-15 20:29:55.110  1170  1201 I mtkpower_client: perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-15 20:29:55.110  1177  1239 I libPowerHal: [perfLockRel] hdl:10645, idx:3
+08-15 20:29:55.110  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1138000 -1
+08-15 20:29:55.111  1170  1201 I mtkpower_client: ret_hdl:10649
+08-15 20:29:55.111  1177  1239 I libPowerHal: [perfLockAcq] idx:2 hdl:10649 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:10649
+08-15 20:29:55.111  1170  1201 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 1428912
+08-15 20:29:55.111  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1750000 -1 1138000 -1
+08-15 20:29:55.115  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.132  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.147  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.165  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.181  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.199  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.215  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.233  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.248  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.254  1673  2176 D NetdEventListenerService: DNS Requested by 101, 10513, 0
+08-15 20:29:55.255 27196 27196 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+08-15 20:29:55.264  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.281  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.297  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.302 27196 27196 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+08-15 20:29:55.302 27196 27196 D app_process: Time zone APEX ICU file found: /apex/com.android.tzdata/etc/icu/icu_tzdata.dat
+08-15 20:29:55.303 27196 27196 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt72l.dat
+08-15 20:29:55.307 27196 27196 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+08-15 20:29:55.311 27196 27196 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+08-15 20:29:55.314  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.314 27196 27196 I app_process: Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+08-15 20:29:55.331  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.347  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.365  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.365  1673  1848 D PowerManagerService: [api] userActivityFromNative : touch displayId=0 eventTime=302272481
+08-15 20:29:55.368 27196 27196 E SemDvfsManager_JNI: SemDvfsManager: registerfunction enter
+08-15 20:29:55.369 27196 27196 E SemAffinityControl: SemAffinityControl: registerfunction enter
+08-15 20:29:55.382  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.398  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.400  1170 27200 I mtkpower_client: perf_lock_rel, hdl:10646, tid:27200
+08-15 20:29:55.401  1170 27200 I mtkpower_client: perf_lock_rel, hdl:10647, tid:27200
+08-15 20:29:55.401  1177  1239 I libPowerHal: [perfLockRel] hdl:10646, idx:4
+08-15 20:29:55.401  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: 1750000 -1 -1 -1
+08-15 20:29:55.402  1170 27200 I mtkpower_client: perf_lock_rel, hdl:10648, tid:27200
+08-15 20:29:55.402  1177  1239 I libPowerHal: [perfLockRel] hdl:10647, idx:1
+08-15 20:29:55.403  1177  1239 I libPowerHal: [perfLockRel] hdl:10648, idx:0
+08-15 20:29:55.403  1170 27200 I mtkpower_client: perf_lock_rel, hdl:10649, tid:27200
+08-15 20:29:55.403  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000, param:-1
+08-15 20:29:55.404  1177  1239 I libPowerHal: [PD] vendor.samsung. update cmd:1000000 param:-1
+08-15 20:29:55.404  1177  1239 I libPowerHal: [perfLockRel] hdl:10649, idx:2
+08-15 20:29:55.404  1170 27200 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 1432297
+08-15 20:29:55.404  1177  1239 I libPowerHal: vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 -1 -1
+08-15 20:29:55.410 27196 27196 W libc    : Access denied finding property "ro.product.name_for_attestation"
+08-15 20:29:55.410  1129  1129 E audit   : type=1400 audit(1786793395.404:200929): avc:  denied  { read } for  pid=27196 comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=11308 scontext=u:r:shell:s0 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 SEPF_SM-T225N_12_0001 audit_filtered
+08-15 20:29:55.410 27196 27196 W libc    : Access denied finding property "ro.product.brand_for_attestation"
+08-15 20:29:55.410  1129  1129 E audit   : type=1400 audit(1786793395.404:200930): avc:  denied  { read } for  pid=27196 comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=11308 scontext=u:r:shell:s0 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 SEPF_SM-T225N_12_0001 audit_filtered
+08-15 20:29:55.410 27196 27196 W libc    : Access denied finding property "ro.product.model_for_attestation"
+08-15 20:29:55.410  1129  1129 E audit   : type=1400 audit(1786793395.404:200931): avc:  denied  { read } for  pid=27196 comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=11308 scontext=u:r:shell:s0 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 SEPF_SM-T225N_12_0001 audit_filtered
+08-15 20:29:55.414 27196 27196 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+08-15 20:29:55.415 27196 27196 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+08-15 20:29:55.425 27196 27196 D UiAutomationConnection: Created on user UserHandle{0}
+08-15 20:29:55.425 27196 27196 I UiAutomation: Initialized for user 0 on display 0
+08-15 20:29:55.425 27196 27196 W UiAutomation: Created with deprecatead constructor, assumes DEFAULT_DISPLAY
+08-15 20:29:55.429  1673 19704 D AccessibilityManagerService: changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+08-15 20:29:55.430  1673 19704 I UiAutomationManager: Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation) when called by user 0
+08-15 20:29:55.431  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.432  1209  1939 E BufferQueueDebug: [WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199](this:0xb400007bc68d2790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199'
+08-15 20:29:55.432  1209  1939 I BufferQueueDebug: [WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199](this:0xb400007bc68d2790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-15 20:29:55.433  1209  1939 I SurfaceFlinger: id=8199 createSurf, flag=84004, WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199
+08-15 20:29:55.434  1673 19704 D KNOX_MDM_SettingsProvider: isChangeAllowed() : name = accessibility_enabled
+08-15 20:29:55.435  1673 19704 D WindowMagnificationMgr: requestConnection :false mConnectionState : 3
+08-15 20:29:55.435  1673 19704 W WindowMagnificationMgr: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+08-15 20:29:55.441  1673 19704 D KNOX_MDM_SettingsProvider: isChangeAllowed() : name = accessibility_enabled
+08-15 20:29:55.442  1673 19704 D WindowMagnificationMgr: requestConnection :false mConnectionState : 3
+08-15 20:29:55.442  1673 19704 W WindowMagnificationMgr: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+08-15 20:29:55.446  1673 19704 W WindowManager: Cannot find window which accessibility connection is added to
+08-15 20:29:55.461  1673  1673 I AccessibilityManagerService: semIsAccessibilityServiceEnabled()
+08-15 20:29:55.461  1673  1673 I AccessibilityManagerService: accesibilityService is null
+08-15 20:29:55.461  1673  1673 I AccessibilityManagerService: semIsAccessibilityServiceEnabled()
+08-15 20:29:55.461  1673  1673 I AccessibilityManagerService: accesibilityService is null
+08-15 20:29:55.461 26403 26403 I SafetyCenterAccessibilityListener: accessibility event occurred, safety center feature not enabled.
+08-15 20:29:55.461  1673  1673 D AS.AudioService: Accessibility volume enabled = false
+08-15 20:29:55.461  1673  1673 D BatterySaverPolicy: accessibility changed to true, updating policy.
+08-15 20:29:55.465  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.481  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.494 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:55.498  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.504   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:55.507   592  5459 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:55.514  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.518 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T11:29:55.515Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"active_initial_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe"}'
+08-15 20:29:55.525 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-08-15T11:29:55.523Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"app_active"}'
+08-15 20:29:55.527 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-08-15T11:29:55.525Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"app_active","code":1006}'
+08-15 20:29:55.528 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_RETRY_SCHEDULED","timestamp":"2026-08-15T11:29:55.527Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"close:1006"}'
+08-15 20:29:55.530  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.531 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_background","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-15 20:29:55.533 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401
+08-15 20:29:55.540 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-15 20:29:55.548  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.564  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.582  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.598  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.613  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.630  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.665  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.681  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.697  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.714  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.732  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.747  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.764  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.781  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.798  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.814  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.830  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.846  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.863  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.881  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.898  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.914  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.931  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.946  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.958 14311 14311 D WM-DelayedWorkTracker: Scheduling work b00b30d5-443e-45cd-a46f-ab417822a9e1
+08-15 20:29:55.959 14311 14311 D WM-GreedyScheduler: Starting tracking for b00b30d5-443e-45cd-a46f-ab417822a9e1
+08-15 20:29:55.961 14311 14664 D WM-ConstraintTracker: BatteryNotLowTracker: initial state = true
+08-15 20:29:55.961 14311 14664 D WM-BrdcstRcvrCnstrntTrc: BatteryNotLowTracker: registering receiver
+08-15 20:29:55.964 14311 14664 D WM-GreedyScheduler: Constraints met: Scheduling work ID WorkGenerationalId(workSpecId=b00b30d5-443e-45cd-a46f-ab417822a9e1, generation=0)
+08-15 20:29:55.965  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.968 14311 14664 D WM-Processor: Processor: processing WorkGenerationalId(workSpecId=b00b30d5-443e-45cd-a46f-ab417822a9e1, generation=0)
+08-15 20:29:55.976 14311 14311 D WM-WorkerWrapper: Starting work for com.android.providers.media.photopicker.sync.ProactiveSyncWorker
+08-15 20:29:55.977 14311 27221 I PSyncWorker: Starting proactive picker sync from sync source: 1
+08-15 20:29:55.979 14311 27221 I PickerSyncTracker: Created new sync future java.util.concurrent.CompletableFuture@ddeda83[Not completed, 1 dependents]. Future map: {b00b30d5-443e-45cd-a46f-ab417822a9e1=java.util.concurrent.CompletableFuture@ddeda83[Not completed, 1 dependents]}
+08-15 20:29:55.980 14311 27221 D PickerSyncController: syncAllMediaFromProvider() LOCAL, auth=com.android.providers.media.photopicker, retry=true
+08-15 20:29:55.980 14311 27221 D PickerSyncController: getSyncRequestParams() LOCAL, auth=com.android.providers.media.photopicker
+08-15 20:29:55.981  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:55.986 14311 27221 D PickerSyncController:    Latest ID/Gen=8b526d64698e04f4:external_primary/23792
+08-15 20:29:55.986 14311 27221 D PickerSyncController:    Cached ID/Gen=8b526d64698e04f4:external_primary/23786
+08-15 20:29:55.986 14311 27221 D PickerSyncController:    RESULT=SyncRequestParams{type=MEDIA_INCREMENTAL, gen=23786, latest=Bundle[{last_media_sync_generation=23792, media_collection_id=8b526d64698e04f4:external_primary}], pageSize=1000}
+08-15 20:29:55.987 14311 27221 I PickerSyncController: Executing SyncRemove. isLocal: true. authority: com.android.providers.media.photopicker
+08-15 20:29:55.987 14311 27221 D PickerSyncLockManager: Trying to acquire lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = [] with timeout.
+08-15 20:29:55.987 14311 27221 D CloseableReentrantLock: Successfully acquired lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Locked by thread pool-3-thread-72]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:55.987 14311 27221 D CloseableReentrantLock: Successfully released lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:55.990 14311 27221 D PickerSyncLockManager: Trying to acquire lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = [] with timeout.
+08-15 20:29:55.990 14311 27221 D CloseableReentrantLock: Successfully acquired lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Locked by thread pool-3-thread-72]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:55.990 14311 27221 D PickerSyncController: Clearing next page token for key: local_provider:media_remove:resume
+08-15 20:29:55.990 14311 27221 D CloseableReentrantLock: Successfully released lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:55.990 14311 27221 D PickerNotificationSender: Sending a notification for media update
+08-15 20:29:55.992  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:55.992 14311 27221 D PickerNotificationSender: Sending a notification for merged album media update Favorites
+08-15 20:29:55.992 14311 27221 D PickerNotificationSender: Sending a notification for album media update Favorites
+08-15 20:29:55.994  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:55.994 14311 27221 D PickerNotificationSender: Sending a notification for merged album media update Videos
+08-15 20:29:55.994 14311 27221 D PickerNotificationSender: Sending a notification for album media update Videos
+08-15 20:29:55.996  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:55.997 14311 27221 I PickerSyncController: Paged sync successful. QueryArgs: Bundle[{android.provider.extra.SYNC_GENERATION=23786, android.provider.extra.PAGE_SIZE=1000}] Total Rows: 0
+08-15 20:29:55.997 14311 27221 I PickerSyncController: Executing SyncAdd. isLocal: true. authority: com.android.providers.media.photopicker
+08-15 20:29:55.997 14311 27221 D PickerSyncLockManager: Trying to acquire lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = [] with timeout.
+08-15 20:29:55.997 14311 27221 D CloseableReentrantLock: Successfully acquired lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Locked by thread pool-3-thread-72]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:55.997 14311 27221 D CloseableReentrantLock: Successfully released lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:55.998 14311 27221 D ExternalDbFacade: Token received for queryMedia = null
+08-15 20:29:56.002 14311 27221 W PickerSyncTracker: Attempted to complete sync future that is not currently tracked for work id: b00b30d5-443e-45cd-a46f-ab417822a9e1. Future map: {}
+08-15 20:29:56.007 14311 27221 D PickerSyncLockManager: Trying to acquire lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = [] with timeout.
+08-15 20:29:56.007 14311 27221 D CloseableReentrantLock: Successfully acquired lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Locked by thread pool-3-thread-72]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:56.007 14311 27221 D PickerSyncController: Saving next page token: 1786793394000|1000004297 for key: local_provider:media_add:resume
+08-15 20:29:56.007 14311 27221 D CloseableReentrantLock: Successfully released lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:56.008  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.009 14311 27221 D PickerNotificationSender: Sending a notification for media update
+08-15 20:29:56.010  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.011 14311 27221 D PickerNotificationSender: Sending a notification for merged album media update Favorites
+08-15 20:29:56.011 14311 27221 D PickerNotificationSender: Sending a notification for album media update Favorites
+08-15 20:29:56.012  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.013 14311 27221 D PickerNotificationSender: Sending a notification for merged album media update Videos
+08-15 20:29:56.013 14311 27221 D PickerNotificationSender: Sending a notification for album media update Videos
+08-15 20:29:56.014  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.015 14311 27221 D ExternalDbFacade: Token received for queryMedia = 1786793394000|1000004297
+08-15 20:29:56.019 14311 27221 D PickerSyncLockManager: Trying to acquire lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = [] with timeout.
+08-15 20:29:56.019 14311 27221 D CloseableReentrantLock: Successfully acquired lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Locked by thread pool-3-thread-72]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:56.019 14311 27221 D PickerSyncController: Clearing next page token for key: local_provider:media_add:resume
+08-15 20:29:56.019 14311 27221 D CloseableReentrantLock: Successfully released lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@ac2db18[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+08-15 20:29:56.019 14311 27221 D PickerNotificationSender: Sending a notification for media update
+08-15 20:29:56.020  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.021 14311 27221 D PickerNotificationSender: Sending a notification for merged album media update Favorites
+08-15 20:29:56.021 14311 27221 D PickerNotificationSender: Sending a notification for album media update Favorites
+08-15 20:29:56.023  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.023 14311 27221 D PickerNotificationSender: Sending a notification for merged album media update Videos
+08-15 20:29:56.023 14311 27221 D PickerNotificationSender: Sending a notification for album media update Videos
+08-15 20:29:56.025  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:56.025 14311 27221 I PickerSyncController: Paged sync successful. QueryArgs: Bundle[{android.provider.extra.PAGE_TOKEN=1786793394000|1000004297, android.provider.extra.SYNC_GENERATION=23786, android.provider.extra.PAGE_SIZE=1000}] Total Rows: 1
+08-15 20:29:56.026 14311 27221 W PickerSyncTracker: Attempted to complete sync future that is not currently tracked for work id: b00b30d5-443e-45cd-a46f-ab417822a9e1. Future map: {}
+08-15 20:29:56.026 14311 27221 I PickerSyncTracker: Marked sync future complete for work id: b00b30d5-443e-45cd-a46f-ab417822a9e1. Future map: {}
+08-15 20:29:56.026 14311 27221 I PSyncWorker: Completed picker proactive sync complete from local provider.
+08-15 20:29:56.028 14311 14884 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=b00b30d5-443e-45cd-a46f-ab417822a9e1, tags={ com.android.providers.media.photopicker.sync.ProactiveSyncWorker } ]
+08-15 20:29:56.031  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.032 14311 14311 D WM-Processor: Processor b00b30d5-443e-45cd-a46f-ab417822a9e1 executed; reschedule = false
+08-15 20:29:56.032 14311 14311 D WM-GreedyScheduler: Stopping tracking for WorkGenerationalId(workSpecId=b00b30d5-443e-45cd-a46f-ab417822a9e1, generation=0)
+08-15 20:29:56.039 14311 14884 D WM-GreedyScheduler: Cancelling work ID b00b30d5-443e-45cd-a46f-ab417822a9e1
+08-15 20:29:56.044 14311 14884 D WM-GreedyScheduler: Ignoring {WorkSpec: 947daf2d-0901-4fd9-8b46-985fac683950}. Requires device idle.
+08-15 20:29:56.044 14311 14884 D WM-GreedyScheduler: Ignoring {WorkSpec: c1beb874-c483-43af-9e66-91c679f173b0}. Requires device idle.
+08-15 20:29:56.044 14311 14884 D WM-GreedyScheduler: Ignoring {WorkSpec: 8fc894be-894b-4e23-90ae-33baef3b2d83}. Requires device idle.
+08-15 20:29:56.044 14311 14884 D WM-BrdcstRcvrCnstrntTrc: BatteryNotLowTracker: unregistering receiver
+08-15 20:29:56.047  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.064  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.081  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.114  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.130  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.146 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:56.147  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.157   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:56.160   592  5498 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:56.163  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.180  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.189  1209  1209 I BufferQueueProducer: [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_25848#8184](this:0xb400007bc4c0e790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.73 dur=1364.97 max=1364.97 min=1364.97
+08-15 20:29:56.191  1161  1161 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:2.931221,dur:1364.62,max:713.21,min:17.34  
+08-15 20:29:56.197  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.213  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.231  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.247  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.264  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.280  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.296  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.313  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.331  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.332   565   565 D io_stats: !@ 179,0 r 3993498 104139114 w 5156809 37550000 d 317622 47578332 f 0 0 iot 3783824 0 th 0 0 0 pt 0 inp 0 0 302273.449
+08-15 20:29:56.347  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.364  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.379  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.380  1673  1848 D PowerManagerService: [api] userActivityFromNative : touch displayId=0 eventTime=302273496
+08-15 20:29:56.397  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.413  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.430  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.446  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.463  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.479  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.496  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.514  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.530  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.564  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.579  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.596  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.630  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.646  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.662  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.666 26027 26071 I SCS@AiSearch user 0: (BaseCollector::AOSP_MP) doesDataKeepChanging: postpone count: 0 - source count: very first = 3400, previous = 3400, current = 3401
+08-15 20:29:56.679  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.713  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.719 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:56.729  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.729 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-15 20:29:56.731   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:56.732 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401
+08-15 20:29:56.734   592  5459 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:56.763  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.796  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.812  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.830  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.847  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.897  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.913  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.930  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.945  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.962  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.978  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:56.997  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.013  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.029  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.046  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.063  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.095  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.113  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.130  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.146  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.162  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.178  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.195  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.213  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.229  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.234  1673  3429 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 100228, isSameBssidAndFreq true
+08-15 20:29:57.235  1673  2128 I SemWifiLinkQualityMonitor: Link stat: 0 / 0 / 1.00 (268) / 390 / -30.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-15 20:29:57.246  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.263  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.268 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:57.271  1673  2176 D NetdEventListenerService: DNS Requested by 101, 10513, 0
+08-15 20:29:57.276 27196 27196 D SemCscFeature: Encoded
+08-15 20:29:57.278  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.280   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:57.282   592  5459 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:57.296  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.312  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.329  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.346  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.350 25848 25890 I hong.worldlinco: Waiting for a blocking GC ProfileSaver
+08-15 20:29:57.361  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.378  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.380  1385  1385 I thermal_repeater: socket -1
+08-15 20:29:57.388 14311 14892 V MediaProvider: isAppCloneUserPair failed. Users: 0 and 0
+08-15 20:29:57.388 14311 14892 W MediaProvider: isAppCloneUserPair for user 0: false
+08-15 20:29:57.396  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.406  1673  1800 D SyncManager: userId - 0 auto - true
+08-15 20:29:57.411  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.429  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.446  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.463  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.465 25848 25855 I hong.worldlinco: NativeAlloc concurrent copying GC freed 7803KB AllocSpace bytes, 34(1312KB) LOS objects, 49% free, 14MB/28MB, paused 319us,117us total 182.329ms
+08-15 20:29:57.466 25848 25890 I hong.worldlinco: WaitForGcToComplete blocked ProfileSaver on NativeAlloc for 115.899ms
+08-15 20:29:57.477 25848 25857 W hong.worldlinco: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/SamsungTTS_tiny_only/SamsungTTS_tiny_only.apk' with 1 weak references
+08-15 20:29:57.477 25848 25857 W hong.worldlinco: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/base.apk' with 1 weak references
+08-15 20:29:57.478 25848 25857 W hong.worldlinco: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/split_config.arm64_v8a.apk' with 1 weak references
+08-15 20:29:57.478 25848 25857 W hong.worldlinco: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/split_config.ko.apk' with 1 weak references
+08-15 20:29:57.478 25848 25857 W hong.worldlinco: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/split_config.tvdpi.apk' with 1 weak references
+08-15 20:29:57.479  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.479  1673  1848 D PowerManagerService: [api] userActivityFromNative : touch displayId=0 eventTime=302274595
+08-15 20:29:57.500 27196 27196 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@2f43d; boundsInParent: Rect(0, 0 - 380, 89); boundsInScreen: Rect(13, 1383 - 393, 1340); boundsInWindow: Rect(13, 1383 - 393, 1340); packageName: com.parkcheolhong.worldlinco; className: android.widget.Button; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: worldlinco-home-quick-voip; tooltipText: null; containerTitle: null; viewIdResName: worldlinco-home-quick-voip; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: true; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_CLICK - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+08-15 20:29:57.500 27196 27196 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@2ff80; boundsInParent: Rect(0, 0 - 380, 89); boundsInScreen: Rect(406, 1383 - 786, 1340); boundsInWindow: Rect(406, 1383 - 786, 1340); packageName: com.parkcheolhong.worldlinco; className: android.widget.Button; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: worldlinco-home-quick-chat; tooltipText: null; containerTitle: null; viewIdResName: worldlinco-home-quick-chat; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: true; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_CLICK - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+08-15 20:29:57.501 27196 27196 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@30ac3; boundsInParent: Rect(0, 0 - 774, 86); boundsInScreen: Rect(13, 1491 - 787, 1340); boundsInWindow: Rect(13, 1491 - 787, 1340); packageName: com.parkcheolhong.worldlinco; className: android.widget.Button; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: worldlinco-home-tools-toggle; tooltipText: null; containerTitle: null; viewIdResName: worldlinco-home-tools-toggle; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: true; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_CLICK - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+08-15 20:29:57.501 27196 27196 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@319c7; boundsInParent: Rect(0, 0 - 339, 54); boundsInScreen: Rect(230, 1622 - 569, 1340); boundsInWindow: Rect(230, 1622 - 569, 1340); packageName: com.parkcheolhong.worldlinco; className: android.widget.TextView; text: WorldLinco v1.0.516 · WorldLinco AI
+08-15 20:29:57.501 27196 27196 I AccessibilityNodeInfoDumper: 51개국어 지원; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+08-15 20:29:57.501 27196 27196 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@31d88; boundsInParent: Rect(0, 0 - 214, 43); boundsInScreen: Rect(293, 1687 - 507, 1340); boundsInWindow: Rect(293, 1687 - 507, 1340); packageName: com.parkcheolhong.worldlinco; className: android.view.ViewGroup; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: worldlinco-open-data-sources; tooltipText: null; containerTitle: null; viewIdResName: worldlinco-open-data-sources; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: true; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_CLICK - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+08-15 20:29:57.529  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.545  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.563  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.579  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.595  1673  2550 D SGM:GameManager: identifyForegroundApp. com.parkcheolhong.worldlinco, mCurrentUserId: 0, callerUserId: 0
+08-15 20:29:57.595  1673  2550 D SGM:PkgDataHelper: getGamePkgData(). com.parkcheolhong.worldlinco
+08-15 20:29:57.596 24650 24698 I PolicyManager: [#CMH#] Is foreground game app: false
+08-15 20:29:57.596  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.601 27196 27196 W AccessibilityNodeInfoDumper: Fetch time: 318ms
+08-15 20:29:57.604  1673  2550 D KNOX_MDM_SettingsProvider: isChangeAllowed() : name = accessibility_enabled
+08-15 20:29:57.605  1673  2550 D WindowMagnificationMgr: requestConnection :false mConnectionState : 3
+08-15 20:29:57.605  1673  2550 W WindowMagnificationMgr: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+08-15 20:29:57.605  1673  2550 D AccessibilityManagerService: restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+08-15 20:29:57.606  1673  2550 D KNOX_MDM_SettingsProvider: isChangeAllowed() : name = accelerometer_rotation
+08-15 20:29:57.607  1673  2550 D KNOX_MDM_SettingsProvider: isChangeAllowed() : name = user_rotation
+08-15 20:29:57.607  1673  1800 W WindowManager: Cannot find window which accessibility connection is added to
+08-15 20:29:57.608  1673  2550 V WindowManager: rotationForOrientation(orient=SCREEN_ORIENTATION_PORTRAIT (1), last=ROTATION_0 (0)); user=ROTATION_0 (0) 
+08-15 20:29:57.608  1673  2550 D WindowManager: rotationForOrientation, orientationSource=ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+08-15 20:29:57.608  1673  2550 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.DisplayContent.updateRotationUnchecked:2674 com.android.server.wm.WindowManagerService.updateRotationUnchecked:4907 com.android.server.wm.WindowManagerService.thawDisplayRotation:4848 com.android.server.wm.WindowManagerService.thawRotation:4812 android.view.IWindowManager$Stub.onTransact:2718 com.android.server.wm.WindowManagerService.onTransact:1540 
+08-15 20:29:57.610 27196 27196 D AndroidRuntime: Shutting down VM
+08-15 20:29:57.611  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.617  1673  1673 D BatterySaverPolicy: accessibility changed to false, updating policy.
+08-15 20:29:57.621  1209  1209 I Layer   : id=8199 removeFromCurrentState WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199 (137)
+08-15 20:29:57.622  1209  1209 I SurfaceFlinger: id=8199 Removed WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199 (137)
+08-15 20:29:57.624  1161  1161 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:0.697675,dur:1433.33,max:1433.33,min:1433.33  
+08-15 20:29:57.629  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.637  1209  1209 I BufferQueueDebug: [WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199](this:0xb400007bc68d2790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-15 20:29:57.637  1209  1209 I Layer   : id=8199 Destroyed WindowToken{faa9304 type=2032 android.os.Binder@59c5317}#8199
+08-15 20:29:57.645  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.661  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.679  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.696  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.711  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.729  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.745  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.761  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.779  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.796  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.812  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.828  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.844  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.862  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.876 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:57.879 25848 26993 I ReactNativeJS: '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-15 20:29:57.879  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.882 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESUME_SKIPPED_AUTH","timestamp":"2026-08-15T11:29:57.880Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_state_resume","status":401,"last_call_id":null}'
+08-15 20:29:57.889   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:57.890 25848 26993 I ReactNativeJS: '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-15 20:29:57.891   592   602 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:57.895  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.898 25848 26993 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T11:29:57.896Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006","api_base":"https://metanova1004.com"}'
+08-15 20:29:57.912  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.944  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.962  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.977  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:57.995  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.011  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.028  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.045  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.060  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.078  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.095  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.110  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.128  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.145  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.161  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.194  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.211  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.228  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.244  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.260  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.278  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.295  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.311  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.328  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.335   565   565 D io_stats: !@ 179,0 r 3993513 104139186 w 5156817 37550056 d 317622 47578332 f 0 0 iot 3783832 0 th 0 0 0 pt 0 inp 0 0 302275.451
+08-15 20:29:58.345  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.361  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.378  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.412  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.428  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.443  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.452 27196 27196 W RefBase : RefBase: Explicit destruction, weak count = 0 (in 0x7df5ded048). Use sp<> to manage this object.
+08-15 20:29:58.461  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.463 27196 27196 D RefBase :   #00 pc 0000000000107140  /apex/com.android.runtime/lib64/bionic/libc.so (__cxa_finalize+144) (BuildId: a099b7763756694a6e367b727ca5eb6d)
+08-15 20:29:58.463 27196 27196 D RefBase :   #01 pc 00000000000f8c38  /apex/com.android.runtime/lib64/bionic/libc.so (exit+24) (BuildId: a099b7763756694a6e367b727ca5eb6d)
+08-15 20:29:58.463 27196 27196 D RefBase :   #02 pc 000000000008d60c  /apex/com.android.runtime/lib64/bionic/libc.so (__libc_init+108) (BuildId: a099b7763756694a6e367b727ca5eb6d)
+08-15 20:29:58.478 25848 26994 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-15 20:29:58.478  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.489   593   593 W keymaster_tee: [WRN]begin req PARAMS: A32 B32 P1 
+08-15 20:29:58.492   592   602 I keystore2: system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-15 20:29:58.511  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.516  7994  7994 I adbd    : adbd service requested 'sync:'
+08-15 20:29:58.520  1209  1209 I BufferQueueProducer: [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_25848#8184](this:0xb400007bc4c0e790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.43 dur=2330.59 max=2330.59 min=2330.59
+08-15 20:29:58.528  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.544  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.546  1673 27228 D WifiConnectivityMonitor.DnsThread:  [|206] []
+08-15 20:29:58.546  1673  2155 D WifiConnectivityMonitor.NetworkStatsAnalyzer: DNS resultType : 0, responseTime : 206
+08-15 20:29:58.547  1673  2150 D OpenNetworkQos[4.00]: updateBssidLatestDnsResultType - result: 0
+08-15 20:29:58.547  1673  2150 D OpenNetworkQos[4.00]: updateBssidNoInternet: mBssidNoInternet = false
+08-15 20:29:58.547  1673  2150 D OpenNetworkQos[4.00]: getOpenNetworkQosNoInternetStatus: false
+08-15 20:29:58.547  1673  2150 D OpenNetworkQos[4.00]: getOpenNetworkQosScores: 26 0 0 
+08-15 20:29:58.547  1673  2150 D KNOX_MDM_SettingsProvider: isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+08-15 20:29:58.560  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.573  7994  7994 I adbd    : adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d''
+08-15 20:29:58.577  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.577  1673  1848 D PowerManagerService: [api] userActivityFromNative : touch displayId=0 eventTime=302275693
+08-15 20:29:58.593  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent
+08-15 20:29:58.611  1673  1848 I InputDispatcher: Dropping event because the pointer is not down or we previously dropped the pointer down event in display 0: MotionEvent

@@ -1,0 +1,45 @@
+name: Mobile Nadotongryoksa Core Gate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile-nadotongryoksa/**'
+      - 'docs/checklists/**'
+      - '.github/workflows/mobile-nadotongryoksa-core-gate.yml'
+      - '.github/pull_request_template.md'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  mobile-core-gate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pass_id: [passA, passB]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --prefix apps/mobile-nadotongryoksa
+
+      - name: Typecheck (${{ matrix.pass_id }})
+        run: npm run --prefix apps/mobile-nadotongryoksa typecheck
+
+      - name: Unit and Integration Gate (${{ matrix.pass_id }})
+        run: >-
+          npm run --prefix apps/mobile-nadotongryoksa test -- --runInBand
+          src/__tests__/biometricGate.test.ts
+          src/__tests__/voiceCaptureLease.test.ts
+          src/__tests__/voiceRelayTurnController.test.ts
+          src/__tests__/travelBooking.test.ts
+          src/__tests__/worldlincoCoreFlow.integration.test.ts

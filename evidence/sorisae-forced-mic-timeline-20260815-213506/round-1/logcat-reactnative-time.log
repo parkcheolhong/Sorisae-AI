@@ -1,0 +1,32 @@
+--------- beginning of main
+08-16 06:35:08.199 I/ReactNativeJS(19384): '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+08-16 06:35:08.199 I/ReactNativeJS(19384):   hasPeerConnection: true,
+08-16 06:35:08.199 I/ReactNativeJS(19384):   hasMediaDevices: true }
+08-16 06:35:08.213 W/ReactNativeJS(19384): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 06:35:08.214 W/ReactNativeJS(19384): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+08-16 06:35:08.215 W/ReactNativeJS(19384): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 06:35:08.215 W/ReactNativeJS(19384): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 06:35:08.233 I/ReactNativeJS(19384): Running "main"
+08-16 06:35:08.442 I/ReactNativeJS(19384): '[UI_PRESS_PROBE]', '{"event":"NETWORK_TRANSPORT_CHANGED","timestamp":"2026-08-15T21:35:08.442Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","transport":"unknown","cellular_generation":null,"label":"알 수 없음","is_connected":false,"is_internet_reachable":null,"carrier":null,"ssid":null,"is_accurate_voip_test_ready":false,"previous_label":null}'
+08-16 06:35:08.444 I/ReactNativeJS(19384): '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'
+08-16 06:35:08.449 I/ReactNativeJS(19384): [VoIPToneService] AudioContext not available (React Native environment)
+08-16 06:35:08.453 I/ReactNativeJS(19384): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-16 06:35:08.464 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"initial_url","outcome":"empty_url"}'
+08-16 06:35:08.546 W/ReactNativeJS(19384): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 06:35:08.710 W/ReactNativeJS(19384): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 06:35:08.922 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"initial_url","outcome":"empty_url"}'
+08-16 06:35:08.973 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"active_initial_url","outcome":"empty_url"}'
+08-16 06:35:09.473 I/ReactNativeJS(19384): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 06:35:09.616 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_600","outcome":"empty_url"}'
+08-16 06:35:10.652 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_1600","outcome":"empty_url"}'
+08-16 06:35:12.231 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_3200","outcome":"empty_url"}'
+08-16 06:35:14.214 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_5200","outcome":"empty_url"}'
+08-16 06:35:16.975 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"initial_url","outcome":"empty_url"}'
+08-16 06:35:17.736 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_600","outcome":"empty_url"}'
+08-16 06:35:18.714 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_1600","outcome":"empty_url"}'
+08-16 06:35:20.314 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_3200","outcome":"empty_url"}'
+08-16 06:35:22.338 I/ReactNativeJS(19384): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_5200","outcome":"empty_url"}'
+08-16 06:35:42.317 I/ReactNativeJS(19384): '[UI_PRESS_PROBE]', '{"event":"LOGIN_SUBMIT_PRESS","timestamp":"2026-08-15T21:35:42.317Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","email_filled":true,"password_filled":true}'
+08-16 06:35:42.355 I/ReactNativeJS(19384): '[AUTH_FLOW]', '{"event":"LOGIN_API_REQUEST","endpoint":"https://metanova1004.com/api/auth/login","email":"119cash@naver.com"}'
+08-16 06:35:42.910 I/ReactNativeJS(19384): '[AUTH_FLOW]', '{"event":"LOGIN_API_FAIL","endpoint":"https://metanova1004.com/api/auth/login","email":"119cash@naver.com","status":401}'
+08-16 06:36:04.757 I/ReactNativeJS(19384): '[UI_PRESS_PROBE]', '{"event":"SOCIAL_LOGIN_PRESS","timestamp":"2026-08-15T21:36:04.757Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","provider":"naver"}'

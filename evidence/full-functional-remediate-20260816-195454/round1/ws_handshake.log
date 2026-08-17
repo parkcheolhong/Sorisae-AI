@@ -1,0 +1,10 @@
+[
+    {
+
+    },
+    {
+        "ok":  true,
+        "state":  "Open",
+        "url":  "wss://metanova1004.com/api/llm/ws"
+    }
+]

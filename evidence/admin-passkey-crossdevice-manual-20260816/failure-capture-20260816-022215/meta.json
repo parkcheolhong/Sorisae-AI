@@ -1,0 +1,11 @@
+﻿{
+    "email":  "119cash@naver.com",
+    "captured_at":  "2026-08-16T02:22:15.5557479+09:00",
+    "domain":  "xn--114-2p7l635dz3bh5j.com",
+    "urls":  {
+                 "passkey_finish":  "https://xn--114-2p7l635dz3bh5j.com/api/auth/passkey/login/finish",
+                 "admin_login":  "https://xn--114-2p7l635dz3bh5j.com/admin/login",
+                 "passkey_start":  "https://xn--114-2p7l635dz3bh5j.com/api/auth/passkey/login/start"
+             },
+    "machine":  "AI-SORISAE"
+}

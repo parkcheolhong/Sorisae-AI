@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-05-02T21:48:23.635571Z",
+  "results": [
+    {
+      "index": 1,
+      "project_name": "ai-engine-stock-trading-program-rerun1-20260502_214027",
+      "run_id": "stage_run_FnKq-vUuoDvdK0IC0OkSEv8U",
+      "execution_status": "completed",
+      "output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun1-20260502_214027_20260502_214028_010961",
+      "semantic_gate_ok": true,
+      "semantic_gate_score": 100,
+      "semantic_gate_checklist": [],
+      "semantic_audit_ok": true,
+      "semantic_audit_score": 100,
+      "failed_reasons": [],
+      "output_audit_semantic_ok": true,
+      "output_audit_semantic_score": 100,
+      "profile_id": "trading_system"
+    },
+    {
+      "index": 2,
+      "project_name": "ai-engine-stock-trading-program-rerun2-20260502_214426",
+      "run_id": "stage_run_vddlYermw2Dl0q8ruLKI0Mg2",
+      "execution_status": "completed",
+      "output_dir": "/app/uploads/projects/customer_9/runs/ai-engine-stock-trading-program-rerun2-20260502_214426_20260502_214426_315405",
+      "semantic_gate_ok": true,
+      "semantic_gate_score": 100,
+      "semantic_gate_checklist": [],
+      "semantic_audit_ok": true,
+      "semantic_audit_score": 100,
+      "failed_reasons": [],
+      "output_audit_semantic_ok": true,
+      "output_audit_semantic_score": 100,
+      "profile_id": "trading_system"
+    }
+  ]
+}

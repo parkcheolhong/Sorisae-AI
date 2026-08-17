@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\run_auth_duplicate_login_e2e.py", line 234, in <module>
+    raise SystemExit(main())
+  File "C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\run_auth_duplicate_login_e2e.py", line 217, in main
+    result = run_scenario(
+  File "C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\run_auth_duplicate_login_e2e.py", line 140, in run_scenario
+    raise RuntimeError(
+RuntimeError: first login failed (409): {'detail': '이미 다른 기기 또는 세션에서 로그인 상태가 남아 있습니다. 현재 사용 중인 기기가 없다면 계정 복구(본인확인) 후 세션 해제 뒤 다시 시도해 주세요.'}

@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/travelBooking.test.ts
+Result: PASS
+Notes: Travel booking map HTML tests passed after the listener cleanup change.

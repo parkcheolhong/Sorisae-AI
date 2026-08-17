@@ -1,0 +1,23 @@
+{
+  "deviceId": "R83W70QY11H",
+  "packageName": "com.parkcheolhong.worldlinco",
+  "flow": {
+    "faceHomeOpened": false,
+    "faceScreenVisible": true,
+    "langPickerOpened": true,
+    "peerLangSelected": true,
+    "micStartTapped": true,
+    "micStopTapped": true,
+    "faceClosed": true
+  },
+  "runDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-start-stop-round1b-20260816-20260816-221840",
+  "rawLogPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-start-stop-round1b-20260816-20260816-221840\\reactnative-logcat.txt",
+  "tracePath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-start-stop-round1b-20260816-20260816-221840\\face-start-stop-trace.txt",
+  "checks": {
+    "hasFaceAutoStartLifecycle": false,
+    "hasFaceAutoStopLifecycle": false,
+    "hasCaptureStartSignal": true
+  },
+  "pass": false,
+  "capturedAtUtc": "2026-08-16T13:20:07.6065760Z"
+}

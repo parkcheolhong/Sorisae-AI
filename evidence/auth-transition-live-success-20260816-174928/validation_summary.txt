@@ -1,0 +1,13 @@
+﻿status: PASS
+objective: same real-token callback reinjection x2 with PASSKEY_LOGIN_CALLBACK_SUCCESS and SOCIAL_LOGIN_CALLBACK_SUCCESS
+run_dir: c:/Users/WORK/source/repos/parkcheolhong/codeAI/evidence/auth-transition-live-success-20260816-174928
+
+round_results:
+- round 1: passkey_success=True social_success=True error_activity=False
+- round 2: passkey_success=True social_success=True error_activity=False
+
+notes:
+- callback path: worldlingo://auth/callback
+- app launch path: am start -W -a android.intent.action.VIEW -d exp+nadotongryoksa://expo-development-client/?url=http%3A%2F%2F172.30.1.41%3A8091
+- runtime_ready_before_rounds: True
+- callback reinjection policy: per-round double start (initial + retry)

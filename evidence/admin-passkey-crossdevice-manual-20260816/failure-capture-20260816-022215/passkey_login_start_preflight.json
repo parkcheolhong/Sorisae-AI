@@ -1,0 +1,23 @@
+﻿{
+    "name":  "passkey_login_start_preflight",
+    "method":  "OPTIONS",
+    "url":  "https://xn--114-2p7l635dz3bh5j.com/api/auth/passkey/login/start",
+    "timestamp":  "2026-08-16T02:27:22.5950916+09:00",
+    "status":  200,
+    "headers":  {
+                    "Access-Control-Allow-Headers":  "content-type",
+                    "Access-Control-Max-Age":  "600",
+                    "Server":  "uvicorn",
+                    "Via":  "1.1 Caddy",
+                    "Content-Length":  "2",
+                    "Alt-Svc":  "h3=\":443\"; ma=2592000",
+                    "Content-Type":  "text/plain; charset=utf-8",
+                    "Date":  "Sat, 15 Aug 2026 17:27:22 GMT",
+                    "Access-Control-Allow-Methods":  "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT",
+                    "Access-Control-Allow-Credentials":  "true",
+                    "Vary":  "Origin",
+                    "Access-Control-Allow-Origin":  "https://xn--114-2p7l635dz3bh5j.com"
+                },
+    "body":  "OK",
+    "error":  null
+}

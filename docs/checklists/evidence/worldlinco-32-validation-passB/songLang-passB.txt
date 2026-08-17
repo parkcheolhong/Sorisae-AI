@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/songLang.test.ts
+Result: PASS
+Notes: Focused song-area smoke test passed after the voice capture manager refactor.

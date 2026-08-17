@@ -1,0 +1,21 @@
+{
+  "session_id": "20260503_031324",
+  "started_at_utc": "2026-05-02T18:13:25.196107+00:00",
+  "ended_at_utc": "2026-05-02T18:13:39.665512+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "summary_path": "/api/admin/orchestrator/capabilities/summary",
+  "duration_hours": 0.003,
+  "interval_sec": 3.0,
+  "timeout_sec": 20.0,
+  "total_samples": 2,
+  "ok_samples": 2,
+  "error_samples": 0,
+  "error_rate": 0.0,
+  "min_ms": 756.3661000458524,
+  "p50_ms": 4612.15825000545,
+  "p95_ms": 8467.950399965048,
+  "p99_ms": 8467.950399965048,
+  "max_ms": 8467.950399965048,
+  "avg_ms": 4612.15825000545,
+  "recent_errors": []
+}

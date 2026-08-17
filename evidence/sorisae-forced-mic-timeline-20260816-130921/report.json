@@ -1,0 +1,24 @@
+{
+  "timestamp_utc": "2026-08-16T13:10:07.252217+00:00",
+  "adb_device": "R83W70QY11H",
+  "rounds": [
+    {
+      "device": "R83W70QY11H",
+      "login_ok": true,
+      "mic_tap": {
+        "selector_used": false,
+        "x": 400,
+        "y": 1000
+      },
+      "analysis": {
+        "post_start_present": false,
+        "segment_response_present": false,
+        "segment_response_ok_true": false,
+        "segment_response_sorisae_ok_true": false,
+        "segment_response_lines": []
+      },
+      "pass": false
+    }
+  ],
+  "all_passed": false
+}

@@ -1,0 +1,5 @@
+580:> Task :expo-av:configureCMakeDebug[arm64-v8a] FAILED
+584:java.nio.file.AccessDeniedException: C:\Windows\sqlite-3.41.2.2-02446025-9819-4f76-b989-fef63a6067d7-sqlitejdbc.dll.lck
+653:> Task :expo-updates:kaptDebugKotlin FAILED
+661:> [CXX1210] C:\Users\WORK\source\repos\parkcheolhong\codeAI\codeAI\apps\mobile-nadotongryoksa\node_modules\expo-av\android\CMakeLists.txt debug|arm64-v8a : No compatible library found
+689:BUILD FAILED in 24s

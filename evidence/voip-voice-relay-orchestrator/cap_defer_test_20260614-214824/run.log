@@ -1,0 +1,7 @@
+[21:48:24] Cap/defer test dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-214824
+[21:48:24] Expected build 1.0.39 code 64
+[21:48:24] === Phase A (40s): S10 짧은 1~2음절 2~3회 (defer 유도) ===
+[21:49:05] === Phase B (90s): S10 15초+ 연속 발화 (14s cap 확인) ===
+[21:50:35] Defer phase: flush_false=0 defer= PASS=False
+[21:50:35] Cap phase: max_duration=0 elapsed_ms= PASS=False
+[21:50:35] Artifacts: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\cap_defer_test_20260614-214824

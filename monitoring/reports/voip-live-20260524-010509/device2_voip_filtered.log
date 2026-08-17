@@ -1,0 +1,113 @@
+05-24 01:03:45.493 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:03:48.401 E/Connection4Water( 9200): ProxyManager.requestSetNetworkSuspended() : watch is not connected
+05-24 01:03:48.908 I/NearbySharing(24302): Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+05-24 01:03:48.913 I/NearbySharing(24302): Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+05-24 01:03:55.700 E/MQTTBypassDGWStreamGroupConnection.cpp(21704): connect failed. Callbacks terminated before ack received
+05-24 01:03:55.703 E/MQTTBypassDGWStreamGroupCallbacks.cpp(21704): onStreamGroupError StreamGroupNetworkRequest request cancelled: max retries reached; last err (TransientError domain: MNSSecureTCP code: 1 detail: SecureTCP connection establish timeout)
+05-24 01:03:55.704 W/MQTTBypassDGWStreamGroupConnection.cpp(21704): Restarting due to reason: StreamError
+05-24 01:04:00.012 D/QSClockBellTower( 3697): onReceive(android.intent.action.TIME_TICK) mTimeZoneString:Asia/Seoul
+05-24 01:04:00.014 D/QSClockBellTower( 3697): He is ready to ring the bell. (((QSClockBellSound - TimeText:01:04, TimeContentDescription:01:04, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demo:false)))
+05-24 01:04:01.203 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:04:01.203 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:04:01.453 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer ScreenCaptureFillLayer at index 0
+05-24 01:04:01.453 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977 at index 1
+05-24 01:04:01.454 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer StatusBar$_3697#118 at index 2
+05-24 01:04:01.454 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986 at index 3
+05-24 01:04:01.454 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer NavigationBar0$_3697#114 at index 4
+05-24 01:04:01.667 W/SLocation( 2765): WifiBssidMonitor - connected wifi : (16:e6:6b:**:**:82/759)
+05-24 01:04:06.245 W/Binder  ( 2765): 	at com.android.server.am.mars.filter.filter.BlueToothConnectedFilter.updateBTUsingPackages(qb/106571952 c4c4375f2809767d35c3924eb0560cb9c53861c2af8e84225184923cb2856e18:22)
+05-24 01:04:12.341 W/RealtimeClientManager(21704): Channel state: MqttChannelState{mConnectionState=CONNECTING, mDisconnectionReason=null, mLastConnectionMs=346701428, mLastDisconnectMs=349745905}
+05-24 01:04:15.536 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:04:31.548 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer ScreenCaptureFillLayer at index 0
+05-24 01:04:31.548 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977 at index 1
+05-24 01:04:31.548 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer StatusBar$_3697#118 at index 2
+05-24 01:04:31.549 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986 at index 3
+05-24 01:04:31.549 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer NavigationBar0$_3697#114 at index 4
+05-24 01:04:42.081 E/Connection4Water( 9200): ProxyManager.requestSetNetworkSuspended() : watch is not connected
+05-24 01:04:42.589 I/NearbySharing(24302): Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+05-24 01:04:42.590 I/NearbySharing(24302): Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+05-24 01:04:45.575 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:05:00.014 D/QSClockBellTower( 3697): onReceive(android.intent.action.TIME_TICK) mTimeZoneString:Asia/Seoul
+05-24 01:05:00.015 D/QSClockBellTower( 3697): He is ready to ring the bell. (((QSClockBellSound - TimeText:01:05, TimeContentDescription:01:05, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demo:false)))
+05-24 01:05:01.206 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:05:01.206 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:05:01.380 I/[CE]_PrimaryLocationManager(16387): runBatchUpdate - After location filtering: 
+05-24 01:05:01.649 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer ScreenCaptureFillLayer at index 0
+05-24 01:05:01.650 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977 at index 1
+05-24 01:05:01.650 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer StatusBar$_3697#118 at index 2
+05-24 01:05:01.650 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986 at index 3
+05-24 01:05:01.651 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer NavigationBar0$_3697#114 at index 4
+05-24 01:05:01.677 W/SLocation( 2765): WifiBssidMonitor - connected wifi : (16:e6:6b:**:**:82/759)
+05-24 01:05:05.546 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul Disconnection due to TCP Sockets
+05-24 01:05:08.535 E/MQTTBypassDGWStreamGroupConnection.cpp(21704): connect failed. Callbacks terminated before ack received
+05-24 01:05:08.538 E/MQTTBypassDGWStreamGroupCallbacks.cpp(21704): onStreamGroupError StreamGroupNetworkRequest request cancelled: max retries reached; last err (TransientError domain: MNSSecureTCP code: 1 detail: SecureTCP connection establish timeout)
+05-24 01:05:08.539 W/MQTTBypassDGWStreamGroupConnection.cpp(21704): Restarting due to reason: StreamError
+05-24 01:05:15.551 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul Disconnection due to TCP Sockets
+05-24 01:05:15.613 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:05:25.555 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul Disconnection due to TCP Sockets
+05-24 01:05:31.751 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer ScreenCaptureFillLayer at index 0
+05-24 01:05:31.751 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977 at index 1
+05-24 01:05:31.752 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer StatusBar$_3697#118 at index 2
+05-24 01:05:31.752 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986 at index 3
+05-24 01:05:31.753 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer NavigationBar0$_3697#114 at index 4
+05-24 01:05:35.561 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 2765): Backhaul Disconnection due to TCP Sockets
+05-24 01:05:44.094 I/InputDispatcher( 2765): Delivering touch to (3697): action: 0x4, f=0x0, d=0, '21d989a', t=1 
+05-24 01:05:44.094 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x0, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:05:44.102 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x1, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:05:44.128 I/ReactNativeJS(20825): '[VoIPFCM] register device failed', [Error: No Firebase App '[DEFAULT]' has been created - call firebase.initializeApp()]
+05-24 01:05:44.128 I/ReactNativeJS(20825): '[VoIPFCM] subscribe failed', [Error: No Firebase App '[DEFAULT]' has been created - call firebase.initializeApp()]
+05-24 01:05:44.193 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-05-23T16:05:44.172Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000140"}'
+05-24 01:05:44.206 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-05-23T16:05:44.193Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000140"}'
+05-24 01:05:45.664 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:05:50.367 W/Binder  ( 2765): 	at com.android.server.am.mars.filter.filter.BlueToothConnectedFilter.updateBTUsingPackages(qb/106571952 c4c4375f2809767d35c3924eb0560cb9c53861c2af8e84225184923cb2856e18:22)
+05-24 01:05:53.333 D/nativeloader(12669): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.tethering.mainline.beta is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): android.net.http is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.tethering.readonly.flags is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): android.net.vcn is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.net.flags is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.tethering.flags is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.tethering.beta.test is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.nearby.flags is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.net.thread.flags is mapped to com.android.tethering
+05-24 01:05:53.343 I/AconfigPackage(12669): com.android.net.ct.flags is mapped to com.android.tethering
+05-24 01:05:53.346 D/UiAutomationConnection(12669): Created on user UserHandle{0}
+05-24 01:05:53.348 D/AccessibilityManagerService( 2765): changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+05-24 01:05:53.348 I/UiAutomationManager( 2765): Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation, flags=0x0) when called by user 0
+05-24 01:05:53.359 D/MagnificationConnectionManager( 2765): requestConnection :false mConnectionState : 3
+05-24 01:05:53.359 W/MagnificationConnectionManager( 2765): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+05-24 01:05:53.372 D/MagnificationConnectionManager( 2765): requestConnection :false mConnectionState : 3
+05-24 01:05:53.372 W/MagnificationConnectionManager( 2765): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+05-24 01:05:54.362 I/ekjt    ( 6626): (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+05-24 01:05:54.470 I/AccessibilityNodeInfoDumper(12669): Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@1ae387; boundsInParent: Rect(0, 0 - 1152, 96); boundsInScreen: Rect(144, 2896 - 1296, 2960); boundsInWindow: Rect(144, 2896 - 1296, 2960); packageName: com.parkcheolhong.worldlinco; className: android.widget.TextView; text: VoIP 통역 통화; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+05-24 01:05:54.500 D/MagnificationConnectionManager( 2765): requestConnection :false mConnectionState : 3
+05-24 01:05:54.500 W/MagnificationConnectionManager( 2765): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+05-24 01:05:54.500 D/AccessibilityManagerService( 2765): restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+05-24 01:05:54.505 I/ekjt    ( 6626): (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+05-24 01:05:54.515 D/MagnificationConnectionManager( 2765): requestConnection :false mConnectionState : 3
+05-24 01:05:54.515 W/MagnificationConnectionManager( 2765): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+05-24 01:06:00.012 D/QSClockBellTower( 3697): onReceive(android.intent.action.TIME_TICK) mTimeZoneString:Asia/Seoul
+05-24 01:06:00.014 D/QSClockBellTower( 3697): He is ready to ring the bell. (((QSClockBellSound - TimeText:01:06, TimeContentDescription:01:06, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demo:false)))
+05-24 01:06:01.242 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:06:01.242 D/[CE]_CellInfoUtils(16387): checkCellInfoCondition - Current connected CellInfo is LTE
+05-24 01:06:01.678 W/SLocation( 2765): WifiBssidMonitor - connected wifi : (16:e6:6b:**:**:82/759)
+05-24 01:06:01.853 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer ScreenCaptureFillLayer at index 0
+05-24 01:06:01.854 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_20825#40977 at index 1
+05-24 01:06:01.854 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer StatusBar$_3697#118 at index 2
+05-24 01:06:01.854 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer com.sec.android.app.launcher/com.samsung.app.honeyspace.edge.edgepanel.app.CocktailBarService$_4253#40986 at index 3
+05-24 01:06:01.855 D/RenderEngine( 2066): [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer NavigationBar0$_3697#114 at index 4
+05-24 01:06:15.705 D/KNOX_MDM_SettingsProvider( 2765): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+05-24 01:06:18.984 I/InputDispatcher( 2765): Delivering touch to (3697): action: 0x4, f=0x0, d=0, '21d989a', t=1 
+05-24 01:06:18.984 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x0, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:06:18.994 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x1, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:06:19.020 I/ReactNativeJS(20825): '[VoIPFCM] register device failed', [Error: No Firebase App '[DEFAULT]' has been created - call firebase.initializeApp()]
+05-24 01:06:19.020 I/ReactNativeJS(20825): '[VoIPFCM] subscribe failed', [Error: No Firebase App '[DEFAULT]' has been created - call firebase.initializeApp()]
+05-24 01:06:19.092 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-05-23T16:06:19.083Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","voice_id":"nado-000140"}'
+05-24 01:06:19.096 I/InputDispatcher( 2765): Delivering touch to (3697): action: 0x4, f=0x0, d=0, '21d989a', t=1 
+05-24 01:06:19.096 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x0, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:06:19.098 I/InputDispatcher( 2765): Delivering touch to (20825): action: 0x1, f=0x0, d=0, '92b540a', t=1 *(1.11)
+05-24 01:06:19.099 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-05-23T16:06:19.092Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","voice_id":"nado-000140"}'
+05-24 01:06:19.101 I/ReactNativeJS(20825): '[UI_PRESS_PROBE]', '{"event":"SECTION_RAIL_PRESS","timestamp":"2026-05-23T16:06:19.101Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"voip_full_auto","key":"voip","previous_section":"voip","next_section":"home"}'
+05-24 01:06:20.488 E/MQTTBypassDGWStreamGroupConnection.cpp(21704): connect failed. Callbacks terminated before ack received
+05-24 01:06:20.491 E/MQTTBypassDGWStreamGroupCallbacks.cpp(21704): onStreamGroupError StreamGroupNetworkRequest request cancelled: max retries reached; last err (TransientError domain: MNSSecureTCP code: 1 detail: SecureTCP connection establish timeout)
+05-24 01:06:20.492 W/MQTTBypassDGWStreamGroupConnection.cpp(21704): Restarting due to reason: StreamError

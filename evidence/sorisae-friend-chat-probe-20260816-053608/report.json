@@ -1,0 +1,212 @@
+{
+  "probe": "sorisae-friend-chat",
+  "timestamp_utc": "2026-08-16T05:37:35.544435+00:00",
+  "base_url": "https://metanova1004.com",
+  "min_apk_build": 323,
+  "probe_speech_text": "춘천 맛집 추천해줘",
+  "fixture_m4a": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\fixtures\\sorisae_probe_ko_speech.m4a",
+  "passed": false,
+  "checks": [
+    {
+      "name": "health",
+      "ok": true,
+      "detail": "status=200",
+      "body": {
+        "status": "ok",
+        "version": "2.2.0",
+        "modules": {
+          "api": "ok",
+          "memory": "ok",
+          "cpu": "ok",
+          "gpu": "ok",
+          "redis_queue": "ok",
+          "ad_worker": "ok"
+        },
+        "runtime": {
+          "bootstrap": {
+            "scheduled_at": "2026-08-16T05:05:11.013634+00:00",
+            "started_at": "2026-08-16T05:05:11.013913+00:00",
+            "completed_at": "2026-08-16T05:05:11.281078+00:00",
+            "duration_ms": 267.2,
+            "stages": {
+              "startup": {
+                "stage_id": "startup",
+                "scheduled_at": "2026-08-16T05:05:11.013589+00:00",
+                "started_at": "2026-08-16T05:05:11.013603+00:00",
+                "completed_at": "2026-08-16T05:05:11.014629+00:00",
+                "duration_ms": 1.0,
+                "blocking_dependencies": [],
+                "state": "completed",
+                "notes": [
+                  "startup stage only performs baseline guards and schedules post_startup_bootstrap",
+                  "startup guard completed and post_startup_bootstrap scheduled"
+                ]
+              },
+              "post_startup_bootstrap": {
+                "stage_id": "post_startup_bootstrap",
+                "scheduled_at": "2026-08-16T05:05:11.013643+00:00",
+                "started_at": "2026-08-16T05:05:11.013900+00:00",
+                "completed_at": "2026-08-16T05:05:11.281094+00:00",
+                "duration_ms": 267.2,
+                "blocking_dependencies": [
+                  "startup"
+                ],
+                "state": "completed",
+                "notes": [
+                  "baseline readiness complete -> post_startup_bootstrap scheduled",
+                  "database schema checks and fixed admin bootstrap only",
+                  "heavy DB schema correction stays in post_startup_bootstrap stage",
+                  "fixed admin account bootstrap runs only after schema bootstrap",
+                  "post-startup bootstrap completed; runtime_recovery and capability_warmup dispatched independently"
+                ]
+              },
+              "capability_warmup": {
+                "stage_id": "capability_warmup",
+                "scheduled_at": "2026-08-16T05:05:11.279139+00:00",
+                "started_at": "2026-08-16T05:05:11.279357+00:00",
+                "completed_at": "2026-08-16T05:05:19.550929+00:00",
+                "duration_ms": 8268.3,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "admin capability cache warmup scheduled after post-startup bootstrap",
+                  "capability warmup started; cache fill only, no runtime recovery work allowed",
+                  "admin capability cache warmup completed via capability map prebuild"
+                ]
+              },
+              "runtime_recovery": {
+                "stage_id": "runtime_recovery",
+                "scheduled_at": "2026-08-16T05:05:11.278094+00:00",
+                "started_at": "2026-08-16T05:05:11.278357+00:00",
+                "completed_at": "2026-08-16T05:05:11.293574+00:00",
+                "duration_ms": 15.2,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "marketplace ad queue recovery and worker bootstrap scheduled after post-startup bootstrap",
+                  "runtime recovery started; heavy runtime import allowed only in runtime_recovery stage",
+                  "runtime recovery completed; recovered=0"
+                ]
+              }
+            }
+          }
+        },
+        "diagnostics": {
+          "generated_at": "2026-08-16T05:36:08.505086+00:00",
+          "resources": {
+            "memory": {
+              "available": true,
+              "state": "ok",
+              "note": "메모리 사용량이 정상 범위입니다.",
+              "total_mb": 63108.1,
+              "used_mb": 14037.3,
+              "available_mb": 49070.7,
+              "usage_percent": 22.2
+            },
+            "cpu": {
+              "available": true,
+              "state": "ok",
+              "note": "CPU 부하가 정상 범위입니다.",
+              "cpu_count": 32,
+              "load_1m": 0.3,
+              "load_ratio_percent": 0.9,
+              "usage_percent": 2.2
+            },
+            "gpu": {
+              "available": true,
+              "state": "ok",
+              "note": "VRAM 상주 비중은 높지만 실제 GPU 연산 부하는 매우 낮습니다. 로드된 모델 또는 캐시 상주 상태로 해석합니다.",
+              "devices": [
+                {
+                  "name": "NVIDIA GeForce RTX 5090",
+                  "memory_total_mb": 32607,
+                  "memory_used_mb": 29955,
+                  "utilization_gpu": 1,
+                  "memory_usage_percent": 91.9
+                }
+              ],
+              "device_count": 1,
+              "peak_memory_usage_percent": 91.9,
+              "peak_utilization_percent": 1.0
+            },
+            "redis_queue": {
+              "available": true,
+              "state": "ok",
+              "note": "redis:video_render_queue 연결 정상, queue=video_render_queue, depth=0",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "error": null
+            },
+            "ad_worker": {
+              "available": true,
+              "state": "ok",
+              "note": "worker_id=ad-render-worker-001 heartbeat 정상, last_order_id=-",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "bootstrap_enabled": true,
+              "started": true,
+              "heartbeat_age_sec": 2.1,
+              "last_order_id": null
+            }
+          },
+          "alerts": []
+        }
+      }
+    },
+    {
+      "name": "marketplace_manifest",
+      "ok": true,
+      "detail": "status=200 build=331 min=323",
+      "versionName": "1.0.246"
+    },
+    {
+      "name": "friend_chat_model_route",
+      "ok": true,
+      "detail": "base=http://host.docker.internal:8008/v1 model=Qwen/Qwen2.5-Coder-14B-Instruct-AWQ served=['Qwen/Qwen2.5-Coder-14B-Instruct-AWQ']"
+    },
+    {
+      "name": "friend_chat_text_llm",
+      "ok": true,
+      "detail": "status=200 response_len=361",
+      "response_preview": "춘천에서 맛있는 음식점 몇 곳을 추천해 드릴게요. 먼저 \"춘천 한옥마을 한식당\"은 전통 한식을 즐길 수 있는 곳입니다. 주소는 춘천시 상남동 1360-10이고, 평일 오후 12시부터 저녁 10시까지 영업합니다.\n\n또"
+    },
+    {
+      "name": "m4a_normalize_ssot",
+      "ok": true,
+      "detail": "docker normalized_bytes=84042 transcript_len=10",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "stt_trust": "high"
+    },
+    {
+      "name": "friend_chat_audio_silent_graceful",
+      "ok": false,
+      "detail": "status=200 detail="
+    },
+    {
+      "name": "friend_chat_audio_speech_m4a",
+      "ok": true,
+      "detail": "",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "response_preview": "춘천에서 맛있는 곳이 많아요! \"춘천 양반\"이라는 음식점은 특히 추천해요. 양반 국수와 다양한 국수 메뉴가 맛있어요. 주소는 춘천시 중앙대로 207호에 있어요. 전화번호는 031-790-2222예요. 점심 시간은 1"
+    },
+    {
+      "name": "adb_apk_build",
+      "ok": true,
+      "detail": "device=R83W70QY11H build=331 min=323"
+    },
+    {
+      "name": "adb_sorisae_runtime",
+      "ok": false,
+      "detail": "segment_200=False tight_preupload_loop=False hallucination_422=False",
+      "log_tail": "08-16 14:37:35.244 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 14:37:35.244 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 14:37:35.244 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 14:37:35.246 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 14:37:35.249 16863 16908 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_START\",\"source\":\"pending_call_initial\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"has_pending_call\":false,\"has_active_call\":false}'\n08-16 14:37:35.251 16863 16908 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CONNECT_ATTEMPT\",\"timestamp\":\"2026-08-16T05:37:35.250Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"effect_start\",\"api_base\":\"https://metanova1004.com\"}'\n08-16 14:37:35.255 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.\n08-16 14:37:35.255 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.\n08-16 14:37:35.255 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.\n08-16 14:37:35.258 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.\n08-16 14:37:35.259 16863 16908 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_NOTIFICATION_PERMISSION_STATUS\",\"timestamp\":\"2026-08-16T05:37:35.258Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"notifications_enabled\":true}'\n08-16 14:37:35.263 16863 16908 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"initial_url\",\"outcome\":\"empty_url\"}'\n08-16 14:37:35.312 16863 16908 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_ERROR\",\"timestamp\":\"2026-08-16T05:37:35.311Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"effect_start\"}'\n08-16 14:37:35.313 16863 16908 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_CLOSED\",\"timestamp\":\"2026-08-16T05:37:35.312Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"effect_start\",\"code\":1006}'\n08-16 14:37:35.313 16863 16908 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"VOIP_PRESENCE_RETRY_SCHEDULED\",\"timestamp\":\"2026-08-16T05:37:35.313Z\",\"token_ready\":true,\"user_ready\":true,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"voice_id\":\"nado-000006\",\"token_summary\":\"len:30:passke...en_331\",\"reason\":\"close:1006\"}'\n08-16 14:37:35.372 16863 16908 I ReactNativeJS: '[MISSED_CALL]', '{\"event\":\"fetch\",\"count\":0}'\n08-16 14:37:35.373 16863 16908 I ReactNativeJS: '[VoIPPendingIncoming]', '{\"event\":\"REQUEST_RESULT\",\"source\":\"pending_call_initial\",\"token_summary\":\"len:30:passke...en_331\",\"user_id\":6,\"status\":401,\"ok\":false}'\n08-16 14:37:35.374 16863 16908 I ReactNativeJS: '[VoIPPendingIncoming] fetch failed', 401\n08-16 14:37:35.377 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.\n08-16 14:37:35.387 16863 16908 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead."
+    }
+  ]
+}

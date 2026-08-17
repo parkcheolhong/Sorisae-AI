@@ -1,0 +1,38 @@
+  * Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+    topResumedActivity=ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+    * Hist  #0: ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+      packageName=com.parkcheolhong.worldlinco processName=com.parkcheolhong.worldlinco
+      launchedFromUid=10513 launchedFromPackage=com.parkcheolhong.worldlinco launchedFromFeature=null userId=0
+      app=ProcessRecord{8ede095 10619:com.parkcheolhong.worldlinco/u0a513}
+      Intent { flg=0x10018000 cmp=com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity }
+      rootOfTask=true task=Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco}
+      taskAffinity=10513:com.parkcheolhong.worldlinco
+      mActivityComponent=com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity
+      baseDir=/data/app/~~JhhQh4TZHnbvyXam8QueVg==/com.parkcheolhong.worldlinco-7xr1d_JntTHXGrIu0M-7-g==/base.apk
+      dataDir=/data/user/0/com.parkcheolhong.worldlinco
+      windows=[Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}]
+    Resumed: ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+  ResumedActivity: ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+  topDisplayFocusedRootTask=Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco}
+  deepestLastOrientationSource=ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+  mCurrentFocus=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+  mFocusedApp=ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+  mObscuringWindow=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+      mPreferredTopFocusableRootTask=Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco}
+      mLastFocusedRootTask=Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco}
+      * Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+        * ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}
+    mFocusedWindow=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+    mTopFullscreenOpaqueWindowState=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+    mSystemBarColorApps={ActivityRecord{eb1a074 u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity t10880}}
+    mNavBarColorWindowCandidate=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+    mNavBarBackgroundWindow=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+      Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+        source=ActivityRecord{ef9a4f7 u0 com.parkcheolhong.worldlinco/.MainActivity t10853} SCREEN_ORIENTATION_PORTRAIT
+        source=ActivityRecord{f774b39 u0 com.parkcheolhong.worldlinco/.MainActivity t10854} SCREEN_ORIENTATION_PORTRAIT
+      Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}:
+        mControlTarget=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+        mControlTarget=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+        mControlTarget=Window{859cbef u0 com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity}
+        (fullscreen) Task{13d601c #10880 type=standard A=10513:com.parkcheolhong.worldlinco}
+  VisibleActivityProcess:[ ProcessRecord{8ede095 10619:com.parkcheolhong.worldlinco/u0a513}]

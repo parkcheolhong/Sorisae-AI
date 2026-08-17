@@ -1,0 +1,687 @@
+{
+  "findings": [],
+  "facts": {
+    "paths": {
+      "proxy_route": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend\\app\\api\\proxy\\route.ts",
+      "canonical_site": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend\\lib\\canonical-site.ts",
+      "proxy_host_gate": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend\\proxy.ts",
+      "backend_admin_router": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\backend\\admin_router.py",
+      "docker_compose": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docker-compose.yml"
+    },
+    "canonical": {
+      "mode": "port+hostname",
+      "default_admin_base_url": "http://개발분석114.com:3005",
+      "default_marketplace_base_url": "http://metanova1004.com:3000",
+      "default_admin_ports": [
+        "3005",
+        "3007"
+      ],
+      "default_marketplace_ports": [
+        "3000"
+      ]
+    },
+    "proxy_host_gate": {
+      "default_admin_base_url": "http://개발분석114.com:3005",
+      "default_local_admin_ports": [
+        "3005",
+        "3007"
+      ]
+    },
+    "frontend_actions": {
+      "admin-ad-video-orders": {
+        "method": "GET",
+        "path": "/api/admin/ad-video-orders"
+      },
+      "admin-ad-video-orders-monitor-summary": {
+        "method": "GET",
+        "path": "/api/admin/ad-video-orders/monitor-summary"
+      },
+      "admin-ad-video-orders-settlement-dashboard": {
+        "method": "GET",
+        "path": "/api/admin/ad-video-orders/settlement-dashboard"
+      },
+      "admin-auto-connect-completions": {
+        "method": "GET",
+        "path": "/api/admin/auto-connect-graph/completions"
+      },
+      "admin-auto-connect-logs": {
+        "method": "GET",
+        "path": "/api/admin/auto-connect-graph/logs"
+      },
+      "admin-auto-connect-retry-queue": {
+        "method": "GET",
+        "path": "/api/admin/auto-connect-graph/retry-queue"
+      },
+      "admin-runtime-verification": {
+        "method": "POST",
+        "path": "/api/admin/orchestrator/runtime-verification"
+      }
+    },
+    "backend_routes": {
+      "/api/admin/ad-video-orders": "GET",
+      "/api/admin/ad-video-orders/monitor-summary": "GET",
+      "/api/admin/ad-video-orders/settlement-dashboard": "GET",
+      "/api/admin/auto-connect-graph/completions": "GET",
+      "/api/admin/auto-connect-graph/logs": "GET",
+      "/api/admin/auto-connect-graph/retry-queue": "GET",
+      "/api/admin/orchestrator/runtime-verification": "POST"
+    },
+    "compose": {
+      "services": {
+        "postgres": {
+          "environment": {
+            "POSTGRES_USER": "admin",
+            "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:-}",
+            "POSTGRES_PASSWORD_FILE": "${POSTGRES_PASSWORD_FILE:-}",
+            "POSTGRES_DB": "devanalysis114"
+          },
+          "build_args": {},
+          "ports": [
+            "5432:5432"
+          ]
+        },
+        "minio": {
+          "environment": {
+            "MINIO_ROOT_USER_FILE": "/run/codeai-secrets/minio_access_key.txt",
+            "MINIO_ROOT_PASSWORD_FILE": "/run/codeai-secrets/minio_secret_key.txt"
+          },
+          "build_args": {},
+          "ports": [
+            "9000:9000",
+            "9001:9001"
+          ]
+        },
+        "redis": {
+          "environment": {},
+          "build_args": {},
+          "ports": [
+            "6380:6379"
+          ]
+        },
+        "qdrant": {
+          "environment": {},
+          "build_args": {},
+          "ports": [
+            "6333:6333"
+          ]
+        },
+        "backend": {
+          "environment": {
+            "DATABASE_URL": "${CODEAI_DATABASE_URL:-}",
+            "DATABASE_URL_FILE": "${CODEAI_DATABASE_URL_FILE:-}",
+            "POSTGRES_USER": "${CODEAI_POSTGRES_USER:-admin}",
+            "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:-}",
+            "POSTGRES_PASSWORD_FILE": "${POSTGRES_PASSWORD_FILE:-}",
+            "POSTGRES_DB": "${POSTGRES_DB:-devanalysis114}",
+            "POSTGRES_HOST": "postgres",
+            "POSTGRES_PORT": "5432",
+            "SECRET_KEY": "${JWT_SECRET_KEY:-}",
+            "SECRET_KEY_FILE": "${JWT_SECRET_KEY_FILE:-}",
+            "CORS_ORIGINS": "http://localhost:3000,http://localhost:3005,http://127.0.0.1:3000,http://127.0.0.1:3005",
+            "REDIS_URL": "redis://redis:6379/0",
+            "QDRANT_URL": "http://qdrant:6333",
+            "NVIDIA_VISIBLE_DEVICES": "all",
+            "NVIDIA_DRIVER_CAPABILITIES": "compute,utility,video",
+            "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE": "${CUDA_MPS_ACTIVE_THREAD_PERCENTAGE:-80}",
+            "MINIO_ENDPOINT": "minio:9000",
+            "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY:-}",
+            "MINIO_ACCESS_KEY_FILE": "${MINIO_ACCESS_KEY_FILE:-}",
+            "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY:-}",
+            "MINIO_SECRET_KEY_FILE": "${MINIO_SECRET_KEY_FILE:-}",
+            "MINIO_BUCKET": "marketplace-projects",
+            "FFMPEG_BIN": "ffmpeg",
+            "VIDEO_EXTERNAL_API_URL": "${VIDEO_EXTERNAL_API_URL:-}",
+            "VIDEO_EXTERNAL_API_KEY": "${VIDEO_EXTERNAL_API_KEY:-}",
+            "VIDEO_EXTERNAL_API_KEY_FILE": "${VIDEO_EXTERNAL_API_KEY_FILE:-}",
+            "AZURE_OPENAI_ENDPOINT": "${AZURE_OPENAI_ENDPOINT:-}",
+            "AZURE_OPENAI_API_KEY": "${AZURE_OPENAI_API_KEY:-}",
+            "AZURE_OPENAI_API_KEY_FILE": "${AZURE_OPENAI_API_KEY_FILE:-}",
+            "AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME": "${AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME:-sora-2}",
+            "AZURE_OPENAI_VISION_DEPLOYMENT_NAME": "${AZURE_OPENAI_VISION_DEPLOYMENT_NAME:-gpt-4o}",
+            "VIDEO_DEDICATED_ENGINE_URL": "${VIDEO_DEDICATED_ENGINE_URL:-}",
+            "VIDEO_DEDICATED_ENGINE_API_KEY": "${VIDEO_DEDICATED_ENGINE_API_KEY:-}",
+            "VIDEO_DEDICATED_ENGINE_API_KEY_FILE": "${VIDEO_DEDICATED_ENGINE_API_KEY_FILE:-}",
+            "VIDEO_DEDICATED_SUBMIT_PATH": "${VIDEO_DEDICATED_SUBMIT_PATH:-/jobs}",
+            "VIDEO_DEDICATED_TIMEOUT_SEC": "${VIDEO_DEDICATED_TIMEOUT_SEC:-900}",
+            "VIDEO_DEDICATED_POLL_SEC": "${VIDEO_DEDICATED_POLL_SEC:-2}",
+            "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "${VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE:-false}",
+            "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "${VIDEO_ENGINE_FALLBACK_TO_INTERNAL:-false}",
+            "VIDEO_REQUIRE_GENERATIVE_ENGINE": "${VIDEO_REQUIRE_GENERATIVE_ENGINE:-true}",
+            "ENABLE_AD_ORDER_WORKER_BOOTSTRAP": "${ENABLE_AD_ORDER_WORKER_BOOTSTRAP:-true}",
+            "ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP": "${ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP:-false}",
+            "AD_TOTAL_SECONDS": "${AD_TOTAL_SECONDS:-60}",
+            "AD_CUT_COUNT": "${AD_CUT_COUNT:-6}",
+            "LLM_MODEL_DEFAULT": "${LLM_MODEL_DEFAULT:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_REASONING": "${LLM_MODEL_REASONING:-qwen2.5-coder:32b-q6k}",
+            "LLM_MODEL_CODING": "${LLM_MODEL_CODING:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_CHAT": "${LLM_MODEL_CHAT:-qwen2.5-coder:32b-q4km}",
+            "LLM_MODEL_VOICE_CHAT": "${LLM_MODEL_VOICE_CHAT:-qwen2.5-coder:32b-q4km}",
+            "LLM_MODEL_PLANNER": "${LLM_MODEL_PLANNER:-qwen2.5-coder:32b-q4km}",
+            "LLM_MODEL_CODER": "${LLM_MODEL_CODER:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_REVIEWER": "${LLM_MODEL_REVIEWER:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_DESIGNER": "${LLM_MODEL_DESIGNER:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_SMART_PLANNER": "${LLM_MODEL_SMART_PLANNER:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_SMART_EXECUTOR": "${LLM_MODEL_SMART_EXECUTOR:-qwen2.5-coder:32b-q5km}",
+            "LLM_MODEL_SMART_DESIGNER": "${LLM_MODEL_SMART_DESIGNER:-qwen2.5-coder:32b-q5km}",
+            "ORCH_FORCE_COMPLETE": "${ORCH_FORCE_COMPLETE:-false}",
+            "ORCH_MIN_FILES": "${ORCH_MIN_FILES:-27}",
+            "ORCH_MIN_DIRS": "${ORCH_MIN_DIRS:-3}",
+            "ORCH_MAX_FORCE_RETRIES": "${ORCH_MAX_FORCE_RETRIES:-60}",
+            "ORCH_REQUIRED_FILES": "${ORCH_REQUIRED_FILES:-README.md,requirements.txt,app/main.py,app/routes.py,tests/test_health.py,.gitignore}",
+            "ADMIN_PROBE_BASE_URL": "${ADMIN_PROBE_BASE_URL:-https://nginx}",
+            "ADMIN_PROBE_HOST": "${ADMIN_PROBE_HOST:-metanova1004.com}",
+            "ADMIN_PROBE_VERIFY_SSL": "${ADMIN_PROBE_VERIFY_SSL:-false}",
+            "PASSKEY_RP_ID": "${PASSKEY_RP_ID:-metanova1004.com}",
+            "PASSKEY_EXPECTED_ORIGIN": "${PASSKEY_EXPECTED_ORIGIN:-https://metanova1004.com}",
+            "MARKETPLACE_UPLOAD_ROOT": "${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}",
+            "TMPDIR": "${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}/tmp",
+            "MARKETPLACE_RETENTION_DAYS": "${MARKETPLACE_RETENTION_DAYS:-30}",
+            "MARKETPLACE_TEMP_RETENTION_DAYS": "${MARKETPLACE_TEMP_RETENTION_DAYS:-7}",
+            "AD_DOWNLOAD_MIN_NOTICE_MINUTES": "${AD_DOWNLOAD_MIN_NOTICE_MINUTES:-60}",
+            "AD_DOWNLOAD_WINDOW_DAYS": "${AD_DOWNLOAD_WINDOW_DAYS:-30}",
+            "AD_DOWNLOAD_MAX_COUNT": "${AD_DOWNLOAD_MAX_COUNT:-2}"
+          },
+          "build_args": {},
+          "ports": [
+            "0.0.0.0:8000:8000"
+          ]
+        },
+        "video-worker": {
+          "environment": {
+            "DATABASE_URL": "${CODEAI_DATABASE_URL:-}",
+            "DATABASE_URL_FILE": "${CODEAI_DATABASE_URL_FILE:-}",
+            "POSTGRES_USER": "${CODEAI_POSTGRES_USER:-admin}",
+            "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:-}",
+            "POSTGRES_PASSWORD_FILE": "${POSTGRES_PASSWORD_FILE:-}",
+            "POSTGRES_DB": "${POSTGRES_DB:-devanalysis114}",
+            "POSTGRES_HOST": "postgres",
+            "POSTGRES_PORT": "5432",
+            "REDIS_URL": "redis://redis:6379/0",
+            "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE": "${CUDA_MPS_ACTIVE_THREAD_PERCENTAGE:-80}",
+            "MINIO_ENDPOINT": "minio:9000",
+            "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY:-}",
+            "MINIO_ACCESS_KEY_FILE": "${MINIO_ACCESS_KEY_FILE:-}",
+            "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY:-}",
+            "MINIO_SECRET_KEY_FILE": "${MINIO_SECRET_KEY_FILE:-}",
+            "MINIO_BUCKET": "marketplace-projects",
+            "FFMPEG_BIN": "ffmpeg",
+            "VIDEO_EXTERNAL_API_URL": "${VIDEO_EXTERNAL_API_URL:-}",
+            "VIDEO_EXTERNAL_API_KEY": "${VIDEO_EXTERNAL_API_KEY:-}",
+            "VIDEO_EXTERNAL_API_KEY_FILE": "${VIDEO_EXTERNAL_API_KEY_FILE:-}",
+            "AZURE_OPENAI_ENDPOINT": "${AZURE_OPENAI_ENDPOINT:-}",
+            "AZURE_OPENAI_API_KEY": "${AZURE_OPENAI_API_KEY:-}",
+            "AZURE_OPENAI_API_KEY_FILE": "${AZURE_OPENAI_API_KEY_FILE:-}",
+            "AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME": "${AZURE_OPENAI_VIDEO_DEPLOYMENT_NAME:-sora-2}",
+            "AZURE_OPENAI_VISION_DEPLOYMENT_NAME": "${AZURE_OPENAI_VISION_DEPLOYMENT_NAME:-gpt-4o}",
+            "VIDEO_DEDICATED_ENGINE_URL": "${VIDEO_DEDICATED_ENGINE_URL:-}",
+            "VIDEO_DEDICATED_ENGINE_API_KEY": "${VIDEO_DEDICATED_ENGINE_API_KEY:-}",
+            "VIDEO_DEDICATED_ENGINE_API_KEY_FILE": "${VIDEO_DEDICATED_ENGINE_API_KEY_FILE:-}",
+            "VIDEO_DEDICATED_SUBMIT_PATH": "${VIDEO_DEDICATED_SUBMIT_PATH:-/jobs}",
+            "VIDEO_DEDICATED_TIMEOUT_SEC": "${VIDEO_DEDICATED_TIMEOUT_SEC:-900}",
+            "VIDEO_DEDICATED_POLL_SEC": "${VIDEO_DEDICATED_POLL_SEC:-2}",
+            "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "${VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE:-false}",
+            "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "${VIDEO_ENGINE_FALLBACK_TO_INTERNAL:-false}",
+            "VIDEO_REQUIRE_GENERATIVE_ENGINE": "${VIDEO_REQUIRE_GENERATIVE_ENGINE:-true}",
+            "AD_TOTAL_SECONDS": "${AD_TOTAL_SECONDS:-60}",
+            "AD_CUT_COUNT": "${AD_CUT_COUNT:-6}",
+            "MARKETPLACE_UPLOAD_ROOT": "${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}",
+            "TMPDIR": "${MARKETPLACE_UPLOAD_ROOT:-/app/uploads}/tmp",
+            "MARKETPLACE_RETENTION_DAYS": "${MARKETPLACE_RETENTION_DAYS:-30}",
+            "MARKETPLACE_TEMP_RETENTION_DAYS": "${MARKETPLACE_TEMP_RETENTION_DAYS:-7}",
+            "VIDEO_RENDER_QUEUE_NAME": "${VIDEO_RENDER_QUEUE_NAME:-video_render_queue}"
+          },
+          "build_args": {},
+          "ports": []
+        },
+        "frontend-admin": {
+          "environment": {
+            "NODE_ENV": "production",
+            "PORT": "3005",
+            "NEXT_PUBLIC_API_URL": "\"\"",
+            "NEXT_PUBLIC_SITE_URL": "https://xn--114-2p7l635dz3bh5j.com",
+            "NEXT_PUBLIC_ADMIN_BASE_URL": "https://xn--114-2p7l635dz3bh5j.com",
+            "NEXT_PUBLIC_MARKETPLACE_BASE_URL": "https://metanova1004.com",
+            "NEXT_PUBLIC_ADMIN_ALLOWED_HOSTS": "xn--114-2p7l635dz3bh5j.com",
+            "NEXT_PUBLIC_MARKETPLACE_ALLOWED_HOSTS": "metanova1004.com",
+            "ADMIN_DEV_PORTS": "3005",
+            "MARKETPLACE_DEV_PORTS": "3000",
+            "BACKEND_PROXY_TARGET": "http://backend:8000",
+            "LOCAL_API_BASE_URL": "http://backend:8000"
+          },
+          "build_args": {},
+          "ports": [
+            "3005:3005"
+          ]
+        },
+        "frontend-marketplace": {
+          "environment": {
+            "NODE_ENV": "production",
+            "PORT": "3000",
+            "NEXT_PUBLIC_API_URL": "\"\"",
+            "NEXT_PUBLIC_SITE_URL": "https://metanova1004.com",
+            "NEXT_PUBLIC_ADMIN_BASE_URL": "https://xn--114-2p7l635dz3bh5j.com",
+            "NEXT_PUBLIC_MARKETPLACE_BASE_URL": "https://metanova1004.com",
+            "NEXT_PUBLIC_ADMIN_ALLOWED_HOSTS": "xn--114-2p7l635dz3bh5j.com",
+            "NEXT_PUBLIC_MARKETPLACE_ALLOWED_HOSTS": "metanova1004.com",
+            "ADMIN_DEV_PORTS": "3005",
+            "MARKETPLACE_DEV_PORTS": "3000",
+            "BACKEND_PROXY_TARGET": "http://backend:8000",
+            "LOCAL_API_BASE_URL": "http://backend:8000"
+          },
+          "build_args": {},
+          "ports": [
+            "3000:3000"
+          ]
+        },
+        "nginx": {
+          "environment": {},
+          "build_args": {},
+          "ports": [
+            "target=80",
+            "published=${NGINX_HTTP_PORT:-80}",
+            "target=443",
+            "published=${NGINX_HTTPS_PORT:-443}"
+          ]
+        }
+      }
+    }
+  },
+  "probes": [
+    {
+      "surface": "local-1",
+      "name": "marketplace",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/marketplace",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/admin",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "docs",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/docs",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-docs-viewer",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/admin/docs-viewer?path=%2Fdocs",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-auto-connect-logs",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-auto-connect-logs",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-auto-connect-completions",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-auto-connect-completions",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-auto-connect-retry-queue",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-auto-connect-retry-queue",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-ad-video-orders",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-ad-video-orders",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-ad-video-orders-monitor-summary",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-ad-video-orders-monitor-summary",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-ad-video-orders-settlement-dashboard",
+      "method": "GET",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-ad-video-orders-settlement-dashboard",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-1",
+      "name": "admin-runtime-verification",
+      "method": "POST",
+      "url": "http://127.0.0.1:3005/api/proxy?action=admin-runtime-verification",
+      "status": null,
+      "outcome": "network-error",
+      "detail": "<urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>"
+    },
+    {
+      "surface": "local-2",
+      "name": "marketplace",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/marketplace",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/admin",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "local-2",
+      "name": "docs",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/docs",
+      "status": 404,
+      "outcome": "http-error",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-docs-viewer",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/admin/docs-viewer?path=%2Fdocs",
+      "status": 404,
+      "outcome": "http-error",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-auto-connect-logs",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-auto-connect-logs",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-auto-connect-completions",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-auto-connect-completions",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-auto-connect-retry-queue",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-auto-connect-retry-queue",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-ad-video-orders",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-ad-video-orders",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-ad-video-orders-monitor-summary",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-ad-video-orders-monitor-summary",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-ad-video-orders-settlement-dashboard",
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-ad-video-orders-settlement-dashboard",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "local-2",
+      "name": "admin-runtime-verification",
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/proxy?action=admin-runtime-verification",
+      "status": 502,
+      "outcome": "http-error",
+      "detail": "{\"error\":\"백엔드 연결 실패: fetch failed\",\"backend\":\"http://127.0.0.1:8013\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "marketplace",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/marketplace",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/admin",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-1",
+      "name": "docs",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/docs",
+      "status": 404,
+      "outcome": "http-error",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-docs-viewer",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/admin/docs-viewer?path=%2Fdocs",
+      "status": 404,
+      "outcome": "http-error",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-auto-connect-logs",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-auto-connect-logs",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-auto-connect-completions",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-auto-connect-completions",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-auto-connect-retry-queue",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-auto-connect-retry-queue",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-ad-video-orders",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-ad-video-orders",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-ad-video-orders-monitor-summary",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-ad-video-orders-monitor-summary",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-ad-video-orders-settlement-dashboard",
+      "method": "GET",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-ad-video-orders-settlement-dashboard",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-1",
+      "name": "admin-runtime-verification",
+      "method": "POST",
+      "url": "https://xn--114-2p7l635dz3bh5j.com/api/proxy?action=admin-runtime-verification",
+      "status": 400,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"이메일과 비밀번호를 입력하세요.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "marketplace",
+      "method": "GET",
+      "url": "https://metanova1004.com/marketplace",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin",
+      "method": "GET",
+      "url": "https://metanova1004.com/admin",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-2",
+      "name": "docs",
+      "method": "GET",
+      "url": "https://metanova1004.com/docs",
+      "status": 200,
+      "outcome": "ok",
+      "detail": "<!DOCTYPE html>\n    <html>\n    <head>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css\">\n    <link rel=\"shortcut icon\" href=\"https://fastapi.tiangolo.com/img/favicon.png\">"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-docs-viewer",
+      "method": "GET",
+      "url": "https://metanova1004.com/admin/docs-viewer?path=%2Fdocs",
+      "status": 404,
+      "outcome": "http-error",
+      "detail": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/chunks/0wtz55r0cnmrw.css\" data-precedence=\"next\"/><link rel=\"preload"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-auto-connect-logs",
+      "method": "GET",
+      "url": "https://metanova1004.com/api/proxy?action=admin-auto-connect-logs",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-auto-connect-completions",
+      "method": "GET",
+      "url": "https://metanova1004.com/api/proxy?action=admin-auto-connect-completions",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-auto-connect-retry-queue",
+      "method": "GET",
+      "url": "https://metanova1004.com/api/proxy?action=admin-auto-connect-retry-queue",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-ad-video-orders",
+      "method": "GET",
+      "url": "https://metanova1004.com/api/proxy?action=admin-ad-video-orders",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-ad-video-orders-monitor-summary",
+      "method": "GET",
+      "url": "https://metanova1004.com/api/proxy?action=admin-ad-video-orders-monitor-summary",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-ad-video-orders-settlement-dashboard",
+      "method": "GET",
+      "url": "https://metanova1004.com/api/proxy?action=admin-ad-video-orders-settlement-dashboard",
+      "status": 401,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"Authorization 헤더가 필요합니다.\"}"
+    },
+    {
+      "surface": "docker-2",
+      "name": "admin-runtime-verification",
+      "method": "POST",
+      "url": "https://metanova1004.com/api/proxy?action=admin-runtime-verification",
+      "status": 400,
+      "outcome": "http-error",
+      "detail": "{\"detail\":\"이메일과 비밀번호를 입력하세요.\"}"
+    }
+  ]
+}

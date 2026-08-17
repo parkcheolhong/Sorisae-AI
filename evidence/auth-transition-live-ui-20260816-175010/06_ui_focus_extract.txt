@@ -1,0 +1,35 @@
+
+=== 03_ui_t2.xml ===
+{"rid":"com.parkcheolhong.worldlinco:id/action_bar_root","text":"","desc":"","class":"android.widget.LinearLayout","bounds":"[0,0][800,1340]"}
+{"rid":"worldlinco-translate-home-button","text":"","desc":"worldlinco-translate-home-button","class":"android.widget.Button","bounds":"[477,154][565,204]"}
+{"rid":"worldlinco-my-info-toggle","text":"","desc":"worldlinco-my-info-toggle","class":"android.widget.Button","bounds":"[198,219][486,276]"}
+{"rid":"worldlinco-home-face-hero","text":"","desc":"worldlinco-home-face-hero","class":"android.widget.Button","bounds":"[13,439][787,862]"}
+{"rid":"worldlinco-home-quick-voip","text":"","desc":"worldlinco-home-quick-voip","class":"android.widget.Button","bounds":"[13,881][393,970]"}
+{"rid":"worldlinco-home-quick-chat","text":"","desc":"worldlinco-home-quick-chat","class":"android.widget.Button","bounds":"[406,881][786,970]"}
+{"rid":"worldlinco-home-tools-toggle","text":"","desc":"worldlinco-home-tools-toggle","class":"android.widget.Button","bounds":"[13,988][787,1074]"}
+{"rid":"worldlinco-open-data-sources","text":"","desc":"worldlinco-open-data-sources","class":"android.view.ViewGroup","bounds":"[293,1184][507,1228]"}
+{"rid":"worldlinco-settings-gear","text":"","desc":"월드링코 설정 열기","class":"android.widget.Button","bounds":"[736,13][787,64]"}
+{"rid":"worldlinco-companion-voicecall-toggle","text":"","desc":"worldlinco-companion-voicecall-toggle","class":"android.widget.Button","bounds":"[205,1118][595,1180]"}
+{"rid":"","text":"📞 소리새AI 음성무한대기(심볼) 켜기","desc":"","class":"android.widget.TextView","bounds":"[228,1131][572,1165]"}
+{"rid":"worldlinco-section-rail-chat-button","text":"","desc":"worldlinco-section-rail-chat-button","class":"android.widget.Button","bounds":"[0,1208][160,1276]"}
+{"rid":"worldlinco-section-rail-voip-button","text":"","desc":"worldlinco-section-rail-voip-button","class":"android.widget.Button","bounds":"[160,1208][320,1276]"}
+{"rid":"worldlinco-section-rail-tourism-promo-button","text":"","desc":"worldlinco-section-rail-tourism-promo-button","class":"android.widget.Button","bounds":"[320,1208][480,1276]"}
+{"rid":"worldlinco-section-rail-travel-booking-button","text":"","desc":"worldlinco-section-rail-travel-booking-button","class":"android.widget.Button","bounds":"[480,1208][640,1276]"}
+{"rid":"worldlinco-bottom-tab-settings","text":"","desc":"worldlinco-bottom-tab-settings","class":"android.widget.Button","bounds":"[640,1208][800,1276]"}
+=== 04_ui_t8.xml ===
+{"rid":"com.parkcheolhong.worldlinco:id/action_bar_root","text":"","desc":"","class":"android.widget.LinearLayout","bounds":"[0,0][800,1340]"}
+{"rid":"worldlinco-translate-home-button","text":"","desc":"worldlinco-translate-home-button","class":"android.widget.Button","bounds":"[477,154][565,204]"}
+{"rid":"worldlinco-my-info-toggle","text":"","desc":"worldlinco-my-info-toggle","class":"android.widget.Button","bounds":"[198,219][486,276]"}
+{"rid":"worldlinco-home-face-hero","text":"","desc":"worldlinco-home-face-hero","class":"android.widget.Button","bounds":"[13,439][787,862]"}
+{"rid":"worldlinco-home-quick-voip","text":"","desc":"worldlinco-home-quick-voip","class":"android.widget.Button","bounds":"[13,881][393,970]"}
+{"rid":"worldlinco-home-quick-chat","text":"","desc":"worldlinco-home-quick-chat","class":"android.widget.Button","bounds":"[406,881][786,970]"}
+{"rid":"worldlinco-home-tools-toggle","text":"","desc":"worldlinco-home-tools-toggle","class":"android.widget.Button","bounds":"[13,988][787,1074]"}
+{"rid":"worldlinco-open-data-sources","text":"","desc":"worldlinco-open-data-sources","class":"android.view.ViewGroup","bounds":"[293,1184][507,1228]"}
+{"rid":"worldlinco-settings-gear","text":"","desc":"월드링코 설정 열기","class":"android.widget.Button","bounds":"[736,13][787,64]"}
+{"rid":"worldlinco-companion-voicecall-toggle","text":"","desc":"worldlinco-companion-voicecall-toggle","class":"android.widget.Button","bounds":"[205,1118][595,1180]"}
+{"rid":"","text":"📞 소리새AI 음성무한대기(심볼) 켜기","desc":"","class":"android.widget.TextView","bounds":"[228,1131][572,1165]"}
+{"rid":"worldlinco-section-rail-chat-button","text":"","desc":"worldlinco-section-rail-chat-button","class":"android.widget.Button","bounds":"[0,1208][160,1276]"}
+{"rid":"worldlinco-section-rail-voip-button","text":"","desc":"worldlinco-section-rail-voip-button","class":"android.widget.Button","bounds":"[160,1208][320,1276]"}
+{"rid":"worldlinco-section-rail-tourism-promo-button","text":"","desc":"worldlinco-section-rail-tourism-promo-button","class":"android.widget.Button","bounds":"[320,1208][480,1276]"}
+{"rid":"worldlinco-section-rail-travel-booking-button","text":"","desc":"worldlinco-section-rail-travel-booking-button","class":"android.widget.Button","bounds":"[480,1208][640,1276]"}
+{"rid":"worldlinco-bottom-tab-settings","text":"","desc":"worldlinco-bottom-tab-settings","class":"android.widget.Button","bounds":"[640,1208][800,1276]"}

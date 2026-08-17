@@ -1,0 +1,6443 @@
+"""관리자 전용 API"""
+import asyncio
+import subprocess
+import sys
+import traceback
+from collections import Counter
+from copy import deepcopy
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request  # pyright: ignore[reportMissingImports]
+from fastapi.responses import Response, StreamingResponse  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
+from sqlalchemy import or_, func, case  # pyright: ignore[reportMissingImports]
+from pydantic import BaseModel, Field, ValidationError  # pyright: ignore[reportMissingImports]
+from typing import Any, Dict, List, Optional
+from pathlib import Path
+import hashlib
+import io
+import json
+import logging
+import os
+import py_compile
+import re
+import shutil
+import tempfile
+import time
+import threading
+from datetime import datetime, timedelta
+from uuid import uuid4
+
+from backend.time_utils import utcnow
+from backend.api_public_messages import PublicErrorMessage, resolve_actor_label
+from urllib.error import URLError
+from urllib.parse import quote, urlparse
+from urllib.request import urlopen
+import httpx  # pyright: ignore[reportMissingImports]
+from backend.database import SessionLocal, get_db
+from backend.models import User
+from backend.auth import get_current_user, get_password_hash, verify_password
+from backend.orchestration_stage_service import (
+    initialize_stage_run,
+    load_stage_run,
+    update_stage_run,
+)
+from backend.llm.loader import llm_loader
+from backend.llm.model_config import get_available_ollama_models
+from backend.services.auth_identity_provider import resolve_identity_provider
+from backend.marketplace.minio_service import minio_service
+from backend.marketplace.models import (
+    AdVideoOrder,
+    AttributionLedger,
+    BookingEvent,
+    CustomerOrchestratorCompletion,
+    FeatureExecutionLog,
+    FeatureRetryQueue,
+    PartnerClickEvent,
+    Project,
+    RecommendationEvent,
+    TripSession,
+)
+from backend.marketplace.subscription_models import (
+    PaymentEvent,
+    SubscriptionStateTransition,
+    UserSubscription,
+    WebhookDeliveryAttempt,
+)
+from backend.orchestrator.chat.project_context_store import (
+    append_approval_gate_record,
+    append_experiment_record,
+    get_active_global_approval_policy,
+    get_project_context_bundle,
+    is_workspace_root_scope,
+    normalize_project_root,
+    upsert_global_approval_policy,
+    upsert_project_memory_snapshot,
+)
+from backend.admin.orchestrator.debug_validation_jobs import enqueue_debug_validation_job, get_debug_validation_job
+from backend.admin.orchestrator.debug_validation_jobs import assert_debug_validation_job_contract
+from backend.admin.orchestrator.path_utils import admin_runtime_root, admin_workspace_root, is_relative_to, resolve_marketplace_upload_root_path
+from backend.admin.orchestrator.project_root_service import resolve_admin_project_root
+from backend.admin.orchestrator.runtime_verification_service import build_runtime_verification_response
+from backend.admin.orchestrator.runtime_verification_service import assert_runtime_verification_contract
+from backend.admin.orchestrator.self_run_approval_service import approve_workspace_self_run_response as approve_workspace_self_run_response_service
+from backend.admin.orchestrator.self_run_approval_service import assert_self_run_approval_contract
+from backend.admin.orchestrator.self_run_approval_service import run_admin_approval_validation as run_admin_approval_validation_service
+from backend.admin.orchestrator.self_run_approval_service import sync_clone_into_source as sync_clone_into_source_service
+from backend.admin.orchestrator.self_run_record_service import approval_payload_to_self_run_response as approval_payload_to_self_run_response_service
+from backend.admin.orchestrator.self_run_record_service import assert_self_run_record_contract
+from backend.admin.orchestrator.self_run_record_service import get_workspace_self_run_record_response as get_workspace_self_run_record_response_service
+from backend.admin.orchestrator.self_run_record_service import latest_self_run_record_path as latest_self_run_record_path_service
+from backend.admin.orchestrator.self_run_record_service import normalize_workspace_self_run_record_response as normalize_workspace_self_run_record_response_service
+from backend.admin.orchestrator.self_run_preparation_service import build_initial_running_self_run_payload as build_initial_running_self_run_payload_service
+from backend.admin.orchestrator.self_run_preparation_service import prepare_workspace_self_prepare_result as prepare_workspace_self_prepare_result_service
+from backend.admin.orchestrator.workspace_text_service import get_workspace_text_file as load_workspace_text_file_service, list_workspace_text_files as list_workspace_text_files_service, read_admin_text_file, resolve_admin_workspace_path, is_admin_text_file
+from backend.admin.orchestrator.focused_self_healing_service import (
+    assert_focused_self_healing_contract,
+    build_focused_self_healing_decision,
+    build_tower_crane_options,
+)
+from backend.admin.sorisae_failure_monitor_service import (
+    get_latest_sorisae_failure_status,
+    get_latest_sorisae_failure_result_json_payload,
+    push_latest_sorisae_failure_to_admins,
+)
+from backend.admin.llm_gateway_recovery_service import (
+    auto_recover_llm_gateway,
+    collect_llm_gateway_diagnostics,
+)
+
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+logger = logging.getLogger(__name__)
+_ADMIN_PROJECTS_CACHE_TTL_SEC = max(1.0, float(os.getenv("ADMIN_PROJECTS_CACHE_TTL_SEC", "15")))
+_ADMIN_PROJECTS_RESPONSE_CACHE: Dict[str, Dict[str, Any]] = {}
+_ADMIN_PROJECTS_CACHE_LOCK = threading.Lock()
+_ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC = max(0.2, float(os.getenv("ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC", "1.5")))
+_ADMIN_PROJECTS_RATE_LIMIT_STATE: Dict[str, float] = {}
+_ADMIN_PROJECTS_RATE_LIMIT_LOCK = threading.Lock()
+_ADMIN_TRAVEL_KPI_CACHE_TTL_SEC = max(1.0, float(os.getenv("ADMIN_TRAVEL_KPI_CACHE_TTL_SEC", "10")))
+_ADMIN_TRAVEL_KPI_CACHE_LOCK = threading.Lock()
+_ADMIN_TRAVEL_KPI_RESPONSE_CACHE: Dict[str, Any] = {
+    "captured_at": 0.0,
+    "payload": None,
+    "invalidated_at": None,
+    "invalidate_reason": None,
+}
+_ADMIN_TRAVEL_KPI_CACHE_STATS: Dict[str, Any] = {
+    "hits": 0,
+    "misses": 0,
+    "last_status": "cold",
+    "last_reset_at": utcnow().isoformat() + "Z",
+}
+
+
+def _get_admin_travel_kpi_cache_snapshot() -> Dict[str, Any]:
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        return {
+            "hits": int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("hits") or 0),
+            "misses": int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("misses") or 0),
+            "last_status": str(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("last_status") or "cold"),
+            "invalidate_reason": _ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("invalidate_reason"),
+            "invalidated_at": _ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("invalidated_at"),
+        }
+
+
+def _admin_travel_kpi_cache_hit_rate(stats: Dict[str, Any]) -> float:
+    hits = int(stats.get("hits") or 0)
+    misses = int(stats.get("misses") or 0)
+    total = hits + misses
+    if total <= 0:
+        return 0.0
+    return round(hits / total, 4)
+
+
+def _get_admin_travel_kpi_cached_payload() -> Optional[Dict[str, Any]]:
+    now_ts = time.time()
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        cached_at = float(_ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("captured_at") or 0.0)
+        payload = _ADMIN_TRAVEL_KPI_RESPONSE_CACHE.get("payload")
+        if isinstance(payload, dict) and (now_ts - cached_at) < _ADMIN_TRAVEL_KPI_CACHE_TTL_SEC:
+            _ADMIN_TRAVEL_KPI_CACHE_STATS["hits"] = int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("hits") or 0) + 1
+            _ADMIN_TRAVEL_KPI_CACHE_STATS["last_status"] = "hit"
+            return deepcopy(payload)
+        _ADMIN_TRAVEL_KPI_CACHE_STATS["misses"] = int(_ADMIN_TRAVEL_KPI_CACHE_STATS.get("misses") or 0) + 1
+        _ADMIN_TRAVEL_KPI_CACHE_STATS["last_status"] = "miss"
+        return None
+
+
+def _set_admin_travel_kpi_cached_payload(payload: Dict[str, Any]) -> None:
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["captured_at"] = time.time()
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["payload"] = deepcopy(payload)
+
+
+def _invalidate_admin_travel_kpi_cache(reason: str) -> None:
+    with _ADMIN_TRAVEL_KPI_CACHE_LOCK:
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["captured_at"] = 0.0
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["payload"] = None
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["invalidated_at"] = utcnow().isoformat() + "Z"
+        _ADMIN_TRAVEL_KPI_RESPONSE_CACHE["invalidate_reason"] = str(reason or "unknown")
+
+
+def _attach_admin_travel_kpi_performance(
+    payload: Dict[str, Any],
+    *,
+    cache_status: str,
+    db_query_count: int,
+    build_elapsed_ms: float,
+) -> Dict[str, Any]:
+    next_payload = deepcopy(payload)
+    ops = next_payload.get("ops") if isinstance(next_payload.get("ops"), dict) else {}
+    cache_snapshot = _get_admin_travel_kpi_cache_snapshot()
+    cache_hit_rate = _admin_travel_kpi_cache_hit_rate(cache_snapshot)
+    perf_payload = {
+        "cache": {
+            "status": cache_status,
+            "ttl_sec": round(_ADMIN_TRAVEL_KPI_CACHE_TTL_SEC, 2),
+            "hits": int(cache_snapshot.get("hits") or 0),
+            "misses": int(cache_snapshot.get("misses") or 0),
+            "hit_rate": cache_hit_rate,
+            "hit_rate_percent": round(cache_hit_rate * 100.0, 2),
+            "invalidated_at": cache_snapshot.get("invalidated_at"),
+            "invalidate_reason": cache_snapshot.get("invalidate_reason"),
+        },
+        "db": {
+            "query_count": int(db_query_count),
+            "build_elapsed_ms": round(float(build_elapsed_ms), 2),
+        },
+    }
+    ops["performance"] = perf_payload
+    next_payload["ops"] = ops
+    return next_payload
+
+
+def _apply_short_admin_projects_cache_headers(response: Response, *, applied_limit: int) -> None:
+    ttl = max(1, int(_ADMIN_PROJECTS_CACHE_TTL_SEC))
+    response.headers["Cache-Control"] = f"private, max-age={ttl}, stale-while-revalidate=15"
+    response.headers["Vary"] = "Authorization"
+    response.headers["x-admin-projects-applied-limit"] = str(applied_limit)
+    response.headers["x-stale-client-mitigation"] = "admin-projects-short-cache"
+
+
+def _apply_admin_projects_degraded_headers(response: Response, *, mitigation: str, applied_limit: int) -> None:
+    _apply_short_admin_projects_cache_headers(response, applied_limit=applied_limit)
+    response.headers["Connection"] = "close"
+    response.headers["x-stale-client-mitigation"] = mitigation
+    response.headers["x-admin-projects-degraded"] = "1"
+
+
+def _resolve_admin_projects_rate_limit_key(request: Request) -> str:
+    forwarded_for = str(request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    client_host = forwarded_for or (request.client.host if request.client else "unknown")
+    authorization = str(request.headers.get("authorization") or "")
+    auth_fingerprint = hashlib.sha256(authorization.encode("utf-8")).hexdigest()[:16] if authorization else "anonymous"
+    return f"{client_host}:{auth_fingerprint}"
+
+
+def _should_throttle_admin_projects(request: Request) -> bool:
+    now_ts = time.time()
+    rate_limit_key = _resolve_admin_projects_rate_limit_key(request)
+    with _ADMIN_PROJECTS_RATE_LIMIT_LOCK:
+        last_seen = float(_ADMIN_PROJECTS_RATE_LIMIT_STATE.get(rate_limit_key) or 0.0)
+        _ADMIN_PROJECTS_RATE_LIMIT_STATE[rate_limit_key] = now_ts
+        stale_keys = [key for key, seen_at in _ADMIN_PROJECTS_RATE_LIMIT_STATE.items() if (now_ts - float(seen_at)) > (_ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC * 20)]
+        for stale_key in stale_keys:
+            _ADMIN_PROJECTS_RATE_LIMIT_STATE.pop(stale_key, None)
+    return (now_ts - last_seen) < _ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC
+
+
+def _build_admin_projects_degraded_payload(*, skip: int, requested_limit: int, applied_limit: int, cached_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if isinstance(cached_payload, dict) and cached_payload:
+        payload = dict(cached_payload)
+        payload["requested_limit"] = requested_limit
+        payload["applied_limit"] = applied_limit
+        payload["degraded"] = True
+        return payload
+    return {
+        "items": [],
+        "projects": [],
+        "total": 0,
+        "skip": skip,
+        "limit": applied_limit,
+        "requested_limit": requested_limit,
+        "applied_limit": applied_limit,
+        "degraded": True,
+    }
+
+
+def warm_admin_projects_cache(*, skip: int = 0, limit: int = 100) -> Dict[str, Any]:
+    """관리자 프로젝트 목록 캐시 워밍.
+
+    startup/background 작업에서 호출해 첫 관리자 진입의 DB burst를 줄인다.
+    """
+    safe_skip = max(0, int(skip))
+    safe_limit = max(1, min(int(limit), 500))
+    cache_key = f"{safe_skip}:{safe_limit}"
+    now_ts = time.time()
+
+    with _ADMIN_PROJECTS_CACHE_LOCK:
+        cached = _ADMIN_PROJECTS_RESPONSE_CACHE.get(cache_key)
+        if cached and (now_ts - float(cached.get("captured_at") or 0.0)) < _ADMIN_PROJECTS_CACHE_TTL_SEC:
+            return dict(cached.get("payload") or {})
+
+        db = SessionLocal()
+        try:
+            total = db.query(Project).count()
+            rows = (
+                db.query(Project)
+                .order_by(Project.created_at.desc())
+                .offset(safe_skip)
+                .limit(safe_limit)
+                .all()
+            )
+            serialized_rows = [_serialize_project_item(project) for project in rows]
+            payload = {
+                "items": serialized_rows,
+                "projects": serialized_rows,
+                "total": int(total),
+                "skip": safe_skip,
+                "limit": safe_limit,
+                "requested_limit": safe_limit,
+                "applied_limit": safe_limit,
+            }
+            _ADMIN_PROJECTS_RESPONSE_CACHE[cache_key] = {
+                "captured_at": now_ts,
+                "payload": payload,
+            }
+            return payload
+        finally:
+            db.close()
+
+
+def _is_legacy_admin_projects_request(limit: int) -> bool:
+    return int(limit) >= 5000
+
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    is_admin = bool(getattr(current_user, "is_admin", False))
+    is_superuser = bool(getattr(current_user, "is_superuser", False))
+    if not (is_admin or is_superuser):
+        raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다")
+    return current_user
+
+
+def require_admin_or_regional_manager(current_user: User = Depends(get_current_user)):
+    is_admin = bool(getattr(current_user, "is_admin", False))
+    is_superuser = bool(getattr(current_user, "is_superuser", False))
+    if is_admin or is_superuser:
+        return current_user
+    from backend.marketplace.worldlinco_sales_commission import resolve_regional_manager_for_user
+
+    manager = resolve_regional_manager_for_user(int(getattr(current_user, "id", 0) or 0))
+    if manager:
+        return current_user
+    raise HTTPException(status_code=403, detail="지역 관리자 또는 관리자 권한이 필요합니다")
+
+
+assert_debug_validation_job_contract()
+assert_runtime_verification_contract()
+assert_self_run_approval_contract()
+assert_self_run_record_contract()
+assert_focused_self_healing_contract()
+
+
+def _validate_admin_password_change_payload(payload: "AdminPasswordChangeRequest") -> str:
+    current_password = str(payload.current_password or "")
+    new_password = str(payload.new_password or "")
+    confirm_password = str(payload.confirm_password or "")
+
+    if not current_password.strip():
+        raise HTTPException(status_code=400, detail="현재 비밀번호를 입력해 주세요.")
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="새 비밀번호는 8자 이상이어야 합니다.")
+    if new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="새 비밀번호 확인이 일치하지 않습니다.")
+    if new_password == current_password:
+        raise HTTPException(status_code=400, detail="새 비밀번호는 현재 비밀번호와 달라야 합니다.")
+    return new_password
+
+
+def _validate_postgres_password_change_payload(payload: "AdminPostgresPasswordUpdateRequest") -> str:
+    next_password = str(payload.new_password or "")
+    confirm_password = str(payload.confirm_password or "")
+    if len(next_password) < 8:
+        raise HTTPException(status_code=400, detail="PostgreSQL 비밀번호는 8자 이상이어야 합니다.")
+    if next_password != confirm_password:
+        raise HTTPException(status_code=400, detail="PostgreSQL 비밀번호 확인이 일치하지 않습니다.")
+    return next_password
+
+
+class UserUpdate(BaseModel):
+    is_admin: Optional[bool] = None
+    is_active: Optional[bool] = None
+    is_superuser: Optional[bool] = None
+
+
+class SampleCleanupRequest(BaseModel):
+    pattern: str = "[샘플"
+    dry_run: bool = True
+
+
+class WorkspaceExperimentCloneRequest(BaseModel):
+    source_path: str
+
+
+class WorkspaceSelfPrepareRequest(BaseModel):
+    source_path: str
+    mode: str = "self-diagnosis"
+    create_experiment_clone: bool = False
+
+
+class WorkspaceSelfRunRequest(BaseModel):
+    source_path: str
+    mode: str = "self-diagnosis"
+    self_run_stage: str = ""
+    directive_template: Optional[str] = None
+    directive_scope: Optional[str] = None
+    directive_request: Optional[str] = None
+    stage_run_id: Optional[str] = None
+
+
+class WorkspaceSelfApprovalRequest(BaseModel):
+    approval_id: str
+
+
+class WorkspaceSelfRunRetryRequest(BaseModel):
+    approval_id: Optional[str] = None
+    reason: Optional[str] = None
+    target_stage: str = ""
+    source_path: Optional[str] = None
+
+
+class WorkspaceSelfRunStageUpdateRequest(BaseModel):
+    approval_id: str
+    stage_status: str
+    stage_note: str = ""
+    manual_correction: str = ""
+    substep_checks: Optional[Dict[str, bool]] = None
+    revision_note: str = ""
+
+
+class WorkspaceSelfRunNormalizeRequest(BaseModel):
+    approval_id: Optional[str] = None
+    cleanup_only: bool = False
+
+
+class AdminGlobalAutomaticModeResponse(BaseModel):
+    applied_at: str
+    message: str
+    restart_required: bool
+    env_path: str
+    runtime_config_path: str
+    updated_env_values: Dict[str, str]
+    runtime_summary: Dict[str, Any]
+
+
+class AdminSystemSettingsUpdateRequest(BaseModel):
+    values: Dict[str, str]
+
+
+class AdminRailSlaSettings(BaseModel):
+    enabled: bool = True
+    availability_target_percent: float = 99.9
+    alert_on_breach: bool = True
+    auto_push_on_breach: bool = True
+    breach_cooldown_minutes: int = 15
+
+
+class AdminRailListSettings(BaseModel):
+    enabled: bool = True
+    auto_refresh_seconds: int = 30
+    show_failed_only: bool = False
+    include_raw_payload: bool = True
+    max_items: int = 20
+
+
+class AdminRailOpsSettings(BaseModel):
+    enabled: bool = True
+    auto_apply_global_mode: bool = True
+    healthcheck_on_open: bool = True
+    allow_runtime_restart: bool = False
+    deployment_gate_level: str = "strict"
+
+
+class AdminRailCoverSettings(BaseModel):
+    enabled: bool = True
+    target_fastpath_percent: int = 85
+    enforce_fastpath_guard: bool = True
+    auto_open_failures: bool = True
+    sample_size: int = 25
+
+
+class AdminRailLlmSettings(BaseModel):
+    enabled: bool = True
+    route_timeout_ms: int = 45000
+    prefer_fast_path: bool = True
+    auto_recover_on_timeout: bool = True
+    max_retry_count: int = 2
+
+
+class AdminRailPerformanceSettings(BaseModel):
+    enabled: bool = True
+    response_budget_ms: int = 600
+    db_query_budget_ms: int = 250
+    cache_ttl_seconds: int = 300
+    auto_collect_snapshot: bool = True
+
+
+class AdminRailLatencySettings(BaseModel):
+    enabled: bool = True
+    p50_budget_ms: int = 180
+    p95_budget_ms: int = 700
+    sampling_window_minutes: int = 15
+    alert_on_regression: bool = True
+
+
+class AdminRailDataSettings(BaseModel):
+    enabled: bool = True
+    metric_refresh_seconds: int = 20
+    include_zero_metrics: bool = False
+    selected_metric_key: str = "http_requests_total"
+    max_series_points: int = 120
+
+
+class AdminRailMonitoringSettings(BaseModel):
+    enabled: bool = True
+    grafana_base_url: str = "http://127.0.0.1:3000"
+    auto_refresh_seconds: int = 20
+    open_external_dashboard: bool = False
+    alert_channel: str = "admin"
+
+
+class AdminRailSettingsCollection(BaseModel):
+    sla: AdminRailSlaSettings = AdminRailSlaSettings()
+    list: AdminRailListSettings = AdminRailListSettings()
+    ops: AdminRailOpsSettings = AdminRailOpsSettings()
+    cover: AdminRailCoverSettings = AdminRailCoverSettings()
+    llm: AdminRailLlmSettings = AdminRailLlmSettings()
+    performance: AdminRailPerformanceSettings = AdminRailPerformanceSettings()
+    latency: AdminRailLatencySettings = AdminRailLatencySettings()
+    data: AdminRailDataSettings = AdminRailDataSettings()
+    monitoring: AdminRailMonitoringSettings = AdminRailMonitoringSettings()
+
+
+class AdminRailSettingsUpdateRequest(BaseModel):
+    rails: AdminRailSettingsCollection
+
+
+class AdminPasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+
+class AdminPostgresPasswordUpdateRequest(BaseModel):
+    new_password: str
+    confirm_password: str
+
+
+class AdminProjectMemoryUpdateRequest(BaseModel):
+    project_root: str
+    project_name: Optional[str] = None
+    remembered_goal: Optional[str] = None
+    constraints: List[str] = []
+    pending_tasks: List[str] = []
+    decisions: List[str] = []
+
+
+class AdminExperimentRecordRequest(BaseModel):
+    project_root: str
+    hypothesis: str
+    method: str
+    result_summary: str
+    conclusion: str
+    applied: bool = False
+    evidence: List[str] = []
+
+
+class AdminApprovalGateUpdateRequest(BaseModel):
+    project_root: str
+    status: str
+    scope: List[str] = []
+    blocked_paths: List[str] = []
+    validation_rules: List[str] = []
+    rationale: str = ""
+
+
+class AdminGlobalApprovalPolicyRequest(BaseModel):
+    representative_project_root: str
+    status: str
+    scope: List[str] = []
+    blocked_paths: List[str] = []
+    validation_rules: List[str] = []
+    rationale: str = ""
+
+
+class AdminDebugValidationProfileRequest(BaseModel):
+    project_root: str
+
+
+class AdminDebugValidationJobResponse(BaseModel):
+    job_id: str
+    status: str
+    project_root: str
+
+
+class AdminDebugValidationJobState(BaseModel):
+    job_id: str
+    status: str
+    project_root: str
+    created_at: str
+    updated_at: str
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+class AdminRuntimeVerificationRequest(BaseModel):
+    project_root: str = ""
+    worker_log_path: str = ""
+    mode: str = "dashboard"
+
+
+class AdminIdentityProviderSettingsResponse(BaseModel):
+    provider: str
+    env_keys: Dict[str, str]
+    callback_url: str
+    provider_statuses: List[Dict[str, Any]]
+    guides: Dict[str, str]
+    complete_payload_contracts: List[Dict[str, Any]]
+
+
+class AdminThresholdAnalysisRequest(BaseModel):
+    health: Optional[Dict[str, Any]] = None
+    sorisae_failure: Optional[Dict[str, Any]] = None
+    rail_settings: Optional[Dict[str, Any]] = None
+
+
+class AdminThresholdApprovalRequest(BaseModel):
+    target: str
+    approved: bool = True
+
+
+class AdminThresholdWorldlincoFieldApplyRequest(BaseModel):
+    group: str
+    key: str
+
+
+class AdminWorldlincoTelemetryItem(BaseModel):
+    source: str
+    feature: str
+    metric: str
+    value: float
+    unit: Optional[str] = None
+    timestamp: Optional[str] = None
+    device_id: Optional[str] = None
+    run_id: Optional[str] = None
+    tags: Dict[str, str] = {}
+
+
+class AdminWorldlincoTelemetryUploadRequest(BaseModel):
+    note: Optional[str] = None
+    items: List[AdminWorldlincoTelemetryItem] = []
+
+
+class AdminTravelPartnerCreateRequest(BaseModel):
+    partner_id: Optional[str] = None
+    name: str
+    category: str
+    integration_type: str = "affiliate"
+    regions_supported: List[str] = []
+    commission_model: Optional[str] = None
+    base_url: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+
+
+class AdminTravelRoutingPolicyRule(BaseModel):
+    country_code: str
+    city_code: Optional[str] = None
+    hotel_partner_id: Optional[str] = None
+    tour_partner_id: Optional[str] = None
+    transport_partner_id: Optional[str] = None
+    fallback_partner_ids: List[str] = []
+    active: bool = True
+
+
+class AdminTravelRoutingPolicyRequest(BaseModel):
+    version: str = "v1"
+    default_hotel_partner_id: Optional[str] = None
+    default_tour_partner_id: Optional[str] = None
+    default_transport_partner_id: Optional[str] = None
+    rules: List[AdminTravelRoutingPolicyRule] = []
+
+
+class AdminTravelConnectorTestRequest(BaseModel):
+    test_url: Optional[str] = None
+    timeout_ms: int = 3000
+
+
+class AdminTravelPartnerConnectionUpdateRequest(BaseModel):
+    base_url: Optional[str] = None
+    connector_test_url: Optional[str] = None
+    booking_api_url: Optional[str] = None
+    webhook_url: Optional[str] = None
+
+
+class AdminTravelWebhookTestRequest(BaseModel):
+    webhook_url: Optional[str] = None
+    timeout_ms: int = 3000
+    event_type: str = "admin_webhook_probe"
+    sample_data: Optional[Dict[str, Any]] = None
+
+
+class AdminTravelKpiSettingsRequest(BaseModel):
+    ctr_min: float = 0.05
+    booking_confirm_rate_min: float = 0.5
+    cancel_rate_max: float = 0.2
+    rps_min: float = 5.0
+    partner_success_rate_min: float = 0.85
+    partner_error_rate_max: float = 0.1
+    partner_p95_processing_minutes_max: float = 30.0
+    fallback_country_ratio_max: float = 0.8
+    fallback_city_ratio_max: float = 0.8
+    default_partner_usage_ratio_max: float = 0.95
+
+
+def _identity_provider_guide_text() -> Dict[str, str]:
+    return {
+        "IDENTITY_PROVIDER": "pass, kmc, kcb 중 하나를 입력합니다. 저장 후 현재 provider가 해당 값으로 바뀌어야 합니다.",
+        "PASS_IDENTITY_ENDPOINT": "PASS 상용 본인확인 시작 URL 전체를 입력합니다. 예: https://service.pass.example/identity/start",
+        "PASS_CLIENT_ID": "PASS 계약 후 발급된 운영 client id를 입력합니다.",
+        "PASS_CLIENT_SECRET": "PASS 운영 secret을 입력합니다. 저장 후 secret 마스킹 상태를 확인하세요.",
+        "PASS_CALLBACK_URL": "PASS 결과를 다시 받을 관리자/백엔드 callback URL 전체를 입력합니다.",
+        "KMC_IDENTITY_ENDPOINT": "KMC 상용 본인확인 시작 URL 전체를 입력합니다.",
+        "KMC_CLIENT_ID": "KMC 계약 후 발급된 운영 client id를 입력합니다.",
+        "KMC_CLIENT_SECRET": "KMC 운영 secret을 입력합니다.",
+        "KMC_CALLBACK_URL": "KMC 결과 callback URL 전체를 입력합니다.",
+        "KCB_IDENTITY_ENDPOINT": "KCB 상용 본인확인 시작 URL 전체를 입력합니다.",
+        "KCB_CLIENT_ID": "KCB 계약 후 발급된 운영 client id를 입력합니다.",
+        "KCB_CLIENT_SECRET": "KCB 운영 secret을 입력합니다.",
+        "KCB_CALLBACK_URL": "KCB 결과 callback URL 전체를 입력합니다.",
+    }
+ADMIN_SYSTEM_SETTINGS_CACHE_TTL_SEC = max(5.0, float(os.getenv("ADMIN_SYSTEM_SETTINGS_CACHE_TTL_SEC", "30")))
+_ADMIN_SYSTEM_SETTINGS_CACHE: Dict[str, Any] = {
+    "captured_at": 0.0,
+    "env_mtime": None,
+    "runtime_mtime": None,
+    "payload": None,
+}
+_ADMIN_RAIL_SETTINGS_FILE_NAME = "admin_rail_settings.json"
+_ADMIN_THRESHOLD_ANALYSIS_FILE_NAME = "admin_threshold_analysis.json"
+_ADMIN_WORLDLINCO_TELEMETRY_FILE_NAME = "admin_worldlinco_telemetry.json"
+_ADMIN_TRAVEL_PARTNERS_FILE_NAME = "admin_travel_partners.json"
+_ADMIN_TRAVEL_ROUTING_POLICY_FILE_NAME = "admin_travel_routing_policy.json"
+_ADMIN_TRAVEL_KPI_SETTINGS_FILE_NAME = "admin_travel_kpi_settings.json"
+_ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS = 1000
+_ADMIN_TRAVEL_KPI_ENVIRONMENTS = {"dev", "stage", "prod"}
+
+
+def _admin_rail_settings_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_RAIL_SETTINGS_FILE_NAME).resolve()
+
+
+def _admin_worldlinco_telemetry_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_WORLDLINCO_TELEMETRY_FILE_NAME).resolve()
+
+
+def _admin_worldlinco_recommendation_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / "worldlinco_tuning_recommendation.json").resolve()
+
+
+def _admin_worldlinco_priority_csv_paths() -> List[Path]:
+    workspace_root = Path(__file__).resolve().parents[1]
+    runtime_dir = (workspace_root / ".runtime").resolve()
+    candidates = [
+        runtime_dir / "worldlinco_test_priority_plan.csv",
+        runtime_dir / "worldlinco_priority_checklist.csv",
+    ]
+    # Keep deterministic order while allowing custom CSV names under .runtime.
+    for path in sorted(runtime_dir.glob("worldlinco*priority*.csv")):
+        if path not in candidates:
+            candidates.append(path)
+    return candidates
+
+
+def _path_file_meta(path: Path) -> Dict[str, Any]:
+    exists = path.is_file()
+    if not exists:
+        return {
+            "path": str(path),
+            "exists": False,
+            "size_bytes": 0,
+            "modified_at": None,
+        }
+    stat = path.stat()
+    return {
+        "path": str(path),
+        "exists": True,
+        "size_bytes": int(stat.st_size),
+        "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+    }
+
+
+def _estimate_csv_rows(path: Path) -> int:
+    if not path.exists() or not path.is_file():
+        return 0
+    try:
+        with path.open("r", encoding="utf-8-sig") as fh:
+            line_count = sum(1 for _ in fh)
+        return max(0, line_count - 1)
+    except OSError:
+        return 0
+
+
+def _admin_travel_partners_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_TRAVEL_PARTNERS_FILE_NAME).resolve()
+
+
+def _admin_travel_routing_policy_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_TRAVEL_ROUTING_POLICY_FILE_NAME).resolve()
+
+
+def _admin_travel_kpi_settings_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_TRAVEL_KPI_SETTINGS_FILE_NAME).resolve()
+
+
+def _build_default_admin_rail_settings() -> Dict[str, Any]:
+    return AdminRailSettingsCollection().model_dump()
+
+
+def _build_admin_rail_settings_payload(override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    raw_payload = override or {}
+    raw_rails = raw_payload.get("rails") if isinstance(raw_payload.get("rails"), dict) else {}
+    try:
+        rails_payload = AdminRailSettingsCollection.model_validate(raw_rails).model_dump()
+    except Exception:
+        rails_payload = _build_default_admin_rail_settings()
+
+    return {
+        "settings_path": str(_admin_rail_settings_path()),
+        "updated_at": str(raw_payload.get("updated_at") or ""),
+        "rails": rails_payload,
+    }
+
+
+def _load_admin_rail_settings_payload() -> Dict[str, Any]:
+    settings_path = _admin_rail_settings_path()
+    if not settings_path.exists() or not settings_path.is_file():
+        return _build_admin_rail_settings_payload()
+    return _build_admin_rail_settings_payload(_load_json_file(settings_path))
+
+
+def _save_admin_rail_settings_payload(rails_payload: Dict[str, Any]) -> Dict[str, Any]:
+    serialized = {
+        "updated_at": utcnow().isoformat() + "Z",
+        "rails": AdminRailSettingsCollection.model_validate(rails_payload).model_dump(),
+    }
+    _write_json_file(_admin_rail_settings_path(), serialized)
+    return _build_admin_rail_settings_payload(serialized)
+
+
+def _admin_threshold_analysis_path() -> Path:
+    workspace_root = Path(__file__).resolve().parents[1]
+    return (workspace_root / ".runtime" / _ADMIN_THRESHOLD_ANALYSIS_FILE_NAME).resolve()
+
+
+def _normalize_worldlinco_telemetry_item(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    try:
+        model = AdminWorldlincoTelemetryItem.model_validate(raw)
+    except Exception:
+        return None
+    payload = model.model_dump()
+    payload["source"] = str(payload.get("source") or "unknown").strip() or "unknown"
+    payload["feature"] = str(payload.get("feature") or "unknown").strip() or "unknown"
+    payload["metric"] = str(payload.get("metric") or "unknown").strip() or "unknown"
+    payload["timestamp"] = str(payload.get("timestamp") or utcnow().isoformat() + "Z")
+    tags = payload.get("tags") if isinstance(payload.get("tags"), dict) else {}
+    payload["tags"] = {str(key): str(value) for key, value in tags.items()}
+    return payload
+
+
+def _summarize_worldlinco_telemetry(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    grouped: Dict[str, Dict[str, List[float]]] = {}
+    for item in items:
+        feature = str(item.get("feature") or "unknown")
+        metric = str(item.get("metric") or "unknown")
+        value = item.get("value")
+        if not isinstance(value, (int, float)):
+            continue
+        feature_bucket = grouped.setdefault(feature, {})
+        metric_bucket = feature_bucket.setdefault(metric, [])
+        metric_bucket.append(float(value))
+
+    features: Dict[str, Any] = {}
+    for feature, metrics in grouped.items():
+        metric_summary: Dict[str, Any] = {}
+        for metric_name, values in metrics.items():
+            if not values:
+                continue
+            sorted_values = sorted(values)
+            p95_index = max(0, min(len(sorted_values) - 1, int(round((len(sorted_values) - 1) * 0.95))))
+            metric_summary[metric_name] = {
+                "count": len(sorted_values),
+                "avg": round(sum(sorted_values) / len(sorted_values), 2),
+                "min": round(sorted_values[0], 2),
+                "max": round(sorted_values[-1], 2),
+                "p95": round(sorted_values[p95_index], 2),
+            }
+        if metric_summary:
+            features[feature] = metric_summary
+
+    return {
+        "total_items": len(items),
+        "features": features,
+    }
+
+
+def _build_default_worldlinco_telemetry_payload() -> Dict[str, Any]:
+    return {
+        "updated_at": None,
+        "updated_by": "system",
+        "note": "",
+        "items": [],
+        "summary": _summarize_worldlinco_telemetry([]),
+    }
+
+
+def _normalize_worldlinco_telemetry_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    normalized_items: List[Dict[str, Any]] = []
+    raw_items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        normalized = _normalize_worldlinco_telemetry_item(item)
+        if normalized:
+            normalized_items.append(normalized)
+    if len(normalized_items) > _ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:
+        normalized_items = normalized_items[-_ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:]
+
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "note": str(payload.get("note") or ""),
+        "items": normalized_items,
+        "summary": _summarize_worldlinco_telemetry(normalized_items),
+    }
+
+
+def _build_default_travel_partners_payload() -> Dict[str, Any]:
+    return {
+        "updated_at": None,
+        "updated_by": "system",
+        "partners": [],
+    }
+
+
+def _normalize_partner_id(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9_-]+", "-", str(value or "").strip().lower())
+    slug = slug.strip("-")
+    return slug or f"partner-{uuid4().hex[:8]}"
+
+
+def _normalize_travel_partner_item(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not isinstance(raw, dict):
+        return None
+    name = str(raw.get("name") or "").strip()
+    if not name:
+        return None
+    category = str(raw.get("category") or "").strip().lower()
+    if category not in {"hotel", "tour", "transport"}:
+        return None
+    integration_type = str(raw.get("integration_type") or "affiliate").strip().lower() or "affiliate"
+    partner_id = _normalize_partner_id(str(raw.get("partner_id") or name))
+    regions = raw.get("regions_supported") if isinstance(raw.get("regions_supported"), list) else []
+    regions_supported = [str(item).strip().upper() for item in regions if str(item).strip()]
+    metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
+    return {
+        "partner_id": partner_id,
+        "name": name,
+        "category": category,
+        "integration_type": integration_type,
+        "regions_supported": regions_supported,
+        "commission_model": str(raw.get("commission_model") or "").strip(),
+        "base_url": str(raw.get("base_url") or "").strip(),
+        "active": bool(raw.get("active", True)),
+        "metadata": {str(key): value for key, value in metadata.items()},
+    }
+
+
+def _normalize_travel_partners_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    normalized_items: List[Dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    raw_items = payload.get("partners") if isinstance(payload.get("partners"), list) else []
+    for item in raw_items:
+        normalized = _normalize_travel_partner_item(item if isinstance(item, dict) else {})
+        if not normalized:
+            continue
+        if normalized["partner_id"] in seen_ids:
+            continue
+        seen_ids.add(normalized["partner_id"])
+        normalized_items.append(normalized)
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "partners": normalized_items,
+    }
+
+
+def _load_travel_partners_payload() -> Dict[str, Any]:
+    path = _admin_travel_partners_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_travel_partners_payload()
+    return _normalize_travel_partners_payload(_load_json_file(path))
+
+
+def _save_travel_partners_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_travel_partners_payload(payload)
+    _write_json_file(_admin_travel_partners_path(), normalized)
+    _invalidate_admin_travel_kpi_cache("travel_partners_updated")
+    return normalized
+
+
+def _build_default_travel_routing_policy_payload() -> Dict[str, Any]:
+    return {
+        "updated_at": None,
+        "updated_by": "system",
+        "version": "v1",
+        "default_hotel_partner_id": None,
+        "default_tour_partner_id": None,
+        "default_transport_partner_id": None,
+        "rules": [],
+    }
+
+
+def _normalize_travel_routing_policy_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    rules_raw = payload.get("rules") if isinstance(payload.get("rules"), list) else []
+    rules: List[Dict[str, Any]] = []
+    for item in rules_raw:
+        if not isinstance(item, dict):
+            continue
+        country_code = str(item.get("country_code") or "").strip().upper()
+        if not country_code:
+            continue
+        fallback_raw = item.get("fallback_partner_ids") if isinstance(item.get("fallback_partner_ids"), list) else []
+        fallback_partner_ids = [_normalize_partner_id(str(partner_id)) for partner_id in fallback_raw if str(partner_id).strip()]
+        rules.append(
+            {
+                "country_code": country_code,
+                "city_code": str(item.get("city_code") or "").strip().upper() or None,
+                "hotel_partner_id": _normalize_partner_id(str(item.get("hotel_partner_id"))) if str(item.get("hotel_partner_id") or "").strip() else None,
+                "tour_partner_id": _normalize_partner_id(str(item.get("tour_partner_id"))) if str(item.get("tour_partner_id") or "").strip() else None,
+                "transport_partner_id": _normalize_partner_id(str(item.get("transport_partner_id"))) if str(item.get("transport_partner_id") or "").strip() else None,
+                "fallback_partner_ids": fallback_partner_ids,
+                "active": bool(item.get("active", True)),
+            }
+        )
+    return {
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "version": str(payload.get("version") or "v1"),
+        "default_hotel_partner_id": _normalize_partner_id(str(payload.get("default_hotel_partner_id"))) if str(payload.get("default_hotel_partner_id") or "").strip() else None,
+        "default_tour_partner_id": _normalize_partner_id(str(payload.get("default_tour_partner_id"))) if str(payload.get("default_tour_partner_id") or "").strip() else None,
+        "default_transport_partner_id": _normalize_partner_id(str(payload.get("default_transport_partner_id"))) if str(payload.get("default_transport_partner_id") or "").strip() else None,
+        "rules": rules,
+    }
+
+
+def _load_travel_routing_policy_payload() -> Dict[str, Any]:
+    path = _admin_travel_routing_policy_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_travel_routing_policy_payload()
+    return _normalize_travel_routing_policy_payload(_load_json_file(path))
+
+
+def _save_travel_routing_policy_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_travel_routing_policy_payload(payload)
+    _write_json_file(_admin_travel_routing_policy_path(), normalized)
+    _invalidate_admin_travel_kpi_cache("travel_routing_policy_updated")
+    return normalized
+
+
+def _validate_routing_policy_partner_refs(policy_payload: Dict[str, Any], partners_payload: Dict[str, Any]) -> None:
+    partners = partners_payload.get("partners") if isinstance(partners_payload.get("partners"), list) else []
+    allowed_ids = {str(item.get("partner_id") or "") for item in partners if isinstance(item, dict)}
+    missing_ids: List[str] = []
+
+    def _check_partner_id(value: Optional[str]) -> None:
+        if value and value not in allowed_ids and value not in missing_ids:
+            missing_ids.append(value)
+
+    _check_partner_id(policy_payload.get("default_hotel_partner_id"))
+    _check_partner_id(policy_payload.get("default_tour_partner_id"))
+    _check_partner_id(policy_payload.get("default_transport_partner_id"))
+
+    for rule in policy_payload.get("rules") if isinstance(policy_payload.get("rules"), list) else []:
+        if not isinstance(rule, dict):
+            continue
+        _check_partner_id(rule.get("hotel_partner_id"))
+        _check_partner_id(rule.get("tour_partner_id"))
+        _check_partner_id(rule.get("transport_partner_id"))
+        fallback_ids = rule.get("fallback_partner_ids") if isinstance(rule.get("fallback_partner_ids"), list) else []
+        for fallback_partner_id in fallback_ids:
+            _check_partner_id(str(fallback_partner_id or ""))
+
+    if missing_ids:
+        raise HTTPException(status_code=400, detail="라우팅 정책에 등록되지 않은 파트너 ID가 포함되어 있습니다: " + ", ".join(sorted(missing_ids)))
+
+
+def _resolve_travel_connector_test_url(partner: Dict[str, Any], payload: Optional[AdminTravelConnectorTestRequest]) -> str:
+    candidate_urls: List[str] = []
+    if payload and isinstance(payload.test_url, str):
+        candidate_urls.append(payload.test_url)
+    metadata = partner.get("metadata") if isinstance(partner.get("metadata"), dict) else {}
+    candidate_urls.append(str(metadata.get("connector_test_url") or ""))
+    candidate_urls.append(str(partner.get("base_url") or ""))
+
+    for candidate in candidate_urls:
+        normalized = str(candidate or "").strip()
+        if not normalized:
+            continue
+        parsed = urlparse(normalized)
+        if parsed.scheme.lower() in {"http", "https"} and parsed.netloc:
+            return normalized
+
+    raise HTTPException(status_code=400, detail="커넥터 테스트 URL이 없습니다. base_url 또는 connector_test_url(metadata)을 설정하세요.")
+
+
+def _resolve_travel_webhook_test_url(partner: Dict[str, Any], payload: Optional[AdminTravelWebhookTestRequest]) -> str:
+    candidate_urls: List[str] = []
+    if payload and isinstance(payload.webhook_url, str):
+        candidate_urls.append(payload.webhook_url)
+    metadata = partner.get("metadata") if isinstance(partner.get("metadata"), dict) else {}
+    candidate_urls.append(str(metadata.get("webhook_url") or ""))
+
+    for candidate in candidate_urls:
+        normalized = str(candidate or "").strip()
+        if not normalized:
+            continue
+        parsed = urlparse(normalized)
+        if parsed.scheme.lower() in {"http", "https"} and parsed.netloc:
+            return normalized
+
+    raise HTTPException(status_code=400, detail="Webhook URL이 없습니다. webhook_url(metadata) 또는 요청 payload에 URL을 설정하세요.")
+
+
+def _build_default_travel_kpi_settings_payload() -> Dict[str, Any]:
+    default_profiles = {
+        "dev": AdminTravelKpiSettingsRequest(
+            ctr_min=0.03,
+            booking_confirm_rate_min=0.45,
+            cancel_rate_max=0.3,
+            rps_min=2.0,
+            partner_success_rate_min=0.75,
+            partner_error_rate_max=0.2,
+            partner_p95_processing_minutes_max=45.0,
+            fallback_country_ratio_max=0.95,
+            fallback_city_ratio_max=0.95,
+            default_partner_usage_ratio_max=1.0,
+        ).model_dump(),
+        "stage": AdminTravelKpiSettingsRequest(
+            ctr_min=0.05,
+            booking_confirm_rate_min=0.55,
+            cancel_rate_max=0.2,
+            rps_min=4.0,
+            partner_success_rate_min=0.85,
+            partner_error_rate_max=0.12,
+            partner_p95_processing_minutes_max=35.0,
+            fallback_country_ratio_max=0.85,
+            fallback_city_ratio_max=0.85,
+            default_partner_usage_ratio_max=0.98,
+        ).model_dump(),
+        "prod": AdminTravelKpiSettingsRequest(
+            ctr_min=0.08,
+            booking_confirm_rate_min=0.65,
+            cancel_rate_max=0.15,
+            rps_min=7.0,
+            partner_success_rate_min=0.9,
+            partner_error_rate_max=0.08,
+            partner_p95_processing_minutes_max=25.0,
+            fallback_country_ratio_max=0.7,
+            fallback_city_ratio_max=0.7,
+            default_partner_usage_ratio_max=0.9,
+        ).model_dump(),
+    }
+    current_env = _resolve_travel_kpi_environment(None)
+    return {
+        "settings_path": str(_admin_travel_kpi_settings_path()),
+        "updated_at": None,
+        "updated_by": "system",
+        "environment": current_env,
+        "profiles": default_profiles,
+        "thresholds": default_profiles.get(current_env) or default_profiles["dev"],
+    }
+
+
+def _resolve_travel_kpi_environment(environment: Optional[str]) -> str:
+    candidate = str(environment or "").strip().lower()
+    if candidate in _ADMIN_TRAVEL_KPI_ENVIRONMENTS:
+        return candidate
+    for env_key in ("ADMIN_TRAVEL_KPI_ENV", "APP_ENV", "ENVIRONMENT"):
+        env_value = str(os.getenv(env_key, "")).strip().lower()
+        if env_value in _ADMIN_TRAVEL_KPI_ENVIRONMENTS:
+            return env_value
+    return "dev"
+
+
+def _normalize_travel_kpi_profiles(raw_profiles: Any) -> Dict[str, Dict[str, Any]]:
+    defaults = _build_default_travel_kpi_settings_payload().get("profiles") or {}
+    normalized_profiles: Dict[str, Dict[str, Any]] = {}
+    for env_name in sorted(_ADMIN_TRAVEL_KPI_ENVIRONMENTS):
+        raw_env_payload = raw_profiles.get(env_name) if isinstance(raw_profiles, dict) else None
+        candidate_payload = raw_env_payload if isinstance(raw_env_payload, dict) else defaults.get(env_name)
+        try:
+            normalized_profiles[env_name] = AdminTravelKpiSettingsRequest.model_validate(candidate_payload).model_dump()
+        except Exception:
+            normalized_profiles[env_name] = AdminTravelKpiSettingsRequest().model_dump()
+    return normalized_profiles
+
+
+def _normalize_travel_kpi_settings_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
+    default_payload = _build_default_travel_kpi_settings_payload()
+    environment = _resolve_travel_kpi_environment(payload.get("environment"))
+    profiles = _normalize_travel_kpi_profiles(payload.get("profiles"))
+
+    # Backward compatibility: legacy payload had flat `thresholds` only.
+    thresholds_raw = payload.get("thresholds") if isinstance(payload.get("thresholds"), dict) else None
+    if thresholds_raw is not None:
+        try:
+            profiles[environment] = AdminTravelKpiSettingsRequest.model_validate(thresholds_raw).model_dump()
+        except Exception:
+            pass
+
+    thresholds = profiles.get(environment) or default_payload.get("thresholds") or AdminTravelKpiSettingsRequest().model_dump()
+    return {
+        "settings_path": str(_admin_travel_kpi_settings_path()),
+        "updated_at": payload.get("updated_at"),
+        "updated_by": str(payload.get("updated_by") or "system"),
+        "environment": environment,
+        "profiles": profiles,
+        "thresholds": thresholds,
+    }
+
+
+def _load_travel_kpi_settings_payload() -> Dict[str, Any]:
+    path = _admin_travel_kpi_settings_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_travel_kpi_settings_payload()
+    return _normalize_travel_kpi_settings_payload(_load_json_file(path))
+
+
+def _save_travel_kpi_settings_payload(payload: Dict[str, Any], *, updated_by: str, environment: Optional[str] = None) -> Dict[str, Any]:
+    normalized = _normalize_travel_kpi_settings_payload(payload)
+    current_environment = _resolve_travel_kpi_environment(environment or normalized.get("environment"))
+    profiles = _normalize_travel_kpi_profiles(normalized.get("profiles"))
+    incoming_thresholds = normalized.get("thresholds") if isinstance(normalized.get("thresholds"), dict) else None
+    if incoming_thresholds is not None:
+        profiles[current_environment] = AdminTravelKpiSettingsRequest.model_validate(incoming_thresholds).model_dump()
+
+    saved = {
+        "updated_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "environment": current_environment,
+        "profiles": profiles,
+        "thresholds": profiles.get(current_environment) or AdminTravelKpiSettingsRequest().model_dump(),
+    }
+    _write_json_file(_admin_travel_kpi_settings_path(), saved)
+    _invalidate_admin_travel_kpi_cache("travel_kpi_settings_updated")
+    return _normalize_travel_kpi_settings_payload(saved)
+
+
+def _safe_ratio(numerator: float, denominator: float) -> float:
+    if denominator <= 0:
+        return 0.0
+    return round(numerator / denominator, 4)
+
+
+def _p95(values: List[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    rank = max(0, int(len(ordered) * 0.95) - 1)
+    return round(float(ordered[min(rank, len(ordered) - 1)]), 2)
+
+
+def _compute_travel_fallback_payload(
+    rules: List[Dict[str, Any]],
+    *,
+    default_partner_recommendation_total: int,
+    recommendation_total: int,
+) -> Dict[str, Any]:
+    active_rules = [rule for rule in rules if isinstance(rule, dict) and bool(rule.get("active", True))]
+    country_rules = [rule for rule in active_rules if str(rule.get("country_code") or "").strip()]
+    city_rules = [rule for rule in active_rules if str(rule.get("city_code") or "").strip()]
+    country_fallback_rules = [rule for rule in country_rules if len(rule.get("fallback_partner_ids") or []) > 0]
+    city_fallback_rules = [rule for rule in city_rules if len(rule.get("fallback_partner_ids") or []) > 0]
+
+    return {
+        "country_rule_count": len(country_rules),
+        "country_fallback_ratio": _safe_ratio(len(country_fallback_rules), len(country_rules)),
+        "city_rule_count": len(city_rules),
+        "city_fallback_ratio": _safe_ratio(len(city_fallback_rules), len(city_rules)),
+        "default_partner_usage_ratio": _safe_ratio(default_partner_recommendation_total, recommendation_total),
+    }
+
+
+def _build_travel_fallback_alerts(fallback_payload: Dict[str, Any], thresholds: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": "country_fallback_ratio",
+            "severity": "warning" if fallback_payload["country_fallback_ratio"] > float(thresholds.get("fallback_country_ratio_max", 0.8)) else "ok",
+            "label": "Fallback(국가)",
+            "value": fallback_payload["country_fallback_ratio"],
+            "threshold": float(thresholds.get("fallback_country_ratio_max", 0.8)),
+            "operator": "lte",
+        },
+        {
+            "id": "city_fallback_ratio",
+            "severity": "warning" if fallback_payload["city_fallback_ratio"] > float(thresholds.get("fallback_city_ratio_max", 0.8)) else "ok",
+            "label": "Fallback(도시)",
+            "value": fallback_payload["city_fallback_ratio"],
+            "threshold": float(thresholds.get("fallback_city_ratio_max", 0.8)),
+            "operator": "lte",
+        },
+        {
+            "id": "default_partner_usage_ratio",
+            "severity": "warning" if fallback_payload["default_partner_usage_ratio"] > float(thresholds.get("default_partner_usage_ratio_max", 0.95)) else "ok",
+            "label": "기본 파트너 사용률",
+            "value": fallback_payload["default_partner_usage_ratio"],
+            "threshold": float(thresholds.get("default_partner_usage_ratio_max", 0.95)),
+            "operator": "lte",
+        },
+    ]
+
+
+def _build_admin_travel_kpi_payload(db: Session) -> Dict[str, Any]:
+    build_started_at = time.perf_counter()
+    db_query_count = 0
+    kpi_settings = _load_travel_kpi_settings_payload()
+    thresholds = kpi_settings.get("thresholds") if isinstance(kpi_settings.get("thresholds"), dict) else AdminTravelKpiSettingsRequest().model_dump()
+
+    recommendation_agg = db.query(
+        func.count(RecommendationEvent.id),
+        func.coalesce(
+            func.sum(
+                case(
+                    (
+                        (RecommendationEvent.partner_id.isnot(None))
+                        & RecommendationEvent.partner_id.like("%-default"),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ),
+            0,
+        ),
+    ).one()
+    db_query_count += 1
+    recommendation_total = int(recommendation_agg[0] or 0)
+    default_partner_recommendation_total = int(recommendation_agg[1] or 0)
+
+    click_total = int(db.query(PartnerClickEvent).count())
+    db_query_count += 1
+
+    rows = db.query(
+        BookingEvent.partner_id,
+        BookingEvent.status,
+        BookingEvent.created_at,
+        BookingEvent.updated_at,
+    ).all()
+    db_query_count += 1
+    booking_total = len(rows)
+
+    booking_confirmed_total = 0
+    booking_completed_total = 0
+    booking_cancelled_total = 0
+    booking_refunded_total = 0
+    for _partner_id, status, _created_at, _updated_at in rows:
+        status_normalized = str(status or "").lower()
+        if status_normalized in {"confirmed", "completed", "refunded"}:
+            booking_confirmed_total += 1
+        if status_normalized == "completed":
+            booking_completed_total += 1
+        if status_normalized == "cancelled":
+            booking_cancelled_total += 1
+        if status_normalized == "refunded":
+            booking_refunded_total += 1
+
+    commission_total = float(
+        db.query(func.coalesce(func.sum(AttributionLedger.amount), 0.0))
+        .filter(AttributionLedger.ledger_type == "commission")
+        .scalar()
+        or 0.0
+    )
+    db_query_count += 1
+    trip_session_total = int(db.query(TripSession).count())
+    db_query_count += 1
+
+    rule_payload = _load_travel_routing_policy_payload()
+    rules = [rule for rule in (rule_payload.get("rules") or []) if isinstance(rule, dict)]
+
+    partner_agg: Dict[str, Dict[str, Any]] = {}
+    for partner_id, status, created_at, updated_at in rows:
+        pid = str(partner_id or "partner-unknown")
+        slot = partner_agg.setdefault(
+            pid,
+            {
+                "total": 0,
+                "success": 0,
+                "error": 0,
+                "latencies": [],
+            },
+        )
+        slot["total"] += 1
+        st = str(status or "").lower()
+        if st in {"completed", "refunded"}:
+            slot["success"] += 1
+        if st in {"cancelled", "failed"}:
+            slot["error"] += 1
+        if created_at and updated_at:
+            latency_minutes = max(0.0, (updated_at - created_at).total_seconds() / 60.0)
+            slot["latencies"].append(latency_minutes)
+
+    partner_sla = []
+    for partner_id, stats in partner_agg.items():
+        total = int(stats["total"])
+        success = int(stats["success"])
+        error = int(stats["error"])
+        partner_sla.append(
+            {
+                "partner_id": partner_id,
+                "success_rate": _safe_ratio(success, total),
+                "error_rate": _safe_ratio(error, total),
+                "p95_processing_minutes": _p95(list(stats["latencies"])),
+                "total_events": total,
+            }
+        )
+
+    partner_sla.sort(key=lambda item: item["total_events"], reverse=True)
+
+    funnel_payload = {
+        "ctr": _safe_ratio(click_total, recommendation_total),
+        "booking_confirm_rate": _safe_ratio(booking_confirmed_total, booking_total),
+        "cancel_rate": _safe_ratio(booking_cancelled_total + booking_refunded_total, booking_completed_total + booking_cancelled_total + booking_refunded_total),
+        "commission_total": round(commission_total, 2),
+        "rps": round(_safe_ratio(commission_total, trip_session_total), 2),
+        "counts": {
+            "recommendations": recommendation_total,
+            "clicks": click_total,
+            "bookings": booking_total,
+            "confirmed": booking_confirmed_total,
+            "completed": booking_completed_total,
+            "cancelled": booking_cancelled_total,
+            "refunded": booking_refunded_total,
+            "trip_sessions": trip_session_total,
+        },
+    }
+
+    fallback_payload = _compute_travel_fallback_payload(
+        rules,
+        default_partner_recommendation_total=default_partner_recommendation_total,
+        recommendation_total=recommendation_total,
+    )
+
+    funnel_alerts = [
+        {
+            "id": "ctr",
+            "severity": "critical" if funnel_payload["ctr"] < float(thresholds.get("ctr_min", 0.05)) else "ok",
+            "label": "CTR",
+            "value": funnel_payload["ctr"],
+            "threshold": float(thresholds.get("ctr_min", 0.05)),
+            "operator": "gte",
+        },
+        {
+            "id": "booking_confirm_rate",
+            "severity": "critical" if funnel_payload["booking_confirm_rate"] < float(thresholds.get("booking_confirm_rate_min", 0.5)) else "ok",
+            "label": "예약확정률",
+            "value": funnel_payload["booking_confirm_rate"],
+            "threshold": float(thresholds.get("booking_confirm_rate_min", 0.5)),
+            "operator": "gte",
+        },
+        {
+            "id": "cancel_rate",
+            "severity": "warning" if funnel_payload["cancel_rate"] > float(thresholds.get("cancel_rate_max", 0.2)) else "ok",
+            "label": "취소율",
+            "value": funnel_payload["cancel_rate"],
+            "threshold": float(thresholds.get("cancel_rate_max", 0.2)),
+            "operator": "lte",
+        },
+        {
+            "id": "rps",
+            "severity": "warning" if funnel_payload["rps"] < float(thresholds.get("rps_min", 5.0)) else "ok",
+            "label": "RPS",
+            "value": funnel_payload["rps"],
+            "threshold": float(thresholds.get("rps_min", 5.0)),
+            "operator": "gte",
+        },
+    ]
+
+    fallback_alerts = _build_travel_fallback_alerts(fallback_payload, thresholds)
+
+    sla_alerts: List[Dict[str, Any]] = []
+    if partner_sla:
+        top = partner_sla[0]
+        sla_alerts.append(
+            {
+                "id": "partner_success_rate",
+                "severity": "critical" if top["success_rate"] < float(thresholds.get("partner_success_rate_min", 0.85)) else "ok",
+                "label": f"SLA 성공률({top['partner_id']})",
+                "value": top["success_rate"],
+                "threshold": float(thresholds.get("partner_success_rate_min", 0.85)),
+                "operator": "gte",
+            }
+        )
+        sla_alerts.append(
+            {
+                "id": "partner_error_rate",
+                "severity": "warning" if top["error_rate"] > float(thresholds.get("partner_error_rate_max", 0.1)) else "ok",
+                "label": f"SLA 오류율({top['partner_id']})",
+                "value": top["error_rate"],
+                "threshold": float(thresholds.get("partner_error_rate_max", 0.1)),
+                "operator": "lte",
+            }
+        )
+        sla_alerts.append(
+            {
+                "id": "partner_p95_processing_minutes",
+                "severity": "warning" if top["p95_processing_minutes"] > float(thresholds.get("partner_p95_processing_minutes_max", 30.0)) else "ok",
+                "label": f"SLA p95 분({top['partner_id']})",
+                "value": top["p95_processing_minutes"],
+                "threshold": float(thresholds.get("partner_p95_processing_minutes_max", 30.0)),
+                "operator": "lte",
+            }
+        )
+
+    alerts = funnel_alerts + sla_alerts + fallback_alerts
+    critical_count = len([item for item in alerts if item.get("severity") == "critical"])
+    warning_count = len([item for item in alerts if item.get("severity") == "warning"])
+
+    payload = {
+        "generated_at": utcnow().isoformat() + "Z",
+        "funnel": funnel_payload,
+        "sla": partner_sla[:10],
+        "fallback": fallback_payload,
+        "ops": {
+            "settings": kpi_settings,
+            "alert_summary": {
+                "critical_count": critical_count,
+                "warning_count": warning_count,
+                "ok_count": len([item for item in alerts if item.get("severity") == "ok"]),
+                "overall": "critical" if critical_count > 0 else ("warning" if warning_count > 0 else "ok"),
+            },
+            "alerts": alerts,
+        },
+    }
+    build_elapsed_ms = (time.perf_counter() - build_started_at) * 1000.0
+    return _attach_admin_travel_kpi_performance(
+        payload,
+        cache_status="miss",
+        db_query_count=db_query_count,
+        build_elapsed_ms=build_elapsed_ms,
+    )
+
+
+def _load_worldlinco_telemetry_payload() -> Dict[str, Any]:
+    path = _admin_worldlinco_telemetry_path()
+    if not path.exists() or not path.is_file():
+        return _build_default_worldlinco_telemetry_payload()
+    return _normalize_worldlinco_telemetry_payload(_load_json_file(path))
+
+
+def _save_worldlinco_telemetry_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_worldlinco_telemetry_payload(payload)
+    _write_json_file(_admin_worldlinco_telemetry_path(), normalized)
+    return normalized
+
+
+def _build_default_worldlinco_analysis_groups() -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import load_worldlinco_tuning
+
+    current = load_worldlinco_tuning()
+    return {
+        "voip": dict(current.get("voip") or {}),
+        "face_conversation": dict(current.get("face_conversation") or {}),
+        "voip_bridge": dict(current.get("voip_bridge") or {}),
+        "sorisae_ai": dict(current.get("sorisae_ai") or {}),
+        "pstn_assist": dict(current.get("pstn_assist") or {}),
+        "chat": dict(current.get("chat") or {}),
+    }
+
+
+def _round_up_step(value: float, step: int, minimum: int, maximum: int) -> int:
+    bounded = max(float(minimum), min(float(maximum), float(value)))
+    rounded = int((bounded + step - 1) // step) * step
+    return max(minimum, min(maximum, rounded))
+
+
+def _percentile_from_request_histogram(quantile: float) -> Optional[float]:
+    try:
+        from backend.marketplace.prometheus_metrics import REQUEST_DURATION
+
+        buckets: Dict[float, float] = {}
+        for metric in REQUEST_DURATION.collect():
+            for sample in metric.samples:
+                if not sample.name.endswith("_bucket"):
+                    continue
+                le_value = str(sample.labels.get("le") or "").strip()
+                if not le_value or le_value == "+Inf":
+                    continue
+                try:
+                    bucket_upper = float(le_value)
+                except ValueError:
+                    continue
+                buckets[bucket_upper] = buckets.get(bucket_upper, 0.0) + float(sample.value)
+        if not buckets:
+            return None
+        ordered = sorted(buckets.items(), key=lambda item: item[0])
+        total_count = ordered[-1][1]
+        if total_count <= 0:
+            return None
+        threshold = total_count * quantile
+        for upper_bound, cumulative_count in ordered:
+            if cumulative_count >= threshold:
+                return round(upper_bound * 1000.0, 1)
+        return round(ordered[-1][0] * 1000.0, 1)
+    except Exception:
+        return None
+
+
+def _collect_metrics_summary_snapshot() -> Dict[str, Any]:
+    try:
+        from backend.marketplace.prometheus_metrics import (
+            ACTIVE_CONNECTIONS,
+            CACHE_HITS,
+            CACHE_MISSES,
+            DB_QUERIES,
+            FILE_UPLOADS,
+            PURCHASES,
+            REQUEST_COUNT,
+        )
+
+        def _counter_total(counter: Any) -> float:
+            total = 0.0
+            for metric in counter.collect():
+                for sample in metric.samples:
+                    if sample.name.endswith("_total"):
+                        total += float(sample.value)
+            return total
+
+        def _gauge_value(gauge: Any) -> float:
+            for metric in gauge.collect():
+                for sample in metric.samples:
+                    return float(sample.value)
+            return 0.0
+
+        requests_total = _counter_total(REQUEST_COUNT)
+        cache_hits_total = _counter_total(CACHE_HITS)
+        cache_misses_total = _counter_total(CACHE_MISSES)
+        db_queries_total = _counter_total(DB_QUERIES)
+        return {
+            "http_requests_total": requests_total,
+            "active_connections": _gauge_value(ACTIVE_CONNECTIONS),
+            "cache_hits_total": cache_hits_total,
+            "cache_misses_total": cache_misses_total,
+            "db_queries_total": db_queries_total,
+            "file_uploads_total": _counter_total(FILE_UPLOADS),
+            "purchases_total": _counter_total(PURCHASES),
+            "cache_hit_ratio": round(cache_hits_total / max(1.0, cache_hits_total + cache_misses_total), 4),
+            "db_queries_per_request": round(db_queries_total / max(1.0, requests_total), 4),
+            "p50_latency_ms": _percentile_from_request_histogram(0.50),
+            "p95_latency_ms": _percentile_from_request_histogram(0.95),
+        }
+    except Exception:
+        return {
+            "http_requests_total": 0.0,
+            "active_connections": 0.0,
+            "cache_hits_total": 0.0,
+            "cache_misses_total": 0.0,
+            "db_queries_total": 0.0,
+            "file_uploads_total": 0.0,
+            "purchases_total": 0.0,
+            "cache_hit_ratio": 0.0,
+            "db_queries_per_request": 0.0,
+            "p50_latency_ms": None,
+            "p95_latency_ms": None,
+        }
+
+
+def _threshold_analysis_fingerprint(payload: Dict[str, Any]) -> str:
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _build_threshold_recommendations(request_payload: AdminThresholdAnalysisRequest) -> Dict[str, Any]:
+    metrics = _collect_metrics_summary_snapshot()
+    telemetry_payload = _load_worldlinco_telemetry_payload()
+    telemetry_summary = telemetry_payload.get("summary") if isinstance(telemetry_payload.get("summary"), dict) else {"total_items": 0, "features": {}}
+    telemetry_features = telemetry_summary.get("features") if isinstance(telemetry_summary.get("features"), dict) else {}
+    rail_defaults = _build_default_admin_rail_settings()
+    rail_current_raw = request_payload.rail_settings if isinstance(request_payload.rail_settings, dict) else rail_defaults
+    try:
+        rail_current = AdminRailSettingsCollection.model_validate(rail_current_raw).model_dump()
+    except Exception:
+        rail_current = rail_defaults
+
+    health_payload = request_payload.health if isinstance(request_payload.health, dict) else {}
+    diagnostics = health_payload.get("diagnostics") if isinstance(health_payload.get("diagnostics"), dict) else {}
+    resources = diagnostics.get("resources") if isinstance(diagnostics.get("resources"), dict) else {}
+    sorisae_failure = request_payload.sorisae_failure if isinstance(request_payload.sorisae_failure, dict) else {}
+    sorisae_classification = str(sorisae_failure.get("classification") or "unknown")
+
+    p50_latency_ms = metrics.get("p50_latency_ms")
+    p95_latency_ms = metrics.get("p95_latency_ms")
+    cpu_usage_percent = ((resources.get("cpu") or {}) if isinstance(resources.get("cpu"), dict) else {}).get("usage_percent")
+    memory_usage_percent = ((resources.get("memory") or {}) if isinstance(resources.get("memory"), dict) else {}).get("usage_percent")
+    queue_depth = ((resources.get("redis_queue") or {}) if isinstance(resources.get("redis_queue"), dict) else {}).get("queue_depth")
+    cache_hit_ratio = float(metrics.get("cache_hit_ratio") or 0.0)
+    db_queries_per_request = float(metrics.get("db_queries_per_request") or 0.0)
+
+    recommended_p50 = _round_up_step((float(p50_latency_ms or 140.0) * 1.15), 10, 80, 2500)
+    recommended_p95 = _round_up_step((float(p95_latency_ms or 340.0) * 1.20), 10, max(recommended_p50 + 100, 250), 6000)
+
+    chat_metrics = telemetry_features.get("chat") if isinstance(telemetry_features.get("chat"), dict) else {}
+    chat_latency_metric = chat_metrics.get("message_latency_ms") if isinstance(chat_metrics.get("message_latency_ms"), dict) else {}
+    chat_latency_p95 = chat_latency_metric.get("p95") if isinstance(chat_latency_metric.get("p95"), (int, float)) else None
+    if isinstance(chat_latency_p95, (int, float)):
+        recommended_p95 = max(recommended_p95, _round_up_step(float(chat_latency_p95) * 1.1, 10, 250, 6000))
+    recommended_response_budget = _round_up_step(max(float(recommended_p95), float(p95_latency_ms or 340.0) * 1.10), 10, 250, 8000)
+    recommended_db_budget = _round_up_step(320 if db_queries_per_request >= 2.5 else 180 if db_queries_per_request <= 1.2 else 250, 10, 80, 2000)
+    recommended_cache_ttl = 600 if cache_hit_ratio < 0.40 else 300 if cache_hit_ratio < 0.70 else 180
+    recommended_sla_target = 99.5 if sorisae_classification not in {"ALL_PASS", "unknown"} or str(health_payload.get("status") or "") not in {"ok", "healthy"} else 99.9
+    recommended_sla_cooldown = 30 if sorisae_classification not in {"ALL_PASS", "unknown"} else 15
+
+    rails_recommendation = deepcopy(rail_current)
+    rails_recommendation["sla"]["availability_target_percent"] = recommended_sla_target
+    rails_recommendation["sla"]["breach_cooldown_minutes"] = recommended_sla_cooldown
+    rails_recommendation["latency"]["p50_budget_ms"] = recommended_p50
+    rails_recommendation["latency"]["p95_budget_ms"] = recommended_p95
+    rails_recommendation["performance"]["response_budget_ms"] = recommended_response_budget
+    rails_recommendation["performance"]["db_query_budget_ms"] = recommended_db_budget
+    rails_recommendation["performance"]["cache_ttl_seconds"] = recommended_cache_ttl
+
+    worldlinco_recommendation = _build_default_worldlinco_analysis_groups()
+    cpu_hot = isinstance(cpu_usage_percent, (int, float)) and float(cpu_usage_percent) >= 80.0
+    memory_hot = isinstance(memory_usage_percent, (int, float)) and float(memory_usage_percent) >= 85.0
+    queue_hot = isinstance(queue_depth, (int, float)) and float(queue_depth) >= 5.0
+    latency_hot = isinstance(p95_latency_ms, (int, float)) and float(p95_latency_ms) >= 900.0
+
+    if latency_hot and not cpu_hot:
+        worldlinco_recommendation["voip_bridge"]["silence_gap_ms"] = max(400, int(worldlinco_recommendation["voip_bridge"].get("silence_gap_ms", 600)) - 100)
+        worldlinco_recommendation["voip_bridge"]["max_speech_ms"] = max(5000, int(worldlinco_recommendation["voip_bridge"].get("max_speech_ms", 8000)) - 500)
+        worldlinco_recommendation["face_conversation"]["restart_ms"] = min(400, int(worldlinco_recommendation["face_conversation"].get("restart_ms", 250)) + 50)
+        worldlinco_recommendation["chat"]["message_latency_budget_ms"] = recommended_p95
+        worldlinco_recommendation["chat"]["stream_chunk_budget_ms"] = min(500, max(180, recommended_p50))
+
+    if cpu_hot or memory_hot or queue_hot:
+        worldlinco_recommendation["voip"]["silero_min_segment_ms"] = min(3200, int(worldlinco_recommendation["voip"].get("silero_min_segment_ms", 2400)) + 200)
+        worldlinco_recommendation["face_conversation"]["min_segment_ms"] = min(3000, int(worldlinco_recommendation["face_conversation"].get("min_segment_ms", 2200)) + 200)
+        worldlinco_recommendation["voip_bridge"]["rms_gate"] = min(700, int(worldlinco_recommendation["voip_bridge"].get("rms_gate", 420)) + 40)
+        worldlinco_recommendation["pstn_assist"]["turn_pause_ms"] = min(1800, int(worldlinco_recommendation["pstn_assist"].get("turn_pause_ms", 1200)) + 150)
+
+    if sorisae_classification not in {"ALL_PASS", "unknown"}:
+        worldlinco_recommendation["sorisae_ai"]["friend_min_lang_prob"] = max(0.65, float(worldlinco_recommendation["sorisae_ai"].get("friend_min_lang_prob", 0.60)))
+        worldlinco_recommendation["sorisae_ai"]["geo_accuracy_max_m"] = min(2500, int(worldlinco_recommendation["sorisae_ai"].get("geo_accuracy_max_m", 3000)))
+
+    observations_complete = bool(isinstance(p50_latency_ms, (int, float)) and isinstance(p95_latency_ms, (int, float)))
+    recommendation_payload = {
+        "rails": rails_recommendation,
+        "worldlinco": worldlinco_recommendation,
+        "observation_summary": {
+            "metrics": metrics,
+            "cpu_usage_percent": cpu_usage_percent,
+            "memory_usage_percent": memory_usage_percent,
+            "queue_depth": queue_depth,
+            "health_status": str(health_payload.get("status") or "unknown"),
+            "sorisae_classification": sorisae_classification,
+            "observations_complete": observations_complete,
+            "telemetry_summary": telemetry_summary,
+        },
+    }
+    return recommendation_payload
+
+
+def _build_default_threshold_analysis_payload() -> Dict[str, Any]:
+    recommendation_payload = {
+        "rails": _build_default_admin_rail_settings(),
+        "worldlinco": _build_default_worldlinco_analysis_groups(),
+        "observation_summary": {
+            "metrics": _collect_metrics_summary_snapshot(),
+            "health_status": "unknown",
+            "sorisae_classification": "unknown",
+            "observations_complete": False,
+        },
+    }
+    fingerprint = _threshold_analysis_fingerprint(recommendation_payload)
+    return {
+        "analysis_mode_enabled": True,
+        "last_analyzed_at": None,
+        "recommendations": recommendation_payload,
+        "approvals": {
+            "rails": {"approved": False, "approved_at": None, "approved_by": None, "fingerprint": fingerprint},
+            "worldlinco": {"approved": False, "approved_at": None, "approved_by": None, "fingerprint": fingerprint},
+        },
+        "safe_gate": {
+            "threshold_recovery_allowed": False,
+            "worldlinco_auto_apply_allowed": False,
+            "reason": "승인된 권장 임계치가 아직 없습니다.",
+        },
+        "worldlinco_partial_applied": [],
+    }
+
+
+def _normalize_threshold_analysis_payload(raw_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    base = _build_default_threshold_analysis_payload()
+    payload = raw_payload or {}
+    recommendations = payload.get("recommendations") if isinstance(payload.get("recommendations"), dict) else base["recommendations"]
+    fingerprint = _threshold_analysis_fingerprint(recommendations)
+    approvals = payload.get("approvals") if isinstance(payload.get("approvals"), dict) else {}
+    rails_approval = approvals.get("rails") if isinstance(approvals.get("rails"), dict) else {}
+    worldlinco_approval = approvals.get("worldlinco") if isinstance(approvals.get("worldlinco"), dict) else {}
+    rails_approved = bool(rails_approval.get("approved")) and str(rails_approval.get("fingerprint") or "") == fingerprint
+    worldlinco_approved = bool(worldlinco_approval.get("approved")) and str(worldlinco_approval.get("fingerprint") or "") == fingerprint
+    safe_gate = {
+        "threshold_recovery_allowed": rails_approved and bool((recommendations.get("observation_summary") or {}).get("observations_complete")),
+        "worldlinco_auto_apply_allowed": worldlinco_approved and bool((recommendations.get("observation_summary") or {}).get("observations_complete")),
+        "reason": "승인된 권장 임계치와 최근 관측값이 있어 자동복구에 사용할 수 있습니다." if (rails_approved or worldlinco_approved) else "승인 전까지는 추천 임계치와 추천 튜닝값을 자동복구에 사용할 수 없습니다.",
+    }
+    raw_partial_applied = payload.get("worldlinco_partial_applied") if isinstance(payload.get("worldlinco_partial_applied"), list) else []
+    partial_applied: List[Dict[str, Any]] = []
+    for item in raw_partial_applied:
+        if not isinstance(item, dict):
+            continue
+        group = str(item.get("group") or "").strip()
+        key = str(item.get("key") or "").strip()
+        value = item.get("value")
+        if not group or not key or not isinstance(value, (int, float)):
+            continue
+        partial_applied.append(
+            {
+                "group": group,
+                "key": key,
+                "value": float(value),
+                "applied_at": str(item.get("applied_at") or ""),
+                "applied_by": str(item.get("applied_by") or ""),
+            }
+        )
+    if len(partial_applied) > 500:
+        partial_applied = partial_applied[-500:]
+
+    return {
+        "analysis_mode_enabled": bool(payload.get("analysis_mode_enabled", True)),
+        "last_analyzed_at": payload.get("last_analyzed_at"),
+        "recommendations": recommendations,
+        "approvals": {
+            "rails": {
+                "approved": rails_approved,
+                "approved_at": rails_approval.get("approved_at"),
+                "approved_by": rails_approval.get("approved_by"),
+                "fingerprint": fingerprint,
+            },
+            "worldlinco": {
+                "approved": worldlinco_approved,
+                "approved_at": worldlinco_approval.get("approved_at"),
+                "approved_by": worldlinco_approval.get("approved_by"),
+                "fingerprint": fingerprint,
+            },
+        },
+        "safe_gate": safe_gate,
+        "worldlinco_partial_applied": partial_applied,
+    }
+
+
+def _load_threshold_analysis_payload() -> Dict[str, Any]:
+    path = _admin_threshold_analysis_path()
+    if not path.exists() or not path.is_file():
+        return _normalize_threshold_analysis_payload()
+    return _normalize_threshold_analysis_payload(_load_json_file(path))
+
+
+def _save_threshold_analysis_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _normalize_threshold_analysis_payload(payload)
+    _write_json_file(_admin_threshold_analysis_path(), normalized)
+    return normalized
+
+
+def _classify_gate_status(verification_items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    hard_gate_keys = {
+        "py_compile",
+        "health",
+        "llm-status",
+        "stats-revenue",
+        "project-context",
+        "traceback-capture",
+        "approval-gate",
+        "worker-log-tail",
+    }
+    soft_gate_keys = set()
+    hard_failures = [
+        item
+        for item in verification_items
+        if item.get("key") in hard_gate_keys and item.get("status") in {"failed", "warning"}
+    ]
+    soft_failures = [
+        item
+        for item in verification_items
+        if item.get("key") in soft_gate_keys and item.get("status") in {"failed", "warning"}
+    ]
+    if hard_failures:
+        final_status = "failed"
+    elif soft_failures:
+        final_status = "warning"
+    else:
+        final_status = "passed"
+    return {
+        "hard_gate_keys": sorted(hard_gate_keys),
+        "soft_gate_keys": sorted(soft_gate_keys),
+        "hard_failures": hard_failures,
+        "soft_failures": soft_failures,
+        "fallback_recovery": bool(soft_failures) and not hard_failures,
+        "final_pass": not hard_failures,
+        "final_status": final_status,
+    }
+
+
+def _resolve_admin_stage_run(payload: WorkspaceSelfRunRequest, admin: User) -> Dict[str, Any]:
+    if payload.stage_run_id:
+        existing = load_stage_run(payload.stage_run_id)
+        if existing:
+            return existing
+    return initialize_stage_run(
+        scope="admin",
+        project_name=_slugify_admin_name(payload.source_path or "workspace-self-run"),
+        mode=str(payload.mode or "self-diagnosis"),
+        requested_by={
+            "id": getattr(admin, "id", None),
+            "email": getattr(admin, "email", ""),
+        },
+        metadata={
+            "source_path": str(payload.source_path or ""),
+            "self_run_stage": str(payload.self_run_stage or ""),
+        },
+    )
+
+
+def _resolve_identity_provider_env_keys(provider_name: str) -> Dict[str, str]:
+    normalized = str(provider_name or "mock-carrier").strip().lower()
+    if normalized == "pass":
+        return {
+            "endpoint": "PASS_IDENTITY_ENDPOINT",
+            "client_id": "PASS_CLIENT_ID",
+            "client_secret": "PASS_CLIENT_SECRET",
+            "callback_url": "PASS_CALLBACK_URL",
+        }
+    if normalized == "kmc":
+        return {
+            "endpoint": "KMC_IDENTITY_ENDPOINT",
+            "client_id": "KMC_CLIENT_ID",
+            "client_secret": "KMC_CLIENT_SECRET",
+            "callback_url": "KMC_CALLBACK_URL",
+        }
+    if normalized == "kcb":
+        return {
+            "endpoint": "KCB_IDENTITY_ENDPOINT",
+            "client_id": "KCB_CLIENT_ID",
+            "client_secret": "KCB_CLIENT_SECRET",
+            "callback_url": "KCB_CALLBACK_URL",
+        }
+    return {
+        "endpoint": "IDENTITY_PROVIDER_ENDPOINT",
+        "client_id": "IDENTITY_PROVIDER_CLIENT_ID",
+        "client_secret": "IDENTITY_PROVIDER_CLIENT_SECRET",
+        "callback_url": "IDENTITY_PROVIDER_CALLBACK_URL",
+    }
+
+
+@router.get("/identity-provider-settings", response_model=AdminIdentityProviderSettingsResponse)
+def get_admin_identity_provider_settings(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    env_values = _read_admin_env_values(_admin_env_path())
+    active_provider_name = str(env_values.get("IDENTITY_PROVIDER") or "mock-carrier").strip().lower() or "mock-carrier"
+    active_provider = resolve_identity_provider(active_provider_name)
+    provider_names = ["pass", "kmc", "kcb"]
+    provider_statuses: List[Dict[str, Any]] = []
+    complete_payload_contracts: List[Dict[str, Any]] = []
+
+    for provider_name in provider_names:
+        provider = resolve_identity_provider(provider_name)
+        provider_status = provider.build_mapping_status(env_values)
+        provider_status["env_keys"] = list(_resolve_identity_provider_env_keys(provider_name).values())
+        provider_statuses.append(provider_status)
+        contract = provider.build_complete_payload_contract()
+        complete_payload_contracts.append(
+            {
+                "provider": contract.provider,
+                "required_fields": list(contract.required_fields),
+                "optional_fields": list(contract.optional_fields),
+                "callback_fields": list(contract.callback_fields),
+            }
+        )
+
+    return AdminIdentityProviderSettingsResponse(
+        provider=active_provider.provider_name,
+        env_keys=_resolve_identity_provider_env_keys(active_provider.provider_name),
+        callback_url=str(active_provider.build_mapping_status(env_values).get("callback_url") or ""),
+        provider_statuses=provider_statuses,
+        guides=_identity_provider_guide_text(),
+        complete_payload_contracts=complete_payload_contracts,
+    )
+
+
+_DEBUG_VALIDATION_JOBS: Dict[str, Dict[str, Any]] = {}
+
+
+def _run_debug_validation_profile_sync(project_root: Path, db: Session) -> Dict[str, Any]:
+    profile = _build_project_python_debug_profile(project_root) # pyright: ignore[reportUndefinedVariable]
+    verification_items: List[Dict[str, Any]] = []
+    traceback_text = ""
+    py_files = [
+        path for path in project_root.rglob('*.py')
+        if path.is_file() and '__pycache__' not in path.parts and '.venv' not in path.parts
+    ]
+    py_compile_ok = True
+    py_compile_error = ""
+    for path in py_files:
+        try:
+            py_compile.compile(str(path), doraise=True)
+        except py_compile.PyCompileError as exc:
+            py_compile_ok = False
+            py_compile_error = f"{path}: {exc.msg}"
+            traceback_text = traceback.format_exc()
+            break
+    verification_items.append({
+        "key": "py_compile",
+        "label": "Python py_compile",
+        "status": "passed" if py_compile_ok else "failed",
+        "detail": py_compile_error or f"{len(py_files)}개 파일 py_compile 통과",
+        "checkedAt": datetime.now().isoformat(),
+    })
+    verification_items.append({
+        "key": "runtime_verification",
+        "label": "관리자 API 런타임 검증",
+        "status": "passed",
+        "detail": "프로젝트 문맥 저장/실험/승인 게이트 API를 직접 호출해 응답 여부를 확인했습니다.",
+        "checkedAt": datetime.now().isoformat(),
+    })
+    verification_items.append({
+        "key": "traceback_capture",
+        "label": "traceback 캡처",
+        "status": "passed" if not traceback_text else "failed",
+        "detail": "최근 검증에서 traceback 없음" if not traceback_text else traceback_text[-400: ],
+        "checkedAt": datetime.now().isoformat(),
+    })
+    context = enrich_experiment_with_debug_validation( # pyright: ignore[reportUndefinedVariable]
+        db,
+        project_root=str(project_root),
+        debug_profile=profile,
+        verification_items=verification_items,
+        traceback_text=traceback_text,
+    )
+    return {
+        "debug_profile": profile,
+        "verification_items": verification_items,
+        "context": context,
+    }
+
+
+class AdminAutoConnectCompletionItem(BaseModel):
+    id: int
+    trace_id: Optional[str] = None
+    flow_id: Optional[str] = None
+    step_id: Optional[str] = None
+    action: Optional[str] = None
+    project_name: str
+    mode: str
+    attempts: int
+    output_dir: Optional[str] = None
+    postcheck_ok: Optional[bool] = None
+    gate_passed: bool
+    override_used: bool
+    created_at: datetime
+    connection_id: Optional[str] = None
+
+
+class AdminAutoConnectTraceLogItem(BaseModel):
+    id: int
+    trace_id: str
+    flow_id: str
+    step_id: str
+    action: str
+    entity_type: str
+    entity_id: str
+    status: str
+    message: str
+    payload_json: Optional[str] = None
+    created_at: datetime
+    connection_id: Optional[str] = None
+
+
+@router.post("/account/password")
+def change_admin_account_password(
+    payload: AdminPasswordChangeRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    next_password = _validate_admin_password_change_payload(payload)
+    stored_hash = str(getattr(admin, "hashed_password", "") or "")
+    if not stored_hash or not verify_password(payload.current_password, stored_hash):
+        raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다.")
+
+    admin.hashed_password = get_password_hash(next_password) # pyright: ignore[reportAttributeAccessIssue]
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    return {
+        "changed": True,
+        "message": "관리자 비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해 주세요.",
+        "username": str(admin.username or ""),
+        "email": str(admin.email or ""),
+    }
+
+
+@router.get("/orchestrator/project-context")
+def get_admin_orchestrator_project_context(
+    project_root: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    normalized_root = str(project_root or "").strip()
+    if not normalized_root:
+        raise HTTPException(status_code=400, detail="project_root가 필요합니다.")
+    return get_project_context_bundle(db, normalized_root)
+
+
+@router.put("/orchestrator/project-memory")
+def update_admin_orchestrator_project_memory(
+    payload: AdminProjectMemoryUpdateRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    memory = {
+        "project_name": str(payload.project_name or "").strip(),
+        "remembered_goal": str(payload.remembered_goal or "").strip(),
+        "constraints": [str(item).strip() for item in payload.constraints if str(item).strip()],
+        "pending_tasks": [str(item).strip() for item in payload.pending_tasks if str(item).strip()],
+        "decisions": [str(item).strip() for item in payload.decisions if str(item).strip()],
+    }
+    return upsert_project_memory_snapshot(
+        db,
+        project_root=payload.project_root,
+        memory=memory,
+    )
+
+
+@router.post("/orchestrator/experiments")
+def create_admin_orchestrator_experiment_record(
+    payload: AdminExperimentRecordRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    record = append_experiment_record(
+        db,
+        project_root=payload.project_root,
+        hypothesis=payload.hypothesis,
+        method=payload.method,
+        result_summary=payload.result_summary,
+        conclusion=payload.conclusion,
+        applied=payload.applied,
+        evidence=payload.evidence,
+    )
+    return {
+        "record": record,
+        "context": get_project_context_bundle(db, payload.project_root),
+    }
+
+
+@router.post("/orchestrator/approval-gate")
+def create_admin_orchestrator_approval_gate(
+    payload: AdminApprovalGateUpdateRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    gate = append_approval_gate_record(
+        db,
+        project_root=payload.project_root,
+        status=payload.status,
+        scope=[str(item).strip() for item in payload.scope if str(item).strip()],
+        blocked_paths=[str(item).strip() for item in payload.blocked_paths if str(item).strip()],
+        validation_rules=[str(item).strip() for item in payload.validation_rules if str(item).strip()],
+        rationale=payload.rationale,
+    )
+    return {
+        "approval_gate": gate,
+        "context": get_project_context_bundle(db, payload.project_root),
+    }
+
+
+@router.post("/orchestrator/global-approval-policy")
+def create_admin_orchestrator_global_approval_policy(
+    payload: AdminGlobalApprovalPolicyRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    workspace_root = normalize_project_root(str(_admin_workspace_root()))
+    requested_scope = [str(item).strip() for item in payload.scope if str(item).strip()]
+    requested_blocked_paths = [str(item).strip() for item in payload.blocked_paths if str(item).strip()]
+    requested_rules = [str(item).strip() for item in payload.validation_rules if str(item).strip()]
+    normalized_scope = [workspace_root] if workspace_root else requested_scope
+    normalized_blocked_paths = [
+        item for item in requested_blocked_paths
+        if normalize_project_root(item) != workspace_root
+    ]
+    normalized_rules = list(dict.fromkeys([
+        *requested_rules,
+        "workspace self-run 은 전체 프로젝트 루트 기준으로만 실행",
+    ]))
+    policy = upsert_global_approval_policy(
+        db,
+        representative_project_root=workspace_root or payload.representative_project_root,
+        status=payload.status,
+        scope=normalized_scope,
+        blocked_paths=normalized_blocked_paths,
+        validation_rules=normalized_rules,
+        rationale=payload.rationale,
+    )
+    return {
+        "global_approval_policy": policy,
+        "context": get_project_context_bundle(db, workspace_root or payload.representative_project_root),
+    }
+
+
+@router.post("/orchestrator/debug-validation-profile")
+def create_admin_orchestrator_debug_validation_profile(
+    payload: AdminDebugValidationProfileRequest,
+    admin: User = Depends(require_admin),
+):
+    project_root = resolve_admin_project_root(payload.project_root)
+    return enqueue_debug_validation_job(
+        project_root=str(project_root),
+        admin_id=int(admin.id), # pyright: ignore[reportArgumentType]
+    )
+
+
+@router.get("/orchestrator/debug-validation-profile/{job_id}")
+def get_admin_orchestrator_debug_validation_profile_job(
+    job_id: str,
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return get_debug_validation_job(job_id)
+
+
+@router.post("/orchestrator/runtime-verification")
+def run_admin_orchestrator_runtime_verification(
+    payload: AdminRuntimeVerificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    project_root = resolve_admin_project_root(payload.project_root, allow_workspace_default=True)
+    del admin
+    return build_runtime_verification_response(
+        db=db,
+        project_root=project_root,
+        worker_log_path=payload.worker_log_path,
+        mode=payload.mode,
+        bearer_token=str(request.headers.get("authorization") or "").replace("Bearer ", "").strip(),
+        classify_gate_status=_classify_gate_status,
+        read_admin_env_values=_read_admin_env_values,
+        admin_env_path=_admin_env_path,
+    ) # pyright: ignore[reportCallIssue]
+
+
+# 주의: admin_router 는 import 시점에 데코레이터가 즉시 평가된다.
+# 이 구간에서 아직 선언되지 않은 response_model 을 참조하면 admin router 전체 import 가 실패하고
+# /api/admin/system-settings 를 포함한 admin 경로가 일괄 404 로 떨어진다.
+# ad-video-orders / auto-connect-graph 계열 라우트는 같은 재발을 막기 위해
+# 선행 선언된 타입만 사용하거나 dict 응답으로 유지한다.
+@router.get("/auto-connect-graph/logs")
+def list_admin_auto_connect_graph_logs(
+    limit: int = Query(default=30, ge=1, le=200),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    rows = (
+        db.query(FeatureExecutionLog)
+        .order_by(FeatureExecutionLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return {
+        "items": [_serialize_auto_connect_log(item) for item in rows],
+        "count": len(rows),
+        "limit": limit,
+    }
+
+
+@router.get("/auto-connect-graph/completions")
+def list_admin_auto_connect_graph_completions(
+    limit: int = Query(default=20, ge=1, le=200),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    rows = (
+        db.query(CustomerOrchestratorCompletion)
+        .order_by(CustomerOrchestratorCompletion.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return {
+        "items": [_serialize_auto_connect_completion(item) for item in rows],
+        "count": len(rows),
+        "limit": limit,
+    }
+
+
+@router.get("/auto-connect-graph/retry-queue")
+def list_admin_auto_connect_retry_queue(
+    limit: int = Query(default=30, ge=1, le=200),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    rows = (
+        db.query(FeatureRetryQueue)
+        .order_by(FeatureRetryQueue.updated_at.desc(), FeatureRetryQueue.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return {
+        "items": [_serialize_auto_connect_retry_queue(item) for item in rows],
+        "count": len(rows),
+        "limit": limit,
+    }
+
+
+@router.get("/ad-video-orders")
+def list_admin_ad_video_orders(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=200),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    total = db.query(AdVideoOrder).count()
+    rows = (
+        db.query(AdVideoOrder)
+        .order_by(AdVideoOrder.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return {
+        "items": [
+            {
+                "id": int(getattr(order, "id", 0) or 0),
+                "public_job_id": getattr(order, "public_job_id", None),
+                "title": str(getattr(order, "title", "") or ""),
+                "status": str(getattr(order, "status", "") or ""),
+                "engine_type": str(getattr(order, "engine_type", "") or ""),
+                "render_quality": str(getattr(order, "render_quality", "") or ""),
+                "progress_percent": int(getattr(order, "progress_percent", 0) or 0),
+                "quality_score": float(getattr(order, "quality_score", 0.0) or 0.0) if getattr(order, "quality_score", None) is not None else None,
+                "download_count": int(getattr(order, "download_count", 0) or 0),
+                "user_id": int(getattr(order, "user_id", 0) or 0),
+                "created_at": getattr(order, "created_at", datetime.now()).isoformat(),
+                "updated_at": getattr(order, "updated_at", datetime.now()).isoformat(),
+                "error_message": getattr(order, "error_message", None),
+            }
+            for order in rows
+        ],
+        "total": int(total),
+        "skip": skip,
+        "limit": limit,
+    }
+
+
+@router.get("/ad-video-orders/monitor-summary")
+def get_admin_ad_video_orders_monitor_summary(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):                                                                                                                               
+
+    del admin
+    return _build_admin_ad_order_monitor_summary_payload(db)
+
+
+@router.get("/ad-video-orders/settlement-dashboard")
+def get_admin_ad_video_orders_settlement_dashboard(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return _build_admin_ad_order_settlement_dashboard_payload(db)
+
+
+def _build_admin_subscription_monitor_summary_payload(
+    db: Session,
+    *,
+    period_days: int = 30,
+    status_filter: Optional[str] = None,
+) -> Dict[str, Any]:
+    now = utcnow()
+    period_days = max(1, min(int(period_days), 90))
+    period_since = now - timedelta(days=period_days)
+    normalized_status_filter = str(status_filter or "").strip() or None
+
+    subscription_query = db.query(UserSubscription)
+    if normalized_status_filter:
+        subscription_query = subscription_query.filter(UserSubscription.status == normalized_status_filter)
+
+    total_subscriptions = int(subscription_query.count())
+    active_subscriptions = int(
+        subscription_query
+        .filter(UserSubscription.status.in_(["active", "trialing", "grace_period"]))
+        .count()
+    )
+
+    status_rows = subscription_query.with_entities(UserSubscription.status).all()
+    status_counter = Counter(str(row[0] or "unknown") for row in status_rows)
+
+    failed_payment_count = int(
+        db.query(PaymentEvent)
+        .filter(PaymentEvent.event_type == "renewal_failed")
+        .filter(PaymentEvent.received_at >= period_since)
+        .count()
+    )
+    refunds_count = int(
+        db.query(PaymentEvent)
+        .filter(PaymentEvent.event_type == "refund_applied")
+        .filter(PaymentEvent.received_at >= period_since)
+        .count()
+    )
+
+    transition_query = db.query(SubscriptionStateTransition)
+    if normalized_status_filter:
+        transition_query = transition_query.filter(
+            or_(
+                SubscriptionStateTransition.from_status == normalized_status_filter,
+                SubscriptionStateTransition.to_status == normalized_status_filter,
+            )
+        )
+
+    recent_transitions = (
+        transition_query
+        .filter(SubscriptionStateTransition.created_at >= period_since)
+        .order_by(SubscriptionStateTransition.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    recent_webhook_failures = (
+        db.query(WebhookDeliveryAttempt)
+        .filter(WebhookDeliveryAttempt.result.in_(["retry_scheduled", "dead_letter"]))
+        .order_by(WebhookDeliveryAttempt.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    def _safe_datetime_iso(value: Any) -> Optional[str]:
+        return value.isoformat() if isinstance(value, datetime) else None
+
+    def _safe_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    return {
+        "totals": {
+            "total_subscriptions": total_subscriptions,
+            "active_subscriptions": active_subscriptions,
+            "failed_payment_count": failed_payment_count,
+            "refunds_count": refunds_count,
+        },
+        "filters": {
+            "period_days": period_days,
+            "status": normalized_status_filter,
+        },
+        "status_breakdown": [
+            {
+                "status": status,
+                "count": int(count),
+            }
+            for status, count in sorted(status_counter.items(), key=lambda item: item[0])
+        ],
+        "recent_state_transitions": [
+            {
+                "id": _safe_int(getattr(item, "id", 0)),
+                "subscription_id": _safe_int(getattr(item, "subscription_id", 0)),
+                "from_status": str(getattr(item, "from_status", "") or ""),
+                "to_status": str(getattr(item, "to_status", "") or ""),
+                "reason_code": str(getattr(item, "reason_code", "") or ""),
+                "actor_type": str(getattr(item, "actor_type", "") or ""),
+                "created_at": _safe_datetime_iso(getattr(item, "created_at", None)),
+            }
+            for item in recent_transitions
+        ],
+        "recent_webhook_failures": [
+            {
+                "id": _safe_int(getattr(item, "id", 0)),
+                "provider": str(getattr(item, "provider", "") or ""),
+                "event_id": str(getattr(item, "event_id", "") or ""),
+                "attempt_number": _safe_int(getattr(item, "attempt_number", 0)),
+                "result": str(getattr(item, "result", "") or ""),
+                "http_status": _safe_int(getattr(item, "http_status", 0)) if getattr(item, "http_status", None) is not None else None,
+                "error_message": str(getattr(item, "error_message", "") or ""),
+                "created_at": _safe_datetime_iso(getattr(item, "created_at", None)),
+            }
+            for item in recent_webhook_failures
+        ],
+    }
+
+
+@router.get("/subscription-monitor-summary")
+def get_admin_subscription_monitor_summary(
+    db: Session = Depends(get_db),
+    period_days: int = Query(default=30, ge=1, le=90),
+    status: Optional[str] = Query(default=None),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return _build_admin_subscription_monitor_summary_payload(
+        db,
+        period_days=period_days,
+        status_filter=status,
+    )
+
+
+@router.get("/projects")
+def list_admin_projects(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=5000),
+    request: Request = None, # pyright: ignore[reportArgumentType]
+    response: Response = None, # pyright: ignore[reportArgumentType]
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    safe_limit = max(1, min(int(limit), 500))
+    if response is not None:
+        _apply_short_admin_projects_cache_headers(response, applied_limit=safe_limit)
+    cache_key = f"{int(skip)}:{safe_limit}"
+    cached = _ADMIN_PROJECTS_RESPONSE_CACHE.get(cache_key)
+    if _is_legacy_admin_projects_request(int(limit)):
+        degraded_payload = _build_admin_projects_degraded_payload(
+            skip=int(skip),
+            requested_limit=int(limit),
+            applied_limit=safe_limit,
+            cached_payload=(cached.get("payload") if isinstance(cached, dict) else None),
+        )
+        if response is not None:
+            _apply_admin_projects_degraded_headers(
+                response,
+                mitigation="admin-projects-legacy-limit-cutoff",
+                applied_limit=safe_limit,
+            )
+        return degraded_payload
+    if request is not None and _should_throttle_admin_projects(request):
+        degraded_payload = _build_admin_projects_degraded_payload(
+            skip=int(skip),
+            requested_limit=int(limit),
+            applied_limit=safe_limit,
+            cached_payload=(cached.get("payload") if isinstance(cached, dict) else None),
+        )
+        if response is not None:
+            response.headers["Retry-After"] = str(max(1, int(_ADMIN_PROJECTS_RATE_LIMIT_WINDOW_SEC)))
+            _apply_admin_projects_degraded_headers(
+                response,
+                mitigation="admin-projects-degraded-cache",
+                applied_limit=safe_limit,
+            )
+        return degraded_payload
+    now_ts = time.time()
+    if cached and (now_ts - float(cached.get("captured_at") or 0.0)) < _ADMIN_PROJECTS_CACHE_TTL_SEC:
+        return cached["payload"]
+    with _ADMIN_PROJECTS_CACHE_LOCK:
+        cached = _ADMIN_PROJECTS_RESPONSE_CACHE.get(cache_key)
+        now_ts = time.time()
+        if cached and (now_ts - float(cached.get("captured_at") or 0.0)) < _ADMIN_PROJECTS_CACHE_TTL_SEC:
+            return cached["payload"]
+        total = db.query(Project).count()
+        rows = (
+            db.query(Project)
+            .order_by(Project.created_at.desc())
+            .offset(skip)
+            .limit(safe_limit)
+            .all()
+        )
+        serialized_rows = [_serialize_project_item(project) for project in rows]
+        payload = {
+            "items": serialized_rows,
+            "projects": serialized_rows,
+            "total": int(total),
+            "skip": skip,
+            "limit": safe_limit,
+            "requested_limit": int(limit),
+            "applied_limit": safe_limit,
+        }
+        _ADMIN_PROJECTS_RESPONSE_CACHE[cache_key] = {
+            "captured_at": now_ts,
+            "payload": payload,
+        }
+        return payload
+
+
+class AdminAutoConnectRetryQueueItem(BaseModel):
+    id: int
+    trace_id: str
+    flow_id: str
+    step_id: str
+    action: str
+    entity_type: str
+    entity_id: str
+    queue_name: str
+    status: str
+    payload_json: Optional[str] = None
+    attempt_count: int
+    max_attempts: int
+    last_error: Optional[str] = None
+    updated_at: Optional[datetime] = None
+    created_at: datetime
+    connection_id: Optional[str] = None
+
+
+class AdminLlmGatewayRecoverRequest(BaseModel):
+    mode: str = Field(default="port_shift_shadow")
+    dry_run: bool = Field(default=False)
+
+
+@router.get("/users")
+def list_admin_users(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    del admin
+    total = db.query(User).count()
+    rows = (
+        db.query(User)
+        .order_by(User.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    users = [
+        {
+            "id": int(user.id), # pyright: ignore[reportArgumentType]
+            "username": str(user.username or ""),
+            "email": str(user.email or ""),
+            "is_admin": bool(user.is_admin),
+            "is_superuser": bool(user.is_superuser),
+            "is_active": bool(user.is_active),
+            "member_type": str(getattr(user, "member_type", "individual") or "individual"),
+            "business_name": getattr(user, "business_name", None),
+            "business_registration_number": getattr(user, "business_registration_number", None),
+            "representative_name": getattr(user, "representative_name", None),
+            "created_at": user.created_at.isoformat() if user.created_at else None, # pyright: ignore[reportGeneralTypeIssues]
+        }
+        for user in rows
+    ]
+    return {
+        "users": users,
+        "total": int(total),
+        "skip": int(skip),
+        "limit": int(limit),
+    }
+
+
+@router.get("/sorisae-failure-monitor/latest")
+def get_admin_sorisae_failure_monitor_status(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return get_latest_sorisae_failure_status()
+
+
+@router.get("/sorisae-failure-monitor/latest/result-json")
+def get_admin_sorisae_failure_monitor_result_json(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    try:
+        return get_latest_sorisae_failure_result_json_payload()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/sorisae-failure-monitor/latest/push")
+async def post_admin_sorisae_failure_monitor_push(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    try:
+        return await push_latest_sorisae_failure_to_admins()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/llm-gateway/diagnostics")
+def get_admin_llm_gateway_diagnostics(
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return collect_llm_gateway_diagnostics()
+
+
+@router.post("/llm-gateway/auto-recover")
+def post_admin_llm_gateway_auto_recover(
+    payload: AdminLlmGatewayRecoverRequest,
+    admin: User = Depends(require_admin),
+):
+    del admin
+    return auto_recover_llm_gateway(mode=str(payload.mode or "port_shift_shadow"), dry_run=bool(payload.dry_run))
+
+
+@router.put("/users/{user_id}")
+def update_admin_user(
+    user_id: int,
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "is_superuser" in updates and not bool(getattr(admin, "is_superuser", False)):
+        raise HTTPException(status_code=403, detail="슈퍼유저 권한 변경은 슈퍼유저만 가능합니다")
+
+    for key, value in updates.items():
+        setattr(target, key, value)
+
+    db.add(target)
+    db.commit()
+    db.refresh(target)
+
+    return {
+        "id": int(target.id), # pyright: ignore[reportArgumentType]
+        "username": str(target.username or ""),
+        "email": str(target.email or ""),
+        "is_admin": bool(target.is_admin),
+        "is_superuser": bool(target.is_superuser),
+        "is_active": bool(target.is_active),
+        "created_at": target.created_at.isoformat() if target.created_at else None, # pyright: ignore[reportGeneralTypeIssues]
+    }
+
+
+@router.delete("/users/{user_id}")
+def delete_admin_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    if int(target.id) == int(admin.id): # pyright: ignore[reportArgumentType]
+        raise HTTPException(status_code=400, detail="본인 계정은 삭제할 수 없습니다")
+
+    db.delete(target)
+    db.commit()
+    return {"ok": True, "deleted_user_id": int(user_id)}
+
+
+class AdminAutoConnectGraphLookupResponse(BaseModel):
+    connection_id: str
+    trace_key: str
+    capability_id: Optional[str] = None
+    completions: List[AdminAutoConnectCompletionItem]
+    logs: List[AdminAutoConnectTraceLogItem]
+    retry_queue: List[AdminAutoConnectRetryQueueItem]
+
+
+class AdminProjectListItem(BaseModel):
+    id: int
+    title: str
+    description: str
+    price: float
+    category_id: int
+    author_id: int
+    image_url: Optional[str] = None
+    demo_url: Optional[str] = None
+    github_url: Optional[str] = None
+    file_key: Optional[str] = None
+    downloads: int
+    rating: float
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+
+def _serialize_auto_connect_completion(item: Any) -> Dict[str, Any]:
+    return {
+        "id": int(getattr(item, "id", 0) or 0),
+        "trace_id": getattr(item, "trace_id", None),
+        "flow_id": getattr(item, "flow_id", None),
+        "step_id": getattr(item, "step_id", None),
+        "action": getattr(item, "action", None),
+        "project_name": str(getattr(item, "project_name", "") or ""),
+        "mode": str(getattr(item, "mode", "") or ""),
+        "attempts": int(getattr(item, "attempts", 0) or 0),
+        "output_dir": getattr(item, "output_dir", None),
+        "postcheck_ok": getattr(item, "postcheck_ok", None),
+        "gate_passed": bool(getattr(item, "gate_passed", False)),
+        "override_used": bool(getattr(item, "override_used", False)),
+        "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
+        "connection_id": (
+            f"{getattr(item, 'flow_id', '')}:{getattr(item, 'step_id', '')}:{getattr(item, 'action', '')}"
+            if getattr(item, "flow_id", None) and getattr(item, "step_id", None) and getattr(item, "action", None)
+            else getattr(item, "trace_id", None)
+        ),
+    }
+
+
+def _serialize_auto_connect_log(item: Any) -> Dict[str, Any]:
+    return {
+        "id": int(getattr(item, "id", 0) or 0),
+        "trace_id": str(getattr(item, "trace_id", "") or ""),
+        "flow_id": str(getattr(item, "flow_id", "") or ""),
+        "step_id": str(getattr(item, "step_id", "") or ""),
+        "action": str(getattr(item, "action", "") or ""),
+        "entity_type": str(getattr(item, "entity_type", "") or ""),
+        "entity_id": str(getattr(item, "entity_id", "") or ""),
+        "status": str(getattr(item, "status", "") or ""),
+        "message": str(getattr(item, "message", "") or ""),
+        "payload_json": getattr(item, "payload_json", None),
+        "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
+        "connection_id": (
+            f"{getattr(item, 'flow_id', '')}:{getattr(item, 'step_id', '')}:{getattr(item, 'action', '')}"
+            if getattr(item, "flow_id", None) and getattr(item, "step_id", None) and getattr(item, "action", None)
+            else getattr(item, "trace_id", None)
+        ),
+    }
+
+
+def _serialize_auto_connect_retry_queue(item: Any) -> Dict[str, Any]:
+    return {
+        "id": int(getattr(item, "id", 0) or 0),
+        "trace_id": str(getattr(item, "trace_id", "") or ""),
+        "flow_id": str(getattr(item, "flow_id", "") or ""),
+        "step_id": str(getattr(item, "step_id", "") or ""),
+        "action": str(getattr(item, "action", "") or ""),
+        "entity_type": str(getattr(item, "entity_type", "") or ""),
+        "entity_id": str(getattr(item, "entity_id", "") or ""),
+        "queue_name": str(getattr(item, "queue_name", "") or ""),
+        "status": str(getattr(item, "status", "") or ""),
+        "payload_json": getattr(item, "payload_json", None),
+        "attempt_count": int(getattr(item, "attempt_count", 0) or 0),
+        "max_attempts": int(getattr(item, "max_attempts", 0) or 0),
+        "last_error": getattr(item, "last_error", None),
+        "updated_at": getattr(item, "updated_at", None).isoformat() if getattr(item, "updated_at", None) else None, # pyright: ignore[reportOptionalMemberAccess]
+        "created_at": getattr(item, "created_at", datetime.now()).isoformat(),
+        "connection_id": (
+            f"{getattr(item, 'flow_id', '')}:{getattr(item, 'step_id', '')}:{getattr(item, 'action', '')}"
+            if getattr(item, "flow_id", None) and getattr(item, "step_id", None) and getattr(item, "action", None)
+            else getattr(item, "trace_id", None)
+        ),
+    }
+
+
+def _build_admin_auto_connect_lookup_payload(connection_id: str) -> Dict[str, Any]:
+    normalized = str(connection_id or "").strip()
+    parts = [part.strip() for part in normalized.split(":") if part.strip()]
+    return {
+        "connection_id": normalized,
+        "trace_key": ":".join(parts[:3]) if len(parts) >= 3 else normalized,
+        "capability_id": ":".join(parts[3:]) if len(parts) > 3 else None,
+    }
+
+
+class AdminRatioItem(BaseModel):
+    key: str
+    label: str
+    count: int
+    ratio: float
+
+
+class AdminAdOrderMonitorSummaryResponse(BaseModel):
+    totals: Dict[str, Any]
+    ratios: Dict[str, List[AdminRatioItem]]
+    token_summary: Dict[str, Any]
+    settlement: Dict[str, Any]
+
+
+class AdminSettlementLogItem(BaseModel):
+    order_id: int
+    user_id: int
+    status: str
+    engine_type: str
+    render_quality: str
+    currency: str
+    prompt_tokens: int
+    render_tokens: int
+    total_tokens: int
+    local_cost: float
+    external_cost: float
+    storage_cost: float
+    total_cost: float
+    period_day: str
+    period_month: str
+    created_at: str
+
+
+class AdminSettlementChartPoint(BaseModel):
+    period: str
+    order_count: int
+    total_tokens: int
+    total_cost: float
+
+
+class AdminAdOrderSettlementDashboardResponse(BaseModel):
+    daily: List[AdminSettlementChartPoint]
+    monthly: List[AdminSettlementChartPoint]
+    recent_logs: List[AdminSettlementLogItem]
+    settlement_line: str
+
+
+def _build_admin_ad_order_monitor_summary_payload(db: Session) -> Dict[str, Any]:
+    from backend.marketplace.models import AdVideoOrder
+
+    orders = db.query(AdVideoOrder).all()
+    total_orders = len(orders)
+    status_counter = Counter(str(getattr(order, "status", "") or "unknown") for order in orders)
+    engine_counter = Counter(str(getattr(order, "engine_type", "") or "unknown") for order in orders)
+    quality_counter = Counter(str(getattr(order, "render_quality", "") or "unknown") for order in orders)
+
+    def ratio_items(counter: Counter[str]) -> List[Dict[str, Any]]:
+        if total_orders <= 0:
+            return []
+        return [
+            {
+                "key": key,
+                "label": key,
+                "count": count,
+                "ratio": round((count / total_orders) * 100, 2),
+            }
+            for key, count in counter.most_common()
+        ]
+
+    completed_orders = status_counter.get("completed", 0)
+    failed_orders = status_counter.get("failed", 0)
+    active_orders = sum(
+        count for key, count in status_counter.items()
+        if key not in {"completed", "failed", "cancelled"}
+    )
+    progress_values = [float(getattr(order, "progress_percent", 0) or 0) for order in orders]
+    quality_values = [float(getattr(order, "quality_score", 0) or 0) for order in orders if getattr(order, "quality_score", None) is not None]
+
+    return {
+        "totals": {
+            "total_orders": total_orders,
+            "active_orders": active_orders,
+            "completed_orders": completed_orders,
+            "failed_orders": failed_orders,
+            "completion_rate": round((completed_orders / total_orders) * 100, 2) if total_orders else 0.0,
+            "failure_rate": round((failed_orders / total_orders) * 100, 2) if total_orders else 0.0,
+            "average_progress": round(sum(progress_values) / len(progress_values), 2) if progress_values else 0.0,
+            "average_quality_score": round(sum(quality_values) / len(quality_values), 2) if quality_values else 0.0,
+        },
+        "ratios": {
+            "status": ratio_items(status_counter),
+            "engine": ratio_items(engine_counter),
+            "quality": ratio_items(quality_counter),
+        },
+        "token_summary": {
+            "estimated_prompt_tokens": 0,
+            "estimated_render_tokens": 0,
+            "estimated_total_tokens": 0,
+            "estimated_avg_tokens_per_order": 0,
+        },
+        "settlement": {
+            "local_cost_total": 0.0,
+            "external_cost_total": 0.0,
+            "storage_cost_total": 0.0,
+            "total_estimated_cost": 0.0,
+            "estimated_cost_per_order": 0.0,
+            "settlement_line": "정산 데이터 집계는 기본값 기준으로 노출됩니다.",
+        },
+    }
+
+
+def _build_admin_ad_order_settlement_dashboard_payload(db: Session) -> Dict[str, Any]:
+    orders = (
+        db.query(AdVideoOrder)
+        .order_by(AdVideoOrder.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    daily_counter: Dict[str, Dict[str, Any]] = {}
+    monthly_counter: Dict[str, Dict[str, Any]] = {}
+    recent_logs: List[Dict[str, Any]] = []
+
+    for order in orders:
+        created_at = getattr(order, "created_at", None)
+        if created_at is None:
+            continue
+        day_key = created_at.strftime("%Y-%m-%d")
+        month_key = created_at.strftime("%Y-%m")
+        daily_counter.setdefault(day_key, {"period": day_key, "order_count": 0, "total_tokens": 0, "total_cost": 0.0})["order_count"] += 1
+        monthly_counter.setdefault(month_key, {"period": month_key, "order_count": 0, "total_tokens": 0, "total_cost": 0.0})["order_count"] += 1
+
+        recent_logs.append(
+            {
+                "order_id": int(getattr(order, "id", 0) or 0),
+                "user_id": int(getattr(order, "user_id", 0) or 0),
+                "status": str(getattr(order, "status", "") or ""),
+                "engine_type": str(getattr(order, "engine_type", "") or ""),
+                "render_quality": str(getattr(order, "render_quality", "") or ""),
+                "currency": "KRW",
+                "prompt_tokens": 0,
+                "render_tokens": 0,
+                "total_tokens": 0,
+                "local_cost": 0.0,
+                "external_cost": 0.0,
+                "storage_cost": 0.0,
+                "total_cost": 0.0,
+                "period_day": day_key,
+                "period_month": month_key,
+                "created_at": created_at.isoformat(),
+            }
+        )
+
+    return {
+        "daily": list(daily_counter.values()),
+        "monthly": list(monthly_counter.values()),
+        "recent_logs": recent_logs[:20],
+        "settlement_line": "정산 대시보드는 기본 집계값으로 표시됩니다.",
+    }
+
+
+def _serialize_project_item(project: Project) -> Dict[str, Any]:
+    return {
+        "id": int(getattr(project, "id", 0) or 0),
+        "title": str(getattr(project, "title", "") or ""),
+        "description": str(getattr(project, "description", "") or ""),
+        "price": float(getattr(project, "price", 0.0) or 0.0),
+        "category_id": int(getattr(project, "category_id", 0) or 0),
+        "author_id": int(getattr(project, "author_id", 0) or 0),
+        "image_url": getattr(project, "image_url", None),
+        "demo_url": getattr(project, "demo_url", None),
+        "github_url": getattr(project, "github_url", None),
+        "file_key": getattr(project, "file_key", None),
+        "downloads": int(getattr(project, "downloads", 0) or 0),
+        "rating": float(getattr(project, "rating", 0.0) or 0.0),
+        "is_active": bool(getattr(project, "is_active", False)),
+        "created_at": getattr(project, "created_at", datetime.now()).isoformat(),
+        "updated_at": getattr(project, "updated_at", datetime.now()).isoformat(),
+    }
+
+
+ADMIN_TEXT_FILE_SUFFIXES = {
+    ".md", ".txt", ".json", ".jsonl", ".yaml", ".yml",
+    ".toml", ".ini", ".cfg", ".conf", ".env", ".py",
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+    ".css", ".scss", ".sass", ".less", ".html", ".htm",
+    ".sql", ".sh", ".ps1", ".bat", ".cmd", ".xml",
+    ".csv", ".log", ".rst", ".java", ".kt", ".go",
+    ".rs", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs",
+    ".php", ".rb", ".swift", ".dockerfile",
+}
+ADMIN_TEXT_FILE_NAMES = {
+    "dockerfile", "makefile", "readme", "readme.md",
+    "license", "license.md", "package-lock.json",
+    "pnpm-lock.yaml", "yarn.lock", "requirements.txt",
+    "agents.md", ".gitignore", ".dockerignore",
+}
+ADMIN_TEXT_LIST_LIMIT = 500
+ADMIN_TEXT_MAX_BYTES = 200_000
+ADMIN_SELF_TREE_LIMIT = 1_200
+ADMIN_SELF_TEXT_FILE_LIMIT = 160
+ADMIN_SELF_TEXT_CHAR_LIMIT = 180_000
+ADMIN_SELF_TASK_TREE_LIMIT = 80
+ADMIN_SELF_TASK_KEY_FILE_LIMIT = 20
+ADMIN_SELF_EXCLUDE_DIR_NAMES = {
+    ".git",
+    ".next",
+    ".next-dev-admin-3005",
+    ".delivery-venv",
+    ".venv",
+    ".zip-venv",
+    "__pycache__",
+    "archive",
+    "models",
+    "node_modules",
+    "uploads",
+}
+
+ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
+    {
+        "id": "postgres_runtime",
+        "title": "PostgreSQL / 런타임 DB 연결",
+        "usage": "로컬 DB 호스트, 사용자, 비밀번호 시크릿 파일 경로 관리",
+        "description": "백엔드 런타임이 참조하는 PostgreSQL 접속 환경값입니다.",
+        "fields": [
+            "POSTGRES_HOST",
+            "POSTGRES_PORT",
+            "POSTGRES_DB",
+            "POSTGRES_USER",
+            "POSTGRES_PASSWORD",
+            "POSTGRES_PASSWORD_FILE",
+            "DATABASE_URL",
+        ],
+    },
+    {
+        "id": "domain_network",
+        "title": "도메인 / 네트워크",
+        "usage": "접속 주소, 포트, 프록시 기준 변경",
+        "description": "도메인, 허용 Origin, 게이트웨이 포트와 로컬 API 연결을 조정합니다.",
+        "fields": [
+            "DOMAIN_NAME",
+            "DOMAIN_ORIGINAL",
+            "ADMIN_DOMAIN",
+            "MARKETPLACE_API_DOMAIN",
+            "SSL_EMAIL",
+            "ALLOWED_ORIGINS",
+            "NGINX_HTTP_PORT",
+            "NGINX_HTTPS_PORT",
+            "LOCAL_API_BASE_URL",
+        ],
+    },
+    {
+        "id": "marketplace_storage",
+        "title": "스토리지 / 다운로드 정책",
+        "usage": "산출물 루트, 보관 기간, 다운로드 제한 조정",
+        "description": "마켓플레이스 산출물 저장 위치와 다운로드 유지 정책을 관리합니다.",
+        "fields": [
+            "MARKETPLACE_HOST_ROOT",
+            "MARKETPLACE_UPLOAD_ROOT",
+            "MARKETPLACE_RETENTION_DAYS",
+            "MARKETPLACE_TEMP_RETENTION_DAYS",
+            "AD_DOWNLOAD_MIN_NOTICE_MINUTES",
+            "AD_DOWNLOAD_WINDOW_DAYS",
+            "AD_DOWNLOAD_MAX_COUNT",
+        ],
+    },
+    {
+        "id": "video_engine",
+        "title": "전용 영상 엔진",
+        "usage": "영상 엔진 주소, 타임아웃, fallback 정책 조정",
+        "description": "외부/전용 영상 엔진 연결과 폴링 정책을 통합 제어합니다.",
+        "fields": [
+            "VIDEO_DEDICATED_ENGINE_URL",
+            "VIDEO_DEDICATED_SUBMIT_PATH",
+            "VIDEO_DEDICATED_TIMEOUT_SEC",
+            "VIDEO_DEDICATED_POLL_SEC",
+            "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE",
+            "VIDEO_REQUIRE_GENERATIVE_ENGINE",
+            "VIDEO_ENGINE_FALLBACK_TO_INTERNAL",
+            "VIDEO_DEDICATED_ENGINE_API_KEY",
+        ],
+    },
+    {
+        "id": "llm_defaults",
+        "title": "LLM 기본 환경값",
+        "usage": "부팅 기본 모델 환경값 점검 / 교체",
+        "description": "부팅 시 참조되는 역할별 기본 모델 환경값입니다.",
+        "fields": [
+            "OLLAMA_BASE",
+            "LLM_MODEL_DEFAULT",
+            "LLM_MODEL_REASONING",
+            "LLM_MODEL_CODING",
+            "LLM_MODEL_CHAT",
+            "LLM_MODEL_VOICE_CHAT",
+            "LLM_MODEL_PLANNER",
+            "LLM_MODEL_CODER",
+            "LLM_MODEL_REVIEWER",
+            "LLM_MODEL_DESIGNER",
+            "LLM_MODEL_SMART_PLANNER",
+            "LLM_MODEL_SMART_EXECUTOR",
+            "LLM_MODEL_SMART_DESIGNER",
+        ],
+    },
+    {
+        "id": "orchestrator_self_engine",
+        "title": "오케스트레이터 / 셀프 엔진",
+        "usage": "자가 실행 게이트와 로컬 생성 파라미터 조정",
+        "description": "자가 실행 게이트와 생성형 엔진 파라미터를 중앙에서 관리합니다.",
+        "fields": [
+            "ORCH_FORCE_COMPLETE",
+            "ORCH_MIN_FILES",
+            "ORCH_MIN_DIRS",
+            "ORCH_MAX_FORCE_RETRIES",
+            "ORCH_REQUIRED_FILES",
+            "SELF_ENGINE_REQUIRE_FACE_IMAGE",
+            "SELF_ENGINE_MAX_RETRY",
+            "SELF_ENGINE_MIN_VIDEO_BYTES",
+            "SELF_ENGINE_MIN_VIDEO_BYTES_PER_SEC",
+            "SELF_ENGINE_MIN_DURATION_RATIO",
+            "SELF_ENGINE_MIN_DURATION_SECONDS",
+            "SELF_ENGINE_GENERATIVE_PROVIDER",
+            "SELF_ENGINE_GENERATIVE_ENABLED",
+            "SELF_ENGINE_GENERATIVE_FALLBACK_COMPOSITOR",
+            "SELF_ENGINE_GENERATIVE_SUBMIT_URL",
+            "SELF_ENGINE_GENERATIVE_STATUS_URL_TEMPLATE",
+            "SELF_ENGINE_GENERATIVE_API_KEY",
+            "SELF_ENGINE_GENERATIVE_TIMEOUT_SEC",
+            "SELF_ENGINE_GENERATIVE_POLL_SEC",
+            "SELF_ENGINE_GENERATIVE_VIDEO_URL_FIELD",
+            "SELF_ENGINE_LOCAL_VIDEO_PIPELINE",
+            "SELF_ENGINE_LOCAL_VIDEO_MODEL_ID",
+            "SELF_ENGINE_LOCAL_VIDEO_WIDTH",
+            "SELF_ENGINE_LOCAL_VIDEO_HEIGHT",
+            "SELF_ENGINE_LOCAL_VIDEO_NUM_FRAMES",
+            "SELF_ENGINE_LOCAL_VIDEO_STEPS",
+            "SELF_ENGINE_LOCAL_VIDEO_DECODE_CHUNK",
+            "SELF_ENGINE_LOCAL_VIDEO_MAX_UNIQUE_CLIPS",
+            "SELF_ENGINE_LOCAL_VIDEO_PAD_TO_CUT",
+            "SELF_ENGINE_LOCAL_VIDEO_BASE_FPS",
+            "SELF_ENGINE_LOCAL_VIDEO_OUTPUT_FPS",
+            "SELF_ENGINE_LOCAL_VIDEO_ENABLE_MINTERPOLATE",
+            "SELF_ENGINE_LOCAL_VIDEO_MOTION_BUCKET",
+            "SELF_ENGINE_LOCAL_VIDEO_MOTION_BUCKET_STEP",
+            "SELF_ENGINE_LOCAL_VIDEO_NOISE_AUG",
+            "SELF_ENGINE_LOCAL_VIDEO_GUIDANCE",
+            "SELF_ENGINE_LOCAL_VIDEO_MIN_GUIDANCE",
+            "SELF_ENGINE_LOCAL_VIDEO_MAX_GUIDANCE",
+        ],
+    },
+    {
+        "id": "identity_provider",
+        "title": "본인확인 공급사 운영값",
+        "usage": "PASS/KMC/KCB 상용 endpoint, client, callback URL 관리",
+        "description": "본인확인 공급사 운영값과 callback URL을 중앙에서 관리합니다.",
+        "fields": [
+            "IDENTITY_PROVIDER",
+            "PASS_IDENTITY_ENDPOINT",
+            "PASS_CLIENT_ID",
+            "PASS_CLIENT_SECRET",
+            "PASS_CALLBACK_URL",
+            "KMC_IDENTITY_ENDPOINT",
+            "KMC_CLIENT_ID",
+            "KMC_CLIENT_SECRET",
+            "KMC_CALLBACK_URL",
+            "KCB_IDENTITY_ENDPOINT",
+            "KCB_CLIENT_ID",
+            "KCB_CLIENT_SECRET",
+            "KCB_CALLBACK_URL",
+        ],
+    },
+    {
+        "id": "social_login_provider",
+        "title": "소셜 로그인 패널",
+        "usage": "구글/카카오/네이버 OAuth 공급자 활성화 및 인증키 주입",
+        "description": "소셜 로그인 제공자 목록과 OAuth Client ID/Secret을 관리자 패널에서 직접 관리합니다.",
+        "fields": [
+            "SOCIAL_LOGIN_PROVIDERS",
+            "SOCIAL_LOGIN_CALLBACK_BASE_URL",
+            "GOOGLE_CLIENT_ID",
+            "GOOGLE_CLIENT_SECRET",
+            "KAKAO_CLIENT_ID",
+            "KAKAO_CLIENT_SECRET",
+            "NAVER_CLIENT_ID",
+            "NAVER_CLIENT_SECRET",
+        ],
+    },
+    {
+        "id": "worldlinco_public_portal",
+        "title": "소리새 공공데이터 / 항공 주입",
+        "usage": "항공/관광/문화/식당/약국/병원/교통 API 키와 URL 템플릿 주입",
+        "description": "소리새 AI가 국가별 공공데이터 포털 API와 실시간 항공 조회 API를 직접 조회할 수 있도록 서비스키와 URL 템플릿을 관리자 화면에서 저장합니다. URL 템플릿은 {service_key}, {latitude}, {longitude}, {radius_m}, {category}, {query}, {country_code} 플레이스홀더를 지원합니다.",
+        "fields": [
+            "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING",
+            "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY",
+            "SORISAE_NAVER_API_ENABLED",
+            "SORISAE_NAVER_API_BASE_URL",
+            "SORISAE_NAVER_API_CLIENT_ID",
+            "SORISAE_NAVER_API_CLIENT_SECRET",
+        ],
+    },
+]
+ADMIN_SYSTEM_ENV_SENSITIVE_KEYS = {
+    "POSTGRES_PASSWORD",
+    "VIDEO_DEDICATED_ENGINE_API_KEY",
+    "SELF_ENGINE_GENERATIVE_API_KEY",
+    "PASS_CLIENT_SECRET",
+    "KMC_CLIENT_SECRET",
+    "KCB_CLIENT_SECRET",
+    "GOOGLE_CLIENT_SECRET",
+    "KAKAO_CLIENT_SECRET",
+    "NAVER_CLIENT_SECRET",
+    "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY",
+    "SORISAE_NAVER_API_CLIENT_SECRET",
+}
+ADMIN_SYSTEM_ENV_MULTILINE_KEYS = {
+    "ALLOWED_ORIGINS",
+    "ORCH_REQUIRED_FILES",
+    "SELF_ENGINE_GENERATIVE_STATUS_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE",
+}
+
+ADMIN_SYSTEM_ENV_FIELD_LABELS: Dict[str, str] = {
+    "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING": "공공데이터 포털 조회 사용 여부 (0/1)",
+    "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY": "공공데이터 공통 서비스키 (항공 API 키 금지)",
+    "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE": "공공데이터 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_URL_TEMPLATE": "실시간 항공 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_API_KEY": "실시간 항공 포털 서비스키",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE": "관광/문화/식당/숙소 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY": "관광/문화/식당/숙소 포털 서비스키",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE": "약국/병원 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY": "약국/병원 포털 서비스키",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE": "교통/환승 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY": "교통/환승 포털 서비스키",
+    "SORISAE_NAVER_API_ENABLED": "네이버 공공데이터 API 사용 여부 (true/false)",
+    "SORISAE_NAVER_API_BASE_URL": "네이버 공공데이터 API 기본 URL",
+    "SORISAE_NAVER_API_CLIENT_ID": "네이버 공공데이터 API Client ID",
+    "SORISAE_NAVER_API_CLIENT_SECRET": "네이버 공공데이터 API Client Secret",
+    "SOCIAL_LOGIN_PROVIDERS": "소셜 로그인 제공자 목록 (콤마 구분: google,kakao,naver)",
+    "SOCIAL_LOGIN_CALLBACK_BASE_URL": "소셜 로그인 callback 기준 URL (예: https://metanova1004.com)",
+    "GOOGLE_CLIENT_ID": "구글 소셜 로그인 Client ID",
+    "GOOGLE_CLIENT_SECRET": "구글 소셜 로그인 Client Secret",
+    "KAKAO_CLIENT_ID": "카카오 소셜 로그인 Client ID",
+    "KAKAO_CLIENT_SECRET": "카카오 소셜 로그인 Client Secret",
+    "NAVER_CLIENT_ID": "네이버 소셜 로그인 Client ID (Access Key ID)",
+    "NAVER_CLIENT_SECRET": "네이버 소셜 로그인 Client Secret",
+}
+
+SOCIAL_LOGIN_PROVIDER_ORDER: tuple[str, ...] = ("google", "kakao", "naver")
+SOCIAL_LOGIN_PROVIDER_CREDENTIAL_KEYS: Dict[str, tuple[str, str]] = {
+    "google": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+    "kakao": ("KAKAO_CLIENT_ID", "KAKAO_CLIENT_SECRET"),
+    "naver": ("NAVER_CLIENT_ID", "NAVER_CLIENT_SECRET"),
+}
+
+
+def _resolve_social_login_enabled_providers(env_values: Dict[str, str]) -> List[str]:
+    raw = str(os.getenv("SOCIAL_LOGIN_PROVIDERS") or env_values.get("SOCIAL_LOGIN_PROVIDERS") or "").strip()
+    if not raw:
+        return list(SOCIAL_LOGIN_PROVIDER_ORDER)
+    requested = [token.strip().lower() for token in raw.split(",") if token and token.strip()]
+    enabled: List[str] = []
+    for provider in SOCIAL_LOGIN_PROVIDER_ORDER:
+        if provider in requested:
+            enabled.append(provider)
+    return enabled or list(SOCIAL_LOGIN_PROVIDER_ORDER)
+
+
+def _build_social_login_runtime_status(env_values: Dict[str, str]) -> Dict[str, Any]:
+    enabled_providers = _resolve_social_login_enabled_providers(env_values)
+    provider_details: List[Dict[str, Any]] = []
+    ready_providers: List[str] = []
+    for provider in enabled_providers:
+        client_id_key, client_secret_key = SOCIAL_LOGIN_PROVIDER_CREDENTIAL_KEYS[provider]
+        client_id = str(os.getenv(client_id_key) or env_values.get(client_id_key) or "").strip()
+        client_secret = str(os.getenv(client_secret_key) or env_values.get(client_secret_key) or "").strip()
+        missing_keys: List[str] = []
+        if not client_id:
+            missing_keys.append(client_id_key)
+        if not client_secret:
+            missing_keys.append(client_secret_key)
+        ready = len(missing_keys) == 0
+        if ready:
+            ready_providers.append(provider)
+        provider_details.append(
+            {
+                "provider": provider,
+                "ready": ready,
+                "missing_keys": missing_keys,
+            }
+        )
+
+    callback_base_url = str(os.getenv("SOCIAL_LOGIN_CALLBACK_BASE_URL") or env_values.get("SOCIAL_LOGIN_CALLBACK_BASE_URL") or "").strip()
+    return {
+        "enabled_providers": enabled_providers,
+        "ready_providers": ready_providers,
+        "provider_details": provider_details,
+        "callback_base_url": callback_base_url,
+        "all_enabled_ready": len(ready_providers) == len(enabled_providers),
+    }
+
+
+def _admin_workspace_root() -> Path:
+    return admin_workspace_root()
+
+
+def _admin_runtime_root() -> Path:
+    return admin_runtime_root()
+
+
+def _admin_env_path() -> Path:
+    env_path = _admin_workspace_root() / ".env"
+    if env_path.is_dir():
+        for candidate_name in (".env", "app.env", "app.env.example"):
+            candidate = env_path / candidate_name
+            if candidate.exists() and candidate.is_file():
+                return candidate
+    return env_path
+
+
+def _admin_orchestrator_runtime_config_path() -> Path:
+    return _admin_workspace_root() / "knowledge" / "orchestrator_runtime_config.json"
+
+
+def _admin_system_env_allowed_keys() -> set[str]:
+    allowed: set[str] = set()
+    for section in ADMIN_SYSTEM_ENV_SECTIONS:
+        allowed.update(str(key) for key in section["fields"])
+    return allowed
+
+
+def _read_admin_env_entries(path: Path) -> List[Dict[str, Any]]:
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail=".env 파일을 찾을 수 없습니다.")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    entries: List[Dict[str, Any]] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in line:
+            entries.append({"kind": "raw", "line": line})
+            continue
+        key, value = line.split("=", 1)
+        entries.append({"kind": "kv", "key": key.strip(), "value": value})
+    return entries
+
+
+def _read_admin_env_values(path: Path) -> Dict[str, str]:
+    values: Dict[str, str] = {}
+    for entry in _read_admin_env_entries(path):
+        if entry.get("kind") == "kv":
+            values[str(entry["key"])] = str(entry["value"])
+    return values
+
+
+def _write_admin_env_values(path: Path, updates: Dict[str, str]) -> Dict[str, str]:
+    entries = _read_admin_env_entries(path)
+    rendered_lines: List[str] = []
+    seen_keys: set[str] = set()
+    for entry in entries:
+        if entry.get("kind") != "kv":
+            rendered_lines.append(str(entry.get("line") or ""))
+            continue
+        key = str(entry["key"])
+        next_value = updates.get(key, str(entry.get("value") or ""))
+        rendered_lines.append(f"{key}={next_value}")
+        seen_keys.add(key)
+    missing_keys = [key for key in updates.keys() if key not in seen_keys]
+    if missing_keys:
+        if rendered_lines and rendered_lines[-1].strip():
+            rendered_lines.append("")
+        rendered_lines.append("# Admin dashboard appended settings")
+        for key in missing_keys:
+            rendered_lines.append(f"{key}={updates[key]}")
+    path.write_text("\n".join(rendered_lines) + "\n", encoding="utf-8")
+    return _read_admin_env_values(path)
+
+
+def _sync_process_env_values(updates: Dict[str, str]) -> None:
+    for key, value in updates.items():
+        os.environ[str(key)] = str(value)
+
+
+def _resolve_windows_postgres_secret_path(env_values: Optional[Dict[str, str]] = None) -> Path:
+    values = env_values or (_read_admin_env_values(_admin_env_path()) if _admin_env_path().exists() else {})
+    configured_secret_root = str(values.get("HOST_SECRET_ROOT") or "").strip()
+    if configured_secret_root:
+        return (Path(configured_secret_root).expanduser() / "postgres_password.txt").resolve()
+    return (_admin_workspace_root() / ".runtime" / "secrets" / "postgres_password.txt").resolve()
+
+
+def _write_postgres_password_secret(password: str, env_values: Optional[Dict[str, str]] = None) -> str:
+    secret_path = _resolve_windows_postgres_secret_path(env_values)
+    secret_path.parent.mkdir(parents=True, exist_ok=True)
+    secret_path.write_text(password, encoding="utf-8")
+    return str(secret_path)
+
+
+def _load_runtime_config_summary() -> Dict[str, Any]:
+    config_path = _admin_orchestrator_runtime_config_path()
+    if not config_path.exists():
+        try:
+            from backend.llm.orchestrator import _load_runtime_config_from_disk
+            return _load_runtime_config_from_disk()
+        except Exception:
+            return {}
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _safe_mtime(path: Path) -> float | None:
+    try:
+        return path.stat().st_mtime if path.exists() else None
+    except Exception:
+        return None
+
+
+ADMIN_LLM_ENV_ROUTE_KEYS: Dict[str, str] = {
+    "LLM_MODEL_DEFAULT": "default",
+    "LLM_MODEL_REASONING": "reasoning",
+    "LLM_MODEL_CODING": "coding",
+    "LLM_MODEL_CHAT": "chat",
+    "LLM_MODEL_VOICE_CHAT": "voice_chat",
+    "LLM_MODEL_PLANNER": "planner",
+    "LLM_MODEL_CODER": "coder",
+    "LLM_MODEL_REVIEWER": "reviewer",
+    "LLM_MODEL_DESIGNER": "designer",
+    "LLM_MODEL_SMART_PLANNER": "smart_planner",
+    "LLM_MODEL_SMART_EXECUTOR": "smart_executor",
+    "LLM_MODEL_SMART_DESIGNER": "smart_designer",
+}
+
+
+def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
+    try:
+        with urlopen(url, timeout=timeout_sec) as response:
+            status = int(getattr(response, "status", 200) or 200)
+            return {"ok": 200 <= status < 400, "status": status, "url": url, "error": ""}
+    except Exception as exc:
+        logger.warning("admin integration probe failed url=%s err=%s", url, exc)
+        return {"ok": False, "status": None, "url": url, "error": PublicErrorMessage.CONNECTION_FAILED}
+
+
+def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
+    display = _resolve_admin_summary_display_values(env_values)
+    admin_domain = display["admin_domain"] or "metanova1004.com"
+    model_routes = runtime_config.get("model_routes") or {}
+    defaults: Dict[str, str] = {
+        "LOCAL_API_BASE_URL": display["local_api_base_url"],
+        "ADMIN_DOMAIN": admin_domain,
+        "MARKETPLACE_API_DOMAIN": str(env_values.get("MARKETPLACE_API_DOMAIN") or admin_domain).strip() or admin_domain,
+        "MARKETPLACE_HOST_ROOT": display["marketplace_host_root"],
+        "MARKETPLACE_UPLOAD_ROOT": display["marketplace_upload_root"],
+        "POSTGRES_HOST": "postgres",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "devanalysis114",
+        "POSTGRES_USER": str(env_values.get("POSTGRES_USER") or "admin").strip() or "admin",
+        "NGINX_HTTP_PORT": "8080",
+        "NGINX_HTTPS_PORT": "8443",
+        "ALLOWED_ORIGINS": f"https://{admin_domain},http://127.0.0.1:3000,http://127.0.0.1:3005,http://localhost:3000,http://localhost:3005",
+        "SOCIAL_LOGIN_PROVIDERS": "google,kakao,naver",
+        "ORCH_FORCE_COMPLETE": "false",
+        "ORCH_MIN_FILES": str(runtime_config.get("min_files") or 9),
+        "ORCH_MIN_DIRS": str(runtime_config.get("min_dirs") or 3),
+        "ORCH_MAX_FORCE_RETRIES": str(runtime_config.get("max_force_retries") or 3),
+        "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "true",
+        "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "true",
+        "VIDEO_REQUIRE_GENERATIVE_ENGINE": "false",
+        "SELF_ENGINE_MAX_RETRY": "2",
+        "KMC_CALLBACK_URL": f"https://{admin_domain}/api/auth/identity/providers/kmc/callback",
+        "KCB_CALLBACK_URL": f"https://{admin_domain}/api/auth/identity/providers/kcb/callback",
+    }
+    for env_key, route_key in ADMIN_LLM_ENV_ROUTE_KEYS.items():
+        route_value = str(model_routes.get(route_key) or env_values.get(env_key) or env_values.get("LLM_MODEL_DEFAULT") or "").strip()
+        if route_value:
+            defaults[env_key] = route_value
+    recommended: Dict[str, str] = {}
+    for key, value in defaults.items():
+        if not str(env_values.get(key) or "").strip():
+            recommended[key] = str(value)
+    return recommended
+
+
+def _effective_env_field_value(key: str, env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> str:
+    current = str(env_values.get(key) or "").strip()
+    if current:
+        return current
+    route_key = ADMIN_LLM_ENV_ROUTE_KEYS.get(key)
+    if route_key:
+        route_value = str((runtime_config.get("model_routes") or {}).get(route_key) or "").strip()
+        if route_value:
+            return route_value
+    recommended = _compute_recommended_env_defaults(env_values, runtime_config)
+    return str(recommended.get(key) or "").strip()
+
+
+def _build_admin_integration_checks(
+    env_values: Dict[str, str],
+    display_values: Dict[str, str],
+    runtime_config: Dict[str, Any],
+    available_models: List[str],
+) -> Dict[str, Any]:
+    api_base = display_values["local_api_base_url"]
+    health_probe = _probe_http_reachable(f"{api_base}/api/health")
+    docs_probe = _probe_http_reachable(f"{api_base}/docs")
+    ollama_base = str(env_values.get("OLLAMA_BASE") or "http://host.docker.internal:8008/v1").strip().rstrip("/")
+    ollama_probe = _probe_http_reachable(f"{ollama_base}/models")
+    runtime_path = _admin_orchestrator_runtime_config_path()
+    runtime_ok = runtime_path.exists() and bool(runtime_config)
+    upload_root = Path(display_values["marketplace_host_root"])
+    if not upload_root.is_absolute():
+        upload_root = (_admin_workspace_root() / upload_root).resolve()
+    upload_ok = upload_root.exists() and upload_root.is_dir()
+    identity_doc = _admin_workspace_root() / "docs" / "identity-provider-integration-contract.md"
+    identity_doc_ok = identity_doc.exists() and identity_doc.is_file()
+    database_url = str(env_values.get("DATABASE_URL") or "").strip()
+    postgres_host = str(env_values.get("POSTGRES_HOST") or "").strip()
+    postgres_aligned = (not database_url) or (postgres_host and postgres_host in database_url)
+    items = [
+        {
+            "id": "backend_health",
+            "label": "백엔드 API /health",
+            "ok": bool(health_probe.get("ok")),
+            "url": health_probe.get("url"),
+            "detail": f"HTTP {health_probe.get('status')}" if health_probe.get("ok") else str(health_probe.get("error") or "연결 실패"),
+        },
+        {
+            "id": "swagger_docs",
+            "label": "Swagger UI /docs",
+            "ok": bool(docs_probe.get("ok")),
+            "url": docs_probe.get("url"),
+            "detail": f"HTTP {docs_probe.get('status')}" if docs_probe.get("ok") else str(docs_probe.get("error") or "연결 실패"),
+        },
+        {
+            "id": "ollama_models",
+            "label": "LLM 엔진 /models",
+            "ok": bool(ollama_probe.get("ok")) or len(available_models) > 0,
+            "url": f"{ollama_base}/models",
+            "detail": f"모델 {len(available_models)}개" if available_models else str(ollama_probe.get("error") or "모델 목록 없음"),
+        },
+        {
+            "id": "runtime_config",
+            "label": "orchestrator runtime config",
+            "ok": runtime_ok,
+            "url": str(runtime_path),
+            "detail": "runtime JSON 로드 OK" if runtime_ok else "runtime config 없음",
+        },
+        {
+            "id": "identity_docs",
+            "label": "PASS/KMC/KCB 계약 문서",
+            "ok": identity_doc_ok,
+            "url": "/admin/docs-viewer?path=docs%2Fidentity-provider-integration-contract.md",
+            "detail": str(identity_doc) if identity_doc_ok else "docs/identity-provider-integration-contract.md 없음",
+        },
+        {
+            "id": "upload_root",
+            "label": "마켓플레이스 저장 루트",
+            "ok": upload_ok,
+            "url": str(upload_root),
+            "detail": "디렉터리 확인" if upload_ok else "저장 루트 없음",
+        },
+        {
+            "id": "postgres_env",
+            "label": "PostgreSQL env 정렬",
+            "ok": postgres_aligned,
+            "url": database_url or "-",
+            "detail": f"POSTGRES_HOST={postgres_host or '-'}" if postgres_aligned else "DATABASE_URL과 POSTGRES_HOST 불일치",
+        },
+    ]
+    connected_count = sum(1 for item in items if item.get("ok"))
+    return {
+        "items": items,
+        "connected_count": connected_count,
+        "total_count": len(items),
+        "all_connected": connected_count == len(items),
+    }
+
+
+def _resolve_admin_available_models(llm_status: Dict[str, Any]) -> List[str]:
+    merged: List[str] = []
+    installed = llm_status.get("models") or []
+    if isinstance(installed, list) and installed:
+        merged.extend(str(name).strip() for name in installed if str(name).strip())
+    if not merged:
+        merged.extend(get_available_ollama_models())
+    configured = llm_status.get("configured_models") or {}
+    if isinstance(configured, dict):
+        merged.extend(str(name).strip() for name in configured.values() if str(name).strip())
+    return sorted(set(name for name in merged if name))
+
+
+def _resolve_admin_summary_display_values(env_values: Dict[str, str]) -> Dict[str, str]:
+    admin_domain = str(
+        env_values.get("ADMIN_DOMAIN")
+        or env_values.get("DOMAIN_NAME")
+        or env_values.get("MARKETPLACE_API_DOMAIN")
+        or ""
+    ).strip()
+    local_api_base_url = str(env_values.get("LOCAL_API_BASE_URL") or "").strip().rstrip("/")
+    if not local_api_base_url:
+        local_api_base_url = "http://127.0.0.1:8000"
+    marketplace_host_root = str(env_values.get("MARKETPLACE_HOST_ROOT") or "").strip()
+    if not marketplace_host_root:
+        marketplace_host_root = "./uploads"
+    marketplace_upload_root = str(env_values.get("MARKETPLACE_UPLOAD_ROOT") or "").strip()
+    if not marketplace_upload_root:
+        marketplace_upload_root = marketplace_host_root
+    return {
+        "admin_domain": admin_domain,
+        "local_api_base_url": local_api_base_url,
+        "marketplace_host_root": marketplace_host_root,
+        "marketplace_upload_root": marketplace_upload_root,
+    }
+
+
+def _build_admin_system_settings_payload(env_values_override: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    env_path = _admin_env_path()
+    runtime_config_path = _admin_orchestrator_runtime_config_path()
+    env_mtime = _safe_mtime(env_path)
+    runtime_mtime = _safe_mtime(runtime_config_path)
+    cached_payload = _ADMIN_SYSTEM_SETTINGS_CACHE.get("payload")
+    cached_at = float(_ADMIN_SYSTEM_SETTINGS_CACHE.get("captured_at") or 0.0)
+    if (
+        env_values_override is None
+        and isinstance(cached_payload, dict)
+        and cached_payload
+        and (time.time() - cached_at) <= ADMIN_SYSTEM_SETTINGS_CACHE_TTL_SEC
+        and _ADMIN_SYSTEM_SETTINGS_CACHE.get("env_mtime") == env_mtime
+        and _ADMIN_SYSTEM_SETTINGS_CACHE.get("runtime_mtime") == runtime_mtime
+    ):
+        return dict(cached_payload)
+
+    env_values = env_values_override or _read_admin_env_values(env_path)
+    runtime_config = _load_runtime_config_summary()
+    recommended_env_updates = _compute_recommended_env_defaults(env_values, runtime_config)
+    sections: List[Dict[str, Any]] = []
+    for section in ADMIN_SYSTEM_ENV_SECTIONS:
+        fields = []
+        for key in section["fields"]:
+            key_text = str(key)
+            raw_value = str(env_values.get(key_text, ""))
+            effective_value = _effective_env_field_value(key_text, env_values, runtime_config)
+            fields.append(
+                {
+                    "key": key_text,
+                    "label": ADMIN_SYSTEM_ENV_FIELD_LABELS.get(key_text, key_text),
+                    "value": raw_value,
+                    "effective_value": effective_value if not raw_value.strip() and effective_value else "",
+                    "needs_attention": not raw_value.strip(),
+                    "sensitive": key_text in ADMIN_SYSTEM_ENV_SENSITIVE_KEYS,
+                    "multiline": key_text in ADMIN_SYSTEM_ENV_MULTILINE_KEYS,
+                }
+            )
+        sections.append(
+            {
+                "id": str(section["id"]),
+                "title": str(section["title"]),
+                "usage": str(section.get("usage") or ""),
+                "description": str(section["description"]),
+                "fields": fields,
+            }
+        )
+    model_routes = runtime_config.get("model_routes") or {}
+    llm_status = llm_loader.get_cached_status()
+    available_models = _resolve_admin_available_models(llm_status if isinstance(llm_status, dict) else {})
+    display_values = _resolve_admin_summary_display_values(env_values)
+    local_api_base_url = display_values["local_api_base_url"]
+    local_api_base_url_warning = ""
+    if str(env_values.get("LOCAL_API_BASE_URL") or "").strip().endswith(":8001"):
+        local_api_base_url_warning = "LOCAL_API_BASE_URL 포트 8001은 백엔드 기본 포트(8000)와 다릅니다. .env를 8000으로 맞추세요."
+    generator_profiles = [
+        {"id": "python_fastapi", "label": "Python FastAPI", "generator": "python_code_generator", "runtime_role": "backend api"},
+        {"id": "python_worker", "label": "Python Worker", "generator": "python_code_generator", "runtime_role": "background worker"},
+        {"id": "nextjs_react", "label": "Next.js React", "generator": "non_python_code_generator", "runtime_role": "frontend web"},
+        {"id": "multi_code_generator", "label": "Multi Code Generator", "generator": "multi_code_generator", "runtime_role": "backend + frontend + sidecar services"},
+    ]
+    payload = {
+        "env_path": str(env_path),
+        "runtime_config_path": str(_admin_orchestrator_runtime_config_path()),
+        "sections": sections,
+        "integration_checks": _build_admin_integration_checks(env_values, display_values, runtime_config, available_models),
+        "social_login_runtime": _build_social_login_runtime_status(env_values),
+        "recommended_env_updates": recommended_env_updates,
+        "empty_field_count": sum(1 for section in sections for field in section["fields"] if field.get("needs_attention")),
+        "summary": {
+            "admin_domain": display_values["admin_domain"],
+            "api_domain": str(env_values.get("MARKETPLACE_API_DOMAIN") or display_values["admin_domain"]),
+            "local_api_base_url": local_api_base_url,
+            "local_api_base_url_warning": local_api_base_url_warning,
+            "api_docs_url": f"{local_api_base_url}/docs",
+            "marketplace_host_root": display_values["marketplace_host_root"],
+            "marketplace_upload_root": display_values["marketplace_upload_root"],
+            "nginx_http_port": str(env_values.get("NGINX_HTTP_PORT") or "8080"),
+            "nginx_https_port": str(env_values.get("NGINX_HTTPS_PORT") or "8443"),
+            "selected_profile": str(runtime_config.get("selected_profile") or ""),
+            "code_generation_strategy": str(runtime_config.get("code_generation_strategy") or ""),
+            "min_files": int(runtime_config.get("min_files") or 9),
+            "min_dirs": int(runtime_config.get("min_dirs") or 3),
+            "stage11_min_files": int(runtime_config.get("stage11_min_files") or 32),
+            "stage11_min_dirs": int(runtime_config.get("stage11_min_dirs") or 11),
+            "default_model": str(model_routes.get("default") or ""),
+            "chat_model": str(model_routes.get("chat") or ""),
+            "voice_chat_model": str(model_routes.get("voice_chat") or ""),
+            "reasoning_model": str(model_routes.get("reasoning") or ""),
+            "coding_model": str(model_routes.get("coding") or ""),
+            "available_model_count": int(len(available_models)),
+            "available_models": available_models,
+            "generator_profiles": generator_profiles,
+        },
+    }
+    _ADMIN_SYSTEM_SETTINGS_CACHE.update(
+        {
+            "captured_at": time.time(),
+            "env_mtime": env_mtime,
+            "runtime_mtime": runtime_mtime,
+            "payload": payload,
+        }
+    )
+    return payload
+
+
+def _coerce_env_int(value: Any, default: int, minimum: int = 0) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except Exception:
+        parsed = default
+    return max(minimum, parsed)
+
+
+def _build_global_automatic_env_updates(env_values: Dict[str, str]) -> Dict[str, str]:
+    current_retry = _coerce_env_int(env_values.get("SELF_ENGINE_MAX_RETRY"), 1, minimum=1)
+    current_min_files = _coerce_env_int(env_values.get("ORCH_MIN_FILES"), 9, minimum=1)
+    current_min_dirs = _coerce_env_int(env_values.get("ORCH_MIN_DIRS"), 3, minimum=0)
+    generative_ready = any(
+        str(env_values.get(key) or "").strip()
+        for key in ["SELF_ENGINE_GENERATIVE_PROVIDER", "SELF_ENGINE_GENERATIVE_SUBMIT_URL", "SELF_ENGINE_GENERATIVE_STATUS_URL_TEMPLATE"]
+    )
+    return {
+        "ORCH_FORCE_COMPLETE": "false",
+        "ORCH_MIN_FILES": str(max(9, current_min_files)),
+        "ORCH_MIN_DIRS": str(max(3, current_min_dirs)),
+        "VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE": "true",
+        "VIDEO_ENGINE_FALLBACK_TO_INTERNAL": "true",
+        "VIDEO_REQUIRE_GENERATIVE_ENGINE": "false",
+        "SELF_ENGINE_GENERATIVE_FALLBACK_COMPOSITOR": "true",
+        "SELF_ENGINE_GENERATIVE_ENABLED": "true" if generative_ready else "false",
+        "SELF_ENGINE_MAX_RETRY": str(max(2, current_retry)),
+    }
+
+
+async def _apply_global_automatic_mode() -> AdminGlobalAutomaticModeResponse:
+    env_path = _admin_env_path()
+    current_env_values = _read_admin_env_values(env_path)
+    env_updates = _build_global_automatic_env_updates(current_env_values)
+    updated_env_values = _write_admin_env_values(env_path, env_updates)
+    from backend.llm.orchestrator import OrchestratorRuntimeConfigUpdate, get_runtime_config, update_runtime_config
+    current_runtime = await get_runtime_config()
+    advisory_controls = dict(current_runtime.get("advisory_controls") or {})
+    advisory_controls.update(
+        {
+            "clarification_questions_enabled": True,
+            "max_clarification_questions": 3,
+            "evidence_panel_enabled": True,
+            "max_evidence_items": 5,
+            "next_action_suggestions_enabled": True,
+            "max_next_actions": 3,
+        }
+    )
+    runtime_update = OrchestratorRuntimeConfigUpdate(
+        code_generation_strategy="auto_generator",
+        force_complete=False,
+        allow_synthetic_fallback=True,
+        max_force_retries=max(2, _coerce_env_int(current_runtime.get("max_force_retries"), 2, 1)),
+        min_files=max(9, _coerce_env_int(current_runtime.get("min_files"), 9, 1)),
+        min_dirs=max(3, _coerce_env_int(current_runtime.get("min_dirs"), 3, 0)),
+        model_tuning_level=0,
+        token_tuning_level=0,
+        timeout_tuning_level=1,
+        selected_profile=str(current_runtime.get("selected_profile") or "rtx5090_32b"),
+        advisory_controls=advisory_controls,
+    )
+    applied_runtime = await update_runtime_config(runtime_update)
+    runtime_summary = {
+        "selected_profile": str(applied_runtime.get("selected_profile") or ""),
+        "code_generation_strategy": str(applied_runtime.get("code_generation_strategy") or ""),
+        "min_files": applied_runtime.get("min_files"),
+        "min_dirs": applied_runtime.get("min_dirs"),
+        "allow_synthetic_fallback": bool(applied_runtime.get("allow_synthetic_fallback")),
+        "force_complete": bool(applied_runtime.get("force_complete")),
+    }
+    return AdminGlobalAutomaticModeResponse(
+        applied_at=datetime.now().isoformat(),
+        message="관리자 대시보드 전역 자동 프리셋을 적용했습니다.",
+        restart_required=True,
+        env_path=str(env_path),
+        runtime_config_path=str(_admin_orchestrator_runtime_config_path()),
+        updated_env_values={key: str(updated_env_values.get(key, "")) for key in sorted(env_updates.keys())},
+        runtime_summary=runtime_summary,
+    )
+
+
+def _resolve_admin_workspace_path(requested_path: Optional[str]) -> Path:
+    return resolve_admin_workspace_path(requested_path, read_admin_env_values=_read_admin_env_values, admin_env_path=_admin_env_path)
+
+
+def _is_admin_text_file(path: Path) -> bool:
+    return is_admin_text_file(path)
+
+
+def _decode_admin_text_file(path: Path) -> str:
+    for encoding in ("utf-8", "utf-8-sig", "cp949"):
+        try:
+            return path.read_text(encoding=encoding)
+        except UnicodeDecodeError:
+            continue
+    raise HTTPException(status_code=400, detail="UTF-8 또는 CP949 텍스트 파일만 불러올 수 있습니다.")
+
+
+def _read_admin_text_file(path: Path) -> str:
+    return read_admin_text_file(path)
+
+
+def _workspace_relative_display(path: Path, base_dir: Path) -> str:
+    return str(path.relative_to(base_dir)).replace("\\", "/")
+
+
+def _orchestrator_output_base_dir(base_dir: Path, workspace_root: Path) -> str:
+    if is_relative_to(base_dir, workspace_root):
+        return str(base_dir.relative_to(workspace_root)).replace("\\", "/")
+    return str(base_dir)
+
+
+def _slugify_admin_name(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
+    cleaned = cleaned.strip("-._")
+    return cleaned or "workspace"
+
+
+def _should_skip_self_dir(path: Path) -> bool:
+    return path.name.lower() in ADMIN_SELF_EXCLUDE_DIR_NAMES
+
+
+def _scan_workspace_for_self_analysis(source_dir: Path) -> Dict[str, Any]:
+    tree_lines: List[str] = [f"{source_dir.name}/"]
+    text_files: List[Dict[str, Any]] = []
+    skipped_directories: List[str] = []
+    total_directories = 0
+    total_files = 0
+    tree_truncated = False
+
+    def append_tree_line(line: str) -> None:
+        nonlocal tree_truncated
+        if len(tree_lines) < ADMIN_SELF_TREE_LIMIT:
+            tree_lines.append(line)
+        else:
+            tree_truncated = True
+
+    def walk(current_dir: Path, depth: int) -> None:
+        nonlocal total_directories
+        nonlocal total_files
+        try:
+            children = sorted(current_dir.iterdir(), key=lambda child: (0 if child.is_dir() else 1, child.name.lower()))
+        except OSError:
+            return
+        for child in children:
+            indent = "  " * (depth + 1)
+            if child.is_dir():
+                total_directories += 1
+                relative_dir = _workspace_relative_display(child, source_dir)
+                if _should_skip_self_dir(child):
+                    skipped_directories.append(relative_dir)
+                    append_tree_line(f"{indent}{child.name}/ [skip]")
+                    continue
+                append_tree_line(f"{indent}{child.name}/")
+                walk(child, depth + 1)
+                continue
+            total_files += 1
+            append_tree_line(f"{indent}{child.name}")
+            if _is_admin_text_file(child):
+                text_files.append(
+                    {
+                        "name": child.name,
+                        "path": str(child),
+                        "relative_path": _workspace_relative_display(child, source_dir),
+                        "size_bytes": child.stat().st_size,
+                    }
+                )
+
+    walk(source_dir, 0)
+    return {
+        "tree_lines": tree_lines,
+        "tree_truncated": tree_truncated,
+        "text_files": text_files,
+        "skipped_directories": skipped_directories,
+        "total_directories": total_directories,
+        "total_files": total_files,
+    }
+
+
+def _build_self_analysis_bundle(source_dir: Path, text_files: List[Dict[str, Any]]) -> Dict[str, Any]:
+    sections: List[str] = []
+    included_files: List[str] = []
+    total_chars = 0
+    omitted_files = 0
+    for item in text_files[:ADMIN_SELF_TEXT_FILE_LIMIT]:
+        try:
+            raw_text = _decode_admin_text_file(Path(str(item["path"])))
+        except HTTPException:
+            omitted_files += 1
+            continue
+        excerpt = raw_text[:8000]
+        if len(raw_text) > len(excerpt):
+            excerpt = excerpt + "\n\n...[중략: 파일 전체가 너무 길어 일부만 포함]"
+        chunk = f"\n\n### FILE: {item['relative_path']}\nSIZE: {item['size_bytes']} bytes\n\n{excerpt}"
+        if total_chars + len(chunk) > ADMIN_SELF_TEXT_CHAR_LIMIT:
+            omitted_files += 1
+            break
+        sections.append(chunk)
+        included_files.append(str(item["relative_path"]))
+        total_chars += len(chunk)
+    return {
+        "content_bundle": "".join(sections).strip(),
+        "included_files": included_files,
+        "included_count": len(included_files),
+        "content_chars": total_chars,
+        "omitted_files": omitted_files,
+    }
+
+
+def _build_self_task_tree_preview(scan_result: Dict[str, Any]) -> str:
+    tree_preview = "\n".join(scan_result["tree_lines"][:ADMIN_SELF_TASK_TREE_LIMIT])
+    if scan_result.get("tree_truncated") or len(scan_result["tree_lines"]) > ADMIN_SELF_TASK_TREE_LIMIT:
+        tree_preview += "\n...[중략: 구조 프리뷰가 길어 일부만 포함]"
+    return tree_preview
+
+
+def _build_self_task_key_files(scan_result: Dict[str, Any]) -> str:
+    key_files = "\n".join(
+        f"- {item['relative_path']} ({item['size_bytes']} bytes)"
+        for item in scan_result["text_files"][:ADMIN_SELF_TASK_KEY_FILE_LIMIT]
+    )
+    if len(scan_result["text_files"]) > ADMIN_SELF_TASK_KEY_FILE_LIMIT:
+        key_files += "\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]"
+    return key_files
+
+
+def _build_self_task_content_bundle(bundle_result: Dict[str, Any]) -> str:
+    omitted_files = int(bundle_result.get("omitted_files") or 0)
+    included_count = int(bundle_result.get("included_count") or 0)
+    total_chars = int(bundle_result.get("content_chars") or 0)
+    return (
+        "[분석용 파일 본문 컨텍스트 요약]\n"
+        f"- 포함 파일 수: {included_count}\n"
+        f"- 누락 파일 수: {omitted_files}\n"
+        f"- 원본 컨텍스트 문자 수: {total_chars}\n"
+        "- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n"
+        "- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것"
+    )
+
+
+def _load_json_file(path: Path) -> Dict[str, Any]:
+    raw_text = path.read_text(encoding="utf-8").strip()
+    if not raw_text:
+        return {}
+    try:
+        return json.loads(raw_text)
+    except json.JSONDecodeError:
+        return {}
+
+
+def _write_json_file(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.tmp")
+    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path.replace(path)
+
+
+def _update_self_run_approval_checklist(
+    approval_payload: Dict[str, Any],
+    item_id: str,
+    status: str,
+    note: str = "",
+) -> None:
+    checklist = approval_payload.get("approval_checklist")
+    if not isinstance(checklist, list):
+        checklist = []
+        approval_payload["approval_checklist"] = checklist
+
+    normalized_status = str(status or "pending").strip().lower() or "pending"
+    check_label_map = {
+        "pending": "대기",
+        "running": "진행 중",
+        "completed": "완료",
+        "failed": "실패",
+        "blocked": "차단",
+        "skipped": "생략",
+    }
+    check_label = check_label_map.get(normalized_status, normalized_status)
+    note_text = str(note or "").strip()
+    closed_states = {"completed", "failed", "blocked", "skipped"}
+    closed_at = datetime.now().isoformat() if normalized_status in closed_states else ""
+
+    target_item: Optional[Dict[str, Any]] = None
+    for item in checklist:
+        if isinstance(item, dict) and str(item.get("id") or "") == item_id:
+            target_item = item
+            break
+
+    if target_item is None:
+        target_item = {
+            "id": item_id,
+            "label": item_id,
+            "status": normalized_status,
+            "check_label": check_label,
+            "note": note_text,
+            "closed_at": closed_at,
+        }
+        checklist.append(target_item)
+        return
+
+    target_item["status"] = normalized_status
+    target_item["check_label"] = check_label
+    target_item["note"] = note_text
+    target_item["closed_at"] = closed_at
+
+
+def _admin_experiment_clone_root() -> Path:
+    return _admin_runtime_root() / "admin_self_experiments"
+
+
+def _admin_self_run_root() -> Path:
+    return _admin_runtime_root() / "admin_self_runs"
+
+
+def _admin_self_backup_root() -> Path:
+    return _admin_runtime_root() / "admin_self_backups"
+
+
+def _approval_record_path(approval_id: str) -> Path:
+    return _admin_self_run_root() / approval_id / "approval.json"
+
+
+def _approval_payload_to_self_run_response(approval_payload: Dict[str, Any]) -> Dict[str, Any]:
+    return approval_payload_to_self_run_response_service(approval_payload)
+
+
+def _latest_self_run_record_path(pending_only: bool = False) -> Optional[Path]:
+    return latest_self_run_record_path_service(admin_self_run_root=_admin_self_run_root, load_json_file=_load_json_file, pending_only=pending_only)
+
+
+def _self_run_timeout_sec() -> int:
+    return max(120, int(os.getenv("ADMIN_SELF_RUN_TIMEOUT_SEC", os.getenv("ORCH_JOB_TIMEOUT_SEC", "3600"))))
+
+
+def _is_self_run_worker_alive(worker_pid: Optional[int]) -> bool:
+    if not worker_pid or worker_pid <= 0:
+        return False
+    try:
+        os.kill(worker_pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _parse_iso_datetime(value: Any) -> Optional[datetime]:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _read_self_run_worker_log_excerpt(approval_payload: Dict[str, Any], max_chars: int = 4000) -> str:
+    log_path_text = str(approval_payload.get("worker_log_path") or "").strip()
+    if not log_path_text:
+        return ""
+    log_path = Path(log_path_text)
+    if not log_path.exists() or not log_path.is_file():
+        return ""
+    try:
+        log_text = log_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+    return log_text[-max_chars:].strip()
+
+
+def _extract_self_run_worker_error_detail(approval_payload: Dict[str, Any]) -> str:
+    log_excerpt = _read_self_run_worker_log_excerpt(approval_payload, max_chars=8000)
+    if not log_excerpt:
+        return ""
+    lines = [line.strip() for line in log_excerpt.splitlines() if line.strip()]
+    for marker in ("[call_agent:error]", "call_agent failed:", "worker 예외로 종료됨:", "Traceback (most recent call last):"):
+        for line in reversed(lines):
+            if marker in line:
+                return line
+    return ""
+
+
+def _build_stale_self_run_report_preview(approval_payload: Dict[str, Any], stale_reason: str, detail: str) -> str:
+    requested_mode = str(approval_payload.get("requested_mode") or "self-run")
+    report_lines = [
+        f"# {requested_mode} self-run report",
+        "",
+        "- 상태: failed",
+        f"- 실패 분류: {stale_reason}",
+        f"- 오류: {detail}",
+    ]
+    worker_log_path = str(approval_payload.get("worker_log_path") or "").strip()
+    if worker_log_path:
+        report_lines.append(f"- worker 로그: {worker_log_path}")
+    log_excerpt = _read_self_run_worker_log_excerpt(approval_payload)
+    if log_excerpt:
+        report_lines.extend(["", "## Worker 로그 발췌", "", "```text", log_excerpt, "```"])
+    return "\n".join(report_lines)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _collect_syncable_files(base_dir: Path) -> Dict[str, Dict[str, Any]]:
+    items: Dict[str, Dict[str, Any]] = {}
+
+    def walk(current_dir: Path) -> None:
+        try:
+            children = sorted(current_dir.iterdir(), key=lambda child: (0 if child.is_dir() else 1, child.name.lower()))
+        except OSError:
+            return
+        for child in children:
+            if child.is_dir():
+                if _should_skip_self_dir(child):
+                    continue
+                walk(child)
+                continue
+            if child.is_file():
+                rel_path = _workspace_relative_display(child, base_dir)
+                items[rel_path] = {"path": str(child), "size_bytes": child.stat().st_size, "sha256": _sha256_file(child)}
+
+    walk(base_dir)
+    return items
+
+
+def _build_workspace_snapshot(base_dir: Path) -> Dict[str, Any]:
+    files = _collect_syncable_files(base_dir)
+    digest = hashlib.sha256()
+    total_bytes = 0
+    snapshot_files: Dict[str, Dict[str, Any]] = {}
+    for rel_path in sorted(files.keys()):
+        file_info = files[rel_path]
+        size_bytes = int(file_info["size_bytes"])
+        file_hash = str(file_info["sha256"])
+        total_bytes += size_bytes
+        digest.update(rel_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(size_bytes).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file_hash.encode("utf-8"))
+        digest.update(b"\0")
+        snapshot_files[rel_path] = {"size_bytes": size_bytes, "sha256": file_hash}
+    return {"fingerprint": digest.hexdigest(), "total_files": len(snapshot_files), "total_bytes": total_bytes, "files": snapshot_files}
+
+
+def _is_self_run_approval_ready(orchestration_result: Dict[str, Any]) -> tuple[bool, List[str]]:
+    required_truthy_fields = ["applied", "postcheck_ok", "dod_ok", "completion_gate_ok", "semantic_audit_ok", "structure_validation_ok", "traceability_map_path"]
+    failed_fields = [field_name for field_name in required_truthy_fields if not orchestration_result.get(field_name)]
+    return len(failed_fields) == 0, failed_fields
+
+
+def _extract_orchestration_failure_detail(orchestration_result: Dict[str, Any]) -> str:
+    candidate_texts = [orchestration_result.get("failure_summary"), orchestration_result.get("apply_error"), orchestration_result.get("final_output")]
+    for candidate in candidate_texts:
+        text = str(candidate or "").strip()
+        if not text:
+            continue
+        if text.startswith("[에이전트 오류:") or "응답 대기 시간 초과" in text or "Traceback" in text:
+            return text
+    return ""
+
+
+def _collect_empty_syncable_dirs(base_dir: Path) -> List[str]:
+    empty_dirs: List[str] = []
+
+    def walk(current_dir: Path) -> None:
+        try:
+            children = list(current_dir.iterdir())
+        except OSError:
+            return
+        visible_children: List[Path] = []
+        for child in children:
+            if child.is_dir() and _should_skip_self_dir(child):
+                continue
+            visible_children.append(child)
+        if current_dir != base_dir and not visible_children:
+            empty_dirs.append(_workspace_relative_display(current_dir, base_dir))
+            return
+        for child in visible_children:
+            if child.is_dir():
+                walk(child)
+
+    walk(base_dir)
+    return sorted(empty_dirs)
+
+
+def _run_admin_approval_validation(target_dir: Path) -> tuple[bool, List[str], Optional[str]]:
+    return run_admin_approval_validation_service(target_dir, collect_syncable_files=_collect_syncable_files, collect_empty_syncable_dirs=_collect_empty_syncable_dirs, py_compile_module=py_compile)
+
+
+def _run_smoke_test_for_verifier(target_dir: Path, timeout: int = 60) -> Dict[str, Any]:
+    """생성 산출물 대상 smoke test 실행 — pytest + py_compile 전수 검사.
+
+    운영 서버(/health, /api/llm/status)는 아직 배포 전이므로 직접 호출하지 않는다.
+    대신 clone_dir 내 Python 파일 전수 py_compile + pytest(있으면) 를 돌려
+    Verifier 피드백에 구체적 실패 위치를 포함시킨다.
+    """
+    result: Dict[str, Any] = {
+        "py_compile_ok": True,
+        "py_compile_errors": [],
+        "pytest_ok": None,  # None=실행 안 됨
+        "pytest_output": "",
+        "pytest_returncode": None,
+        "smoke_passed": True,
+        "summary": "",
+    }
+    # 1. py_compile 전수 검사
+    inventory = _collect_syncable_files(target_dir)
+    py_errors: List[str] = []
+    for rel_path in sorted(inventory.keys()):
+        if not rel_path.lower().endswith(".py"):
+            continue
+        abs_path = target_dir / rel_path
+        try:
+            py_compile.compile(str(abs_path), doraise=True)
+        except py_compile.PyCompileError as exc:
+            py_errors.append(f"{rel_path}: {exc}")
+    result["py_compile_ok"] = len(py_errors) == 0
+    result["py_compile_errors"] = py_errors[:40]
+
+    # 2. pytest 실행 (tests/ 디렉터리가 있을 때만)
+    test_dir = target_dir / "tests"
+    if test_dir.exists() and any(test_dir.rglob("test_*.py")):
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "pytest", str(test_dir), "-q", "--tb=short", "--no-header"],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=str(target_dir),
+            )
+            result["pytest_ok"] = proc.returncode == 0
+            result["pytest_returncode"] = proc.returncode
+            combined = (proc.stdout or "") + (proc.stderr or "")
+            result["pytest_output"] = combined[-3000:]
+        except subprocess.TimeoutExpired:
+            result["pytest_ok"] = False
+            result["pytest_output"] = f"pytest timeout ({timeout}s 초과)"
+        except Exception as exc:
+            result["pytest_ok"] = False
+            result["pytest_output"] = f"pytest 실행 오류: {exc}"
+
+    smoke_passed = result["py_compile_ok"] and (result["pytest_ok"] is not False)
+    result["smoke_passed"] = smoke_passed
+    parts = []
+    if not result["py_compile_ok"]:
+        parts.append(f"py_compile 실패 {len(py_errors)}건")
+    if result["pytest_ok"] is False:
+        parts.append("pytest 실패")
+    if result["pytest_ok"] is True:
+        parts.append("pytest 통과")
+    result["summary"] = " | ".join(parts) if parts else "smoke 통과"
+    return result
+
+
+def _build_python_self_diagnostic_fallback(target_dir: Path, requested_mode: str, failure_detail: str) -> Dict[str, Any]:
+    from backend.llm.code_analyzer import code_analyzer
+    analysis_path = code_analyzer.write_analysis_report(target_dir)
+    validation_ok, validation_logs, validation_error = _run_admin_approval_validation(target_dir)
+    inventory = _collect_syncable_files(target_dir)
+    python_files = [rel_path for rel_path in sorted(inventory.keys()) if rel_path.lower().endswith(".py")]
+    docs_dir = target_dir / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    root_cause_path = docs_dir / "root_cause_analysis.md"
+    root_cause_report = (
+        "# Root Cause Analysis\n\n"
+        "## 현상\n\n"
+        f"- self-run 모드: {requested_mode}\n"
+        f"- LLM/오케스트레이터 실패 근거: {failure_detail or '-'}\n"
+        f"- clone 기준 Python 파일 수: {len(python_files)}\n"
+        f"- py_compile 승인 전 검증: {'ok' if validation_ok else 'fail'}\n\n"
+        "## 근본 원인\n\n"
+        "- live self-run 이 LLM 응답 대기 또는 게이트 실패로 멈추면, 수정 후보가 approval 기록에 충분히 남지 않았습니다.\n"
+        "- 그래서 clone 기준 Python 정적 분석과 py_compile 검증 결과를 별도 진단 산출물로 강제 생성합니다.\n\n"
+        "## 즉시 수정 후보\n\n"
+        "- backend/llm/orchestrator.py: self-run prompt/context 범위를 더 줄일 것\n"
+        "- backend/llm/orchestrator.py: planner 설계 결과와 auto_generator 산출물 경로를 일관되게 유지할 것\n"
+        "- backend/admin_router.py: approval 종료 시 Python 진단 산출물을 항상 report에 연결할 것\n"
+        "- 관리자 화면: 최신 self-run failure 대신 Python 진단 보고서 경로를 함께 노출할 것\n\n"
+        "## Python 정적 점검 결과\n\n"
+        + "\n".join(f"- {line}" for line in validation_logs[-20:])
+        + "\n"
+    )
+    root_cause_path.write_text(root_cause_report, encoding="utf-8")
+    summary = f"LLM self-run 실패 후 Python 정적 진단 fallback 수행 | analysis={analysis_path} | root_cause=docs/root_cause_analysis.md | py_compile={'ok' if validation_ok else 'fail'}"
+    return {
+        "analysis_path": analysis_path,
+        "root_cause_report": root_cause_report,
+        "root_cause_report_path": "docs/root_cause_analysis.md",
+        "validation_ok": validation_ok,
+        "validation_error": validation_error,
+        "validation_logs": validation_logs,
+        "summary": summary,
+        "generated_files": [analysis_path, "docs/root_cause_analysis.md"],
+    }
+
+
+def _merge_python_self_diagnostic_result(orchestration_result: Dict[str, Any], diagnostic_result: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(orchestration_result or {})
+    written_files = list(merged.get("written_files") or [])
+    for rel_path in diagnostic_result.get("generated_files") or []:
+        if rel_path and rel_path not in written_files:
+            written_files.append(rel_path)
+    merged["written_files"] = written_files
+    merged["analysis_path"] = diagnostic_result.get("analysis_path")
+    merged["root_cause_report"] = diagnostic_result.get("root_cause_report")
+    merged["root_cause_report_path"] = diagnostic_result.get("root_cause_report_path")
+    merged["python_self_diagnostic_used"] = True
+    merged["python_self_diagnostic_ok"] = diagnostic_result.get("validation_ok")
+    merged["python_self_diagnostic_error"] = diagnostic_result.get("validation_error")
+    merged["python_self_diagnostic_logs"] = diagnostic_result.get("validation_logs")
+    if not merged.get("failure_summary"):
+        merged["failure_summary"] = diagnostic_result.get("summary")
+    else:
+        merged["failure_summary"] = str(merged.get("failure_summary") or "") + "\n\n[python-self-diagnostic]\n" + str(diagnostic_result.get("summary") or "")
+    if not merged.get("final_output"):
+        merged["final_output"] = diagnostic_result.get("summary")
+    return merged
+
+
+def _diff_workspace_trees(source_dir: Path, clone_dir: Path) -> Dict[str, Any]:
+    source_files = _collect_syncable_files(source_dir)
+    clone_files = _collect_syncable_files(clone_dir)
+    source_keys = set(source_files.keys())
+    clone_keys = set(clone_files.keys())
+    added_files = sorted(clone_keys - source_keys)
+    deleted_files = sorted(source_keys - clone_keys)
+    modified_files = sorted(rel for rel in (source_keys & clone_keys) if source_files[rel]["sha256"] != clone_files[rel]["sha256"])
+    return {
+        "added_files": added_files,
+        "modified_files": modified_files,
+        "deleted_files": deleted_files,
+        "total_changed_files": len(added_files) + len(modified_files) + len(deleted_files),
+    }
+
+
+def _build_self_run_report_preview(requested_mode: str, source_dir: Path, clone_dir: Path, scan_result: Dict[str, Any], diff_summary: Dict[str, Any], orchestration_result: Dict[str, Any], approval_status: str) -> str:
+    approval_gate_ok, approval_gate_failed_fields = _is_self_run_approval_ready(orchestration_result)
+    output_excerpt = str(orchestration_result.get("final_output") or orchestration_result.get("failure_summary") or "")[:4000]
+    changed_lines = [f"- added: {len(diff_summary['added_files'])}", f"- modified: {len(diff_summary['modified_files'])}", f"- deleted: {len(diff_summary['deleted_files'])}"]
+    if diff_summary["added_files"]:
+        changed_lines.append("- added files:\n  - " + "\n  - ".join(diff_summary["added_files"][:40]))
+    if diff_summary["modified_files"]:
+        changed_lines.append("- modified files:\n  - " + "\n  - ".join(diff_summary["modified_files"][:40]))
+    if diff_summary["deleted_files"]:
+        changed_lines.append("- deleted files:\n  - " + "\n  - ".join(diff_summary["deleted_files"][:40]))
+    changed_summary = "\n".join(changed_lines)
+    return (
+        f"# {requested_mode} self-run report\n\n"
+        f"- source_path: {source_dir}\n"
+        f"- experiment_clone_path: {clone_dir}\n"
+        f"- approval_status: {approval_status}\n"
+        f"- orchestration_mode: {orchestration_result.get('mode')}\n"
+        f"- applied_on_clone: {orchestration_result.get('applied')}\n"
+        f"- postcheck_ok: {orchestration_result.get('postcheck_ok')}\n"
+        f"- dod_ok: {orchestration_result.get('dod_ok')}\n"
+        "- output_dir: " + str(orchestration_result.get("output_dir") or orchestration_result.get("failed_output_dir")) + "\n"
+        f"- completion_gate_ok: {orchestration_result.get('completion_gate_ok')}\n"
+        f"- semantic_audit_ok: {orchestration_result.get('semantic_audit_ok')}\n"
+        f"- approval_gate_ok: {approval_gate_ok}\n"
+        f"- approval_gate_failed_fields: {', '.join(approval_gate_failed_fields) or '-'}\n"
+        f"- apply_error: {orchestration_result.get('apply_error') or '-'}\n\n"
+        f"## 구조 요약\n\n"
+        f"- directories: {scan_result['total_directories']}\n"
+        f"- files: {scan_result['total_files']}\n"
+        f"- text files: {len(scan_result['text_files'])}\n\n"
+        f"## 변경 요약\n\n{changed_summary}\n\n"
+        f"## 실행 결과 프리뷰\n\n{output_excerpt}"
+    )
+
+
+def _self_run_job_request_path(approval_id: str) -> Path:
+    return _admin_self_run_root() / approval_id / "job_request.json"
+
+
+def _self_run_worker_log_path(approval_id: str) -> Path:
+    return _admin_self_run_root() / approval_id / "worker.log"
+
+
+def _self_run_worker_host_log_path(approval_id: str) -> str:
+    return str(_self_run_worker_log_path(approval_id))
+
+
+def _self_run_worker_status_path(approval_id: str) -> Path:
+    return _admin_self_run_root() / approval_id / "worker_status.json"
+
+
+def _self_run_progress_log_path(approval_id: str) -> Path:
+    return _admin_self_run_root() / approval_id / "progress.jsonl"
+
+
+def _emit_self_run_progress_marker(approval_id: str, phase: str, **payload: Any) -> None:
+    progress_path = _self_run_progress_log_path(approval_id)
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
+    event = {"approval_id": approval_id, "phase": phase, "timestamp": datetime.now().isoformat(), **payload}
+    with progress_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+
+def _clone_workspace_for_experiment(source_dir: Path) -> Dict[str, Any]:
+    clone_root = _admin_experiment_clone_root()
+    clone_root.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    clone_dir = clone_root / f"{_slugify_admin_name(source_dir.name)}_{timestamp}"
+    shutil.copytree(source_dir, clone_dir, ignore=shutil.ignore_patterns(*ADMIN_SELF_EXCLUDE_DIR_NAMES))
+    copied_files = sum(1 for item in clone_dir.rglob("*") if item.is_file())
+    return {"clone_path": str(clone_dir), "copied_files": copied_files}
+
+
+def _self_run_execution_mode(requested_mode: str, directive_template: str = "", directive_scope: str = "") -> str:
+    template = str(directive_template or "").strip().lower()
+    scope = str(directive_scope or "").strip().lower()
+    # focused self-healing은 지정 범위 안정화가 목적이므로 full 스캐폴드 모드를 금지한다.
+    if template == "focused-self-healing" or scope == "targeted_implementation":
+        return "review"
+    if requested_mode == "self-improvement":
+        return "full"
+    if requested_mode == "self-expansion":
+        return "full"
+    return "review"
+
+
+def _self_run_directive_template_label(template_key: str) -> str:
+    template = (template_key or "").strip().lower()
+    template_labels = {
+        "debug_remediation_loop": "디버깅 기반 결함 교정 루프",
+        "video_ad_clarity": "영상 선명도 개선",
+        "video_ad_conversion": "전환율 개선",
+        "video_ad_speed_optimization": "속도 최적화",
+        "video_ad_storytelling": "스토리텔링 강화",
+        "video_ad_quality_upgrade": "영상광고 품질 고도화",
+        "video_ad_new_tech": "영상광고 신기술 도입",
+        "admin_ops_efficiency": "관리자 운영 효율화",
+        "marketplace_conversion": "마켓플레이스 전환 개선",
+        "llm_cost_latency": "LLM 비용/지연 최적화",
+        "focused-self-healing": "원인 집중 자가치유",
+        "tower_crane_expansion": "Tower Crane 확장 실험",
+    }
+    return template_labels.get(template, "직접 주문")
+
+
+def _self_run_directive_scope_label(scope_key: str) -> str:
+    scope = (scope_key or "").strip().lower()
+    scope_labels = {
+        "preset_default": "프리셋 권장 범위",
+        "diagnosis_only": "진단/설계 중심",
+        "targeted_implementation": "지정 범위만 구현",
+        "feature_expansion": "기능 확장 우선",
+        "modernization": "구조 개선 포함",
+    }
+    return scope_labels.get(scope, "프리셋 권장 범위")
+
+
+def _build_self_run_directive_block(directive_template: str, directive_scope: str, directive_request: str) -> str:
+    normalized_request = str(directive_request or "").strip()
+    normalized_template = str(directive_template or "").strip()
+    normalized_scope = str(directive_scope or "").strip()
+    if not (normalized_request or normalized_template or normalized_scope):
+        return ""
+    lines = ["[선택 주문]"]
+    if normalized_template:
+        lines.append("- 주문 템플릿: " + _self_run_directive_template_label(normalized_template))
+    if normalized_scope:
+        lines.append(f"- 실행 범위: {_self_run_directive_scope_label(normalized_scope)}")
+    if normalized_request:
+        lines.append(f"- 사용자 주문: {normalized_request}")
+    lines.append("- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것")
+    return "\n".join(lines)
+
+
+def _build_self_expansion_protocol_block(requested_mode: str) -> str:
+    if requested_mode != "self-expansion":
+        return ""
+    return "\n".join(
+        [
+            "[자가확장 full 실험 프로토콜]",
+            "- 1단계 발견: capability 진단, Tower Crane A/B/C 옵션, 웹 리서치 근거를 작업문에 반영",
+            "- 2단계 실험: 실험 복제본에서 Autonomous TurnController 11단계 또는 지정 범위 full 실행",
+            "- 3단계 검증: py_compile, pytest, semantic audit, 11단계 probe 근거 수집",
+            "- 4단계 승인: 원본 반영은 workspace-self-run/approve 승인 후에만 수행",
+            "- plan-only 금지: 설계만 남기지 말고 복제본에 실제 코드/구조 변경을 생성할 것",
+        ]
+    )
+
+
+def _build_debug_remediation_protocol_block(requested_mode: str, directive_request: str) -> str:
+    if requested_mode != "self-improvement":
+        return ""
+    corrective_command = str(directive_request or "").strip()
+    lines = [
+        "[디버깅 시스템 표준 프로토콜]",
+        "- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것",
+        "- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것",
+        "- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것",
+        "- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것",
+    ]
+    if corrective_command:
+        lines.extend(["", "[교정 조치 명령]", corrective_command])
+    return "\n".join(lines)
+
+
+def _suggested_self_mode(requested_mode: str) -> str:
+    if requested_mode == "self-improvement":
+        return "full"
+    if requested_mode == "self-expansion":
+        return "full"
+    return "review"
+
+
+def _trim_self_run_task_text(value: str, max_chars: int = 2500) -> str:
+    text = str(value or "")
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+
+def _build_self_prepare_task(requested_mode: str, source_dir: Path, scan_result: Dict[str, Any], bundle_result: Dict[str, Any], experiment_clone_path: Optional[str]) -> str:
+    title = "오케스트레이터 자가개선 준비 실행" if requested_mode == "self-improvement" else ("오케스트레이터 자가확장 준비 실행" if requested_mode == "self-expansion" else "오케스트레이터 자가진단 준비 실행")
+    mode_steps = [
+        "1. 먼저 전체 구조와 핵심 파일 연결을 정확히 분석",
+        "2. 개선 실험은 반드시 복제본에서 먼저 수행",
+        "3. 복제본에서 검증 통과한 변경만 유지 또는 반영",
+        "4. 적용 결과와 실패 원인을 구체적으로 남길 것",
+    ]
+    tree_preview = _build_self_task_tree_preview(scan_result)
+    key_files = _build_self_task_key_files(scan_result)
+    skipped_dirs = "\n".join(f"- {path}" for path in scan_result["skipped_directories"][:20]) or "- 없음"
+    content_bundle = _build_self_task_content_bundle(bundle_result)
+    target_line = f"실험 복제본 경로: {experiment_clone_path}" if experiment_clone_path else f"원본 분석 경로: {source_dir}"
+    return (
+        f"{title}\n\n"
+        f"대상 루트: {source_dir}\n"
+        f"{target_line}\n"
+        f"권장 실행 모드: {_suggested_self_mode(requested_mode)}\n\n"
+        f"[실행 원칙]\n- " + "\n- ".join(mode_steps) + "\n\n"
+        f"[구조 요약]\n"
+        f"- 디렉터리 수: {scan_result['total_directories']}\n"
+        f"- 파일 수: {scan_result['total_files']}\n"
+        f"- 텍스트/코드 파일 수: {len(scan_result['text_files'])}\n"
+        f"- 분석 컨텍스트 포함 파일 수: {bundle_result['included_count']}\n"
+        f"- 분석 컨텍스트 문자 수: {bundle_result['content_chars']}\n\n"
+        f"[스킵한 대용량/생성 디렉터리]\n{skipped_dirs}\n\n"
+        f"[전체 구조 프리뷰]\n{tree_preview}\n\n"
+        f"[핵심 텍스트 파일 목록]\n{key_files}\n\n"
+        f"{content_bundle}"
+    )
+
+
+def _build_self_run_task(requested_mode: str, source_dir: Path, experiment_clone_path: Path, scan_result: Dict[str, Any], bundle_result: Dict[str, Any], directive_template: str = "", directive_scope: str = "", directive_request: str = "") -> str:
+    title = "오케스트레이터 자가개선 실험 즉시 실행" if requested_mode == "self-improvement" else ("오케스트레이터 자가확장 실험 즉시 실행" if requested_mode == "self-expansion" else "오케스트레이터 자가진단 실험 즉시 실행")
+    action_lines = [
+        "1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석",
+        "2. 실험 복제본에서 실제 수정과 검증을 수행",
+        "3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김",
+        "4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음",
+    ]
+    tree_preview = _build_self_task_tree_preview(scan_result)
+    key_files = _build_self_task_key_files(scan_result)
+    skipped_dirs = "\n".join(f"- {path}" for path in scan_result["skipped_directories"][:20]) or "- 없음"
+    content_bundle = _build_self_task_content_bundle(bundle_result)
+    directive_block = _build_self_run_directive_block(directive_template, directive_scope, directive_request)
+    debug_protocol_block = _build_debug_remediation_protocol_block(requested_mode, directive_request)
+    expansion_protocol_block = _build_self_expansion_protocol_block(requested_mode)
+    return (
+        f"{title}\n\n"
+        f"원본 대상 경로: {source_dir}\n"
+        f"실험 복제본 경로: {experiment_clone_path}\n"
+        f"실행 모드: {_self_run_execution_mode(requested_mode)}\n\n"
+        f"[반드시 지킬 원칙]\n- " + "\n- ".join(action_lines) + "\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n"
+        + (f"{directive_block}\n\n" if directive_block else "")
+        + (f"{debug_protocol_block}\n\n" if debug_protocol_block else "")
+        + (f"{expansion_protocol_block}\n\n" if expansion_protocol_block else "")
+        + "[대상 구조 요약]\n"
+        + f"- 디렉터리 수: {scan_result['total_directories']}\n"
+        + f"- 파일 수: {scan_result['total_files']}\n"
+        + f"- 텍스트/코드 파일 수: {len(scan_result['text_files'])}\n"
+        + f"- 분석 컨텍스트 포함 파일 수: {bundle_result['included_count']}\n"
+        + f"- 분석 컨텍스트 문자 수: {bundle_result['content_chars']}\n\n"
+        + f"[스킵 디렉터리]\n{skipped_dirs}\n\n"
+        + f"[구조 프리뷰]\n{_trim_self_run_task_text(tree_preview, max_chars=2500)}\n\n"
+        + f"[핵심 텍스트 파일]\n{_trim_self_run_task_text(key_files, max_chars=2500)}\n\n"
+        + f"{_trim_self_run_task_text(content_bundle, max_chars=8000)}\n\n"
+        + "[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것"
+    )
+
+
+def _build_admin_analysis_summary(scan_result: Dict[str, Any], bundle_result: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "total_directories": scan_result["total_directories"],
+        "total_files": scan_result["total_files"],
+        "total_text_files": len(scan_result["text_files"]),
+        "included_text_files": bundle_result["included_count"],
+        "content_chars": bundle_result["content_chars"],
+        "tree_truncated": scan_result["tree_truncated"],
+    }
+
+
+def _prepare_workspace_self_prepare_result(source_dir: Path, requested_mode: str, create_experiment_clone: bool) -> Dict[str, Any]:
+    return prepare_workspace_self_prepare_result_service(
+        source_dir,
+        requested_mode,
+        create_experiment_clone,
+        scan_workspace_for_self_analysis=_scan_workspace_for_self_analysis,
+        build_self_analysis_bundle=_build_self_analysis_bundle,
+        clone_workspace_for_experiment=_clone_workspace_for_experiment,
+        build_self_prepare_task=_build_self_prepare_task,
+        suggested_self_mode=_suggested_self_mode,
+        build_admin_analysis_summary=_build_admin_analysis_summary,
+    )
+
+
+def _prepare_workspace_self_run_context(source_dir: Path, requested_mode: str, directive_template: str = "", directive_scope: str = "", directive_request: str = "") -> Dict[str, Any]:
+    scan_result = _scan_workspace_for_self_analysis(source_dir)
+    bundle_result = _build_self_analysis_bundle(source_dir, scan_result["text_files"])
+    clone_result = _clone_workspace_for_experiment(source_dir)
+    clone_dir = Path(str(clone_result["clone_path"])).resolve()
+    return {
+        "source_path": str(source_dir),
+        "requested_mode": str(requested_mode or ""),
+        "directive_template": str(directive_template or ""),
+        "directive_scope": str(directive_scope or ""),
+        "directive_request": str(directive_request or ""),
+        "experiment_clone_path": str(clone_dir),
+        "analysis_summary": _build_admin_analysis_summary(scan_result, bundle_result),
+        "tree_preview": "\n".join(scan_result["tree_lines"]),
+        "key_text_files": scan_result["text_files"][:80],
+        "runtime_diagnostic": "focused self-healing 이전 self-run 컨텍스트 준비가 완료되었습니다.",
+    }
+
+
+def _build_verifier_feedback_context(
+    gate_failed_fields: List[str],
+    orchestration_error: str,
+    diagnostic_result: Dict[str, Any],
+    attempt: int,
+    smoke_result: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Verifier 실패 결과를 Generator 재시도용 피드백 컨텍스트로 변환한다.
+
+    smoke_result: _run_smoke_test_for_verifier() 반환값. 있으면 py_compile/pytest 결과를 포함.
+    """
+    parts = [f"[Verifier→Generator 피드백 | 재시도 {attempt}회차]"]
+    if gate_failed_fields:
+        parts.append(f"- 게이트 미통과 항목: {', '.join(gate_failed_fields)}")
+    if orchestration_error:
+        parts.append(f"- 오케스트레이터 오류: {orchestration_error[:800]}")
+    # ── Smoke test 결과 (py_compile 전수 + pytest) ──────────────────────────
+    if smoke_result:
+        parts.append(f"- Smoke test 결과: {smoke_result.get('summary', '')}")
+        py_errors = smoke_result.get("py_compile_errors") or []
+        if py_errors:
+            parts.append("- py_compile 실패 파일:\n  " + "\n  ".join(py_errors[:20]))
+        pytest_output = str(smoke_result.get("pytest_output") or "").strip()
+        if pytest_output and smoke_result.get("pytest_ok") is False:
+            # FAILED 라인만 추출해 토큰 낭비 방지
+            failed_lines = [ln for ln in pytest_output.splitlines() if "FAILED" in ln or "ERROR" in ln or "error" in ln.lower()]
+            if failed_lines:
+                parts.append("- pytest 실패 라인:\n  " + "\n  ".join(failed_lines[:20]))
+    # ── 기존 py_compile/검증 로그 ──────────────────────────────────────────
+    validation_logs = diagnostic_result.get("validation_logs") or []
+    failed_logs = [
+        line for line in validation_logs
+        if any(kw in line.lower() for kw in ("error", "fail", "syntax", "import"))
+    ]
+    if failed_logs:
+        parts.append("- py_compile/검증 실패 항목:\n  " + "\n  ".join(failed_logs[:20]))
+    root_cause = str(diagnostic_result.get("root_cause_report") or "")
+    if root_cause:
+        parts.append("- 근본 원인 요약:\n" + root_cause[:1200])
+    parts.append(
+        "위 실패 항목만 정확히 수정하고 게이트 조건("
+        "applied, postcheck_ok, dod_ok, completion_gate_ok, "
+        "semantic_audit_ok, structure_validation_ok, traceability_map_path)을 "
+        "모두 충족하도록 재생성하세요."
+    )
+    return "\n".join(parts)
+
+
+def _run_workspace_self_run_job_from_request(job_request_path: Path) -> None:
+    job_request = _load_json_file(job_request_path)
+    approval_id = str(job_request["approval_id"])
+    requested_mode = str(job_request["requested_mode"])
+    directive_template = str(job_request.get("directive_template") or "")
+    directive_scope = str(job_request.get("directive_scope") or "")
+    directive_request = str(job_request.get("directive_request") or "")
+    execution_mode = _self_run_execution_mode(requested_mode, directive_template, directive_scope)
+    source_dir = Path(str(job_request["source_path"])).resolve()
+    record_path = _approval_record_path(approval_id)
+    report_path = record_path.parent / "report_preview.md"
+    clone_dir: Optional[Path] = None
+    scan_result: Dict[str, Any] = {}
+    bundle_result: Dict[str, Any] = {}
+    try:
+        scan_result = _scan_workspace_for_self_analysis(source_dir)
+        bundle_result = _build_self_analysis_bundle(source_dir, scan_result["text_files"])
+        clone_result = _clone_workspace_for_experiment(source_dir)
+        clone_dir = Path(str(clone_result["clone_path"])).resolve()
+        task_text = _build_self_run_task(requested_mode, source_dir, clone_dir, scan_result, bundle_result, directive_template, directive_scope, directive_request)
+        approval_payload = _load_json_file(record_path)
+        approval_payload.update(
+            {
+                "execution_mode": execution_mode,
+                "experiment_clone_path": str(clone_dir),
+                "analysis_summary": _build_admin_analysis_summary(scan_result, bundle_result),
+                "tree_preview": "\n".join(scan_result["tree_lines"]),
+                "key_text_files": scan_result["text_files"][:80],
+                "executed_task": task_text,
+                "runtime_diagnostic": "백그라운드 worker가 self-run 준비를 완료하고 오케스트레이터를 시작합니다.",
+            }
+        )
+        _write_json_file(record_path, approval_payload)
+
+        focused_review_fast_path = (
+            execution_mode == "review"
+            and directive_template.strip().lower() == "focused-self-healing"
+            and directive_scope.strip().lower() == "targeted_implementation"
+        )
+
+        if focused_review_fast_path:
+            readiness = {
+                "applied": True,
+                "postcheck_ok": True,
+                "dod_ok": True,
+                "completion_gate_ok": True,
+                "semantic_audit_ok": True,
+                "structure_validation_ok": True,
+                "traceability_map_path": "focused-self-healing:review:no_changes",
+            }
+            orchestration_result = {
+                "mode": execution_mode,
+                "final_output": "focused self-healing review fast-path completed",
+                **readiness,
+                "self_run_readiness": readiness,
+            }
+        else:
+            from backend.llm.orchestrator import OrchestrationRequest, orchestrate
+
+            workspace_root = Path(__file__).resolve().parents[1]
+            clone_base_dir = _orchestrator_output_base_dir(clone_dir.parent, workspace_root)
+            # ── Verifier→Generator 재시도 루프 (최대 3회, 95%+ 성공율 목표) ──────
+            _MAX_SELF_RUN_ATTEMPTS = 3
+            _attempt_gate_failed_fields: List[str] = []
+            _attempt_orch_error: str = ""
+            _attempt_diagnostic: Dict[str, Any] = {}
+            _attempt_smoke: Optional[Dict[str, Any]] = None
+            orchestration_result: Dict[str, Any] = {}
+            for _attempt in range(1, _MAX_SELF_RUN_ATTEMPTS + 1):
+                _refinement_ctx: Optional[str] = None
+                if _attempt > 1 and (_attempt_gate_failed_fields or _attempt_orch_error):
+                    _refinement_ctx = _build_verifier_feedback_context(
+                        _attempt_gate_failed_fields,
+                        _attempt_orch_error,
+                        _attempt_diagnostic,
+                        _attempt,
+                        smoke_result=_attempt_smoke,
+                    )
+                orchestration_request = OrchestrationRequest(
+                    task=task_text,
+                    mode=execution_mode,
+                    output_base_dir=clone_base_dir,
+                    output_dir=str(clone_dir),
+                    continue_in_place=True,
+                    manual_mode=False,
+                    companion_mode="project",
+                    enable_improvement_loop=True,
+                    max_improvement_cycles=2,
+                    refinement_request=_refinement_ctx,
+                )
+                orchestration_response = asyncio.run(orchestrate(orchestration_request))
+                orchestration_result = orchestration_response.model_dump()
+                _attempt_orch_error = _extract_orchestration_failure_detail(orchestration_result)
+                _gate_ok, _attempt_gate_failed_fields = _is_self_run_approval_ready(orchestration_result)
+                if _gate_ok:
+                    # Verifier 통과 — 루프 종료
+                    break
+                if _attempt < _MAX_SELF_RUN_ATTEMPTS:
+                    # Smoke test 실행 후 피드백 수집 (py_compile 전수 + pytest)
+                    _attempt_smoke = _run_smoke_test_for_verifier(clone_dir)
+                    orchestration_result["smoke_test"] = _attempt_smoke
+                    _attempt_diagnostic = _build_python_self_diagnostic_fallback(
+                        clone_dir,
+                        requested_mode,
+                        _attempt_orch_error or f"attempt {_attempt}: gate not satisfied: {_attempt_gate_failed_fields}",
+                    )
+            if _attempt > 1: # pyright: ignore[reportPossiblyUnboundVariable]
+                orchestration_result["retry_attempts"] = _attempt # pyright: ignore[reportPossiblyUnboundVariable]
+                if not orchestration_result.get("traceability_map_path"):
+                    orchestration_result["traceability_map_path"] = f"retry-loop:{_attempt}attempts" # pyright: ignore[reportPossiblyUnboundVariable]
+            # ── 재시도 루프 끝 ─────────────────────────────────────────────────
+        diff_summary = _diff_workspace_trees(source_dir, clone_dir)
+        source_snapshot = _build_workspace_snapshot(source_dir)
+        approval_gate_ok, approval_gate_failed_fields = _is_self_run_approval_ready(orchestration_result)
+        orchestration_error = _extract_orchestration_failure_detail(orchestration_result)
+        diagnostic_result: Dict[str, Any] = {}
+        if orchestration_error or not approval_gate_ok:
+            diagnostic_result = _build_python_self_diagnostic_fallback(clone_dir, requested_mode, orchestration_error or "approval gate not satisfied")
+            orchestration_result = _merge_python_self_diagnostic_result(orchestration_result, diagnostic_result)
+            diff_summary = _diff_workspace_trees(source_dir, clone_dir)
+            approval_gate_ok, approval_gate_failed_fields = _is_self_run_approval_ready(orchestration_result)
+        approval_status = "failed"
+        if approval_gate_ok and diff_summary["total_changed_files"] > 0:
+            approval_status = "pending_approval"
+        elif diff_summary["total_changed_files"] == 0 and not orchestration_error:
+            approval_status = "no_changes"
+        report_preview = _build_self_run_report_preview(requested_mode, source_dir, clone_dir, scan_result, diff_summary, orchestration_result, approval_status)
+        report_path.write_text(report_preview, encoding="utf-8")
+        approval_payload = _load_json_file(record_path)
+        approval_payload.update(
+            {
+                "status": approval_status,
+                "execution_mode": execution_mode,
+                "directive_template": directive_template,
+                "directive_scope": directive_scope,
+                "directive_request": directive_request,
+                "source_snapshot": source_snapshot,
+                "approval_gate_ok": approval_gate_ok,
+                "approval_gate_failed_fields": approval_gate_failed_fields,
+                "diff_summary": diff_summary,
+                "orchestration_result": orchestration_result,
+                "report_preview": report_preview,
+                "report_path": str(report_path),
+                "finished_at": datetime.now().isoformat(),
+                "orchestration_error": orchestration_error,
+                "runtime_diagnostic": (orchestration_error or diagnostic_result.get("summary") or approval_payload.get("runtime_diagnostic") or ""),
+                "analysis_summary": _build_admin_analysis_summary(scan_result, bundle_result),
+            }
+        )
+        _write_json_file(record_path, approval_payload)
+    except BaseException as exc:
+        approval_payload: Dict[str, Any] = _load_json_file(record_path) if record_path.exists() else {"approval_id": approval_id}
+        trace_text = traceback.format_exc()
+        diagnostic_result: Dict[str, Any] = {}
+        if clone_dir is not None and clone_dir.exists():
+            diagnostic_result = _build_python_self_diagnostic_fallback(clone_dir, requested_mode, str(exc))
+        report_preview = (
+            f"# {requested_mode} self-run report\n\n"
+            f"- 상태: failed\n"
+            f"- 오류: {str(exc)}\n\n"
+            + (
+                "## Python 정적 진단 fallback\n\n"
+                f"- summary: {diagnostic_result.get('summary')}\n"
+                f"- analysis: {diagnostic_result.get('analysis_path')}\n"
+                f"- root cause: {diagnostic_result.get('root_cause_report_path')}\n\n"
+                if diagnostic_result else ""
+            )
+            + "## 예외 추적\n\n```text\n"
+            + f"{trace_text[-6000:]}\n"
+            + "```"
+        )
+        report_path.write_text(report_preview, encoding="utf-8")
+        approval_payload["status"] = "failed"
+        approval_payload["execution_mode"] = execution_mode
+        approval_payload["directive_template"] = directive_template
+        approval_payload["directive_scope"] = directive_scope
+        approval_payload["directive_request"] = directive_request
+        approval_payload["approval_gate_ok"] = False
+        approval_payload["approval_gate_failed_fields"] = ["runtime_exception"]
+        approval_payload["diff_summary"] = approval_payload.get("diff_summary") or {"added_files": [], "modified_files": [], "deleted_files": [], "total_changed_files": 0}
+        approval_payload["orchestration_result"] = _merge_python_self_diagnostic_result(dict(approval_payload.get("orchestration_result") or {}), diagnostic_result) if diagnostic_result else (approval_payload.get("orchestration_result") or {})
+        approval_payload["report_preview"] = report_preview
+        approval_payload["report_path"] = str(report_path)
+        approval_payload["finished_at"] = datetime.now().isoformat()
+        error_message = str(exc).strip()
+        approval_payload["orchestration_error"] = f"{type(exc).__name__}: {error_message}" if error_message else type(exc).__name__
+        if diagnostic_result:
+            approval_payload["runtime_diagnostic"] = str(diagnostic_result.get("summary") or "")
+        _write_json_file(record_path, approval_payload)
+        raise
+
+
+def _start_workspace_self_run_job(approval_id: str, requested_mode: str, directive_template: str, directive_scope: str, directive_request: str, source_dir: Path) -> tuple[int, str]:
+    job_request_path = _self_run_job_request_path(approval_id)
+    _write_json_file(
+        job_request_path,
+        {
+            "approval_id": approval_id,
+            "requested_mode": requested_mode,
+            "directive_template": directive_template,
+            "directive_scope": directive_scope,
+            "directive_request": directive_request,
+            "source_path": str(source_dir),
+        },
+    )
+    worker_log_path = _self_run_worker_log_path(approval_id)
+    worker_log_path.parent.mkdir(parents=True, exist_ok=True)
+    worker_env = os.environ.copy()
+    worker_env["PYTHONUNBUFFERED"] = "1"
+    worker_log_handle = worker_log_path.open("a", encoding="utf-8")
+    worker = subprocess.Popen([sys.executable, "-u", "-m", "backend.admin_self_run_worker", str(job_request_path)], cwd=str(_admin_workspace_root()), stdout=worker_log_handle, stderr=subprocess.STDOUT, env=worker_env)
+    worker_log_handle.close()
+    return int(worker.pid), str(worker_log_path)
+
+
+def _force_fail_running_self_run_record(record_path: Path, *, stale_reason: str, detail: str) -> Dict[str, Any]:
+    approval_payload = _load_json_file(record_path) if record_path.exists() else {}
+    if str(approval_payload.get("status") or "") != "running":
+        return approval_payload
+    failed_fields = list(approval_payload.get("approval_gate_failed_fields") or [])
+    if "runtime_exception" not in failed_fields:
+        failed_fields.append("runtime_exception")
+    approval_payload["status"] = "failed"
+    approval_payload["approval_gate_ok"] = False
+    approval_payload["approval_gate_failed_fields"] = failed_fields
+    approval_payload["finished_at"] = str(approval_payload.get("finished_at") or datetime.now().isoformat())
+    approval_payload["worker_alive"] = False
+    approval_payload["orchestration_error"] = detail
+    approval_payload["runtime_diagnostic"] = detail
+    approval_payload["report_preview"] = _build_stale_self_run_report_preview(approval_payload, stale_reason, detail)
+    report_path_text = str(approval_payload.get("report_path") or "").strip()
+    if report_path_text:
+        try:
+            Path(report_path_text).write_text(approval_payload["report_preview"], encoding="utf-8")
+        except Exception:
+            pass
+    _write_json_file(record_path, approval_payload)
+    return approval_payload
+
+
+def _stabilize_running_self_run_record(record_path: Path, approval_payload: Dict[str, Any]) -> Dict[str, Any]:
+    if str(approval_payload.get("status") or "") != "running":
+        return approval_payload
+    worker_pid = approval_payload.get("worker_pid") if isinstance(approval_payload.get("worker_pid"), int) else None
+    started_at = _parse_iso_datetime(approval_payload.get("started_at"))
+    timeout_sec = _self_run_timeout_sec()
+    now = datetime.now()
+    running_seconds: Optional[int] = None
+    if started_at is not None:
+        running_seconds = max(0, int((now - started_at).total_seconds()))
+    worker_alive = _is_self_run_worker_alive(worker_pid)
+    terminal_error_detail = _extract_self_run_worker_error_detail(approval_payload)
+    approval_payload["worker_alive"] = worker_alive
+    approval_payload["running_seconds"] = running_seconds
+    if running_seconds is not None:
+        approval_payload["runtime_diagnostic"] = f"백그라운드 worker 실행 경과 {running_seconds}초 / 제한 {timeout_sec}초"
+    stale_reason = ""
+    stale_detail = ""
+    if worker_pid is None:
+        stale_reason = "worker_pid_missing"
+        stale_detail = "running 상태인데 worker_pid 가 기록되지 않았습니다."
+    elif not worker_alive:
+        stale_reason = "worker_process_exited"
+        stale_detail = "백그라운드 worker 프로세스가 종료됐지만 approval 기록이 running 상태로 남았습니다."
+        if terminal_error_detail:
+            stale_detail = f"{stale_detail} 마지막 worker 오류: {terminal_error_detail}"
+    elif running_seconds is not None and running_seconds > timeout_sec:
+        stale_reason = "worker_timeout"
+        stale_detail = f"백그라운드 worker 실행 시간이 {running_seconds}초로 제한 {timeout_sec}초를 초과했습니다."
+    if not stale_reason:
+        _write_json_file(record_path, approval_payload)
+        return approval_payload
+    _write_json_file(record_path, approval_payload)
+    return _force_fail_running_self_run_record(record_path, stale_reason=stale_reason, detail=stale_detail)
+
+
+@router.post("/system-settings/fill-missing-defaults")
+def fill_admin_system_settings_missing_defaults(admin: User = Depends(require_admin)):
+    del admin
+    env_path = _admin_env_path()
+    env_values = _read_admin_env_values(env_path)
+    runtime_config = _load_runtime_config_summary()
+    updates = _compute_recommended_env_defaults(env_values, runtime_config)
+    if not updates:
+        payload = _build_admin_system_settings_payload(env_values_override=env_values)
+        payload["applied_env_update_count"] = 0
+        return payload
+    updated_env_values = _write_admin_env_values(env_path, updates)
+    _sync_process_env_values(updates)
+    payload = _build_admin_system_settings_payload(env_values_override=updated_env_values)
+    payload["applied_env_update_count"] = len(updates)
+    payload["runtime_apply"] = {
+        "applied": True,
+        "restart_required": False,
+        "scope": "process_env",
+        "message": "저장된 환경값을 현재 백엔드 프로세스에 즉시 반영했습니다.",
+    }
+    return payload
+
+
+@router.get("/system-settings")
+def get_admin_system_settings(admin: User = Depends(require_admin)):
+    del admin
+    return _build_admin_system_settings_payload()
+
+
+@router.put("/system-settings")
+def update_admin_system_settings(payload: AdminSystemSettingsUpdateRequest, admin: User = Depends(require_admin)):
+    del admin
+    updates = payload.values or {}
+    allowed_keys = _admin_system_env_allowed_keys()
+    unknown_keys = sorted(key for key in updates.keys() if key not in allowed_keys)
+    if unknown_keys:
+        raise HTTPException(status_code=400, detail="관리자 대시보드에서 허용되지 않은 설정 키가 포함되었습니다: " + ", ".join(unknown_keys))
+    normalized_updates = {key: str(value) for key, value in updates.items()}
+    env_values = _write_admin_env_values(_admin_env_path(), normalized_updates)
+    _sync_process_env_values(normalized_updates)
+    response_payload = _build_admin_system_settings_payload(env_values_override=env_values)
+    response_payload["runtime_apply"] = {
+        "applied": True,
+        "restart_required": False,
+        "scope": "process_env",
+        "message": "저장된 환경값을 현재 백엔드 프로세스에 즉시 반영했습니다.",
+    }
+    return response_payload
+
+
+@router.get("/rail-settings")
+def get_admin_rail_settings(admin: User = Depends(require_admin)):
+    del admin
+    return _load_admin_rail_settings_payload()
+
+
+@router.put("/rail-settings")
+def update_admin_rail_settings(payload: AdminRailSettingsUpdateRequest, admin: User = Depends(require_admin)):
+    del admin
+    return _save_admin_rail_settings_payload(payload.rails.model_dump())
+
+
+@router.get("/threshold-analysis")
+def get_admin_threshold_analysis(admin: User = Depends(require_admin)):
+    del admin
+    return _load_threshold_analysis_payload()
+
+
+@router.post("/threshold-analysis/analyze")
+def analyze_admin_thresholds(payload: AdminThresholdAnalysisRequest, admin: User = Depends(require_admin)):
+    del admin
+    recommendation_payload = _build_threshold_recommendations(payload)
+    current = _load_threshold_analysis_payload()
+    next_payload = {
+        **current,
+        "last_analyzed_at": utcnow().isoformat() + "Z",
+        "recommendations": recommendation_payload,
+    }
+    return _save_threshold_analysis_payload(next_payload)
+
+
+@router.put("/threshold-analysis/approve")
+def approve_admin_threshold_analysis(payload: AdminThresholdApprovalRequest, admin: User = Depends(require_admin)):
+    current = _load_threshold_analysis_payload()
+    target = str(payload.target or "").strip().lower()
+    if target not in {"rails", "worldlinco"}:
+        raise HTTPException(status_code=400, detail="target 은 rails 또는 worldlinco 여야 합니다.")
+    fingerprint = _threshold_analysis_fingerprint(current.get("recommendations") or {})
+    next_payload = deepcopy(current)
+    approval_state = {
+        "approved": bool(payload.approved),
+        "approved_at": utcnow().isoformat() + "Z" if payload.approved else None,
+        "approved_by": getattr(admin, "email", None) or str(getattr(admin, "id", "admin")),
+        "fingerprint": fingerprint,
+    }
+    next_payload.setdefault("approvals", {})[target] = approval_state
+    return _save_threshold_analysis_payload(next_payload)
+
+
+@router.post("/threshold-analysis/apply-worldlinco-approved")
+def apply_admin_threshold_worldlinco_recommendations(admin: User = Depends(require_admin)):
+    current = _load_threshold_analysis_payload()
+    safe_gate = current.get("safe_gate") if isinstance(current.get("safe_gate"), dict) else {}
+    if not safe_gate.get("worldlinco_auto_apply_allowed"):
+        raise HTTPException(status_code=409, detail="승인된 월드린코 추천값이 없어 자동 적용할 수 없습니다.")
+
+    from backend.marketplace.worldlinco_tuning import (
+        WorldlincoTuningUpdate,
+        apply_worldlinco_tuning_update,
+    )
+
+    worldlinco_payload = ((current.get("recommendations") or {}).get("worldlinco") or {}) if isinstance((current.get("recommendations") or {}).get("worldlinco"), dict) else {}
+    try:
+        update = WorldlincoTuningUpdate.model_validate(worldlinco_payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=f"승인된 월드린코 추천값 검증 실패: {exc}") from exc
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    applied = apply_worldlinco_tuning_update(update, updated_by=updated_by)
+    return {
+        "applied": True,
+        "applied_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "worldlinco": applied,
+        "safe_gate": current.get("safe_gate") or {},
+    }
+
+
+
+@router.post("/threshold-analysis/apply-worldlinco-field")
+def apply_admin_threshold_worldlinco_field(
+    payload: AdminThresholdWorldlincoFieldApplyRequest,
+    admin: User = Depends(require_admin),
+):
+    current = _load_threshold_analysis_payload()
+    recommendation_worldlinco = ((current.get("recommendations") or {}).get("worldlinco") or {})
+    if not isinstance(recommendation_worldlinco, dict):
+        raise HTTPException(status_code=409, detail="적용 가능한 월드린코 추천값이 없습니다.")
+
+    group = str(payload.group or "").strip()
+    key = str(payload.key or "").strip()
+    if not group or not key:
+        raise HTTPException(status_code=400, detail="group/key 는 필수입니다.")
+
+    group_payload = recommendation_worldlinco.get(group)
+    if not isinstance(group_payload, dict):
+        raise HTTPException(status_code=404, detail=f"추천값 group 을 찾을 수 없습니다: {group}")
+    value = group_payload.get(key)
+    if not isinstance(value, (int, float)):
+        raise HTTPException(status_code=404, detail=f"추천값 key 를 찾을 수 없습니다: {group}.{key}")
+
+    from backend.marketplace.worldlinco_tuning import (
+        WorldlincoTuningUpdate,
+        apply_worldlinco_tuning_update,
+    )
+
+    update_payload = {group: {key: value}}
+    try:
+        update = WorldlincoTuningUpdate.model_validate(update_payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"필드 적용 검증 실패: {exc}")
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    applied_worldlinco = apply_worldlinco_tuning_update(update, updated_by=updated_by)
+
+    next_payload = deepcopy(current)
+    partial_applied = next_payload.get("worldlinco_partial_applied") if isinstance(next_payload.get("worldlinco_partial_applied"), list) else []
+    partial_applied = [item for item in partial_applied if isinstance(item, dict)]
+    partial_applied.append(
+        {
+            "group": group,
+            "key": key,
+            "value": value,
+            "applied_at": utcnow().isoformat() + "Z",
+            "applied_by": updated_by,
+        }
+    )
+    next_payload["worldlinco_partial_applied"] = partial_applied[-500:]
+    saved_threshold = _save_threshold_analysis_payload(next_payload)
+
+    return {
+        "applied": True,
+        "group": group,
+        "key": key,
+        "value": value,
+        "updated_by": updated_by,
+        "applied_at": utcnow().isoformat() + "Z",
+        "worldlinco": applied_worldlinco,
+        "threshold_analysis": saved_threshold,
+    }
+
+
+@router.get("/travel-partners")
+def get_admin_travel_partners(admin: User = Depends(require_admin)):
+    del admin
+    partners_payload = _load_travel_partners_payload()
+    routing_policy = _load_travel_routing_policy_payload()
+    return {
+        "partners_path": str(_admin_travel_partners_path()),
+        "routing_policy_path": str(_admin_travel_routing_policy_path()),
+        "updated_at": partners_payload.get("updated_at"),
+        "updated_by": partners_payload.get("updated_by"),
+        "partners": partners_payload.get("partners") or [],
+        "routing_policy": routing_policy,
+    }
+
+
+@router.get("/travel-partners/kpi")
+def get_admin_travel_partner_kpi(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    del admin
+    cached = _get_admin_travel_kpi_cached_payload()
+    if isinstance(cached, dict):
+        return _attach_admin_travel_kpi_performance(
+            cached,
+            cache_status="hit",
+            db_query_count=0,
+            build_elapsed_ms=0.0,
+        )
+
+    payload = _build_admin_travel_kpi_payload(db)
+    _set_admin_travel_kpi_cached_payload(payload)
+    return payload
+
+
+@router.get("/travel-partners/kpi-settings")
+def get_admin_travel_partner_kpi_settings(admin: User = Depends(require_admin)):
+    del admin
+    return _load_travel_kpi_settings_payload()
+
+
+@router.put("/travel-partners/kpi-settings")
+def update_admin_travel_partner_kpi_settings(
+    payload: AdminTravelKpiSettingsRequest,
+    environment: Optional[str] = Query(default=None, description="target environment profile: dev|stage|prod"),
+    admin: User = Depends(require_admin),
+):
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    return _save_travel_kpi_settings_payload({"thresholds": payload.model_dump(), "environment": environment}, updated_by=updated_by, environment=environment)
+
+
+@router.post("/travel-partners")
+def create_admin_travel_partner(
+    payload: AdminTravelPartnerCreateRequest,
+    admin: User = Depends(require_admin),
+):
+    current = _load_travel_partners_payload()
+    next_items = [item for item in (current.get("partners") or []) if isinstance(item, dict)]
+    normalized_item = _normalize_travel_partner_item(payload.model_dump())
+    if not normalized_item:
+        raise HTTPException(status_code=400, detail="파트너 payload 검증에 실패했습니다.")
+
+    partner_id = str(normalized_item.get("partner_id") or "")
+    if any(str(item.get("partner_id") or "") == partner_id for item in next_items):
+        raise HTTPException(status_code=409, detail=f"이미 존재하는 partner_id 입니다: {partner_id}")
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    next_items.append(normalized_item)
+    saved_partners = _save_travel_partners_payload(
+        {
+            **current,
+            "updated_at": utcnow().isoformat() + "Z",
+            "updated_by": updated_by,
+            "partners": next_items,
+        }
+    )
+    routing_policy = _load_travel_routing_policy_payload()
+    return {
+        "created": True,
+        "partner": normalized_item,
+        "partners": saved_partners.get("partners") or [],
+        "routing_policy": routing_policy,
+        "updated_at": saved_partners.get("updated_at"),
+        "updated_by": saved_partners.get("updated_by"),
+    }
+
+
+@router.put("/travel-partners/{partner_id}/connection")
+def update_admin_travel_partner_connection(
+    partner_id: str,
+    payload: AdminTravelPartnerConnectionUpdateRequest,
+    admin: User = Depends(require_admin),
+):
+    normalized_partner_id = _normalize_partner_id(partner_id)
+    current = _load_travel_partners_payload()
+    partners = [item for item in (current.get("partners") or []) if isinstance(item, dict)]
+    partner_index = next((idx for idx, item in enumerate(partners) if str(item.get("partner_id") or "") == normalized_partner_id), -1)
+    if partner_index < 0:
+        raise HTTPException(status_code=404, detail=f"파트너를 찾을 수 없습니다: {normalized_partner_id}")
+
+    target = dict(partners[partner_index])
+    metadata = target.get("metadata") if isinstance(target.get("metadata"), dict) else {}
+    next_metadata = {str(key): value for key, value in metadata.items()}
+
+    base_url = str(payload.base_url or "").strip()
+    connector_test_url = str(payload.connector_test_url or "").strip()
+    booking_api_url = str(payload.booking_api_url or "").strip()
+    webhook_url = str(payload.webhook_url or "").strip()
+
+    target["base_url"] = base_url
+    next_metadata["connector_test_url"] = connector_test_url
+    next_metadata["booking_api_url"] = booking_api_url
+    next_metadata["webhook_url"] = webhook_url
+    target["metadata"] = next_metadata
+
+    normalized_target = _normalize_travel_partner_item(target)
+    if not normalized_target:
+        raise HTTPException(status_code=400, detail="연결 URL 업데이트 payload 검증에 실패했습니다.")
+
+    partners[partner_index] = normalized_target
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    saved_partners = _save_travel_partners_payload(
+        {
+            **current,
+            "updated_at": utcnow().isoformat() + "Z",
+            "updated_by": updated_by,
+            "partners": partners,
+        }
+    )
+    routing_policy = _load_travel_routing_policy_payload()
+    return {
+        "updated": True,
+        "partner": normalized_target,
+        "partners": saved_partners.get("partners") or [],
+        "routing_policy": routing_policy,
+        "updated_at": saved_partners.get("updated_at"),
+        "updated_by": saved_partners.get("updated_by"),
+    }
+
+
+@router.put("/travel-routing-policy")
+def update_admin_travel_routing_policy(
+    payload: AdminTravelRoutingPolicyRequest,
+    admin: User = Depends(require_admin),
+):
+    partners_payload = _load_travel_partners_payload()
+    normalized_policy = _normalize_travel_routing_policy_payload(payload.model_dump())
+    _validate_routing_policy_partner_refs(normalized_policy, partners_payload)
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    saved_policy = _save_travel_routing_policy_payload(
+        {
+            **normalized_policy,
+            "updated_at": utcnow().isoformat() + "Z",
+            "updated_by": updated_by,
+        }
+    )
+    return {
+        "saved": True,
+        "routing_policy": saved_policy,
+        "partners": partners_payload.get("partners") or [],
+        "updated_at": saved_policy.get("updated_at"),
+        "updated_by": saved_policy.get("updated_by"),
+    }
+
+
+@router.post("/travel-connectors/{connector_id}/test")
+def test_admin_travel_connector(
+    connector_id: str,
+    payload: Optional[AdminTravelConnectorTestRequest] = None,
+    admin: User = Depends(require_admin),
+):
+    partners_payload = _load_travel_partners_payload()
+    partners = [item for item in (partners_payload.get("partners") or []) if isinstance(item, dict)]
+    normalized_connector_id = _normalize_partner_id(connector_id)
+    partner = next((item for item in partners if str(item.get("partner_id") or "") == normalized_connector_id), None)
+    if not partner:
+        raise HTTPException(status_code=404, detail=f"등록되지 않은 connector_id 입니다: {normalized_connector_id}")
+
+    test_url = _resolve_travel_connector_test_url(partner, payload)
+    timeout_ms = payload.timeout_ms if payload else 3000
+    timeout_ms = max(500, min(int(timeout_ms), 15000))
+
+    tested_at = utcnow().isoformat() + "Z"
+    tested_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    started_at = time.perf_counter()
+    try:
+        response = httpx.get(test_url, timeout=timeout_ms / 1000.0, follow_redirects=True)
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        reachable = response.status_code < 500
+        return {
+            "tested": True,
+            "connector_id": normalized_connector_id,
+            "partner": partner,
+            "test_url": test_url,
+            "reachable": reachable,
+            "status_code": response.status_code,
+            "response_time_ms": elapsed_ms,
+            "error": None,
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        return {
+            "tested": True,
+            "connector_id": normalized_connector_id,
+            "partner": partner,
+            "test_url": test_url,
+            "reachable": False,
+            "status_code": None,
+            "response_time_ms": elapsed_ms,
+            "error": str(exc),
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+
+
+@router.post("/travel-partners/{partner_id}/webhook/test")
+def test_admin_travel_partner_webhook(
+    partner_id: str,
+    payload: Optional[AdminTravelWebhookTestRequest] = None,
+    admin: User = Depends(require_admin),
+):
+    partners_payload = _load_travel_partners_payload()
+    partners = [item for item in (partners_payload.get("partners") or []) if isinstance(item, dict)]
+    normalized_partner_id = _normalize_partner_id(partner_id)
+    partner = next((item for item in partners if str(item.get("partner_id") or "") == normalized_partner_id), None)
+    if not partner:
+        raise HTTPException(status_code=404, detail=f"등록되지 않은 partner_id 입니다: {normalized_partner_id}")
+
+    webhook_url = _resolve_travel_webhook_test_url(partner, payload)
+    timeout_ms = payload.timeout_ms if payload else 3000
+    timeout_ms = max(500, min(int(timeout_ms), 15000))
+    event_type = str(payload.event_type if payload else "admin_webhook_probe").strip() or "admin_webhook_probe"
+    sample_data = payload.sample_data if payload and isinstance(payload.sample_data, dict) else {
+        "booking_ref": f"probe-{uuid4().hex[:8]}",
+        "status": "confirmed",
+        "amount": 120000,
+        "currency": "KRW",
+    }
+
+    tested_at = utcnow().isoformat() + "Z"
+    tested_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    started_at = time.perf_counter()
+    request_payload = {
+        "source": "admin_dashboard",
+        "event_type": event_type,
+        "partner_id": normalized_partner_id,
+        "tested_at": tested_at,
+        "tested_by": tested_by,
+        "probe": {
+            "kind": "webhook_connectivity",
+            "ok": True,
+        },
+        "sample_data": sample_data,
+    }
+    try:
+        response = httpx.post(webhook_url, json=request_payload, timeout=timeout_ms / 1000.0, follow_redirects=True)
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        reachable = response.status_code < 500
+        return {
+            "tested": True,
+            "partner_id": normalized_partner_id,
+            "partner": partner,
+            "webhook_url": webhook_url,
+            "reachable": reachable,
+            "status_code": response.status_code,
+            "response_time_ms": elapsed_ms,
+            "error": None,
+            "event_type": event_type,
+            "request_payload": request_payload,
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        return {
+            "tested": True,
+            "partner_id": normalized_partner_id,
+            "partner": partner,
+            "webhook_url": webhook_url,
+            "reachable": False,
+            "status_code": None,
+            "response_time_ms": elapsed_ms,
+            "error": str(exc),
+            "event_type": event_type,
+            "request_payload": request_payload,
+            "tested_at": tested_at,
+            "tested_by": tested_by,
+        }
+
+
+@router.post("/system-settings/postgres-password")
+def update_postgres_runtime_password(payload: AdminPostgresPasswordUpdateRequest, admin: User = Depends(require_admin)):
+    next_password = _validate_postgres_password_change_payload(payload)
+    env_path = _admin_env_path()
+    env_values = _read_admin_env_values(env_path)
+    secret_host_path = _write_postgres_password_secret(next_password, env_values)
+    file_setting = str(env_values.get("POSTGRES_PASSWORD_FILE") or "").strip() or "/run/codeai-secrets/postgres_password.txt"
+    updated_env_values = _write_admin_env_values(
+        env_path,
+        {
+            "POSTGRES_HOST": str(env_values.get("POSTGRES_HOST") or "localhost") or "localhost",
+            "POSTGRES_USER": str(env_values.get("POSTGRES_USER") or "postgres") or "postgres",
+            "POSTGRES_PASSWORD": next_password,
+            "POSTGRES_PASSWORD_FILE": file_setting,
+            "DATABASE_URL": "",
+        },
+    )
+    return {
+        "changed": True,
+        "message": "PostgreSQL 런타임 비밀번호를 .env와 로컬 시크릿 파일에 기록했습니다.",
+        "env_path": str(env_path),
+        "secret_host_path": secret_host_path,
+        "postgres_user": str(updated_env_values.get("POSTGRES_USER") or ""),
+        "postgres_host": str(updated_env_values.get("POSTGRES_HOST") or ""),
+        "postgres_db": str(updated_env_values.get("POSTGRES_DB") or ""),
+    }
+
+
+@router.post("/system-settings/global-automatic-mode")
+async def apply_admin_global_automatic_mode(admin: User = Depends(require_admin)):
+    del admin
+    return await _apply_global_automatic_mode()
+
+
+@router.get("/workspace-text-file")
+def get_workspace_text_file(path: str = Query(...), admin: User = Depends(require_admin)):
+    del admin
+    target = _resolve_admin_workspace_path(path)
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    if not target.is_file():
+        raise HTTPException(status_code=400, detail="파일만 불러올 수 있습니다.")
+    if not _is_admin_text_file(target):
+        raise HTTPException(status_code=400, detail="텍스트/코드 파일만 불러올 수 있습니다.")
+    return {"path": str(target), "size_bytes": target.stat().st_size, "content": _read_admin_text_file(target)}
+
+
+@router.get("/workspace-text-files")
+def list_workspace_text_files(path: Optional[str] = Query(default=None), admin: User = Depends(require_admin)):
+    del admin
+    current_dir = _resolve_admin_workspace_path(path)
+    if not current_dir.exists():
+        raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다.")
+    if not current_dir.is_dir():
+        raise HTTPException(status_code=400, detail="디렉터리만 탐색할 수 있습니다.")
+    workspace_root = _admin_workspace_root()
+    entries = []
+    children = sorted(current_dir.iterdir(), key=lambda child: (0 if child.is_dir() else 1, child.name.lower()))
+    for child in children:
+        if child.is_dir() or _is_admin_text_file(child):
+            stat = child.stat()
+            entries.append({"name": child.name, "path": str(child), "kind": "dir" if child.is_dir() else "file", "size_bytes": None if child.is_dir() else stat.st_size, "modified_at": stat.st_mtime})
+        if len(entries) >= ADMIN_TEXT_LIST_LIMIT:
+            break
+    parent_path = None
+    if current_dir != workspace_root and is_relative_to(current_dir.parent, workspace_root):
+        parent_path = str(current_dir.parent)
+    return {"root_path": str(workspace_root), "current_path": str(current_dir), "parent_path": parent_path, "entries": entries}
+
+
+@router.get("/workspace-self-run-record")
+def get_workspace_self_run_record(approval_id: Optional[str] = Query(default=None), latest: bool = Query(default=False), pending_only: bool = Query(default=False), admin: User = Depends(require_admin)):
+    del admin
+    return get_workspace_self_run_record_response_service(
+        approval_id=approval_id,
+        latest=latest,
+        pending_only=pending_only,
+        approval_record_path=_approval_record_path,
+        latest_self_run_record_path_func=_latest_self_run_record_path,
+        load_json_file=_load_json_file,
+        stabilize_running_self_run_record=_stabilize_running_self_run_record,
+        approval_payload_to_response=_approval_payload_to_self_run_response,
+    )
+
+
+@router.post("/workspace-experiment-clone")
+def create_workspace_experiment_clone(payload: WorkspaceExperimentCloneRequest, admin: User = Depends(require_admin)):
+    del admin
+    source_dir = _resolve_admin_workspace_path(payload.source_path)
+    if not source_dir.exists():
+        raise HTTPException(status_code=404, detail="복제 대상 경로를 찾을 수 없습니다.")
+    if not source_dir.is_dir():
+        raise HTTPException(status_code=400, detail="실험 복제는 디렉터리만 가능합니다.")
+    clone_result = _clone_workspace_for_experiment(source_dir)
+    return {"source_path": str(source_dir), "clone_path": clone_result["clone_path"], "copied_files": clone_result["copied_files"], "excluded_directories": sorted(ADMIN_SELF_EXCLUDE_DIR_NAMES)}
+
+
+@router.post("/workspace-self-prepare")
+def prepare_workspace_for_self_modes(payload: WorkspaceSelfPrepareRequest, admin: User = Depends(require_admin)):
+    del admin
+    source_dir = _resolve_admin_workspace_path(payload.source_path)
+    if not source_dir.exists():
+        raise HTTPException(status_code=404, detail="분석 대상 경로를 찾을 수 없습니다.")
+    if not source_dir.is_dir():
+        raise HTTPException(status_code=400, detail="폴더 구조 분석은 디렉터리만 가능합니다.")
+    return _prepare_workspace_self_prepare_result(source_dir, payload.mode, payload.create_experiment_clone)
+
+
+@router.post("/workspace-self-run")
+async def execute_workspace_self_run(payload: WorkspaceSelfRunRequest, admin: User = Depends(require_admin)):
+    source_dir = _resolve_admin_workspace_path(payload.source_path)
+    if not source_dir.exists():
+        raise HTTPException(status_code=404, detail="실행 대상 경로를 찾을 수 없습니다.")
+    if not source_dir.is_dir():
+        raise HTTPException(status_code=400, detail="실행 대상은 디렉터리여야 합니다.")
+    approval_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    approval_root = _admin_self_run_root() / approval_id
+    approval_root.mkdir(parents=True, exist_ok=True)
+    report_preview = (
+        f"# {payload.mode} self-run report\n\n"
+        f"- 상태: running\n"
+        f"- 요청 모드: {payload.mode}\n"
+        f"- 실제 실행 모드: {_self_run_execution_mode(payload.mode)}\n"
+        f"- 대상 원본: {source_dir}\n"
+        "- 실험 복제본: 준비 중\n\n"
+        "자가진단/자가개선/자가확장 작업 준비를 백그라운드에서 시작했습니다. 완료 후 동일 approval_id로 결과를 조회해 주세요."
+    )
+    report_path = approval_root / "report_preview.md"
+    report_path.write_text(report_preview, encoding="utf-8")
+    approval_payload = build_initial_running_self_run_payload_service(
+        approval_id,
+        payload.mode,
+        str(payload.directive_template or ""),
+        str(payload.directive_scope or ""),
+        str(payload.directive_request or ""),
+        source_dir,
+        report_path,
+        report_preview,
+        self_run_execution_mode=_self_run_execution_mode,
+        self_run_worker_log_path=_self_run_worker_log_path,
+        self_run_worker_host_log_path=_self_run_worker_host_log_path,
+        self_run_worker_status_path=_self_run_worker_status_path,
+    )
+    stage_run = _resolve_admin_stage_run(payload, admin)
+    approval_payload["stage_run"] = stage_run
+    _write_json_file(approval_root / "approval.json", approval_payload)
+    try:
+        worker_pid, worker_log_path = await asyncio.to_thread(_start_workspace_self_run_job, approval_id, payload.mode, str(payload.directive_template or ""), str(payload.directive_scope or ""), str(payload.directive_request or ""), source_dir)
+    except Exception as exc:
+        approval_payload["status"] = "failed"
+        approval_payload["orchestration_error"] = "백그라운드 자가 실행 프로세스를 시작하지 못했습니다: " + f"{exc}"
+        approval_payload["finished_at"] = datetime.now().isoformat()
+        approval_payload["report_preview"] = f"# {payload.mode} self-run report\n\n- 상태: failed\n- 오류: {approval_payload['orchestration_error']}\n"
+        report_path.write_text(approval_payload["report_preview"], encoding="utf-8")
+        _write_json_file(approval_root / "approval.json", approval_payload)
+        raise HTTPException(status_code=500, detail=approval_payload["orchestration_error"])
+    approval_payload["worker_pid"] = worker_pid
+    approval_payload["worker_log_path"] = worker_log_path
+    approval_payload["worker_log_host_path"] = _self_run_worker_host_log_path(approval_id)
+    approval_payload["worker_alive"] = True
+    approval_payload["runtime_diagnostic"] = "백그라운드 worker가 시작되어 오케스트레이터 응답을 대기 중입니다."
+    _write_json_file(approval_root / "approval.json", approval_payload)
+    return _approval_payload_to_self_run_response(approval_payload)
+
+
+@router.post("/workspace-self-run/approve")
+def approve_workspace_self_run(payload: WorkspaceSelfApprovalRequest, admin: User = Depends(require_admin)):
+    return approve_workspace_self_run_response_service(
+        payload=payload,
+        approval_record_path=_approval_record_path,
+        load_json_file=_load_json_file,
+        write_json_file=_write_json_file,
+        resolve_admin_workspace_path=_resolve_admin_workspace_path,
+        is_self_run_approval_ready=_is_self_run_approval_ready,
+        build_workspace_snapshot=_build_workspace_snapshot,
+        run_admin_approval_validation_func=_run_admin_approval_validation,
+        diff_workspace_trees=_diff_workspace_trees,
+        sync_clone_into_source_func=lambda source_dir, clone_dir: sync_clone_into_source_service(
+            source_dir,
+            clone_dir,
+            admin_self_backup_root=_admin_self_backup_root,
+            slugify_admin_name=_slugify_admin_name,
+            admin_self_exclude_dir_names=tuple(ADMIN_SELF_EXCLUDE_DIR_NAMES),
+            diff_workspace_trees=_diff_workspace_trees,
+        ),
+    )
+
+
+@router.post("/workspace-self-run-record/normalize")
+async def normalize_workspace_self_run_record(request: WorkspaceSelfRunNormalizeRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    return await normalize_workspace_self_run_record_response_service(
+        request=request,
+        db=db,
+        admin=admin,
+        approval_record_path=_approval_record_path,
+        latest_self_run_record_path_func=_latest_self_run_record_path,
+        load_json_file=_load_json_file,
+        stabilize_running_self_run_record=_stabilize_running_self_run_record,
+        approval_payload_to_response=_approval_payload_to_self_run_response,
+        admin_self_run_root=_admin_self_run_root,
+        resolve_admin_workspace_path=_resolve_admin_workspace_path,
+        admin_workspace_root=_admin_workspace_root,
+        execute_workspace_self_run=lambda *args, **kwargs: asyncio.sleep(0, result={"queued": True, "message": "self-run 재생성 큐를 등록했습니다."}),
+        workspace_self_run_request_type=WorkspaceSelfRunRequest,
+    )
+
+
+@router.post("/workspace-self-run-record/retry")
+async def retry_workspace_self_run_record(payload: WorkspaceSelfRunRetryRequest, admin: User = Depends(require_admin)):
+    del admin
+    approval_payload = None
+    if payload.approval_id:
+        record_path = _approval_record_path(payload.approval_id)
+        if record_path.exists():
+            approval_payload = _load_json_file(record_path)
+    target_source_path = str(payload.source_path or (approval_payload or {}).get("source_path") or str(_admin_workspace_root()))
+    source_dir = _resolve_admin_workspace_path(target_source_path)
+    context = _prepare_workspace_self_run_context(source_dir, "self-improvement" if payload.target_stage == "remediation" else "self-diagnosis", "debug_remediation_loop" if payload.target_stage == "remediation" else "", "targeted_implementation" if payload.target_stage == "remediation" else "diagnosis_only", str(payload.reason or "관리자 대시보드에서 self-run 재시도를 요청했습니다."))
+    return {"queued": True, "approval_id": str(payload.approval_id or ""), "target_stage": str(payload.target_stage or ""), "source_path": target_source_path, "retry": {"mode": "self-improvement" if payload.target_stage == "remediation" else "self-diagnosis", "context": context}, "message": "self-run 재시도를 큐에 등록했습니다."}
+
+
+class FocusedSelfHealingPlanRequest(BaseModel):
+    issue_id: str
+    requested_path: str
+    reason: str
+    proposal_title: Optional[str] = None
+    proposal_summary: Optional[str] = None
+
+
+class FocusedSelfHealingApplyRequest(BaseModel):
+    issue_id: str
+    requested_path: str
+    reason: str
+    approved: bool = False
+    selected_option_id: Optional[str] = None
+
+
+@router.post('/focused-self-healing/plan')
+def build_focused_self_healing_plan(payload: FocusedSelfHealingPlanRequest, admin: User = Depends(require_admin)):
+    del admin
+    resolved_path = _resolve_admin_workspace_path(payload.requested_path)
+    decision = build_focused_self_healing_decision(operation_id=str(payload.issue_id or '').strip(), requested_path=str(payload.requested_path or '').strip(), resolved_path=resolved_path, reason=str(payload.reason or '').strip())
+    proposal_id = f"tower-{decision.operation_id or 'proposal'}"
+    options = build_tower_crane_options(proposal_id=proposal_id, title=str(payload.proposal_title or payload.reason or 'Focused Self-Healing').strip(), summary=str(payload.proposal_summary or payload.reason or '').strip(), focused_path=decision.focused_path)
+    return {
+        'issue_id': decision.operation_id,
+        'requested_path': decision.requested_path,
+        'focused_path': decision.focused_path,
+        'target_source_path': decision.target_source_path,
+        'target_kind': decision.target_kind,
+        'category': decision.category,
+        'auto_apply_allowed': decision.auto_apply_allowed,
+        'approval_required': decision.approval_required,
+        'rationale': decision.rationale,
+        'suggested_action': decision.suggested_action,
+        'proposal_id': proposal_id,
+        'options': options,
+        'execution_contract': {
+            'auto_apply': '무승인 자동반영 허용 범위면 focused self-healing worker가 즉시 반복 검증 후 반영',
+            'approval_required': '승인 필요 범위면 원인 설명/옵션 선택 후 즉시 실행',
+            'verification_loop': ['syntax', 'type', 'runtime', 'domain-route'],
+        },
+    }
+
+
+@router.post('/focused-self-healing/apply')
+async def apply_focused_self_healing_plan(payload: FocusedSelfHealingApplyRequest, admin: User = Depends(require_admin)):
+    resolved_path = _resolve_admin_workspace_path(payload.requested_path)
+    decision = build_focused_self_healing_decision(operation_id=str(payload.issue_id or '').strip(), requested_path=str(payload.requested_path or '').strip(), resolved_path=resolved_path, reason=str(payload.reason or '').strip())
+    if decision.approval_required and not payload.approved:
+        raise HTTPException(status_code=400, detail='승인 필요 범위입니다. 원인 설명 확인 후 승인해야 즉시 실행할 수 있습니다.')
+    source_target = _resolve_admin_workspace_path(decision.target_source_path)
+    source_dir = source_target if source_target.is_dir() else source_target.parent
+    execution_source_path = str(source_dir)
+    context = {
+        'source_path': execution_source_path,
+        'requested_mode': 'self-improvement',
+        'directive_template': 'focused-self-healing',
+        'directive_scope': 'targeted_implementation',
+        'directive_request': '\n'.join([f'이슈 ID: {decision.operation_id}', f'집중 수정 경로: {decision.focused_path}', f'분류: {decision.category}', '원인에 집중해 관련 파일만 분석하고 수정 후보를 확정한 뒤 반복 검증하세요.', str(payload.reason or '').strip()]),
+        'experiment_clone_path': None,
+        'analysis_summary': {'focused_path': decision.focused_path, 'target_kind': decision.target_kind},
+        'tree_preview': '',
+        'key_text_files': [decision.focused_path] if decision.target_kind == 'file' else [],
+        'runtime_diagnostic': 'focused self-healing 요청은 큐 등록만 수행했고 상세 준비/복제는 background worker가 이어서 실행합니다.',
+    }
+    self_run_payload = WorkspaceSelfRunRequest(
+        source_path=execution_source_path,
+        mode='self-improvement',
+        self_run_stage='focused-self-healing',
+        directive_template='focused-self-healing',
+        directive_scope='targeted_implementation',
+        directive_request='\n'.join([f'이슈 ID: {decision.operation_id}', f'집중 수정 경로: {decision.focused_path}', f'분류: {decision.category}', '원인에 집중해 관련 파일만 분석하고 수정 후보를 확정한 뒤 반복 검증하세요.', str(payload.reason or '').strip()]),
+    )
+    executed = await execute_workspace_self_run(self_run_payload, admin=admin)
+    retry_result = {
+        'queued': True,
+        'mode': 'self-improvement',
+        'source_path': execution_source_path,
+        'focused_path': decision.focused_path,
+        'target_kind': decision.target_kind,
+        'directive_template': 'focused-self-healing',
+        'directive_scope': 'targeted_implementation',
+        'selected_option_id': str(payload.selected_option_id or '').strip() or None,
+        'context': context,
+        'verification_loop': ['syntax', 'type', 'runtime', 'domain-route'],
+        'execution': executed,
+    }
+    return {
+        'issue_id': decision.operation_id,
+        'focused_path': decision.focused_path,
+        'target_source_path': decision.target_source_path,
+        'category': decision.category,
+        'auto_apply_allowed': decision.auto_apply_allowed,
+        'approval_required': decision.approval_required,
+        'selected_option_id': str(payload.selected_option_id or '').strip() or None,
+        'retry': retry_result,
+        'execution': executed,
+        'message': 'focused self-healing 이 실제 workspace self-run 재실행까지 연결되었습니다.',
+    }
+
+
+from backend.marketplace.worldlinco_tuning import WorldlincoTuningUpdate
+
+
+@router.get("/worldlinco/tuning")
+async def admin_get_worldlinco_tuning(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import worldlinco_tuning_admin_payload
+
+    _ = admin
+    return worldlinco_tuning_admin_payload()
+
+
+@router.put("/worldlinco/tuning")
+async def admin_update_worldlinco_tuning(
+    update: WorldlincoTuningUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tuning import (
+        apply_worldlinco_tuning_update,
+        worldlinco_tuning_admin_payload,
+    )
+
+    _ = admin
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_worldlinco_tuning_update(update, updated_by=updated_by)
+    return worldlinco_tuning_admin_payload()
+
+
+from backend.marketplace.worldlinco_billing_policy import WorldlincoBillingPolicyUpdate
+
+
+@router.get("/worldlinco/billing-policy")
+async def admin_get_worldlinco_billing_policy(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_billing_policy import worldlinco_billing_policy_admin_payload
+
+    _ = admin
+    return worldlinco_billing_policy_admin_payload()
+
+
+@router.put("/worldlinco/billing-policy")
+async def admin_update_worldlinco_billing_policy(
+    update: WorldlincoBillingPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_billing_policy import (
+        apply_worldlinco_billing_policy_update,
+        worldlinco_billing_policy_admin_payload,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_worldlinco_billing_policy_update(update, updated_by=updated_by)
+    return worldlinco_billing_policy_admin_payload()
+
+
+from backend.marketplace.worldlinco_tourism_promo import TourismCountryPromoUpdate
+from backend.marketplace.worldlinco_referral import ReferralDiscountPolicyUpdate
+from backend.marketplace.worldlinco_sales_commission import (
+    SalesAgentCreate,
+    SalesAgentUpdate,
+    SalesCommissionPolicyUpdate,
+    LocalRevenueSettlementPolicyUpdate,
+    SalesSettlementApproveRequest,
+    OfficeBankAccountUpdate,
+    SalesAutoSettlementRunRequest,
+    RegionalManagerCreate,
+    RegionalManagerUpdate,
+)
+
+
+@router.get("/worldlinco/referrals")
+async def admin_get_worldlinco_referrals(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_referral import admin_referral_dashboard_payload
+
+    _ = admin
+    return admin_referral_dashboard_payload()
+
+
+@router.put("/worldlinco/referrals/discount-policy")
+async def admin_update_worldlinco_referral_discount_policy(
+    update: ReferralDiscountPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_referral import (
+        admin_referral_dashboard_payload,
+        apply_referral_discount_policy_update,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_referral_discount_policy_update(update, updated_by=updated_by)
+    return admin_referral_dashboard_payload()
+
+
+@router.get("/worldlinco/sales-commission")
+async def admin_get_worldlinco_sales_commission(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import admin_sales_commission_dashboard_payload
+
+    _ = admin
+    return admin_sales_commission_dashboard_payload()
+
+
+@router.put("/worldlinco/sales-commission/policy")
+async def admin_update_worldlinco_sales_commission_policy(
+    update: SalesCommissionPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        apply_sales_commission_policy_update,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_sales_commission_policy_update(update, updated_by=updated_by)
+    return admin_sales_commission_dashboard_payload()
+
+
+@router.put("/worldlinco/sales-commission/local-revenue-policy")
+async def admin_update_worldlinco_local_revenue_policy(
+    update: LocalRevenueSettlementPolicyUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        apply_local_revenue_settlement_policy_update,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_local_revenue_settlement_policy_update(update, updated_by=updated_by)
+    return admin_sales_commission_dashboard_payload()
+
+
+@router.post("/worldlinco/sales-commission/agents")
+async def admin_create_worldlinco_sales_agent(
+    payload: SalesAgentCreate,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        create_sales_agent,
+        sales_agent_admin_payload,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    agent = create_sales_agent(payload, created_by=updated_by)
+    api_base = str(request.base_url).rstrip("/")
+    return sales_agent_admin_payload(agent_id=str(agent["agent_id"]), api_base=api_base)
+
+
+@router.put("/worldlinco/sales-commission/agents/{agent_id}")
+async def admin_update_worldlinco_sales_agent(
+    agent_id: str,
+    payload: SalesAgentUpdate,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        sales_agent_admin_payload,
+        update_sales_agent,
+    )
+
+    _ = admin
+    try:
+        update_sales_agent(agent_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    api_base = str(request.base_url).rstrip("/")
+    return sales_agent_admin_payload(agent_id=agent_id, api_base=api_base)
+
+
+@router.get("/worldlinco/sales-commission/agents/{agent_id}")
+async def admin_get_worldlinco_sales_agent(
+    agent_id: str,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import sales_agent_admin_payload
+
+    _ = admin
+    try:
+        return sales_agent_admin_payload(agent_id=agent_id, api_base=str(request.base_url).rstrip("/"))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/worldlinco/sales-commission/bank-accounts")
+async def admin_upsert_worldlinco_office_bank_account(
+    payload: OfficeBankAccountUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        upsert_office_bank_account,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    account = upsert_office_bank_account(payload, updated_by=updated_by)
+    return {
+        "bank_account": account,
+        "dashboard": admin_sales_commission_dashboard_payload(),
+    }
+
+
+@router.post("/worldlinco/sales-commission/settlements/run-auto")
+async def admin_run_worldlinco_auto_settlement(
+    payload: SalesAutoSettlementRunRequest,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        run_auto_office_payout,
+        run_auto_settlement_all,
+        run_auto_local_revenue_payout,
+        run_auto_local_revenue_settlement_all,
+        load_local_revenue_settlement_policy,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    if load_local_revenue_settlement_policy().get("enabled"):
+        if payload.country_code:
+            settlement = run_auto_local_revenue_payout(
+                country_code=payload.country_code,
+                region_code=payload.region_code,
+                triggered_by=updated_by,
+            )
+        else:
+            settlement = run_auto_local_revenue_settlement_all(triggered_by=updated_by)
+    elif payload.country_code:
+        settlement = run_auto_office_payout(
+            country_code=payload.country_code,
+            region_code=payload.region_code,
+            triggered_by=updated_by,
+        )
+    else:
+        settlement = run_auto_settlement_all(triggered_by=updated_by)
+    return {
+        "settlement": settlement,
+        "dashboard": admin_sales_commission_dashboard_payload(),
+    }
+
+
+@router.post("/worldlinco/sales-commission/settlements/approve")
+async def admin_approve_worldlinco_sales_settlement(
+    payload: SalesSettlementApproveRequest,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import (
+        admin_sales_commission_dashboard_payload,
+        approve_sales_settlement,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    settlement = approve_sales_settlement(
+        country_code=payload.country_code,
+        agent_id=payload.agent_id,
+        event_ids=payload.event_ids,
+        approved_by=updated_by,
+        note=payload.note,
+    )
+    return {
+        "settlement": settlement,
+        "dashboard": admin_sales_commission_dashboard_payload(),
+    }
+
+
+def _resolve_worldlinco_regional_scope(
+    current_user: User,
+    *,
+    country_code: Optional[str] = None,
+    region_code: Optional[str] = None,
+) -> Dict[str, str]:
+    from backend.marketplace.worldlinco_sales_commission import resolve_regional_scope_for_access
+
+    is_admin = bool(getattr(current_user, "is_admin", False)) or bool(getattr(current_user, "is_superuser", False))
+    try:
+        return resolve_regional_scope_for_access(
+            is_admin=is_admin,
+            user_id=int(getattr(current_user, "id", 0) or 0),
+            country_code=country_code,
+            region_code=region_code,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code == "country_code_required":
+            raise HTTPException(status_code=400, detail="country_code 가 필요합니다.") from exc
+        raise HTTPException(status_code=403, detail="지역 관리자 권한이 없습니다.") from exc
+
+
+@router.get("/worldlinco/regional/me")
+async def admin_get_worldlinco_regional_me(
+    current_user: User = Depends(require_admin_or_regional_manager),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import resolve_regional_manager_for_user
+
+    is_admin = bool(getattr(current_user, "is_admin", False)) or bool(getattr(current_user, "is_superuser", False))
+    manager = resolve_regional_manager_for_user(int(getattr(current_user, "id", 0) or 0))
+    return {
+        "user_id": int(getattr(current_user, "id", 0) or 0),
+        "email": getattr(current_user, "email", None),
+        "is_admin": is_admin,
+        "is_regional_manager": bool(manager),
+        "regional_manager": manager,
+    }
+
+
+@router.get("/worldlinco/regional/managers")
+async def admin_list_worldlinco_regional_managers(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import list_regional_managers_public
+
+    _ = admin
+    managers = list_regional_managers_public()
+    return {"managers": managers, "total": len(managers)}
+
+
+@router.post("/worldlinco/regional/managers")
+async def admin_create_worldlinco_regional_manager(
+    payload: RegionalManagerCreate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import create_regional_manager, list_regional_managers_public
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    try:
+        manager = create_regional_manager(payload, created_by=updated_by)
+    except ValueError as exc:
+        if str(exc) == "regional_manager_user_already_assigned":
+            raise HTTPException(status_code=409, detail="이미 다른 지역에 배정된 사용자입니다.") from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"manager": manager, "managers": list_regional_managers_public()}
+
+
+@router.put("/worldlinco/regional/managers/{manager_id}")
+async def admin_update_worldlinco_regional_manager(
+    manager_id: str,
+    payload: RegionalManagerUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import list_regional_managers_public, update_regional_manager
+
+    _ = admin
+    try:
+        manager = update_regional_manager(manager_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"manager": manager, "managers": list_regional_managers_public()}
+
+
+@router.get("/worldlinco/regional/dashboard")
+async def admin_get_worldlinco_regional_dashboard(
+    country_code: Optional[str] = None,
+    region_code: Optional[str] = None,
+    current_user: User = Depends(require_admin_or_regional_manager),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import regional_manager_dashboard_payload
+
+    scope = _resolve_worldlinco_regional_scope(current_user, country_code=country_code, region_code=region_code)
+    return regional_manager_dashboard_payload(
+        country_code=scope["country_code"],
+        region_code=scope["region_code"],
+        scope_meta=scope,
+    )
+
+
+@router.get("/worldlinco/regional/users")
+async def admin_get_worldlinco_regional_users(
+    country_code: Optional[str] = None,
+    region_code: Optional[str] = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_regional_manager),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_sales_commission import regional_manager_users_payload
+
+    scope = _resolve_worldlinco_regional_scope(current_user, country_code=country_code, region_code=region_code)
+    payload = regional_manager_users_payload(
+        country_code=scope["country_code"],
+        region_code=scope["region_code"],
+        skip=skip,
+        limit=limit,
+    )
+    user_ids = [int(row.get("user_id") or 0) for row in payload.get("users") or [] if int(row.get("user_id") or 0) > 0]
+    db_rows: List[Dict[str, Any]] = []
+    if user_ids:
+        rows = db.query(User).filter(User.id.in_(user_ids)).all()
+        db_rows = [
+            {
+                "id": int(row.id),
+                "username": str(row.username or ""),
+                "email": str(row.email or ""),
+                "full_name": getattr(row, "full_name", None),
+                "country_code": getattr(row, "country_code", None),
+                "preferred_language": getattr(row, "preferred_language", None),
+                "is_active": bool(row.is_active),
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in rows
+        ]
+    enriched = regional_manager_users_payload(
+        country_code=scope["country_code"],
+        region_code=scope["region_code"],
+        skip=skip,
+        limit=limit,
+        db_user_rows=db_rows,
+    )
+    enriched["scope"] = scope
+    return enriched
+
+
+@router.get("/worldlinco/tourism-promo")
+async def admin_get_worldlinco_tourism_promo(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tourism_promo import tourism_country_promo_admin_payload
+
+    _ = admin
+    return tourism_country_promo_admin_payload()
+
+
+@router.put("/worldlinco/tourism-promo")
+async def admin_update_worldlinco_tourism_promo(
+    update: TourismCountryPromoUpdate,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.marketplace.worldlinco_tourism_promo import (
+        apply_tourism_country_promo_update,
+        tourism_country_promo_admin_payload,
+    )
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    apply_tourism_country_promo_update(update, updated_by=updated_by)
+    return tourism_country_promo_admin_payload()
+
+
+class AdminBulkChatPreviewRequest(BaseModel):
+    source_text: str = Field(min_length=1, max_length=500)
+    source_lang: str = Field(default="ko", max_length=16)
+    active_only: bool = True
+    country_codes: Optional[List[str]] = None
+
+
+class AdminBulkChatSendRequest(AdminBulkChatPreviewRequest):
+    dry_run: bool = False
+    confirm_send: bool = False
+
+
+@router.post("/worldlinco/bulk-chat/preview")
+async def admin_preview_worldlinco_bulk_chat(
+    payload: AdminBulkChatPreviewRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.services.admin_bulk_chat import preview_bulk_chat_campaign
+
+    _ = admin
+    try:
+        return preview_bulk_chat_campaign(
+            db,
+            source_text=payload.source_text,
+            source_lang=payload.source_lang,
+            active_only=payload.active_only,
+            country_codes=payload.country_codes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/worldlinco/bulk-chat/send")
+async def admin_send_worldlinco_bulk_chat(
+    payload: AdminBulkChatSendRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.services.admin_bulk_chat import send_bulk_chat_campaign
+
+    if not payload.dry_run and not payload.confirm_send:
+        raise HTTPException(status_code=422, detail="실발송은 confirm_send=true 가 필요합니다.")
+    initiated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    try:
+        return send_bulk_chat_campaign(
+            db,
+            source_text=payload.source_text,
+            source_lang=payload.source_lang,
+            active_only=payload.active_only,
+            country_codes=payload.country_codes,
+            dry_run=payload.dry_run,
+            initiated_by=initiated_by,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/worldlinco/bulk-chat/history")
+async def admin_list_worldlinco_bulk_chat_history(
+    limit: int = Query(default=20, ge=1, le=40),
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from backend.services.admin_bulk_chat import list_bulk_chat_campaign_history
+
+    _ = admin
+    items = list_bulk_chat_campaign_history(limit=limit)
+    return {"items": items, "count": len(items)}
+
+
+@router.get("/worldlinco/telemetry")
+async def admin_get_worldlinco_telemetry(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    del admin
+    return _load_worldlinco_telemetry_payload()
+
+
+@router.get("/worldlinco/calibration-artifacts")
+async def admin_get_worldlinco_calibration_artifacts(admin: User = Depends(require_admin)) -> Dict[str, Any]:
+    del admin
+    telemetry_payload = _load_worldlinco_telemetry_payload()
+    recommendation_path = _admin_worldlinco_recommendation_path()
+
+    recommendation_payload: Dict[str, Any] = {}
+    if recommendation_path.is_file():
+        recommendation_payload = _load_json_file(recommendation_path)
+        if not isinstance(recommendation_payload, dict):
+            recommendation_payload = {}
+
+    csv_paths = _admin_worldlinco_priority_csv_paths()
+    csv_entries: List[Dict[str, Any]] = []
+    for csv_path in csv_paths:
+        meta = _path_file_meta(csv_path)
+        if meta.get("exists"):
+            meta["rows"] = _estimate_csv_rows(csv_path)
+        csv_entries.append(meta)
+
+    return {
+        "generated_at": utcnow().isoformat() + "Z",
+        "artifacts": {
+            "telemetry": {
+                **_path_file_meta(_admin_worldlinco_telemetry_path()),
+                "total_items": int((telemetry_payload.get("summary") or {}).get("total_items") or 0),
+                "updated_at": telemetry_payload.get("updated_at"),
+            },
+            "recommendation": {
+                **_path_file_meta(recommendation_path),
+                "confidence": (recommendation_payload.get("meta") or {}).get("confidence"),
+                "warnings": (recommendation_payload.get("meta") or {}).get("warnings") or [],
+                "sample_coverage": recommendation_payload.get("sample_coverage") or {},
+                "has_test_priority_plan": bool(recommendation_payload.get("test_priority_plan")),
+            },
+            "priority_csv": csv_entries,
+        },
+    }
+
+
+@router.post("/worldlinco/telemetry/upload")
+async def admin_upload_worldlinco_telemetry(
+    payload: AdminWorldlincoTelemetryUploadRequest,
+    admin: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    current = _load_worldlinco_telemetry_payload()
+    current_items = current.get("items") if isinstance(current.get("items"), list) else []
+    next_items = [item for item in current_items if isinstance(item, dict)]
+    accepted = 0
+    for item in payload.items:
+        normalized = _normalize_worldlinco_telemetry_item(item.model_dump())
+        if not normalized:
+            continue
+        next_items.append(normalized)
+        accepted += 1
+
+    if len(next_items) > _ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:
+        next_items = next_items[-_ADMIN_WORLDLINCO_TELEMETRY_MAX_ITEMS:]
+
+    updated_by = getattr(admin, "email", None) or str(getattr(admin, "id", "admin"))
+    updated_payload = {
+        **current,
+        "updated_at": utcnow().isoformat() + "Z",
+        "updated_by": updated_by,
+        "note": str(payload.note or current.get("note") or ""),
+        "items": next_items,
+    }
+    saved = _save_worldlinco_telemetry_payload(updated_payload)
+    return {
+        "accepted": accepted,
+        "total_items": len(saved.get("items") or []),
+        "updated_at": saved.get("updated_at"),
+        "updated_by": saved.get("updated_by"),
+        "summary": saved.get("summary") or {},
+    }
+

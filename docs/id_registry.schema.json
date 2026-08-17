@@ -1,0 +1,512 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://codeai.local/schemas/id_registry.schema.json",
+    "title": "AI Engine Orchestrator ID Registry",
+    "description": "파일별/섹션별/기능별/청크별 식별표와 flow/trace/failure/repair 연결고리를 정의하는 표준 스키마입니다.",
+    "type": "object",
+    "required": [
+        "schema_version",
+        "registry_id",
+        "generated_at",
+        "project",
+        "governance",
+        "files",
+        "flows",
+        "traceability_links",
+        "failure_tags",
+        "repair_tags",
+        "validation_rules"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string",
+            "const": "id-registry.v1"
+        },
+        "registry_id": {
+            "type": "string",
+            "pattern": "^REG-[A-Z0-9-]+$"
+        },
+        "generated_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "project": {
+            "type": "object",
+            "required": [
+                "project_id",
+                "name",
+                "root_path",
+                "scope"
+            ],
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "pattern": "^PROJECT-[A-Z0-9-]+$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "root_path": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": [
+                        "workspace",
+                        "generated-output",
+                        "runtime-artifact"
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "governance": {
+            "type": "object",
+            "required": [
+                "required_documents",
+                "required_id_levels",
+                "selective_apply_policy",
+                "future_generation_mandatory"
+            ],
+            "properties": {
+                "required_documents": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "required_id_levels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "file",
+                            "section",
+                            "feature",
+                            "chunk",
+                            "flow",
+                            "trace",
+                            "failure_tag",
+                            "repair_tag"
+                        ]
+                    },
+                    "uniqueItems": true
+                },
+                "selective_apply_policy": {
+                    "type": "string",
+                    "enum": [
+                        "id-targeted-only",
+                        "id-first-with-manual-expansion"
+                    ]
+                },
+                "future_generation_mandatory": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false
+        },
+        "files": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "file_id",
+                    "path",
+                    "layer",
+                    "sections",
+                    "owner_capabilities",
+                    "selective_apply_ready"
+                ],
+                "properties": {
+                    "file_id": {
+                        "type": "string",
+                        "pattern": "^FILE-[A-Z0-9-]+$"
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "layer": {
+                        "type": "string",
+                        "enum": [
+                            "backend-entry",
+                            "backend-router",
+                            "backend-service",
+                            "backend-repository",
+                            "backend-infra",
+                            "backend-worker",
+                            "backend-orchestrator",
+                            "frontend-page",
+                            "frontend-component",
+                            "frontend-lib",
+                            "docs",
+                            "generated-template",
+                            "test"
+                        ]
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "owner_capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "selective_apply_ready": {
+                        "type": "boolean"
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "section_id",
+                                "summary",
+                                "feature_ids",
+                                "chunks"
+                            ],
+                            "properties": {
+                                "section_id": {
+                                    "type": "string",
+                                    "pattern": "^SECTION-[A-Z0-9-]+$"
+                                },
+                                "summary": {
+                                    "type": "string"
+                                },
+                                "line_span": {
+                                    "type": "object",
+                                    "required": [
+                                        "start",
+                                        "end"
+                                    ],
+                                    "properties": {
+                                        "start": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "end": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                },
+                                "feature_ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "pattern": "^FEATURE-[A-Z0-9-]+$"
+                                    },
+                                    "uniqueItems": true
+                                },
+                                "chunks": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "required": [
+                                            "chunk_id",
+                                            "summary",
+                                            "stability",
+                                            "targetable"
+                                        ],
+                                        "properties": {
+                                            "chunk_id": {
+                                                "type": "string",
+                                                "pattern": "^CHUNK-[A-Z0-9-]+$"
+                                            },
+                                            "summary": {
+                                                "type": "string"
+                                            },
+                                            "stability": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "stable",
+                                                    "volatile",
+                                                    "experimental"
+                                                ]
+                                            },
+                                            "targetable": {
+                                                "type": "boolean"
+                                            },
+                                            "line_span": {
+                                                "type": "object",
+                                                "required": [
+                                                    "start",
+                                                    "end"
+                                                ],
+                                                "properties": {
+                                                    "start": {
+                                                        "type": "integer",
+                                                        "minimum": 1
+                                                    },
+                                                    "end": {
+                                                        "type": "integer",
+                                                        "minimum": 1
+                                                    }
+                                                },
+                                                "additionalProperties": false
+                                            },
+                                            "failure_tags": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "pattern": "^FAIL-TAG-[A-Z0-9-]+$"
+                                                }
+                                            },
+                                            "repair_tags": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "pattern": "^REPAIR-TAG-[A-Z0-9-]+$"
+                                                }
+                                            }
+                                        },
+                                        "additionalProperties": false
+                                    }
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "flows": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "flow_id",
+                    "steps"
+                ],
+                "properties": {
+                    "flow_id": {
+                        "type": "string",
+                        "pattern": "^FLOW-[A-Z0-9-]+$"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "step_id",
+                                "action",
+                                "route_id",
+                                "panel_id"
+                            ],
+                            "properties": {
+                                "step_id": {
+                                    "type": "string",
+                                    "pattern": "^(STEP|FLOW)-[A-Z0-9-]+$"
+                                },
+                                "action": {
+                                    "type": "string"
+                                },
+                                "route_id": {
+                                    "type": "string",
+                                    "pattern": "^ROUTE-[A-Z0-9-]+$"
+                                },
+                                "panel_id": {
+                                    "type": "string",
+                                    "pattern": "^PANEL-[A-Z0-9-]+$"
+                                },
+                                "trace_ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "pattern": "^TRACE-[A-Z0-9-]+$"
+                                    }
+                                },
+                                "target_file_ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "pattern": "^FILE-[A-Z0-9-]+$"
+                                    }
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "traceability_links": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "trace_id",
+                    "design_item_id",
+                    "target_file_ids",
+                    "target_section_ids",
+                    "target_chunk_ids",
+                    "validation_evidence"
+                ],
+                "properties": {
+                    "trace_id": {
+                        "type": "string",
+                        "pattern": "^TRACE-[A-Z0-9-]+$"
+                    },
+                    "design_item_id": {
+                        "type": "string"
+                    },
+                    "target_file_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^FILE-[A-Z0-9-]+$"
+                        }
+                    },
+                    "target_section_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^SECTION-[A-Z0-9-]+$"
+                        }
+                    },
+                    "target_feature_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^FEATURE-[A-Z0-9-]+$"
+                        }
+                    },
+                    "target_chunk_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^CHUNK-[A-Z0-9-]+$"
+                        }
+                    },
+                    "validation_evidence": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "approval_status": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "failure_tags": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "failure_tag",
+                    "trace_id",
+                    "target_chunk_ids",
+                    "root_cause_summary"
+                ],
+                "properties": {
+                    "failure_tag": {
+                        "type": "string",
+                        "pattern": "^FAIL-TAG-[A-Z0-9-]+$"
+                    },
+                    "trace_id": {
+                        "type": "string",
+                        "pattern": "^TRACE-[A-Z0-9-]+$"
+                    },
+                    "target_file_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^FILE-[A-Z0-9-]+$"
+                        }
+                    },
+                    "target_chunk_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^CHUNK-[A-Z0-9-]+$"
+                        }
+                    },
+                    "root_cause_summary": {
+                        "type": "string"
+                    },
+                    "evidence_paths": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "repair_tags": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "repair_tag",
+                    "applies_to_failure_tags",
+                    "target_chunk_ids",
+                    "validation_targets"
+                ],
+                "properties": {
+                    "repair_tag": {
+                        "type": "string",
+                        "pattern": "^REPAIR-TAG-[A-Z0-9-]+$"
+                    },
+                    "applies_to_failure_tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^FAIL-TAG-[A-Z0-9-]+$"
+                        }
+                    },
+                    "target_chunk_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^CHUNK-[A-Z0-9-]+$"
+                        }
+                    },
+                    "validation_targets": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "rollback_scope": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "validation_rules": {
+            "type": "object",
+            "required": [
+                "hard_gate",
+                "generation_requirements"
+            ],
+            "properties": {
+                "hard_gate": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "generation_requirements": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

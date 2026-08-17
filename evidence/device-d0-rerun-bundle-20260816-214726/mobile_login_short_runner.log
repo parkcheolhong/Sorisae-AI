@@ -1,0 +1,9 @@
+[verify-mobile-login] device=R83W70QY11H package=com.parkcheolhong.worldlinco rounds=1
+[verify-mobile-login] looking for admin password in .runtime/secrets/apibase55_d0_password.txt
+--- round 1/1 ---
+Write-Error: C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\verify_mobile_login_automation.ps1:381:9
+Line |
+ 381 |          Write-Error "Round $i failed: $msg"
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Round 1 failed: Login form did not appear within 30
+     | seconds

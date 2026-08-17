@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-08-16T15:07:49.4085672+09:00",
+  "device": "R83W70QY11H",
+  "probe_report": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-20260816-150743\\sorisae_probe_report.json",
+  "logcat": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-20260816-150743\\device_reactnative_logcat.txt",
+  "screenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-20260816-150743\\device_validation_screen.png",
+  "ui_dump": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-20260816-150743\\device_validation_ui.xml",
+  "auth_e2e": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-20260816-150743\\auth_duplicate_login_e2e.json"
+}

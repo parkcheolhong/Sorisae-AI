@@ -1,0 +1,40 @@
+.next
+.build-logs/
+.vs/
+uploads/tmp/
+uploads/tmp/archived_checklists/
+node_modules
+npm-debug.log*
+
+# 시크릿 및 환경변수 (절대 커밋 금지)
+.env
+.env.*
+.runtime/secrets/
+*.secret
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# R9 작업트리 산출물 표면 차단
+.playwright-mcp/
+.runtime/
+.tmp/
+.venv*/
+TestResults/
+
+# Metro/Gradle 빌드 임시 캐시 (자동 재생성, 추적 금지)
+apps/mobile-nadotongryoksa/.gradle-tmp/
+
+# Large generated binaries and local packages (GitHub 100MB limit)
+uploads/marketplace_local/apk/
+evidence/*.apk
+mobile-nadotongryoksa/android/app/build/
+mobile-nadotongryoksa/tmp/device-apk/
+apps/mobile-nadotongryoksa/tmp/device-apk/
+frontend/frontend/.next-admin-3005/
+frontend/frontend/.next-marketplace-3000/
+frontend/frontend/.next-build*/
+exports/bundle-331-featured/
+exports/bundle-331-featured-copy/

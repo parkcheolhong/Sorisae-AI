@@ -1,0 +1,144 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e134]:
+    - complementary "Admin Workspace 탐색" [ref=e135]:
+      - generic [ref=e136]: AD
+      - navigation [ref=e137]:
+        - link "관리" [ref=e138] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e140]: 관리
+        - link "실행" [ref=e141] [cursor=pointer]:
+          - /url: /admin/runs
+          - generic [ref=e143]: 실행
+        - link "승인" [ref=e144] [cursor=pointer]:
+          - /url: /admin/approvals
+          - generic [ref=e146]: 승인
+        - link "배포" [ref=e147] [cursor=pointer]:
+          - /url: /admin/publish
+          - generic [ref=e149]: 배포
+        - link "관측" [ref=e150] [cursor=pointer]:
+          - /url: /admin/observability
+          - generic [ref=e152]: 관측
+      - generic [ref=e153]: LIVE
+    - generic [ref=e154]:
+      - banner [ref=e155]:
+        - generic [ref=e156]:
+          - paragraph [ref=e157]: 관리자 대시보드
+          - heading "Admin Workspace" [level=1] [ref=e158]
+          - paragraph [ref=e159]: 누락된 admin 의존으로 깨졌던 페이지를 최소 자기완결 구조로 복구했습니다. marketplace 운영과 AI 엑셀 시트 검증 진입점을 유지합니다.
+        - generic [ref=e160]:
+          - link "Marketplace" [ref=e161] [cursor=pointer]:
+            - /url: /marketplace
+          - link "관측 보드" [ref=e162] [cursor=pointer]:
+            - /url: /admin/observability
+          - link "관리 홈" [ref=e163] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e164]:
+        - generic [ref=e165]:
+          - generic [ref=e166]:
+            - generic [ref=e167]: 운영 복구
+            - generic [ref=e168]: 운영 API 연결 완료
+          - paragraph [ref=e169]: admin 경량 복구 대시보드
+          - heading "관리자 화면을 최소 자기완결 구조로 복구했습니다" [level=2] [ref=e170]
+          - paragraph [ref=e171]: 기존 admin 세부 모듈 누락 때문에 전체 프론트 빌드가 막히던 상태를 우선 해소하고, marketplace/AI 엑셀 시트 검증 경로와 하위 운영 보드까지 유지하는 방향으로 정리했습니다.
+          - generic [ref=e172]:
+            - link "Marketplace 열기" [ref=e173] [cursor=pointer]:
+              - /url: /marketplace
+            - link "관측 보드" [ref=e174] [cursor=pointer]:
+              - /url: /admin/observability
+        - generic "핵심 기능 바로가기" [ref=e175]:
+          - generic [ref=e176]: admin 빌드 차단 해소
+          - generic [ref=e177]: marketplace 운영 통계 확인
+          - generic [ref=e178]: AI 엑셀 시트 검증 진입
+          - generic [ref=e179]: 하위 운영 보드 연결
+      - generic [ref=e180]:
+        - main [ref=e181]:
+          - generic [ref=e182]:
+            - generic [ref=e183]:
+              - generic [ref=e184]:
+                - paragraph [ref=e185]: 프로젝트 수
+                - paragraph [ref=e186]: "0"
+                - paragraph [ref=e187]: marketplace 등록 프로젝트 기준
+              - generic [ref=e188]:
+                - paragraph [ref=e189]: 사용자 수
+                - paragraph [ref=e190]: "1"
+                - paragraph [ref=e191]: 가입 사용자 집계
+              - generic [ref=e192]:
+                - paragraph [ref=e193]: 구매 수
+                - paragraph [ref=e194]: "0"
+                - paragraph [ref=e195]: 완료 구매 기준
+              - generic [ref=e196]:
+                - paragraph [ref=e197]: 리뷰 수
+                - paragraph [ref=e198]: "0"
+                - paragraph [ref=e199]: 공개 리뷰 기준
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - paragraph [ref=e202]: Ops Board
+                - heading "Popup UI 검증" [level=3] [ref=e203]
+                - generic [ref=e204]: 운영 연결 완료
+                - paragraph [ref=e205]: popup interaction, focus, mobile, 결과 패널 특화까지 현재 검증 흐름에 포함되어 있습니다.
+              - generic [ref=e206]:
+                - paragraph [ref=e207]: Ops Board
+                - heading "Liveview 상태판" [level=3] [ref=e208]
+                - generic [ref=e209]: sheet flow + admin API
+                - paragraph [ref=e210]: preview → final workbook → download 흐름과 admin 실행/승인/관측 보드가 실제 관리자 API 기준으로 연결되었습니다.
+              - generic [ref=e211]:
+                - paragraph [ref=e212]: Ops Board
+                - heading "CI 상위 검증" [level=3] [ref=e213]
+                - generic [ref=e214]: ci:marketplace 사용
+                - paragraph [ref=e215]: popup UI와 liveview sheet Playwright를 하나의 상위 명령으로 묶고, 운영 보드 하위 페이지는 실제 관리자 API 응답을 표시합니다.
+            - generic [ref=e216]:
+              - link "Sub Board 실행 보드 self-run, runtime, liveview 진행 상태를 확인합니다." [ref=e217] [cursor=pointer]:
+                - /url: /admin/runs
+                - paragraph [ref=e218]: Sub Board
+                - heading "실행 보드" [level=3] [ref=e219]
+                - paragraph [ref=e220]: self-run, runtime, liveview 진행 상태를 확인합니다.
+              - link "Sub Board 승인 큐 pending approval / retry / manual correction 흐름을 확인합니다." [ref=e221] [cursor=pointer]:
+                - /url: /admin/approvals
+                - paragraph [ref=e222]: Sub Board
+                - heading "승인 큐" [level=3] [ref=e223]
+                - paragraph [ref=e224]: pending approval / retry / manual correction 흐름을 확인합니다.
+              - link "Sub Board Publish 보드 shipment readiness 와 publish payload 상태를 확인합니다." [ref=e225] [cursor=pointer]:
+                - /url: /admin/publish
+                - paragraph [ref=e226]: Sub Board
+                - heading "Publish 보드" [level=3] [ref=e227]
+                - paragraph [ref=e228]: shipment readiness 와 publish payload 상태를 확인합니다.
+              - link "Sub Board Observability runtime probe, connectivity, evidence bundle 상태를 확인합니다." [ref=e229] [cursor=pointer]:
+                - /url: /admin/observability
+                - paragraph [ref=e230]: Sub Board
+                - heading "Observability" [level=3] [ref=e231]
+                - paragraph [ref=e232]: runtime probe, connectivity, evidence bundle 상태를 확인합니다.
+            - generic [ref=e233]:
+              - generic [ref=e234]:
+                - generic [ref=e235]
+                - paragraph [ref=e239]: 복구된 admin 페이지에서 marketplace와 AI 엑셀 시트 플로우 검증으로 바로 이동할 수 있습니다.
+              - button "창 열기" [ref=e241] [cursor=pointer]
+        - complementary [ref=e242]:
+          - generic [ref=e243]:
+            - generic [ref=e244]:
+              - paragraph [ref=e245]: Admin Status
+              - heading "관리자 빌드 복구 상태" [level=3] [ref=e246]
+              - generic [ref=e247]:
+                - generic [ref=e248]
+                - generic [ref=e251]
+                - generic [ref=e254]
+            - generic [ref=e257]:
+              - paragraph [ref=e258]: Board Navigation
+              - heading "운영 보드 바로가기" [level=3] [ref=e259]
+              - generic [ref=e260]:
+                - link "대시보드 현재 운영 상태와 quick actions를 확인합니다." [ref=e261] [cursor=pointer]:
+                  - /url: /admin
+                - link "실행 보드 self-run, runtime, liveview 진행 상태를 확인합니다." [ref=e264] [cursor=pointer]:
+                  - /url: /admin/runs
+                - link "승인 큐 pending approval / retry / manual correction 흐름을 확인합니다." [ref=e267] [cursor=pointer]:
+                  - /url: /admin/approvals
+                - link "Publish 보드 shipment readiness 와 publish payload 상태를 확인합니다." [ref=e270] [cursor=pointer]:
+                  - /url: /admin/publish
+                - link "Observability runtime probe, connectivity, evidence bundle 상태를 확인합니다." [ref=e273] [cursor=pointer]:
+                  - /url: /admin/observability
+                - link "Marketplace popup/liveview 결과 패널과 다운로드 흐름을 확인합니다." [ref=e276] [cursor=pointer]:
+                  - /url: /marketplace
+                - link "관측 보드 운영 검증 및 런타임 진단 보드로 이동합니다." [ref=e279] [cursor=pointer]:
+                  - /url: /admin/observability
+  - button "Open Next.js Dev Tools" [ref=e129] [cursor=pointer]:
+    - img [ref=e130]
+  - alert [ref=e133]

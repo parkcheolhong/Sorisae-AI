@@ -1,0 +1,32 @@
+Run20 Release Device Validation Summary
+GeneratedAt=2026-08-13T20:59:00+09:00
+
+Scope
+- Release APK authenticated-state validation on physical device R83W70QY11H
+- Sequence: login -> notification/voice -> core rail entry
+
+Evidence
+- run20_after_login_confirm.png
+- run20_after_login_confirm.xml
+- run20_voice_wait_toggle.png
+- run20_voice_wait_toggle.xml
+- run20_chat_rail_entry.png
+- run20_chat_rail_entry.xml
+- run20_login_lag_fix_screen.png
+- run20_login_lag_fix_typed.png
+- run20_login_gfxinfo_after_fix.txt
+
+Observed Results
+- Login confirmed: authenticated home shows burumi69@gmail.com and logout button.
+- Notification/voice confirmed: voice panel switched to "대화 통역 ON · 탭하여 끄기" and wake phrase banner switched to "소리새 AI 부르면 깨어나요 · 대기 끄기".
+- Core rail entry confirmed: chat rail opened to "채팅 + 친구 허브" with VoIP friend search / phone number search / map search / group chat cards.
+- Login input lag improved versus prior build after login input rerender reduction.
+
+Render Snapshot
+- Source: run20_login_gfxinfo_after_fix.txt
+- 50th percentile: 19ms
+- 90th percentile: 38ms
+- High input latency count: 14
+
+Conclusion
+- Release APK launches standalone, login state works, voice wait toggle works, and core chat rail entry works on the physical device.

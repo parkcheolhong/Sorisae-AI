@@ -1,0 +1,5 @@
+08-16 22:51:58.802 I/ReactNativeJS( 5330): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-16 22:52:45.049 I/ReactNativeJS( 5330): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_ENTER","auto_mode":true,"target":"main","armed":false,"recording":false,"in_flight_start":false,"in_flight_stop":false}'
+08-16 22:52:45.050 I/ReactNativeJS( 5330): '[FACE_CAPTURE_TRACE]', '{"trace_id":"face-trace-face.interpret-msvv72m1-5f8571","event":"start_tap","from_lang":"ko","to_lang":"en","face_screen_open":true,"sorisae_window_open":false}'
+08-16 22:52:45.108 I/ReactNativeJS( 5330): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_ENTER","auto_mode":true,"target":"main","armed":false,"recording":false,"in_flight_start":true,"in_flight_stop":false}'
+08-16 22:52:45.108 I/ReactNativeJS( 5330): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_BLOCKED","reason":"busy","armed":false,"recording":false,"in_flight_start":true,"in_flight_stop":false}'

@@ -1,0 +1,30 @@
+# FILE-ID: FILE-INFRA-DOCKER-COMPOSE-OVERRIDE-YML
+# SECTION-ID: SECTION-INFRA-DOCKER-COMPOSE-OVERRIDE-YML-MAIN
+# FEATURE-ID: FEATURE-INFRA-DOCKER-COMPOSE-OVERRIDE-YML-RUNTIME
+# CHUNK-ID: CHUNK-INFRA-DOCKER-COMPOSE-OVERRIDE-YML-001
+
+services:
+  app:
+    build: ..
+    command: uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../configs/app.env.example
+    environment:
+      - APP_ENV=production
+      - APP_PORT=8000
+      - DATABASE_URL=sqlite:///./app.db
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRE_MINUTES=30
+      JWT_SECRET: replace-with-32-char-random-secret
+      - JWT_SECRET=replace-with-32-char-random-secret
+      - ALLOWED_HOSTS=localhost,127.0.0.1,metanova1004.com
+      - CORS_ALLOW_ORIGINS=https://metanova1004.com
+      - OPS_LOG_PATH=logs/ops-events.jsonl
+      - REQUEST_TIMEOUT_SEC=5
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

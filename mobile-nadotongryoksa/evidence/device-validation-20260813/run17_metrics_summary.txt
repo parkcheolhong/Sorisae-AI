@@ -1,0 +1,28 @@
+Run17 Metrics Summary
+GeneratedAt=2026-08-13T20:24:00+09:00
+
+Source Files
+- run17_launch_timing.txt
+- run17_key_runtime_events.log
+- run17_logcat_dump.txt
+- run17_login_form_ready.png
+- run17_after_login_state.png
+- run17_login_confirm_after_minimize_seq.png
+
+Measured Values
+- Launch.TotalTimeMs=8296
+- Launch.WaitTimeMs=8319
+
+Login Latency (LOGIN_SUBMIT_PRESS -> LOGIN_SESSION_APPLIED)
+- LOGIN_SUBMIT_PRESS: not observed in run17_key_runtime_events.log
+- LOGIN_SESSION_APPLIED: not observed in run17_key_runtime_events.log
+- DeltaMs: N/A (cannot compute without both markers in same run slice)
+
+Custom Sound Warning Count
+- Count in extracted key event file (run17_key_runtime_events.log): 72
+- Visible warning proof in run17 screen: run17_after_login_state.png (LogBox message shown)
+
+Conclusion
+- Fresh-login modal exposure and warning reproduction are verified.
+- Precise submit-to-applied latency remains unmeasurable in current captured run17 event slice because submit/applied markers are absent.
+- Login state is visually confirmed as authenticated (`AUTH_DEBUG_STATE: AUTHENTICATED`, `AUTH_DEBUG_USER: 6|burumi69@gmail.com`) in `run17_login_confirm_after_minimize_seq.png`.

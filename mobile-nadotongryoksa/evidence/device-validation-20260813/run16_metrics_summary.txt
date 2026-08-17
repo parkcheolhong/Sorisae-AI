@@ -1,0 +1,21 @@
+Run16 Metrics Summary
+GeneratedAt=2026-08-13T20:10:00+09:00
+
+Source Files
+- run8_launch_timing.txt
+- run16_key_runtime_events.log
+- run16_adb_runtime_focus.log
+
+Measured Values
+- Launch.TotalTimeMs=8205
+- Launch.WaitTimeMs=8221
+
+Auth Restore Latency (from Metro event epochs)
+- Sample A: Found=1786618660093, Applied=1786618660136, DeltaMs=43
+- Sample B: Found=1786618666885, Applied=1786618666926, DeltaMs=41
+- Sample C: Found=1786618670758, Applied=1786618670806, DeltaMs=48
+
+Runtime Validation Notes
+- Firebase databaseURL error was not observed in latest run16 event slice.
+- Session restore reaches AUTH_STORAGE_RESTORE_APPLIED repeatedly.
+- Ongoing warning: expo-notifications custom sound default not found.

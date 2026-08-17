@@ -1,0 +1,1 @@
+2494f4c6f ci(pr111): make admin build step cross-platform in pipeline script

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/frontend/frontend/app/%5B...adminOnly%5D/page.tsx"],"sourcesContent":["import { redirect } from 'next/navigation';\n\nexport default function AdminOnlyCatchAllPage() {\n  redirect('/admin');\n}\n"],"names":["AdminOnlyCatchAllPage"],"mappings":";;;;AAAA;AAAA;;AAEe,SAASA;IACtB,IAAA,iMAAQ,EAAC;AACX"}}]
+}

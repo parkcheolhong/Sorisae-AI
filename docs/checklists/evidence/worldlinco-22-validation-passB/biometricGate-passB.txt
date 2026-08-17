@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/biometricGate.test.ts
+Result: PASS
+Notes: Auth helper regression check passed after the current-user cache refactor.

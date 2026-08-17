@@ -1,0 +1,38 @@
+﻿[
+    {
+        "round":  1,
+        "has_passkey_callback_success":  true,
+        "has_social_callback_success":  true,
+        "has_error_activity":  false,
+        "passkey_success_count":  2,
+        "passkey_fail_count":  0,
+        "social_success_count":  1,
+        "social_fail_count":  0,
+        "show_login_true_count":  0,
+        "show_login_false_count":  16,
+        "sorisae_fab_eval_count":  3,
+        "sorisae_fab_alt_score":  6,
+        "sorisae_fab_alt_evidence_ok":  true,
+        "sorisae_fab_gate_status":  "PASS",
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhcGliYXNlNTVkMHBhc3MyMTZAd29ybGRsaW5jby5kZXYiLCJzaWQiOiJQUmk4MGVTek5zck9UbTFwd0tGNTRFUDIxNXdNR05rVCJ9.93itn4mSuWGTFkAfV9s5L7RW17GMp1hOSqC-_UZUPes\u0026email=apibase55d0pass216%40worldlinco.dev\u0026user_id=13\u0026username=apibase55d0pass216\u0026display_name=D0%20Passkey%20Bootstrap\u0026round=1\u0026ts=1786885237134",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhcGliYXNlNTVkMHBhc3MyMTZAd29ybGRsaW5jby5kZXYiLCJzaWQiOiJQUmk4MGVTek5zck9UbTFwd0tGNTRFUDIxNXdNR05rVCJ9.93itn4mSuWGTFkAfV9s5L7RW17GMp1hOSqC-_UZUPes\u0026email=apibase55d0pass216%40worldlinco.dev\u0026user_id=13\u0026username=apibase55d0pass216\u0026display_name=D0%20Passkey%20Bootstrap\u0026round=1\u0026ts=1786885237134\u0027"
+    },
+    {
+        "round":  2,
+        "has_passkey_callback_success":  true,
+        "has_social_callback_success":  true,
+        "has_error_activity":  false,
+        "passkey_success_count":  2,
+        "passkey_fail_count":  0,
+        "social_success_count":  1,
+        "social_fail_count":  0,
+        "show_login_true_count":  0,
+        "show_login_false_count":  12,
+        "sorisae_fab_eval_count":  1,
+        "sorisae_fab_alt_score":  6,
+        "sorisae_fab_alt_evidence_ok":  true,
+        "sorisae_fab_gate_status":  "PASS",
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhcGliYXNlNTVkMHBhc3MyMTZAd29ybGRsaW5jby5kZXYiLCJzaWQiOiJQUmk4MGVTek5zck9UbTFwd0tGNTRFUDIxNXdNR05rVCJ9.93itn4mSuWGTFkAfV9s5L7RW17GMp1hOSqC-_UZUPes\u0026email=apibase55d0pass216%40worldlinco.dev\u0026user_id=13\u0026username=apibase55d0pass216\u0026display_name=D0%20Passkey%20Bootstrap\u0026round=2\u0026ts=1786885246749",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhcGliYXNlNTVkMHBhc3MyMTZAd29ybGRsaW5jby5kZXYiLCJzaWQiOiJQUmk4MGVTek5zck9UbTFwd0tGNTRFUDIxNXdNR05rVCJ9.93itn4mSuWGTFkAfV9s5L7RW17GMp1hOSqC-_UZUPes\u0026email=apibase55d0pass216%40worldlinco.dev\u0026user_id=13\u0026username=apibase55d0pass216\u0026display_name=D0%20Passkey%20Bootstrap\u0026round=2\u0026ts=1786885246749\u0027"
+    }
+]

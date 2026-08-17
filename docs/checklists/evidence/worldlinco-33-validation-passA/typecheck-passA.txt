@@ -1,0 +1,3 @@
+Command: npm run typecheck
+Result: PASS
+Notes: TanStack Query provider/query cache integration compiles in mobile-nadotongryoksa after applying purchases/friends read-path caching and retry policies.

@@ -1,0 +1,320 @@
+{
+  "version": 2,
+  "updated_at": "2026-07-01T19:00:00Z",
+  "updated_by": "system",
+  "note": "GPS 국가 일치 + spot 50km 반경 내에서만 노출. i18n 키는 앱 프로그램 언어 코드(ko, en, ja …).",
+  "default_radius_km": 50,
+  "entries": {
+    "KR": {
+      "enabled": true,
+      "cta_action": "travel_booking",
+      "accent_color": "#E53935",
+      "spots": [
+        {
+          "id": "kr-seoul",
+          "lat": 37.5665,
+          "lon": 126.978,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇰🇷 서울·수도권 여행",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "경복궁·한강·맛집과 교통·안전 팁을 소리새 AI가 안내합니다.",
+              "cta_label": "주변 관광지 찾기"
+            },
+            "en": {
+              "title": "🇰🇷 Seoul & Capital Area",
+              "subtitle": "Within 50 km of you",
+              "body": "Palaces, Han River spots, food and transit tips via Sorisae AI.",
+              "cta_label": "Find nearby places"
+            },
+            "ja": {
+              "title": "🇰🇷 ソウル・首都圏",
+              "subtitle": "現在地から50km以内",
+              "body": "宮殿・漢江・グルメと交通のヒントをソリセ AIが案内します。",
+              "cta_label": "周辺を探す"
+            }
+          }
+        },
+        {
+          "id": "kr-busan",
+          "lat": 35.1796,
+          "lon": 129.0756,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇰🇷 부산·경남 여행",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "해운대·감천문화마을·항구 맛집을 주변에서 바로 찾아보세요.",
+              "cta_label": "주변 관광지 찾기"
+            },
+            "en": {
+              "title": "🇰🇷 Busan & Gyeongnam",
+              "subtitle": "Within 50 km of you",
+              "body": "Beaches, Gamcheon Village and port-side food near you.",
+              "cta_label": "Find nearby places"
+            }
+          }
+        },
+        {
+          "id": "kr-jeju",
+          "lat": 33.4996,
+          "lon": 126.5312,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇰🇷 제주 여행",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "오름·해변·흑돼지 맛집과 렌터카·날씨 팁을 안내합니다.",
+              "cta_label": "주변 관광지 찾기"
+            },
+            "en": {
+              "title": "🇰🇷 Jeju Island",
+              "subtitle": "Within 50 km of you",
+              "body": "Volcanic trails, beaches and local food tips near you.",
+              "cta_label": "Find nearby places"
+            }
+          }
+        }
+      ]
+    },
+    "US": {
+      "enabled": true,
+      "cta_action": "travel_booking",
+      "accent_color": "#1565C0",
+      "spots": [
+        {
+          "id": "us-nyc",
+          "lat": 40.7128,
+          "lon": -74.006,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇺🇸 뉴욕·뉴저지",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "맨하탄·브루클린 명소, 지하철·팁·응급 연락처를 안내합니다.",
+              "cta_label": "주변 검색"
+            },
+            "en": {
+              "title": "🇺🇸 New York Metro",
+              "subtitle": "Within 50 miles of you",
+              "body": "Manhattan highlights, subway tips and safety info near you.",
+              "cta_label": "Search nearby"
+            }
+          }
+        },
+        {
+          "id": "us-la",
+          "lat": 34.0522,
+          "lon": -118.2437,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇺🇸 LA·올린 카운티",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "해변·할리우드·교통과 주차 팁을 현지 가이드처럼 안내합니다.",
+              "cta_label": "주변 검색"
+            },
+            "en": {
+              "title": "🇺🇸 Los Angeles Area",
+              "subtitle": "Within 50 km of you",
+              "body": "Beaches, Hollywood routes and driving tips near you.",
+              "cta_label": "Search nearby"
+            }
+          }
+        },
+        {
+          "id": "us-sf",
+          "lat": 37.7749,
+          "lon": -122.4194,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇺🇸 샌프란시스코·베이에리어",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "금문교·피셔맨스 와프·BART 이용 팁을 안내합니다.",
+              "cta_label": "주변 검색"
+            },
+            "en": {
+              "title": "🇺🇸 San Francisco Bay",
+              "subtitle": "Within 50 km of you",
+              "body": "Golden Gate, Fisherman's Wharf and BART tips near you.",
+              "cta_label": "Search nearby"
+            }
+          }
+        }
+      ]
+    },
+    "JP": {
+      "enabled": true,
+      "cta_action": "travel_booking",
+      "accent_color": "#C62828",
+      "spots": [
+        {
+          "id": "jp-tokyo",
+          "lat": 35.6762,
+          "lon": 139.6503,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇯🇵 도쿄·수도권",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "교통 IC·온천·거리 음식과 매너 팁을 음성으로 물어보세요.",
+              "cta_label": "여행 예약 열기"
+            },
+            "en": {
+              "title": "🇯🇵 Tokyo Metro",
+              "subtitle": "Within 50 km of you",
+              "body": "Transit cards, onsen and street food tips near you.",
+              "cta_label": "Open travel tools"
+            },
+            "ja": {
+              "title": "🇯🇵 東京・首都圏",
+              "subtitle": "現在地から50km以内",
+              "body": "交通IC・温泉・屋台グルメとマナーを案内します。",
+              "cta_label": "旅行ツールを開く"
+            }
+          }
+        },
+        {
+          "id": "jp-osaka",
+          "lat": 34.6937,
+          "lon": 135.5023,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇯🇵 오사카·간사이",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "道頓堀·USJ·타코야키 맛집을 주변에서 찾아보세요.",
+              "cta_label": "여행 예약 열기"
+            },
+            "en": {
+              "title": "🇯🇵 Osaka & Kansai",
+              "subtitle": "Within 50 km of you",
+              "body": "Dotonbori, USJ and local food near you.",
+              "cta_label": "Open travel tools"
+            },
+            "ja": {
+              "title": "🇯🇵 大阪・関西",
+              "subtitle": "現在地から50km以内",
+              "body": "道頓堀・USJ・たこ焼き名店を周辺検索できます。",
+              "cta_label": "旅行ツールを開く"
+            }
+          }
+        }
+      ]
+    },
+    "CN": {
+      "enabled": true,
+      "cta_action": "face_interpretation",
+      "accent_color": "#D32F2F",
+      "spots": [
+        {
+          "id": "cn-beijing",
+          "lat": 39.9042,
+          "lon": 116.4074,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇨🇳 베이징",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "자금성·만리장성 동선과 위챗·지하철 이용 팁을 안내합니다.",
+              "cta_label": "대면 통역 시작"
+            },
+            "en": {
+              "title": "🇨🇳 Beijing",
+              "subtitle": "Within 50 km of you",
+              "body": "Forbidden City routes and WeChat transit tips near you.",
+              "cta_label": "Start interpretation"
+            },
+            "zh": {
+              "title": "🇨🇳 北京",
+              "subtitle": "距您50公里内",
+              "body": "故宫、长城路线与微信交通提示。",
+              "cta_label": "开始面对面对译"
+            }
+          }
+        },
+        {
+          "id": "cn-shanghai",
+          "lat": 31.2304,
+          "lon": 121.4737,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇨🇳 상하이",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "외滩·迪士尼·지하철과 알리페이 팁을 안내합니다.",
+              "cta_label": "대면 통역 시작"
+            },
+            "en": {
+              "title": "🇨🇳 Shanghai",
+              "subtitle": "Within 50 km of you",
+              "body": "The Bund, Disney and metro tips near you.",
+              "cta_label": "Start interpretation"
+            },
+            "zh": {
+              "title": "🇨🇳 上海",
+              "subtitle": "距您50公里内",
+              "body": "外滩、迪士尼与地铁支付宝提示。",
+              "cta_label": "开始面对面对译"
+            }
+          }
+        }
+      ]
+    },
+    "TH": {
+      "enabled": true,
+      "cta_action": "face_interpretation",
+      "accent_color": "#F57C00",
+      "spots": [
+        {
+          "id": "th-bangkok",
+          "lat": 13.7563,
+          "lon": 100.5018,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇹🇭 방콕",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "왕궁·야시장·택시·안전 수칙을 짧고 빠르게 안내합니다.",
+              "cta_label": "소리새에게 물어보기"
+            },
+            "en": {
+              "title": "🇹🇭 Bangkok",
+              "subtitle": "Within 50 km of you",
+              "body": "Palaces, night markets and taxi safety tips near you.",
+              "cta_label": "Ask Sorisae AI"
+            },
+            "th": {
+              "title": "🇹🇭 กรุงเทพฯ",
+              "subtitle": "ในรัศมี 50 กม.",
+              "body": "พระราชวัง ตลาดกลางคืน และเคล็ดลับความปลอดภัย",
+              "cta_label": "ถาม Sorisae AI"
+            }
+          }
+        },
+        {
+          "id": "th-phuket",
+          "lat": 7.8804,
+          "lon": 98.3923,
+          "radius_km": 50,
+          "i18n": {
+            "ko": {
+              "title": "🇹🇭 푸켓·남부",
+              "subtitle": "현재 위치 50km 이내",
+              "body": "해변·스노클링·현지 음식과 교통 팁을 안내합니다.",
+              "cta_label": "소리새에게 물어보기"
+            },
+            "en": {
+              "title": "🇹🇭 Phuket & South",
+              "subtitle": "Within 50 km of you",
+              "body": "Beaches, snorkeling and local food tips near you.",
+              "cta_label": "Ask Sorisae AI"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

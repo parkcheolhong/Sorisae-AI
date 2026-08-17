@@ -1,0 +1,30 @@
+--------- beginning of main
+08-17 15:06:19.356 W/ReactNativeJS( 5876): Require cycle: src/features/navigation/sectionRegistry.ts -> src/features/i18n/featureUiCatalog.ts -> src/features/i18n/uiI18n.ts -> src/features/i18n/uiStringCatalog.ts -> src/features/navigation/sectionRegistry.ts
+08-17 15:06:19.356 W/ReactNativeJS( 5876): 
+08-17 15:06:19.356 W/ReactNativeJS( 5876): Require cycles are allowed, but can result in uninitialized values. Consider refactoring to remove the need for a cycle.
+08-17 15:06:20.751 I/ReactNativeJS( 5876): '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+08-17 15:06:20.751 I/ReactNativeJS( 5876):   hasPeerConnection: true,
+08-17 15:06:20.751 I/ReactNativeJS( 5876):   hasMediaDevices: true }
+08-17 15:06:21.506 W/ReactNativeJS( 5876): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-17 15:06:21.526 W/ReactNativeJS( 5876): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+08-17 15:06:21.539 W/ReactNativeJS( 5876): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-17 15:06:21.550 W/ReactNativeJS( 5876): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-17 15:06:21.737 I/ReactNativeJS( 5876): Running "main" with {"rootTag":1,"initialProps":{},"fabric":true}
+08-17 15:06:26.817 I/ReactNativeJS( 5876): '[UI_PRESS_PROBE]', '{"event":"NETWORK_TRANSPORT_CHANGED","timestamp":"2026-08-17T06:06:26.814Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","transport":"unknown","cellular_generation":null,"label":"알 수 없음","is_connected":false,"is_internet_reachable":null,"carrier":null,"ssid":null,"is_accurate_voip_test_ready":false,"previous_label":null}'
+08-17 15:06:26.929 I/ReactNativeJS( 5876): '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'
+08-17 15:06:27.061 I/ReactNativeJS( 5876): [VoIPToneService] AudioContext not available (React Native environment)
+08-17 15:06:27.282 I/ReactNativeJS( 5876): '[UI_PRESS_PROBE]', '{"event":"SORISAE_FAB_VISIBLE_EVAL","timestamp":"2026-08-17T06:06:27.278Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","visible":false,"platform":"android","sorisae_fab_setting":true,"pending_incoming_voip":false,"voip_call_active":false,"sorisae_window_open":false}'
+08-17 15:06:27.334 I/ReactNativeJS( 5876): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-17 15:06:28.454 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:06:47.860 I/ReactNativeJS( 5876): '[UI_PRESS_PROBE]', '{"event":"LOGIN_BUTTON_PRESS","timestamp":"2026-08-17T06:06:47.857Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"header_account_row"}'
+08-17 15:06:52.989 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:06:54.267 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:06:55.595 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:06:56.855 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:06:57.808 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:06:58.762 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:07:06.264 I/ReactNativeJS( 5876): '[AUTH_FLOW]', '{"event":"DEMO_SESSION_START","target_section":"chat"}'
+08-17 15:07:06.851 I/ReactNativeJS( 5876): '[AUTH_FLOW]', '{"event":"DEMO_SESSION_FAIL","target_section":"chat","error":"회원가입은 이메일 OTP 인증이 필요합니다. /api/auth/signup/request-code → /confirm 경로를 사용하세요."}'
+08-17 15:07:07.312 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:07:08.027 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 15:07:08.862 I/ReactNativeJS( 5876): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'

@@ -1,0 +1,14 @@
+{
+  "adminBase": "https://metanova1004.com",
+  "marketBase": "https://metanova1004.com",
+  "adminUi": {
+    "ok": true,
+    "marker": "관리자 오케스트레이터는 자유 대화형 모드입니다. 질문-응답-역질문을 이어가며 설계/구현/운영을 함께 진행할 수 있습니다."
+  },
+  "marketUi": {
+    "ok": true,
+    "marker": "UI smoke: 답변하고 역질문으로 이어가줘."
+  },
+  "adminScreenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\reports\\playwright-evidence\\admin-llm-reverse-question.png",
+  "marketScreenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\reports\\playwright-evidence\\marketplace-orchestrator-reverse-question.png"
+}

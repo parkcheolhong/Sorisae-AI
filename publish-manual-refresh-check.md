@@ -1,0 +1,108 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary "Admin Workspace 탐색" [ref=e5]:
+      - generic [ref=e6]: AD
+      - navigation [ref=e7]:
+        - link "관리" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e10]: 관리
+        - link "실행" [ref=e11] [cursor=pointer]:
+          - /url: /admin/runs
+          - generic [ref=e13]: 실행
+        - link "승인" [ref=e14] [cursor=pointer]:
+          - /url: /admin/approvals
+          - generic [ref=e16]: 승인
+        - link "배포" [ref=e17] [cursor=pointer]:
+          - /url: /admin/publish
+          - generic [ref=e19]: 배포
+        - link "관측" [ref=e20] [cursor=pointer]:
+          - /url: /admin/observability
+          - generic [ref=e22]: 관측
+      - generic [ref=e23]: LIVE
+    - generic [ref=e24]:
+      - banner [ref=e25]:
+        - generic [ref=e26]:
+          - paragraph [ref=e27]: Publish 보드
+          - heading "Admin Workspace" [level=1] [ref=e28]
+          - paragraph [ref=e29]: shipment readiness, publish payload, release decision을 운영 관점에서 정리한 하위 보드입니다.
+        - generic [ref=e30]:
+          - link "Marketplace" [ref=e31] [cursor=pointer]:
+            - /url: /marketplace
+          - link "관측 보드" [ref=e32] [cursor=pointer]:
+            - /url: /admin/observability
+          - link "관리 홈" [ref=e33] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]: Publish Board
+            - generic [ref=e38]: publish readiness visible
+          - paragraph [ref=e39]: shipment / payload / release gate
+          - heading "배포 전 readiness 와 evidence 를 한 화면에서 점검합니다" [level=2] [ref=e40]
+          - paragraph [ref=e41]: publish payload 계약과 shipment archive readiness를 분리해, 운영자가 배포 가능 여부를 빠르게 판단하도록 구성했습니다.
+          - generic [ref=e42]:
+            - link "Marketplace 열기" [ref=e43] [cursor=pointer]:
+              - /url: /marketplace
+            - link "관측 보드" [ref=e44] [cursor=pointer]:
+              - /url: /admin/observability
+        - generic "핵심 기능 바로가기" [ref=e45]:
+          - generic [ref=e46]: payload contract
+          - generic [ref=e47]: shipment readiness
+          - generic [ref=e48]: release decision
+      - generic [ref=e49]:
+        - main [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e53]:
+              - generic [ref=e54]:
+                - paragraph [ref=e55]: Publish Readiness
+                - heading "Publish Payload Contract" [level=3] [ref=e56]
+                - generic [ref=e57]: applied_to_source
+                - paragraph [ref=e58]: shipment_id, validation_result, evidence_bundle, approval_status 등 필수 필드를 운영 기준으로 검토합니다.
+              - generic [ref=e59]:
+                - paragraph [ref=e60]: Publish Readiness
+                - heading "Shipment Readiness" [level=3] [ref=e61]
+                - generic [ref=e62]: gate tracked
+                - paragraph [ref=e63]: adapter compatibility, traceability map, semantic gate를 함께 확인해 publish ready 여부를 결정합니다.
+              - generic [ref=e64]:
+                - paragraph [ref=e65]: Publish Readiness
+                - heading "Release Window" [level=3] [ref=e66]
+                - generic [ref=e67]: manual release
+                - paragraph [ref=e68]: 운영자가 승인/보류/재검증 중 하나를 빠르게 선택할 수 있도록 릴리즈 상태를 분리합니다.
+            - generic [ref=e69]:
+              - generic [ref=e70]:
+                - paragraph [ref=e71]: Checklist
+                - heading "배포 전 점검 항목" [level=3] [ref=e72]
+                - list [ref=e73]
+              - generic [ref=e78]:
+                - generic [ref=e79]
+                - generic [ref=e84]
+                - generic [ref=e85]
+        - complementary [ref=e98]:
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - paragraph [ref=e101]: Ops Navigation
+              - heading "운영 보드 바로가기" [level=3] [ref=e102]
+              - generic [ref=e103]:
+                - link "관리 홈 전체 운영 카드와 Marketplace 진입점" [ref=e104] [cursor=pointer]:
+                  - /url: /admin
+                - link "실행 보드 self-run 및 live execution 상태" [ref=e107] [cursor=pointer]:
+                  - /url: /admin/runs
+                - link "승인 큐 승인 대기, 재시도, 수동 보정" [ref=e110] [cursor=pointer]:
+                  - /url: /admin/approvals
+                - link "Publish shipment readiness 및 publish gate" [ref=e113] [cursor=pointer]:
+                  - /url: /admin/publish
+                - link "관측 runtime probe, logs, evidence" [ref=e116] [cursor=pointer]:
+                  - /url: /admin/observability
+            - generic [ref=e119]:
+              - paragraph [ref=e120]: External Routes
+              - heading "운영 진입 링크" [level=3] [ref=e121]
+              - generic [ref=e122]:
+                - link "Marketplace 운영 페이지" [ref=e123] [cursor=pointer]:
+                  - /url: /marketplace
+                - link "관측 보드" [ref=e124] [cursor=pointer]:
+                  - /url: /admin/observability
+                - link "관리 홈 새로고침" [ref=e125] [cursor=pointer]:
+                  - /url: /admin
+  - button "Open Next.js Dev Tools" [ref=e131] [cursor=pointer]:
+    - img [ref=e132]
+  - alert [ref=e138]

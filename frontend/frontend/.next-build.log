@@ -1,0 +1,75 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Experiments (use with caution):
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.8s
+  Running TypeScript ...
+  Finished TypeScript in 7.1s ...
+  Collecting page data using 31 workers ...
+  Generating static pages using 31 workers (0/20) ...
+  Generating static pages using 31 workers (5/20) 
+  Generating static pages using 31 workers (10/20) 
+  Generating static pages using 31 workers (15/20) 
+✓ Generating static pages using 31 workers (20/20) in 138ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+├ ƒ /.well-known/webauthn
+├ ƒ /[...adminOnly]
+├ ƒ /admin
+├ ƒ /admin/carbon
+├ ƒ /admin/docs-viewer
+├ ƒ /admin/llm
+├ ƒ /admin/login
+├ ƒ /admin/recovery
+├ ƒ /admin/regional
+├ ƒ /admin/subscription-monitor
+├ ƒ /admin/tourism-review
+├ ƒ /admin/users
+├ ƒ /api/admin/system-settings
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[userId]
+├ ƒ /api/admin/worldlinco-billing-policy
+├ ƒ /api/admin/worldlinco-tourism-promo
+├ ƒ /api/admin/worldlinco-tuning
+├ ƒ /api/backend-proxy/[...path]
+├ ƒ /api/llm/autonomous/chat
+├ ƒ /api/llm/autonomous/session/[sessionId]
+├ ƒ /api/llm/orchestrate/chat
+├ ƒ /api/llm/voice/orchestrate
+├ ƒ /api/llm/voice/synthesize
+├ ƒ /api/marketplace/customer-orchestrate/stage-runs
+├ ƒ /api/marketplace/customer-orchestrate/stage-runs/[runId]
+├ ƒ /api/marketplace/download-product
+├ ƒ /api/marketplace/face-recognition/status
+├ ƒ /api/marketplace/metrics/prometheus
+├ ƒ /api/marketplace/metrics/summary
+├ ƒ /api/marketplace/ml-detectors/status
+├ ƒ /api/proxy
+├ ƒ /marketplace
+├ ƒ /marketplace/[id]
+├ ƒ /marketplace/code-generator
+├ ƒ /marketplace/exp/game
+├ ƒ /marketplace/exp/iot
+├ ƒ /marketplace/exp/music
+├ ƒ /marketplace/exp/predict
+├ ƒ /marketplace/exp/quantum
+├ ƒ /marketplace/exp/security
+├ ƒ /marketplace/metrics
+├ ƒ /marketplace/ml-detectors
+├ ƒ /marketplace/nadotongryoksa
+├ ƒ /marketplace/orchestrator
+├ ƒ /marketplace/subscription
+├ ƒ /marketplace/worldlinco
+├ ○ /privacy
+├ ○ /sorisae-dashboard
+└ ○ /terms
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

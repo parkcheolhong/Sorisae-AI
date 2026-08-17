@@ -1,0 +1,17 @@
+{
+  "device": "R83W70QY11H",
+  "login_ok": true,
+  "mic_tap": {
+    "selector_used": false,
+    "x": 400,
+    "y": 1000
+  },
+  "analysis": {
+    "post_start_present": false,
+    "segment_response_present": false,
+    "segment_response_ok_true": false,
+    "segment_response_sorisae_ok_true": false,
+    "segment_response_lines": []
+  },
+  "pass": false
+}

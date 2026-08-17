@@ -1,0 +1,44 @@
+
+> devanalysis114-frontend@1.0.0 e2e
+> playwright test -c playwright.config.ts tests/marketplace-passkey-login.playwright.spec.ts tests/marketplace-passkey-feature-experience.playwright.spec.ts --project chromium
+
+
+Running 4 tests using 2 workers
+
+  ✘  1 [setup] › tests\admin.setup.playwright.spec.ts:67:5 › create admin storage state (31.5s)
+
+
+  1) [setup] › tests\admin.setup.playwright.spec.ts:67:5 › create admin storage state ──────────────
+
+    TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByTestId('admin-topnav-api-docs') to be visible[22m
+
+
+      84 |         await page.goto('/admin');
+      85 |         await page.waitForURL(/\/admin(?:\/)?(?:\?.*)?$/);
+    > 86 |         await page.getByTestId('admin-topnav-api-docs').waitFor({ timeout: ADMIN_DASHBOARD_WAIT_MS });
+         |                                                         ^
+      87 |     }
+      88 |
+      89 |     await page.context().storageState({ path: STORAGE_STATE_PATH });
+        at C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin.setup.playwright.spec.ts:86:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin.setup.playwright-create-admin-storage-state-setup\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\admin.setup.playwright-create-admin-storage-state-setup\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin.setup.playwright-create-admin-storage-state-setup\error-context.md
+
+  1 failed
+    [setup] › tests\admin.setup.playwright.spec.ts:67:5 › create admin storage state ───────────────
+  3 did not run
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m

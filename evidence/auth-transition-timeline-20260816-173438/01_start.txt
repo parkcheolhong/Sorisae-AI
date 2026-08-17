@@ -1,0 +1,7 @@
+Starting: Intent { cmp=com.parkcheolhong.worldlinco/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.parkcheolhong.worldlinco/.MainActivity
+TotalTime: 570
+WaitTime: 577
+Complete

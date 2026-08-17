@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-08-15T21:00:09.266188+00:00",
+  "adb_device": "172.30.1.15:5555",
+  "rounds": [
+    {
+      "device": "172.30.1.15:5555",
+      "login_ok": true,
+      "mic_tap": {
+        "selector_used": false,
+        "x": 400,
+        "y": 1000
+      },
+      "analysis": {
+        "post_start_present": false,
+        "segment_response_present": false,
+        "segment_response_ok_true": false,
+        "segment_response_sorisae_ok_true": false,
+        "segment_response_lines": []
+      },
+      "pass": false
+    },
+    {
+      "device": "172.30.1.15:5555",
+      "login_ok": true,
+      "mic_tap": {
+        "selector_used": false,
+        "x": 400,
+        "y": 1000
+      },
+      "analysis": {
+        "post_start_present": false,
+        "segment_response_present": false,
+        "segment_response_ok_true": false,
+        "segment_response_sorisae_ok_true": false,
+        "segment_response_lines": []
+      },
+      "pass": false
+    }
+  ],
+  "all_passed": false
+}

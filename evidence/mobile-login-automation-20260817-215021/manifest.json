@@ -1,0 +1,16 @@
+{
+  "device": "172.30.1.15:5555",
+  "package": "com.parkcheolhong.worldlinco",
+  "rounds": 1,
+  "reset_session_applied": true,
+  "strict_reset_session_mode": true,
+  "results": [
+    {
+      "round": 1,
+      "success": false,
+      "error": "Round 1 login automation failed: ensure_reason=login_409_cleared_but_not_authenticated, auth_debug_state="
+    }
+  ],
+  "all_passed": false,
+  "generated_at": "2026-08-17T21:54:12.5507403+09:00"
+}

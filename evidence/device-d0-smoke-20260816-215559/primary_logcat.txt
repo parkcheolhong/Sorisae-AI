@@ -1,0 +1,4 @@
+--------- beginning of main
+08-16 21:59:16.918 I/ReactNativeJS( 6705): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T12:59:16.918Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","url":"worldlingo://voip/open?action=validation"}'
+08-16 21:59:16.933 I/ReactNativeJS( 6705): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T12:59:16.932Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"active_initial_url","url":"worldlingo://voip/open?action=validation"}'
+08-16 21:59:16.975 I/ReactNativeJS( 6705): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'

@@ -1,0 +1,24 @@
+Run22 Face/Sorisae Block Check Summary
+GeneratedAt=2026-08-13T21:22:00+09:00
+
+Scope
+- Verify whether the previous block banner appears when directly opening face translate and Sorisae AI on the physical device.
+
+Evidence
+- run22_after_login_confirm.png
+- run22_after_login_confirm.xml
+- run22_face_translate_open.png
+- run22_face_translate_open.xml
+- run22_sorisae_open_retry.png
+- run22_sorisae_open_retry.xml
+- run21_voice_block_fix_launch.txt
+
+Observed Results
+- Face translate opened normally after login.
+- No visible block banner saying "차단 사유: 이미 음성 캡처가 진행 중입니다. 잠시 후 다시 시도해 주세요." on the face translate screen.
+- Sorisae AI window opened normally from the bird floating button.
+- No visible block banner on the Sorisae AI window.
+- Sorisae AI window showed the expected empty-state message: "아직 대화가 없습니다. 아래 마이크를 켜고 말씀해 보세요."
+
+Conclusion
+- The previously reported capture-busy block banner is not reproduced on either face translate or Sorisae AI in the updated release build.

@@ -1,0 +1,5 @@
+out_dir=C:\Users\WORK\source\repos\parkcheolhong\codeAI\backend\tmp\ui_api_failure_split_20260809_180038
+classification=BOTH_FAIL
+api_fail=1
+ui_fail=1
+result_json=C:\Users\WORK\source\repos\parkcheolhong\codeAI\backend\tmp\ui_api_failure_split_20260809_180038\smoke_result.json

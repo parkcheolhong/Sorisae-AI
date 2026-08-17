@@ -1,0 +1,7 @@
+08-16 23:15:15.668 I/ReactNativeJS(22784): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-16 23:16:10.433 I/ReactNativeJS(22784): '[FACE_CONVERSATION]', '{"event":"face_auto_voice_start_begin"}'
+08-16 23:16:10.501 I/ReactNativeJS(22784): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_ENTER","auto_mode":true,"target":"main","armed":false,"recording":false,"in_flight_start":false,"in_flight_stop":false}'
+08-16 23:16:10.512 I/ReactNativeJS(22784): '[FACE_CAPTURE_TRACE]', '{"trace_id":"face-trace-face.interpret-msvw172d-4nd5e1","event":"start_tap","from_lang":"ko","to_lang":"en","face_screen_open":true,"sorisae_window_open":false}'
+08-16 23:16:10.520 I/ReactNativeJS(22784): '[FACE_CONVERSATION]', '{"event":"face_auto_voice_start_end"}'
+08-16 23:16:11.016 I/ReactNativeJS(22784): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_ENTER","auto_mode":true,"target":"main","armed":false,"recording":false,"in_flight_start":true,"in_flight_stop":false}'
+08-16 23:16:11.018 I/ReactNativeJS(22784): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_BLOCKED","reason":"busy","armed":false,"recording":false,"in_flight_start":true,"in_flight_stop":false}'

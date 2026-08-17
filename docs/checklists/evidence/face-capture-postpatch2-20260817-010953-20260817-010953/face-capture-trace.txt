@@ -1,0 +1,5 @@
+08-17 01:11:00.919 I/ReactNativeJS( 9530): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-17 01:11:47.445 I/ReactNativeJS( 9530): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-17 01:12:32.950 I/ReactNativeJS( 9530): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-17 01:13:17.504 I/ReactNativeJS( 9530): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-17 01:14:12.056 I/ReactNativeJS( 9530): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'

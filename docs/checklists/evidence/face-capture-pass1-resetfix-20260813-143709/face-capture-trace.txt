@@ -1,0 +1,4 @@
+﻿08-13 14:37:09.974 I/ReactNativeJS(17354): '[FACE_CONVERSATION]', '{"event":"file_growth_silence","growth_bps":3793,"peak_bps":11378}'
+08-13 14:37:10.069 I/ReactNativeJS(17354): '[FACE_CONVERSATION]', '{"event":"file_growth_speech","growth_bps":10779,"peak_bps":10779}'
+08-13 14:37:10.287 I/ReactNativeJS(17354): '[FACE_CONVERSATION]', '{"event":"file_growth_silence","growth_bps":3459,"peak_bps":8731}'
+08-13 14:37:14.764 I/ReactNativeJS(19346): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'

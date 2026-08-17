@@ -1,0 +1,10 @@
+[00:12:02] logcat cleared
+[00:12:12] pre-reset complete: force-stop + cooldown + home
+[00:12:18] app launch requested: com.parkcheolhong.worldlinco
+[00:12:22] foreground confirmed: com.parkcheolhong.worldlinco
+[00:12:26] permission dialog handled if present
+[00:14:52] login state: ok=False attempted=True reason=login_timeout_probe
+[00:14:52] blocked early: login not ready
+FAIL: login not ready (reason=login_timeout_probe)
+TRACE: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-perf-r2-20260817-001200-20260817-001200\face-capture-trace.txt
+SUMMARY: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-perf-r2-20260817-001200-20260817-001200\summary.json

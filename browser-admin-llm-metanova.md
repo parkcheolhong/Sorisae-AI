@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e7]
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: 🛡️
+      - heading "관리자 대시보드" [level=1] [ref=e12]
+      - paragraph [ref=e13]: 관리자 계정으로 로그인하세요
+      - paragraph [ref=e14]: 아이디/비밀번호 기억, 지문/패스키 로그인 사용 여부, 로그인 전 복구 진입 경로를 이 화면에서 바로 확인할 수 있습니다.
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: 이메일
+        - textbox "admin@example.com" [ref=e18]: 119cash@naver.com
+      - generic [ref=e19]:
+        - generic [ref=e20]: 비밀번호
+        - textbox "••••••••" [ref=e21]: space0215@
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - checkbox "아이디 기억" [checked] [ref=e24]
+          - text: 아이디 기억
+        - generic [ref=e25]:
+          - checkbox "비밀번호 기억" [checked] [ref=e26]
+          - text: 비밀번호 기억
+        - generic [ref=e27]:
+          - checkbox "이 기기에서 지문/패스키 로그인 사용" [checked] [ref=e28]
+          - text: 이 기기에서 지문/패스키 로그인 사용
+        - paragraph [ref=e29]: 공용 기기에서는 비밀번호 기억을 권장하지 않습니다.
+      - button "🔐 로그인" [ref=e30] [cursor=pointer]
+      - button "📱 지문/패스키 로그인" [ref=e31] [cursor=pointer]
+      - button "🪪 이 기기 패스키 등록" [ref=e32] [cursor=pointer]
+      - generic [ref=e33]:
+        - link "비밀번호를 잊으셨나요?" [ref=e34] [cursor=pointer]:
+          - /url: /admin/recovery
+        - link "통신사 본인확인 후 비밀번호 재설정" [ref=e35] [cursor=pointer]:
+          - /url: /admin/recovery?mode=carrier
+      - generic [ref=e36]:
+        - generic [ref=e37]: 로그인 문제 해결 안내
+        - list [ref=e38]:
+          - listitem [ref=e39]: 관리자 비밀번호를 잊은 경우 로그인 전 복구 페이지에서 재설정 흐름을 시작할 수 있습니다.
+          - listitem [ref=e40]: 통신사 본인확인과 패스키(지문/Face ID)는 다음 단계에서 관리자/회원 공통 인증 코어로 연결할 예정입니다.
+          - listitem [ref=e41]: 고위험 설정 변경 시 추가 본인확인이 필요할 수 있습니다.
+    - paragraph [ref=e42]: DevAnalysis114 Admin v2.2.0

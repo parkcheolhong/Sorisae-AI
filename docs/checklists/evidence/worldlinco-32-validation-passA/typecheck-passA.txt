@@ -1,0 +1,3 @@
+Command: npm run typecheck
+Result: PASS
+Notes: App.tsx compiles after extracting the voice capture workflow into useVoiceCaptureManager.

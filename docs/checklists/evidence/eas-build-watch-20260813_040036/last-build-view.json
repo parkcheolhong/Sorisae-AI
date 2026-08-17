@@ -1,0 +1,66 @@
+﻿cmd : ★ eas-cli@21.8.0 is now available.
+At C:\Users\WORK\source\repos\parkcheolhong\codeAI\scripts\watch_ea
+s_build_status.ps1:47 char:20
++ ...           $raw = cmd /c "npx eas-cli build:view $BuildId --js
+on" 2>&1
++                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo          : NotSpecified: (★ eas-cli@21.8.0 is n 
+   ow available.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+To upgrade, run:
+npm install -g eas-cli
+Proceeding with outdated version.
+
+- Fetching the build…\ Fetching the build…| Fetching the build…✔ Fo
+und a matching build for the project @parkcheolhong/nadotongryoksa
+{
+  "id": "bd968eb2-9176-4060-8b34-4b2d5d10ca7d",
+  "status": "FINISHED",
+  "platform": "ANDROID",
+  "artifacts": {
+    "buildUrl": "https://expo.dev/artifacts/eas/N5bL9ZuyqQmMRTpBD6_CDoVqaHVSsqN9Jx6ptDoVhl4.aab",
+    "applicationArchiveUrl": "https://expo.dev/artifacts/eas/N5bL9ZuyqQmMRTpBD6_CDoVqaHVSsqN9Jx6ptDoVhl4.aab"
+  },
+  "fingerprint": {
+    "id": "019ff749-a26f-7757-85b6-2cf2322351db",
+    "hash": "89f9ce3577aaaa170f060b22f4ac50b98d150886"
+  },
+  "initiatingActor": {
+    "id": "40137e61-333c-4eae-8ff3-c08221b4ffa6",
+    "displayName": "parkcheolhong"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/25954146-4067-4c4f-9835-24382678e4b2/bd968eb2-9176-4060-8b34-4b2d5d10ca7d/2026-08-12T18%3A54%3A17Z-3e1327e0-1c04-4230-ac0e-a76fc85523d0.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260812%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260812T191606Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=23e4c1f6b9569b91203de0ce39f68fd5285064b6617e3714977f55f44be6276a9625776a259553508c7f0748f6b77055f1a462e042afb9973cb3b78fca4d6a8d50ca45316fd17c2046eb51658dae819cfc36debccceb324a6c8a779b5c5a16f2bebd0d4db18a845c6614620fcf7359c70e05d7d0d0c80ad3d445e1254377858c1e7c160a1f111123de25e092ee7fbaeef490a09bc55b94024466bf815b36c4d108966f4f9e61b3138bbe326da3469f61fade3a6c5de74bb9cd7faac40d02a646e805134b2988e16ad47b253cdb9ecb891869d9c42d6040e6d600ce8aa1484778b294dbcc46ed0d349c342d3d99d3687d24daa8bdb33a784bfb7112832e7a06d9"
+  ],
+  "project": {
+    "id": "25954146-4067-4c4f-9835-24382678e4b2",
+    "name": "World Linco",
+    "slug": "nadotongryoksa",
+    "ownerAccount": {
+      "id": "0115dacd-6667-42e2-80e8-cef7533bfa21",
+      "name": "parkcheolhong"
+    }
+  },
+  "channel": "production",
+  "distribution": "STORE",
+  "buildProfile": "production",
+  "sdkVersion": "56.0.0",
+  "appVersion": "1.0.246",
+  "appBuildVersion": "331",
+  "runtimeVersion": "1.0.76",
+  "gitCommitHash": "2494f4c6fe37ac794be7d292659d60f2d2d04864",
+  "gitCommitMessage": "ci(pr111): make admin build step cross-platform in pipeline script",
+  "priority": "NORMAL",
+  "createdAt": "2026-08-12T18:43:45.850Z",
+  "updatedAt": "2026-08-12T19:03:46.407Z",
+  "completedAt": "2026-08-12T19:03:46.217Z",
+  "expirationDate": "2026-09-11T18:43:45.897Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 479,
+    "buildQueueTime": 636036,
+    "buildDuration": 563852
+  }
+}

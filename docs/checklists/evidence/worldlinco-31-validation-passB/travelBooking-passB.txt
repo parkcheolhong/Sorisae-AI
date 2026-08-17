@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/travelBooking.test.ts
+Result: PASS
+Notes: Representative app-package smoke test passed after the UI section extraction.

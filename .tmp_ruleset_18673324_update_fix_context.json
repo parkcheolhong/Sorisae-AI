@@ -1,0 +1,29 @@
+{
+  "name": "main-pr-core-hard-gates-v1",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/main"],
+      "exclude": []
+    }
+  },
+  "bypass_actors": [],
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": true,
+        "required_status_checks": [
+          { "context": "constitution-hard-gate / constitution-hard-gate" },
+          { "context": "checklist-consistency-gate / consistency-hard-gate" },
+          { "context": "feature-engine-isolation-gate / feature-engine-isolation-gate" },
+          { "context": "backend-security-gate / backend-security-gate" },
+          { "context": "sorisae-friend-chat-gate / sorisae-unit-gate" },
+          { "context": "auth-duplicate-login-gate / enforce-single-session" }
+        ]
+      }
+    }
+  ]
+}

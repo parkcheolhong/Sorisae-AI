@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://metanova1004.com",
+      "localStorage": [
+        {
+          "name": "admin_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6IkhIWFFwTkNoMDBSQmV1WmRGVFEtQVFhSXNqWXowM3FPIn0._8okr3rF_A30kyJPDqWh3jYHcsY_mxm6tnMeDLOBLSo"
+        }
+      ]
+    }
+  ]
+}

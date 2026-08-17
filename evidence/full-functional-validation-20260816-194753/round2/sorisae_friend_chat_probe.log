@@ -1,0 +1,11 @@
+[FAIL] health: status=200
+[PASS] marketplace_manifest: status=200 build=331 min=323
+[PASS] friend_chat_model_route: base=http://host.docker.internal:8008/v1 model=Qwen/Qwen2.5-Coder-14B-Instruct-AWQ served=['Qwen/Qwen2.5-Coder-14B-Instruct-AWQ']
+[PASS] friend_chat_text_llm: status=200 response_len=116
+[PASS] m4a_normalize_ssot: docker normalized_bytes=84042 transcript_len=10
+[PASS] friend_chat_audio_silent_graceful: status=422 detail=음성이 감지되지 않았습니다. 다시 말씀해 주세요.
+[PASS] friend_chat_audio_speech_m4a: status=200 transcript_len=10 response_len=370
+
+[report] C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\sorisae-friend-chat-probe-20260816-104942\report.json
+
+[FAIL] Sorisae friend-chat probe failed — 배포/머지 차단

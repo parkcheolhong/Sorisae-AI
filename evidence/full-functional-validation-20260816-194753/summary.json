@@ -1,0 +1,18 @@
+[
+  {
+    "round": 1,
+    "mobile_core_tests_exit": 0,
+    "auth_duplicate_login_exit": 1,
+    "sorisae_probe_exit": 1,
+    "ops_health_exit": 1,
+    "admin_passkey_e2e_exit": 1
+  },
+  {
+    "round": 2,
+    "mobile_core_tests_exit": 0,
+    "auth_duplicate_login_exit": 1,
+    "sorisae_probe_exit": 1,
+    "ops_health_exit": 1,
+    "admin_passkey_e2e_exit": 1
+  }
+]

@@ -1,0 +1,45 @@
+
+> devanalysis114-frontend@1.0.0 e2e
+> playwright test -c playwright.config.ts tests/admin-passkey-operational.playwright.spec.ts --project chromium
+
+
+Running 3 tests using 1 worker
+
+  ✘  1 [setup] › tests\admin.setup.playwright.spec.ts:89:5 › create admin storage state (376ms)
+
+
+  1) [setup] › tests\admin.setup.playwright.spec.ts:89:5 › create admin storage state ──────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeTruthy[2m()[22m
+
+    Received: [31mfalse[39m
+
+      79 |         },
+      80 |     });
+    > 81 |     expect(response.ok()).toBeTruthy();
+         |                           ^
+      82 |     const payload = await response.json();
+      83 |     const token = String(payload?.access_token || '');
+      84 |     expect(token).not.toBe('');
+        at loginAndInjectAdminToken (C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin.setup.playwright.spec.ts:81:27)
+        at waitForAdminTopnavReady (C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin.setup.playwright.spec.ts:62:9)
+        at C:\Users\WORK\source\repos\parkcheolhong\codeAI\frontend\frontend\tests\admin.setup.playwright.spec.ts:112:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin.setup.playwright-create-admin-storage-state-setup\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\admin.setup.playwright-create-admin-storage-state-setup\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin.setup.playwright-create-admin-storage-state-setup\error-context.md
+
+  1 failed
+    [setup] › tests\admin.setup.playwright.spec.ts:89:5 › create admin storage state ───────────────
+  2 did not run
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m

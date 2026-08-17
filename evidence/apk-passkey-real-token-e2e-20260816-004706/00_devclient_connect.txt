@@ -1,0 +1,8 @@
+Starting: Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... }
+Warning: Activity not started, its current task has been brought to the front
+Status: ok
+LaunchState: HOT
+Activity: com.parkcheolhong.worldlinco/.MainActivity
+TotalTime: 618
+WaitTime: 665
+Complete

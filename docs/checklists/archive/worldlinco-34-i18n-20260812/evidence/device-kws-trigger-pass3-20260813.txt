@@ -1,0 +1,13 @@
+[KWS-VERIFY] Checking adb availability...
+[KWS-VERIFY] Online devices:
+  172.30.1.15:5555	device
+Requested device serial 'R83W70QY11H' is not online.
+At C:\Users\WORK\source\repos\parkcheolhong\codeAI\apps\mobile-nadotongryoksa\s
+cripts\verify_on_device_kws.ps1:158 char:9
++         throw "Requested device serial '$DeviceSerial' is not online. ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Requested devic... is not onl 
+   ine.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Requested device serial 'R83W70QY11H' is not onl 
+   ine.
+ 

@@ -1,0 +1,20 @@
+[21:55:59] D-0 device smoke -> C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\device-d0-smoke-20260816-215559
+[21:55:59] Devices: primary=R83W70QY11H secondary=172.30.1.15:5555
+[21:55:59] adb devices:
+R83W70QY11H
+10.202.94.167:5555
+172.30.1.15:5555
+[21:56:00] R83W70QY11H package:     versionCode=331 minSdk=24 targetSdk=36
+[21:56:00] 172.30.1.15:5555 package:     versionCode=331 minSdk=24 targetSdk=36
+[21:56:00] Launch + auth wait on R83W70QY11H
+[21:56:14] Tap worldlinco-auth-email-input at 422,684 on R83W70QY11H
+[21:56:30] Tap worldlinco-auth-password-input at 398,832 on R83W70QY11H
+[21:56:48] Tap worldlinco-auth-login-submit-button at 401,931 on R83W70QY11H
+[21:56:48] UI login submit attempted on R83W70QY11H
+[21:59:09] Primary auth ready: False
+[21:59:16] Primary auth state: ready=False blocker=auth_not_ready restore_applied=False restore_invalid=False token_ready=False user_ready=False presence_connected=False session_present=False ui_probe_seen=False react_log_silent=False
+[21:59:16] Secondary auth state: ready=False blocker=auth_not_ready restore_applied=False restore_invalid=False token_ready=False user_ready=False presence_connected=False session_present=False ui_probe_seen=False react_log_silent=False
+[21:59:16] Open friend folder via validation deeplink (build 76 hub)
+[21:59:29] Friend hub visible in UI dump: False
+[21:59:30] Friend hub blocker: friend_folder_not_detected
+[21:59:30] Summary written: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\device-d0-smoke-20260816-215559\summary.json

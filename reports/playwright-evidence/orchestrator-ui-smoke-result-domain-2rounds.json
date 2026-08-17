@@ -1,0 +1,20 @@
+﻿{
+    "domain":  "https://metanova1004.com",
+    "executedAt":  "2026-04-27T22:15:59.5748079Z",
+    "rounds":  [
+                   {
+                       "round":  1,
+                       "adminOk":  true,
+                       "marketOk":  true,
+                       "adminMarker":  "관리자 오케스트레이터는 자유 대화형 모드입니다. 질문-응답-역질문을 이어가며 설계/구현/운영을 함께 진행할 수 있습니다.",
+                       "marketMarker":  "UI smoke: 답변하고 역질문으로 이어가줘."
+                   },
+                   {
+                       "round":  2,
+                       "adminOk":  true,
+                       "marketOk":  true,
+                       "adminMarker":  "관리자 오케스트레이터는 자유 대화형 모드입니다. 질문-응답-역질문을 이어가며 설계/구현/운영을 함께 진행할 수 있습니다.",
+                       "marketMarker":  "UI smoke: 답변하고 역질문으로 이어가줘."
+                   }
+               ]
+}

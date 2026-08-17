@@ -1,0 +1,34 @@
+[KWS-VERIFY] Checking adb availability...
+[KWS-VERIFY] Online devices:
+  172.30.1.15:5555	device
+[KWS-VERIFY] Target device: 172.30.1.15:5555
+[KWS-VERIFY] Launching app...
+[KWS-VERIFY] Launch attempt #1: am start -n com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity
+[KWS-VERIFY] Clearing old logs...
+[KWS-VERIFY] Capturing logs for 120 seconds
+[KWS-VERIFY] Watch for: native_started, native_wake, native_error, scan_idle, companion handler markers, kws_init markers
+[KWS-VERIFY] Preflow loop success: 'worldlinco-companion-voicecall-toggle' visible before trigger (attempt=1).
+[KWS-VERIFY] Triggering companion arm via accessibility id: worldlinco-companion-voicecall-toggle
+[KWS-VERIFY] Tap 'worldlinco-companion-voicecall-toggle' at (400,1149)
+[KWS-VERIFY] Armed-state label not yet stable; retry check (1/3).
+[KWS-VERIFY] Re-tap skipped: toggle not visible during armed-state retry.
+[KWS-VERIFY] Armed-state label not yet stable; retry check (2/3).
+[KWS-VERIFY] Re-tap skipped: toggle not visible during armed-state retry.
+[KWS-VERIFY] Armed-state label not yet stable; retry check (3/3).
+[KWS-VERIFY] Armed-state UI not confirmed after retries.
+[KWS-VERIFY] Trigger tap received but armed-state UI was not confirmed.
+[KWS-VERIFY] Trigger scenario could not toggle companion arm.
+[KWS-VERIFY] ---- filtered output ----
+08-13 01:19:51.197 I/ReactNativeJS(16680): '[UI_PRESS_PROBE]', '{"event":"COMPANION_TOGGLE_TAP","timestamp":"2026-08-12T16:19:51.196Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","armed_before":false,"has_user":false,"test_mode":true,"test_mode_show_login":true}'
+08-13 01:19:51.197 I/ReactNativeJS(16680): '[COMPANION_HANDLER]', '{"event":"COMPANION_TOGGLE_TAP","armed_before":false,"show_login":false,"has_user":false}'
+08-13 01:19:51.198 I/ReactNativeJS(16680): '[UI_PRESS_PROBE]', '{"event":"COMPANION_START_VOICE_REQUEST","timestamp":"2026-08-12T16:19:51.197Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","auto_mode":true}'
+08-13 01:19:51.198 I/ReactNativeJS(16680): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_REQUEST","auto_mode":true}'
+08-13 01:19:51.201 I/ReactNativeJS(16680): '[UI_PRESS_PROBE]', '{"event":"COMPANION_ARMED_ON","timestamp":"2026-08-12T16:19:51.200Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","reason":"manual_toggle"}'
+08-13 01:19:51.202 I/ReactNativeJS(16680): '[COMPANION_HANDLER]', '{"event":"COMPANION_ARMED_ON","reason":"manual_toggle"}'
+[KWS-VERIFY] ---- gate summary ----
+[KWS-VERIFY] has_companion_kws=False has_companion_voice_call=False has_native_started=False has_native_skip=False has_native_wake=False has_native_error=False has_scan_idle=False
+[KWS-VERIFY] has_companion_tap_marker=True has_companion_armed_on_marker=True has_companion_start_voice_marker=True
+[KWS-VERIFY] has_companion_kws_init_begin_marker=False has_companion_kws_init_end_marker=False has_companion_kws_init_error_marker=False
+[KWS-VERIFY] GATE: FAIL (no companion marker observed - trigger path may not be reached)
+[KWS-VERIFY] Raw log saved: C:\Users\WORK\AppData\Local\Temp\kws_verify_log.txt
+[KWS-VERIFY] PASS condition example: native_started -> native_wake sequence appears.

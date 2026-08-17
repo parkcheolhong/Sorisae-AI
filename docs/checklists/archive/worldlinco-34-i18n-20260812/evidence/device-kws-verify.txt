@@ -1,0 +1,21 @@
+
+> mobile-nadotongryoksa@1.0.3 verify:kws:device
+> powershell -NoProfile -File ./scripts/verify_on_device_kws.ps1 -LaunchApp
+
+[KWS-VERIFY] Checking adb availability...
+[KWS-VERIFY] Online devices:
+  R83W70QY11H	device
+  172.30.1.15:5555	device
+[KWS-VERIFY] Launching app...
+adb.exe: more than one device/emulator
+[KWS-VERIFY] Clearing old logs...
+- waiting for device -
+error: more than one device/emulator
+[KWS-VERIFY] Capturing logs for 120 seconds
+[KWS-VERIFY] Watch for: native_started, native_wake, native_error, scan_idle
+- waiting for device -
+error: more than one device/emulator
+[KWS-VERIFY] ---- filtered output ----
+[KWS-VERIFY] No KWS markers found.
+[KWS-VERIFY] Raw log saved: C:\Users\WORK\AppData\Local\Temp\kws_verify_log.txt
+[KWS-VERIFY] PASS condition example: native_started -> native_wake sequence appears.

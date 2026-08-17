@@ -1,0 +1,89 @@
+
+> mobile-nadotongryoksa@1.0.3 test
+> jest --runInBand src/__tests__/biometricGate.test.ts src/__tests__/voiceCaptureLease.test.ts src/__tests__/voiceRelayTurnController.test.ts src/__tests__/travelBooking.test.ts src/__tests__/worldlincoCoreFlow.integration.test.ts
+
+PASS src/__tests__/worldlincoCoreFlow.integration.test.ts
+  ● Console
+
+    console.log
+      [AUTH_FLOW] {"event":"LOGIN_API_REQUEST","endpoint":"http://127.0.0.1:8000/api/auth/login","email":"qa@worldlinco.dev"}
+
+      at log (src/app/appApiClient.ts:56:13)
+
+    console.log
+      [AUTH_FLOW] {"event":"LOGIN_API_SUCCESS","endpoint":"http://127.0.0.1:8000/api/auth/login","email":"qa@worldlinco.dev","status":200}
+
+      at log (src/app/appApiClient.ts:68:13)
+
+PASS src/__tests__/voiceCaptureLease.test.ts
+  ● Console
+
+    console.log
+      [VOICE_LEASE] {"event":"acquire","owner":"face"}
+
+      at log (src/services/voiceCaptureLease.ts:59:13)
+
+    console.log
+      [VOICE_LEASE] {"event":"release","owner":"face"}
+
+      at log (src/services/voiceCaptureLease.ts:69:17)
+
+    console.log
+      [VOICE_LEASE] {"event":"acquire","owner":"face"}
+
+      at log (src/services/voiceCaptureLease.ts:59:13)
+
+    console.log
+      [VOICE_LEASE] {"event":"revoke","prev":"face","next":"song"}
+
+      at Object.log [as stopPrevious] (src/services/voiceCaptureLease.ts:49:25)
+
+    console.log
+      [VOICE_LEASE] {"event":"acquire","owner":"song"}
+
+      at log (src/services/voiceCaptureLease.ts:59:13)
+
+    console.log
+      [VOICE_LEASE] {"event":"revoke_current","prev":"song","reason":"test_reset"}
+
+      at log (src/services/voiceCaptureLease.ts:95:17)
+
+    console.log
+      [VOICE_LEASE] {"event":"acquire","owner":"sorisae"}
+
+      at log (src/services/voiceCaptureLease.ts:59:13)
+
+    console.log
+      [VOICE_LEASE] {"event":"revoke","prev":"sorisae","next":"inter_call"}
+
+      at Object.log [as stopPrevious] (src/services/voiceCaptureLease.ts:49:25)
+
+    console.log
+      [VOICE_LEASE] {"event":"acquire","owner":"inter_call"}
+
+      at log (src/services/voiceCaptureLease.ts:59:13)
+
+    console.log
+      [VOICE_LEASE] {"event":"revoke_current","prev":"inter_call","reason":"test_reset"}
+
+      at log (src/services/voiceCaptureLease.ts:95:17)
+
+    console.log
+      [VOICE_LEASE] {"event":"acquire","owner":"song"}
+
+      at log (src/services/voiceCaptureLease.ts:59:13)
+
+    console.log
+      [VOICE_LEASE] {"event":"revoke_current","prev":"song","reason":"feature_switch"}
+
+      at log (src/services/voiceCaptureLease.ts:95:17)
+
+PASS src/__tests__/voiceRelayTurnController.test.ts
+PASS src/__tests__/biometricGate.test.ts
+PASS src/__tests__/travelBooking.test.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       40 passed, 40 total
+Snapshots:   0 total
+Time:        0.432 s, estimated 1 s
+Ran all test suites matching /src\\__tests__\\biometricGate.test.ts|src\\__tests__\\voiceCaptureLease.test.ts|src\\__tests__\\voiceRelayTurnController.test.ts|src\\__tests__\\travelBooking.test.ts|src\\__tests__\\worldlincoCoreFlow.integration.test.ts/i.

@@ -1,0 +1,4 @@
+581:> Task :expo-av:configureCMakeDebug[arm64-v8a] FAILED
+661:FAILURE: Build failed with an exception.
+665:> [CXX1210] C:\Users\WORK\source\repos\parkcheolhong\codeAI\codeAI\apps\mobile-nadotongryoksa\node_modules\expo-av\android\CMakeLists.txt debug|arm64-v8a : No compatible library found
+679:BUILD FAILED in 31s

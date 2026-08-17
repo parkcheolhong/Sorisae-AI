@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-08-16T13:01:29.5365629Z",
+  "run_dir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-d0-smoke-20260816-220106",
+  "primary_device": "R83W70QY11H",
+  "secondary_device": "172.30.1.15:5555",
+  "auth_ready": true,
+  "primary_auth": {
+    "device": "R83W70QY11H",
+    "auth_ready": true,
+    "blocker": null,
+    "restore_found": false,
+    "restore_applied": false,
+    "restore_invalid": false,
+    "token_ready": false,
+    "user_ready": false,
+    "presence_connected": false,
+    "login_invalid": false,
+    "session_present": true,
+    "ui_probe_seen": true,
+    "react_log_silent": false
+  },
+  "secondary_auth": {
+    "device": "172.30.1.15:5555",
+    "auth_ready": true,
+    "blocker": null,
+    "restore_found": false,
+    "restore_applied": false,
+    "restore_invalid": false,
+    "token_ready": false,
+    "user_ready": false,
+    "presence_connected": false,
+    "login_invalid": false,
+    "session_present": true,
+    "ui_probe_seen": true,
+    "react_log_silent": false
+  },
+  "auth_api_credential": {
+    "ok": false,
+    "blocker": "login_api_error"
+  },
+  "friend_hub_visible": true,
+  "friend_hub_blocker": null,
+  "network_probe_hits": [
+    {
+      "pattern": "VOIP_NETWORK_SNAPSHOT",
+      "count": 0
+    },
+    {
+      "pattern": "NETWORK_TRANSPORT_CHANGED",
+      "count": 0
+    },
+    {
+      "pattern": "FRIEND_FOLDER_DIAG",
+      "count": 0
+    },
+    {
+      "pattern": "VOIP_VALIDATION_DEEPLINK_AUTH_REQUIRED",
+      "count": 0
+    },
+    {
+      "pattern": "friend-add-mode-contacts",
+      "count": 0
+    },
+    {
+      "pattern": "friend-pick-contact",
+      "count": 0
+    }
+  ],
+  "voip": null
+}

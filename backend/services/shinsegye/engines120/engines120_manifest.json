@@ -1,0 +1,962 @@
+﻿[
+    {
+        "slot":  1,
+        "priority":  "P1",
+        "source_rel":  "sorisae_voice_movie_server.py",
+        "source_name":  "sorisae_voice_movie_server.py",
+        "target_file":  "slot001_sorisae_voice_movie_server.py",
+        "bytes":  50028
+    },
+    {
+        "slot":  2,
+        "priority":  "P1",
+        "source_rel":  "sorisae_iot_voice_control.py",
+        "source_name":  "sorisae_iot_voice_control.py",
+        "target_file":  "slot002_sorisae_iot_voice_control.py",
+        "bytes":  37660
+    },
+    {
+        "slot":  3,
+        "priority":  "P1",
+        "source_rel":  "hybrid_conversation_translator.py",
+        "source_name":  "hybrid_conversation_translator.py",
+        "target_file":  "slot003_hybrid_conversation_translator.py",
+        "bytes":  37657
+    },
+    {
+        "slot":  4,
+        "priority":  "P1",
+        "source_rel":  "sorisae_voice_processor.py",
+        "source_name":  "sorisae_voice_processor.py",
+        "target_file":  "slot004_sorisae_voice_processor.py",
+        "bytes":  36995
+    },
+    {
+        "slot":  5,
+        "priority":  "P1",
+        "source_rel":  "voice_tuner.py",
+        "source_name":  "voice_tuner.py",
+        "target_file":  "slot005_voice_tuner.py",
+        "bytes":  35832
+    },
+    {
+        "slot":  6,
+        "priority":  "P1",
+        "source_rel":  "sorisae_voice_reactive.py",
+        "source_name":  "sorisae_voice_reactive.py",
+        "target_file":  "slot006_sorisae_voice_reactive.py",
+        "bytes":  34190
+    },
+    {
+        "slot":  7,
+        "priority":  "P1",
+        "source_rel":  "voice_calling_system.py",
+        "source_name":  "voice_calling_system.py",
+        "target_file":  "slot007_voice_calling_system.py",
+        "bytes":  30957
+    },
+    {
+        "slot":  8,
+        "priority":  "P1",
+        "source_rel":  "hybrid_interpreter_system.py",
+        "source_name":  "hybrid_interpreter_system.py",
+        "target_file":  "slot008_hybrid_interpreter_system.py",
+        "bytes":  30072
+    },
+    {
+        "slot":  9,
+        "priority":  "P1",
+        "source_rel":  "modules\\ai_code_manager\\music_chat_web.py",
+        "source_name":  "music_chat_web.py",
+        "target_file":  "slot009_music_chat_web.py",
+        "bytes":  28483
+    },
+    {
+        "slot":  10,
+        "priority":  "P1",
+        "source_rel":  "modules\\ai_code_manager\\dream_interpreter.py",
+        "source_name":  "dream_interpreter.py",
+        "target_file":  "slot010_dream_interpreter.py",
+        "bytes":  26451
+    },
+    {
+        "slot":  11,
+        "priority":  "P1",
+        "source_rel":  "modules\\ai_code_manager\\ai_music_composer.py",
+        "source_name":  "ai_music_composer.py",
+        "target_file":  "slot011_ai_music_composer.py",
+        "bytes":  26325
+    },
+    {
+        "slot":  12,
+        "priority":  "P1",
+        "source_rel":  "hybrid_voice_processor.py",
+        "source_name":  "hybrid_voice_processor.py",
+        "target_file":  "slot012_hybrid_voice_processor.py",
+        "bytes":  25742
+    },
+    {
+        "slot":  13,
+        "priority":  "P1",
+        "source_rel":  "multilingual_system.py",
+        "source_name":  "multilingual_system.py",
+        "target_file":  "slot013_multilingual_system.py",
+        "bytes":  18150
+    },
+    {
+        "slot":  14,
+        "priority":  "P1",
+        "source_rel":  "modules\\ai_code_manager\\sorisae_iot_voice_control.py",
+        "source_name":  "sorisae_iot_voice_control.py",
+        "target_file":  "slot014_sorisae_iot_voice_control.py",
+        "bytes":  18127
+    },
+    {
+        "slot":  15,
+        "priority":  "P1",
+        "source_rel":  "sorisae_interpreter.py",
+        "source_name":  "sorisae_interpreter.py",
+        "target_file":  "slot015_sorisae_interpreter.py",
+        "bytes":  17330
+    },
+    {
+        "slot":  16,
+        "priority":  "P1",
+        "source_rel":  "sorisae_southeast_asia_translator.py",
+        "source_name":  "sorisae_southeast_asia_translator.py",
+        "target_file":  "slot016_sorisae_southeast_asia_translator.py",
+        "bytes":  15912
+    },
+    {
+        "slot":  17,
+        "priority":  "P1",
+        "source_rel":  "modules\\ai_code_manager\\music_chat_system.py",
+        "source_name":  "music_chat_system.py",
+        "target_file":  "slot017_music_chat_system.py",
+        "bytes":  15874
+    },
+    {
+        "slot":  18,
+        "priority":  "P1",
+        "source_rel":  "tests\\test_voice_reactive.py",
+        "source_name":  "test_voice_reactive.py",
+        "target_file":  "slot018_test_voice_reactive.py",
+        "bytes":  14449
+    },
+    {
+        "slot":  19,
+        "priority":  "P1",
+        "source_rel":  "music_chat_friend_system.py",
+        "source_name":  "music_chat_friend_system.py",
+        "target_file":  "slot019_music_chat_friend_system.py",
+        "bytes":  13816
+    },
+    {
+        "slot":  20,
+        "priority":  "P1",
+        "source_rel":  "voice_command_processor.py",
+        "source_name":  "voice_command_processor.py",
+        "target_file":  "slot020_voice_command_processor.py",
+        "bytes":  13568
+    },
+    {
+        "slot":  21,
+        "priority":  "P1",
+        "source_rel":  "test_animation_voice_integration.py",
+        "source_name":  "test_animation_voice_integration.py",
+        "target_file":  "slot021_test_animation_voice_integration.py",
+        "bytes":  11784
+    },
+    {
+        "slot":  22,
+        "priority":  "P1",
+        "source_rel":  "demo_animation_voice_integration.py",
+        "source_name":  "demo_animation_voice_integration.py",
+        "target_file":  "slot022_demo_animation_voice_integration.py",
+        "bytes":  9392
+    },
+    {
+        "slot":  23,
+        "priority":  "P1",
+        "source_rel":  "sorisae_multilingual_support.py",
+        "source_name":  "sorisae_multilingual_support.py",
+        "target_file":  "slot023_sorisae_multilingual_support.py",
+        "bytes":  9115
+    },
+    {
+        "slot":  24,
+        "priority":  "P1",
+        "source_rel":  "modules\\voice_response_fallback.py",
+        "source_name":  "voice_response_fallback.py",
+        "target_file":  "slot024_voice_response_fallback.py",
+        "bytes":  8657
+    },
+    {
+        "slot":  25,
+        "priority":  "P1",
+        "source_rel":  "tests\\test_socket_voice_fixes.py",
+        "source_name":  "test_socket_voice_fixes.py",
+        "target_file":  "slot025_test_socket_voice_fixes.py",
+        "bytes":  7879
+    },
+    {
+        "slot":  26,
+        "priority":  "P1",
+        "source_rel":  "tests\\test_voice_double_utterance_fix.py",
+        "source_name":  "test_voice_double_utterance_fix.py",
+        "target_file":  "slot026_test_voice_double_utterance_fix.py",
+        "bytes":  6982
+    },
+    {
+        "slot":  27,
+        "priority":  "P1",
+        "source_rel":  "tests\\test_integration_voice_error_handling.py",
+        "source_name":  "test_integration_voice_error_handling.py",
+        "target_file":  "slot027_test_integration_voice_error_handling.py",
+        "bytes":  6696
+    },
+    {
+        "slot":  28,
+        "priority":  "P1",
+        "source_rel":  "emotion_based_music_generator.py",
+        "source_name":  "emotion_based_music_generator.py",
+        "target_file":  "slot028_emotion_based_music_generator.py",
+        "bytes":  6400
+    },
+    {
+        "slot":  29,
+        "priority":  "P1",
+        "source_rel":  "animation_studio_theme_song_demo.py",
+        "source_name":  "animation_studio_theme_song_demo.py",
+        "target_file":  "slot029_animation_studio_theme_song_demo.py",
+        "bytes":  4922
+    },
+    {
+        "slot":  30,
+        "priority":  "P1",
+        "source_rel":  "enhanced_voice_exit.py",
+        "source_name":  "enhanced_voice_exit.py",
+        "target_file":  "slot030_enhanced_voice_exit.py",
+        "bytes":  3729
+    },
+    {
+        "slot":  31,
+        "priority":  "P1",
+        "source_rel":  "modules\\ai_code_manager\\ai_speech_tts.py",
+        "source_name":  "ai_speech_tts.py",
+        "target_file":  "slot031_ai_speech_tts.py",
+        "bytes":  2339
+    },
+    {
+        "slot":  32,
+        "priority":  "P1",
+        "source_rel":  "start_music_chat_server.py",
+        "source_name":  "start_music_chat_server.py",
+        "target_file":  "slot032_start_music_chat_server.py",
+        "bytes":  1321
+    },
+    {
+        "slot":  33,
+        "priority":  "P1",
+        "source_rel":  "projects_separated\\interpreter\\run_interpreter.py",
+        "source_name":  "run_interpreter.py",
+        "target_file":  "slot033_run_interpreter.py",
+        "bytes":  1187
+    },
+    {
+        "slot":  34,
+        "priority":  "P1",
+        "source_rel":  "projects_separated\\music-composer\\run_music_composer.py",
+        "source_name":  "run_music_composer.py",
+        "target_file":  "slot034_run_music_composer.py",
+        "bytes":  1176
+    },
+    {
+        "slot":  35,
+        "priority":  "P1",
+        "source_rel":  "projects_separated\\voice-processing\\run_voice_processing.py",
+        "source_name":  "run_voice_processing.py",
+        "target_file":  "slot035_run_voice_processing.py",
+        "bytes":  1159
+    },
+    {
+        "slot":  36,
+        "priority":  "P2",
+        "source_rel":  "spatiotemporal_learning_system.py",
+        "source_name":  "spatiotemporal_learning_system.py",
+        "target_file":  "slot036_spatiotemporal_learning_system.py",
+        "bytes":  39958
+    },
+    {
+        "slot":  37,
+        "priority":  "P2",
+        "source_rel":  "sorisae_enhanced_consciousness.py",
+        "source_name":  "sorisae_enhanced_consciousness.py",
+        "target_file":  "slot037_sorisae_enhanced_consciousness.py",
+        "bytes":  35651
+    },
+    {
+        "slot":  38,
+        "priority":  "P2",
+        "source_rel":  "sorisae_ethical_consciousness_engine.py",
+        "source_name":  "sorisae_ethical_consciousness_engine.py",
+        "target_file":  "slot038_sorisae_ethical_consciousness_engine.py",
+        "bytes":  35527
+    },
+    {
+        "slot":  39,
+        "priority":  "P2",
+        "source_rel":  "hybrid_cyber_security_system.py",
+        "source_name":  "hybrid_cyber_security_system.py",
+        "target_file":  "slot039_hybrid_cyber_security_system.py",
+        "bytes":  32078
+    },
+    {
+        "slot":  40,
+        "priority":  "P2",
+        "source_rel":  "sorisae_ai_decision_engine.py",
+        "source_name":  "sorisae_ai_decision_engine.py",
+        "target_file":  "slot040_sorisae_ai_decision_engine.py",
+        "bytes":  29734
+    },
+    {
+        "slot":  41,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_dashboard.py",
+        "source_name":  "cyber_detective_dashboard.py",
+        "target_file":  "slot041_cyber_detective_dashboard.py",
+        "bytes":  29550
+    },
+    {
+        "slot":  42,
+        "priority":  "P2",
+        "source_rel":  "hybrid_iot_controller.py",
+        "source_name":  "hybrid_iot_controller.py",
+        "target_file":  "slot042_hybrid_iot_controller.py",
+        "bytes":  29392
+    },
+    {
+        "slot":  43,
+        "priority":  "P2",
+        "source_rel":  "sorisae_iot_integration.py",
+        "source_name":  "sorisae_iot_integration.py",
+        "target_file":  "slot043_sorisae_iot_integration.py",
+        "bytes":  28664
+    },
+    {
+        "slot":  44,
+        "priority":  "P2",
+        "source_rel":  "sorisae_iot_smarthome.py",
+        "source_name":  "sorisae_iot_smarthome.py",
+        "target_file":  "slot044_sorisae_iot_smarthome.py",
+        "bytes":  27809
+    },
+    {
+        "slot":  45,
+        "priority":  "P2",
+        "source_rel":  "temp_files\\sorisae_dual_brain_stock_system.py",
+        "source_name":  "sorisae_dual_brain_stock_system.py",
+        "target_file":  "slot045_sorisae_dual_brain_stock_system.py",
+        "bytes":  26767
+    },
+    {
+        "slot":  46,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_visual_monitoring.py",
+        "source_name":  "cyber_detective_visual_monitoring.py",
+        "target_file":  "slot046_cyber_detective_visual_monitoring.py",
+        "bytes":  26509
+    },
+    {
+        "slot":  47,
+        "priority":  "P2",
+        "source_rel":  "sorisae_ethical_consciousness_simple.py",
+        "source_name":  "sorisae_ethical_consciousness_simple.py",
+        "target_file":  "slot047_sorisae_ethical_consciousness_simple.py",
+        "bytes":  26074
+    },
+    {
+        "slot":  48,
+        "priority":  "P2",
+        "source_rel":  "sorisae_dual_brain_stock_system.py",
+        "source_name":  "sorisae_dual_brain_stock_system.py",
+        "target_file":  "slot048_sorisae_dual_brain_stock_system.py",
+        "bytes":  25633
+    },
+    {
+        "slot":  49,
+        "priority":  "P2",
+        "source_rel":  "advanced_security_system.py",
+        "source_name":  "advanced_security_system.py",
+        "target_file":  "slot049_advanced_security_system.py",
+        "bytes":  24647
+    },
+    {
+        "slot":  50,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_ai.py",
+        "source_name":  "cyber_detective_ai.py",
+        "target_file":  "slot050_cyber_detective_ai.py",
+        "bytes":  24312
+    },
+    {
+        "slot":  51,
+        "priority":  "P2",
+        "source_rel":  "sorisae_dual_brain_comparison.py",
+        "source_name":  "sorisae_dual_brain_comparison.py",
+        "target_file":  "slot051_sorisae_dual_brain_comparison.py",
+        "bytes":  24229
+    },
+    {
+        "slot":  52,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_future_tech.py",
+        "source_name":  "cyber_detective_future_tech.py",
+        "target_file":  "slot052_cyber_detective_future_tech.py",
+        "bytes":  20555
+    },
+    {
+        "slot":  53,
+        "priority":  "P2",
+        "source_rel":  "modules\\ai_code_manager\\sorisae_iot_smarthome.py",
+        "source_name":  "sorisae_iot_smarthome.py",
+        "target_file":  "slot053_sorisae_iot_smarthome.py",
+        "bytes":  20469
+    },
+    {
+        "slot":  54,
+        "priority":  "P2",
+        "source_rel":  "sorisae_cyber_investigator.py",
+        "source_name":  "sorisae_cyber_investigator.py",
+        "target_file":  "slot054_sorisae_cyber_investigator.py",
+        "bytes":  20167
+    },
+    {
+        "slot":  55,
+        "priority":  "P2",
+        "source_rel":  "modules\\ai_code_manager\\sorisae_iot_integration.py",
+        "source_name":  "sorisae_iot_integration.py",
+        "target_file":  "slot055_sorisae_iot_integration.py",
+        "bytes":  20159
+    },
+    {
+        "slot":  56,
+        "priority":  "P2",
+        "source_rel":  "modules\\ai_code_manager\\sorisae_iot_auto_discovery.py",
+        "source_name":  "sorisae_iot_auto_discovery.py",
+        "target_file":  "slot056_sorisae_iot_auto_discovery.py",
+        "bytes":  18378
+    },
+    {
+        "slot":  57,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_global_server_analysis.py",
+        "source_name":  "cyber_detective_global_server_analysis.py",
+        "target_file":  "slot057_cyber_detective_global_server_analysis.py",
+        "bytes":  17916
+    },
+    {
+        "slot":  58,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_global_network.py",
+        "source_name":  "cyber_detective_global_network.py",
+        "target_file":  "slot058_cyber_detective_global_network.py",
+        "bytes":  17688
+    },
+    {
+        "slot":  59,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_gps_radius.py",
+        "source_name":  "cyber_detective_gps_radius.py",
+        "target_file":  "slot059_cyber_detective_gps_radius.py",
+        "bytes":  16234
+    },
+    {
+        "slot":  60,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_detailed_analysis.py",
+        "source_name":  "cyber_detective_detailed_analysis.py",
+        "target_file":  "slot060_cyber_detective_detailed_analysis.py",
+        "bytes":  15064
+    },
+    {
+        "slot":  61,
+        "priority":  "P2",
+        "source_rel":  "spatiotemporal_learning_system_new.py",
+        "source_name":  "spatiotemporal_learning_system_new.py",
+        "target_file":  "slot061_spatiotemporal_learning_system_new.py",
+        "bytes":  14858
+    },
+    {
+        "slot":  62,
+        "priority":  "P2",
+        "source_rel":  "cyber_realtime_monitor.py",
+        "source_name":  "cyber_realtime_monitor.py",
+        "target_file":  "slot062_cyber_realtime_monitor.py",
+        "bytes":  12846
+    },
+    {
+        "slot":  63,
+        "priority":  "P2",
+        "source_rel":  "biometric_security_system.py",
+        "source_name":  "biometric_security_system.py",
+        "target_file":  "slot063_biometric_security_system.py",
+        "bytes":  11751
+    },
+    {
+        "slot":  64,
+        "priority":  "P2",
+        "source_rel":  "cyber_investigation_report.py",
+        "source_name":  "cyber_investigation_report.py",
+        "target_file":  "slot064_cyber_investigation_report.py",
+        "bytes":  11245
+    },
+    {
+        "slot":  65,
+        "priority":  "P2",
+        "source_rel":  "cyber_detective_methodology.py",
+        "source_name":  "cyber_detective_methodology.py",
+        "target_file":  "slot065_cyber_detective_methodology.py",
+        "bytes":  10458
+    },
+    {
+        "slot":  66,
+        "priority":  "P2",
+        "source_rel":  "security_key_manager.py",
+        "source_name":  "security_key_manager.py",
+        "target_file":  "slot066_security_key_manager.py",
+        "bytes":  7862
+    },
+    {
+        "slot":  67,
+        "priority":  "P2",
+        "source_rel":  "backup\\security_demo_20251019_070650.py",
+        "source_name":  "security_demo_20251019_070650.py",
+        "target_file":  "slot067_security_demo_20251019_070650.py",
+        "bytes":  4466
+    },
+    {
+        "slot":  68,
+        "priority":  "P2",
+        "source_rel":  "security_demo.py",
+        "source_name":  "security_demo.py",
+        "target_file":  "slot068_security_demo.py",
+        "bytes":  4315
+    },
+    {
+        "slot":  69,
+        "priority":  "P2",
+        "source_rel":  "modules\\sorisae\\golden_sorisae\\consciousness_engine.py",
+        "source_name":  "consciousness_engine.py",
+        "target_file":  "slot069_consciousness_engine.py",
+        "bytes":  2031
+    },
+    {
+        "slot":  70,
+        "priority":  "P2",
+        "source_rel":  "projects_separated\\iot-smarthome\\run_iot_smarthome.py",
+        "source_name":  "run_iot_smarthome.py",
+        "target_file":  "slot070_run_iot_smarthome.py",
+        "bytes":  1169
+    },
+    {
+        "slot":  71,
+        "priority":  "P2",
+        "source_rel":  "projects_separated\\cyber-detective\\run_cyber_detective.py",
+        "source_name":  "run_cyber_detective.py",
+        "target_file":  "slot071_run_cyber_detective.py",
+        "bytes":  1161
+    },
+    {
+        "slot":  72,
+        "priority":  "P2",
+        "source_rel":  "projects_separated\\security\\run_security.py",
+        "source_name":  "run_security.py",
+        "target_file":  "slot072_run_security.py",
+        "bytes":  1154
+    },
+    {
+        "slot":  73,
+        "priority":  "P3",
+        "source_rel":  "sorisae_fantasy_vr_infinite_universe_game.py",
+        "source_name":  "sorisae_fantasy_vr_infinite_universe_game.py",
+        "target_file":  "slot073_sorisae_fantasy_vr_infinite_universe_game.py",
+        "bytes":  40782
+    },
+    {
+        "slot":  74,
+        "priority":  "P3",
+        "source_rel":  "sorisae_game_economy_system.py",
+        "source_name":  "sorisae_game_economy_system.py",
+        "target_file":  "slot074_sorisae_game_economy_system.py",
+        "bytes":  32279
+    },
+    {
+        "slot":  75,
+        "priority":  "P3",
+        "source_rel":  "sorisae_investment_advisor_200.py",
+        "source_name":  "sorisae_investment_advisor_200.py",
+        "target_file":  "slot075_sorisae_investment_advisor_200.py",
+        "bytes":  30588
+    },
+    {
+        "slot":  76,
+        "priority":  "P3",
+        "source_rel":  "temp_files\\stock_prediction_200_percent.py",
+        "source_name":  "stock_prediction_200_percent.py",
+        "target_file":  "slot076_stock_prediction_200_percent.py",
+        "bytes":  26666
+    },
+    {
+        "slot":  77,
+        "priority":  "P3",
+        "source_rel":  "stock_prediction_200_percent.py",
+        "source_name":  "stock_prediction_200_percent.py",
+        "target_file":  "slot077_stock_prediction_200_percent.py",
+        "bytes":  26402
+    },
+    {
+        "slot":  78,
+        "priority":  "P3",
+        "source_rel":  "game_earning_analysis.py",
+        "source_name":  "game_earning_analysis.py",
+        "target_file":  "slot078_game_earning_analysis.py",
+        "bytes":  16986
+    },
+    {
+        "slot":  79,
+        "priority":  "P3",
+        "source_rel":  "temp_files\\sorisae_investment_advisor_200.py",
+        "source_name":  "sorisae_investment_advisor_200.py",
+        "target_file":  "slot079_sorisae_investment_advisor_200.py",
+        "bytes":  15012
+    },
+    {
+        "slot":  80,
+        "priority":  "P3",
+        "source_rel":  "backup\\realtime_game_generator_20251019_182012.py",
+        "source_name":  "realtime_game_generator_20251019_182012.py",
+        "target_file":  "slot080_realtime_game_generator_20251019_182012.py",
+        "bytes":  14219
+    },
+    {
+        "slot":  81,
+        "priority":  "P3",
+        "source_rel":  "modules\\ai_code_manager\\realtime_game_generator.py",
+        "source_name":  "realtime_game_generator.py",
+        "target_file":  "slot081_realtime_game_generator.py",
+        "bytes":  14014
+    },
+    {
+        "slot":  82,
+        "priority":  "P3",
+        "source_rel":  "sorisae_game_concept_design.py",
+        "source_name":  "sorisae_game_concept_design.py",
+        "target_file":  "slot082_sorisae_game_concept_design.py",
+        "bytes":  13117
+    },
+    {
+        "slot":  83,
+        "priority":  "P3",
+        "source_rel":  "sorisae_earning_game.py",
+        "source_name":  "sorisae_earning_game.py",
+        "target_file":  "slot083_sorisae_earning_game.py",
+        "bytes":  12776
+    },
+    {
+        "slot":  84,
+        "priority":  "P3",
+        "source_rel":  "sorisae_vr_launcher.py",
+        "source_name":  "sorisae_vr_launcher.py",
+        "target_file":  "slot084_sorisae_vr_launcher.py",
+        "bytes":  5576
+    },
+    {
+        "slot":  85,
+        "priority":  "P3",
+        "source_rel":  "projects_separated\\investment-advisor\\run_investment_advisor.py",
+        "source_name":  "run_investment_advisor.py",
+        "target_file":  "slot085_run_investment_advisor.py",
+        "bytes":  1201
+    },
+    {
+        "slot":  86,
+        "priority":  "P3",
+        "source_rel":  "projects_separated\\game-economy\\run_game_economy.py",
+        "source_name":  "run_game_economy.py",
+        "target_file":  "slot086_run_game_economy.py",
+        "bytes":  1197
+    },
+    {
+        "slot":  87,
+        "priority":  "P3",
+        "source_rel":  "projects_separated\\vr-games\\run_vr_games.py",
+        "source_name":  "run_vr_games.py",
+        "target_file":  "slot087_run_vr_games.py",
+        "bytes":  1159
+    },
+    {
+        "slot":  88,
+        "priority":  "P4",
+        "source_rel":  "backup\\sorisae_core_new_features_20251019_182012.py",
+        "source_name":  "sorisae_core_new_features_20251019_182012.py",
+        "target_file":  "slot088_sorisae_core_new_features_20251019_182012.py",
+        "bytes":  56180
+    },
+    {
+        "slot":  89,
+        "priority":  "P4",
+        "source_rel":  "sorisae_integrated_dashboard.py",
+        "source_name":  "sorisae_integrated_dashboard.py",
+        "target_file":  "slot089_sorisae_integrated_dashboard.py",
+        "bytes":  54401
+    },
+    {
+        "slot":  90,
+        "priority":  "P4",
+        "source_rel":  "backup\\sorisae_core_controller_exit_fix_20251019_174426.py",
+        "source_name":  "sorisae_core_controller_exit_fix_20251019_174426.py",
+        "target_file":  "slot090_sorisae_core_controller_exit_fix_20251019_174426.py",
+        "bytes":  52204
+    },
+    {
+        "slot":  91,
+        "priority":  "P4",
+        "source_rel":  "sorisae_animation_studio_ultra.py",
+        "source_name":  "sorisae_animation_studio_ultra.py",
+        "target_file":  "slot091_sorisae_animation_studio_ultra.py",
+        "bytes":  49304
+    },
+    {
+        "slot":  92,
+        "priority":  "P4",
+        "source_rel":  "ethical_gps_system.py",
+        "source_name":  "ethical_gps_system.py",
+        "target_file":  "slot092_ethical_gps_system.py",
+        "bytes":  42815
+    },
+    {
+        "slot":  93,
+        "priority":  "P4",
+        "source_rel":  "modules\\ai_code_manager\\emotion_color_therapist.py",
+        "source_name":  "emotion_color_therapist.py",
+        "target_file":  "slot093_emotion_color_therapist.py",
+        "bytes":  40160
+    },
+    {
+        "slot":  94,
+        "priority":  "P4",
+        "source_rel":  "modules\\sorisae_dashboard_web.py",
+        "source_name":  "sorisae_dashboard_web.py",
+        "target_file":  "slot094_sorisae_dashboard_web.py",
+        "bytes":  39509
+    },
+    {
+        "slot":  95,
+        "priority":  "P4",
+        "source_rel":  "integrated_shopping_tutor_designer.py",
+        "source_name":  "integrated_shopping_tutor_designer.py",
+        "target_file":  "slot095_integrated_shopping_tutor_designer.py",
+        "bytes":  37359
+    },
+    {
+        "slot":  96,
+        "priority":  "P4",
+        "source_rel":  "run_all_shinsegye.py",
+        "source_name":  "run_all_shinsegye.py",
+        "target_file":  "slot096_run_all_shinsegye.py",
+        "bytes":  35234
+    },
+    {
+        "slot":  97,
+        "priority":  "P4",
+        "source_rel":  "sorisae_master_hybrid_system.py",
+        "source_name":  "sorisae_master_hybrid_system.py",
+        "target_file":  "slot097_sorisae_master_hybrid_system.py",
+        "bytes":  35210
+    },
+    {
+        "slot":  98,
+        "priority":  "P4",
+        "source_rel":  "modules\\ai_code_manager\\virtual_dev_team.py",
+        "source_name":  "virtual_dev_team.py",
+        "target_file":  "slot098_virtual_dev_team.py",
+        "bytes":  32261
+    },
+    {
+        "slot":  99,
+        "priority":  "P4",
+        "source_rel":  "detailed_technical_report.py",
+        "source_name":  "detailed_technical_report.py",
+        "target_file":  "slot099_detailed_technical_report.py",
+        "bytes":  30593
+    },
+    {
+        "slot":  100,
+        "priority":  "P4",
+        "source_rel":  "sorisae_divine_intelligence_105.py",
+        "source_name":  "sorisae_divine_intelligence_105.py",
+        "target_file":  "slot100_sorisae_divine_intelligence_105.py",
+        "bytes":  30364
+    },
+    {
+        "slot":  101,
+        "priority":  "P4",
+        "source_rel":  "organize_projects_into_folders.py",
+        "source_name":  "organize_projects_into_folders.py",
+        "target_file":  "slot101_organize_projects_into_folders.py",
+        "bytes":  30128
+    },
+    {
+        "slot":  102,
+        "priority":  "P4",
+        "source_rel":  "app_Sorisay.py",
+        "source_name":  "app_Sorisay.py",
+        "target_file":  "slot102_app_Sorisay.py",
+        "bytes":  29931
+    },
+    {
+        "slot":  103,
+        "priority":  "P4",
+        "source_rel":  "sorisae_movie_web_server.py",
+        "source_name":  "sorisae_movie_web_server.py",
+        "target_file":  "slot103_sorisae_movie_web_server.py",
+        "bytes":  29436
+    },
+    {
+        "slot":  104,
+        "priority":  "P4",
+        "source_rel":  "modules\\ai_code_manager\\future_prediction_engine.py",
+        "source_name":  "future_prediction_engine.py",
+        "target_file":  "slot104_future_prediction_engine.py",
+        "bytes":  29345
+    },
+    {
+        "slot":  105,
+        "priority":  "P4",
+        "source_rel":  "next_gen_caching_system.py",
+        "source_name":  "next_gen_caching_system.py",
+        "target_file":  "slot105_next_gen_caching_system.py",
+        "bytes":  28832
+    },
+    {
+        "slot":  106,
+        "priority":  "P4",
+        "source_rel":  "sorisae_master_system.py",
+        "source_name":  "sorisae_master_system.py",
+        "target_file":  "slot106_sorisae_master_system.py",
+        "bytes":  28607
+    },
+    {
+        "slot":  107,
+        "priority":  "P4",
+        "source_rel":  "run_complete_sorisae_system.py",
+        "source_name":  "run_complete_sorisae_system.py",
+        "target_file":  "slot107_run_complete_sorisae_system.py",
+        "bytes":  27566
+    },
+    {
+        "slot":  108,
+        "priority":  "P4",
+        "source_rel":  "sorisae_civil_engineering_bidding.py",
+        "source_name":  "sorisae_civil_engineering_bidding.py",
+        "target_file":  "slot108_sorisae_civil_engineering_bidding.py",
+        "bytes":  27490
+    },
+    {
+        "slot":  109,
+        "priority":  "P4",
+        "source_rel":  "modules\\ai_code_manager\\autonomous_marketing_system.py",
+        "source_name":  "autonomous_marketing_system.py",
+        "target_file":  "slot109_autonomous_marketing_system.py",
+        "bytes":  27043
+    },
+    {
+        "slot":  110,
+        "priority":  "P4",
+        "source_rel":  "sorisae_transcendent_102.py",
+        "source_name":  "sorisae_transcendent_102.py",
+        "target_file":  "slot110_sorisae_transcendent_102.py",
+        "bytes":  26654
+    },
+    {
+        "slot":  111,
+        "priority":  "P4",
+        "source_rel":  "modules\\ai_code_manager\\smart_plugin_generator.py",
+        "source_name":  "smart_plugin_generator.py",
+        "target_file":  "slot111_smart_plugin_generator.py",
+        "bytes":  26265
+    },
+    {
+        "slot":  112,
+        "priority":  "P4",
+        "source_rel":  "ethical_gps_system_simple.py",
+        "source_name":  "ethical_gps_system_simple.py",
+        "target_file":  "slot112_ethical_gps_system_simple.py",
+        "bytes":  26199
+    },
+    {
+        "slot":  113,
+        "priority":  "P4",
+        "source_rel":  "comprehensive_project_analyzer.py",
+        "source_name":  "comprehensive_project_analyzer.py",
+        "target_file":  "slot113_comprehensive_project_analyzer.py",
+        "bytes":  25706
+    },
+    {
+        "slot":  114,
+        "priority":  "P4",
+        "source_rel":  "modules\\ai_code_manager\\sorisae_smart_car_control.py",
+        "source_name":  "sorisae_smart_car_control.py",
+        "target_file":  "slot114_sorisae_smart_car_control.py",
+        "bytes":  24952
+    },
+    {
+        "slot":  115,
+        "priority":  "P4",
+        "source_rel":  "sorisae_satellite_wifi_system.py",
+        "source_name":  "sorisae_satellite_wifi_system.py",
+        "target_file":  "slot115_sorisae_satellite_wifi_system.py",
+        "bytes":  24311
+    },
+    {
+        "slot":  116,
+        "priority":  "P4",
+        "source_rel":  "async_performance_system.py",
+        "source_name":  "async_performance_system.py",
+        "target_file":  "slot116_async_performance_system.py",
+        "bytes":  23924
+    },
+    {
+        "slot":  117,
+        "priority":  "P4",
+        "source_rel":  "analyze_all_shinsegye_projects.py",
+        "source_name":  "analyze_all_shinsegye_projects.py",
+        "target_file":  "slot117_analyze_all_shinsegye_projects.py",
+        "bytes":  23762
+    },
+    {
+        "slot":  118,
+        "priority":  "P4",
+        "source_rel":  "sorisae_nextgen_features.py",
+        "source_name":  "sorisae_nextgen_features.py",
+        "target_file":  "slot118_sorisae_nextgen_features.py",
+        "bytes":  23717
+    },
+    {
+        "slot":  119,
+        "priority":  "P4",
+        "source_rel":  "sorisae_integrated_hybrid_system.py",
+        "source_name":  "sorisae_integrated_hybrid_system.py",
+        "target_file":  "slot119_sorisae_integrated_hybrid_system.py",
+        "bytes":  23510
+    },
+    {
+        "slot":  120,
+        "priority":  "P4",
+        "source_rel":  "shopping_mall_dashboard.py",
+        "source_name":  "shopping_mall_dashboard.py",
+        "target_file":  "slot120_shopping_mall_dashboard.py",
+        "bytes":  21855
+    }
+]

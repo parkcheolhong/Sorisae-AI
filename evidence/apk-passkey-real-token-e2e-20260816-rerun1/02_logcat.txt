@@ -1,0 +1,659 @@
+﻿--------- beginning of main
+08-16 03:31:48.166 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:am start -W -a android.intent.action.VIEW -d 'worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220''
+08-16 03:31:48.225 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-16 03:31:48.226 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-16 03:31:48.227 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+--------- beginning of system
+08-16 03:31:48.228 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=28890) has no WPC
+08-16 03:31:48.228 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+08-16 03:31:48.229 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:12572 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12572
+08-16 03:31:48.230 I/mtkpower_client( 1170): ret_hdl:12572
+08-16 03:31:48.231 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.232 D/WindowManager( 1673): Transition is created, t=TransitionRecord{4378808 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 03:31:48.232 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 03:31:48.232 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:12573 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12573
+08-16 03:31:48.232 D/WindowManager( 1673): SyncGroup is created, id=551, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-16 03:31:48.232 W/WindowManager( 1673): setSyncMethod, id=551, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-16 03:31:48.233 I/mtkpower_client( 1170): ret_hdl:12573
+08-16 03:31:48.233 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.233 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{4378808 id=551 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 03:31:48.233 V/WindowManager( 1673): Collecting in transition 551: ActivityRecord{5478ba1 u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-16 03:31:48.233 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{5478ba1 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-16 03:31:48.233 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:12574 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12574
+08-16 03:31:48.234 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 03:31:48.234 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{14a183 #10950 type=standard A=10513:com.parkcheolhong.worldlinco} activity=ActivityRecord{5478ba1 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-16 03:31:48.234 I/mtkpower_client( 1170): ret_hdl:12574
+08-16 03:31:48.234 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.235 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_START/1673@17, type = -999
+08-16 03:31:48.235 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:12575 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12575
+08-16 03:31:48.235 D/ActivityManagerPerformance( 1673): AMP_acquire() ACT_START
+08-16 03:31:48.236 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 03:31:48.236 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 03:31:48.236 I/mtkpower_client( 1170): ret_hdl:12575
+08-16 03:31:48.236 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.237 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:12576 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12576
+08-16 03:31:48.237 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:48.238 I/mtkpower_client( 1170): ret_hdl:12576
+08-16 03:31:48.238 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1428912  [1673 / 17]    HINT : AMS_ACT_START    list : 
+08-16 03:31:48.238 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{4378808 id=551 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 03:31:48.238 I/mtkpower_client( 1170): perf_lock_rel, hdl:12574, tid:1201
+08-16 03:31:48.239 I/libPowerHal( 1177): [perfLockRel] hdl:12574, idx:2
+08-16 03:31:48.239 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 03:31:48.239 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-16 03:31:48.239 I/Pageboost( 1673): stop alp
+08-16 03:31:48.240 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@88243e7 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10950 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=327567440 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@bd17b94} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{450e63d com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 03:31:48.241 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.242 I/mtkpower_client( 1170): ret_hdl:12577
+08-16 03:31:48.242 I/mtkpower_client( 1170): perf_lock_rel, hdl:12573, tid:1201
+08-16 03:31:48.242 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:12577 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12577
+08-16 03:31:48.243 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:48.243 E/pageboostd( 3280): Received HALT command code 2
+08-16 03:31:48.244 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.244 I/libPowerHal( 1177): [perfLockRel] hdl:12573, idx:1
+08-16 03:31:48.245 V/WindowManager( 1673): Starting Transition 551, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-16 03:31:48.245 I/mtkpower_client( 1170): ret_hdl:12578
+08-16 03:31:48.245 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-16 03:31:48.245 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.245 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 03:31:48.245 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:12578 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12578
+08-16 03:31:48.246 I/mtkpower_client( 1170): ret_hdl:12579
+08-16 03:31:48.246 I/mtkpower_client( 1170): perf_lock_rel, hdl:12575, tid:1201
+08-16 03:31:48.246 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.247 I/mtkpower_client( 1170): ret_hdl:12580
+08-16 03:31:48.247 I/mtkpower_client( 1170): perf_lock_rel, hdl:12576, tid:1201
+08-16 03:31:48.247 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:48.247 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-16 03:31:48.247 I/mtkpower_client( 1170): ret_hdl:12581
+08-16 03:31:48.250 V/WindowManager( 1673): SyncGroup 551: Finished!
+08-16 03:31:48.250 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:12579 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12579
+08-16 03:31:48.250 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 1
+08-16 03:31:48.250 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{4378808 id=551 type=OPEN flags=0x0}
+08-16 03:31:48.250 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-16 03:31:48.250 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{5478ba1 u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-16 03:31:48.250 V/WindowManager( 1673):   Final targets: []
+08-16 03:31:48.250 V/WindowManager( 1673): Calling onTransitionReady: {id=551 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 03:31:48.251 I/libPowerHal( 1177): [perfLockRel] hdl:12575, idx:3
+08-16 03:31:48.251 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 03:31:48.251 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 03:31:48.251 V/WindowManager( 1673): Sent Transition #551 createdAt=08-16 03:31:48.231 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10950 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=327567440 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{b8f362d Task{14a183 #10950 type=standard A=10513:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{63612af com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 03:31:48.252 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-16 03:31:48.252 V/WindowManager( 1673):     info={id=551 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 03:31:48.252 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@88243e7: {id=551 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 03:31:48.252 V/WindowManagerShell( 2424): No transition roots in (#551)android.os.BinderProxy@88243e7@0 so abort
+08-16 03:31:48.252 W/unknown:BridgelessReact(28667): ReactHost{0}.onHostPause(activity)
+08-16 03:31:48.252 I/libPowerHal( 1177): [perfLockAcq] idx:6 hdl:12580 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12580
+08-16 03:31:48.252 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<551>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-16 03:31:48.252 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 03:31:48.253 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 03:31:48.253 I/libPowerHal( 1177): [perfLockRel] hdl:12576, idx:4
+08-16 03:31:48.253 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#551)android.os.BinderProxy@88243e7@0
+08-16 03:31:48.253 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 03:31:48.253 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<551>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-16 03:31:48.254 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-16 03:31:48.255 D/SensorManager(28667): unregisterListener
+08-16 03:31:48.255 V/WindowManager( 1673): Finish Transition: TransitionRecord{4378808 id=551 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-16 03:31:48.256 V/WindowManager( 1673): Finish Transition #551: created at 08-16 03:31:48.231 collect-started=1.144ms request-sent=6.92ms started=15.208ms ready=14.03ms sent=18.897ms finished=23.599ms
+08-16 03:31:48.256 I/libPowerHal( 1177): [perfLockAcq] idx:7 hdl:12581 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12581
+08-16 03:31:48.257 V/WindowManagerShell( 2424): Track 0 became idle
+08-16 03:31:48.257 V/WindowManagerShell( 2424): All active transition animations finished
+08-16 03:31:48.257 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:48.259 W/unknown:BridgelessReact(28667): ReactHost{0}.ReactContext.onHostPause()
+08-16 03:31:48.269 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-16 03:31:48.271 W/unknown:BridgelessReact(28667): ReactHost{0}.onHostResume(activity)
+08-16 03:31:48.273 I/Accelerometer( 1365): flush, flushCnt:1
+08-16 03:31:48.275 D/SensorManager(28667): registerListener :: 1, mc3419, 66667, 0, 
+08-16 03:31:48.276 I/Accelerometer( 1365): flush complete, flushCnt:0
+08-16 03:31:48.276 I/SensorService( 1673): [SO] SENSOR_TYPE_META_DATA: 1
+08-16 03:31:48.276 I/SensorService( 1673): [SO] Send Meta Event for AR
+08-16 03:31:48.277 D/BatteryExternalStatsWorker( 1673): update stats : update-network-download (6)
+08-16 03:31:48.277 D/BatteryExternalStatsWorker( 1673): Update Rail Energy data
+08-16 03:31:48.277 D/BatteryExternalStatsWorker( 1673): Fetch modem data
+08-16 03:31:48.278 W/unknown:BridgelessReact(28667): ReactHost{0}.ReactContext.onHostResume()
+08-16 03:31:48.290 V/WindowManager( 1673): Relayout Window{9057d66 u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=800x1340 ty=1 d0
+08-16 03:31:48.290 I/BLASTBufferQueue_Java(28667): update, w= 800 h= 1340 mName = ViewRootImpl@46a8abd[MainActivity] mNativeObject= 0xb400007728171a00 sc.mNativeObject= 0xb400007780efd340 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3017 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 
+08-16 03:31:48.290 I/ViewRootImpl@46a8abd[MainActivity](28667): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=true req=(800,1340)0 dur=0 res=0x0 s={true 0xb40000772818f800} ch=false seqId=0
+08-16 03:31:48.295 I/ViewRootImpl@46a8abd[MainActivity](28667): registerCallbackForPendingTransactions
+08-16 03:31:48.295 V/WindowManager( 1673): Relayout hash=9057d66, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030303
+08-16 03:31:48.295 V/WindowManager( 1673):   fl=81810180
+08-16 03:31:48.295 V/WindowManager( 1673):   pfl=16008040
+08-16 03:31:48.295 V/WindowManager( 1673):   vsysui=1100
+08-16 03:31:48.295 V/WindowManager( 1673):   apr=LIGHT_STATUS_BARS
+08-16 03:31:48.295 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-16 03:31:48.295 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-16 03:31:48.297 I/ViewRootImpl@46a8abd[MainActivity](28667): mWNT: t=0xb40000740645c680 mBlastBufferQueue=0xb400007728171a00 fn= 58 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$6.onFrameDraw:5635 android.view.ViewRootImpl$2.onFrameDraw:2146 android.view.ThreadedRenderer$1.onFrameDraw:792 
+08-16 03:31:48.298 I/WindowManager( 1673): Reparenting to original parent: Surface(name=WindowToken{98c5bbb type=2005 android.os.Binder@d2f804a})/@0x6dfcea2, destroy=true, surface=Surface(name=4ed5716 Toast)/@0x484e26d
+08-16 03:31:48.309 D/TelephonyManager( 1673): requestModemActivityInfo: Sending result to app: ModemActivityInfo{ mTimestamp=327585425 mSleepTimeMs=317129950 mIdleTimeMs=7703829 mActivityStatsTechSpecificInfo=[{mRat=UNKNOWN,mFrequencyRange=UNKNOWN,mTxTimeMs[]=[0, 0, 0, 0, 0],mRxTimeMs=650892}]}
+08-16 03:31:48.310 D/BatteryExternalStatsWorker( 1673): mStats lock released
+08-16 03:31:48.313 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28667#9782](this:0xb400007bc7912790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=2.40 dur=1248.71 max=682.93 min=16.82
+08-16 03:31:48.313 I/Layer   ( 1209): id=9791 removeFromCurrentState Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9791 (126)
+08-16 03:31:48.315 I/SurfaceFlinger( 1209): id=9791 Removed Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9791 (126)
+08-16 03:31:48.317 D/BatteryExternalStatsWorker( 1673): Update modem state
+08-16 03:31:48.317 D/BatteryExternalStatsWorker( 1673): done updateExternalStatsLocked
+08-16 03:31:48.330 I/BufferQueueDebug( 1209): [Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9791](this:0xb400007bc7939790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:48.330 I/Layer   ( 1209): id=9791 Destroyed Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9791
+08-16 03:31:48.539 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 108643, isSameBssidAndFreq true
+08-16 03:31:48.540 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (526) / 390 / -23.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 03:31:48.674 D/VibratorManagerService( 1673): Canceling vibration
+08-16 03:31:48.777 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:48.783 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:48.796 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:48.818 D/BiometricService( 1673): canAuthenticate: User=0, Caller=0, Authenticators=255
+08-16 03:31:48.818 D/BiometricService/PreAuthInfo( 1673): create: true, true, false, ff, 0
+08-16 03:31:48.818 D/BiometricService/PreAuthInfo( 1673): Package: com.parkcheolhong.worldlinco Sensor ID: 1 Modality: 8 Status: 4
+08-16 03:31:48.818 D/BiometricService/PreAuthInfo( 1673): getCanAuthenticateInternal Modality: 8 AuthenticatorStatus: 4
+08-16 03:31:48.818 D/AuthService( 1673): canAuthenticate, userId: 0, callingUserId: 0, authenticators: 255, result: 12
+08-16 03:31:48.819 D/VibratorManagerService( 1673): Canceling vibration
+08-16 03:31:48.846 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_initial","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-16 03:31:48.864 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T18:31:48.862Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"effect_start","api_base":"https://metanova1004.com"}'
+08-16 03:31:48.880 D/NetdEventListenerService( 1673): DNS Requested by 101, 10513, 1
+08-16 03:31:48.912 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:48.916 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:48.925 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:48.931 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:48.950 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:48.954 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:48.972 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:48.981 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:48.982 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_DISPATCH]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","entry_type":"auth"}'
+08-16 03:31:48.983 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"SOCIAL_LOGIN_CALLBACK","timestamp":"2026-08-15T18:31:48.982Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","provider":"passkey","has_token":true,"auth_mode":"passkey_login"}'
+08-16 03:31:49.079 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:am start -W -a android.intent.action.VIEW -d 'worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220''
+08-16 03:31:49.135 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-16 03:31:49.136 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-16 03:31:49.136 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+08-16 03:31:49.137 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=28905) has no WPC
+08-16 03:31:49.141 D/WindowManager( 1673): Transition is created, t=TransitionRecord{513c6ba id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 03:31:49.141 D/WindowManager( 1673): SyncGroup is created, id=552, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-16 03:31:49.141 W/WindowManager( 1673): setSyncMethod, id=552, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-16 03:31:49.142 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{513c6ba id=552 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 03:31:49.142 V/WindowManager( 1673): Collecting in transition 552: ActivityRecord{dd4796b u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-16 03:31:49.142 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{dd4796b u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-16 03:31:49.143 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{14a183 #10950 type=standard A=10513:com.parkcheolhong.worldlinco} activity=ActivityRecord{dd4796b u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-16 03:31:49.146 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{513c6ba id=552 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 03:31:49.148 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-16 03:31:49.148 I/Pageboost( 1673): stop alp
+08-16 03:31:49.148 E/pageboostd( 3280): Received HALT command code 2
+08-16 03:31:49.149 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@cc6ce32 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10950 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=327567440 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@253783} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{914bd00 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 03:31:49.149 V/WindowManager( 1673): Starting Transition 552, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-16 03:31:49.150 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-16 03:31:49.151 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-16 03:31:49.153 V/WindowManager( 1673): SyncGroup 552: Finished!
+08-16 03:31:49.153 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{513c6ba id=552 type=OPEN flags=0x0}
+08-16 03:31:49.153 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{dd4796b u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-16 03:31:49.153 V/WindowManager( 1673):   Final targets: []
+08-16 03:31:49.154 V/WindowManager( 1673): Calling onTransitionReady: {id=552 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 03:31:49.155 V/WindowManager( 1673): Sent Transition #552 createdAt=08-16 03:31:49.140 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10950 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=327567440 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{b8f362d Task{14a183 #10950 type=standard A=10513:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{63612af com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10513:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 03:31:49.155 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-16 03:31:49.155 V/WindowManager( 1673):     info={id=552 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 03:31:49.156 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-16 03:31:49.158 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@cc6ce32: {id=552 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 03:31:49.158 V/WindowManagerShell( 2424): No transition roots in (#552)android.os.BinderProxy@cc6ce32@0 so abort
+08-16 03:31:49.158 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<552>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-16 03:31:49.159 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#552)android.os.BinderProxy@cc6ce32@0
+08-16 03:31:49.159 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<552>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-16 03:31:49.161 V/WindowManager( 1673): Finish Transition: TransitionRecord{513c6ba id=552 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-16 03:31:49.161 V/WindowManager( 1673): Finish Transition #552: created at 08-16 03:31:49.140 collect-started=1.072ms request-sent=6.348ms started=9.669ms ready=9.559ms sent=13.498ms finished=20.583ms
+08-16 03:31:49.162 V/WindowManagerShell( 2424): Track 0 became idle
+08-16 03:31:49.162 V/WindowManagerShell( 2424): All active transition animations finished
+08-16 03:31:49.163 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-16 03:31:49.182 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:dumpsys activity activities'
+08-16 03:31:49.428 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28667#9782](this:0xb400007bc7912790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.90 dur=1114.76 max=1114.76 min=1114.76
+08-16 03:31:49.429 W/unknown:BridgelessReact(28667): ReactHost{0}.onHostPause(activity)
+08-16 03:31:49.430 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:12.488204,dur:1361.28,max:1096.35,min:13.90  
+08-16 03:31:49.431 D/SensorManager(28667): unregisterListener
+08-16 03:31:49.432 W/unknown:BridgelessReact(28667): ReactHost{0}.ReactContext.onHostPause()
+08-16 03:31:49.441 W/unknown:BridgelessReact(28667): ReactHost{0}.onHostResume(activity)
+08-16 03:31:49.442 I/Accelerometer( 1365): flush, flushCnt:1
+08-16 03:31:49.444 D/SensorManager(28667): registerListener :: 1, mc3419, 66667, 0, 
+08-16 03:31:49.445 I/Accelerometer( 1365): flush complete, flushCnt:0
+08-16 03:31:49.445 I/SensorService( 1673): [SO] SENSOR_TYPE_META_DATA: 1
+08-16 03:31:49.445 I/SensorService( 1673): [SO] Send Meta Event for AR
+08-16 03:31:49.447 W/unknown:BridgelessReact(28667): ReactHost{0}.ReactContext.onHostResume()
+08-16 03:31:49.472 D/io_stats(  565): !@ 179,0 r 4156251 107569406 w 5224391 38661308 d 337822 48871200 f 0 0 iot 3860932 0 th 0 0 0 pt 0 inp 0 0 327586.588
+08-16 03:31:49.599 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"NETWORK_TRANSPORT_CHANGED","timestamp":"2026-08-15T18:31:49.597Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","transport":"wifi","cellular_generation":null,"label":"WiFi","is_connected":true,"is_internet_reachable":true,"carrier":null,"ssid":"KT_WiFi_7_0A7C","is_accurate_voip_test_ready":false,"previous_label":"알 수 없음"}'
+08-16 03:31:49.601 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:49.605 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:49.612 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:49.614 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:49.615 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:49.615 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:49.614Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"initial_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:49.630 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-08-15T18:31:49.629Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"effect_start"}'
+08-16 03:31:49.636 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-08-15T18:31:49.634Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"effect_start","code":1006}'
+08-16 03:31:49.641 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_RETRY_SCHEDULED","timestamp":"2026-08-15T18:31:49.640Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"close:1006"}'
+08-16 03:31:49.642 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"active_initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:49.652 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"active_initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:49.653 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:49.652Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"active_initial_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:49.659 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_initial","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-16 03:31:49.661 I/ReactNativeJS(28667): '[VoIPPendingIncoming] fetch failed', 401
+08-16 03:31:49.689 I/ReactNativeJS(28667): '[AUTH_FLOW]', '{"event":"PASSKEY_LOGIN_CALLBACK_SUCCESS","auth_mode":"passkey_login","success_message":"패스키 로그인 콜백 성공 (auth_mode=passkey_login)","source":"runtime_url","user_id":6,"user_email":"119cash@naver.com"}'
+08-16 03:31:49.691 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"PASSKEY_LOGIN_CALLBACK_SUCCESS","timestamp":"2026-08-15T18:31:49.689Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","auth_mode":"passkey_login","success_message":"패스키 로그인 성공","source":"runtime_url","user_id":6,"user_email":"119cash@naver.com"}'
+08-16 03:31:49.693 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"SOCIAL_LOGIN_CALLBACK_SUCCESS","timestamp":"2026-08-15T18:31:49.691Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","provider":"passkey","user_id":6,"user_email":"119cash@naver.com","auth_mode":"passkey_login"}'
+08-16 03:31:49.700 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_background","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-16 03:31:49.706 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:49.714 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:49.718 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:49.720 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:49.720 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:49.718Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:49.727 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T18:31:49.723Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"app_active","api_base":"https://metanova1004.com"}'
+08-16 03:31:49.736 I/Toast   (28667): show: caller = com.facebook.react.modules.toast.ToastModule.show$lambda$0:34 
+08-16 03:31:49.738 I/Toast   (28667): show: contextDispId = 0 mCustomDisplayId = -1 focusedDisplayId = 0 isActivityContext = false
+08-16 03:31:49.743 W/ContextImpl( 1673): Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1281 com.android.server.notification.sec.DisplayToast.sendIntentForToastDumpLog:156 com.android.server.notification.sec.DisplayToast.outFile:106 com.android.server.notification.sec.DisplayToast.out:62 com.android.server.notification.NotificationManagerService$15.enqueueToastForDex:5125 
+08-16 03:31:49.744 E/BufferQueueDebug( 1209): [WindowToken{accb3be type=2005 android.os.Binder@87fa79}#9792](this:0xb400007bc4cc8790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'WindowToken{accb3be type=2005 android.os.Binder@87fa79}#9792'
+08-16 03:31:49.745 I/BufferQueueDebug( 1209): [WindowToken{accb3be type=2005 android.os.Binder@87fa79}#9792](this:0xb400007bc4cc8790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-16 03:31:49.745 I/SurfaceFlinger( 1209): id=9792 createSurf, flag=84004, WindowToken{accb3be type=2005 android.os.Binder@87fa79}#9792
+08-16 03:31:49.935 I/wpa_supplicant( 2197): Heartbeat 32712
+08-16 03:31:49.986 I/WindowManager( 2424): WindowManagerGlobal#removeView, ty=2005, view=android.widget.LinearLayout{5d83bc9 V.E...... ........ 0,0-648,59}, caller=android.view.WindowManagerGlobal.removeView:628 android.view.WindowManagerImpl.removeViewImmediate:208 android.widget.ToastPresenter.hide:358 
+08-16 03:31:49.986 W/WindowOnBackDispatcher( 2424): sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda19@41fcb85
+08-16 03:31:49.987 D/CoreBackPreview( 1673): Window{4ed5716 u0 Toast}: Setting back callback null
+08-16 03:31:49.989 I/ViewRootImpl@5bee2ce[Toast]( 2424): dispatchDetachedFromWindow
+08-16 03:31:49.989 D/BLASTBufferQueue( 2424): [ViewRootImpl@5bee2ce[Toast]#615](f:0,a:1) destructor()
+08-16 03:31:49.989 D/BufferQueueConsumer( 2424): [ViewRootImpl@5bee2ce[Toast]#615(BLAST Consumer)615](id:97800000267,api:0,p:-1,c:2424) disconnect
+08-16 03:31:49.990 D/InputTransport( 1673): Input channel destroyed: '4ed5716', fd=866
+08-16 03:31:49.990 W/InputManager-JNI( 1673): Input channel object '4ed5716 Toast (client)' was disposed without first being removed with the input manager!
+08-16 03:31:49.990 D/InputTransport( 1673): Input channel destroyed: '4ed5716', fd=867
+08-16 03:31:49.991 V/WindowManager( 1673): Remove Window{4ed5716 u0 Toast}: mSurfaceController=Surface(name=Toast$_2424)/@0x77cdb3b mAnimatingExit=false mRemoveOnExit=false mHasSurface=true surfaceShowing=true animating=false app-animation=false mDisplayFrozen=false callers=com.android.server.wm.WindowManagerService.removeWindow:2148 com.android.server.wm.Session.remove:257 android.view.IWindowSession$Stub.onTransact:747 com.android.server.wm.Session.onTransact:204 android.os.Binder.execTransactInternal:1375 android.os.Binder.execTransact:1311 
+08-16 03:31:49.991 I/WindowManager( 1673): Reparenting to leash, surface=Surface(name=4ed5716 Toast)/@0x484e26d, leashParent=Surface(name=WindowToken{98c5bbb type=2005 android.os.Binder@d2f804a})/@0x6dfcea2
+08-16 03:31:49.992 E/BufferQueueDebug( 1209): [Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793](this:0xb400007bc4ccb790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793'
+08-16 03:31:49.992 I/BufferQueueDebug( 1209): [Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793](this:0xb400007bc4ccb790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-16 03:31:49.992 I/SurfaceFlinger( 1209): id=9793 createSurf, flag=24000, Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793
+08-16 03:31:49.993 D/WindowManager( 1673): makeSurface duration=2 leash=Surface(name=Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation)/@0x5978258
+08-16 03:31:49.994 V/WindowManager( 1673): removeIfPossible 2, Window{4ed5716 u0 Toast}: mAnimatingExit=true caller=com.android.server.wm.WindowManagerService.removeWindow:2148 com.android.server.wm.Session.remove:257 android.view.IWindowSession$Stub.onTransact:747 com.android.server.wm.Session.onTransact:204 android.os.Binder.execTransactInternal:1375 
+08-16 03:31:49.997 D/InputTransport( 2424): Input channel destroyed: '4ed5716', fd=530
+08-16 03:31:49.998 W/NotificationService( 1673): Toast already killed. pkg=com.parkcheolhong.worldlinco token=android.os.BinderProxy@3497fb1
+08-16 03:31:50.006 I/AppIconSolution( 2424): return adaptive icon for com.parkcheolhong.worldlinco, isNight = true
+08-16 03:31:50.015 V/ToastPresenter( 2424): yOffset = 85
+08-16 03:31:50.015 V/ToastPresenter( 2424): Text: 팩스키  in android.widget.ToastPresenter@dfb0d8e
+08-16 03:31:50.016 I/WindowManager( 2424): WindowManagerGlobal#addView, ty=2005, view=android.widget.LinearLayout{bda39af V.E...... ......I. 0,0-0,0}, caller=android.view.WindowManagerImpl.addView:150 android.widget.ToastPresenter.addToastView:414 android.widget.ToastPresenter.show:335 
+08-16 03:31:50.016 D/SurfaceFlinger( 1209): [SF client] NEW(0xb400007bea63c000) for (2424:com.android.systemui)
+08-16 03:31:50.018 D/NativeCustomFrequencyManager( 2424): [NativeCFMS] BpCustomFrequencyManager::BpCustomFrequencyManager()
+08-16 03:31:50.021 D/InputTransport( 1673): Input channel constructed: 'd2e6c04', fd=866
+08-16 03:31:50.021 D/InputTransport( 1673): Input channel constructed: 'd2e6c04', fd=867
+08-16 03:31:50.021 D/InputTransport( 1673): Input channel constructed: 'd2e6c04', fd=946
+08-16 03:31:50.022 E/BufferQueueDebug( 1209): [d2e6c04 Toast#9794](this:0xb400007bc4cce790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'd2e6c04 Toast#9794'
+08-16 03:31:50.022 I/BufferQueueDebug( 1209): [d2e6c04 Toast#9794](this:0xb400007bc4cce790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-16 03:31:50.022 I/SurfaceFlinger( 1209): id=9794 createSurf, flag=84004, d2e6c04 Toast#9794
+08-16 03:31:50.024 D/InputTransport( 1673): Input channel destroyed: 'd2e6c04', fd=946
+08-16 03:31:50.025 I/InsetsController( 2424): onStateChanged: host=Toast, from=android.view.ViewRootImpl.setView:1753, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 800, 1340), mDisplayCutout=DisplayCutout{insets=Rect(0, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=0 displayHeight=0 physicalDisplayWidth=0 physicalDisplayHeight=0 density={0.0} cutoutSpec={} rotation={0} scale={0.0} physicalPixelDisplaySizeRatio={0.0}}}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=17, center=Point(17, 17)}, RoundedCorner{position=TopRight, radius=17, center=Point(783, 17)}, RoundedCorner{position=BottomRight, radius=17, center=Point(783, 1323)}, RoundedCorner{position=BottomLeft, radius=17, center=Point(17, 1323)}]}  mRoundedCornerFrame=Rect(0, 0 - 0, 0), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(742, 0 - 800, 32) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=800 displayHeight=1340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {3 mType=ime mFrame=[0,0][0,0] mVisible=false mFlags=[]}, InsetsSource: {1be60000 mType=statusBars mFrame=[0,0][800,32] mVisible=true mFlags=[]}, InsetsSource: {1be60005 mType=mandatorySystemGestures mFrame=[0,0][800,32] mVisible=true mFlags=[]}, InsetsSource: {1be60006 mType=tappableElement mFrame=[0,0][800,32] mVisible=true mFlags=[]}, InsetsSource: {56b70001 mType=navigationBars mFrame=[0,1276][800,1340] mVisible=true mFlags=[]}, InsetsSource: {56b70004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]}, InsetsSource: {56b70005 mType=mandatorySystemGestures mFrame=[0,1276][800,1340] mVisible=true mFlags=[]}, InsetsSource: {56b70006 mType=tappableElement mFrame=[0,1276][800,1340] mVisible=true mFlags=[]}, InsetsSource: {56b70024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags=[]} }
+08-16 03:31:50.026 I/ViewRootImpl@5d811bc[Toast]( 2424): synced displayState. AttachInfo displayState=2
+08-16 03:31:50.026 I/ViewRootImpl@5d811bc[Toast]( 2424): setView = android.widget.LinearLayout@bda39af TM=true
+08-16 03:31:50.029 D/CoreBackPreview( 1673): Window{d2e6c04 u0 Toast}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@e1d76b3, mPriority=0, mIsAnimationCallback=false}
+08-16 03:31:50.030 V/WindowManager( 1673): Relayout Window{d2e6c04 u0 Toast}: viewVisibility=0 req=648x59 ty=2005 d0
+08-16 03:31:50.030 D/RestrictionPolicy( 1673): isScreenCaptureEnabled : ret=true userId=0
+08-16 03:31:50.030 E/BufferQueueDebug( 1209): [Toast$_2424#9795](this:0xb400007bc787f790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'Toast$_2424#9795'
+08-16 03:31:50.031 I/BufferQueueDebug( 1209): [Toast$_2424#9795](this:0xb400007bc787f790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-16 03:31:50.031 I/SurfaceFlinger( 1209): id=9795 createSurf, flag=44004, Toast$_2424#9795
+08-16 03:31:50.032 D/WindowManager( 1673): makeSurface duration=2 name=Toast$_2424
+08-16 03:31:50.037 V/WindowManager( 1673): Relayout hash=d2e6c04, pid=2424, syncId=-1: mAttrs={(0,85)(wrapxwrap) gr=BOTTOM CENTER sim={adjust=pan} ty=TOAST fmt=TRANSLUCENT wanim=0x1030004 receive insets ignoring z-order
+08-16 03:31:50.037 V/WindowManager( 1673):   fl=1000098
+08-16 03:31:50.037 V/WindowManager( 1673):   pfl=32000000
+08-16 03:31:50.037 V/WindowManager( 1673):   bhv=DEFAULT
+08-16 03:31:50.037 V/WindowManager( 1673):   fitTypes=STATUS_BARS NAVIGATION_BARS CAPTION_BAR IME
+08-16 03:31:50.037 V/WindowManager( 1673):   fitIgnoreVis naviIconColor=0}
+08-16 03:31:50.038 D/BufferQueueConsumer( 2424): [](id:97800000268,api:0,p:-1,c:2424) connect: controlledByApp=false
+08-16 03:31:50.039 I/BLASTBufferQueue_Java( 2424): new BLASTBufferQueue, mName= ViewRootImpl@5d811bc[Toast] mNativeObject= 0xb4000076f0205780 sc.mNativeObject= 0xb4000076ef839780 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3028 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 android.view.Choreographer$CallbackRecord.run:1698 android.view.Choreographer.doCallbacks:1153 android.view.Choreographer.doFrame:1079 android.view.Choreographer$FrameDisplayEventReceiver.run:1646 
+08-16 03:31:50.039 I/BLASTBufferQueue_Java( 2424): update, w= 648 h= 59 mName = ViewRootImpl@5d811bc[Toast] mNativeObject= 0xb4000076f0205780 sc.mNativeObject= 0xb4000076ef839780 format= -3 caller= android.graphics.BLASTBufferQueue.<init>:89 android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3028 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 
+08-16 03:31:50.040 I/ViewRootImpl@5d811bc[Toast]( 2424): Relayout returned: old=(0,32,800,1276) new=(76,1132,724,1191) relayoutAsync=false req=(648,59)0 dur=9 res=0x3 s={true 0xb4000076ef904000} ch=true seqId=0
+08-16 03:31:50.041 D/ViewRootImpl@5d811bc[Toast]( 2424): mThreadedRenderer.initialize() mSurface={isValid=true 0xb4000076ef904000} hwInitialized=true
+08-16 03:31:50.043 D/ViewRootImpl@5d811bc[Toast]( 2424): reportNextDraw android.view.ViewRootImpl.performTraversals:4718 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 android.view.Choreographer$CallbackRecord.run:1698 
+08-16 03:31:50.043 I/ViewRootImpl@5d811bc[Toast]( 2424): Setup new sync=wmsSync-ViewRootImpl@5d811bc[Toast]#92
+08-16 03:31:50.043 I/ViewRootImpl@5d811bc[Toast]( 2424): Creating new active sync group ViewRootImpl@5d811bc[Toast]#93
+08-16 03:31:50.044 I/ViewRootImpl@5d811bc[Toast]( 2424): registerCallbacksForSync syncBuffer=false
+08-16 03:31:50.049 I/thermal_repeater( 1385): socket -1
+08-16 03:31:50.049 I/ViewRootImpl@5d811bc[Toast]( 2424): Received frameDrawingCallback syncResult=0 frameNum=1.
+08-16 03:31:50.050 I/ViewRootImpl@5d811bc[Toast]( 2424): mWNT: t=0xb400007706a74f00 mBlastBufferQueue=0xb4000076f0205780 fn= 1 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$8.onFrameDraw:13841 android.view.ThreadedRenderer$1.onFrameDraw:792 <bottom of call stack> 
+08-16 03:31:50.050 I/ViewRootImpl@5d811bc[Toast]( 2424): Setting up sync and frameCommitCallback
+08-16 03:31:50.053 D/BLASTBufferQueue( 2424): [ViewRootImpl@5d811bc[Toast]#616](f:0,a:0) onFrameAvailable the first frame is available
+08-16 03:31:50.053 D/BLASTBufferQueue( 2424): [ViewRootImpl@5d811bc[Toast]#616](f:0,a:1) acquireNextBufferLocked size=648x59 mFrameNumber=1 applyTransaction=true mTimestamp=327587169725294(auto) mPendingTransactions.size=0 graphicBufferId=10411000729623 transform=0
+08-16 03:31:50.054 I/ViewRootImpl@5d811bc[Toast]( 2424): Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true
+08-16 03:31:50.055 D/OpenGLRenderer( 2424): CFMS:: SetUp Pid : 2424    Tid : 2525
+08-16 03:31:50.055 I/ViewRootImpl@5d811bc[Toast]( 2424): reportDrawFinished seqId=0
+08-16 03:31:50.056 D/OpenGLRenderer( 2424): HWUI - treat SMPTE_170M as sRGB
+08-16 03:31:50.056 D/WindowManager( 1673): finishDrawingWindow: Window{d2e6c04 u0 Toast} mDrawState=DRAW_PENDING seqId=0
+08-16 03:31:50.058 I/WindowManager( 1673): Reparenting to leash, surface=Surface(name=d2e6c04 Toast)/@0xe284470, leashParent=Surface(name=WindowToken{accb3be type=2005 android.os.Binder@87fa79})/@0xa9f73e9
+08-16 03:31:50.058 E/BufferQueueDebug( 1209): [Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796](this:0xb400007bc4d07790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796'
+08-16 03:31:50.058 I/BufferQueueDebug( 1209): [Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796](this:0xb400007bc4d07790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-16 03:31:50.059 I/SurfaceFlinger( 1209): id=9796 createSurf, flag=24004, Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796
+08-16 03:31:50.060 D/WindowManager( 1673): makeSurface duration=2 leash=Surface(name=Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation)/@0xa6b886e
+08-16 03:31:50.060 V/WindowManager( 1673): performShowLocked: mDrawState=HAS_DRAWN in Window{d2e6c04 u0 Toast}
+08-16 03:31:50.077 I/Layer   ( 1209): Layer [Toast$_2424#9795] hidden!! flag(0)
+08-16 03:31:50.099 D/SurfaceFlinger( 1209): Display 0 HWC layers:
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bea67c040 | 0102 | RGBA_8888    |    0.0    0.0  800.0 1340.0 |    0    0  800 1340 | com.parkcheolhong.worldlinco/com.par[...].worldlinco.MainActivity$_28667#9782
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bea67bbe0 | 0100 | RGBA_8888    |    0.0    0.0  133.0   33.0 |  333   32  466   65 | Caption of Task=10950#9756
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bca040 | 0100 | RGBA_8888    |    0.0    0.0  800.0   32.0 |    0    0  800   32 | StatusBar$_2424#107
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bc6d80 | 0100 | RGBA_8888    |    0.0    0.0   67.0  208.0 |  733  294  800  502 | com.sec.android.app.launcher/com.sam[...]e.edge.CocktailBarService$_3068#7917
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bea67bb00 | 0100 | RGBA_8888    |    0.0    0.0  648.0   59.0 |   76 1132  724 1191 | Toast$_2424#9790
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007be8a4a600 | 0100 | RGBA_8888    |    0.0    0.0  648.0   59.0 |   76 1132  724 1191 | Toast$_2424#9795
+08-16 03:31:50.099 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bc96a0 | 0100 | RGBA_8888    |    0.0    0.0  800.0   64.0 |    0 1276  800 1340 | T
+08-16 03:31:50.100 D/SurfaceFlinger( 1209): askbarWindow$_3068#150
+08-16 03:31:50.100 D/SurfaceFlinger( 1209): 
+08-16 03:31:50.103 D/WifiConnectivityMonitor.DnsThread( 1673):  [|204] []
+08-16 03:31:50.104 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 1673): DNS resultType : 0, responseTime : 204
+08-16 03:31:50.104 D/OpenNetworkQos[4.00]( 1673): updateBssidLatestDnsResultType - result: 0
+08-16 03:31:50.104 D/OpenNetworkQos[4.00]( 1673): updateBssidNoInternet: mBssidNoInternet = false
+08-16 03:31:50.104 D/OpenNetworkQos[4.00]( 1673): getOpenNetworkQosNoInternetStatus: false
+08-16 03:31:50.104 D/OpenNetworkQos[4.00]( 1673): getOpenNetworkQosScores: 26 0 0 
+08-16 03:31:50.104 D/KNOX_MDM_SettingsProvider( 1673): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+08-16 03:31:50.168 D/VibratorManagerService( 1673): Canceling vibration
+08-16 03:31:50.206 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:50.209 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:50.213 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:50.218 D/VibratorManagerService( 1673): Canceling vibration
+08-16 03:31:50.220 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T18:31:50.218Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"effect_start","api_base":"https://metanova1004.com"}'
+08-16 03:31:50.225 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:50.228 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:50.230 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:50.232 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:50.238 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_RESUME_TAIL/1673@19, type = -999
+08-16 03:31:50.238 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_LAZY/1673@20, type = -999
+08-16 03:31:50.238 D/ActivityManagerPerformance( 1673): AMP_acquire() TAIL
+08-16 03:31:50.238 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1432297  [1673 / 19]    HINT : AMS_RESUME_TAIL    list : 
+08-16 03:31:50.238 D/ActivityManagerPerformance( 1673): AMP_release() ACT_START
+08-16 03:31:50.239 I/mtkpower_client( 1170): perf_lock_rel, hdl:12577, tid:1201
+08-16 03:31:50.239 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.240 I/libPowerHal( 1177): [perfLockRel] hdl:12577, idx:2
+08-16 03:31:50.240 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 03:31:50.242 I/mtkpower_client( 1170): ret_hdl:12582
+08-16 03:31:50.242 I/mtkpower_client( 1170): perf_lock_rel, hdl:12578, tid:1201
+08-16 03:31:50.242 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:12582 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12582
+08-16 03:31:50.242 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:50.243 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.244 I/libPowerHal( 1177): [perfLockRel] hdl:12578, idx:1
+08-16 03:31:50.246 I/mtkpower_client( 1170): ret_hdl:12583
+08-16 03:31:50.246 I/mtkpower_client( 1170): perf_lock_rel, hdl:12580, tid:1201
+08-16 03:31:50.246 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.247 I/mtkpower_client( 1170): ret_hdl:12584
+08-16 03:31:50.247 I/mtkpower_client( 1170): perf_lock_rel, hdl:12581, tid:1201
+08-16 03:31:50.247 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 03:31:50.247 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:12583 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12583
+08-16 03:31:50.248 I/libPowerHal( 1177): [perfLockRel] hdl:12580, idx:6
+08-16 03:31:50.248 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 03:31:50.248 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 03:31:50.249 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:12584 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12584
+08-16 03:31:50.249 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 03:31:50.250 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 03:31:50.250 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.250 I/mtkpower_client( 1170): ret_hdl:12585
+08-16 03:31:50.250 I/mtkpower_client( 1170): perf_lock_rel, hdl:12582, tid:1201
+08-16 03:31:50.251 I/libPowerHal( 1177): [perfLockRel] hdl:12581, idx:7
+08-16 03:31:50.251 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 03:31:50.252 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:12585 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12585
+08-16 03:31:50.252 I/ReactNativeJS(28667): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 03:31:50.253 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:50.253 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.254 I/mtkpower_client( 1170): ret_hdl:12586
+08-16 03:31:50.254 I/mtkpower_client( 1170): perf_lock_rel, hdl:12583, tid:1201
+08-16 03:31:50.254 I/libPowerHal( 1177): [perfLockRel] hdl:12582, idx:3
+08-16 03:31:50.255 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_background","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-16 03:31:50.257 I/ReactNativeJS(28667): '[VoIPPendingIncoming] fetch failed', 401
+08-16 03:31:50.257 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 03:31:50.258 I/libPowerHal( 1177): [perfLockAcq] idx:6 hdl:12586 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12586
+08-16 03:31:50.258 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:50.258 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:50.259 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.259 I/mtkpower_client( 1170): ret_hdl:12587
+08-16 03:31:50.259 I/mtkpower_client( 1170): perf_lock_rel, hdl:12579, tid:1201
+08-16 03:31:50.260 I/mtkpower_client( 1170): perf_lock_rel, hdl:12584, tid:1201
+08-16 03:31:50.260 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.261 I/libPowerHal( 1177): [perfLockRel] hdl:12583, idx:2
+08-16 03:31:50.262 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 03:31:50.262 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:12587 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12587
+08-16 03:31:50.262 I/libPowerHal( 1177): [perfLockRel] hdl:12579, idx:5
+08-16 03:31:50.262 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:50.262 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 2
+08-16 03:31:50.263 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-16 03:31:50.264 I/libPowerHal( 1177): [perfLockRel] hdl:12584, idx:1
+08-16 03:31:50.264 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 03:31:50.264 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 03:31:50.265 I/mtkpower_client( 1170): ret_hdl:12588
+08-16 03:31:50.265 I/mtkpower_client( 1170): perf_lock_rel, hdl:12585, tid:1201
+08-16 03:31:50.265 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 03:31:50.266 I/mtkpower_client( 1170): ret_hdl:12589
+08-16 03:31:50.266 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1428912
+08-16 03:31:50.266 I/libPowerHal( 1177): [perfLockAcq] idx:7 hdl:12588 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12588
+08-16 03:31:50.267 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 03:31:50.267 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 03:31:50.268 I/libPowerHal( 1177): [perfLockRel] hdl:12585, idx:4
+08-16 03:31:50.268 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 03:31:50.269 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:12589 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12589
+08-16 03:31:50.269 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:50.430 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:31.987179,dur:1000.40,max:284.09,min:14.17  
+08-16 03:31:50.513 I/WindowManager( 1673): Reparenting to original parent: Surface(name=WindowToken{98c5bbb type=2005 android.os.Binder@d2f804a})/@0x6dfcea2, destroy=true, surface=Surface(name=4ed5716 Toast)/@0x484e26d
+08-16 03:31:50.527 I/WindowManager( 1673): Destroying surface Surface(name=Toast$_2424)/@0x77cdb3b called by com.android.server.wm.WindowStateAnimator.destroySurface:799 com.android.server.wm.WindowStateAnimator.destroySurfaceLocked:472 com.android.server.wm.WindowState.removeImmediately:2937 com.android.server.wm.WindowState.handleCompleteDeferredRemoval:5780 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 
+08-16 03:31:50.532 D/SurfaceFlinger( 1209): Display 0 HWC layers:
+08-16 03:31:50.532 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007be8a46540 | 0102 | RGBA_8888    |    0.0    0.0  800.0 1340.0 |    0    0  800 1340 | com.parkcheolhong.worldlinco/com.par[...].worldlinco.MainActivity$_28667#9782
+08-16 03:31:50.532 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bea67bbe0 | 0100 | RGBA_8888    |    0.0    0.0  133.0   33.0 |  333   32  466   65 | Caption of Task=10950#9756
+08-16 03:31:50.532 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bca040 | 0100 | RGBA_8888    |    0.0    0.0  800.0   32.0 |    0    0  800   32 | StatusBar$_2424#107
+08-16 03:31:50.532 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bc6d80 | 0100 | RGBA_8888    |    0.0    0.0   67.0  208.0 |  733  294  800  502 | com.sec.android.app.launcher/com.sam[...]e.edge.CocktailBarService$_3068#7917
+08-16 03:31:50.532 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007be8a4a600 | 0100 | RGBA_8888    |    0.0    0.0  648.0   59.0 |   76 1132  724 1191 | Toast$_2424#9795
+08-16 03:31:50.532 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bc96a0 | 0100 | RGBA_8888    |    0.0    0.0  800.0   64.0 |    0 1276  800 1340 | TaskbarWindow$_3068#150
+08-16 03:31:50.532 D/SurfaceFlinger( 1209): 
+08-16 03:31:50.543 I/Layer   ( 1209): id=9789 removeFromCurrentState 4ed5716 Toast#9789 (130)
+08-16 03:31:50.543 I/Layer   ( 1209): id=9790 removeFromCurrentState Toast$_2424#9790 (130)
+08-16 03:31:50.544 I/Layer   ( 1209): id=9793 removeFromCurrentState Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793 (130)
+08-16 03:31:50.544 I/Layer   ( 1209): Layer [Toast$_2424#9790] hidden!! flag(1)
+08-16 03:31:50.544 I/Layer   ( 1209): id=9790 removeFromCurrentState Toast$_2424#9790 (130)
+08-16 03:31:50.545 I/SurfaceFlinger( 1209): id=9790 Removed Toast$_2424#9790 (130)
+08-16 03:31:50.545 I/SurfaceFlinger( 1209): id=9793 Removed Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793 (130)
+08-16 03:31:50.545 I/SurfaceFlinger( 1209): id=9789 Removed 4ed5716 Toast#9789 (130)
+08-16 03:31:50.551 I/mtkpower_client( 1170): perf_lock_rel, hdl:12586, tid:28924
+08-16 03:31:50.551 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28924
+08-16 03:31:50.551 I/libPowerHal( 1177): [perfLockRel] hdl:12586, idx:6
+08-16 03:31:50.552 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 03:31:50.552 I/mtkpower_client( 1170): ret_hdl:12590
+08-16 03:31:50.552 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:12590 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12590
+08-16 03:31:50.552 I/mtkpower_client( 1170): perf_lock_rel, hdl:12587, tid:28924
+08-16 03:31:50.553 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:50.553 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28924
+08-16 03:31:50.553 I/libPowerHal( 1177): [perfLockRel] hdl:12587, idx:3
+08-16 03:31:50.554 I/mtkpower_client( 1170): ret_hdl:12591
+08-16 03:31:50.554 I/mtkpower_client( 1170): perf_lock_rel, hdl:12588, tid:28924
+08-16 03:31:50.554 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 03:31:50.554 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:12591 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12591
+08-16 03:31:50.554 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28924
+08-16 03:31:50.554 I/libPowerHal( 1177): [perfLockRel] hdl:12588, idx:7
+08-16 03:31:50.554 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 03:31:50.555 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 03:31:50.555 I/mtkpower_client( 1170): ret_hdl:12592
+08-16 03:31:50.555 I/mtkpower_client( 1170): perf_lock_rel, hdl:12589, tid:28924
+08-16 03:31:50.555 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:12592 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12592
+08-16 03:31:50.555 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 03:31:50.556 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 03:31:50.556 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28924
+08-16 03:31:50.556 I/libPowerHal( 1177): [perfLockRel] hdl:12589, idx:1
+08-16 03:31:50.556 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 03:31:50.557 I/mtkpower_client( 1170): ret_hdl:12593
+08-16 03:31:50.557 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1432297
+08-16 03:31:50.557 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:12593 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:12593
+08-16 03:31:50.557 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 03:31:50.560 I/BufferQueueDebug( 1209): [Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793](this:0xb400007bc4ccb790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:50.560 I/Layer   ( 1209): id=9793 Destroyed Surface(name=4ed5716 Toast)/@0x484e26d - animation-leash of window_animation#9793
+08-16 03:31:50.560 I/BufferQueueDebug( 1209): [4ed5716 Toast#9789](this:0xb400007bc7837790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:50.560 I/Layer   ( 1209): id=9789 Destroyed 4ed5716 Toast#9789
+08-16 03:31:50.560 I/BufferQueueDebug( 1209): [Toast$_2424#9790](this:0xb400007bc784d790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:50.560 I/Layer   ( 1209): id=9790 Destroyed Toast$_2424#9790
+08-16 03:31:50.577 I/WindowManager( 1673): Reparenting to original parent: Surface(name=WindowToken{accb3be type=2005 android.os.Binder@87fa79})/@0xa9f73e9, destroy=true, surface=Surface(name=d2e6c04 Toast)/@0xe284470
+08-16 03:31:50.593 I/Layer   ( 1209): id=9796 removeFromCurrentState Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796 (127)
+08-16 03:31:50.594 I/SurfaceFlinger( 1209): id=9796 Removed Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796 (127)
+08-16 03:31:50.610 I/BufferQueueDebug( 1209): [Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796](this:0xb400007bc4d07790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:50.610 I/Layer   ( 1209): id=9796 Destroyed Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9796
+08-16 03:31:50.636 I/mtkpower_client( 1170): perf_lock_rel, hdl:12572, tid:28893
+08-16 03:31:50.637 I/mtkpower_client( 1170): perf_lock_rel, hdl:12591, tid:28893
+08-16 03:31:50.637 I/libPowerHal( 1177): [perfLockRel] hdl:12572, idx:0
+08-16 03:31:50.638 I/mtkpower_client( 1170): perf_lock_rel, hdl:12590, tid:28893
+08-16 03:31:50.638 I/libPowerHal( 1177): [perfLockRel] hdl:12591, idx:3
+08-16 03:31:50.638 I/mtkpower_client( 1170): perf_lock_rel, hdl:12592, tid:28893
+08-16 03:31:50.638 I/libPowerHal( 1177): [perfLockRel] hdl:12590, idx:2
+08-16 03:31:50.639 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 03:31:50.639 I/mtkpower_client( 1170): perf_lock_rel, hdl:12593, tid:28893
+08-16 03:31:50.639 I/libPowerHal( 1177): [perfLockRel] hdl:12592, idx:4
+08-16 03:31:50.639 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 03:31:50.640 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 03:31:50.641 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1422154
+08-16 03:31:50.641 I/libPowerHal( 1177): [perfLockRel] hdl:12593, idx:1
+08-16 03:31:50.641 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 -1 -1
+08-16 03:31:50.643 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:50.730 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:50.743 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:50.746 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:50.756 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:50.758 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:50.756Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"initial_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:50.761 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:50.763 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-08-15T18:31:50.762Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"effect_start"}'
+08-16 03:31:50.765 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-08-15T18:31:50.764Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"effect_start","code":1006}'
+08-16 03:31:50.766 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:50.766 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_RETRY_SCHEDULED","timestamp":"2026-08-15T18:31:50.765Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"close:1006"}'
+08-16 03:31:50.769 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESUME_SKIPPED_AUTH","timestamp":"2026-08-15T18:31:50.767Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_launch_resume","status":401,"last_call_id":null}'
+08-16 03:31:50.774 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESUME_SKIPPED_AUTH","timestamp":"2026-08-15T18:31:50.773Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_state_resume","status":401,"last_call_id":null}'
+08-16 03:31:50.810 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28667#9782](this:0xb400007bc7912790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=4.34 dur=1382.06 max=616.35 min=16.27
+08-16 03:31:51.221 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:51.226 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESUME_SKIPPED_AUTH","timestamp":"2026-08-15T18:31:51.224Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_state_resume","status":401,"last_call_id":null}'
+08-16 03:31:51.232 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_600","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:51.240 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:51.242 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"bootstrap_initial_url_600","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:51.244 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:51.242Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"bootstrap_initial_url_600","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:51.246 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:51.246 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_ACTIVE_CALL_RESUME_SKIPPED_AUTH","timestamp":"2026-08-15T18:31:51.245Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"app_launch_resume","status":401,"last_call_id":null}'
+08-16 03:31:51.316 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:51.407 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:51.472 D/io_stats(  565): !@ 179,0 r 4156258 107569434 w 5224406 38661360 d 337822 48871200 f 0 0 iot 3860944 0 th 0 0 0 pt 0 inp 0 0 327588.589
+08-16 03:31:51.545 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 108644, isSameBssidAndFreq true
+08-16 03:31:51.545 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (246) / 390 / -23.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90000, delta: -8400
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90001, delta: -4035
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90002, delta: -7470
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90003, delta: -530
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90004, delta: -7574
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90005, delta: -338
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90006, delta: -19080
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90007, delta: -173
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90008, delta: -62
+08-16 03:31:51.590 E/KernelCpuUidFullTimeReader( 1673): Negative delta from freq time for uid: 90009, delta: -91
+08-16 03:31:51.591 D/CustomizedBinderCallsStatsInternal( 1673): reportCpuUsage() : 1%
+08-16 03:31:51.591 I/BinderCallsStats( 1673): Collected cpu time : 0us, collected call count : 0 for 327406911 ms
+08-16 03:31:51.667 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:51.705 W/WindowManager( 1673): Unable to start animation, surface is null or no children.
+08-16 03:31:51.728 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:11.558932,dur:1297.70,max:535.12,min:14.36  
+08-16 03:31:52.118 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:52.134 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:52.141 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:52.149 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:52.185 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:52.190 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:52.573 I/WindowManager( 2424): WindowManagerGlobal#removeView, ty=2005, view=android.widget.LinearLayout{bda39af V.E...... ........ 0,0-648,59}, caller=android.view.WindowManagerGlobal.removeView:628 android.view.WindowManagerImpl.removeViewImmediate:208 android.widget.ToastPresenter.hide:358 
+08-16 03:31:52.573 W/WindowOnBackDispatcher( 2424): sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda19@e9ac1cb
+08-16 03:31:52.576 D/CoreBackPreview( 1673): Window{d2e6c04 u0 Toast}: Setting back callback null
+08-16 03:31:52.581 I/ViewRootImpl@5d811bc[Toast]( 2424): dispatchDetachedFromWindow
+08-16 03:31:52.581 D/BLASTBufferQueue( 2424): [ViewRootImpl@5d811bc[Toast]#616](f:0,a:1) destructor()
+08-16 03:31:52.581 D/BufferQueueConsumer( 2424): [ViewRootImpl@5d811bc[Toast]#616(BLAST Consumer)616](id:97800000268,api:0,p:-1,c:2424) disconnect
+08-16 03:31:52.584 D/InputTransport( 1673): Input channel destroyed: 'd2e6c04', fd=866
+08-16 03:31:52.584 W/InputManager-JNI( 1673): Input channel object 'd2e6c04 Toast (client)' was disposed without first being removed with the input manager!
+08-16 03:31:52.584 D/InputTransport( 1673): Input channel destroyed: 'd2e6c04', fd=867
+08-16 03:31:52.584 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:52.584 V/WindowManager( 1673): Remove Window{d2e6c04 u0 Toast}: mSurfaceController=Surface(name=Toast$_2424)/@0xaa3142c mAnimatingExit=false mRemoveOnExit=false mHasSurface=true surfaceShowing=true animating=false app-animation=false mDisplayFrozen=false callers=com.android.server.wm.WindowManagerService.removeWindow:2148 com.android.server.wm.Session.remove:257 android.view.IWindowSession$Stub.onTransact:747 com.android.server.wm.Session.onTransact:204 android.os.Binder.execTransactInternal:1375 android.os.Binder.execTransact:1311 
+08-16 03:31:52.585 I/WindowManager( 1673): Reparenting to leash, surface=Surface(name=d2e6c04 Toast)/@0xe284470, leashParent=Surface(name=WindowToken{accb3be type=2005 android.os.Binder@87fa79})/@0xa9f73e9
+08-16 03:31:52.586 E/BufferQueueDebug( 1209): [Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797](this:0xb400007bc4d0a790,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797'
+08-16 03:31:52.586 I/BufferQueueDebug( 1209): [Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797](this:0xb400007bc4d0a790,id:-1,api:0,p:-1,c:-1) BufferQueue core=(1209:/system/bin/surfaceflinger)
+08-16 03:31:52.587 I/SurfaceFlinger( 1209): id=9797 createSurf, flag=24000, Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797
+08-16 03:31:52.589 D/WindowManager( 1673): makeSurface duration=3 leash=Surface(name=Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation)/@0xd9d2ef5
+08-16 03:31:52.590 V/WindowManager( 1673): removeIfPossible 2, Window{d2e6c04 u0 Toast}: mAnimatingExit=true caller=com.android.server.wm.WindowManagerService.removeWindow:2148 com.android.server.wm.Session.remove:257 android.view.IWindowSession$Stub.onTransact:747 com.android.server.wm.Session.onTransact:204 android.os.Binder.execTransactInternal:1375 
+08-16 03:31:52.595 D/InputTransport( 2424): Input channel destroyed: 'd2e6c04', fd=456
+08-16 03:31:52.596 W/NotificationService( 1673): Toast already killed. pkg=com.parkcheolhong.worldlinco token=android.os.BinderProxy@6b9d48a
+08-16 03:31:52.605 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:52.612 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:52.732 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:7.968375,dur:1003.97,max:868.31,min:16.30  
+08-16 03:31:52.904 D/SensorService( 1673): [SO] 3.029 0.489 9.298
+08-16 03:31:53.042 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:53.049 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:53.062 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 03:31:53.064 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:53.067 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:53.071 W/ReactNativeJS(28667): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 03:31:53.072 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:53.081 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T18:31:53.078Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006","api_base":"https://metanova1004.com"}'
+08-16 03:31:53.084 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_1600","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:53.095 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"bootstrap_initial_url_1600","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:53.097 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:53.095Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"bootstrap_initial_url_1600","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:53.110 I/WindowManager( 1673): Reparenting to original parent: Surface(name=WindowToken{accb3be type=2005 android.os.Binder@87fa79})/@0xa9f73e9, destroy=true, surface=Surface(name=d2e6c04 Toast)/@0xe284470
+08-16 03:31:53.125 I/WindowManager( 1673): Destroying surface Surface(name=Toast$_2424)/@0xaa3142c called by com.android.server.wm.WindowStateAnimator.destroySurface:799 com.android.server.wm.WindowStateAnimator.destroySurfaceLocked:472 com.android.server.wm.WindowState.removeImmediately:2937 com.android.server.wm.WindowState.handleCompleteDeferredRemoval:5780 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:1476 
+08-16 03:31:53.131 D/SurfaceFlinger( 1209): Display 0 HWC layers:
+08-16 03:31:53.131 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bea67c040 | 0102 | RGBA_8888    |    0.0    0.0  800.0 1340.0 |    0    0  800 1340 | com.parkcheolhong.worldlinco/com.par[...].worldlinco.MainActivity$_28667#9782
+08-16 03:31:53.131 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bea67bbe0 | 0100 | RGBA_8888    |    0.0    0.0  133.0   33.0 |  333   32  466   65 | Caption of Task=10950#9756
+08-16 03:31:53.131 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bca040 | 0100 | RGBA_8888    |    0.0    0.0  800.0   32.0 |    0    0  800   32 | StatusBar$_2424#107
+08-16 03:31:53.131 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bc6d80 | 0100 | RGBA_8888    |    0.0    0.0   67.0  208.0 |  733  294  800  502 | com.sec.android.app.launcher/com.sam[...]e.edge.CocktailBarService$_3068#7917
+08-16 03:31:53.131 D/SurfaceFlinger( 1209):      DEVICE | 0xb400007bc4bc96a0 | 0100 | RGBA_8888    |    0.0    0.0  800.0   64.0 |    0 1276  800 1340 | TaskbarWindow$_3068#150
+08-16 03:31:53.131 D/SurfaceFlinger( 1209): 
+08-16 03:31:53.141 I/Layer   ( 1209): id=9794 removeFromCurrentState d2e6c04 Toast#9794 (127)
+08-16 03:31:53.141 I/Layer   ( 1209): id=9795 removeFromCurrentState Toast$_2424#9795 (127)
+08-16 03:31:53.142 I/Layer   ( 1209): id=9797 removeFromCurrentState Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797 (127)
+08-16 03:31:53.142 I/Layer   ( 1209): Layer [Toast$_2424#9795] hidden!! flag(1)
+08-16 03:31:53.142 I/Layer   ( 1209): id=9795 removeFromCurrentState Toast$_2424#9795 (127)
+08-16 03:31:53.143 I/SurfaceFlinger( 1209): id=9795 Removed Toast$_2424#9795 (127)
+08-16 03:31:53.143 I/SurfaceFlinger( 1209): id=9797 Removed Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797 (127)
+08-16 03:31:53.143 I/SurfaceFlinger( 1209): id=9794 Removed d2e6c04 Toast#9794 (127)
+08-16 03:31:53.158 I/BufferQueueDebug( 1209): [d2e6c04 Toast#9794](this:0xb400007bc4cce790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:53.158 I/Layer   ( 1209): id=9794 Destroyed d2e6c04 Toast#9794
+08-16 03:31:53.158 I/BufferQueueDebug( 1209): [Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797](this:0xb400007bc4d0a790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:53.158 I/Layer   ( 1209): id=9797 Destroyed Surface(name=d2e6c04 Toast)/@0xe284470 - animation-leash of window_animation#9797
+08-16 03:31:53.159 I/BufferQueueDebug( 1209): [Toast$_2424#9795](this:0xb400007bc787f790,id:-1,api:0,p:-1,c:1209) onDestructor()
+08-16 03:31:53.159 I/Layer   ( 1209): id=9795 Destroyed Toast$_2424#9795
+08-16 03:31:53.530 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:53.533 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-16 03:31:53.552 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:53.557 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:53.656 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28667#9782](this:0xb400007bc7912790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=1.41 dur=2846.20 max=1930.38 min=16.29
+08-16 03:31:53.956 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:53.969 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-08-15T18:31:53.967Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006"}'
+08-16 03:31:53.970 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-08-15T18:31:53.969Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006","code":1006}'
+08-16 03:31:53.972 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_RETRY_SCHEDULED","timestamp":"2026-08-15T18:31:53.970Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"close:1006"}'
+08-16 03:31:53.979 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:53.986 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:54.023 W/WindowManager( 1673): Unable to start animation, surface is null or no children.
+08-16 03:31:54.425 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:54.428 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-16 03:31:54.430 I/ReactNativeJS(28667): '[VoIPPendingIncoming] fetch failed', 401
+08-16 03:31:54.447 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:54.452 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:54.491 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:16.482269,dur:1759.47,max:816.19,min:13.08  
+08-16 03:31:54.554 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 108645, isSameBssidAndFreq true
+08-16 03:31:54.556 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (58) / 390 / -23.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 03:31:54.826 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:54.828 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_3200","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:54.846 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"bootstrap_initial_url_3200","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:54.848 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:54.846Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"bootstrap_initial_url_3200","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:54.850 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:54.857 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:55.049 I/thermal_repeater( 1385): socket -1
+08-16 03:31:55.281 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:55.300 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:55.304 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:55.338 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28667#9782](this:0xb400007bc7912790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=1.78 dur=1682.04 max=849.41 min=16.69
+08-16 03:31:55.474 D/io_stats(  565): !@ 179,0 r 4156259 107569438 w 5224406 38661360 d 337878 48871672 f 0 0 iot 3860952 0 th 0 0 0 pt 0 inp 0 0 327592.591
+08-16 03:31:55.673 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:55.677 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"has_pending_call":false,"has_active_call":false}'
+08-16 03:31:55.696 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:55.704 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:55.830 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:55.936 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:56.094 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:56.101 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CONNECT_ATTEMPT","timestamp":"2026-08-15T18:31:56.100Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006","api_base":"https://metanova1004.com"}'
+08-16 03:31:56.117 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:56.122 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:56.493 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:56.526 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:56.529 I/ReactNativeJS(28667): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:30:passke...en_331","user_id":6,"status":401,"ok":false}'
+08-16 03:31:56.531 I/ReactNativeJS(28667): '[VoIPPendingIncoming] fetch failed', 401
+08-16 03:31:56.535 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_5200","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:56.545 I/ReactNativeJS(28667): '[DEEP_LINK_TRACE_PARSE]', '{"source":"bootstrap_initial_url_5200","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 03:31:56.546 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:56.547 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-15T18:31:56.545Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"bootstrap_initial_url_5200","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786818708220"}'
+08-16 03:31:56.550 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:56.584 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 03:31:56.586 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28667#9782](this:0xb400007bc7912790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.80 dur=1248.00 max=1248.00 min=1248.00
+08-16 03:31:56.589 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:0.953342,dur:2097.88,max:1248.43,min:849.45  
+08-16 03:31:56.979 W/unknown:ReactNative(28667): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 03:31:56.982 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_ERROR","timestamp":"2026-08-15T18:31:56.980Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006"}'
+08-16 03:31:56.984 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_CLOSED","timestamp":"2026-08-15T18:31:56.982Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"retry:close:1006","code":1006}'
+08-16 03:31:56.985 I/ReactNativeJS(28667): '[UI_PRESS_PROBE]', '{"event":"VOIP_PRESENCE_RETRY_SCHEDULED","timestamp":"2026-08-15T18:31:56.984Z","token_ready":true,"user_ready":true,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","voice_id":"nado-000006","token_summary":"len:30:passke...en_331","reason":"close:1006"}'
+08-16 03:31:57.007 W/keymaster_tee(  593): [WRN]begin req PARAMS: A32 B32 P1 
+08-16 03:31:57.011 I/keystore2(  592): system/security/keystore2/src/security_level.rs:448 - In create_operation. Success to create IKeystoreOperation. 10513, None
+08-16 03:31:57.283 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''
+

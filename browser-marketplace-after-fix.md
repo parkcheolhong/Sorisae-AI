@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Marketplace Workspace 탐색" [ref=e3]:
+      - generic [ref=e4]: MA
+      - navigation [ref=e5]:
+        - link "홈" [ref=e6] [cursor=pointer]:
+          - /url: /marketplace
+        - link "주문" [ref=e9] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+        - link "관리" [ref=e12] [cursor=pointer]:
+          - /url: /admin
+        - link "안내" [ref=e15] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+      - generic [ref=e18]: LIVE
+    - generic [ref=e19]:
+      - banner [ref=e20]:
+        - generic [ref=e21]
+        - generic [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]
+        - generic "핵심 기능 바로가기" [ref=e41]
+      - generic [ref=e50]:
+        - main [ref=e51]
+        - complementary [ref=e289]
+  - alert [ref=e304]

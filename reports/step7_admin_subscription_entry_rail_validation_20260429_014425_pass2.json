@@ -1,0 +1,26 @@
+{
+    "step": "Step 7",
+    "title": "관리자 구독 모니터링 우측 진입 레일 추가",
+    "status": "completed",
+    "pass": 2,
+    "executed_at": "2026-04-29T01:44:25+09:00",
+    "url": "http://127.0.0.1:3005/admin/subscription-monitor?period_days=7&status=all",
+    "checks": [
+        {
+            "name": "우측 진입 레일 유지",
+            "result": "pass",
+            "evidence": "period_days=7 재진입 후에도 '⚡ 진입 레일' 유지 확인"
+        },
+        {
+            "name": "레일 링크 활성 상태 반영",
+            "result": "pass",
+            "evidence": "'📅 최근 7일 모니터링' 링크 active 상태 확인"
+        },
+        {
+            "name": "우측 레일 링크 동작",
+            "result": "pass",
+            "evidence": "레일 링크 클릭 후 URL이 /admin/subscription-monitor?period_days=7&status=all 로 이동 확인"
+        }
+    ],
+    "notes": "필터 라벨 텍스트는 기존 요약 라벨(최근 90일 실패 결제)로 표시되며 본 작업 범위(우측 진입 레일)에는 영향 없음"
+}

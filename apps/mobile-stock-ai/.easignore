@@ -1,0 +1,35 @@
+# Reduce EAS archive size in monorepo context
+uploads/
+../uploads/
+../../uploads/
+.delivery-venv/
+../.delivery-venv/
+../../.delivery-venv/
+.venv/
+../.venv/
+../../.venv/
+TestResults/
+../TestResults/
+../../TestResults/
+
+# EAS installs dependencies remotely; local modules should not be archived.
+node_modules/
+
+# Local diagnostics / transient artifacts
+tmp_eas_preview_full.log
+
+# Monorepo siblings not required for this mobile app build context
+frontend/
+apps/
+
+# Exclude large build outputs and nested dependency trees recursively.
+**/node_modules/
+**/.next/
+**/.next-build/
+**/dist/
+**/build/
+
+# Exclude transient logs and caches.
+*.log
+**/*.log
+.expo/

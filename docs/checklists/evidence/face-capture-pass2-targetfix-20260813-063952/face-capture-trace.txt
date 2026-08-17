@@ -1,0 +1,2 @@
+﻿08-13 06:40:27.079 I/ReactNativeJS(17354): '[FACE_CAPTURE_TRACE]', '{"trace_id":"face-trace-face.interpret-msqm54qv-5pxzh1","event":"start_tap","from_lang":"ko","to_lang":"en","face_screen_open":true,"sorisae_window_open":false}'
+08-13 06:40:27.122 I/ReactNativeJS(17354): '[FACE_CAPTURE_BLOCK]', '{"code":"capture_busy","message":"이미 음성 캡처가 진행 중입니다. 잠시 후 다시 시도해 주세요.","trace_id":"face-trace-face.interpret-msqm54qv-5pxzh1","from_lang":"ko","to_lang":"en"}'

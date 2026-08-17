@@ -1,0 +1,8 @@
+﻿Starting: Intent { act=android.intent.action.VIEW dat=exp+nadotongryoksa://expo-development-client/... }
+Status: ok
+LaunchState: COLD
+Activity: com.parkcheolhong.worldlinco/.MainActivity
+TotalTime: 756
+WaitTime: 774
+Complete
+

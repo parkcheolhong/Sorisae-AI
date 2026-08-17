@@ -1,0 +1,7 @@
+Starting: Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] cmp=com.parkcheolhong.worldlinco/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity
+TotalTime: 8211
+WaitTime: 8239
+Complete

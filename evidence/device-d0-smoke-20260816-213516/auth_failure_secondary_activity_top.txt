@@ -1,0 +1,1200 @@
+TASK 10197:com.android.chrome id=11040 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity 20c28a7 pid=13637 userId=0 uid=10197 displayId=0(type=INTERNAL)
+    Local Activity f08ed60 State:
+      mResumed=false mStopped=true mFinished=false
+      mIsInMultiWindowMode=false mIsInPictureInPictureMode=false
+      mChangingConfigurations=false
+      mCurrentConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mLoadersStarted=true
+      Active Fragments in 82a393e:
+        #0: j4m{b5f739f #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+          mFragmentId=#0 mContainerId=#0 mTag=androidx.lifecycle.LifecycleDispatcher.report_fragment_tag
+          mState=3 mIndex=0 mWho=android:fragment:0 mBackStackNesting=0
+          mAdded=true mRemoving=false mFromLayout=false mInLayout=false
+          mHidden=false mDetached=false mMenuVisible=true mHasMenu=false
+          mRetainInstance=false mRetaining=false mUserVisibleHint=true
+          mFragmentManager=FragmentManager{82a393e in HostCallbacks{8d8dcec}}
+          mHost=android.app.Activity$HostCallbacks@8d8dcec
+          Child FragmentManager{22e28b5 in j4m{b5f739f}}:
+            FragmentManager misc state:
+              mHost=android.app.Activity$HostCallbacks@8d8dcec
+              mContainer=android.app.Fragment$1@f0cab4a
+              mParent=j4m{b5f739f #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+              mCurState=3 mStateSaved=true mDestroyed=false
+      Added Fragments:
+        #0: j4m{b5f739f #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+      FragmentManager misc state:
+        mHost=android.app.Activity$HostCallbacks@8d8dcec
+        mContainer=android.app.Activity$HostCallbacks@8d8dcec
+        mCurState=3 mStateSaved=true mDestroyed=false
+    PhoneWindow:
+      mStatusBarColor=0x0 mForcedStatusBarColor=true
+      mNavigationBarColor=0x0 mForcedNavigationBarColor=true
+      mDeviceDefaultNavigationBarColor=0xFF010102
+      mDefaultNavigationBarColor=0xFF010102
+      mSettingsNavigationBarColor=0xFFF6F6F8
+      mThemeApplied=false
+    ViewRoot:
+      mAdded=true
+      mRemoved=false
+      mStopped=true
+      mPausedForTransition=false
+      mConsumeBatchedInputScheduled=false
+      mConsumeBatchedInputImmediatelyScheduled=false
+      mPendingInputEventCount=0
+      mProcessInputEventsScheduled=false
+      mTraversalScheduled=false
+      mReportNextDraw=false
+      mLastPerformTraversalsFailedReason=view_not_visible
+      mLastReportedMergedConfiguration={mGlobalConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1075 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0} mOverrideConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}}
+      mLastConfigurationFromResources={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mIsAmbientMode=false
+      mUnbufferedInputSource=0
+      mAttachInfo=       AttachInfo:
+        mHasWindowFocus=false
+        mWindowVisibility=8
+        mInTouchMode=true
+        mUnbufferedDispatchRequested=false
+      android.view.ViewRootImpl$NativePreImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$ImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$NativePostImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$WindowInputEventReceiver
+       mInputChannel: 8bf64e5 com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity (client)
+       mSeqMap: {}
+       mReceiverPtr:
+        mInputConsumer:
+          mResampleTouch = true
+          mChannel = 8bf64e5 com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity (client)
+          mMsgDeferred: false
+          Batches:
+              <empty>
+          mSeqChains:
+              <empty>
+          mConsumeTimes:
+              <empty>
+          
+        mBatchedInputEventPending: false
+        mOutboundQueue:
+          <empty>
+        
+    Choreographer:
+      mFrameScheduled=true
+      mLastFrameTime=392791384 (10 ms ago)
+    InsetsController:
+      InsetsState
+        mDisplayFrame=Rect(0, 0 - 800, 1340)
+        mDisplayCutout=DisplayCutout{insets=Rect(0, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=0 displayHeight=0 physicalDisplayWidth=0 physicalDisplayHeight=0 density={0.0} cutoutSpec={} rotation={0} scale={0.0} physicalPixelDisplaySizeRatio={0.0}}}}
+        mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=17, center=Point(17, 17)}, RoundedCorner{position=TopRight, radius=17, center=Point(783, 17)}, RoundedCorner{position=BottomRight, radius=17, center=Point(783, 1323)}, RoundedCorner{position=BottomLeft, radius=17, center=Point(17, 1323)}]}
+        mRoundedCornerFrame=Rect(0, 0 - 800, 1340)
+        mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(742, 0 - 800, 32) rotation=0}
+        mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=800 displayHeight=1340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}
+          InsetsSource id=3 type=ime frame=[0,0][0,0] visibleFrame=[0,1276][800,1340] visible=false flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60000 type=statusBars frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60005 type=mandatorySystemGestures frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60006 type=tappableElement frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70001 type=navigationBars frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70004 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70005 type=mandatorySystemGestures frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70006 type=tappableElement frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70024 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+    WindowOnBackDispatcher:
+        Top Callback: android.app.Activity$$ExternalSyntheticLambda0@b403540
+        Callbacks: 
+          Callback: android.app.Activity$$ExternalSyntheticLambda0@b403540 Priority=-1
+    View Hierarchy:
+      DecorView@cbe2641[ChromeTabbedActivity]
+        android.widget.LinearLayout{9d1aabb V.E...... .......D 0,0-800,1340}
+          android.view.ViewStub{7ecdbd8 G.E...... ......I. 0,0-0,0 #10201cc android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{be59b31 V.E...... .......D 0,0-800,1340}
+            androidx.appcompat.widget.FitWindowsFrameLayout{ef23216 V.E...... .......D 0,0-800,1340 #7f010080 app:id/action_bar_root}
+              androidx.appcompat.widget.ContentFrameLayout{b663797 V.E...... .......D 0,0-800,1340 #1020002 android:id/content}
+                org.chromium.ui.edge_to_edge.layout.EdgeToEdgeBaseLayout{53fdd84 V.E...... ......ID 0,0-800,1340 #7f010459 app:id/edge_to_edge_base_layout}
+                  android.widget.FrameLayout{9c7b96d V.E...... .......D 0,32-800,1276}
+                    android.view.ViewStub{bd759a2 G.E...... ......I. 0,0-0,0 #7f0103a6 app:id/custom_tabs_handle_view_stub}
+                    org.chromium.components.browser_ui.widget.CoordinatorLayoutForPointer{d4cb633 V.E...... .......D 0,0-800,1244 #7f010377 app:id/coordinator}
+                      org.chromium.chrome.browser.compositor.CompositorViewHolder{a105c79 V.E...... ........ 0,0-800,1244 #7f010304 app:id/compositor_view_holder}
+                        org.chromium.chrome.browser.compositor.CompositorView{79f4df0 V.E...... ........ 0,0-800,1244}
+                          android.view.SurfaceView{774bac1 V.E...... ........ 0,0-800,1244}
+                        q66{337f69 VFE...... .F...... 0,0-800,1244}
+                        izb{af56dee I.E...... ......I. 0,0-800,1244}
+                      android.widget.FrameLayout{3ba6dbe G.E...... ......I. 0,0-0,0 #7f010128 app:id/ar_view_holder}
+                      android.view.View{2c4ce1f G.ED..... ......I. 0,0-0,0 #7f01024e app:id/capture_overlay}
+                      android.view.View{f93656c G.ED..... ......I. 0,0-0,0 #7f01045a app:id/edge_to_edge_bottom_chin}
+                      org.chromium.ui.AsyncViewStub{8314735 G.E...... ......I. 0,0-0,0 #7f0106a7 app:id/keyboard_accessory_stub}
+                      org.chromium.ui.AsyncViewStub{8aba7ca G.E...... ......I. 0,0-0,0 #7f0106a6 app:id/keyboard_accessory_sheet_stub}
+                      android.view.ViewStub{e722d3b G.E...... ......I. 0,0-0,0 #7f010214 app:id/bottombar_stub}
+                      android.view.ViewStub{7076c58 G.E...... ......I. 0,0-0,0 #7f010d53 app:id/tab_modal_dialog_container_stub}
+                      android.view.ViewStub{53c21b1 G.E...... ......I. 0,0-0,0 #7f010d52 app:id/tab_modal_dialog_container_sibling_view}
+                      android.view.ViewStub{cc47696 G.E...... ......I. 0,0-0,0 #7f0101e0 app:id/bookmark_bar_stub}
+                      android.view.ViewStub{9cc6217 G.E...... ......I. 0,0-0,0 #7f01009e app:id/actor_overlay_stub}
+                      org.chromium.ui.AsyncViewStub{6b2f604 G.E...... ......I. 0,0-0,0 #7f010896 app:id/omnibox_suggestions_container_stub}
+                      org.chromium.ui.AsyncViewStub{c4027ed G.E...... ......I. 0,0-0,0 #7f010882 app:id/ntp_realbox_results_container_stub}
+                      org.chromium.chrome.browser.ui.BottomContainer{1c96622 V.E...... ........ 0,1244-800,1244 #7f0101fd app:id/bottom_container}
+                      android.view.View{2b08b3 G.ED..... ......ID 0,0-0,0 #7f01007e app:id/action_bar_black_background}
+                      android.view.ViewStub{c6b6e70 G.E...... ......I. 0,0-0,0 #7f010d31 app:id/tab_group_ui_container_stub}
+                      org.chromium.chrome.browser.toolbar.top.ToolbarControlContainer{455e9 V.E...... .......D 0,0-800,129 #7f01036e app:id/control_container}
+                        org.chromium.chrome.browser.toolbar.top.ToolbarControlContainer$ToolbarViewResourceCoordinatorLayout{612828f V.E...... .......D 0,0-800,129 #7f010e07 app:id/toolbar_container}
+                          org.chromium.chrome.browser.toolbar.top.ToolbarTablet{52f53a0 V.E....L. ......ID 0,53-800,128 #7f010e01 app:id/toolbar}
+                            android.view.View{343591c G.ED..... ......ID 0,0-0,0 #7f010e13 app:id/toolbar_tablet_fixed_height_bg}
+                            android.widget.LinearLayout{7ba925 V.E...... .......D 5,0-795,75 #7f010e14 app:id/toolbar_tablet_layout}
+                              org.chromium.chrome.browser.toolbar.home_button.HomeButton{9ce7afa VFED..CL. ......I. 0,0-64,75 #7f01061d app:id/home_button}
+                              org.chromium.ui.widget.ChromeImageButton{dbeb8ab V..D..CLX ......I. 64,0-128,75 #7f010199 app:id/back_button}
+                              org.chromium.ui.widget.ChromeImageButton{5baeb08 VFED..CL. ......I. 128,0-192,75 #7f01057b app:id/forward_button}
+                              org.chromium.ui.widget.ChromeImageButton{462b2a1 VFED..CL. ......I. 192,0-256,75 #7f010ae6 app:id/refresh_button}
+                              android.widget.FrameLayout{9f94cc6 V.E...... .......D 256,5-598,69 #7f0106f4 app:id/location_bar_holder}
+                                org.chromium.chrome.browser.omnibox.LocationBarTablet{bae3487 V.E....L. ......ID 0,0-342,64 #7f0106f0 app:id/location_bar}
+                                  androidx.constraintlayout.widget.Barrier{497afb4 G.ED..... ......I. 0,0-0,0 #7f01019a app:id/back_button_barrier}
+                                  org.chromium.chrome.browser.omnibox.status.StatusView{556d7dd VFE...CL. ......I. 0,0-64,64 #7f0106f7 app:id/location_bar_status}
+                                    android.view.ViewStub{dad6f52 G.E...... ......I. 0,0-0,0 #7f0106f6 app:id/location_bar_incognito_badge_stub}
+                                    org.chromium.chrome.browser.omnibox.status.StatusIconView{62f9223 V.E...... ........ 0,0-64,64 #7f0106fa app:id/location_bar_status_icon_view}
+                                      org.chromium.ui.widget.ChromeImageView{ada1320 V.ED..... ......I. 16,16-48,48 #7f0106f8 app:id/location_bar_status_icon}
+                                      android.widget.Space{b6e14d9 G.ED..... ......I. 0,0-0,0 #7f0106f9 app:id/location_bar_status_icon_holding_space}
+                                    ljf{10f2e9e G.ED..... ......I. 0,0-0,0 #7f0106fb app:id/location_bar_verbose_status}
+                                    android.view.View{fdf2d7f G.ED..... ......I. 0,0-0,0 #7f0106fd app:id/location_bar_verbose_status_separator}
+                                    android.widget.Space{11d414c G.ED..... ......I. 0,0-0,0 #7f0106fc app:id/location_bar_verbose_status_extra_space}
+                                  org.chromium.chrome.browser.omnibox.UrlBarApi26{222595 VFED..CL. ........ 64,0-278,64 #7f010e71 app:id/url_bar}
+                                  android.view.ViewStub{c3b96aa G.E...... ......I. 0,0-0,0 #7f010cbd app:id/suggestions_container_placeholder}
+                                  android.widget.LinearLayout{ec3229b G.E...... ......I. 0,0-0,0 #7f010893 app:id/omnibox_chip_container}
+                                  org.chromium.ui.widget.ChromeImageButton{c832638 GFED..C.. ......I. 0,0-0,0 #7f010680 app:id/install_button}
+                                  org.chromium.ui.widget.ChromeImageButton{cc8611 GFED..C.. ......I. 0,0-0,0 #7f010eed app:id/zoom_button}
+                                  org.chromium.ui.widget.ChromeImageButton{a147376 VFED..C.. ......ID 278,0-342,64 #7f0101e3 app:id/bookmark_button}
+                                  org.chromium.ui.widget.ChromeImageButton{9274d77 GFED..C.. ......I. 0,0-0,0 #7f01077a app:id/mic_button}
+                                  org.chromium.ui.widget.ChromeImageButton{606de4 GFED..C.. ......I. 0,0-0,0 #7f0106c4 app:id/lens_camera_button}
+                                  org.chromium.ui.widget.ChromeImageButton{ce2724d GFED..C.. ......I. 0,0-0,0 #7f0103d2 app:id/delete_button}
+                                  android.widget.Space{fcc5102 I.ED..... ......I. 342,0-353,0 #7f010727 app:id/margin_spacer}
+                                  androidx.constraintlayout.widget.Barrier{4394a13 G.ED..... ......I. 278,0-278,0 #7f010087 app:id/action_buttons_segment}
+                                  androidx.constraintlayout.widget.Barrier{ea88450 G.ED..... ......I. 278,0-278,0 #7f010088 app:id/action_buttons_segment_multimodal}
+                                  org.chromium.chrome.browser.omnibox.fusebox.FuseboxAttachmentRecyclerView{bf0e649 GFED..... ......I. 0,0-0,0 #7f0106f1 app:id/location_bar_attachments}
+                                  org.chromium.ui.widget.ChromeImageView{1327b4e GFED..C.. ......I. 0,0-0,0 #7f0105a1 app:id/fusebox_plus_button}
+                                  org.chromium.ui.widget.ButtonCompat{64746f GFED..C.. ......I. 0,0-0,0 #7f0105a5 app:id/fusebox_request_type}
+                                  org.chromium.ui.widget.ChromeImageView{319957c GFED..C.. ......I. 0,0-0,0 #7f010817 app:id/navigate_button}
+                                  org.chromium.ui.widget.ButtonCompat{7589e05 GFED..C.. ......I. 0,0-0,0 #7f010597 app:id/fusebox_activation_chip}
+                              org.chromium.ui.listmenu.ListMenuButton{dbefe5a VFED..CL. ......I. 598,0-662,75 #7f0108ce app:id/optional_toolbar_button}
+                              android.view.ViewStub{f6de88b G.E...... ......I. 0,0-0,0 #7f010c30 app:id/signin_button_stub}
+                              android.view.ViewStub{5288d68 G.E...... ......I. 0,0-0,0 #7f01066d app:id/incognito_indicator_stub}
+                              android.view.ViewStub{3ca1581 G.E...... ......I. 0,0-0,0 #7f0104fd app:id/extensions_toolbar_container_stub}
+                              android.view.View{25ea626 G.ED..... ......ID 0,0-0,0 #7f0105b5 app:id/glic_divider}
+                              android.view.ViewStub{508267 G.E...... ......I. 0,0-0,0 #7f0105af app:id/glic_action_chip_stub}
+                              org.chromium.chrome.browser.toolbar.top.ToggleTabStackButton{cad1814 VFED..CL. ......I. 662,0-726,75 #7f010d5e app:id/tab_switcher_button}
+                              org.chromium.chrome.browser.toolbar.menu_button.MenuButton{68188bd V.E...... ........ 726,0-790,75 #7f010746 app:id/menu_button_wrapper}
+                                org.chromium.ui.widget.ChromeImageButton{bfefeb2 VFED..C.. ......I. 0,0-64,75 #7f010744 app:id/menu_button}
+                                androidx.appcompat.widget.AppCompatImageView{cd8de03 I.ED..... ......I. 0,0-64,75 #7f010743 app:id/menu_badge}
+                          org.chromium.chrome.browser.toolbar.ToolbarHairlineView{e618b59 V.ED..... ......I. 0,128-800,129 #7f010e0a app:id/toolbar_hairline}
+                          android.view.ViewStub{7d3a31e G.E...... ......I. 0,0-0,0 #7f010534 app:id/find_toolbar_stub}
+                        android.view.ViewStub{54da180 G.E...... ......I. 0,0-0,0 #7f010535 app:id/find_toolbar_tablet_stub}
+                        r3s{242f3b9 G.ED..... ......I. 0,0-0,0}
+                      android.widget.FrameLayout{f3bc26e V.E...... ......ID 0,128-800,131 #7f010e10 app:id/toolbar_progress_bar_container}
+                        org.chromium.chrome.browser.toolbar.ToolbarProgressBar{6da53fe I.ED..... ......ID 0,0-800,3 #7f010e0f app:id/toolbar_progress_bar}
+                        org.chromium.chrome.browser.toolbar.ToolbarProgressBarAnimatingView{501575f V.ED..... ......ID 0,0-800,3 #7f010a5d app:id/progress_bar_animating_view}
+                      android.view.ViewStub{c37d0f G.E...... ......I. 0,0-0,0 #7f0101f7 app:id/bottom_app_bar_container_stub}
+                      android.view.ViewStub{bf1019c G.E...... ......I. 0,0-0,0 #7f01036a app:id/contextual_tasks_fusebox_stub}
+                      android.view.ViewStub{ec367a5 G.E...... ......I. 0,0-0,0 #7f010d65 app:id/tab_switcher_view_holder_stub}
+                      android.view.ViewStub{165977a G.E...... ......I. 0,0-0,0 #7f010d38 app:id/tab_hover_card_holder_stub}
+                      org.chromium.components.messages.MessageContainer{ec4db2b G.E...... ......I. 0,0-0,0 #7f01076e app:id/message_container}
+                      android.view.ViewStub{2da9b88 G.E...... ......I. 0,0-0,0 #7f010ca0 app:id/status_indicator_stub}
+                      android.view.ViewStub{5a7d921 G.E...... ......I. 0,0-0,0 #7f010ab7 app:id/readaloud_mini_player_stub}
+                      android.widget.FrameLayout{d25b146 G.E...... ......I. 0,0-0,0 #7f010cc9 app:id/survey_container}
+                      android.view.ViewStub{733ff07 G.E...... ......I. 0,0-0,0 #7f0108fc app:id/page_zoom_container}
+                      ljf{5ff3021 G.ED..... ......I. 0,0-0,0 #7f010c9e app:id/status_bar_text}
+                      android.widget.FrameLayout{7e65d G.E...... ......ID 0,0-800,1244 #7f010c0d app:id/sheet_container}
+                      android.widget.FrameLayout{47b9bd2 G.E...... ......I. 0,0-0,0 #7f010d32 app:id/tab_group_ui_dialog_container}
+                      android.widget.RelativeLayout{88784a3 G.E...... ......I. 0,0-0,0 #7f0106e2 app:id/loading_fullscreen_container}
+                        android.widget.LinearLayout{cab55ac V.E...... ......I. 0,0-0,0 #7f010a66 app:id/progress_spinner_container}
+                          android.widget.ProgressBar{8161275 V.ED..... ......ID 0,0-0,0 #7f010a65 app:id/progress_spinner}
+                        org.chromium.ui.widget.ButtonCompat{683b20a VFED..C.. ......I. 0,0-0,0 #7f0106e1 app:id/loading_cancel_button}
+                    android.view.View{40e0a7b V.ED..... ........ 0,1244-0,1244 #7f010742 app:id/menu_anchor_stub}
+                    android.view.View{74e2098 V.ED..... ........ 0,1244-800,1244 #7f010825 app:id/navigation_popup_anchor_stub}
+              androidx.appcompat.widget.ViewStubCompat{7c260f1 G.E...... ......I. 0,0-0,0 #7f010094 app:id/action_mode_bar_stub}
+    Looper (main, tid 2) {2b2e4d6}
+      (Total messages: 0, polling=false, quitting=false)
+    ResourcesManager:
+      total apks: 12
+      resources: 15
+      resource impls: 9
+    1 dumpables:
+    #0: AutofillManager
+        AutofillManager:
+          sessionId: 2147483647
+          state: UNKNOWN
+          context: org.chromium.chrome.browser.ChromeTabbedActivity@f08ed60
+          service client: null
+          client: android.view.autofill.AutofillClientController@b68d357 (android.os.BinderProxy@e4cd071)
+          enabled: false
+          enabledAugmentedOnly: false
+          hasService: true
+          hasCallback: false
+          onInvisibleCalled false
+          last autofilled data: null
+          id of last fill UI shown: null
+          tracked views: null
+          fillable ids: null
+          entered ids: null
+          save trigger id: null
+          save on finish(): false
+          options: logLvl=0, compatMode=false, augmented=false, appDisabledExpiration=0
+          compat mode enabled:   fill dialog enabled: false
+          fill dialog enabled hints: [password, passwordAuto, creditCardNumber, creditCardSecurityCode, creditCardExpirationDate]
+        false
+          debug: false verbose: false
+        Autofill Compat Mode: false
+    Local FragmentActivity f08ed60 State:
+      mCreated=true mResumed=false mStopped=true    Back Stack Index: 0
+    FragmentManager misc state:
+      mHost=ooa@c0b1b2d
+      mContainer=ooa@c0b1b2d
+      mCurState=4 mStateSaved=true mStopped=true mDestroyed=false
+
+TASK null id=10815 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY com.sec.android.app.launcher/com.android.quickstep.RecentsActivity a4a941 pid=3068 userId=0 uid=10103 displayId=0(type=INTERNAL)
+    Local Activity 5fb4919 State:
+      mResumed=false mStopped=true mFinished=false
+      mIsInMultiWindowMode=false mIsInPictureInPictureMode=false
+      mChangingConfigurations=false
+      mCurrentConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=recents mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.2 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mLoadersStarted=true
+      Active Fragments in 8fe6d7:
+        #0: ReportFragment{6e4fbc4 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+          mFragmentId=#0 mContainerId=#0 mTag=androidx.lifecycle.LifecycleDispatcher.report_fragment_tag
+          mState=3 mIndex=0 mWho=android:fragment:0 mBackStackNesting=0
+          mAdded=true mRemoving=false mFromLayout=false mInLayout=false
+          mHidden=false mDetached=false mMenuVisible=true mHasMenu=false
+          mRetainInstance=false mRetaining=false mUserVisibleHint=true
+          mFragmentManager=FragmentManager{8fe6d7 in HostCallbacks{1cd1aad}}
+          mHost=android.app.Activity$HostCallbacks@1cd1aad
+          Child FragmentManager{14341e2 in ReportFragment{6e4fbc4}}:
+            FragmentManager misc state:
+              mHost=android.app.Activity$HostCallbacks@1cd1aad
+              mContainer=android.app.Fragment$1@e821973
+              mParent=ReportFragment{6e4fbc4 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+              mCurState=3 mStateSaved=true mDestroyed=false
+      Added Fragments:
+        #0: ReportFragment{6e4fbc4 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+      FragmentManager misc state:
+        mHost=android.app.Activity$HostCallbacks@1cd1aad
+        mContainer=android.app.Activity$HostCallbacks@1cd1aad
+        mCurState=3 mStateSaved=true mDestroyed=false
+    PhoneWindow:
+      mStatusBarColor=0x0 mForcedStatusBarColor=true
+      mNavigationBarColor=0x0 mForcedNavigationBarColor=false
+      mDeviceDefaultNavigationBarColor=0xFF010102
+      mDefaultNavigationBarColor=0xFF010102
+      mSettingsNavigationBarColor=0xFFF6F6F8
+      mThemeApplied=false
+    ViewRoot:
+      mAdded=true
+      mRemoved=false
+      mStopped=true
+      mPausedForTransition=false
+      mConsumeBatchedInputScheduled=false
+      mConsumeBatchedInputImmediatelyScheduled=false
+      mPendingInputEventCount=0
+      mProcessInputEventsScheduled=false
+      mTraversalScheduled=false
+      mReportNextDraw=false
+      mLastPerformTraversalsFailedReason=view_not_visible
+      mLastReportedMergedConfiguration={mGlobalConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.132 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0} mOverrideConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=recents mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.4 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}}
+      mLastConfigurationFromResources={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=recents mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.2 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mIsAmbientMode=false
+      mUnbufferedInputSource=0
+      mAttachInfo=       AttachInfo:
+        mHasWindowFocus=false
+        mWindowVisibility=8
+        mInTouchMode=true
+        mUnbufferedDispatchRequested=false
+      android.view.ViewRootImpl$NativePreImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$ImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$NativePostImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$WindowInputEventReceiver
+       mInputChannel: 25446a2 com.sec.android.app.launcher/com.android.quickstep.RecentsActivity (client)
+       mSeqMap: {}
+       mReceiverPtr:
+        mInputConsumer:
+          mResampleTouch = true
+          mChannel = 25446a2 com.sec.android.app.launcher/com.android.quickstep.RecentsActivity (client)
+          mMsgDeferred: false
+          Batches:
+              <empty>
+          mSeqChains:
+              <empty>
+          mConsumeTimes:
+              <empty>
+          
+        mBatchedInputEventPending: false
+        mOutboundQueue:
+          <empty>
+        
+    Choreographer:
+      mFrameScheduled=false
+      mLastFrameTime=392648279 (143131 ms ago)
+    InsetsController:
+      InsetsState
+        mDisplayFrame=Rect(0, 0 - 800, 1340)
+        mDisplayCutout=DisplayCutout{insets=Rect(0, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=0 displayHeight=0 physicalDisplayWidth=0 physicalDisplayHeight=0 density={0.0} cutoutSpec={} rotation={0} scale={0.0} physicalPixelDisplaySizeRatio={0.0}}}}
+        mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=17, center=Point(17, 17)}, RoundedCorner{position=TopRight, radius=17, center=Point(783, 17)}, RoundedCorner{position=BottomRight, radius=17, center=Point(783, 1323)}, RoundedCorner{position=BottomLeft, radius=17, center=Point(17, 1323)}]}
+        mRoundedCornerFrame=Rect(0, 0 - 800, 1340)
+        mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(742, 0 - 800, 32) rotation=0}
+        mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=800 displayHeight=1340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}
+          InsetsSource id=3 type=ime frame=[0,0][0,0] visibleFrame=[0,1276][800,1340] visible=false flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60000 type=statusBars frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60005 type=mandatorySystemGestures frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60006 type=tappableElement frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70001 type=navigationBars frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70004 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70005 type=mandatorySystemGestures frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70006 type=tappableElement frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70024 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+    WindowOnBackDispatcher:
+        Top Callback: android.view.ViewRootImpl$$ExternalSyntheticLambda19@2aa1f3f
+        Callbacks: 
+          Callback: android.view.ViewRootImpl$$ExternalSyntheticLambda19@2aa1f3f Priority=0
+    View Hierarchy:
+      DecorView@46a2be5[RecentsActivity]
+        com.honeyspace.core.background.CapturedBlurView{3181030 V.ED..... ........ 0,0-800,1340 #7f0a0103 app:id/captured_blur_view}
+        i8.r{b4db4a9 V.ED..... ........ 0,0-800,1340} ScrimView - visibility:0, alpha:1.0
+        android.widget.ImageView{d79a2e G.ED..... ......ID 0,0-800,1340}
+        android.widget.LinearLayout{a5ad9cf V.E...... ........ 0,0-800,1340}
+          android.view.ViewStub{c25ff5c G.E...... ......I. 0,0-0,0 #10201cc android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{d23f265 V.E...... ........ 0,32-800,1276 #1020002 android:id/content}
+            androidx.constraintlayout.widget.ConstraintLayout{b472b3a V.E...... ........ 0,0-800,1244}
+        android.widget.FrameLayout{55543eb V.E...... ......ID 0,0-800,1340 #7f0a0421 app:id/recentContainer}
+          com.honeyspace.ui.honeypots.tasklist.presentation.TaskListContainerView{80520e8 V.E...... ......ID 0,0-800,1340 #7f0a05d0 app:id/taskListContainer}
+            ie.x{2c1b548 V.ED..... ........ 0,0-800,1340}
+            androidx.constraintlayout.widget.ConstraintLayout{f664fe1 V.E...... ......ID 0,0-800,1340 #7f0a0133 app:id/clearAllContainer}
+              android.widget.Button{3ecc106 GFED..C.. ......ID 240,1076-560,1135 #7f0a0134 app:id/clear_all}
+              androidx.constraintlayout.widget.Guideline{f4233c7 G.ED..... ......I. 0,1076-0,1076 #7f0a0241 app:id/guideline}
+            androidx.constraintlayout.widget.ConstraintLayout{de0ddf4 V.E...... ......ID 0,0-800,1340 #7f0a01e2 app:id/emptyMessageContainer}
+              android.widget.FrameLayout{b17091d V.E...... ........ 0,40-800,1122}
+                android.widget.TextView{703e792 V.ED..... ........ 265,523-535,559}
+              androidx.constraintlayout.widget.Guideline{a244563 G.ED..... ......I. 0,40-0,40 #7f0a0250 app:id/guideline_top}
+              androidx.constraintlayout.widget.Guideline{c27e560 G.ED..... ......I. 0,1122-0,1122 #7f0a0244 app:id/guideline_bottom}
+          android.widget.FrameLayout{d201a19 V.E...... .......D 0,0-800,1340 #7f0a0568 app:id/subViewContainer}
+            android.widget.FrameLayout{6f4eade V.E...... ......ID 0,32-800,1276 #7f0a0460 app:id/searchContainer}
+              android.widget.FrameLayout{b8bd4bf GFE...C.. ......I. 0,0-0,0 #7f0a0463 app:id/searchInnerContainer}
+                android.widget.ImageButton{15f78c VFED..... ......I. 0,0-0,0 #7f0a0462 app:id/searchIcon}
+            android.widget.FrameLayout{d0f3ed5 V.E...... ......ID 0,32-800,1276 #7f0a0461 app:id/searchContainerTablet}
+              android.widget.FrameLayout{260d6ea VFE...C.. .......D 682,0-733,80 #7f0a0463 app:id/searchInnerContainer}
+                android.widget.ImageButton{7b2fddb VFED..... ......ID 11,24-43,56 #7f0a0462 app:id/searchIcon}
+            android.widget.FrameLayout{2f10078 V.E...... ......ID 0,32-800,1276 #7f0a032b app:id/moreContainer}
+              android.widget.FrameLayout{391f351 GFE...C.. ......I. 0,0-0,0 #7f0a032e app:id/moreInnerContainer}
+                android.widget.ImageButton{eed77b6 VFED..... ......I. 0,0-0,0 #7f0a032d app:id/moreIcon}
+            android.widget.FrameLayout{2599cb7 V.E...... ......ID 0,32-800,1276 #7f0a032c app:id/moreContainerTablet}
+              android.widget.FrameLayout{a71ac24 VFE...C.. .......D 730,0-797,80 #7f0a032e app:id/moreInnerContainer}
+                android.widget.ImageButton{cb1738d VFED..... ......ID 8,24-40,56 #7f0a032d app:id/moreIcon}
+            android.widget.FrameLayout{4d15942 V.E...... ......ID 0,32-800,1276 #7f0a01f9 app:id/fgsButtonContainer}
+              androidx.constraintlayout.widget.ConstraintLayout{1614d53 V.E...... ........ 0,0-800,1244}
+                android.widget.LinearLayout{d2f6690 GFE...C.. ......I. 0,0-0,0 #7f0a01f9 app:id/fgsButtonContainer}
+                  android.widget.LinearLayout{1cebb89 VFE...C.. ......I. 0,0-0,0 #7f0a01fb app:id/fgsButtonTouchArea}
+                    android.widget.LinearLayout{71fc78e V.E...... ......I. 0,0-0,0 #7f0a01fa app:id/fgsButtonInnerContainer}
+                      android.widget.TextView{d296baf V.ED..... ......ID 0,0-0,0 #7f0a01f8 app:id/fgsButton}
+                      android.widget.ImageView{1cc5bbc V.ED..... ......I. 0,0-0,0}
+                androidx.constraintlayout.widget.Guideline{75e8745 G.ED..... ......I. 672,0-672,0 #7f0a0241 app:id/guideline}
+              android.widget.TextView{4d4ce9a GFED..C.. ......I. 0,0-0,0 #7f0a01fc app:id/fgsSmallButton}
+          androidx.constraintlayout.widget.ConstraintLayout{aab13cb V.E...... ........ 0,0-800,1340 #7f0a0252 app:id/handOffContainer}
+            android.widget.LinearLayout{4e177a8 GFE...C.. ......I. 0,0-0,0 #7f0a015a app:id/container}
+              android.widget.ImageView{a6552c1 V.ED..... ......I. 0,0-0,0 #7f0a00f6 app:id/button_icon}
+              android.widget.LinearLayout{ea13a66 V.E...... ......I. 0,0-0,0 #7f0a02a2 app:id/info_container}
+                android.widget.TextView{b5521a7 V.ED..... ......ID 0,0-0,0 #7f0a008b app:id/app_label}
+                android.widget.TextView{1aa6654 V.ED..... ......ID 0,0-0,0 #7f0a049a app:id/sender_name}
+              android.widget.TextView{9b359fd V.ED..... ......I. 0,0-0,0 #7f0a0390 app:id/open_button}
+            androidx.constraintlayout.widget.Guideline{d7696f2 G.ED..... ......I. 128,0-128,0 #7f0a0243 app:id/guidelineStart}
+            androidx.constraintlayout.widget.Guideline{ea83143 G.ED..... ......I. 672,0-672,0 #7f0a0242 app:id/guidelineEnd}
+          android.widget.LinearLayout{d2f1b7b V.E...... .......D 134,1140-666,1276 #7f0a05a3 app:id/suggestedAppsContainer}
+            com.honeyspace.ui.common.CellLayout{97193c0 V.E...... ......ID 0,0-532,136 #7f0a05a2 app:id/suggestedAppsCellLayout}
+              com.honeyspace.ui.common.iconview.IconView{ea9a189 VFED..C.. ......ID 0,0-88,136 #7f0a028e app:id/icon} - Chrome, visibility:0, alpha:1.0, badge:0, x=0, y=0
+              com.honeyspace.ui.common.iconview.IconView{e01cd45 VFED..C.. ......ID 88,0-176,136 #7f0a028e app:id/icon} - 네이버 메일, visibility:0, alpha:1.0, badge:0, x=1, y=0
+              com.honeyspace.ui.common.iconview.IconView{ef6f8c1 VFED..C.. ......ID 176,0-264,136 #7f0a028e app:id/icon} - 설정, visibility:0, alpha:1.0, badge:0, x=2, y=0
+              com.honeyspace.ui.common.iconview.IconView{cb95ffd VFED..C.. ......ID 264,0-352,136 #7f0a028e app:id/icon} - NAVER, visibility:0, alpha:1.0, badge:0, x=3, y=0
+              com.honeyspace.ui.common.iconview.IconView{b40fef9 VFED..C.. ......ID 352,0-440,136 #7f0a028e app:id/icon} - 계산기, visibility:0, alpha:1.0, badge:0, x=4, y=0
+              com.honeyspace.ui.common.iconview.IconView{c0991b5 VFED..C.. ......ID 440,0-528,136 #7f0a028e app:id/icon} - 갤러리, visibility:0, alpha:1.0, badge:0, x=5, y=0
+    Looper (main, tid 2) {6e098f9}
+      (Total messages: 0, polling=false, quitting=false)
+    ResourcesManager:
+      total apks: 9
+      resources: 32
+      resource impls: 14
+    1 dumpables:
+    #0: AutofillManager
+        AutofillManager:
+          sessionId: 2147483647
+          state: UNKNOWN
+          context: com.android.quickstep.RecentsActivity@5fb4919
+          service client: null
+          client: android.view.autofill.AutofillClientController@5d3303e (android.os.BinderProxy@ac51cfb)
+          enabled: false
+          enabledAugmentedOnly: false
+          hasService: true
+          hasCallback: false
+          onInvisibleCalled false
+          last autofilled data: null
+          id of last fill UI shown: null
+          tracked views: null
+          fillable ids: null
+          entered ids: null
+          save trigger id: null
+          save on finish(): false
+          options: logLvl=0, compatMode=false, augmented=false, appDisabledExpiration=0
+          compat mode enabled:   fill dialog enabled: false
+          fill dialog enabled hints: [password, passwordAuto, creditCardNumber, creditCardSecurityCode, creditCardExpirationDate]
+        false
+          debug: false verbose: false
+        Autofill Compat Mode: false
+
+TASK null id=10814 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY com.sec.android.app.launcher/.activities.LauncherActivity 6a1d8d8 pid=3068 userId=0 uid=10103 displayId=0(type=INTERNAL)
+    Local Activity 6448c7a State:
+      mResumed=false mStopped=true mFinished=false
+      mIsInMultiWindowMode=false mIsInPictureInPictureMode=false
+      mChangingConfigurations=false
+      mCurrentConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.12 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mLoadersStarted=true
+      Active Fragments in b08cbb5:
+        #0: ReportFragment{3ce124a #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+          mFragmentId=#0 mContainerId=#0 mTag=androidx.lifecycle.LifecycleDispatcher.report_fragment_tag
+          mState=3 mIndex=0 mWho=android:fragment:0 mBackStackNesting=0
+          mAdded=true mRemoving=false mFromLayout=false mInLayout=false
+          mHidden=false mDetached=false mMenuVisible=true mHasMenu=false
+          mRetainInstance=false mRetaining=false mUserVisibleHint=true
+          mFragmentManager=FragmentManager{b08cbb5 in HostCallbacks{78c85bb}}
+          mHost=android.app.Activity$HostCallbacks@78c85bb
+          Child FragmentManager{1361ad8 in ReportFragment{3ce124a}}:
+            FragmentManager misc state:
+              mHost=android.app.Activity$HostCallbacks@78c85bb
+              mContainer=android.app.Fragment$1@b476e31
+              mParent=ReportFragment{3ce124a #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+              mCurState=3 mStateSaved=true mDestroyed=false
+      Added Fragments:
+        #0: ReportFragment{3ce124a #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+      FragmentManager misc state:
+        mHost=android.app.Activity$HostCallbacks@78c85bb
+        mContainer=android.app.Activity$HostCallbacks@78c85bb
+        mCurState=3 mStateSaved=true mDestroyed=false
+    PhoneWindow:
+      mStatusBarColor=0x0 mForcedStatusBarColor=false
+      mNavigationBarColor=0x0 mForcedNavigationBarColor=false
+      mDeviceDefaultNavigationBarColor=0xFF010102
+      mDefaultNavigationBarColor=0xFF010102
+      mSettingsNavigationBarColor=0xFFF6F6F8
+      mThemeApplied=false
+    ViewRoot:
+      mAdded=true
+      mRemoved=false
+      mStopped=true
+      mPausedForTransition=false
+      mConsumeBatchedInputScheduled=false
+      mConsumeBatchedInputImmediatelyScheduled=false
+      mPendingInputEventCount=0
+      mProcessInputEventsScheduled=false
+      mTraversalScheduled=false
+      mReportNextDraw=false
+      mLastPerformTraversalsFailedReason=view_not_visible
+      mLastReportedMergedConfiguration={mGlobalConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.603 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0} mOverrideConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.12 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}}
+      mLastConfigurationFromResources={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.2 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mIsAmbientMode=false
+      mUnbufferedInputSource=0
+      mAttachInfo=       AttachInfo:
+        mHasWindowFocus=false
+        mWindowVisibility=8
+        mInTouchMode=true
+        mUnbufferedDispatchRequested=false
+      android.view.ViewRootImpl$NativePreImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$ImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$NativePostImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$WindowInputEventReceiver
+       mInputChannel: e0759a1 com.sec.android.app.launcher/com.sec.android.app.launcher.activities.LauncherActivity (client)
+       mSeqMap: {}
+       mReceiverPtr:
+        mInputConsumer:
+          mResampleTouch = true
+          mChannel = e0759a1 com.sec.android.app.launcher/com.sec.android.app.launcher.activities.LauncherActivity (client)
+          mMsgDeferred: false
+          Batches:
+              <empty>
+          mSeqChains:
+              <empty>
+          mConsumeTimes:
+              <empty>
+          
+        mBatchedInputEventPending: false
+        mOutboundQueue:
+          <empty>
+        
+    Choreographer:
+      mFrameScheduled=false
+      mLastFrameTime=392648279 (143141 ms ago)
+    InsetsController:
+      InsetsState
+        mDisplayFrame=Rect(0, 0 - 800, 1340)
+        mDisplayCutout=DisplayCutout{insets=Rect(0, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=0 displayHeight=0 physicalDisplayWidth=0 physicalDisplayHeight=0 density={0.0} cutoutSpec={} rotation={0} scale={0.0} physicalPixelDisplaySizeRatio={0.0}}}}
+        mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=17, center=Point(17, 17)}, RoundedCorner{position=TopRight, radius=17, center=Point(783, 17)}, RoundedCorner{position=BottomRight, radius=17, center=Point(783, 1323)}, RoundedCorner{position=BottomLeft, radius=17, center=Point(17, 1323)}]}
+        mRoundedCornerFrame=Rect(0, 0 - 800, 1340)
+        mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(742, 0 - 800, 32) rotation=0}
+        mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=800 displayHeight=1340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}
+          InsetsSource id=3 type=ime frame=[0,0][0,0] visibleFrame=[0,1276][800,1340] visible=false flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60000 type=statusBars frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60005 type=mandatorySystemGestures frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60006 type=tappableElement frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70001 type=navigationBars frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70004 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70005 type=mandatorySystemGestures frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70006 type=tappableElement frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70024 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+    WindowOnBackDispatcher:
+        Top Callback: android.view.ViewRootImpl$$ExternalSyntheticLambda19@8bf3787
+        Callbacks: 
+          Callback: android.view.ViewRootImpl$$ExternalSyntheticLambda19@8bf3787 Priority=0
+    View Hierarchy:
+      DecorView@d613534[LauncherActivity]
+        com.honeyspace.core.background.CapturedBlurView{b658813 V.ED..... ........ 0,0-800,1340 #7f0a0103 app:id/captured_blur_view}
+        i8.r{ad528e9 V.ED..... ........ 0,0-800,1340} ScrimView - visibility:0, alpha:1.0
+        android.widget.LinearLayout{c6f996e V.E...... ........ 0,0-800,1340}
+          android.view.ViewStub{be30916 G.E...... ......I. 0,0-0,0 #10201cc android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{558080f V.E...... ........ 0,0-800,1340 #1020002 android:id/content}
+            androidx.constraintlayout.widget.ConstraintLayout{38a309c V.E...... ........ 0,0-800,1340}
+        com.honeyspace.search.ui.honeypot.presentation.control.GestureControlView{973c297 G.E...C.. ......I. 0,0-0,0 #7f0a0229 app:id/gesture_control_layout}
+          androidx.constraintlayout.widget.ConstraintLayout{35e0c84 V.E...... ......I. 0,0-0,0 #7f0a043d app:id/root_layout}
+            androidx.constraintlayout.widget.Guideline{8f3bc6d G.ED..... ......I. 0,0-0,0 #7f0a02ca app:id/left_guideline}
+            androidx.constraintlayout.widget.Guideline{c7ea0a2 G.ED..... ......I. 0,0-0,0 #7f0a0435 app:id/right_guideline}
+            android.widget.RelativeLayout{627f133 V.E...... ......I. 0,0-0,0 #7f0a02e6 app:id/main_ui}
+              android.widget.RelativeLayout{af16cf0 V.E...... ......I. 0,0-0,0 #7f0a015d app:id/content_area}
+                android.widget.LinearLayout{99cb269 GFE...... ......I. 0,0-0,0 #7f0a0379 app:id/no_recent_searches}
+                  android.widget.FrameLayout{c4a24ee V.E...... ......I. 0,0-0,0}
+                  android.widget.TextView{e66d8f V.ED..... ......ID 0,0-0,0}
+                  android.widget.FrameLayout{318681c V.E...... ......I. 0,0-0,0}
+                androidx.cardview.widget.CardView{2c50c25 V.E...... ......I. 0,0-0,0 #7f0a0106 app:id/card_view}
+                  com.honeyspace.search.ui.honeypot.presentation.content.animatable.EnterAnimateRecyclerView{137a1fa VFED.V... ......I. 0,0-0,0 #7f0a0105 app:id/card_list}
+              androidx.constraintlayout.widget.ConstraintLayout{96653ab V.E...... ......I. 0,0-0,0 #7f0a02a6 app:id/input_layout}
+                android.widget.FrameLayout{f51ea08 V.E...... ......I. 0,0-0,0 #7f0a02a5 app:id/input_area}
+                  android.widget.RelativeLayout{55f45a1 V.E...... ......I. 0,0-0,0}
+                    android.widget.LinearLayout{c4de3c6 V.E...... ......I. 0,0-0,0}
+                      android.widget.EditText{3f72ba3 VFED..CL. ......ID 0,0-0,0 #7f0a01dd app:id/edit_search}
+                      android.widget.ImageView{9b47f87 VFED..C.. ......I. 0,0-0,0 #7f0a0647 app:id/voice_search_menu}
+                      android.widget.FrameLayout{a1f9eb4 V.E...... ......I. 0,0-0,0 #7f0a0335 app:id/more_menu}
+                        android.widget.ImageView{5099add VFED..C.. ......I. 0,0-0,0 #7f0a0336 app:id/more_menu_image}
+                      android.widget.ImageView{6347652 GFED..C.. ......I. 0,0-0,0 #7f0a0132 app:id/clear}
+        com.honeyspace.ui.honeypots.homescreen.presentation.HomeView{6625449 V.E.....X .......D 0,0-800,1340 #7f0a0281 app:id/home_screen} - visibility:0, alpha:1.0
+          com.honeyspace.ui.honeypots.workspace.presentation.WorkspaceContainer{3dd5c31 V.E...... .......D 0,0-800,1340 #7f0a0677 app:id/workspace_pot_view} - visibility:0, alpha:1.0
+            com.honeyspace.ui.honeypots.workspace.presentation.WorkspaceFastRecyclerView{e909c03 V.E...... .......D 0,0-800,1095 #7f0a0675 app:id/workspace_fast_recycler_view} - visibility:0, alpha:1.0
+              com.honeyspace.ui.honeypots.workspace.presentation.WorkspaceCellLayoutContainer{2e6f4b2 V.E...C.. ......ID 22,-51-778,1116} - visibility:0, alpha:1.0
+                android.widget.FrameLayout{37fde7a V.E...... ........ 0,0-756,196}
+                  com.honeyspace.ui.honeypots.workspace.presentation.DeletePageLayout{5cf8d23 IFE...C.. ......ID 0,0-756,100 #7f0a0199 app:id/delete_page_layout}
+                    android.view.View{271f220 V.ED..... ......ID 353,25-402,74 #7f0a0198 app:id/delete_page_icon}
+                    android.view.View{70a07d9 V.ED..... ......ID 4,99-752,100 #7f0a042a app:id/remove_page_divider}
+                com.honeyspace.ui.honeypots.workspace.presentation.WorkspaceCellLayout{4d796bd V.E...CL. ......ID 0,196-756,1070 #7f0a067e app:id/wsCellLayout} - visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{4e7fd72 VFED..CL. ......ID 0,696-126,870 #7f0a028e app:id/icon} - 갤러리, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{4c0282b VFED..CL. ......ID 126,696-252,870 #7f0a028e app:id/icon} - 캘린더, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{2210dd0 VFED..CL. ......ID 252,696-378,870 #7f0a028e app:id/icon} - Notes, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{605bc71 VFED..CL. ......ID 378,696-504,870 #7f0a028e app:id/icon} - 스토어, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{13d7dd7 VFED..CL. ......ID 504,696-630,870 #7f0a028e app:id/icon} - Play 스토어, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.FolderIconView{1c80c70 VFED..CL. ......ID 630,696-756,870 #7f0a0215 app:id/folder_icon_view} - Google, visibility:0, alpha:1.0, badge:14, x=5, y=4
+                  com.honeyspace.ui.common.widget.HoneyAppWidgetHostView{34441bf VFE....L. R.....ID 252,174-505,523}
+                    android.widget.RelativeLayout{17a9e14 VFE...C.. ......ID 7,6-246,343 #7f0905c3 app:id/widget_main_layout}
+                      android.widget.ImageView{a933f91 V.ED..... ......ID 0,0-239,337 #1020000 android:id/background}
+                      android.widget.ImageView{9366ef6 V.ED..... ......ID 0,0-239,337 #7f09056c app:id/widget_background}
+                      android.widget.RelativeLayout{5686067 V.E...... ......ID 0,114-239,223 #7f090573 app:id/widget_content}
+                        android.widget.LinearLayout{e39bac V.E...... ......ID 15,0-224,46 #7f0904d9 app:id/temperature_area}
+                          android.widget.ImageView{538fad6 V.ED..... ......ID 56,3-96,43 #7f090580 app:id/widget_current_weather_icon}
+                          android.widget.FrameLayout{87fa59e G.E...... ......ID 56,3-96,43 #7f090581 app:id/widget_current_weather_icon_animation}
+                          android.widget.TextView{d76f55f V.ED..... ......ID 100,0-153,46 #7f09057d app:id/widget_current_temp}
+                          android.widget.TextView{903d87f G.ED..... ......I. 0,0-0,0 #7f09057e app:id/widget_current_temp_bg}
+                        android.widget.LinearLayout{b933c26 V.E...... ......ID 15,51-224,71 #7f090571 app:id/widget_city_name_area}
+                          android.widget.FrameLayout{13b4381 V.E...... ......ID 88,0-121,20 #7f09011d app:id/city_name_view_area}
+                            android.widget.TextView{609b368 V.ED..... ......ID 0,0-33,20 #7f09057a app:id/widget_current_city_name}
+                            android.widget.TextView{3d4104c G.ED..... ......ID 0,0-0,0 #7f09057b app:id/widget_current_city_name_bg}
+                        android.widget.LinearLayout{34ba9fe V.E...... ......ID 15,71-224,109 #7f090585 app:id/widget_current_weather_text_area}
+                          android.widget.FrameLayout{aebe1b9 V.E...... ......ID 0,0-209,38}
+                            android.widget.TextView{6d8780 V.ED..... ......ID 0,0-209,38 #7f090584 app:id/widget_current_weather_text}
+                            android.widget.TextView{50a4895 G.ED..... ......ID 0,0-0,0 #7f090586 app:id/widget_current_weather_text_bg}
+                        android.widget.FrameLayout{fbc7daa G.E...... ......I. 0,0-0,0 #7f090566 app:id/widget_additional_info_layout}
+                          android.widget.TextView{d077d9b V.ED..... ......ID 0,0-0,0 #7f090567 app:id/widget_additional_info_text}
+                          android.widget.TextView{557e538 V.ED..... ......ID 0,0-0,0 #7f090568 app:id/widget_additional_info_text_bg}
+                        android.widget.LinearLayout{7b4680a G.E...... ......I. 0,0-0,0 #7f0905eb app:id/widget_update_area}
+                          android.widget.TextView{d5fe075 V.ED..... ......I. 0,0-0,0 #7f0905ed app:id/widget_update_text}
+                          android.widget.TextView{f93d911 G.ED..... ......I. 0,0-0,0 #7f0905ee app:id/widget_update_text_bg}
+                          android.widget.ProgressBar{23cca76 G.ED..... ......I. 0,0-0,0 #7f0905cb app:id/widget_refresh_progress}
+                          android.widget.ProgressBar{6d65877 G.ED..... ......I. 0,0-0,0 #7f0905cc app:id/widget_refresh_progress_wallpaper}
+                          android.widget.ImageView{b421ce4 V.ED..... ......I. 0,0-0,0 #7f0905c8 app:id/widget_refresh_icon}
+                      android.widget.LinearLayout{a4062f7 V.E...... .......D 112,223-126,237 #7f0905ca app:id/widget_refresh_icon_touch_area_anchor}
+                      android.widget.FrameLayout{d9b9564 V.E...... .......D 126,187-176,237}
+                        android.widget.Button{c4bf54d GFED..C.. ......I. 0,0-0,0 #7f0905c9 app:id/widget_refresh_icon_touch_area}
+                  com.honeyspace.ui.common.widget.HoneyAppWidgetHostView{e5718af VFE....L. R.....ID 0,522-761,696}
+                    android.widget.FrameLayout{f97162b V.E...... ......ID 7,49-754,124 #7f0b2289 app:id/googleapp_search_widget_ghost_tap_targets}
+                      android.widget.LinearLayout{b00a3f9 V.E...... ......ID 0,0-747,75 #7f0b228a app:id/googleapp_search_widget_ghost_tap_targets_4dp}
+                        android.widget.FrameLayout{f55219f VFE...C.. ......ID 0,0-64,75 #7f0b2286 app:id/googleapp_search_widget_ghost_google_logo}
+                        android.widget.FrameLayout{777f2ec VFE...C.. ......ID 64,0-619,75 #7f0b228b app:id/googleapp_search_widget_ghost_text_search}
+                        android.widget.FrameLayout{a8b84de G.E...... ......I. 0,0-0,0 #7f0b2288 app:id/googleapp_search_widget_ghost_shortcut}
+                        android.widget.FrameLayout{89e86b5 VFE...C.. ......ID 619,0-683,75 #7f0b228c app:id/googleapp_search_widget_ghost_voice_search}
+                        android.widget.FrameLayout{19766bf VFE...C.. ......ID 683,0-747,75 #7f0b2287 app:id/googleapp_search_widget_ghost_lens}
+                      android.widget.FrameLayout{cd1df3e V.E...... ......ID 0,5-747,69 #7f0b229e app:id/googleapp_search_widget_two_right_icons}
+                        android.widget.ImageView{57f218c V.ED..... ......ID 0,0-747,64 #7f0b227e app:id/googleapp_search_widget_background_protection}
+                        android.widget.ImageView{1a220d5 G.ED..... ......I. 0,0-0,0 #7f0b2280 app:id/googleapp_search_widget_background_protection_light_mode}
+                        android.widget.ImageView{1c710ea G.ED..... ......I. 0,0-0,0 #7f0b227f app:id/googleapp_search_widget_background_protection_dark_mode}
+                        android.widget.ImageView{7e5afdb VFED..C.. ......ID 0,0-747,64 #7f0b227b app:id/googleapp_search_widget_background}
+                        android.widget.ImageView{6c2ca78 G.ED..... ......I. 0,0-0,0 #7f0b227d app:id/googleapp_search_widget_background_light_mode}
+                        android.widget.ImageView{b70f551 G.ED..... ......I. 0,0-0,0 #7f0b227c app:id/googleapp_search_widget_background_dark_mode}
+                        android.widget.LinearLayout{77d51b6 V.E...... ......ID 0,0-747,64 #7f0b226d app:id/googleapp_search_plate}
+                          android.widget.FrameLayout{8056eb7 V.E...... ......ID 0,0-64,64}
+                            android.widget.ImageButton{a961624 VFED..C.. ......ID 0,0-64,64 #7f0b228e app:id/googleapp_search_widget_google_logo}
+                            android.widget.ImageButton{7e958d GFED..C.. ......I. 0,0-0,0 #7f0b2285 app:id/googleapp_search_widget_doodle}
+                          android.widget.FrameLayout{f84d342 V.E...... ......ID 64,0-619,64 #7f0b2259 app:id/googleapp_search_edit_frame}
+                          android.widget.FrameLayout{af83f53 V.E...... ......ID 619,0-619,64}
+                            android.widget.ImageButton{c307090 GFED..C.. ......I. 0,0-0,0 #7f0b2299 app:id/googleapp_search_widget_shortcut_btn}
+                          android.widget.FrameLayout{24bfd89 V.E...... ......ID 619,0-683,64}
+                            android.widget.ImageButton{290e18e VFED..C.. ......ID 0,0-64,64 #7f0b229f app:id/googleapp_search_widget_voice_btn}
+                          android.widget.FrameLayout{e3d7daf V.E...... ......ID 683,0-747,64}
+                            android.widget.ImageButton{d405bc VFED..C.. ......ID 0,0-64,64 #7f0b2293 app:id/googleapp_search_widget_lens_btn}
+              com.honeyspace.ui.honeypots.workspace.presentation.WorkspaceCellLayoutContainer{14e6aa5 V.E...C.. ......ID 800,-51-1556,1116} - visibility:0, alpha:1.0
+                android.widget.FrameLayout{e84190a V.E...... ........ 0,0-756,196}
+                  com.honeyspace.ui.honeypots.workspace.presentation.DeletePageLayout{59be57b IFE...C.. ......ID 0,0-756,100 #7f0a0199 app:id/delete_page_layout}
+                    android.view.View{b6e5f98 V.ED..... ......ID 353,25-402,74 #7f0a0198 app:id/delete_page_icon}
+                    android.view.View{6af33f1 V.ED..... ......ID 4,99-752,100 #7f0a042a app:id/remove_page_divider}
+                com.honeyspace.ui.honeypots.workspace.presentation.WorkspaceCellLayout{7d2bbd6 V.E...CL. ......ID 0,196-756,1070 #7f0a067e app:id/wsCellLayout} - visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{5213ee VFED..CL. ......ID 0,0-126,174 #7f0a028e app:id/icon} - sharebox, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.FolderIconView{a464522 VFED..CL. ......ID 0,696-126,870 #7f0a0215 app:id/folder_icon_view} - Microsoft, visibility:0, alpha:1.0, badge:0, x=0, y=4
+            com.honeyspace.ui.common.pageindicator.PageIndicatorView{79ec6f9 V.E...... .......D 0,1076-800,1095 #7f0a0676 app:id/workspace_page_indicator}
+              android.widget.LinearLayout{7795e57 V.E...... .......D 0,0-800,19}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{21b43cd V.E...C.. .......D 373,0-391,18}
+                  android.widget.ImageView{52ea3d0 V.ED..... ......ID 0,0-18,18 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{1d28482 V.E...C.. .......D 391,0-409,18}
+                  android.widget.ImageView{da54fc9 V.ED..... ......ID 0,0-18,18 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{98e3793 V.E...C.. .......D 409,0-427,18}
+                  android.widget.ImageView{c2866ce V.ED..... ......ID 0,0-18,18 #7f0a028e app:id/icon}
+            android.widget.FrameLayout{7b5dd44 G.E...... ......I. 0,0-0,0 #7f0a018c app:id/default_page_layout_container}
+              android.widget.ImageView{8721e2d VFED..C.. ......I. 0,0-0,0 #7f0a018b app:id/default_page_layout}
+              android.view.View{196bf62 GFED..C.. ......I. 0,0-0,0 #7f0a018d app:id/default_page_layout_sync}
+          com.honeyspace.ui.honeypots.hotseat.presentation.HotseatContainer{d93aee V.E...... .......D 0,1095-800,1340 #7f0a028c app:id/hotseat_container}
+            com.honeyspace.ui.honeypots.hotseat.presentation.HotseatCellLayout{80912f0 V.E...... ......ID 109,51-690,181 #7f0a028d app:id/hotseat_layout}
+              com.honeyspace.ui.common.iconview.IconView{51b576d VFED..CL. ......ID 0,0-83,130 #7f0a028e app:id/icon} - 브라우저, visibility:0, alpha:1.0, badge:0, x=0, y=0
+              com.honeyspace.ui.common.iconview.IconView{c959fa2 VFED..CL. ......ID 83,0-166,130 #7f0a028e app:id/icon} - 내 파일, visibility:0, alpha:1.0, badge:0, x=1, y=0
+              com.honeyspace.ui.common.iconview.IconView{e32bce0 VFED..CL. ......ID 166,0-249,130 #7f0a028e app:id/icon} - 전화, visibility:0, alpha:1.0, badge:0, x=2, y=0
+              com.honeyspace.ui.common.iconview.IconView{9fc749a VFED..CL. ......ID 249,0-332,130 #7f0a028e app:id/icon} - 메시지, visibility:0, alpha:1.0, badge:0, x=3, y=0
+              com.honeyspace.ui.common.iconview.IconView{ba48433 VFED..CL. ......ID 332,0-415,130 #7f0a028e app:id/icon} - 연락처, visibility:0, alpha:1.0, badge:0, x=4, y=0
+              com.honeyspace.ui.common.iconview.IconView{7c603f0 VFED..CL. ......ID 415,0-498,130 #7f0a028e app:id/icon} - 카메라, visibility:0, alpha:1.0, badge:0, x=5, y=0
+              com.honeyspace.ui.common.iconview.IconView{22fd69 VFED..CL. ......ID 498,0-581,130 #7f0a028e app:id/icon} - 앱스, visibility:0, alpha:1.0, badge:0, x=6, y=0
+        com.honeyspace.ui.honeypots.appscreen.presentation.AppscreenContainerView{b62ea50 G.E...... ......ID 0,0-800,1340 #7f0a00a6 app:id/apps_screen} - visibility:8, alpha:1.0
+          com.honeyspace.ui.honeypots.applist.presentation.ApplistContainer{6b8dee2 V.E...... ......ID 0,0-800,1340 #7f0a0093 app:id/applist_container} - visibility:0, alpha:1.0
+            com.honeyspace.ui.honeypots.applist.presentation.ApplistFastRecyclerView{502a34d V.E...... ......ID 0,0-800,1340 #7f0a0094 app:id/applist_fast_recycler_view} - visibility:0, alpha:1.0
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{a6f2e02 V.E...... ......ID 19,32-781,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{4407b5a V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:0, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.FolderIconView{2bb3fd4 VFED..CL. ......ID 0,0-127,221 #7f0a0215 app:id/folder_icon_view} - Samsung, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.FolderIconView{bc86b2b VFED..CL. ......ID 127,0-254,221 #7f0a0215 app:id/folder_icon_view} - Google, visibility:0, alpha:1.0, badge:14, x=1, y=0
+                  com.honeyspace.ui.common.iconview.FolderIconView{3973eef VFED..CL. ......ID 254,0-381,221 #7f0a0215 app:id/folder_icon_view} - Microsoft, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{453f14 VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - Play 스토어, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{4e3c84c VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - 스토어, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{ff0c484 VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - Notes, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{9c213bc VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - 내 파일, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{d1995f4 VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - 전화, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{2a52b2c VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - 메시지, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{c7eb364 VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - 브라우저, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{1ac0e9c VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - 게이밍 허브, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{99f1cd4 VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - 카메라, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{7b5be0c VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - 갤러리, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{6b9d244 VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - 계산기, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{461397c VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - 캘린더, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{ccdd3b4 VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - 시계, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{60d80ec VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - 설정, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{b9a2124 VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - YT Music, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{9d9945c VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - 뉴스, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{99dba94 VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - TikTok, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{ba473cc VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - 온비드, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{417a004 VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - YouTube Studio, visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{60d1f3c VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - 전자카드근무관리, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{f06d174 VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - OK Cashbag, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{7259549 VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - 비즈니스용 Skype, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{fadd608 VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - 하나증권 원큐프로, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{3b8e256 VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - 토지이음, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{705e8ce VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - Mobile Print, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{99e9910 VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - 하이원 리조트, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.IconView{7ec594c VFED..CL. ......ID 635,884-762,1105 #7f0a028e app:id/icon} - 온크레딧 모바일, visibility:0, alpha:1.0, badge:0, x=5, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{8e76313 V.E...... ......ID 801,32-1563,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{34b88f3 V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:1, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{becbde VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} - Voice Access, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{659930f VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - NOL(야놀자), visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{a56f1d6 VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 신용회복위원회, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{fba26f9 VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - 대한항공, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{92c0ff5 VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} -  Deep Translate, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{55d0805 VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - 레일포인트, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{dd86ff9 VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - Rx Drone, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{595a848 VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - 하나은행, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{7897707 VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - Suno, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{d79bf74 VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - 전자소송포털, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{b2644ac VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - 해외안전여행, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{c16bce4 VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - Bill Letter, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{d11081c VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - To Do, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{fa917b6 VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - CosLight, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{1173a2e VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - Printer, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{29c17a6 VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - 산재보험, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{3365d79 VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - 신한 슈퍼SOL, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{d8c2bc8 VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - Pinterest, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{21c217c VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - MG더뱅킹기업, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{de9bbb4 VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - Facebook, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{8c901f9 VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - 한전ON, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{d19308f VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - 에이닷, visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{77aded3 VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - 번역기, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{f00c56b VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - Camera One, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{a9f3b03 VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - 페이북/ISP, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{45599e3 VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - Lens, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{40e0a7b VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - 어시스턴트, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{4394a13 VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - 카카오페이, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{dbeb8ab VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - Authenticator, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.IconView{de1b643 VFED..CL. ......ID 635,884-762,1105 #7f0a028e app:id/icon} - 토스, visibility:0, alpha:1.0, badge:0, x=5, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{e672950 V.E...... ......ID 1583,32-2345,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{9d589b0 V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:2, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{7c1a2db VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} - OTP, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{5d9de73 VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - StarMaker Lite, visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{b81c90b VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 카카오톡, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{66cc2a3 VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - NAVER, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{2a2b3b VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - 카카오뱅크, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{fa562d3 VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - Instagram, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{aa5c96b VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - GitHub, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{9f9649f VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - ChatGPT, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{65822b7 VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - Copilot, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{a491fcf VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - Word, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{5b9bbe7 VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - 파일관리자 +, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{cb356ff VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - BAND, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{db5117 VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - LINE, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{af30a2f VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - AI 코딩밸리, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{457e247 VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - 근처톡, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{83395f VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - 하나카드, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{68a6f77 VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - GPS Location & Phone Tracker, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{a9ee48f VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - daglo, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{78df8a7 VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - Mureka, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{8410bbf VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - Sider, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{a24aeef VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - AiPPT, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{733ff07 VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - 빽다방(더본통합), visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{2c4ce1f VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - 터치엔 엠백신, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{f4ea174 VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - Account Access, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{bc66ac VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - Adobe Scan, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{6b61ee4 VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - 아고다, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{89b65b5 VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - V3 Mobile Plus, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{2484d8d VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - V3 Mobile Security, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{3e70c65 VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - 즐챗, visibility:0, alpha:1.0, badge:0, x=4, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{4632749 V.E...... ......ID 2365,32-3127,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{dff7029 V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:3, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{b94023d VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} - 심쿵, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{ee78f15 VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - 모바일 팩스, visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{7612ed VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 스마트 공동인증, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{13703ac VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - Dropbox, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{a24dbe4 VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - 이디야, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{138871c VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - Temu, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{523e554 VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - (구)고속도로 통행료, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{8baf1de VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - 내 기기 허브, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{f1ae518 VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - Google Ads, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{654ba64 VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - Gemini, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{fa12058 VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - Home, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{15cdc10 VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - 문서, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{7979ac8 VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - Google One, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{1a13c80 VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - 캘린더, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{175a138 VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - 주소록, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{f3ca8f0 VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - Gboard, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{cca33a8 VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - 내일찾기메타버스, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{91e2160 VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - 하나은행 기업, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{3e45218 VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - HP, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{f4a5d0 VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - 해피포인트, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{bd2fc88 VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - Polaris Office, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{32849a3 VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - 2025 생계급여 지급안내서, visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{eef00b VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - 헤이카카오, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{134a573 VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - 카카오스토리, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{8c609db VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - 카카오 T, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{6cbbd43 VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - 케이뱅크, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{9130608 VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - KB Pay, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{e1dbf50 VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - KB손해보험, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{fec7b98 VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - (구)하나은행, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.IconView{f9f1c5e VFED..CL. ......ID 635,884-762,1105 #7f0a028e app:id/icon} - 고용보험 모바일, visibility:0, alpha:1.0, badge:0, x=5, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{fa6284e V.E...... ......ID 3147,32-3909,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{2a56fae V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:4, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{96b7be6 VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} - 1분공사보고, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{bca766e VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - 코레일+, visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{ad41182 VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 올크레딧, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{e68228a VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - 메리츠화재, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{13ede92 VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - 기가지니, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{c7b659a VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - ALICE, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{e8cd7a2 VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - PASS, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{3ae54aa VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - LH청약플러스, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{e66fcb2 VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - LinkedIn, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{9efba VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - 카카오내비, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{1364dc2 VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - 엘포인트, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{a5736ca VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - 프렌즈 스크린, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{c23cad2 VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - GeoPoint360, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{81f29da VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - McDonald's, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{91873e2 VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - Windows와 연결, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{baac8ea VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - Edge, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{6bd48f2 VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - Power Automate, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{40313fa VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - Excel, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{87b4a02 VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - PowerPoint, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{cf10b0a VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - Teams, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{67b7712 VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - Translator, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{b9603b4 VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - NICE지키미, visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{bd6fb5f VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - N+스토어, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{157f2a4 VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - 거울, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{1e7626c VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - 네이버 주소록, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{6ff5d VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - 네이버 블로그, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{9d90ae8 VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - 네이버 메일, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{6257830 VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - MYBOX, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{1c41fb6 VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - 네이버지도, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.IconView{941ccee VFED..CL. ......ID 635,884-762,1105 #7f0a028e app:id/icon} - PAYCO, visibility:0, alpha:1.0, badge:0, x=5, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{45b1d6f V.E...... ......ID 3929,32-4691,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{70bc14f V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:5, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{ffb7276 VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} -  Docx 리더, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{9f7f2fe VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - 고용보험 피보험자격, visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{41c6e86 VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 삼성화재, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{b5a050e VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - Samsung Print Service 플러그인, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{d2dd696 VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - SGI서울보증, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{821031e VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - SGI M, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{c48aaa6 VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - 신한카드, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{bc5ed2e VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - 신한은행 기업, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{b45eab6 VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - 신한투자증권, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{281c33e VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - 넘버플러스Ⅱ, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{cbe96c6 VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - 에이닷 전화, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{94d854e VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - TMAP, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{c0baed6 VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - T world, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{de2335e VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - PASS, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{d4632e6 VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - Skype, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{45b2c0f VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - 프린터, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{a1a87cd VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - ECF 근로복지공단, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{a74298a VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - Rythmix, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{8ac8592 VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - 숨고, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{10a99cb VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - Spotify, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{e4fb733 VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - 아시아나항공, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{ef4f258 VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - StarMaker, visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{c522fcc VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - Stremio, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{10b453d VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - Tinder, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{c38261d VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - T 멤버십, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{206879a VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - 당근, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{936b9a2 VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - 휴대폰 인증서 서비스, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{f3029b VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - WA Business, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{3dcbe03 VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - 위치 추적기, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.IconView{20a686b VFED..CL. ......ID 635,884-762,1105 #7f0a028e app:id/icon} - 오지캠핑, visibility:0, alpha:1.0, badge:0, x=5, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{9d8a7c V.E...... ......ID 4711,32-5473,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{70190dc V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:6, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{9fca1d3 VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} - 신분증 사진, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{c100a3b VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - 하나머니, visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{80a1960 VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 쉐어박스 플레이어, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{d02f99e VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - 공수계산노트, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{658e97b VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - 롯데손해보험 렛클릭, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{2b18e3 VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - 롯데손해보험, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{400b74b VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - 모빌카드, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{3aa64b3 VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - (구)티머니onda, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{d4c11b VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - 티머니GO, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{b886c83 VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - 우체국, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{aa06eb VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - 모바일우편함, visibility:0, alpha:1.0, badge:0, x=4, y=1
+                  com.honeyspace.ui.common.iconview.IconView{87a3053 VFED..CL. ......ID 635,221-762,442 #7f0a028e app:id/icon} - 인터넷 등기소, visibility:0, alpha:1.0, badge:0, x=5, y=1
+                  com.honeyspace.ui.common.iconview.IconView{51588bb VFED..CL. ......ID 0,442-127,663 #7f0a028e app:id/icon} - 모바일 관세청, visibility:0, alpha:1.0, badge:0, x=0, y=2
+                  com.honeyspace.ui.common.iconview.IconView{f4b023 VFED..CL. ......ID 127,442-254,663 #7f0a028e app:id/icon} - 워크넷, visibility:0, alpha:1.0, badge:0, x=1, y=2
+                  com.honeyspace.ui.common.iconview.IconView{d6c468b VFED..CL. ......ID 254,442-381,663 #7f0a028e app:id/icon} - 모바일 신분증, visibility:0, alpha:1.0, badge:0, x=2, y=2
+                  com.honeyspace.ui.common.iconview.IconView{aff0b29 VFED..CL. ......ID 381,442-508,663 #7f0a028e app:id/icon} - 국세청 손택스, visibility:0, alpha:1.0, badge:0, x=3, y=2
+                  com.honeyspace.ui.common.iconview.IconView{9c31a1e VFED..CL. ......ID 508,442-635,663 #7f0a028e app:id/icon} - 스마트 위택스, visibility:0, alpha:1.0, badge:0, x=4, y=2
+                  com.honeyspace.ui.common.iconview.IconView{e2261a6 VFED..CL. ......ID 635,442-762,663 #7f0a028e app:id/icon} - 건설일드림넷, visibility:0, alpha:1.0, badge:0, x=5, y=2
+                  com.honeyspace.ui.common.iconview.IconView{353442e VFED..CL. ......ID 0,663-127,884 #7f0a028e app:id/icon} - TOUCH! 산재고용, visibility:0, alpha:1.0, badge:0, x=0, y=3
+                  com.honeyspace.ui.common.iconview.IconView{d8f20f2 VFED..CL. ......ID 127,663-254,884 #7f0a028e app:id/icon} - 건설e음, visibility:0, alpha:1.0, badge:0, x=1, y=3
+                  com.honeyspace.ui.common.iconview.IconView{7eb84eb VFED..CL. ......ID 254,663-381,884 #7f0a028e app:id/icon} - 건설근로자공제회, visibility:0, alpha:1.0, badge:0, x=2, y=3
+                  com.honeyspace.ui.common.iconview.IconView{8b7af66 VFED..CL. ......ID 381,663-508,884 #7f0a028e app:id/icon} - 고용24, visibility:0, alpha:1.0, badge:0, x=3, y=3
+                  com.honeyspace.ui.common.iconview.IconView{d30817c VFED..CL. ......ID 508,663-635,884 #7f0a028e app:id/icon} - 건강보험25시, visibility:0, alpha:1.0, badge:0, x=4, y=3
+                  com.honeyspace.ui.common.iconview.IconView{1cc1a44 VFED..CL. ......ID 635,663-762,884 #7f0a028e app:id/icon} - 내 곁에 국민연금, visibility:0, alpha:1.0, badge:0, x=5, y=3
+                  com.honeyspace.ui.common.iconview.IconView{92b060c VFED..CL. ......ID 0,884-127,1105 #7f0a028e app:id/icon} - 현대해상, visibility:0, alpha:1.0, badge:0, x=0, y=4
+                  com.honeyspace.ui.common.iconview.IconView{ac2ec59 VFED..CL. ......ID 127,884-254,1105 #7f0a028e app:id/icon} - Waazy, visibility:0, alpha:1.0, badge:0, x=1, y=4
+                  com.honeyspace.ui.common.iconview.IconView{3533d01 VFED..CL. ......ID 254,884-381,1105 #7f0a028e app:id/icon} - 카카오맵, visibility:0, alpha:1.0, badge:0, x=2, y=4
+                  com.honeyspace.ui.common.iconview.IconView{40e77a8 VFED..CL. ......ID 381,884-508,1105 #7f0a028e app:id/icon} - monimo, visibility:0, alpha:1.0, badge:0, x=3, y=4
+                  com.honeyspace.ui.common.iconview.IconView{24994e3 VFED..CL. ......ID 508,884-635,1105 #7f0a028e app:id/icon} - NH기업뱅킹, visibility:0, alpha:1.0, badge:0, x=4, y=4
+                  com.honeyspace.ui.common.iconview.IconView{269b34b VFED..CL. ......ID 635,884-762,1105 #7f0a028e app:id/icon} - NH기업뱅킹, visibility:0, alpha:1.0, badge:0, x=5, y=4
+              com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayoutContainer{b2def05 V.E...... ......ID 5493,32-6255,1231} - visibility:0, alpha:1.0
+                com.honeyspace.ui.honeypots.applist.presentation.ApplistCellLayout{bf5e5e5 V.E...... ......ID 0,92-762,1199 #7f0a0112 app:id/cell_layout} - pageIndex:7, visibility:0, alpha:1.0
+                  com.honeyspace.ui.common.iconview.IconView{28349f8 VFED..CL. ......ID 0,0-127,221 #7f0a028e app:id/icon} - 삼성 인터넷용 ABP, visibility:0, alpha:1.0, badge:0, x=0, y=0
+                  com.honeyspace.ui.common.iconview.IconView{ed77f55 VFED..CL. ......ID 127,0-254,221 #7f0a028e app:id/icon} - Logo Maker, visibility:0, alpha:1.0, badge:0, x=1, y=0
+                  com.honeyspace.ui.common.iconview.IconView{717431c VFED..CL. ......ID 254,0-381,221 #7f0a028e app:id/icon} - 기금e든든, visibility:0, alpha:1.0, badge:0, x=2, y=0
+                  com.honeyspace.ui.common.iconview.IconView{5d02154 VFED..CL. ......ID 381,0-508,221 #7f0a028e app:id/icon} - Authenticator, visibility:0, alpha:1.0, badge:0, x=3, y=0
+                  com.honeyspace.ui.common.iconview.IconView{36e928c VFED..CL. ......ID 508,0-635,221 #7f0a028e app:id/icon} - FLO, visibility:0, alpha:1.0, badge:0, x=4, y=0
+                  com.honeyspace.ui.common.iconview.IconView{7fc76c4 VFED..CL. ......ID 635,0-762,221 #7f0a028e app:id/icon} - 프린터, visibility:0, alpha:1.0, badge:0, x=5, y=0
+                  com.honeyspace.ui.common.iconview.IconView{66fadfc VFED..CL. ......ID 0,221-127,442 #7f0a028e app:id/icon} - 낱말퀴즈, visibility:0, alpha:1.0, badge:0, x=0, y=1
+                  com.honeyspace.ui.common.iconview.IconView{82a1834 VFED..CL. ......ID 127,221-254,442 #7f0a028e app:id/icon} - Appium Settings, visibility:0, alpha:1.0, badge:0, x=1, y=1
+                  com.honeyspace.ui.common.iconview.IconView{879956c VFED..CL. ......ID 254,221-381,442 #7f0a028e app:id/icon} - sharebox, visibility:0, alpha:1.0, badge:0, x=2, y=1
+                  com.honeyspace.ui.common.iconview.IconView{1805a4 VFED..CL. ......ID 381,221-508,442 #7f0a028e app:id/icon} - Stock AI Mobile, visibility:0, alpha:1.0, badge:0, x=3, y=1
+                  com.honeyspace.ui.common.iconview.IconView{2ef6a79 VFED..CL. ......ID 508,221-635,442 #7f0a028e app:id/icon} - WorldLinco, visibility:0, alpha:1.0, badge:0, x=4, y=1
+            android.widget.FrameLayout{7dcd8ba G.E...... ......I. 0,0-0,0 #7f0a009e app:id/apps_knox_icon}
+              android.widget.ImageView{ced236b V.ED..... ......ID 0,0-0,0}
+            com.honeyspace.ui.common.pageindicator.PageIndicatorView{a0f87fc V.E...... .......D 0,1295-800,1340 #7f0a0095 app:id/applist_page_indicator}
+              android.widget.LinearLayout{184dec8 V.E...... .......D 0,0-800,45}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{41340fe V.E...C.. .......D 312,11-334,33}
+                  android.widget.ImageView{823fb61 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{c74405f V.E...C.. .......D 334,11-356,33}
+                  android.widget.ImageView{befc686 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{1968aac V.E...C.. .......D 356,11-378,33}
+                  android.widget.ImageView{5388b47 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{861a375 V.E...C.. .......D 378,11-400,33}
+                  android.widget.ImageView{36d1f74 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{2de6f0a V.E...C.. .......D 400,11-422,33}
+                  android.widget.ImageView{cc3ec9d V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{a46837b V.E...C.. .......D 422,11-444,33}
+                  android.widget.ImageView{ff1c512 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{837a598 V.E...C.. .......D 444,11-466,33}
+                  android.widget.ImageView{1e894e3 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+                com.honeyspace.ui.common.pageindicator.PageIndicatorMarker{7f6bee0 V.E...C.. .......D 466,11-488,33}
+                  android.widget.ImageView{fb601f1 V.ED..... ......ID 0,0-22,22 #7f0a028e app:id/icon}
+            android.widget.LinearLayout{377b599 G.E...... ......I. 0,0-0,0 #7f0a0098 app:id/apps_change_page_mode_button}
+              com.google.android.material.tabs.TabLayout{a3205e VFED..... ......I. 0,0-0,0 #7f0a0678 app:id/workspace_tab_layout}
+                z6.f{59c3f V.ED..... ......I. 0,0-0,0}
+          com.honeyspace.ui.honeypots.appscreen.presentation.AppsSearchBar{b0ec2e4 V.E...... ......ID 0,0-800,117 #7f0a00a7 app:id/appscreen_search_bar_container}
+            android.widget.FrameLayout{fb8e90c V.E...... .......D 0,32-800,117 #7f0a0091 app:id/app_search_wrapper}
+              android.widget.ImageView{67c71d6 V.ED..... ......ID 56,13-744,72}
+              android.widget.LinearLayout{f2fdc57 V.E...... .......D 56,13-744,72}
+                android.widget.LinearLayout{ecd8344 VFE...C.. ........ 0,0-629,59 #7f0a008f app:id/app_search_edit_text_wrapper}
+                  android.widget.TextView{4051255 V.ED..... ........ 0,0-629,59 #7f0a008e app:id/app_search_edit_text}
+                android.widget.LinearLayout{617cc2d V.E...... .......D 629,0-688,59 #7f0a0090 app:id/app_search_more_button_wrapper}
+                  android.widget.FrameLayout{47ce46a V.E...... .......D 0,0-59,59 #7f0a0330 app:id/more_icon_button}
+                    android.widget.ImageButton{2ebe6f3 VFED..C.. ......ID 0,0-59,59 #7f0a0333 app:id/more_icon_imageview}
+                    android.view.View{25d562 V.ED..... ........ 0,0-59,0 #7f0a05a7 app:id/support_sort_option}
+    Looper (main, tid 2) {6e098f9}
+      (Total messages: 0, polling=false, quitting=false)
+    ResourcesManager:
+      total apks: 9
+      resources: 32
+      resource impls: 14
+    1 dumpables:
+    #0: AutofillManager
+        AutofillManager:
+          sessionId: 2147483647
+          state: UNKNOWN
+          context: com.sec.android.app.launcher.Launcher@6448c7a
+          service client: null
+          client: android.view.autofill.AutofillClientController@ac1bd5b (android.os.BinderProxy@47e1f3)
+          enabled: false
+          enabledAugmentedOnly: false
+          hasService: true
+          hasCallback: false
+          onInvisibleCalled false
+          last autofilled data: null
+          id of last fill UI shown: null
+          tracked views: null
+          fillable ids: null
+          entered ids: null
+          save trigger id: null
+          save on finish(): false
+          options: logLvl=0, compatMode=false, augmented=false, appDisabledExpiration=0
+          compat mode enabled:   fill dialog enabled: false
+          fill dialog enabled hints: [password, passwordAuto, creditCardNumber, creditCardSecurityCode, creditCardExpirationDate]
+        false
+          debug: false verbose: false
+        Autofill Compat Mode: false
+
+TASK 10517:com.parkcheolhong.worldlinco id=11063 userId=0 displayId=0(type=INTERNAL)
+  ACTIVITY com.parkcheolhong.worldlinco/.MainActivity 6753fb pid=6705 userId=0 uid=10517 displayId=0(type=INTERNAL)
+    Local Activity 437c591 State:
+      mResumed=true mStopped=false mFinished=false
+      mIsInMultiWindowMode=false mIsInPictureInPictureMode=false
+      mChangingConfigurations=false
+      mCurrentConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mLoadersStarted=true
+      Active Fragments in 3de61cd:
+        #0: ReportFragment{90a4a82 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+          mFragmentId=#0 mContainerId=#0 mTag=androidx.lifecycle.LifecycleDispatcher.report_fragment_tag
+          mState=5 mIndex=0 mWho=android:fragment:0 mBackStackNesting=0
+          mAdded=true mRemoving=false mFromLayout=false mInLayout=false
+          mHidden=false mDetached=false mMenuVisible=true mHasMenu=false
+          mRetainInstance=false mRetaining=false mUserVisibleHint=true
+          mFragmentManager=FragmentManager{3de61cd in HostCallbacks{ea18593}}
+          mHost=android.app.Activity$HostCallbacks@ea18593
+          Child FragmentManager{42ad9d0 in ReportFragment{90a4a82}}:
+            FragmentManager misc state:
+              mHost=android.app.Activity$HostCallbacks@ea18593
+              mContainer=android.app.Fragment$1@b7c4dc9
+              mParent=ReportFragment{90a4a82 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+              mCurState=5 mStateSaved=false mDestroyed=false
+      Added Fragments:
+        #0: ReportFragment{90a4a82 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+      FragmentManager misc state:
+        mHost=android.app.Activity$HostCallbacks@ea18593
+        mContainer=android.app.Activity$HostCallbacks@ea18593
+        mCurState=5 mStateSaved=false mDestroyed=false
+    PhoneWindow:
+      mStatusBarColor=0x0 mForcedStatusBarColor=true
+      mNavigationBarColor=0x0 mForcedNavigationBarColor=true
+      mDeviceDefaultNavigationBarColor=0xFF010102
+      mDefaultNavigationBarColor=0xFF010102
+      mSettingsNavigationBarColor=0xFFF6F6F8
+      mThemeApplied=false
+    ViewRoot:
+      mAdded=true
+      mRemoved=false
+      mStopped=false
+      mPausedForTransition=false
+      mConsumeBatchedInputScheduled=false
+      mConsumeBatchedInputImmediatelyScheduled=false
+      mPendingInputEventCount=0
+      mProcessInputEventsScheduled=false
+      mTraversalScheduled=false
+      mReportNextDraw=false
+      mLastReportedMergedConfiguration={mGlobalConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1166 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0} mOverrideConfig={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}}
+      mLastConfigurationFromResources={1.15 ?mcc0mnc [ko_KR] ldltr sw601dp w601dp h934dp 213dpi lrg port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 800, 1340) mAppBounds=Rect(0, 0 - 800, 1276) mMaxBounds=Rect(0, 0 - 800, 1340) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mPopOver=off mOverlappingWithCutout=false mStageConfig=undefined mEmbedActivityMode=undefined mFreeformTaskPinningState=unpinned mCompatSandboxScale=-1.0 mFreeformTranslucent=UNDEFINED} s.1 fontWeightAdjustment=300 ff=0 bf=1 bts=0 cst=1.0 nightDim=-1 themeSeq=0}
+      mIsAmbientMode=false
+      mUnbufferedInputSource=0
+      mAttachInfo=       AttachInfo:
+        mHasWindowFocus=false
+        mWindowVisibility=0
+        mInTouchMode=true
+        mUnbufferedDispatchRequested=false
+      android.view.ViewRootImpl$NativePreImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$ImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$NativePostImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$WindowInputEventReceiver
+       mInputChannel: d0ef3bb com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity (client)
+       mSeqMap: {}
+       mReceiverPtr:
+        mInputConsumer:
+          mResampleTouch = true
+          mChannel = d0ef3bb com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity (client)
+          mMsgDeferred: false
+          Batches:
+              <empty>
+          mSeqChains:
+              <empty>
+          mConsumeTimes:
+              <empty>
+          
+        mBatchedInputEventPending: false
+        mOutboundQueue:
+          <empty>
+        
+    Choreographer:
+      mFrameScheduled=true
+      mLastFrameTime=392791434 (7 ms ago)
+    InsetsController:
+      InsetsState
+        mDisplayFrame=Rect(0, 0 - 800, 1340)
+        mDisplayCutout=DisplayCutout{insets=Rect(0, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=0 displayHeight=0 physicalDisplayWidth=0 physicalDisplayHeight=0 density={0.0} cutoutSpec={} rotation={0} scale={0.0} physicalPixelDisplaySizeRatio={0.0}}}}
+        mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=17, center=Point(17, 17)}, RoundedCorner{position=TopRight, radius=17, center=Point(783, 17)}, RoundedCorner{position=BottomRight, radius=17, center=Point(783, 1323)}, RoundedCorner{position=BottomLeft, radius=17, center=Point(17, 1323)}]}
+        mRoundedCornerFrame=Rect(0, 0 - 800, 1340)
+        mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(742, 0 - 800, 32) rotation=0}
+        mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=800 displayHeight=1340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}
+          InsetsSource id=3 type=ime frame=[0,1276][800,1340] visibleFrame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60000 type=statusBars frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60005 type=mandatorySystemGestures frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=1be60006 type=tappableElement frame=[0,0][800,32] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70001 type=navigationBars frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70004 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70005 type=mandatorySystemGestures frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70006 type=tappableElement frame=[0,1276][800,1340] visible=true flags= insetsRoundedCornerFrame=false
+          InsetsSource id=56b70024 type=systemGestures frame=[0,0][0,0] visible=true flags= insetsRoundedCornerFrame=false
+    WindowOnBackDispatcher:
+        Top Callback: android.view.ViewRootImpl$$ExternalSyntheticLambda19@88e0fb6
+        Callbacks: 
+          Callback: android.view.ViewRootImpl$$ExternalSyntheticLambda19@88e0fb6 Priority=0
+    View Hierarchy:
+      DecorView@5bd8cbf[MainActivity]
+        android.widget.LinearLayout{754c6a6 V.E...... ........ 0,0-800,1340}
+          android.view.ViewStub{6168cce G.E...... ......I. 0,0-0,0 #10201cc android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{62d6c94 V.E...... ........ 0,0-800,1340}
+            androidx.appcompat.widget.FitWindowsLinearLayout{6e4833d V.E...... ........ 0,0-800,1340 #7f0a0046 app:id/action_bar_root}
+              androidx.appcompat.widget.ViewStubCompat{bd4e7ef G.E...... ......I. 0,0-0,0 #7f0a0051 app:id/action_mode_bar_stub}
+              androidx.appcompat.widget.ContentFrameLayout{d76a732 V.E...... ........ 0,0-800,1340 #1020002 android:id/content}
+                com.facebook.react.runtime.ReactSurfaceView{5229c83 V.E...... ........ 0,0-800,1340 #1}
+                  com.th3rdwave.safeareacontext.SafeAreaProvider{bbebe00 V.E...... ........ 0,0-800,1340 #2}
+                    ReactImageView{holder=DraweeHolder{controllerAttached=true, holderAttached=true, drawableVisible=true, events=[ON_SET_HIERARCHY, ON_DRAWABLE_HIDE, ON_SET_CONTROLLER, ON_DRAWABLE_SHOW, ON_HOLDER_ATTACH, ON_ATTACH_CONTROLLER]}}
+                    com.th3rdwave.safeareacontext.SafeAreaView{f64047e V.E...... ........ 0,0-800,1340 #8e}
+                      com.facebook.react.views.scroll.ReactScrollView{e687ddf VFED.V... ........ 0,32-800,1340 #8c}
+                        com.facebook.react.views.view.ReactViewGroup{251ba2c V.E...... ........ 0,0-800,1301 #8a}
+                          com.facebook.react.views.text.ReactTextView{70118fb V.ED..... ........ 301,20-498,72 #a}
+                          com.facebook.react.views.text.ReactTextView{e364d18 V.ED..... ........ 301,75-498,108 #e}
+                          com.facebook.react.views.view.ReactViewGroup{12c5371 V.E...... ........ 191,122-425,174 #14}
+                          com.facebook.react.views.text.ReactTextView{bb22556 V.ED..... ........ 208,132-407,162 #12}
+                          com.facebook.react.views.view.ReactViewGroup{8be49d7 VFE...C.. ........ 435,122-609,172 #1a}
+                            com.facebook.react.views.text.ReactTextView{a2bc2fc V.ED..... ........ 14,9-158,41 #18}
+                          com.facebook.react.views.view.ReactViewGroup{6cf22c4 VFE...C.. ........ 336,187-464,245 #22}
+                            com.facebook.react.views.text.ReactTextView{4f2fd85 V.ED..... ........ 17,11-110,45 #20}
+                          com.facebook.react.views.view.ReactViewGroup{a61b5ad V.E...... ........ 13,261-787,468 #3c}
+                          com.facebook.react.views.text.ReactTextView{1c340e2 V.ED..... ........ 30,278-770,318 #28}
+                          com.facebook.react.views.text.ReactTextView{eb3ac73 V.ED..... ........ 30,318-770,372 #2c}
+                          com.facebook.react.views.view.ReactViewGroup{4fda730 VFE...C.. ........ 30,393-172,444 #32}
+                            com.facebook.react.views.text.ReactTextView{e92a7da V.ED..... ........ 11,9-129,41 #30}
+                          com.facebook.react.views.view.ReactViewGroup{810ffa9 VFE...C.. ........ 183,386-769,452 #38}
+                            com.facebook.react.views.text.ReactTextView{32140b V.ED..... ........ 205,13-380,52 #36}
+                          com.facebook.react.views.view.ReactViewGroup{2d8892e V.E...... ........ 13,487-787,722 #4c}
+                          com.facebook.react.views.text.ReactTextView{7929ccf V.ED..... ........ 35,509-765,539 #42}
+                          com.facebook.react.views.text.ReactTextView{c4e065c V.ED..... ........ 35,550-765,628 #46}
+                          com.facebook.react.views.text.ReactTextView{a50ed65 V.ED..... ........ 35,638-765,698 #4a}
+                          com.facebook.react.views.view.ReactViewGroup{de80a3a V.E...... ........ 13,740-385,906 #5a}
+                          com.facebook.react.views.text.ReactTextView{1c636eb V.ED..... ........ 27,754-370,796 #50}
+                          com.facebook.react.views.text.ReactTextView{ae32c48 V.ED..... ........ 27,801-370,835 #54}
+                          com.facebook.react.views.text.ReactTextView{1e7fae1 V.ED..... ........ 27,841-370,891 #58}
+                          com.facebook.react.views.view.ReactViewGroup{93c9006 V.E...... ........ 398,740-769,906 #68}
+                          com.facebook.react.views.text.ReactTextView{d4f56c7 V.ED..... ........ 412,754-755,796 #5e}
+                          com.facebook.react.views.text.ReactTextView{c22c4f4 V.ED..... ........ 412,801-755,835 #62}
+                          com.facebook.react.views.text.ReactTextView{b88641d V.ED..... ........ 412,841-755,891 #66}
+                          com.facebook.react.views.view.ReactViewGroup{301a692 V.E...... ........ 13,919-385,1085 #76}
+                          com.facebook.react.views.text.ReactTextView{f609863 V.ED..... ........ 27,933-370,975 #6c}
+                          com.facebook.react.views.text.ReactTextView{a213c60 V.ED..... ........ 27,980-370,1014 #70}
+                          com.facebook.react.views.text.ReactTextView{2cc2519 V.ED..... ........ 27,1020-370,1070 #74}
+                          com.facebook.react.views.view.ReactViewGroup{e8f99de V.E...... ........ 398,919-769,1085 #84}
+                          com.facebook.react.views.text.ReactTextView{3ba57bf V.ED..... ........ 412,933-755,975 #7a}
+                          com.facebook.react.views.text.ReactTextView{9cdbe8c V.ED..... ........ 412,980-755,1014 #7e}
+                          com.facebook.react.views.text.ReactTextView{8f0f9d5 V.ED..... ........ 412,1020-755,1070 #82}
+                      com.facebook.react.views.modal.ReactModalHostView{2f012e8 V.E...... ........ 0,0-800,1340 #f6}
+                        com.facebook.react.views.view.ReactViewGroup{e65ef60 V.E...... ........ 0,0-800,1340 #f4}
+                          com.facebook.react.views.view.ReactViewGroup{4965c19 V.E...... ........ 0,0-800,1340 #f2}
+                          ReactImageView{holder=DraweeHolder{controllerAttached=true, holderAttached=true, drawableVisible=true, events=[ON_SET_HIERARCHY, ON_DRAWABLE_HIDE, ON_SET_CONTROLLER, ON_DRAWABLE_SHOW, ON_HOLDER_ATTACH, ON_ATTACH_CONTROLLER]}}
+                          com.facebook.react.views.view.ReactViewGroup{2c0e6bf VFE...C.. ........ 728,19-779,69 #9a}
+                            com.facebook.react.views.text.ReactTextView{2a7a0d5 V.ED..... ........ 12,4-38,46 #98}
+                          com.facebook.react.views.scroll.ReactScrollView{92aa18c VFED..... ........ 0,75-800,1340 #f0}
+                            com.facebook.react.views.view.ReactViewGroup{e1e90ea V.E...... ........ 0,0-800,1265 #ee}
+                              ReactImageView{holder=DraweeHolder{controllerAttached=true, holderAttached=true, drawableVisible=true, events=[ON_SET_HIERARCHY, ON_DRAWABLE_HIDE, ON_SET_CONTROLLER, ON_DRAWABLE_SHOW, ON_HOLDER_ATTACH, ON_ATTACH_CONTROLLER]}}
+                              com.facebook.react.views.text.ReactTextView{9a64a78 V.ED..... ........ 261,356-538,429 #a2}
+                              com.facebook.react.views.text.ReactTextView{74e7551 V.ED..... ........ 220,434-580,473 #a6}
+                              com.facebook.react.views.view.ReactViewGroup{1ccd1b6 V.E...... ........ 94,492-706,1136 #ec}
+                                com.facebook.react.views.text.ReactTextView{4deeeb7 V.ED..... ........ 26,31-586,70 #ac}
+                                com.facebook.react.views.view.ReactViewGroup{8319624 V.E...... ........ 27,80-587,154 #b4}
+                                com.facebook.react.views.text.ReactTextView{cb4158d V.ED..... ........ 44,98-77,136 #b0}
+                                com.facebook.react.views.textinput.ReactEditText{f4c5342 VFED..CL. ........ 87,81-569,154 #b2 aid=1073741824}
+                                com.facebook.react.views.text.ReactTextView{be9bf53 V.ED..... ........ 26,178-586,217 #b8}
+                                com.facebook.react.views.view.ReactViewGroup{803f090 V.E...... ........ 27,227-587,301 #c6}
+                                com.facebook.react.views.text.ReactTextView{c597d89 V.ED..... ........ 44,245-77,283 #bc}
+                                com.facebook.react.views.textinput.ReactEditText{750618e VFED..CL. .F...... 87,228-522,301 #be aid=1073741825}
+                                com.facebook.react.views.view.ReactViewGroup{cc6fdaf VFE...C.. ........ 522,236-568,293 #c4}
+                                  com.facebook.react.views.text.ReactTextView{d0b1466 V.ED..... ........ 5,7-41,48 #c2}
+                                com.facebook.react.views.view.ReactViewGroup{65f85bc VFE...C.. ........ 27,322-587,406 #cc}
+                                  com.facebook.react.views.text.ReactTextView{ad2f3a7 V.ED..... ........ 239,19-319,63 #ca}
+                                com.facebook.react.views.view.ReactViewGroup{cd36945 VFE...C.. ........ 464,428-583,461 #d4}
+                                  com.facebook.react.views.text.ReactTextView{c38d054 V.ED..... ........ 0,0-119,33 #d2}
+                                com.facebook.react.views.view.ReactViewGroup{75089a V.E...... ........ 27,482-587,484 #d8}
+                                com.facebook.react.views.text.ReactTextView{b8fc5cb V.ED..... ........ 161,505-356,544 #dc}
+                                com.facebook.react.views.view.ReactViewGroup{7d41a8 VFE...C.. ........ 364,505-452,544 #e2}
+                                  com.facebook.react.views.text.ReactTextView{8a27bfd V.ED..... ........ 0,0-88,39 #e0}
+                                com.facebook.react.views.view.ReactViewGroup{f4654c1 VFE...C.. ........ 27,552-587,618 #ea}
+                                  com.facebook.react.views.text.ReactTextView{1a410f2 V.ED..... ........ 193,15-365,49 #e8}
+        android.view.View{e0358e7 V.ED..... ........ 0,1276-800,1340 #1020030 android:id/navigationBarBackground}
+    Looper (main, tid 2) {d6aed01}
+      Message 0: { when=+89ms callback=android.widget.Editor$Blink target=android.view.ViewRootImpl$ViewRootHandler }
+      (Total messages: 1, polling=false, quitting=false)
+    ResourcesManager:
+      total apks: 2
+      resources: 4
+      resource impls: 3
+    1 dumpables:
+    #0: AutofillManager
+        AutofillManager:
+          sessionId: 2147483647
+          state: UNKNOWN
+          context: com.parkcheolhong.worldlinco.MainActivity@437c591
+          service client: android.view.autofill.AutofillManager$AutofillManagerClient@a8367a6
+          client: android.view.autofill.AutofillClientController@3ebe5e7 (android.os.BinderProxy@4296ee9)
+          enabled: false
+          enabledAugmentedOnly: false
+          hasService: true
+          hasCallback: false
+          onInvisibleCalled false
+          last autofilled data: null
+          id of last fill UI shown: null
+          tracked views: null
+          fillable ids: null
+          entered ids: null
+          save trigger id: null
+          save on finish(): false
+          options: logLvl=0, compatMode=false, augmented=false, appDisabledExpiration=0
+          compat mode enabled:   fill dialog enabled: false
+          fill dialog enabled hints: [password, passwordAuto, creditCardNumber, creditCardSecurityCode, creditCardExpirationDate]
+        false
+          debug: false verbose: false
+        Autofill Compat Mode: false
+    Local FragmentActivity 437c591 State:
+      mCreated=true mResumed=true mStopped=false    Back Stack Index: 0
+    FragmentManager misc state:
+      mHost=androidx.fragment.app.FragmentActivity$HostCallbacks@218583d
+      mContainer=androidx.fragment.app.FragmentActivity$HostCallbacks@218583d
+      mCurState=7 mStateSaved=false mStopped=false mDestroyed=false

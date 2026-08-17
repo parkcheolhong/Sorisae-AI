@@ -1,0 +1,5 @@
+﻿List of devices attached
+R83W70QY11H	unauthorized
+172.30.1.15:5555	device
+
+

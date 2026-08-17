@@ -1,0 +1,583 @@
+{
+  "document": {
+    "document_id": "GEN-DSL-001",
+    "project_id": "GEN-PROJECT-001",
+    "project_name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-88b347d566",
+    "profile": "python_fastapi",
+    "runtime": "fastapi",
+    "node_count": 21,
+    "quality_gates": [
+      "required-files-present",
+      "service-package-contract",
+      "multi-role-contract-generated",
+      "auto-link-map-generated",
+      "architecture-contract-generated",
+      "role-separation-generated",
+      "generator-checklist-generated",
+      "output-audit-generated",
+      "traceability-generated",
+      "self-configurable-settings",
+      "syntax-verifiable"
+    ],
+    "safety_hooks": [
+      "id-based-auto-link",
+      "role-separation-contract",
+      "service-package-export",
+      "multi-role-orchestrator",
+      "security-baseline",
+      "status-adapter-default",
+      "generation-checklist",
+      "runtime-entrypoint-check"
+    ]
+  },
+  "graph": {
+    "graph_id": "GRAPH-001",
+    "project_id": "GEN-PROJECT-001",
+    "nodes": [
+      {
+        "id": "GRAPH-NODE-001",
+        "source_dsl_id": "DSL-NODE-001",
+        "role": "api-entrypoint",
+        "target_path": "app/main.py",
+        "template_id": "TPL-PYTHON_FASTAPI-001",
+        "metadata": {
+          "auto_link_key": "entrypoint:main",
+          "kind": "entrypoint",
+          "layer": "entry",
+          "contract_target_path": "app/main.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-002",
+        "source_dsl_id": "DSL-NODE-002",
+        "role": "health-route",
+        "target_path": "app/api/routes/health.py",
+        "template_id": "TPL-PYTHON_FASTAPI-002",
+        "metadata": {
+          "auto_link_key": "route:health",
+          "kind": "route",
+          "layer": "api",
+          "contract_target_path": "app/api/routes/health.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-003",
+        "source_dsl_id": "DSL-NODE-003",
+        "role": "service-package-export",
+        "target_path": "app/services/__init__.py",
+        "template_id": "TPL-PYTHON_FASTAPI-003",
+        "metadata": {
+          "auto_link_key": "service:service_package",
+          "kind": "service",
+          "layer": "service",
+          "contract_target_path": "app/services/__init__.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-004",
+        "source_dsl_id": "DSL-NODE-004",
+        "role": "runtime-service",
+        "target_path": "app/services/runtime_service.py",
+        "template_id": "TPL-PYTHON_FASTAPI-004",
+        "metadata": {
+          "auto_link_key": "service:runtime_service",
+          "kind": "service",
+          "layer": "service",
+          "contract_target_path": "app/services/runtime_service.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-005",
+        "source_dsl_id": "DSL-NODE-005",
+        "role": "runtime-config",
+        "target_path": "app/core/config.py",
+        "template_id": "TPL-PYTHON_FASTAPI-005",
+        "metadata": {
+          "auto_link_key": "config:settings",
+          "kind": "config",
+          "layer": "config",
+          "contract_target_path": "app/core/config.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-006",
+        "source_dsl_id": "DSL-NODE-006",
+        "role": "security-guard",
+        "target_path": "app/core/security.py",
+        "template_id": "TPL-PYTHON_FASTAPI-006",
+        "metadata": {
+          "auto_link_key": "guard:security",
+          "kind": "guard",
+          "layer": "security",
+          "contract_target_path": "app/core/security.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-007",
+        "source_dsl_id": "DSL-NODE-007",
+        "role": "upstream-status-adapter",
+        "target_path": "app/external_adapters/status_client.py",
+        "template_id": "TPL-PYTHON_FASTAPI-007",
+        "metadata": {
+          "auto_link_key": "adapter:status_client",
+          "kind": "adapter",
+          "layer": "adapter",
+          "contract_target_path": "app/external_adapters/status_client.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-008",
+        "source_dsl_id": "DSL-NODE-008",
+        "role": "multi-role-orchestrator",
+        "target_path": "app/agents/orchestrator_roles.py",
+        "template_id": "TPL-PYTHON_FASTAPI-008",
+        "metadata": {
+          "auto_link_key": "agent:multi_role_registry",
+          "kind": "agent",
+          "layer": "agent",
+          "contract_target_path": "app/agents/orchestrator_roles.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-009",
+        "source_dsl_id": "DSL-NODE-009",
+        "role": "health-test",
+        "target_path": "tests/test_health.py",
+        "template_id": "TPL-PYTHON_FASTAPI-009",
+        "metadata": {
+          "auto_link_key": "test:test_health",
+          "kind": "test",
+          "layer": "test",
+          "contract_target_path": "tests/test_health.py"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-010",
+        "source_dsl_id": "DSL-NODE-010",
+        "role": "file-manifest",
+        "target_path": "docs/file_manifest.md",
+        "template_id": "TPL-PYTHON_FASTAPI-010",
+        "metadata": {
+          "auto_link_key": "doc:file_manifest",
+          "kind": "doc",
+          "layer": "meta",
+          "contract_target_path": "docs/file_manifest.md"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-011",
+        "source_dsl_id": "DSL-NODE-011",
+        "role": "orchestrator-checklist",
+        "target_path": "docs/orchestrator_checklist.md",
+        "template_id": "TPL-PYTHON_FASTAPI-011",
+        "metadata": {
+          "auto_link_key": "doc:orchestrator_checklist",
+          "kind": "doc",
+          "layer": "meta",
+          "contract_target_path": "docs/orchestrator_checklist.md"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-012",
+        "source_dsl_id": "DSL-NODE-012",
+        "role": "output-audit",
+        "target_path": "docs/output_audit.json",
+        "template_id": "TPL-PYTHON_FASTAPI-012",
+        "metadata": {
+          "auto_link_key": "doc:output_audit",
+          "kind": "doc",
+          "layer": "meta",
+          "contract_target_path": "docs/output_audit.json"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-013",
+        "source_dsl_id": "DSL-NODE-013",
+        "role": "artifact-ledger",
+        "target_path": "docs/orchestrator_artifacts.json",
+        "template_id": "TPL-PYTHON_FASTAPI-013",
+        "metadata": {
+          "auto_link_key": "doc:orchestrator_artifacts",
+          "kind": "doc",
+          "layer": "meta",
+          "contract_target_path": "docs/orchestrator_artifacts.json"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-014",
+        "source_dsl_id": "DSL-NODE-014",
+        "role": "traceability-map",
+        "target_path": "docs/traceability_map.json",
+        "template_id": "TPL-PYTHON_FASTAPI-014",
+        "metadata": {
+          "auto_link_key": "doc:traceability",
+          "kind": "doc",
+          "layer": "meta",
+          "contract_target_path": "docs/traceability_map.json"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-015",
+        "source_dsl_id": "DSL-NODE-015",
+        "role": "auto-link-map",
+        "target_path": "docs/auto_link_map.json",
+        "template_id": "TPL-PYTHON_FASTAPI-015",
+        "metadata": {
+          "auto_link_key": "doc:auto_link_map",
+          "kind": "doc",
+          "layer": "governance",
+          "contract_target_path": "docs/auto_link_map.json"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-016",
+        "source_dsl_id": "DSL-NODE-016",
+        "role": "architecture-contract",
+        "target_path": "docs/architecture.contract.json",
+        "template_id": "TPL-PYTHON_FASTAPI-016",
+        "metadata": {
+          "auto_link_key": "doc:architecture_contract",
+          "kind": "doc",
+          "layer": "governance",
+          "contract_target_path": "docs/architecture.contract.json"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-017",
+        "source_dsl_id": "DSL-NODE-017",
+        "role": "role-separation",
+        "target_path": "docs/role_separation.md",
+        "template_id": "TPL-PYTHON_FASTAPI-017",
+        "metadata": {
+          "auto_link_key": "doc:role_separation",
+          "kind": "doc",
+          "layer": "governance",
+          "contract_target_path": "docs/role_separation.md"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-018",
+        "source_dsl_id": "DSL-NODE-018",
+        "role": "generator-checklist",
+        "target_path": "docs/generator_checklist.md",
+        "template_id": "TPL-PYTHON_FASTAPI-018",
+        "metadata": {
+          "auto_link_key": "doc:generator_checklist",
+          "kind": "doc",
+          "layer": "governance",
+          "contract_target_path": "docs/generator_checklist.md"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-019",
+        "source_dsl_id": "DSL-NODE-019",
+        "role": "multi-role-contract",
+        "target_path": "docs/multi_role_contract.json",
+        "template_id": "TPL-PYTHON_FASTAPI-019",
+        "metadata": {
+          "auto_link_key": "doc:multi_role_contract",
+          "kind": "doc",
+          "layer": "governance",
+          "contract_target_path": "docs/multi_role_contract.json"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-020",
+        "source_dsl_id": "DSL-NODE-020",
+        "role": "operational-readiness",
+        "target_path": "docs/operational_readiness.md",
+        "template_id": "TPL-PYTHON_FASTAPI-020",
+        "metadata": {
+          "auto_link_key": "doc:operational_readiness",
+          "kind": "doc",
+          "layer": "governance",
+          "contract_target_path": "docs/operational_readiness.md"
+        }
+      },
+      {
+        "id": "GRAPH-NODE-021",
+        "source_dsl_id": "DSL-NODE-021",
+        "role": "template-contract",
+        "target_path": ".codeai-template.json",
+        "template_id": "TPL-PYTHON_FASTAPI-021",
+        "metadata": {
+          "auto_link_key": "template:template_contract",
+          "kind": "template",
+          "layer": "template",
+          "contract_target_path": ".codeai-template.json"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "GRAPH-EDGE-001",
+        "source_id": "GRAPH-NODE-001",
+        "target_id": "GRAPH-NODE-002",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-002",
+        "source_id": "GRAPH-NODE-002",
+        "target_id": "GRAPH-NODE-003",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-003",
+        "source_id": "GRAPH-NODE-003",
+        "target_id": "GRAPH-NODE-004",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-004",
+        "source_id": "GRAPH-NODE-004",
+        "target_id": "GRAPH-NODE-005",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-005",
+        "source_id": "GRAPH-NODE-005",
+        "target_id": "GRAPH-NODE-006",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-006",
+        "source_id": "GRAPH-NODE-006",
+        "target_id": "GRAPH-NODE-007",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-007",
+        "source_id": "GRAPH-NODE-007",
+        "target_id": "GRAPH-NODE-008",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-008",
+        "source_id": "GRAPH-NODE-008",
+        "target_id": "GRAPH-NODE-009",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-009",
+        "source_id": "GRAPH-NODE-009",
+        "target_id": "GRAPH-NODE-010",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-010",
+        "source_id": "GRAPH-NODE-010",
+        "target_id": "GRAPH-NODE-011",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-011",
+        "source_id": "GRAPH-NODE-011",
+        "target_id": "GRAPH-NODE-012",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-012",
+        "source_id": "GRAPH-NODE-012",
+        "target_id": "GRAPH-NODE-013",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-013",
+        "source_id": "GRAPH-NODE-013",
+        "target_id": "GRAPH-NODE-014",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-014",
+        "source_id": "GRAPH-NODE-014",
+        "target_id": "GRAPH-NODE-015",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-015",
+        "source_id": "GRAPH-NODE-015",
+        "target_id": "GRAPH-NODE-016",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-016",
+        "source_id": "GRAPH-NODE-016",
+        "target_id": "GRAPH-NODE-017",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-017",
+        "source_id": "GRAPH-NODE-017",
+        "target_id": "GRAPH-NODE-018",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-018",
+        "source_id": "GRAPH-NODE-018",
+        "target_id": "GRAPH-NODE-019",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-019",
+        "source_id": "GRAPH-NODE-019",
+        "target_id": "GRAPH-NODE-020",
+        "relation": "auto-link"
+      },
+      {
+        "id": "GRAPH-EDGE-020",
+        "source_id": "GRAPH-NODE-020",
+        "target_id": "GRAPH-NODE-021",
+        "relation": "auto-link"
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "binding_id": "BIND-001",
+      "node_id": "GRAPH-NODE-001",
+      "template_id": "TPL-PYTHON_FASTAPI-001",
+      "target_path": "app/main.py",
+      "role": "api-entrypoint"
+    },
+    {
+      "binding_id": "BIND-002",
+      "node_id": "GRAPH-NODE-002",
+      "template_id": "TPL-PYTHON_FASTAPI-002",
+      "target_path": "app/api/routes/health.py",
+      "role": "health-route"
+    },
+    {
+      "binding_id": "BIND-003",
+      "node_id": "GRAPH-NODE-003",
+      "template_id": "TPL-PYTHON_FASTAPI-003",
+      "target_path": "app/services/__init__.py",
+      "role": "service-package-export"
+    },
+    {
+      "binding_id": "BIND-004",
+      "node_id": "GRAPH-NODE-004",
+      "template_id": "TPL-PYTHON_FASTAPI-004",
+      "target_path": "app/services/runtime_service.py",
+      "role": "runtime-service"
+    },
+    {
+      "binding_id": "BIND-005",
+      "node_id": "GRAPH-NODE-005",
+      "template_id": "TPL-PYTHON_FASTAPI-005",
+      "target_path": "app/core/config.py",
+      "role": "runtime-config"
+    },
+    {
+      "binding_id": "BIND-006",
+      "node_id": "GRAPH-NODE-006",
+      "template_id": "TPL-PYTHON_FASTAPI-006",
+      "target_path": "app/core/security.py",
+      "role": "security-guard"
+    },
+    {
+      "binding_id": "BIND-007",
+      "node_id": "GRAPH-NODE-007",
+      "template_id": "TPL-PYTHON_FASTAPI-007",
+      "target_path": "app/external_adapters/status_client.py",
+      "role": "upstream-status-adapter"
+    },
+    {
+      "binding_id": "BIND-008",
+      "node_id": "GRAPH-NODE-008",
+      "template_id": "TPL-PYTHON_FASTAPI-008",
+      "target_path": "app/agents/orchestrator_roles.py",
+      "role": "multi-role-orchestrator"
+    },
+    {
+      "binding_id": "BIND-009",
+      "node_id": "GRAPH-NODE-009",
+      "template_id": "TPL-PYTHON_FASTAPI-009",
+      "target_path": "tests/test_health.py",
+      "role": "health-test"
+    },
+    {
+      "binding_id": "BIND-010",
+      "node_id": "GRAPH-NODE-010",
+      "template_id": "TPL-PYTHON_FASTAPI-010",
+      "target_path": "docs/file_manifest.md",
+      "role": "file-manifest"
+    },
+    {
+      "binding_id": "BIND-011",
+      "node_id": "GRAPH-NODE-011",
+      "template_id": "TPL-PYTHON_FASTAPI-011",
+      "target_path": "docs/orchestrator_checklist.md",
+      "role": "orchestrator-checklist"
+    },
+    {
+      "binding_id": "BIND-012",
+      "node_id": "GRAPH-NODE-012",
+      "template_id": "TPL-PYTHON_FASTAPI-012",
+      "target_path": "docs/output_audit.json",
+      "role": "output-audit"
+    },
+    {
+      "binding_id": "BIND-013",
+      "node_id": "GRAPH-NODE-013",
+      "template_id": "TPL-PYTHON_FASTAPI-013",
+      "target_path": "docs/orchestrator_artifacts.json",
+      "role": "artifact-ledger"
+    },
+    {
+      "binding_id": "BIND-014",
+      "node_id": "GRAPH-NODE-014",
+      "template_id": "TPL-PYTHON_FASTAPI-014",
+      "target_path": "docs/traceability_map.json",
+      "role": "traceability-map"
+    },
+    {
+      "binding_id": "BIND-015",
+      "node_id": "GRAPH-NODE-015",
+      "template_id": "TPL-PYTHON_FASTAPI-015",
+      "target_path": "docs/auto_link_map.json",
+      "role": "auto-link-map"
+    },
+    {
+      "binding_id": "BIND-016",
+      "node_id": "GRAPH-NODE-016",
+      "template_id": "TPL-PYTHON_FASTAPI-016",
+      "target_path": "docs/architecture.contract.json",
+      "role": "architecture-contract"
+    },
+    {
+      "binding_id": "BIND-017",
+      "node_id": "GRAPH-NODE-017",
+      "template_id": "TPL-PYTHON_FASTAPI-017",
+      "target_path": "docs/role_separation.md",
+      "role": "role-separation"
+    },
+    {
+      "binding_id": "BIND-018",
+      "node_id": "GRAPH-NODE-018",
+      "template_id": "TPL-PYTHON_FASTAPI-018",
+      "target_path": "docs/generator_checklist.md",
+      "role": "generator-checklist"
+    },
+    {
+      "binding_id": "BIND-019",
+      "node_id": "GRAPH-NODE-019",
+      "template_id": "TPL-PYTHON_FASTAPI-019",
+      "target_path": "docs/multi_role_contract.json",
+      "role": "multi-role-contract"
+    },
+    {
+      "binding_id": "BIND-020",
+      "node_id": "GRAPH-NODE-020",
+      "template_id": "TPL-PYTHON_FASTAPI-020",
+      "target_path": "docs/operational_readiness.md",
+      "role": "operational-readiness"
+    },
+    {
+      "binding_id": "BIND-021",
+      "node_id": "GRAPH-NODE-021",
+      "template_id": "TPL-PYTHON_FASTAPI-021",
+      "target_path": ".codeai-template.json",
+      "role": "template-contract"
+    }
+  ]
+}

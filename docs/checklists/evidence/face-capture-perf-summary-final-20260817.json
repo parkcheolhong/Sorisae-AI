@@ -1,0 +1,35 @@
+{
+  "runs": [
+    {
+      "reason": "login_timeout_probe",
+      "login_sec": 143,
+      "login": "00:11:58",
+      "fg": "00:09:35",
+      "run": 1
+    },
+    {
+      "reason": "login_timeout_probe",
+      "login_sec": 150,
+      "login": "00:14:52",
+      "fg": "00:12:22",
+      "run": 2
+    },
+    {
+      "reason": "login_timeout_probe",
+      "login_sec": 139,
+      "login": "00:17:36",
+      "fg": "00:15:17",
+      "run": 3
+    }
+  ],
+  "metric": "foreground confirmed -> login state",
+  "login_latency_sec": {
+    "samples": [
+      139,
+      143,
+      150
+    ],
+    "p50": 143,
+    "p95": 150
+  }
+}

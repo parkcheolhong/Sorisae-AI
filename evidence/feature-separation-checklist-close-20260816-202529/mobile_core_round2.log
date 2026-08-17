@@ -1,0 +1,17 @@
+
+> mobile-nadotongryoksa@1.0.3 test
+> jest --runInBand src/__tests__/socialLogin.test.ts src/__tests__/faceConversationTiming.test.ts src/__tests__/voiceRelayOrchestrator.test.ts src/__tests__/voiceRelayTurnController.test.ts src/__tests__/chatVoiceInput.test.ts src/__tests__/travelBooking.test.ts src/__tests__/songLang.test.ts
+
+PASS src/__tests__/socialLogin.test.ts
+PASS src/__tests__/voiceRelayOrchestrator.test.ts
+PASS src/__tests__/songLang.test.ts
+PASS src/__tests__/voiceRelayTurnController.test.ts
+PASS src/__tests__/chatVoiceInput.test.ts
+PASS src/__tests__/travelBooking.test.ts
+PASS src/__tests__/faceConversationTiming.test.ts
+
+Test Suites: 7 passed, 7 total
+Tests:       84 passed, 84 total
+Snapshots:   0 total
+Time:        1.11 s, estimated 2 s
+Ran all test suites matching /src\\__tests__\\socialLogin.test.ts|src\\__tests__\\faceConversationTiming.test.ts|src\\__tests__\\voiceRelayOrchestrator.test.ts|src\\__tests__\\voiceRelayTurnController.test.ts|src\\__tests__\\chatVoiceInput.test.ts|src\\__tests__\\travelBooking.test.ts|src\\__tests__\\songLang.test.ts/i.

@@ -1,0 +1,89 @@
+08-13 19:50:31.932  1673  1701 W System.err: java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.String android.content.ComponentName.getPackageName()' on a null object reference
+08-13 19:50:31.948  1673  1701 W System.err: java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.String android.content.ComponentName.getPackageName()' on a null object reference
+08-13 19:50:32.018  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:50:32.179  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:50:34.250  1673  2535 D VpnManagerService: Exception: java.lang.NullPointerException: Attempt to invoke interface method 'int com.samsung.android.knox.zt.networktrust.filter.IKnoxNetworkFilterService.getKnoxNwFilterHttpProxyPort(int, java.lang.String)' on a null object reference
+08-13 19:50:37.042  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:50:41.711 17373 17373 E LoadedApk: java.lang.ClassNotFoundException: Didn't find class "com.sec.android.app.camera.camera" on path: DexPathList[[zip file "/system/priv-app/SamSungCamera/SamSungCamera.apk"],nativeLibraryDirectories=[/system/priv-app/SamSungCamera/lib/arm64, /system/lib64, /system_ext/lib64, /system/lib64, /system_ext/lib64]]
+08-13 19:50:41.733  1673  1691 D VpnManagerService: Exception: java.lang.NullPointerException: Attempt to invoke interface method 'int com.samsung.android.knox.zt.networktrust.filter.IKnoxNetworkFilterService.getKnoxNwFilterHttpProxyPort(int, java.lang.String)' on a null object reference
+08-13 19:50:41.809 17373 17373 W System.err: java.lang.NoSuchFieldException: QUALITY_2k
+08-13 19:51:16.737  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:51:17.632  2424  2499 W FrameTracker: Missed SF frame:PREDICTION_ERROR, 52703325, 13568819, CUJ=J<SPLASHSCREEN_EXIT_ANIM>
+08-13 19:51:17.632  2424  2499 W FrameTracker: Missed SF frame:PREDICTION_ERROR, 52703340, 0, CUJ=J<SPLASHSCREEN_EXIT_ANIM>
+08-13 19:51:19.143 17248 17248 W DevLauncher: java.lang.NoSuchFieldException: No field colorScheme in class Lcom/facebook/react/modules/appearance/AppearanceModule; (declaration of 'com.facebook.react.modules.appearance.AppearanceModule' appears in /data/app/~~JhhQh4TZHnbvyXam8QueVg==/com.parkcheolhong.worldlinco-7xr1d_JntTHXGrIu0M-7-g==/base.apk!classes7.dex)
+08-13 19:51:20.431 17248 17957 E chromium: [0813/195120.431759:ERROR:android_webview/browser/variations/variations_seed_loader.cc:39] Seed missing signature.
+08-13 19:51:23.001 17248 17894 W ReactNativeJS: Require cycle: src/features/navigation/sectionRegistry.ts -> src/features/i18n/featureUiCatalog.ts -> src/features/i18n/uiI18n.ts -> src/features/i18n/uiStringCatalog.ts -> src/features/navigation/sectionRegistry.ts
+08-13 19:51:23.001 17248 17894 W ReactNativeJS: 
+08-13 19:51:23.001 17248 17894 W ReactNativeJS: Require cycles are allowed, but can result in uninitialized values. Consider refactoring to remove the need for a cycle.
+08-13 19:51:24.421 17248 17894 I ReactNativeJS: '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+08-13 19:51:24.421 17248 17894 I ReactNativeJS:   hasPeerConnection: true,
+08-13 19:51:24.421 17248 17894 I ReactNativeJS:   hasMediaDevices: true }
+08-13 19:51:25.192 17248 17894 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-13 19:51:25.212 17248 17894 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+08-13 19:51:25.214 17248 17894 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-13 19:51:25.215 17248 17894 I ReactNativeJS: [WorldlincoFCM] skipping background handler because firebase default app is unavailable
+08-13 19:51:25.254 17248 17894 I ReactNativeJS: Running "main" with {"rootTag":1,"initialProps":{},"fabric":true}
+08-13 19:51:26.492 14267 17968 E adbd    : error reading output FD 41: Connection reset by peer
+08-13 19:51:27.440 17248 17894 E ReactNativeJS: [Error: Uncaught (in promise, id: 0): "Error: Missing or invalid FirebaseOptions property 'databaseURL'."]
+08-13 19:51:27.823  1673 14583 W BatteryExternalStatsWorker: error reading Bluetooth stats: 11
+08-13 19:51:31.211 17248 17894 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"NETWORK_TRANSPORT_CHANGED","timestamp":"2026-08-13T10:51:31.208Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","transport":"unknown","cellular_generation":null,"label":"알 수 없음","is_connected":false,"is_internet_reachable":null,"carrier":null,"ssid":null,"is_accurate_voip_test_ready":false,"previous_label":null}'
+08-13 19:51:31.331 17248 17894 I ReactNativeJS: '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'
+08-13 19:51:31.534 17248 17894 I ReactNativeJS: [VoIPToneService] AudioContext not available (React Native environment)
+08-13 19:51:31.979 17248 17894 I ReactNativeJS: '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-13 19:51:32.054 17248 17894 E ReactNativeJS: expo-notifications: Custom sound 'default' not found in native app. Make sure the sound file (e.g. 'custom_sound.wav') is included in the expo-notifications config plugin sounds array in app config.
+08-13 19:51:32.319 17248 18138 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package com.android.libcore cannot be found on the device
+08-13 19:51:32.319 17248 18137 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package com.android.libcore cannot be found on the device
+08-13 19:51:33.017 17248 17894 E ReactNativeJS: expo-notifications: Custom sound 'default' not found in native app. Make sure the sound file (e.g. 'custom_sound.wav') is included in the expo-notifications config plugin sounds array in app config.
+08-13 19:51:33.912 17248 17894 I ReactNativeJS: '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-13T08:06:15Z","version":6}'
+08-13 19:52:23.246 17248 17852 E unknown:ReconnectingWebSocket: Error occurred, shutting down websocket connection: Websocket exception
+08-13 19:52:23.246 17248 17852 E unknown:ReconnectingWebSocket: java.io.EOFException
+08-13 19:52:23.248 17248 17871 E unknown:ReconnectingWebSocket: Error occurred, shutting down websocket connection: Websocket exception
+08-13 19:52:23.248 17248 17871 E unknown:ReconnectingWebSocket: java.io.EOFException
+08-13 19:52:23.248 17248 17876 E unknown:ReconnectingWebSocket: Error occurred, shutting down websocket connection: Websocket exception
+08-13 19:52:23.248 17248 17876 E unknown:ReconnectingWebSocket: java.io.EOFException
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: Cannot connect to Expo CLI.
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: 
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: Try the following to fix the issue:
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: - Ensure that Expo dev server is running and available on the same network
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: - Ensure that your device/emulator is connected to your machine and has USB debugging enabled - run 'adb devices' to see a list of connected devices
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: - If you're on a physical device connected to the same machine, run 'adb reverse tcp:8081 tcp:8081' to forward requests from your device
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: 
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: URL: 127.0.0.1:8081
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: 
+08-13 19:52:24.252 17248 17894 W ReactNativeJS: Error: undefined
+08-13 19:52:48.674  1673  1701 W System.err: java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.String android.content.ComponentName.getPackageName()' on a null object reference
+08-13 19:52:48.721  1673  1701 W System.err: java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.String android.content.ComponentName.getPackageName()' on a null object reference
+08-13 19:52:48.792  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:52:48.859  1673  1673 I TextToSpeechManagerPerUserService: Failed running callback method: android.os.DeadObjectException
+08-13 19:52:48.954  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:52:49.058  1673  1690 W WindowManager: Exception thrown during dispatchAppVisibility Window{e63ac12 u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity EXITING}
+08-13 19:52:49.058  1673  1690 W WindowManager: android.os.DeadObjectException
+08-13 19:52:51.134  1673  1800 D VpnManagerService: Exception: java.lang.NullPointerException: Attempt to invoke interface method 'int com.samsung.android.knox.zt.networktrust.filter.IKnoxNetworkFilterService.getKnoxNwFilterHttpProxyPort(int, java.lang.String)' on a null object reference
+08-13 19:52:53.713  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:53:00.985  1673  1698 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-13 19:53:01.799 18786 18786 W unknown:BridgelessReact: ReactHost{0}.raiseSoftException(onWindowFocusChange(hasFocus = "true")): Tried to access onWindowFocusChange while context is not ready
+08-13 19:53:01.803 18786 18786 E unknown:ReactHost: Unhandled SoftException
+08-13 19:53:01.803 18786 18786 E unknown:ReactHost: com.facebook.react.bridge.ReactNoCrashSoftException: raiseSoftException(onWindowFocusChange(hasFocus = "true")): Tried to access onWindowFocusChange while context is not ready
+08-13 19:53:01.803 18786 18786 E unknown:ReactHost: 	at com.facebook.react.runtime.ReactHostImpl.raiseSoftException(ReactHostImpl.kt:905)
+08-13 19:53:01.803 18786 18786 E unknown:ReactHost: 	at com.facebook.react.runtime.ReactHostImpl.raiseSoftException$default(ReactHostImpl.kt:896)
+08-13 19:53:08.644 18786 18786 W DevLauncher: java.lang.NoSuchFieldException: No field colorScheme in class Lcom/facebook/react/modules/appearance/AppearanceModule; (declaration of 'com.facebook.react.modules.appearance.AppearanceModule' appears in /data/app/~~JhhQh4TZHnbvyXam8QueVg==/com.parkcheolhong.worldlinco-7xr1d_JntTHXGrIu0M-7-g==/base.apk!classes7.dex)
+08-13 19:53:09.978 18786 19118 E chromium: [0813/195309.978141:ERROR:android_webview/browser/variations/variations_seed_loader.cc:39] Seed missing signature.
+08-13 19:53:12.795 18786 19076 W ReactNativeJS: Require cycle: src/features/navigation/sectionRegistry.ts -> src/features/i18n/featureUiCatalog.ts -> src/features/i18n/uiI18n.ts -> src/features/i18n/uiStringCatalog.ts -> src/features/navigation/sectionRegistry.ts
+08-13 19:53:12.795 18786 19076 W ReactNativeJS: 
+08-13 19:53:12.795 18786 19076 W ReactNativeJS: Require cycles are allowed, but can result in uninitialized values. Consider refactoring to remove the need for a cycle.
+08-13 19:53:14.109 18786 19076 I ReactNativeJS: '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+08-13 19:53:14.109 18786 19076 I ReactNativeJS:   hasPeerConnection: true,
+08-13 19:53:14.109 18786 19076 I ReactNativeJS:   hasMediaDevices: true }
+08-13 19:53:14.917 18786 19076 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-13 19:53:14.938 18786 19076 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+08-13 19:53:14.952 18786 19076 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-13 19:53:14.965 18786 19076 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-13 19:53:15.158 18786 19076 I ReactNativeJS: Running "main" with {"rootTag":1,"initialProps":{},"fabric":true}
+08-13 19:53:15.422 18786 19215 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package com.android.libcore cannot be found on the device
+08-13 19:53:20.801 18786 19076 I ReactNativeJS: '[UI_PRESS_PROBE]', '{"event":"NETWORK_TRANSPORT_CHANGED","timestamp":"2026-08-13T10:53:20.799Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","transport":"unknown","cellular_generation":null,"label":"알 수 없음","is_connected":false,"is_internet_reachable":null,"carrier":null,"ssid":null,"is_accurate_voip_test_ready":false,"previous_label":null}'
+08-13 19:53:20.914 18786 19076 I ReactNativeJS: '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'
+08-13 19:53:21.113 18786 19076 I ReactNativeJS: [VoIPToneService] AudioContext not available (React Native environment)
+08-13 19:53:21.398 18786 19076 I ReactNativeJS: '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-13 19:53:21.627 18786 19076 E ReactNativeJS: expo-notifications: Custom sound 'default' not found in native app. Make sure the sound file (e.g. 'custom_sound.wav') is included in the expo-notifications config plugin sounds array in app config.
+08-13 19:53:22.408 18786 19076 E ReactNativeJS: expo-notifications: Custom sound 'default' not found in native app. Make sure the sound file (e.g. 'custom_sound.wav') is included in the expo-notifications config plugin sounds array in app config.
+08-13 19:53:23.383 18786 19076 I ReactNativeJS: '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-13T08:06:15Z","version":6}'

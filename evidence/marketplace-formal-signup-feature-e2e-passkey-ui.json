@@ -1,0 +1,240 @@
+{
+  "generated_at": "2026-08-14T20:42:38.234448+00:00",
+  "base_url": "https://metanova1004.com",
+  "signup": {},
+  "login": {
+    "status": 428,
+    "ok": false,
+    "passkey_only_blocked": true,
+    "detail": "비밀번호 로그인이 비활성화되었습니다. 먼저 패스키를 등록하세요(/api/auth/passkey/register/start, /finish)."
+  },
+  "public_feature_checks": {
+    "apk_manifest": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "downloadPath": "/api/marketplace/apk/nadotongryoksa-v1.apk",
+        "publishedAt": "2026-08-14T20:31:42.2606484Z",
+        "versionName": "1.0.246",
+        "apkFilename": "nadotongryoksa-v1.apk",
+        "versionCode": 331,
+        "sizeBytes": 58228541,
+        "package": "com.parkcheolhong.worldlinco",
+        "versionedFilename": "nadotongryoksa-v1.0.246-build331-current.apk"
+      }
+    },
+    "marketplace_categories": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "raw": "[{'id': 3, 'name': 'AI/ML', 'description': '인공지능, 머신러닝 프로젝트'}, {'id': 5, 'name': '게임', 'description': '게임 개발 프로젝트'}, {'id': 6, 'name': '기타', 'description': '기타 프로젝트'}, {'id': 4, 'name': '데이터 분석', 'description': '데이터 분석, 시각화'}, {'id': 2, 'name': '모바일 앱', 'description': 'iOS, Android 앱'}, {'id': 1, 'n"
+      }
+    },
+    "marketplace_projects": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "projects": [
+          {
+            "title": "daytrade-ai — AI 주식 단타(스캘핑) 자동매매 시스템 [실험 빌드]",
+            "description": "오더북·체결 흐름을 실시간 분석해 밀리초 단위로 시그널을 생성하고 자동 주문하는 AI 단타(스캘핑·초단타) 자동매매 파이프라인 — Python 완제품. (실험 빌드 v0.9)\n\n• Feature(OBI·OBI z-score·거래량 급증·마이크로 모멘텀·VWAP·스프레드) → Detection → AI 추론 → Risk → Execution(OrderRouter) → Monitoring 전 구간 모듈화\n• 기본 모의투자(paper)·백테스트 모드 — 실거래는 코드 레벨 이중 안전 게이트로 차단\n• 리스크 한도(포지션·총노출·레버리지) + 레이턴시/손익 서킷브레이커 + 슬리피지 가드 + 주문 라우터 예외 흡수(브로커 단절 내성)\n• AI 추론 플러거블(휴리스틱 / ONNX) + 강화학습(PPO·연속 포지션 사이징) + 워크포워드 OOS 검증 + Optuna 하이퍼파라미터 튜닝\n• MLOps 피드백 루프: 자동 재학습·검증·핫스왑(블루그린)·KPI 악화 시 자동 롤백·롤백 쿨다운/블랙리스트·스케줄러 (Prometheus/Grafana/Alertmanager 관측성)\n• 고속 바이너리 틱 스토어(.dts, KDB+ 경량 대안)·실데이터 일별 캡처·Backtrader 교차검증 어댑터\n• C++ 저지연 코어(FeatureEngine/DetectionEngine, Python과 1e-9 수치 동일성 골든 테스트)\n• 백테스트 리포트 고도화(Sortino·Calmar·VaR/CVaR·수익팩터·HTML 스파크라인)\n• 단위/통합 테스트 286건 통과 · CLI(`python -m daytrade.cli sim`) 즉시 실행\n\n주의: 실거래는 증권사 API 계약(KIS/키움 등) + 초저지연 인프라(DPDK/FPGA/코로케이션) 확장 영역이며, 거래소·금융 규제 준수와 사전 승인이 필요합니다. 본 빌드는 모의/백테스트용입니다.",
+            "price": 349000.0,
+            "demo_url": null,
+            "github_url": "https://github.com/parkcheolhong/codeAI/tree/main/apps/daytrade-ai",
+            "image_url": null,
+            "id": 2,
+            "category_id": 3,
+            "author_id": 3,
+            "file_key": "local:samples/daytrade-ai-v1.zip",
+            "downloads": 0,
+            "rating": 0.0,
+            "is_active": true,
+            "created_at": "2026-08-14T20:12:11.818312",
+            "updated_at": "2026-08-14T20:12:11.818319",
+            "category": {
+              "name": "AI/ML",
+              "description": "인공지능, 머신러닝 프로젝트",
+              "id": 3
+            },
+            "tags": [
+              {
+                "name": "주식",
+                "id": 11
+              },
+              {
+                "name": "단타",
+                "id": 12
+              },
+              {
+                "name": "스캘핑",
+                "id": 13
+              },
+              {
+                "name": "자동매매",
+                "id": 14
+              },
+              {
+                "name": "퀀트",
+                "id": 15
+              },
+              {
+                "name": "백테스트",
+                "id": 16
+              },
+              {
+                "name": "AI",
+                "id": 17
+              },
+              {
+                "name": "강화학습",
+                "id": 18
+              },
+              {
+                "name": "MLOps",
+                "id": 19
+              },
+              {
+                "name": "실험빌드",
+                "id": 20
+              }
+            ],
+            "subscription": null
+          },
+          {
+            "title": "나도통역사 - 신세계소리새 통번역",
+            "description": "WorldLinco(나도통역사) — 소리새 AI 기반 실시간 통번역 슈퍼앱. Android APK 완제품 (v1.0.150).\n\n• 소리새 하늘색 UI 적용 — 전 화면 통일된 스카이블루 배경(신규 디자인)\n• 대면통역·VoIP 통역통화·채팅 번역·노래 번역·여행 예약 통합 채널\n• 소리새 AI 동반자 — 웨이크워드 호출·기억/성격을 가진 개인 통역 비서\n• 한국어↔영어/중국어/일본어/스페인어 실시간 음성 통역\n• 인앱 자동 업데이트(expo-updates) — 신규 빌드 배포 시 기기에서 자동 수신\n• APK 직접 설치 후 바로 사용 가능 (Android 8.0+)\n\n소리새 마스터 하이브리드 시스템의 통역 엔진을 모바일에 이식한 완전 독립 실행형 앱입니다.",
+            "price": 0.0,
+            "demo_url": "/api/marketplace/apk/nadotongryoksa-v1.apk",
+            "github_url": "/marketplace/nadotongryoksa",
+            "image_url": null,
+            "id": 1,
+            "category_id": 2,
+            "author_id": 3,
+            "file_key": "local:samples/nadotongryoksa-v1.zip",
+            "downloads": 0,
+            "rating": 0.0,
+            "is_active": true,
+            "created_at": "2026-08-14T20:12:11.806055",
+            "updated_at": "2026-08-14T20:12:11.806062",
+            "category": {
+              "name": "모바일 앱",
+              "description": "iOS, Android 앱",
+              "id": 2
+            },
+            "tags": [
+              {
+                "name": "통역",
+                "id": 1
+              },
+              {
+                "name": "번역",
+                "id": 2
+              },
+              {
+                "name": "음성인식",
+                "id": 3
+              },
+              {
+                "name": "android",
+                "id": 4
+              },
+              {
+                "name": "apk",
+                "id": 5
+              },
+              {
+                "name": "무료",
+                "id": 6
+              },
+              {
+                "name": "WorldLinco",
+                "id": 7
+              },
+              {
+                "name": "소리새",
+                "id": 8
+              },
+              {
+                "name": "실시간통역",
+                "id": 9
+              },
+              {
+                "name": "AI동반자",
+                "id": 10
+              }
+            ],
+            "subscription": null
+          }
+        ],
+        "total": 2,
+        "skip": 0,
+        "limit": 6
+      }
+    },
+    "ml_detectors_status": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "error": "expected an indented block after function definition on line 4 (<unknown>, line 9)",
+        "gpu_available": false,
+        "gpu_name": null,
+        "device": "unavailable",
+        "detectors": {},
+        "model_source": "torchvision-pretrained"
+      }
+    },
+    "extras_health": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "status": "ok",
+        "engines": {
+          "iot": "ok",
+          "game": "ok"
+        },
+        "circuit_breakers": {
+          "iot": {
+            "name": "iot-engine",
+            "state": "CLOSED",
+            "failures": 0,
+            "threshold": 3
+          },
+          "game": {
+            "name": "game-economy-engine",
+            "state": "CLOSED",
+            "failures": 0,
+            "threshold": 3
+          }
+        },
+        "addon_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\addons\\shinsegye_extras\\src",
+        "addon_exists": true
+      }
+    }
+  },
+  "auth_feature_checks": {},
+  "playwright_ui_checks": {
+    "requested": true,
+    "ok": true,
+    "exit_code": 0,
+    "command": "cmd /c npm run e2e:marketplace:passkey-feature-chain",
+    "cwd": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\frontend\\frontend",
+    "marketplace_base_url": "http://127.0.0.1:3005",
+    "summary": {
+      "passed": true,
+      "failed": false,
+      "duration_seconds": 5.687
+    },
+    "stdout_tail": "\n> devanalysis114-frontend@1.0.0 e2e:marketplace:passkey-feature-chain\n> set PLAYWRIGHT_USE_WEBSERVER=1&& set PLAYWRIGHT_MARKETPLACE_BASE_URL=http://127.0.0.1:3005&& playwright test -c playwright.config.ts tests/marketplace-passkey-login.playwright.spec.ts tests/marketplace-passkey-feature-experience.playwright.spec.ts --project chromium --no-deps\n\n\u001b[2m[WebServer] \u001b[22m\n\u001b[2m[WebServer] \u001b[22m> devanalysis114-frontend@1.0.0 dev\n\u001b[2m[WebServer] \u001b[22m> next dev --hostname 127.0.0.1 --port 3005\n\u001b[2m[WebServer] \u001b[22m\n\u001b[2m[WebServer] \u001b[22m\u001b[1m\u001b[38;2;173;127;168m▲ Next.js 16.2.6\u001b[39m\u001b[22m (Turbopack)\n\u001b[2m[WebServer] \u001b[22m- Local:         http://127.0.0.1:3005\n\u001b[2m[WebServer] \u001b[22m- Network:       http://127.0.0.1:3005\n\u001b[2m[WebServer] \u001b[22m\u001b[32m\u001b[1m✓\u001b[22m\u001b[39m Ready in 272ms\n\u001b[2m[WebServer] \u001b[22m- Experiments (use with caution):\n\u001b[2m[WebServer] \u001b[22m  · optimizePackageImports\n\u001b[2m[WebServer] \u001b[22m\n\u001b[2m[WebServer] \u001b[22m GET /admin/login \u001b[32m200\u001b[39m in 1249ms\u001b[2m (next.js: 1013ms, proxy.ts: 71ms, application-code: 166ms)\u001b[22m\n\nRunning 3 tests using 2 workers\n\n\u001b[2m[WebServer] \u001b[22m GET /marketplace?auth_mode=passkey_login&email=119cash%40naver.com \u001b[32m200\u001b[39m in 202ms\u001b[2m (next.js: 20ms, proxy.ts: 4ms, application-code: 178ms)\u001b[22m\n\u001b[2m[WebServer] \u001b[22m GET /marketplace?auth_mode=passkey_login&email=119cash%40naver.com \u001b[32m200\u001b[39m in 139ms\u001b[2m (next.js: 4ms, proxy.ts: 12ms, application-code: 124ms)\u001b[22m\n  ✓  1 [chromium] › tests\\marketplace-passkey-login.playwright.spec.ts:7:9 › @marketplace-operational @passkey marketplace passkey login flow › auto passkey_login deep-link mode applies session and shows user profile (900ms)\n\u001b[2m[WebServer] \u001b[22m GET /marketplace/orchestrator?product=code-generator-deployment-kit&projectId=101&projectTitle=%EB%82%98%EB%8F%84%ED%86%B5%EC%97%AD%EC%82%AC+-+%EC%8B%A0%EC%84%B8%EA%B3%84%EC%86%8C%EB%A6%AC%EC%83%88+%ED%86%B5%EB%B2%88%EC%97%AD&projectSummary=passkey+feature+experience+fixture \u001b[32m200\u001b[39m in 56ms\u001b[2m (next.js: 21ms, proxy.ts: 4ms, application-code: 31ms)\u001b[22m\n\u001b[2m[WebServer] \u001b[22m GET /marketplace?auth_mode=passkey_login&email=119cash%40naver.com&mobile_return_uri=https%3A%2F%2Fcallback.local%2Fmobile-auth-return \u001b[32m200\u001b[39m in 100ms\u001b[2m (next.js: 3ms, proxy.ts: 3ms, application-code: 94ms)\u001b[22m\n  ✓  2 [chromium] › tests\\marketplace-passkey-feature-experience.playwright.spec.ts:11:13 › @marketplace-operational @passkey marketplace post-passkey feature experience › passkey login then main marketplace and orchestrator flow are usable (1.2s)\n  ✓  3 [chromium] › tests\\marketplace-passkey-login.playwright.spec.ts:81:9 › @marketplace-operational @passkey marketplace passkey login flow › passkey_login with mobile_return_uri redirects to callback with auth payload (540ms)\n\n  3 passed (4.8s)\n\nTo open last HTML report run:\n\u001b[36m\u001b[39m\n\u001b[36m  npx playwright show-report\u001b[39m\n\u001b[36m\u001b[39m",
+    "stderr_tail": "\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. \n\u001b[2m[WebServer] \u001b[22m\u001b[36m[browser]\u001b[39m Encountered two children with the same key, `shinsegye-0`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. "
+  },
+  "playwright_summary": {
+    "requested": true,
+    "passed": true,
+    "failed": false,
+    "duration_seconds": 5.687
+  },
+  "notes": [
+    "auth_feature_checks skipped because no bearer token was issued.",
+    "Environment is passkey-only for password login. WebAuthn passkey flow must be validated from browser/app UI."
+  ]
+}

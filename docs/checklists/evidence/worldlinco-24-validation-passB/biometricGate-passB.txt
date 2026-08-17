@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/biometricGate.test.ts
+Result: PASS
+Notes: Existing biometric credential secure-storage regression test passed after the auth storage migration.

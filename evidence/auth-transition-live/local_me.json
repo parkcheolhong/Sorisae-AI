@@ -1,0 +1,16 @@
+{
+  "id": 4,
+  "username": "nado_119cash_recover",
+  "email": "119cash@naver.com",
+  "is_admin": true,
+  "is_superuser": true,
+  "is_active": true,
+  "full_name": "MetaNova Admin",
+  "member_type": "individual",
+  "business_name": null,
+  "business_registration_number": null,
+  "representative_name": null,
+  "preferred_language": "ko",
+  "country_code": "KR",
+  "phone_number": null
+}

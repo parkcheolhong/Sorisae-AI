@@ -1,0 +1,33 @@
+﻿{
+    "run_id":  "mobile-ui-smoke-20260813-042644",
+    "device":  "172.30.1.15:5555",
+    "package":  "com.parkcheolhong.worldlinco",
+    "started_at":  "2026-08-13T04:26:45.0291781+09:00",
+    "captures":  [
+                     {
+                         "section":  "chat",
+                         "selector":  "worldlinco-section-rail-chat-button",
+                         "tapped":  false,
+                         "screenshot":  ""
+                     },
+                     {
+                         "section":  "voip",
+                         "selector":  "worldlinco-section-rail-voip-button",
+                         "tapped":  false,
+                         "screenshot":  ""
+                     },
+                     {
+                         "section":  "travel",
+                         "selector":  "worldlinco-section-rail-travel-booking-button",
+                         "tapped":  false,
+                         "screenshot":  ""
+                     },
+                     {
+                         "section":  "settings",
+                         "selector":  "worldlinco-bottom-tab-settings",
+                         "tapped":  false,
+                         "screenshot":  ""
+                     }
+                 ],
+    "completed_at":  "2026-08-13T04:27:01.5653797+09:00"
+}

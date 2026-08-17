@@ -1,0 +1,152 @@
+[일 08/16/2026  3:00:01.47] tourism_kb refresh start 
+[tourism_kb] Qdrant 연결 실패(폴백 동작): No module named 'qdrant_client'
+[batch] 대상 27개 도시: amsterdam, bali, bangkok, barcelona, busan, chiangmai, danang, dubai, fukuoka, hanoi, hongkong, incheon, jeju, kualalumpur, kyoto, london, losangeles, newyork, osaka, paris, rome, sapporo, seoul, singapore, sydney, taipei, tokyo
+
+===== [1/27] amsterdam (NL) =====
+[osm] Overpass 균형 조회 bbox=52.34,4.85,52.4,4.95 (scale=1.40) ...
+[error] amsterdam 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [2/27] bali (ID) =====
+[osm] Overpass 균형 조회 bbox=-8.74,115.14,-8.62,115.28 (scale=1.40) ...
+[error] bali 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [3/27] bangkok (TH) =====
+[osm] Overpass 균형 조회 bbox=13.68,100.45,13.82,100.6 (scale=1.40) ...
+[osm] 수집 667건
+[qc] total=667 kept=666 dropped=1 drop_rate=0.001 unknown_cat=3 reasons={'dup': 1}
+
+===== [4/27] barcelona (ES) =====
+[osm] Overpass 균형 조회 bbox=41.36,2.13,41.43,2.22 (scale=1.40) ...
+[error] barcelona 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [5/27] busan (KR) =====
+[osm] Overpass 균형 조회 bbox=35.06,128.95,35.24,129.18 (scale=1.40) ...
+[error] busan 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [6/27] chiangmai (TH) =====
+[osm] Overpass 균형 조회 bbox=18.74,98.95,18.83,99.03 (scale=1.40) ...
+[error] chiangmai 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [7/27] danang (VN) =====
+[osm] Overpass 균형 조회 bbox=16.02,108.18,16.1,108.25 (scale=1.40) ...
+[osm] 수집 544건
+[qc] total=544 kept=544 dropped=0 drop_rate=0.0 unknown_cat=0 reasons={}
+
+===== [8/27] dubai (AE) =====
+[osm] Overpass 균형 조회 bbox=25.16,55.24,25.27,55.36 (scale=1.40) ...
+[osm] 수집 595건
+[qc] total=595 kept=595 dropped=0 drop_rate=0.0 unknown_cat=4 reasons={}
+
+===== [9/27] fukuoka (JP) =====
+[osm] Overpass 균형 조회 bbox=33.53,130.34,33.66,130.46 (scale=1.40) ...
+[error] fukuoka 적재 실패(건너뜀): HTTP Error 429: Too Many Requests
+
+===== [10/27] hanoi (VN) =====
+[osm] Overpass 균형 조회 bbox=20.98,105.79,21.06,105.88 (scale=1.40) ...
+[error] hanoi 적재 실패(건너뜀): HTTP Error 429: Too Many Requests
+
+===== [11/27] hongkong (HK) =====
+[osm] Overpass 균형 조회 bbox=22.26,114.14,22.34,114.22 (scale=1.40) ...
+[error] hongkong 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [12/27] incheon (KR) =====
+[osm] Overpass 균형 조회 bbox=37.4,126.58,37.55,126.75 (scale=1.40) ...
+[error] incheon 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [13/27] jeju (KR) =====
+[osm] Overpass 균형 조회 bbox=33.45,126.45,33.56,126.62 (scale=1.40) ...
+[osm] 수집 586건
+[qc] total=586 kept=586 dropped=0 drop_rate=0.0 unknown_cat=0 reasons={}
+
+===== [14/27] kualalumpur (MY) =====
+[osm] Overpass 균형 조회 bbox=3.1,101.66,3.2,101.74 (scale=1.40) ...
+[osm] 수집 629건
+[qc] total=629 kept=627 dropped=2 drop_rate=0.003 unknown_cat=2 reasons={'dup': 2}
+
+===== [15/27] kyoto (JP) =====
+[osm] Overpass 균형 조회 bbox=34.95,135.68,35.08,135.83 (scale=1.40) ...
+[error] kyoto 적재 실패(건너뜀): HTTP Error 429: Too Many Requests
+
+===== [16/27] london (GB) =====
+[osm] Overpass 균형 조회 bbox=51.48,-0.18,51.55,0.0 (scale=1.40) ...
+[error] london 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [17/27] losangeles (US) =====
+[osm] Overpass 균형 조회 bbox=34.0,-118.3,34.1,-118.2 (scale=1.40) ...
+[osm] 수집 478건
+[qc] total=478 kept=478 dropped=0 drop_rate=0.0 unknown_cat=0 reasons={}
+
+===== [18/27] newyork (US) =====
+[osm] Overpass 균형 조회 bbox=40.7,-74.02,40.8,-73.93 (scale=1.40) ...
+[error] newyork 적재 실패(건너뜀): HTTP Error 429: Too Many Requests
+
+===== [19/27] osaka (JP) =====
+[osm] Overpass 균형 조회 bbox=34.55,135.4,34.75,135.6 (scale=1.40) ...
+[osm] 수집 778건
+[qc] total=778 kept=778 dropped=0 drop_rate=0.0 unknown_cat=0 reasons={}
+
+===== [20/27] paris (FR) =====
+[osm] Overpass 균형 조회 bbox=48.82,2.28,48.9,2.41 (scale=1.40) ...
+[error] paris 적재 실패(건너뜀): HTTP Error 429: Too Many Requests
+
+===== [21/27] rome (IT) =====
+[osm] Overpass 균형 조회 bbox=41.86,12.45,41.94,12.55 (scale=1.40) ...
+[error] rome 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [22/27] sapporo (JP) =====
+[osm] Overpass 균형 조회 bbox=43.02,141.3,43.1,141.4 (scale=1.40) ...
+[osm] 수집 600건
+[qc] total=600 kept=600 dropped=0 drop_rate=0.0 unknown_cat=1 reasons={}
+
+===== [23/27] seoul (KR) =====
+[osm] Overpass 균형 조회 bbox=37.45,126.85,37.65,127.1 (scale=1.40) ...
+[error] seoul 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [24/27] singapore (SG) =====
+[osm] Overpass 균형 조회 bbox=1.27,103.78,1.37,103.9 (scale=1.40) ...
+[osm] 수집 710건
+[qc] total=710 kept=709 dropped=1 drop_rate=0.001 unknown_cat=0 reasons={'dup': 1}
+
+===== [25/27] sydney (AU) =====
+[osm] Overpass 균형 조회 bbox=-33.89,151.18,-33.84,151.24 (scale=1.40) ...
+[error] sydney 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+===== [26/27] taipei (TW) =====
+[osm] Overpass 균형 조회 bbox=25.0,121.5,25.1,121.6 (scale=1.40) ...
+[osm] 수집 691건
+[qc] total=691 kept=691 dropped=0 drop_rate=0.0 unknown_cat=0 reasons={}
+
+===== [27/27] tokyo (JP) =====
+[osm] Overpass 균형 조회 bbox=35.62,139.65,35.73,139.82 (scale=1.40) ...
+[error] tokyo 적재 실패(건너뜀): HTTP Error 504: Gateway Timeout
+
+========== 배치 요약 ==========
+성공 0/27 도시 · 총 0 POI · 소요 522.0s
+  ✗ amsterdam: HTTP Error 504: Gateway Timeout
+  ✗ bali: HTTP Error 504: Gateway Timeout
+  ✗ bangkok: qdrant_down
+  ✗ barcelona: HTTP Error 504: Gateway Timeout
+  ✗ busan: HTTP Error 504: Gateway Timeout
+  ✗ chiangmai: HTTP Error 504: Gateway Timeout
+  ✗ danang: qdrant_down
+  ✗ dubai: qdrant_down
+  ✗ fukuoka: HTTP Error 429: Too Many Requests
+  ✗ hanoi: HTTP Error 429: Too Many Requests
+  ✗ hongkong: HTTP Error 504: Gateway Timeout
+  ✗ incheon: HTTP Error 504: Gateway Timeout
+  ✗ jeju: qdrant_down
+  ✗ kualalumpur: qdrant_down
+  ✗ kyoto: HTTP Error 429: Too Many Requests
+  ✗ london: HTTP Error 504: Gateway Timeout
+  ✗ losangeles: qdrant_down
+  ✗ newyork: HTTP Error 429: Too Many Requests
+  ✗ osaka: qdrant_down
+  ✗ paris: HTTP Error 429: Too Many Requests
+  ✗ rome: HTTP Error 504: Gateway Timeout
+  ✗ sapporo: qdrant_down
+  ✗ seoul: HTTP Error 504: Gateway Timeout
+  ✗ singapore: qdrant_down
+  ✗ sydney: HTTP Error 504: Gateway Timeout
+  ✗ taipei: qdrant_down
+  ✗ tokyo: HTTP Error 504: Gateway Timeout
+[일 08/16/2026  3:08:43.75] tourism_kb refresh done (exit 3) 

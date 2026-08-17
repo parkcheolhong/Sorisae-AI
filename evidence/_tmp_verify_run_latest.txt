@@ -1,0 +1,58 @@
+[verify-mobile-login] device=172.30.1.15:5555 package=com.parkcheolhong.worldlinco rounds=1
+[verify-mobile-login] looking for admin password in .runtime/secrets/fixed_admin_password.txt
+--- round 1/1 ---
+{
+  "round": 1,
+  "timestamp": "2026-08-17T15:35:36.4347597+09:00",
+  "device": "172.30.1.15:5555",
+  "package": "com.parkcheolhong.worldlinco",
+  "email": "119cash@naver.com",
+  "ensure_attempted": true,
+  "ensure_ok": true,
+  "ensure_reason": "login_success_after_clear_session",
+  "login_submit_seen": true,
+  "token_ready": true,
+  "user_ready": true,
+  "show_login_false": true,
+  "auth_debug_state": "AUTHENTICATED",
+  "auth_debug_user": "23|autologin_1786948438_756@worldlinco-demo.com",
+  "auth_ready_hint": true,
+  "login_form_visible_after_submit": false,
+  "ui_dump_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153228\\round-1\\after_submit.xml",
+  "screenshot_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153228\\round_1_after_submit",
+  "log_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153228\\round-1\\reactnativejs.log",
+  "success": true
+}
+--- manifest ---
+{
+  "device": "172.30.1.15:5555",
+  "package": "com.parkcheolhong.worldlinco",
+  "rounds": 1,
+  "results": [
+    {
+      "round": 1,
+      "timestamp": "2026-08-17T15:35:36.4347597+09:00",
+      "device": "172.30.1.15:5555",
+      "package": "com.parkcheolhong.worldlinco",
+      "email": "119cash@naver.com",
+      "ensure_attempted": true,
+      "ensure_ok": true,
+      "ensure_reason": "login_success_after_clear_session",
+      "login_submit_seen": true,
+      "token_ready": true,
+      "user_ready": true,
+      "show_login_false": true,
+      "auth_debug_state": "AUTHENTICATED",
+      "auth_debug_user": "23|autologin_1786948438_756@worldlinco-demo.com",
+      "auth_ready_hint": true,
+      "login_form_visible_after_submit": false,
+      "ui_dump_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153228\\round-1\\after_submit.xml",
+      "screenshot_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153228\\round_1_after_submit",
+      "log_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153228\\round-1\\reactnativejs.log",
+      "success": true
+    }
+  ],
+  "all_passed": false,
+  "generated_at": "2026-08-17T15:35:36.4512428+09:00"
+}
+

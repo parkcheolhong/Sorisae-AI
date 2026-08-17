@@ -1,0 +1,9 @@
+Starting: Intent { act=android.intent.action.VIEW dat=worldlingo://rail/... pkg=com.parkcheolhong.worldlinco }
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+Status: ok
+LaunchState: UNKNOWN (0)
+Activity: com.parkcheolhong.worldlinco/.MainActivity
+TotalTime: 0
+WaitTime: 15
+Complete
+

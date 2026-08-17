@@ -1,0 +1,22 @@
+{
+  "round": 2,
+  "timestamp": "2026-08-17T15:40:46.1632774+09:00",
+  "device": "172.30.1.15:5555",
+  "package": "com.parkcheolhong.worldlinco",
+  "email": "119cash@naver.com",
+  "ensure_attempted": true,
+  "ensure_ok": false,
+  "ensure_reason": "login_open_failed",
+  "login_submit_seen": false,
+  "token_ready": true,
+  "user_ready": true,
+  "show_login_false": true,
+  "auth_debug_state": null,
+  "auth_debug_user": null,
+  "auth_ready_hint": true,
+  "login_form_visible_after_submit": false,
+  "ui_dump_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153551\\round-2\\after_submit.xml",
+  "screenshot_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153551\\round_2_after_submit",
+  "log_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\mobile-login-automation-20260817-153551\\round-2\\reactnativejs.log",
+  "success": true
+}

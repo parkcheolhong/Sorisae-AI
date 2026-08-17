@@ -1,0 +1,52 @@
+{
+  "scenario": "section7 travel partner funnel verification",
+  "base_url": "http://127.0.0.1:8000",
+  "generated_at": 1786276278,
+  "rounds": [
+    {
+      "round": 1,
+      "status_codes": {
+        "nearby": 200,
+        "click": 200,
+        "booking_start": 200,
+        "booking_confirm": 200,
+        "booking_complete": 200,
+        "settlement_batch": 200,
+        "refund": 200
+      },
+      "samples": {
+        "trip_session_id": "trip-5c15afbec4c74a5c",
+        "recommendation_id": 157,
+        "partner_id": "partner-hotel-default",
+        "click_ref": "CLK-B0462DC21396",
+        "booking_ref": "BK-85729C7F1C6A",
+        "settlement_created": 1,
+        "refund_adjustment_amount": 15.0
+      },
+      "passed": true
+    },
+    {
+      "round": 2,
+      "status_codes": {
+        "nearby": 200,
+        "click": 200,
+        "booking_start": 200,
+        "booking_confirm": 200,
+        "booking_complete": 200,
+        "settlement_batch": 200,
+        "refund": 200
+      },
+      "samples": {
+        "trip_session_id": "trip-2384b1b58b5a469a",
+        "recommendation_id": 165,
+        "partner_id": "partner-hotel-default",
+        "click_ref": "CLK-07BD7A9C2AC8",
+        "booking_ref": "BK-5D18ACBF5522",
+        "settlement_created": 1,
+        "refund_adjustment_amount": 15.0
+      },
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}

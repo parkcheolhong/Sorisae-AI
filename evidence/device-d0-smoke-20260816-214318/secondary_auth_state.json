@@ -1,0 +1,15 @@
+{
+  "device": "172.30.1.15:5555",
+  "auth_ready": false,
+  "blocker": "login_api_error",
+  "restore_found": false,
+  "restore_applied": false,
+  "restore_invalid": false,
+  "token_ready": false,
+  "user_ready": false,
+  "presence_connected": false,
+  "login_invalid": false,
+  "session_present": false,
+  "ui_probe_seen": false,
+  "react_log_silent": false
+}

@@ -1,0 +1,16 @@
+# FILE-ID: FILE-CONFIGS-LOGGING-YML
+# SECTION-ID: SECTION-CONFIGS-LOGGING-YML-MAIN
+# FEATURE-ID: FEATURE-CONFIGS-LOGGING-YML-RUNTIME
+# CHUNK-ID: CHUNK-CONFIGS-LOGGING-YML-001
+
+version: 1
+formatters:
+  standard:
+    format: '%(asctime)s %(levelname)s %(name)s %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: standard
+root:
+  level: INFO
+  handlers: [console]

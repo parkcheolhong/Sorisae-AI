@@ -1,0 +1,18 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - heading "연결이 비공개로 설정되어 있지 않습니다." [level=1] [ref=e6]
+      - paragraph [ref=e7]:
+        - text: 공격자가
+        - strong [ref=e8]: localhost
+        - text: "에서 사용자의 정보를 도용하려고 시도할 수 있습니다(예: 비밀번호, 메시지, 신용카드 정보)."
+        - link "이 경고에 대해 자세히 알아보기" [ref=e9] [cursor=pointer]:
+          - /url: "#"
+      - button "net::ERR_CERT_COMMON_NAME_INVALID" [ref=e11]
+    - generic [ref=e15]:
+      - link "향상된 보호 모드를 사용 설정" [ref=e16] [cursor=pointer]:
+        - /url: "#"
+      - text: 하여 Chrome의 가장 강력한 보안을 활용하세요.
+  - generic [ref=e17]:
+    - button "안전한 페이지로 돌아가기" [ref=e18] [cursor=pointer]
+    - button "고급" [ref=e19] [cursor=pointer]

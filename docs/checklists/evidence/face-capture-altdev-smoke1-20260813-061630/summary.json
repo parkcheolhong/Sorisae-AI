@@ -1,0 +1,39 @@
+﻿{
+    "deviceId":  "172.30.1.15:5555",
+    "packageName":  "com.parkcheolhong.worldlinco",
+    "tap":  {
+                "y":  256,
+                "x":  400
+            },
+    "login":  {
+                  "ok":  false,
+                  "attempted":  true,
+                  "reason":  "login_not_completed"
+              },
+    "flow":  {
+                 "faceHomeOpened":  false,
+                 "langPickerOpened":  false,
+                 "peerLangSelected":  false,
+                 "faceMicTapped":  false
+             },
+    "runDir":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-altdev-smoke1-20260813-061630",
+    "lastDumpPath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-altdev-smoke1-20260813-061630\\last-window-dump.xml",
+    "rawLogPath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-altdev-smoke1-20260813-061630\\reactnative-logcat.txt",
+    "tracePath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-altdev-smoke1-20260813-061630\\face-capture-trace.txt",
+    "requiredEvents":  [
+                           "start_tap",
+                           "capture_started",
+                           "payload_prepared",
+                           "post_start",
+                           "response_received"
+                       ],
+    "missingEvents":  [
+                          "start_tap",
+                          "capture_started",
+                          "payload_prepared",
+                          "post_start",
+                          "response_received"
+                      ],
+    "pass":  false,
+    "capturedAtUtc":  "2026-08-12T21:19:01.9927967Z"
+}

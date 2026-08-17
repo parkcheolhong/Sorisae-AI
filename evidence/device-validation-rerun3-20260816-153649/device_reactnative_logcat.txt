@@ -1,0 +1,23 @@
+--------- beginning of main
+08-16 15:35:24.486 I/ReactNativeJS(25181): '[VoIP] WebRTC module loaded', { module: 'react-native-webrtc',
+08-16 15:35:24.486 I/ReactNativeJS(25181):   hasPeerConnection: true,
+08-16 15:35:24.486 I/ReactNativeJS(25181):   hasMediaDevices: true }
+08-16 15:35:24.500 W/ReactNativeJS(25181): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 15:35:24.501 W/ReactNativeJS(25181): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `initializeApp()` instead.
+08-16 15:35:24.504 W/ReactNativeJS(25181): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 15:35:24.504 W/ReactNativeJS(25181): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApp()` instead.
+08-16 15:35:24.522 I/ReactNativeJS(25181): Running "main"
+08-16 15:35:24.760 I/ReactNativeJS(25181): '[UI_PRESS_PROBE]', '{"event":"NETWORK_TRANSPORT_CHANGED","timestamp":"2026-08-16T06:35:24.759Z","token_ready":false,"user_ready":false,"show_login":false,"show_voip_tester":false,"selected_call_mode":"pstn_assist","transport":"unknown","cellular_generation":null,"label":"알 수 없음","is_connected":false,"is_internet_reachable":null,"carrier":null,"ssid":null,"is_accurate_voip_test_ready":false,"previous_label":null}'
+08-16 15:35:24.763 I/ReactNativeJS(25181): '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'
+08-16 15:35:24.769 I/ReactNativeJS(25181): [VoIPToneService] AudioContext not available (React Native environment)
+08-16 15:35:24.773 I/ReactNativeJS(25181): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-16 15:35:24.788 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"initial_url","outcome":"empty_url"}'
+08-16 15:35:24.875 W/ReactNativeJS(25181): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 15:35:25.060 W/ReactNativeJS(25181): This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.
+08-16 15:35:25.295 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"initial_url","outcome":"empty_url"}'
+08-16 15:35:25.345 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"active_initial_url","outcome":"empty_url"}'
+08-16 15:35:25.566 I/ReactNativeJS(25181): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 15:35:25.962 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_600","outcome":"empty_url"}'
+08-16 15:35:26.997 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_1600","outcome":"empty_url"}'
+08-16 15:35:28.573 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_3200","outcome":"empty_url"}'
+08-16 15:35:30.564 I/ReactNativeJS(25181): '[DEEP_LINK_TRACE]', '{"source":"bootstrap_initial_url_5200","outcome":"empty_url"}'

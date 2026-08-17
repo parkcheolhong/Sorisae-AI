@@ -1,0 +1,12 @@
+    topResumedActivity=ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+    * Hist  #0: ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+      Intent { act=android.intent.action.VIEW dat=worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe flg=0x10018000 cmp=com.parkcheolhong.worldlinco/.MainActivity }
+      mActivityComponent=com.parkcheolhong.worldlinco/.MainActivity
+    Resumed: ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+  ResumedActivity: ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+  deepestLastOrientationSource=ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+  mFocusedApp=ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+        * ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}
+    mSystemBarColorApps={ActivityRecord{f236bae u0 com.parkcheolhong.worldlinco/.MainActivity t10924}}
+        source=ActivityRecord{ef9a4f7 u0 com.parkcheolhong.worldlinco/.MainActivity t10853} SCREEN_ORIENTATION_PORTRAIT
+        source=ActivityRecord{f774b39 u0 com.parkcheolhong.worldlinco/.MainActivity t10854} SCREEN_ORIENTATION_PORTRAIT

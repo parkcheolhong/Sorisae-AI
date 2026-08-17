@@ -1,0 +1,710 @@
+﻿--------- beginning of main
+08-16 17:29:38.323 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop ro.product.brand'
+08-16 17:29:38.328 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.347 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:am start -W -a android.intent.action.VIEW -d 'worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474''
+08-16 17:29:38.368 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.389 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop ro.product.model'
+08-16 17:29:38.404 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.408 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-16 17:29:38.409 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-16 17:29:38.410 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+--------- beginning of system
+08-16 17:29:38.410 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=28749) has no WPC
+08-16 17:29:38.410 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.412 I/mtkpower_client( 1170): ret_hdl:18383
+08-16 17:29:38.412 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.412 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265464455; UID 10517; state: DISABLED
+08-16 17:29:38.412 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:18383 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18383
+08-16 17:29:38.413 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265452344; UID 10517; state: DISABLED
+08-16 17:29:38.413 D/CompatibilityChangeReporter( 1673): Compat change id reported: 266124927; UID 10517; state: DISABLED
+08-16 17:29:38.413 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265451093; UID 10517; state: DISABLED
+08-16 17:29:38.413 I/mtkpower_client( 1170): ret_hdl:18384
+08-16 17:29:38.414 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.414 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265456536; UID 10517; state: DISABLED
+08-16 17:29:38.414 D/CompatibilityChangeReporter( 1673): Compat change id reported: 255940284; UID 10517; state: DISABLED
+08-16 17:29:38.414 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 17:29:38.414 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:18384 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18384
+08-16 17:29:38.414 D/CompatibilityChangeReporter( 1673): Compat change id reported: 236283604; UID 10517; state: DISABLED
+08-16 17:29:38.415 D/CompatibilityChangeReporter( 1673): Compat change id reported: 263959004; UID 10517; state: DISABLED
+08-16 17:29:38.415 D/CompatibilityChangeReporter( 1673): Compat change id reported: 264304459; UID 10517; state: DISABLED
+08-16 17:29:38.415 I/mtkpower_client( 1170): ret_hdl:18385
+08-16 17:29:38.415 D/CompatibilityChangeReporter( 1673): Compat change id reported: 264301586; UID 10517; state: DISABLED
+08-16 17:29:38.415 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.416 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:18385 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18385
+08-16 17:29:38.416 D/CompatibilityChangeReporter( 1673): Compat change id reported: 254631730; UID 10517; state: DISABLED
+08-16 17:29:38.416 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 17:29:38.416 D/CompatibilityChangeReporter( 1673): Compat change id reported: 273509367; UID 10517; state: DISABLED
+08-16 17:29:38.416 D/CompatibilityChangeReporter( 1673): Compat change id reported: 263259275; UID 10517; state: DISABLED
+08-16 17:29:38.416 D/CompatibilityChangeReporter( 1673): Compat change id reported: 174042980; UID 10517; state: DISABLED
+08-16 17:29:38.416 I/mtkpower_client( 1170): ret_hdl:18386
+08-16 17:29:38.416 D/CompatibilityChangeReporter( 1673): Compat change id reported: 174042936; UID 10517; state: DISABLED
+08-16 17:29:38.416 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.417 D/CompatibilityChangeReporter( 1673): Compat change id reported: 181136395; UID 10517; state: DISABLED
+08-16 17:29:38.417 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:18386 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18386
+08-16 17:29:38.417 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 17:29:38.417 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 17:29:38.417 I/mtkpower_client( 1170): ret_hdl:18387
+08-16 17:29:38.417 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:18387 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18387
+08-16 17:29:38.417 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:38.418 D/CompatibilityChangeReporter( 1673): Compat change id reported: 194480991; UID 10517; state: ENABLED
+08-16 17:29:38.419 D/WindowManager( 1673): Transition is created, t=TransitionRecord{8ea8789 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 17:29:38.419 D/WindowManager( 1673): SyncGroup is created, id=813, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-16 17:29:38.419 W/WindowManager( 1673): setSyncMethod, id=813, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-16 17:29:38.420 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{8ea8789 id=813 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 17:29:38.420 V/WindowManager( 1673): Collecting in transition 813: ActivityRecord{e1da38e u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-16 17:29:38.420 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{e1da38e u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-16 17:29:38.421 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{f6f3cea #11035 type=standard A=10517:com.parkcheolhong.worldlinco} activity=ActivityRecord{e1da38e u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-16 17:29:38.422 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_START/1673@17, type = -999
+08-16 17:29:38.422 D/ActivityManagerPerformance( 1673): AMP_acquire() ACT_START
+08-16 17:29:38.422 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1428912  [1673 / 17]    HINT : AMS_ACT_START    list : 
+08-16 17:29:38.422 I/mtkpower_client( 1170): perf_lock_rel, hdl:18385, tid:1201
+08-16 17:29:38.423 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.423 I/libPowerHal( 1177): [perfLockRel] hdl:18385, idx:2
+08-16 17:29:38.423 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 17:29:38.424 I/mtkpower_client( 1170): ret_hdl:18388
+08-16 17:29:38.424 I/mtkpower_client( 1170): perf_lock_rel, hdl:18384, tid:1201
+08-16 17:29:38.424 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:18388 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18388
+08-16 17:29:38.424 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:38.425 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.425 I/libPowerHal( 1177): [perfLockRel] hdl:18384, idx:1
+08-16 17:29:38.425 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{8ea8789 id=813 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 17:29:38.425 W/unknown:BridgelessReact(28439): ReactHost{0}.onHostPause(activity)
+08-16 17:29:38.425 W/unknown:BridgelessReact(28439): ReactHost{0}.ReactContext.onHostPause()
+08-16 17:29:38.425 I/mtkpower_client( 1170): ret_hdl:18389
+08-16 17:29:38.425 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.426 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 17:29:38.426 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:18389 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18389
+08-16 17:29:38.426 I/mtkpower_client( 1170): ret_hdl:18390
+08-16 17:29:38.426 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-16 17:29:38.426 I/Pageboost( 1673): stop alp
+08-16 17:29:38.426 I/mtkpower_client( 1170): perf_lock_rel, hdl:18386, tid:1201
+08-16 17:29:38.426 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:18390 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18390
+08-16 17:29:38.426 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 1
+08-16 17:29:38.426 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-16 17:29:38.427 E/pageboostd( 3280): Received HALT command code 2
+08-16 17:29:38.427 D/WorldlincoDeepLink(28439): MainActivity.onNewIntent action=android.intent.action.VIEW data=worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474 flags=268435456 extras=null
+08-16 17:29:38.427 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@dfc3c76 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11035 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=377840394 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@815e277} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{b5bdee4 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10517:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 17:29:38.428 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.429 I/mtkpower_client( 1170): ret_hdl:18391
+08-16 17:29:38.429 W/unknown:BridgelessReact(28439): ReactHost{0}.onHostResume(activity)
+08-16 17:29:38.429 I/mtkpower_client( 1170): perf_lock_rel, hdl:18387, tid:1201
+08-16 17:29:38.429 W/unknown:BridgelessReact(28439): ReactHost{0}.ReactContext.onHostResume()
+08-16 17:29:38.429 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:38.429 V/WindowManager( 1673): Starting Transition 813, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-16 17:29:38.430 I/mtkpower_client( 1170): ret_hdl:18392
+08-16 17:29:38.430 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-16 17:29:38.430 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-16 17:29:38.433 I/libPowerHal( 1177): [perfLockRel] hdl:18386, idx:3
+08-16 17:29:38.433 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 17:29:38.433 V/WindowManager( 1673): SyncGroup 813: Finished!
+08-16 17:29:38.434 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{8ea8789 id=813 type=OPEN flags=0x0}
+08-16 17:29:38.434 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 17:29:38.434 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{e1da38e u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-16 17:29:38.434 V/WindowManager( 1673):   Final targets: []
+08-16 17:29:38.434 V/WindowManager( 1673): Calling onTransitionReady: {id=813 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 17:29:38.435 I/BLASTBufferQueue_Java(28439): update, w= 800 h= 1340 mName = ViewRootImpl@e5d104d[MainActivity] mNativeObject= 0xb400007710664000 sc.mNativeObject= 0xb40000761fcca540 format= -2 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3017 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 
+08-16 17:29:38.435 I/ViewRootImpl@e5d104d[MainActivity](28439): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=true req=(800,1340)0 dur=0 res=0x0 s={true 0xb400007623dbb000} ch=false seqId=0
+08-16 17:29:38.435 V/WindowManager( 1673): Relayout Window{b45dfdd u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=800x1340 ty=2 d0
+08-16 17:29:38.435 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@dfc3c76: {id=813 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 17:29:38.435 V/WindowManagerShell( 2424): No transition roots in (#813)android.os.BinderProxy@dfc3c76@0 so abort
+08-16 17:29:38.435 I/libPowerHal( 1177): [perfLockAcq] idx:6 hdl:18391 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18391
+08-16 17:29:38.436 I/ViewRootImpl@e5d104d[MainActivity](28439): registerCallbackForPendingTransactions
+08-16 17:29:38.436 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 17:29:38.436 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 17:29:38.436 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<813>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-16 17:29:38.436 I/libPowerHal( 1177): [perfLockRel] hdl:18387, idx:4
+08-16 17:29:38.437 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#813)android.os.BinderProxy@dfc3c76@0
+08-16 17:29:38.437 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 17:29:38.437 I/ViewRootImpl@e5d104d[MainActivity](28439): mWNT: t=0xb40000761fb4e980 mBlastBufferQueue=0xb400007710664000 fn= 7 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$6.onFrameDraw:5635 android.view.ViewRootImpl$2.onFrameDraw:2146 android.view.ThreadedRenderer$1.onFrameDraw:792 
+08-16 17:29:38.437 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<813>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-16 17:29:38.437 V/WindowManager( 1673): Sent Transition #813 createdAt=08-16 17:29:38.418 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11035 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=377840394 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{1df9069 Task{f6f3cea #11035 type=standard A=10517:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{665a910 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10517:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 17:29:38.437 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-16 17:29:38.437 V/WindowManager( 1673):     info={id=813 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 17:29:38.439 V/WindowManager( 1673): Finish Transition: TransitionRecord{8ea8789 id=813 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-16 17:29:38.439 V/WindowManager( 1673): Relayout hash=b45dfdd, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) gr=CENTER sim={adjust=resize} layoutInDisplayCutoutMode=always ty=APPLICATION fmt=TRANSPARENT wanim=0x7f140132
+08-16 17:29:38.439 V/WindowManager( 1673):   fl=81810102
+08-16 17:29:38.439 V/WindowManager( 1673):   pfl=12008040
+08-16 17:29:38.439 V/WindowManager( 1673):   vsysui=1100
+08-16 17:29:38.439 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-16 17:29:38.439 V/WindowManager( 1673):   fitSides=
+08-16 17:29:38.439 V/WindowManager( 1673):  dimAmount=0.5 naviIconColor=0}
+08-16 17:29:38.439 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-16 17:29:38.440 V/WindowManager( 1673): Finish Transition #813: created at 08-16 17:29:38.418 collect-started=1.066ms request-sent=6.585ms started=11.532ms ready=11.454ms sent=15.935ms finished=20.839ms
+08-16 17:29:38.441 V/WindowManagerShell( 2424): Track 0 became idle
+08-16 17:29:38.441 V/WindowManagerShell( 2424): All active transition animations finished
+08-16 17:29:38.442 I/libPowerHal( 1177): [perfLockAcq] idx:7 hdl:18392 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18392
+08-16 17:29:38.443 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:38.444 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28439#14887](this:0xb400007bc709c790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.21 dur=9421.58 max=8522.46 min=899.13
+08-16 17:29:38.447 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.447 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:0.424521,dur:9422.39,max:8523.45,min:183.52  
+08-16 17:29:38.452 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-16 17:29:38.462 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop ro.build.version.release'
+08-16 17:29:38.480 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.510 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.512 W/.osp.app.signin( 9041): Reducing the number of considered missed Gc histogram windows from 180 to 100
+08-16 17:29:38.524 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:settings get secure android_id'
+08-16 17:29:38.541 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.573 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.602 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.607 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop service.adb.tcp.port'
+08-16 17:29:38.644 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.645 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:38.651 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_PARSE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 17:29:38.651 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_DISPATCH]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","entry_type":"auth"}'
+08-16 17:29:38.651 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"SOCIAL_LOGIN_CALLBACK","timestamp":"2026-08-16T08:29:38.651Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","provider":"passkey","has_token":true,"auth_mode":"passkey_login"}'
+08-16 17:29:38.682 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:ip route'
+08-16 17:29:38.684 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.710 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_28439#14880](this:0xb400007bc4c58790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.21 dur=9437.74 max=9254.21 min=183.53
+08-16 17:29:38.715 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.741 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.768 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.773 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:38.797 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.820 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:38.824 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.825 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE]', '{"source":"active_initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:38.832 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_PARSE]', '{"source":"active_initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 17:29:38.832 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T08:29:38.832Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"active_initial_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:38.868 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:38.877 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.879 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"SOCIAL_LOGIN_CALLBACK_FAIL","timestamp":"2026-08-16T08:29:38.879Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","provider":"passkey","error":"내 정보 조회 실패 (HTTP 401)","auth_mode":"passkey_login"}'
+08-16 17:29:38.910 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.920 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop ro.product.brand'
+08-16 17:29:38.940 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.968 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:38.993 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop ro.product.model'
+08-16 17:29:38.995 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.026 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.052 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.054 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop ro.build.version.release'
+08-16 17:29:39.059 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:6C:6B, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-51, periodicAdvInt=0x0
+08-16 17:29:39.068 D/ScanFilter( 3198): manu data matches
+08-16 17:29:39.069 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:37:5A, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-65, periodicAdvInt=0x0
+08-16 17:29:39.082 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.110 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.118 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:settings get secure android_id'
+08-16 17:29:39.145 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.170 D/BoundBrokerSvc(25987): onUnbind: Intent { act=com.google.android.gms.chromesync.service.firstparty.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsApiService }
+08-16 17:29:39.176 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.203 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.205 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop service.adb.tcp.port'
+08-16 17:29:39.232 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.234 I/ReactNativeJS(28439): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 17:29:39.260 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.261 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE]', '{"source":"runtime_url_followup_initial","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:39.265 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:am start -W -a android.intent.action.VIEW -d 'worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474''
+08-16 17:29:39.267 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_PARSE]', '{"source":"runtime_url_followup_initial","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 17:29:39.267 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T08:29:39.267Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url_followup_initial","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:39.297 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.314 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-16 17:29:39.315 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-16 17:29:39.315 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+08-16 17:29:39.316 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=28790) has no WPC
+08-16 17:29:39.319 D/WindowManager( 1673): Transition is created, t=TransitionRecord{7726e20 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 17:29:39.319 D/WindowManager( 1673): SyncGroup is created, id=814, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-16 17:29:39.319 W/WindowManager( 1673): setSyncMethod, id=814, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-16 17:29:39.319 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{7726e20 id=814 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 17:29:39.320 V/WindowManager( 1673): Collecting in transition 814: ActivityRecord{606d3d9 u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-16 17:29:39.320 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{606d3d9 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-16 17:29:39.320 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{f6f3cea #11035 type=standard A=10517:com.parkcheolhong.worldlinco} activity=ActivityRecord{606d3d9 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-16 17:29:39.323 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{7726e20 id=814 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-16 17:29:39.324 W/unknown:BridgelessReact(28439): ReactHost{0}.onHostPause(activity)
+08-16 17:29:39.324 W/unknown:BridgelessReact(28439): ReactHost{0}.ReactContext.onHostPause()
+08-16 17:29:39.324 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-16 17:29:39.325 I/Pageboost( 1673): stop alp
+08-16 17:29:39.325 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@c5f8f4d TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11035 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=377840394 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@4e7aa02} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{bfc2f13 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10517:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 17:29:39.325 E/pageboostd( 3280): Received HALT command code 2
+08-16 17:29:39.326 D/WorldlincoDeepLink(28439): MainActivity.onNewIntent action=android.intent.action.VIEW data=worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474 flags=268435456 extras=null
+08-16 17:29:39.327 V/WindowManager( 1673): Starting Transition 814, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-16 17:29:39.327 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-16 17:29:39.327 W/unknown:BridgelessReact(28439): ReactHost{0}.onHostResume(activity)
+08-16 17:29:39.327 W/unknown:BridgelessReact(28439): ReactHost{0}.ReactContext.onHostResume()
+08-16 17:29:39.328 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-16 17:29:39.330 V/WindowManager( 1673): SyncGroup 814: Finished!
+08-16 17:29:39.330 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{7726e20 id=814 type=OPEN flags=0x0}
+08-16 17:29:39.330 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{606d3d9 u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-16 17:29:39.330 V/WindowManager( 1673):   Final targets: []
+08-16 17:29:39.331 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.331 V/WindowManager( 1673): Calling onTransitionReady: {id=814 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 17:29:39.331 I/BLASTBufferQueue_Java(28439): update, w= 800 h= 1340 mName = ViewRootImpl@e5d104d[MainActivity] mNativeObject= 0xb400007710664000 sc.mNativeObject= 0xb40000761fcca540 format= -2 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3017 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 
+08-16 17:29:39.331 I/ViewRootImpl@e5d104d[MainActivity](28439): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=true req=(800,1340)0 dur=1 res=0x0 s={true 0xb400007623dbb000} ch=false seqId=0
+08-16 17:29:39.332 I/ViewRootImpl@e5d104d[MainActivity](28439): registerCallbackForPendingTransactions
+08-16 17:29:39.332 V/WindowManager( 1673): Sent Transition #814 createdAt=08-16 17:29:39.319 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11035 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=377840394 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{1df9069 Task{f6f3cea #11035 type=standard A=10517:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{665a910 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10517:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-16 17:29:39.332 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-16 17:29:39.332 V/WindowManager( 1673):     info={id=814 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 17:29:39.333 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-16 17:29:39.333 V/WindowManager( 1673): Relayout Window{b45dfdd u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=800x1340 ty=2 d0
+08-16 17:29:39.336 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@c5f8f4d: {id=814 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-16 17:29:39.336 V/WindowManagerShell( 2424): No transition roots in (#814)android.os.BinderProxy@c5f8f4d@0 so abort
+08-16 17:29:39.336 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<814>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-16 17:29:39.337 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#814)android.os.BinderProxy@c5f8f4d@0
+08-16 17:29:39.337 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<814>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-16 17:29:39.338 V/WindowManager( 1673): Relayout hash=b45dfdd, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) gr=CENTER sim={adjust=resize} layoutInDisplayCutoutMode=always ty=APPLICATION fmt=TRANSPARENT wanim=0x7f140132
+08-16 17:29:39.338 V/WindowManager( 1673):   fl=81810102
+08-16 17:29:39.338 V/WindowManager( 1673):   pfl=12008040
+08-16 17:29:39.338 V/WindowManager( 1673):   vsysui=1100
+08-16 17:29:39.338 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-16 17:29:39.338 V/WindowManager( 1673):   fitSides=
+08-16 17:29:39.338 V/WindowManager( 1673):  dimAmount=0.5 naviIconColor=0}
+08-16 17:29:39.339 V/WindowManager( 1673): Finish Transition: TransitionRecord{7726e20 id=814 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-16 17:29:39.339 I/ViewRootImpl@e5d104d[MainActivity](28439): mWNT: t=0xb40000761fb4eb00 mBlastBufferQueue=0xb400007710664000 fn= 8 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$6.onFrameDraw:5635 android.view.ViewRootImpl$2.onFrameDraw:2146 android.view.ThreadedRenderer$1.onFrameDraw:792 
+08-16 17:29:39.339 V/WindowManager( 1673): Finish Transition #814: created at 08-16 17:29:39.319 collect-started=0.794ms request-sent=5.05ms started=8.446ms ready=8.381ms sent=12.173ms finished=20.563ms
+08-16 17:29:39.341 V/WindowManagerShell( 2424): Track 0 became idle
+08-16 17:29:39.341 V/WindowManagerShell( 2424): All active transition animations finished
+08-16 17:29:39.356 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-16 17:29:39.360 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:dumpsys activity activities'
+08-16 17:29:39.368 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.396 D/CompatibilityChangeReporter( 1673): Compat change id reported: 168419799; UID 10517; state: DISABLED
+08-16 17:29:39.396 D/CompatibilityChangeReporter( 1673): Compat change id reported: 273564678; UID 10517; state: DISABLED
+08-16 17:29:39.397 D/CompatibilityChangeReporter( 1673): Compat change id reported: 184838306; UID 10517; state: DISABLED
+08-16 17:29:39.398 D/CompatibilityChangeReporter( 1673): Compat change id reported: 185004937; UID 10517; state: DISABLED
+08-16 17:29:39.399 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.428 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.455 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.482 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.509 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.509 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:39.513 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:39.515 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_PARSE]', '{"source":"runtime_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 17:29:39.516 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T08:29:39.515Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:39.546 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.561 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:39.574 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.607 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.609 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:39.635 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.662 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.666 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop service.adb.tcp.port'
+08-16 17:29:39.691 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.718 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.719 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE]', '{"source":"active_initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:39.725 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_PARSE]', '{"source":"active_initial_url","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 17:29:39.725 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T08:29:39.725Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"active_initial_url","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:39.732 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:ip route'
+08-16 17:29:39.756 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.783 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.810 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.819 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:39.844 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.870 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.877 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:39.899 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.926 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.937 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:39.955 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.982 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:39.991 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop service.adb.tcp.port'
+08-16 17:29:40.010 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.038 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.065 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.097 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.098 I/ReactNativeJS(28439): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 17:29:40.124 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.125 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE]', '{"source":"runtime_url_followup_initial","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:40.131 I/ReactNativeJS(28439): '[DEEP_LINK_TRACE_PARSE]', '{"source":"runtime_url_followup_initial","raw_url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474","scheme":"worldlingo","resolved_path":"auth/callback","entry_target":{"type":"auth","provider":"passkey","auth_mode":"passkey_login","access_token_present":true}}'
+08-16 17:29:40.131 I/ReactNativeJS(28439): '[UI_PRESS_PROBE]', '{"event":"APP_ENTRY_DEEP_LINK_SKIPPED_ALREADY_CONSUMED","timestamp":"2026-08-16T08:29:40.131Z","token_ready":false,"user_ready":false,"show_login":true,"show_voip_tester":false,"selected_call_mode":"pstn_assist","source":"runtime_url_followup_initial","url":"worldlingo://auth/callback?provider=passkey&auth_mode=passkey_login&access_token=passkey_device_probe_token_331&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe&round=2&ts=1786868978474"}'
+08-16 17:29:40.158 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.184 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.210 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.237 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.264 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.290 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.322 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.349 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.349 I/wpa_supplicant( 2197): Heartbeat 37735
+08-16 17:29:40.375 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.402 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.424 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_RESUME_TAIL/1673@19, type = -999
+08-16 17:29:40.424 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_LAZY/1673@20, type = -999
+08-16 17:29:40.425 D/ActivityManagerPerformance( 1673): AMP_acquire() TAIL
+08-16 17:29:40.425 D/ActivityManagerPerformance( 1673): AMP_release() ACT_START
+08-16 17:29:40.425 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1432297  [1673 / 19]    HINT : AMS_RESUME_TAIL    list : 
+08-16 17:29:40.425 I/mtkpower_client( 1170): perf_lock_rel, hdl:18388, tid:1201
+08-16 17:29:40.426 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.426 I/libPowerHal( 1177): [perfLockRel] hdl:18388, idx:5
+08-16 17:29:40.426 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 17:29:40.427 I/mtkpower_client( 1170): ret_hdl:18393
+08-16 17:29:40.427 I/mtkpower_client( 1170): perf_lock_rel, hdl:18389, tid:1201
+08-16 17:29:40.427 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:18393 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18393
+08-16 17:29:40.427 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:40.427 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.428 I/mtkpower_client( 1170): ret_hdl:18394
+08-16 17:29:40.428 I/mtkpower_client( 1170): perf_lock_rel, hdl:18391, tid:1201
+08-16 17:29:40.428 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.428 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.428 I/mtkpower_client( 1170): ret_hdl:18395
+08-16 17:29:40.428 I/mtkpower_client( 1170): perf_lock_rel, hdl:18392, tid:1201
+08-16 17:29:40.429 I/libPowerHal( 1177): [perfLockRel] hdl:18389, idx:1
+08-16 17:29:40.429 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 17:29:40.429 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:18394 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18394
+08-16 17:29:40.430 I/libPowerHal( 1177): [perfLockRel] hdl:18391, idx:6
+08-16 17:29:40.430 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 17:29:40.430 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 17:29:40.430 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:18395 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18395
+08-16 17:29:40.430 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 17:29:40.431 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 17:29:40.431 I/libPowerHal( 1177): [perfLockRel] hdl:18392, idx:7
+08-16 17:29:40.431 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.431 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 17:29:40.432 I/mtkpower_client( 1170): ret_hdl:18396
+08-16 17:29:40.432 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:18396 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18396
+08-16 17:29:40.432 I/mtkpower_client( 1170): perf_lock_rel, hdl:18393, tid:1201
+08-16 17:29:40.432 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:40.432 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.432 I/mtkpower_client( 1170): ret_hdl:18397
+08-16 17:29:40.433 I/mtkpower_client( 1170): perf_lock_rel, hdl:18394, tid:1201
+08-16 17:29:40.433 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.433 I/mtkpower_client( 1170): ret_hdl:18398
+08-16 17:29:40.433 I/mtkpower_client( 1170): perf_lock_rel, hdl:18390, tid:1201
+08-16 17:29:40.433 I/mtkpower_client( 1170): perf_lock_rel, hdl:18395, tid:1201
+08-16 17:29:40.433 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.433 I/libPowerHal( 1177): [perfLockRel] hdl:18393, idx:3
+08-16 17:29:40.433 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 17:29:40.434 I/libPowerHal( 1177): [perfLockAcq] idx:6 hdl:18397 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18397
+08-16 17:29:40.434 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:40.434 I/libPowerHal( 1177): [perfLockRel] hdl:18394, idx:4
+08-16 17:29:40.435 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 17:29:40.435 I/libPowerHal( 1177): [perfLockAcq] idx:7 hdl:18398 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18398
+08-16 17:29:40.435 I/libPowerHal( 1177): [perfLockRel] hdl:18390, idx:2
+08-16 17:29:40.435 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 2
+08-16 17:29:40.435 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-16 17:29:40.436 I/libPowerHal( 1177): [perfLockRel] hdl:18395, idx:5
+08-16 17:29:40.436 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 17:29:40.436 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 17:29:40.436 I/mtkpower_client( 1170): ret_hdl:18399
+08-16 17:29:40.436 I/libPowerHal( 1177): [perfLockAcq] idx:8 hdl:18399 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18399
+08-16 17:29:40.436 I/mtkpower_client( 1170): perf_lock_rel, hdl:18396, tid:1201
+08-16 17:29:40.437 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 17:29:40.437 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 17:29:40.437 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-16 17:29:40.437 I/libPowerHal( 1177): [perfLockRel] hdl:18396, idx:1
+08-16 17:29:40.437 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 17:29:40.438 I/mtkpower_client( 1170): ret_hdl:18400
+08-16 17:29:40.438 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1428912
+08-16 17:29:40.438 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:18400 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18400
+08-16 17:29:40.438 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:40.454 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.481 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.507 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.541 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.568 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.596 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.622 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.649 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.675 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.701 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.727 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.732 I/mtkpower_client( 1170): perf_lock_rel, hdl:18397, tid:28814
+08-16 17:29:40.732 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28814
+08-16 17:29:40.733 I/libPowerHal( 1177): [perfLockRel] hdl:18397, idx:6
+08-16 17:29:40.733 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 17:29:40.734 I/mtkpower_client( 1170): ret_hdl:18401
+08-16 17:29:40.734 I/mtkpower_client( 1170): perf_lock_rel, hdl:18398, tid:28814
+08-16 17:29:40.734 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:18401 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18401
+08-16 17:29:40.734 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:40.734 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28814
+08-16 17:29:40.735 I/libPowerHal( 1177): [perfLockRel] hdl:18398, idx:7
+08-16 17:29:40.735 I/mtkpower_client( 1170): ret_hdl:18402
+08-16 17:29:40.735 I/mtkpower_client( 1170): perf_lock_rel, hdl:18399, tid:28814
+08-16 17:29:40.736 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-16 17:29:40.736 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:18402 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18402
+08-16 17:29:40.736 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28814
+08-16 17:29:40.736 I/libPowerHal( 1177): [perfLockRel] hdl:18399, idx:8
+08-16 17:29:40.736 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 17:29:40.736 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 17:29:40.737 I/mtkpower_client( 1170): ret_hdl:18403
+08-16 17:29:40.737 I/mtkpower_client( 1170): perf_lock_rel, hdl:18400, tid:28814
+08-16 17:29:40.737 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:18403 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18403
+08-16 17:29:40.737 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-16 17:29:40.737 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-16 17:29:40.737 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:28814
+08-16 17:29:40.737 I/libPowerHal( 1177): [perfLockRel] hdl:18400, idx:1
+08-16 17:29:40.738 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-16 17:29:40.738 I/mtkpower_client( 1170): ret_hdl:18404
+08-16 17:29:40.738 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1432297
+08-16 17:29:40.738 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:18404 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:18404
+08-16 17:29:40.738 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-16 17:29:40.754 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.786 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.812 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.815 I/mtkpower_client( 1170): perf_lock_rel, hdl:18383, tid:28754
+08-16 17:29:40.816 I/libPowerHal( 1177): [perfLockRel] hdl:18383, idx:0
+08-16 17:29:40.816 I/mtkpower_client( 1170): perf_lock_rel, hdl:18402, tid:28754
+08-16 17:29:40.817 I/mtkpower_client( 1170): perf_lock_rel, hdl:18401, tid:28754
+08-16 17:29:40.817 I/libPowerHal( 1177): [perfLockRel] hdl:18402, idx:3
+08-16 17:29:40.817 I/mtkpower_client( 1170): perf_lock_rel, hdl:18403, tid:28754
+08-16 17:29:40.817 I/libPowerHal( 1177): [perfLockRel] hdl:18401, idx:2
+08-16 17:29:40.818 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-16 17:29:40.818 I/mtkpower_client( 1170): perf_lock_rel, hdl:18404, tid:28754
+08-16 17:29:40.818 I/libPowerHal( 1177): [perfLockRel] hdl:18403, idx:4
+08-16 17:29:40.818 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-16 17:29:40.819 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-16 17:29:40.820 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1422154
+08-16 17:29:40.820 I/libPowerHal( 1177): [perfLockRel] hdl:18404, idx:1
+08-16 17:29:40.820 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 -1 -1
+08-16 17:29:40.835 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 125333, isSameBssidAndFreq true
+08-16 17:29:40.837 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (130) / 351 / -46.0 || 100.0 : 351.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.13 ms / 63.67 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 17:29:40.840 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.868 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.895 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.923 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.950 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.978 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:40.985 D/ScanFilter( 3198): manu data matches
+08-16 17:29:40.985 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:37:5A, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-66, periodicAdvInt=0x0
+08-16 17:29:41.013 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.040 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.068 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.095 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.123 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.151 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.179 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.206 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.233 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.268 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.295 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.323 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.351 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.378 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.406 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.434 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.461 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.496 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.523 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.551 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.578 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.606 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.633 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.661 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.689 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.718 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.750 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.778 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.805 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.833 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.861 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.890 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.920 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.949 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:41.986 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.014 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.043 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.074 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.104 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.133 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.161 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.190 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.218 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.252 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.280 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.307 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.335 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.362 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.368 E/Watchdog( 1673): !@Sync: 12584 heap: 103 / 116 FD: 948 [2026-08-16 17:29:42.367]
+08-16 17:29:42.390 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.411 I/thermal_repeater( 1385): socket -1
+08-16 17:29:42.417 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.445 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.485 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.529 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.559 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.588 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.617 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.646 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.675 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.704 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.733 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.773 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:6C:6B, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-53, periodicAdvInt=0x0
+08-16 17:29:42.782 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.809 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.837 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.865 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.892 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.919 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.947 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:42.974 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.021 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.048 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.076 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.104 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.131 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.158 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.186 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.213 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.241 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.276 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.304 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.331 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.359 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.387 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.414 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.442 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.469 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.504 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.531 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.559 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.587 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.614 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.642 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.669 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.697 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.725 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.759 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.786 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.814 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.841 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.849 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 125334, isSameBssidAndFreq true
+08-16 17:29:43.851 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (56) / 390 / -46.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 17:29:43.869 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.896 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.924 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.951 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:43.985 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.013 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.040 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.068 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.095 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.122 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.149 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.177 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.205 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.238 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.266 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.294 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.322 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.348 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.376 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.403 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.431 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.459 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.493 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.520 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.548 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.565 D/ScanFilter( 3198): manu data matches
+08-16 17:29:44.565 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:37:5A, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-66, periodicAdvInt=0x0
+08-16 17:29:44.576 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.603 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.631 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.649 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x1a, addressType=1, address=XX:XX:XX:XX:1B:0C, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-82, periodicAdvInt=0x0
+08-16 17:29:44.658 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.662 D/io_stats(  565): !@ 179,0 r 5194808 131057254 w 5577316 44203744 d 416281 54930680 f 0 0 iot 4427684 0 th 0 0 0 pt 0 inp 0 0 377861.779
+08-16 17:29:44.686 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.720 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.748 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.776 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.803 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.831 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.858 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.885 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.913 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.941 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:44.974 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.002 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.029 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.057 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.083 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:45.084 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.115 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.136 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:45.142 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.172 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.191 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:45.208 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.237 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.250 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop service.adb.tcp.port'
+08-16 17:29:45.266 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.296 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.314 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:ip route'
+08-16 17:29:45.325 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.356 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.383 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.411 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.413 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:45.441 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.464 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:45.475 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.504 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.516 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-16 17:29:45.534 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.562 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.568 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:getprop service.adb.tcp.port'
+08-16 17:29:45.593 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.622 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.650 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.677 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.711 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.739 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.766 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.794 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.821 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.849 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.876 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.904 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.931 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.965 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:45.992 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.020 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.048 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.075 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.102 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.130 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.137 D/SensorService( 1673): [SO] -0.683 6.460 7.325
+08-16 17:29:46.157 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.195 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.234 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.266 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.295 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.323 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.352 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.382 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.411 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.439 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.484 D/ScanFilter( 3198): manu data matches
+08-16 17:29:46.484 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:37:5A, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-65, periodicAdvInt=0x0
+08-16 17:29:46.486 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:6C:6B, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-51, periodicAdvInt=0x0
+08-16 17:29:46.491 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.519 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.546 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.573 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.601 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.628 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.656 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.683 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.720 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.748 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.775 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.802 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.830 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.857 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.862 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 125335, isSameBssidAndFreq true
+08-16 17:29:46.863 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (22) / 390 / -46.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-16 17:29:46.885 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.913 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.940 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:46.974 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.001 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.029 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.057 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.084 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.112 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.139 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.167 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.200 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.229 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.256 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.284 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.311 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.339 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.366 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.393 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.412 I/thermal_repeater( 1385): socket -1
+08-16 17:29:47.419 I/NearbyMediums( 6049): Found Fast Ble Advertisements :
+08-16 17:29:47.419 I/NearbyMediums( 6049): BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x37 0x4d 0x46 0x31 0x11 0x32 0x99 0xd0 0xb1 0x92 0x97 0x57 0xf9 0x19 0x39 0x76 0x68 0x1d 0xa7 0x25 0xfa 0x60 ], deviceToken=[ 0x76 0xc7 ], rxAdvertisement=null } : 3 times.
+08-16 17:29:47.419 I/NearbyMediums( 6049): BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x32 0x5a 0x35 0x46 0x11 0x32 0x8d 0x2d 0xb9 0x29 0xd5 0x9e 0x1a 0xc9 0x09 0x88 0x2c 0xad 0xd4 0x15 0x9e 0x25 ], deviceToken=[ 0xee 0xdf ], rxAdvertisement=null } : 1 times.
+08-16 17:29:47.419 I/NearbyMediums( 6049): Total 4 fast advertisements from 2 unique advertisers.
+08-16 17:29:47.419 I/NearbyMediums( 6049): Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+08-16 17:29:47.421 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.453 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''
+08-16 17:29:47.455 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+08-16 17:29:47.486 W/unknown:ReactNative(28439): StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+

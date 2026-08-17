@@ -1,0 +1,680 @@
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=C:\Users\WORK\AppData\Local\Temp -Dorg.sqlite.tmpdir=C:\Users\WORK\AppData\Local\Temp
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-updates-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-updates-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-updates-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+> Task :expo-updates-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-updates-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-updates-gradle-plugin:classes UP-TO-DATE
+> Task :expo-updates-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :app
+ ℹ️  [33mApplying gradle plugin[0m '[32mexpo-updates-gradle-plugin[0m' (expo-updates@0.25.28)
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-asset[0m (10.0.10)
+  - [32mexpo-av[0m (14.0.7)
+  - [32mexpo-constants[0m (16.0.2)
+  - [32mexpo-document-picker[0m (12.0.2)
+  - [32mexpo-eas-client[0m (0.12.0)
+  - [32mexpo-file-system[0m (17.0.1)
+  - [32mexpo-font[0m (12.0.10)
+  - [32mexpo-json-utils[0m (0.13.1)
+  - [32mexpo-keep-awake[0m (13.0.2)
+  - [32mexpo-location[0m (17.0.1)
+  - [32mexpo-manifests[0m (0.14.3)
+  - [32mexpo-modules-core[0m (1.12.26)
+  - [32mexpo-secure-store[0m (13.0.2)
+  - [32mexpo-speech[0m (12.0.2)
+  - [32mexpo-structured-headers[0m (3.8.0)
+  - [32mexpo-updates[0m (0.25.28)
+
+
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :app:generatePackageList
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :expo:generateExpoModulesPackageListTask UP-TO-DATE
+> Task :expo:preBuild UP-TO-DATE
+> Task :expo:preDebugBuild UP-TO-DATE
+> Task :expo:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-asset:preBuild UP-TO-DATE
+> Task :expo-asset:preDebugBuild UP-TO-DATE
+> Task :expo-asset:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-av:preBuild UP-TO-DATE
+> Task :expo-av:preDebugBuild UP-TO-DATE
+> Task :expo-av:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-constants:createExpoConfig UP-TO-DATE
+> Task :expo-constants:preBuild UP-TO-DATE
+> Task :expo-constants:preDebugBuild UP-TO-DATE
+> Task :expo-constants:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-document-picker:preBuild UP-TO-DATE
+> Task :expo-document-picker:preDebugBuild UP-TO-DATE
+> Task :expo-document-picker:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-eas-client:preBuild UP-TO-DATE
+> Task :expo-eas-client:preDebugBuild UP-TO-DATE
+> Task :expo-eas-client:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-file-system:preBuild UP-TO-DATE
+> Task :expo-file-system:preDebugBuild UP-TO-DATE
+> Task :expo-file-system:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-font:preBuild UP-TO-DATE
+> Task :expo-font:preDebugBuild UP-TO-DATE
+> Task :expo-font:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-json-utils:preBuild UP-TO-DATE
+> Task :expo-json-utils:preDebugBuild UP-TO-DATE
+> Task :expo-json-utils:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-keep-awake:preBuild UP-TO-DATE
+> Task :expo-keep-awake:preDebugBuild UP-TO-DATE
+> Task :expo-keep-awake:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-location:preBuild UP-TO-DATE
+> Task :expo-location:preDebugBuild UP-TO-DATE
+> Task :expo-location:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-manifests:preBuild UP-TO-DATE
+> Task :expo-manifests:preDebugBuild UP-TO-DATE
+> Task :expo-manifests:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-secure-store:preBuild UP-TO-DATE
+> Task :expo-secure-store:preDebugBuild UP-TO-DATE
+> Task :expo-secure-store:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-speech:preBuild UP-TO-DATE
+> Task :expo-speech:preDebugBuild UP-TO-DATE
+> Task :expo-speech:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-structured-headers:preBuild UP-TO-DATE
+> Task :expo-structured-headers:preDebugBuild UP-TO-DATE
+> Task :expo-structured-headers:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-updates:preBuild UP-TO-DATE
+> Task :expo-updates:preDebugBuild UP-TO-DATE
+> Task :expo-updates:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-updates-interface:preBuild UP-TO-DATE
+> Task :expo-updates-interface:preDebugBuild UP-TO-DATE
+> Task :expo-updates-interface:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preDebugBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-webrtc:preBuild UP-TO-DATE
+> Task :react-native-webrtc:preDebugBuild UP-TO-DATE
+> Task :react-native-webrtc:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-webview:preBuild UP-TO-DATE
+> Task :react-native-webview:preDebugBuild UP-TO-DATE
+> Task :react-native-webview:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :expo:generateDebugResValues UP-TO-DATE
+> Task :expo:generateDebugResources UP-TO-DATE
+> Task :expo:packageDebugResources UP-TO-DATE
+> Task :expo-asset:generateDebugResValues UP-TO-DATE
+> Task :expo-asset:generateDebugResources UP-TO-DATE
+> Task :expo-asset:packageDebugResources UP-TO-DATE
+> Task :expo-av:generateDebugResValues UP-TO-DATE
+> Task :expo-av:generateDebugResources UP-TO-DATE
+> Task :expo-av:packageDebugResources UP-TO-DATE
+> Task :expo-constants:generateDebugResValues UP-TO-DATE
+> Task :expo-constants:generateDebugResources UP-TO-DATE
+> Task :expo-constants:packageDebugResources UP-TO-DATE
+> Task :expo-document-picker:generateDebugResValues UP-TO-DATE
+> Task :expo-document-picker:generateDebugResources UP-TO-DATE
+> Task :expo-document-picker:packageDebugResources UP-TO-DATE
+> Task :expo-eas-client:generateDebugResValues UP-TO-DATE
+> Task :expo-eas-client:generateDebugResources UP-TO-DATE
+> Task :expo-eas-client:packageDebugResources UP-TO-DATE
+> Task :expo-file-system:generateDebugResValues UP-TO-DATE
+> Task :expo-file-system:generateDebugResources UP-TO-DATE
+> Task :expo-file-system:packageDebugResources UP-TO-DATE
+> Task :expo-font:generateDebugResValues UP-TO-DATE
+> Task :expo-font:generateDebugResources UP-TO-DATE
+> Task :expo-font:packageDebugResources UP-TO-DATE
+> Task :expo-json-utils:generateDebugResValues UP-TO-DATE
+> Task :expo-json-utils:generateDebugResources UP-TO-DATE
+> Task :expo-json-utils:packageDebugResources UP-TO-DATE
+> Task :expo-keep-awake:generateDebugResValues UP-TO-DATE
+> Task :expo-keep-awake:generateDebugResources UP-TO-DATE
+> Task :expo-keep-awake:packageDebugResources UP-TO-DATE
+> Task :expo-location:generateDebugResValues UP-TO-DATE
+> Task :expo-location:generateDebugResources UP-TO-DATE
+> Task :expo-location:packageDebugResources UP-TO-DATE
+> Task :expo-manifests:generateDebugResValues UP-TO-DATE
+> Task :expo-manifests:generateDebugResources UP-TO-DATE
+> Task :expo-manifests:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugResValues UP-TO-DATE
+> Task :expo-modules-core:generateDebugResources UP-TO-DATE
+> Task :expo-modules-core:packageDebugResources UP-TO-DATE
+> Task :expo-secure-store:generateDebugResValues UP-TO-DATE
+> Task :expo-secure-store:generateDebugResources UP-TO-DATE
+> Task :expo-secure-store:packageDebugResources UP-TO-DATE
+> Task :expo-speech:generateDebugResValues UP-TO-DATE
+> Task :expo-speech:generateDebugResources UP-TO-DATE
+> Task :expo-speech:packageDebugResources UP-TO-DATE
+> Task :expo-structured-headers:generateDebugResValues UP-TO-DATE
+> Task :expo-structured-headers:generateDebugResources UP-TO-DATE
+> Task :expo-structured-headers:packageDebugResources UP-TO-DATE
+> Task :expo-updates:generateDebugResValues UP-TO-DATE
+> Task :expo-updates:generateDebugResources UP-TO-DATE
+> Task :expo-updates:packageDebugResources UP-TO-DATE
+> Task :expo-updates-interface:generateDebugResValues UP-TO-DATE
+> Task :expo-updates-interface:generateDebugResources UP-TO-DATE
+> Task :expo-updates-interface:packageDebugResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugResValues UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:packageDebugResources UP-TO-DATE
+> Task :react-native-webrtc:generateDebugResValues UP-TO-DATE
+> Task :react-native-webrtc:generateDebugResources UP-TO-DATE
+> Task :react-native-webrtc:packageDebugResources UP-TO-DATE
+> Task :react-native-webview:generateDebugResValues UP-TO-DATE
+> Task :react-native-webview:generateDebugResources UP-TO-DATE
+> Task :react-native-webview:packageDebugResources UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :expo:extractDeepLinksDebug UP-TO-DATE
+> Task :expo:processDebugManifest UP-TO-DATE
+> Task :expo-asset:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-asset:processDebugManifest UP-TO-DATE
+> Task :expo-av:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-av:processDebugManifest UP-TO-DATE
+> Task :expo-constants:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-constants:processDebugManifest UP-TO-DATE
+> Task :expo-document-picker:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-document-picker:processDebugManifest UP-TO-DATE
+> Task :expo-eas-client:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-eas-client:processDebugManifest UP-TO-DATE
+> Task :expo-file-system:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-file-system:processDebugManifest UP-TO-DATE
+> Task :expo-font:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-font:processDebugManifest UP-TO-DATE
+> Task :expo-json-utils:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-json-utils:processDebugManifest UP-TO-DATE
+> Task :expo-keep-awake:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-keep-awake:processDebugManifest UP-TO-DATE
+> Task :expo-location:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-location:processDebugManifest UP-TO-DATE
+> Task :expo-manifests:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-manifests:processDebugManifest UP-TO-DATE
+> Task :expo-modules-core:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-modules-core:processDebugManifest UP-TO-DATE
+> Task :expo-secure-store:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-secure-store:processDebugManifest UP-TO-DATE
+> Task :expo-speech:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-speech:processDebugManifest UP-TO-DATE
+> Task :expo-structured-headers:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-structured-headers:processDebugManifest UP-TO-DATE
+> Task :expo-updates:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-updates:processDebugManifest UP-TO-DATE
+> Task :expo-updates-interface:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-updates-interface:processDebugManifest UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processDebugManifest UP-TO-DATE
+> Task :react-native-webrtc:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-webrtc:processDebugManifest UP-TO-DATE
+> Task :react-native-webview:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-webview:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :expo:compileDebugLibraryResources UP-TO-DATE
+> Task :expo:parseDebugLocalResources UP-TO-DATE
+> Task :expo:generateDebugRFile UP-TO-DATE
+> Task :expo-asset:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-asset:parseDebugLocalResources UP-TO-DATE
+> Task :expo-asset:generateDebugRFile UP-TO-DATE
+> Task :expo-av:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-av:parseDebugLocalResources UP-TO-DATE
+> Task :expo-av:generateDebugRFile UP-TO-DATE
+> Task :expo-constants:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-constants:parseDebugLocalResources UP-TO-DATE
+> Task :expo-constants:generateDebugRFile UP-TO-DATE
+> Task :expo-document-picker:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-document-picker:parseDebugLocalResources UP-TO-DATE
+> Task :expo-document-picker:generateDebugRFile UP-TO-DATE
+> Task :expo-eas-client:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-eas-client:parseDebugLocalResources UP-TO-DATE
+> Task :expo-eas-client:generateDebugRFile UP-TO-DATE
+> Task :expo-file-system:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-file-system:parseDebugLocalResources UP-TO-DATE
+> Task :expo-file-system:generateDebugRFile UP-TO-DATE
+> Task :expo-font:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-font:parseDebugLocalResources UP-TO-DATE
+> Task :expo-font:generateDebugRFile UP-TO-DATE
+> Task :expo-json-utils:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-json-utils:parseDebugLocalResources UP-TO-DATE
+> Task :expo-json-utils:generateDebugRFile UP-TO-DATE
+> Task :expo-keep-awake:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-keep-awake:parseDebugLocalResources UP-TO-DATE
+> Task :expo-keep-awake:generateDebugRFile UP-TO-DATE
+> Task :expo-location:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-location:parseDebugLocalResources UP-TO-DATE
+> Task :expo-location:generateDebugRFile UP-TO-DATE
+> Task :expo-manifests:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-manifests:parseDebugLocalResources UP-TO-DATE
+> Task :expo-manifests:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-modules-core:parseDebugLocalResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugRFile UP-TO-DATE
+> Task :expo-secure-store:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-secure-store:parseDebugLocalResources UP-TO-DATE
+> Task :expo-secure-store:generateDebugRFile UP-TO-DATE
+> Task :expo-speech:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-speech:parseDebugLocalResources UP-TO-DATE
+> Task :expo-speech:generateDebugRFile UP-TO-DATE
+> Task :expo-structured-headers:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-structured-headers:parseDebugLocalResources UP-TO-DATE
+> Task :expo-structured-headers:generateDebugRFile UP-TO-DATE
+> Task :expo-updates:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-updates:parseDebugLocalResources UP-TO-DATE
+> Task :expo-updates:generateDebugRFile UP-TO-DATE
+> Task :expo-updates-interface:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-updates-interface:parseDebugLocalResources UP-TO-DATE
+> Task :expo-updates-interface:generateDebugRFile UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugRFile UP-TO-DATE
+> Task :react-native-webrtc:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-webrtc:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-webrtc:generateDebugRFile UP-TO-DATE
+> Task :react-native-webview:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-webview:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-webview:generateDebugRFile UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :expo:checkKotlinGradlePluginConfigurationErrors
+> Task :expo:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-asset:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-asset:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-modules-core:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:compileDebugKotlin UP-TO-DATE
+> Task :expo-modules-core:javaPreCompileDebug UP-TO-DATE
+> Task :expo-modules-core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-modules-core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-asset:compileDebugKotlin UP-TO-DATE
+> Task :expo-asset:javaPreCompileDebug UP-TO-DATE
+> Task :expo-asset:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-asset:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-av:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-av:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-av:compileDebugKotlin UP-TO-DATE
+> Task :expo-av:javaPreCompileDebug UP-TO-DATE
+> Task :expo-av:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-av:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-constants:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-constants:compileDebugKotlin UP-TO-DATE
+> Task :expo-constants:javaPreCompileDebug UP-TO-DATE
+> Task :expo-constants:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-constants:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-document-picker:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-document-picker:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-document-picker:compileDebugKotlin UP-TO-DATE
+> Task :expo-document-picker:javaPreCompileDebug UP-TO-DATE
+> Task :expo-document-picker:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-document-picker:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-eas-client:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-eas-client:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-eas-client:compileDebugKotlin UP-TO-DATE
+> Task :expo-eas-client:javaPreCompileDebug UP-TO-DATE
+> Task :expo-eas-client:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-eas-client:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-file-system:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-file-system:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-file-system:compileDebugKotlin UP-TO-DATE
+> Task :expo-file-system:javaPreCompileDebug UP-TO-DATE
+> Task :expo-file-system:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-file-system:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-font:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-font:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-font:compileDebugKotlin UP-TO-DATE
+> Task :expo-font:javaPreCompileDebug UP-TO-DATE
+> Task :expo-font:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-font:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-json-utils:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-json-utils:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-json-utils:compileDebugKotlin UP-TO-DATE
+> Task :expo-json-utils:javaPreCompileDebug UP-TO-DATE
+> Task :expo-json-utils:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-json-utils:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-keep-awake:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-keep-awake:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-keep-awake:compileDebugKotlin UP-TO-DATE
+> Task :expo-keep-awake:javaPreCompileDebug UP-TO-DATE
+> Task :expo-keep-awake:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-keep-awake:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-location:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-location:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-location:compileDebugKotlin UP-TO-DATE
+> Task :expo-location:javaPreCompileDebug UP-TO-DATE
+> Task :expo-location:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-location:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-manifests:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-manifests:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-manifests:compileDebugKotlin UP-TO-DATE
+> Task :expo-manifests:javaPreCompileDebug UP-TO-DATE
+> Task :expo-manifests:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-manifests:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-secure-store:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-secure-store:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-secure-store:compileDebugKotlin UP-TO-DATE
+> Task :expo-secure-store:javaPreCompileDebug UP-TO-DATE
+> Task :expo-secure-store:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-secure-store:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-speech:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-speech:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-speech:compileDebugKotlin UP-TO-DATE
+> Task :expo-speech:javaPreCompileDebug UP-TO-DATE
+> Task :expo-speech:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-speech:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-structured-headers:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-structured-headers:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-structured-headers:compileDebugKotlin NO-SOURCE
+> Task :expo-structured-headers:javaPreCompileDebug UP-TO-DATE
+> Task :expo-structured-headers:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-structured-headers:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-updates:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-updates:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-updates-interface:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-updates-interface:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-updates-interface:compileDebugKotlin UP-TO-DATE
+> Task :expo-updates-interface:javaPreCompileDebug UP-TO-DATE
+> Task :expo-updates-interface:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-updates-interface:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-updates:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :expo-updates:kaptDebugKotlin UP-TO-DATE
+> Task :expo-updates:javaPreCompileDebug UP-TO-DATE
+> Task :expo:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-async-storage_async-storage:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-webrtc:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-webrtc:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-webrtc:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-webrtc:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-webview:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-webview:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-webview:compileDebugKotlin UP-TO-DATE
+> Task :react-native-webview:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-webview:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-webview:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:createDebugUpdatesResources UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :expo:mergeDebugShaders UP-TO-DATE
+> Task :expo:compileDebugShaders NO-SOURCE
+> Task :expo:generateDebugAssets UP-TO-DATE
+> Task :expo:packageDebugAssets UP-TO-DATE
+> Task :expo-asset:mergeDebugShaders UP-TO-DATE
+> Task :expo-asset:compileDebugShaders NO-SOURCE
+> Task :expo-asset:generateDebugAssets UP-TO-DATE
+> Task :expo-asset:packageDebugAssets UP-TO-DATE
+> Task :expo-av:mergeDebugShaders UP-TO-DATE
+> Task :expo-av:compileDebugShaders NO-SOURCE
+> Task :expo-av:generateDebugAssets UP-TO-DATE
+> Task :expo-av:packageDebugAssets UP-TO-DATE
+> Task :expo-constants:mergeDebugShaders UP-TO-DATE
+> Task :expo-constants:compileDebugShaders NO-SOURCE
+> Task :expo-constants:generateDebugAssets UP-TO-DATE
+> Task :expo-constants:packageDebugAssets UP-TO-DATE
+> Task :expo-document-picker:mergeDebugShaders UP-TO-DATE
+> Task :expo-document-picker:compileDebugShaders NO-SOURCE
+> Task :expo-document-picker:generateDebugAssets UP-TO-DATE
+> Task :expo-document-picker:packageDebugAssets UP-TO-DATE
+> Task :expo-eas-client:mergeDebugShaders UP-TO-DATE
+> Task :expo-eas-client:compileDebugShaders NO-SOURCE
+> Task :expo-eas-client:generateDebugAssets UP-TO-DATE
+> Task :expo-eas-client:packageDebugAssets UP-TO-DATE
+> Task :expo-file-system:mergeDebugShaders UP-TO-DATE
+> Task :expo-file-system:compileDebugShaders NO-SOURCE
+> Task :expo-file-system:generateDebugAssets UP-TO-DATE
+> Task :expo-file-system:packageDebugAssets UP-TO-DATE
+> Task :expo-font:mergeDebugShaders UP-TO-DATE
+> Task :expo-font:compileDebugShaders NO-SOURCE
+> Task :expo-font:generateDebugAssets UP-TO-DATE
+> Task :expo-font:packageDebugAssets UP-TO-DATE
+> Task :expo-json-utils:mergeDebugShaders UP-TO-DATE
+> Task :expo-json-utils:compileDebugShaders NO-SOURCE
+> Task :expo-json-utils:generateDebugAssets UP-TO-DATE
+> Task :expo-json-utils:packageDebugAssets UP-TO-DATE
+> Task :expo-keep-awake:mergeDebugShaders UP-TO-DATE
+> Task :expo-keep-awake:compileDebugShaders NO-SOURCE
+> Task :expo-keep-awake:generateDebugAssets UP-TO-DATE
+> Task :expo-keep-awake:packageDebugAssets UP-TO-DATE
+> Task :expo-location:mergeDebugShaders UP-TO-DATE
+> Task :expo-location:compileDebugShaders NO-SOURCE
+> Task :expo-location:generateDebugAssets UP-TO-DATE
+> Task :expo-location:packageDebugAssets UP-TO-DATE
+> Task :expo-manifests:mergeDebugShaders UP-TO-DATE
+> Task :expo-manifests:compileDebugShaders NO-SOURCE
+> Task :expo-manifests:generateDebugAssets UP-TO-DATE
+> Task :expo-manifests:packageDebugAssets UP-TO-DATE
+> Task :expo-modules-core:mergeDebugShaders UP-TO-DATE
+> Task :expo-modules-core:compileDebugShaders NO-SOURCE
+> Task :expo-modules-core:generateDebugAssets UP-TO-DATE
+> Task :expo-modules-core:packageDebugAssets UP-TO-DATE
+> Task :expo-secure-store:mergeDebugShaders UP-TO-DATE
+> Task :expo-secure-store:compileDebugShaders NO-SOURCE
+> Task :expo-secure-store:generateDebugAssets UP-TO-DATE
+> Task :expo-secure-store:packageDebugAssets UP-TO-DATE
+> Task :expo-speech:mergeDebugShaders UP-TO-DATE
+> Task :expo-speech:compileDebugShaders NO-SOURCE
+> Task :expo-speech:generateDebugAssets UP-TO-DATE
+> Task :expo-speech:packageDebugAssets UP-TO-DATE
+> Task :expo-structured-headers:mergeDebugShaders UP-TO-DATE
+> Task :expo-structured-headers:compileDebugShaders NO-SOURCE
+> Task :expo-structured-headers:generateDebugAssets UP-TO-DATE
+> Task :expo-structured-headers:packageDebugAssets UP-TO-DATE
+> Task :expo-updates:mergeDebugShaders UP-TO-DATE
+> Task :expo-updates:compileDebugShaders NO-SOURCE
+> Task :expo-updates:generateDebugAssets UP-TO-DATE
+> Task :expo-updates:packageDebugAssets UP-TO-DATE
+> Task :expo-updates-interface:mergeDebugShaders UP-TO-DATE
+> Task :expo-updates-interface:compileDebugShaders NO-SOURCE
+> Task :expo-updates-interface:generateDebugAssets UP-TO-DATE
+> Task :expo-updates-interface:packageDebugAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeDebugShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileDebugShaders NO-SOURCE
+> Task :react-native-async-storage_async-storage:generateDebugAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:packageDebugAssets UP-TO-DATE
+> Task :react-native-webrtc:mergeDebugShaders UP-TO-DATE
+> Task :react-native-webrtc:compileDebugShaders NO-SOURCE
+> Task :react-native-webrtc:generateDebugAssets UP-TO-DATE
+> Task :react-native-webrtc:packageDebugAssets UP-TO-DATE
+> Task :react-native-webview:mergeDebugShaders UP-TO-DATE
+> Task :react-native-webview:compileDebugShaders NO-SOURCE
+> Task :react-native-webview:generateDebugAssets UP-TO-DATE
+> Task :react-native-webview:packageDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-webrtc:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-webview:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-asset:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-av:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-document-picker:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-eas-client:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-file-system:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-font:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-manifests:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-json-utils:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-keep-awake:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-location:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-secure-store:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-speech:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-structured-headers:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-updates-interface:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :expo-asset:processDebugJavaRes UP-TO-DATE
+> Task :expo-av:processDebugJavaRes UP-TO-DATE
+> Task :expo-constants:processDebugJavaRes UP-TO-DATE
+> Task :expo-document-picker:processDebugJavaRes UP-TO-DATE
+> Task :expo-eas-client:processDebugJavaRes UP-TO-DATE
+> Task :expo-file-system:processDebugJavaRes UP-TO-DATE
+> Task :expo-font:processDebugJavaRes UP-TO-DATE
+> Task :expo-json-utils:processDebugJavaRes UP-TO-DATE
+> Task :expo-keep-awake:processDebugJavaRes UP-TO-DATE
+> Task :expo-location:processDebugJavaRes UP-TO-DATE
+> Task :expo-manifests:processDebugJavaRes UP-TO-DATE
+> Task :expo-modules-core:processDebugJavaRes UP-TO-DATE
+> Task :expo-secure-store:processDebugJavaRes UP-TO-DATE
+> Task :expo-speech:processDebugJavaRes UP-TO-DATE
+> Task :expo-structured-headers:processDebugJavaRes NO-SOURCE
+> Task :expo-updates-interface:processDebugJavaRes UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processDebugJavaRes NO-SOURCE
+> Task :react-native-webrtc:processDebugJavaRes NO-SOURCE
+> Task :react-native-webview:processDebugJavaRes UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-webrtc:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-webview:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-asset:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-av:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-document-picker:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-eas-client:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-file-system:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-font:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-manifests:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-json-utils:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-keep-awake:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-location:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-secure-store:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-speech:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-structured-headers:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-updates-interface:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo:mergeDebugNativeLibs NO-SOURCE
+> Task :expo:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-asset:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-asset:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-asset:copyDebugJniLibsProjectOnly UP-TO-DATE
+
+> Task :expo-av:configureCMakeDebug[arm64-v8a] FAILED
+[CXX5304] This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+[CXX5304] This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+
+> Task :expo-updates:compileDebugKotlin
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/DisabledUpdatesController.kt:63:20 This class shouldn't be used in Kotlin. Use kotlin.Any instead.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/DisabledUpdatesController.kt:164:14 This class shouldn't be used in Kotlin. Use kotlin.Any instead.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:5:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:79:39 This class shouldn't be used in Kotlin. Use kotlin.Any instead.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:114:20 This class shouldn't be used in Kotlin. Use kotlin.Any instead.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:232:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:232:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:258:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/EnabledUpdatesController.kt:258:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesConfiguration.kt:189:13 'get(String!): Any?' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesDevLauncherController.kt:4:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesDevLauncherController.kt:183:138 'getRawJson(): JSONObject' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesDevLauncherController.kt:290:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesDevLauncherController.kt:290:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesModule.kt:4:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesModule.kt:151:46 'toString(): String' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesModule.kt:240:7 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesModule.kt:240:17 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesModule.kt:246:7 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesModule.kt:246:17 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/Converters.kt:56:30 Type mismatch: inferred type is ByteArray? but ByteArray was expected
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/Converters.kt:98:21 Parameter 'value' is never used
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/Converters.kt:103:21 Parameter 'hashType' is never used
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/DatabaseHolder.kt:24:20 This class shouldn't be used in Kotlin. Use kotlin.Any instead.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/DatabaseHolder.kt:36:14 This class shouldn't be used in Kotlin. Use kotlin.Any instead.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/DatabaseIntegrityCheck.kt:38:39 Type mismatch: inferred type is String? but String was expected
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/Reaper.kt:50:41 Type mismatch: inferred type is String? but String was expected
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/Reaper.kt:68:41 Type mismatch: inferred type is String? but String was expected
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:107:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:122:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:144:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:162:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:181:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:189:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:197:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/db/UpdatesDatabase.kt:208:28 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/launcher/NoDatabaseLauncher.kt:4:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/launcher/NoDatabaseLauncher.kt:61:7 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/launcher/NoDatabaseLauncher.kt:61:17 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/FileDownloader.kt:210:27 'constructor MultipartStream(InputStream!, ByteArray!)' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/Loader.kt:242:13 Type mismatch: inferred type is String? but String was expected
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/Loader.kt:285:7 'when' is exhaustive so 'else' is redundant here
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/Loader.kt:306:65 Type mismatch: inferred type is String? but String was expected
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/LoaderTask.kt:4:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/LoaderTask.kt:350:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/LoaderTask.kt:350:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/LoaderTask.kt:403:105 'getRawJson(): JSONObject' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/LoaderTask.kt:479:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/LoaderTask.kt:479:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/manifest/EmbeddedUpdate.kt:30:89 'getRawJson(): JSONObject' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/manifest/ExpoUpdatesUpdate.kt:35:92 'getRawJson(): JSONObject' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/CheckForUpdateProcedure.kt:4:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/CheckForUpdateProcedure.kt:33:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/CheckForUpdateProcedure.kt:33:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/CheckForUpdateProcedure.kt:131:108 'getRawJson(): JSONObject' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/CheckForUpdateProcedure.kt:164:108 'getRawJson(): JSONObject' is deprecated. Prefer to use specific field getters
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/FetchUpdateProcedure.kt:4:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/FetchUpdateProcedure.kt:34:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/FetchUpdateProcedure.kt:34:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RelaunchProcedure.kt:5:19 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RelaunchProcedure.kt:11:34 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RelaunchProcedure.kt:91:5 'AsyncTask<Params : Any!, Progress : Any!, Result : Any!>' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RelaunchProcedure.kt:91:15 'execute(Runnable!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RelaunchProcedure.kt:118:9 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RestartReactAppExtensions.kt:6:34 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/RestartReactAppExtensions.kt:15:7 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/StartupProcedure.kt:163:36 'getCurrentState(): UpdatesStateValue' is deprecated. Avoid needing to access current state to know how to transition to next state
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/StartupProcedure.kt:197:34 'getCurrentState(): UpdatesStateValue' is deprecated. Avoid needing to access current state to know how to transition to next state
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/procedures/StateMachineSerialExecutorQueue.kt:43:35 'getCurrentState(): UpdatesStateValue' is deprecated. Avoid needing to access current state to know how to transition to next state
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/main/java/expo/modules/updates/statemachine/UpdatesStateMachine.kt:27:20 This declaration overrides deprecated member but not marked as deprecated itself. Please add @Deprecated annotation or suppress. See https://youtrack.jetbrains.com/issue/KT-47902 for details
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/react-native-74/main/expo/modules/updates/errorrecovery/ErrorRecovery.kt:11:34 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/react-native-74/main/expo/modules/updates/errorrecovery/ErrorRecovery.kt:103:9 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/react-native-74/main/expo/modules/updates/errorrecovery/ErrorRecovery.kt:110:50 Parameter 'devSupportManager' is never used
+w: file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/codeAI/apps/mobile-nadotongryoksa/node_modules/expo-updates/android/src/react-native-74/main/expo/modules/updates/errorrecovery/ErrorRecovery.kt:136:9 'ReactFeatureFlags' is deprecated. Deprecated in Java
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':expo-av:configureCMakeDebug[arm64-v8a]'.
+> [CXX1210] C:\Users\WORK\source\repos\parkcheolhong\codeAI\codeAI\apps\mobile-nadotongryoksa\node_modules\expo-av\android\CMakeLists.txt debug|arm64-v8a : No compatible library found
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.8/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 31s
+428 actionable tasks: 26 executed, 402 up-to-date

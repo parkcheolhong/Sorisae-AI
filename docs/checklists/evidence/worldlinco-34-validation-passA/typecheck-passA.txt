@@ -1,0 +1,5 @@
+mobile-nadotongryoksa@1.0.3 typecheck
+command: npm run typecheck
+result: PASS
+compiler: tsc --noEmit
+notes: i18n normalization patch applied (song/voice status texts moved to featureUiCatalog keys)

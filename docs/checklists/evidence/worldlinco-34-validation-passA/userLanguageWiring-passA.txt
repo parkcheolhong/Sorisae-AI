@@ -1,0 +1,4 @@
+mobile-nadotongryoksa@1.0.3 test
+command: npm test -- --runInBand src/__tests__/userLanguageWiring.test.ts
+result: PASS
+summary: 1 suite passed, 8 tests passed, 0 failed

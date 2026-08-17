@@ -1,0 +1,117 @@
+
+=== 03_ui_t2.xml ===
+-- ids --
+android:id/content
+worldlinco-login-close
+worldlinco-login-modal
+worldlinco-auth-email-input
+worldlinco-auth-password-input
+worldlinco-auth-password-visibility
+worldlinco-auth-login-submit-button
+worldlinco-social-login-google
+worldlinco-social-login-naver
+worldlinco-social-login-kakao
+worldlinco-auth-forgot-password-modal
+worldlinco-auth-passkey-login-modal
+worldlinco-auth-passkey-register-modal
+worldlinco-modal-auth-mode-toggle
+android:id/navigationBarBackground
+-- text --
+✕
+WorldLinco
+언어의 벽을 넘어, 세상을 연결합니다
+이메일
+✉️
+이메일을 입력하세요
+비밀번호
+&#128274;
+비밀번호를 입력하세요
+&#128065;
+로그인
+소셜 로그인
+&#128998;
+Google
+구글 계정으로 시작
+&#129001;
+Naver
+네이버 계정으로 시작
+&#129000;
+Kakao
+카카오 계정으로 시작
+비밀번호 찾기
+패스키 로그인
+패스키 등록
+계정이 없으신가요?
+회원가입
+-- desc --
+worldlinco-login-close
+worldlinco-login-modal
+worldlinco-auth-email-input
+worldlinco-auth-password-input
+worldlinco-auth-password-visibility
+worldlinco-auth-login-submit-button
+worldlinco-social-login-google
+worldlinco-social-login-naver
+worldlinco-social-login-kakao
+비밀번호 찾기
+패스키 로그인
+패스키 등록
+worldlinco-modal-auth-mode-toggle
+=== 04_ui_t10.xml ===
+-- ids --
+android:id/content
+worldlinco-login-close
+worldlinco-login-modal
+worldlinco-auth-email-input
+worldlinco-auth-password-input
+worldlinco-auth-password-visibility
+worldlinco-auth-login-submit-button
+worldlinco-social-login-google
+worldlinco-social-login-naver
+worldlinco-social-login-kakao
+worldlinco-auth-forgot-password-modal
+worldlinco-auth-passkey-login-modal
+worldlinco-auth-passkey-register-modal
+worldlinco-modal-auth-mode-toggle
+android:id/navigationBarBackground
+-- text --
+✕
+WorldLinco
+언어의 벽을 넘어, 세상을 연결합니다
+이메일
+✉️
+이메일을 입력하세요
+비밀번호
+&#128274;
+비밀번호를 입력하세요
+&#128065;
+로그인
+소셜 로그인
+&#128998;
+Google
+구글 계정으로 시작
+&#129001;
+Naver
+네이버 계정으로 시작
+&#129000;
+Kakao
+카카오 계정으로 시작
+비밀번호 찾기
+패스키 로그인
+패스키 등록
+계정이 없으신가요?
+회원가입
+-- desc --
+worldlinco-login-close
+worldlinco-login-modal
+worldlinco-auth-email-input
+worldlinco-auth-password-input
+worldlinco-auth-password-visibility
+worldlinco-auth-login-submit-button
+worldlinco-social-login-google
+worldlinco-social-login-naver
+worldlinco-social-login-kakao
+비밀번호 찾기
+패스키 로그인
+패스키 등록
+worldlinco-modal-auth-mode-toggle

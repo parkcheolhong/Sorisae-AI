@@ -1,0 +1,15 @@
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\bin\Debug\net10.0\ProfilerHost.exe
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\bin\Debug\net10.0\ProfilerHost.deps.json
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\bin\Debug\net10.0\ProfilerHost.runtimeconfig.json
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\bin\Debug\net10.0\ProfilerHost.dll
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\bin\Debug\net10.0\ProfilerHost.pdb
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.AssemblyInfoInputs.cache
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.AssemblyInfo.cs
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.csproj.CoreCompileInputs.cache
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.dll
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\refint\ProfilerHost.dll
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.pdb
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.genruntimeconfig.cache
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ref\ProfilerHost.dll
+C:\Users\WORK\source\repos\parkcheolhong\codeAI\tools\ProfilerHost\obj\Debug\net10.0\ProfilerHost.sourcelink.json

@@ -1,0 +1,212 @@
+{
+  "probe": "sorisae-friend-chat",
+  "timestamp_utc": "2026-08-16T01:31:20.689220+00:00",
+  "base_url": "https://metanova1004.com",
+  "min_apk_build": 323,
+  "probe_speech_text": "춘천 맛집 추천해줘",
+  "fixture_m4a": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\fixtures\\sorisae_probe_ko_speech.m4a",
+  "passed": false,
+  "checks": [
+    {
+      "name": "health",
+      "ok": true,
+      "detail": "status=200",
+      "body": {
+        "status": "ok",
+        "version": "2.2.0",
+        "modules": {
+          "api": "ok",
+          "memory": "ok",
+          "cpu": "ok",
+          "gpu": "ok",
+          "redis_queue": "ok",
+          "ad_worker": "ok"
+        },
+        "runtime": {
+          "bootstrap": {
+            "scheduled_at": "2026-08-15T18:52:00.150781+00:00",
+            "started_at": "2026-08-15T18:52:00.150982+00:00",
+            "completed_at": "2026-08-15T18:52:00.528265+00:00",
+            "duration_ms": 377.3,
+            "stages": {
+              "startup": {
+                "stage_id": "startup",
+                "scheduled_at": "2026-08-15T18:52:00.150755+00:00",
+                "started_at": "2026-08-15T18:52:00.150768+00:00",
+                "completed_at": "2026-08-15T18:52:00.151476+00:00",
+                "duration_ms": 0.7,
+                "blocking_dependencies": [],
+                "state": "completed",
+                "notes": [
+                  "startup stage only performs baseline guards and schedules post_startup_bootstrap",
+                  "startup guard completed and post_startup_bootstrap scheduled"
+                ]
+              },
+              "post_startup_bootstrap": {
+                "stage_id": "post_startup_bootstrap",
+                "scheduled_at": "2026-08-15T18:52:00.150785+00:00",
+                "started_at": "2026-08-15T18:52:00.150973+00:00",
+                "completed_at": "2026-08-15T18:52:00.528280+00:00",
+                "duration_ms": 377.3,
+                "blocking_dependencies": [
+                  "startup"
+                ],
+                "state": "completed",
+                "notes": [
+                  "baseline readiness complete -> post_startup_bootstrap scheduled",
+                  "database schema checks and fixed admin bootstrap only",
+                  "heavy DB schema correction stays in post_startup_bootstrap stage",
+                  "fixed admin account bootstrap runs only after schema bootstrap",
+                  "post-startup bootstrap completed; runtime_recovery and capability_warmup dispatched independently"
+                ]
+              },
+              "capability_warmup": {
+                "stage_id": "capability_warmup",
+                "scheduled_at": "2026-08-15T18:52:00.526204+00:00",
+                "started_at": "2026-08-15T18:52:00.526472+00:00",
+                "completed_at": "2026-08-15T18:52:12.843412+00:00",
+                "duration_ms": 12314.9,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "admin capability cache warmup scheduled after post-startup bootstrap",
+                  "capability warmup started; cache fill only, no runtime recovery work allowed",
+                  "admin capability cache warmup completed via capability map prebuild"
+                ]
+              },
+              "runtime_recovery": {
+                "stage_id": "runtime_recovery",
+                "scheduled_at": "2026-08-15T18:52:00.525230+00:00",
+                "started_at": "2026-08-15T18:52:00.525477+00:00",
+                "completed_at": "2026-08-15T18:52:00.540820+00:00",
+                "duration_ms": 15.4,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "marketplace ad queue recovery and worker bootstrap scheduled after post-startup bootstrap",
+                  "runtime recovery started; heavy runtime import allowed only in runtime_recovery stage",
+                  "runtime recovery completed; recovered=0"
+                ]
+              }
+            }
+          }
+        },
+        "diagnostics": {
+          "generated_at": "2026-08-16T01:29:51.599345+00:00",
+          "resources": {
+            "memory": {
+              "available": true,
+              "state": "ok",
+              "note": "메모리 사용량이 정상 범위입니다.",
+              "total_mb": 63108.1,
+              "used_mb": 14342.3,
+              "available_mb": 48765.8,
+              "usage_percent": 22.7
+            },
+            "cpu": {
+              "available": true,
+              "state": "ok",
+              "note": "CPU 부하가 정상 범위입니다.",
+              "cpu_count": 32,
+              "load_1m": 1.82,
+              "load_ratio_percent": 5.7,
+              "usage_percent": 2.9
+            },
+            "gpu": {
+              "available": true,
+              "state": "ok",
+              "note": "VRAM 상주 비중은 높지만 실제 GPU 연산 부하는 매우 낮습니다. 로드된 모델 또는 캐시 상주 상태로 해석합니다.",
+              "devices": [
+                {
+                  "name": "NVIDIA GeForce RTX 5090",
+                  "memory_total_mb": 32607,
+                  "memory_used_mb": 29928,
+                  "utilization_gpu": 2,
+                  "memory_usage_percent": 91.8
+                }
+              ],
+              "device_count": 1,
+              "peak_memory_usage_percent": 91.8,
+              "peak_utilization_percent": 2.0
+            },
+            "redis_queue": {
+              "available": true,
+              "state": "ok",
+              "note": "redis:video_render_queue 연결 정상, queue=video_render_queue, depth=0",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "error": null
+            },
+            "ad_worker": {
+              "available": true,
+              "state": "ok",
+              "note": "worker_id=ad-render-worker-001 heartbeat 정상, last_order_id=-",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "bootstrap_enabled": true,
+              "started": true,
+              "heartbeat_age_sec": 2.8,
+              "last_order_id": null
+            }
+          },
+          "alerts": []
+        }
+      }
+    },
+    {
+      "name": "marketplace_manifest",
+      "ok": true,
+      "detail": "status=200 build=331 min=323",
+      "versionName": "1.0.246"
+    },
+    {
+      "name": "friend_chat_model_route",
+      "ok": true,
+      "detail": "base=http://host.docker.internal:8008/v1 model=Qwen/Qwen2.5-Coder-14B-Instruct-AWQ served=['Qwen/Qwen2.5-Coder-14B-Instruct-AWQ']"
+    },
+    {
+      "name": "friend_chat_text_llm",
+      "ok": true,
+      "detail": "status=200 response_len=225",
+      "response_preview": "춘천 맛집 중에서 추천해드릴게. \"춘천 한옥마을\"에서 시작해볼까? 이곳에는 전통적인 한옥으로 된 식당들이 많아서 한국 전통 음식을 즐길 수 있어. 특히 \"한옥마을 한우\"는 매콤한 양념 한우를 먹을 수 있어요.\n\n주소"
+    },
+    {
+      "name": "m4a_normalize_ssot",
+      "ok": true,
+      "detail": "docker normalized_bytes=84042 transcript_len=10",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "stt_trust": "high"
+    },
+    {
+      "name": "friend_chat_audio_silent_graceful",
+      "ok": false,
+      "detail": "status=200 detail="
+    },
+    {
+      "name": "friend_chat_audio_speech_m4a",
+      "ok": true,
+      "detail": "",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "response_preview": "춘천은 다양한 맛집들이 있어요! 한강공원 근처의 '김밥천국'이 맛집으로 유명해요. 주소는 춘천시 진흥구 한강공원1길 24-10이고, 평균 10,000원 정도에 맛있는 김밥을 즐길 수 있어요. 여기서는 독특한 김밥 메"
+    },
+    {
+      "name": "adb_apk_build",
+      "ok": true,
+      "detail": "device=172.30.1.15:5555 build=331 min=323"
+    },
+    {
+      "name": "adb_sorisae_runtime",
+      "ok": false,
+      "detail": "segment_200=False tight_preupload_loop=False hallucination_422=False",
+      "log_tail": "08-16 10:30:10.645 27345 27394 I ReactNativeJS: Running \"main\"\n08-16 10:30:10.870 27345 27394 I ReactNativeJS: '[UI_PRESS_PROBE]', '{\"event\":\"NETWORK_TRANSPORT_CHANGED\",\"timestamp\":\"2026-08-16T01:30:10.869Z\",\"token_ready\":false,\"user_ready\":false,\"show_login\":false,\"show_voip_tester\":false,\"selected_call_mode\":\"pstn_assist\",\"transport\":\"unknown\",\"cellular_generation\":null,\"label\":\"알 수 없음\",\"is_connected\":false,\"is_internet_reachable\":null,\"carrier\":null,\"ssid\":null,\"is_accurate_voip_test_ready\":false,\"previous_label\":null}'\n08-16 10:30:10.872 27345 27394 I ReactNativeJS: '[WORLDLINGCO_API] base_url', 'https://metanova1004.com'\n08-16 10:30:10.879 27345 27394 I ReactNativeJS: [VoIPToneService] AudioContext not available (React Native environment)\n08-16 10:30:10.883 27345 27394 I ReactNativeJS: '[FACE_CONVERSATION]', '{\"event\":\"silero_probe\",\"supported\":false}'\n08-16 10:30:10.898 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"initial_url\",\"outcome\":\"empty_url\"}'\n08-16 10:30:10.979 27345 27394 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 10:30:11.145 27345 27394 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22 Please use `getApps()` instead.\n08-16 10:30:11.349 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"initial_url\",\"outcome\":\"empty_url\"}'\n08-16 10:30:11.402 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"active_initial_url\",\"outcome\":\"empty_url\"}'\n08-16 10:30:11.785 27345 27394 I ReactNativeJS: '[WORLDLINGCO_TUNING]', '{\"event\":\"remote_loaded\",\"updated_at\":\"2026-08-14T06:06:31Z\",\"version\":6}'\n08-16 10:30:12.086 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_600\",\"outcome\":\"empty_url\"}'\n08-16 10:30:13.048 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_1600\",\"outcome\":\"empty_url\"}'\n08-16 10:30:14.664 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_3200\",\"outcome\":\"empty_url\"}'\n08-16 10:30:16.667 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_5200\",\"outcome\":\"empty_url\"}'\n08-16 10:30:19.006 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"initial_url\",\"outcome\":\"empty_url\"}'\n08-16 10:30:19.803 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_600\",\"outcome\":\"empty_url\"}'\n08-16 10:30:20.754 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_1600\",\"outcome\":\"empty_url\"}'\n08-16 10:30:22.352 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_3200\",\"outcome\":\"empty_url\"}'\n08-16 10:30:24.372 27345 27394 I ReactNativeJS: '[DEEP_LINK_TRACE]', '{\"source\":\"bootstrap_initial_url_5200\",\"outcome\":\"empty_url\"}'"
+    }
+  ]
+}

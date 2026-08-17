@@ -1,0 +1,43 @@
+{
+  "verified_at": "2026-05-01T22:31:13.157716",
+  "base_url": "http://127.0.0.1:8000",
+  "timeout_policy": {
+    "request_timeout_sec": 90,
+    "llm_case_retries": 1,
+    "elapsed_warn_ms": 70000
+  },
+  "summary": {
+    "total": 4,
+    "pass": 4,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "TC-01",
+      "status": "PASS",
+      "elapsed_ms": 10736,
+      "grounding": "관리자 연구형 자유 대화 응답",
+      "content": "무엇을 도와드릴까요? 구체적인 내용이나 질문이 있으시면 말씀해 주세요."
+    },
+    {
+      "id": "TC-02",
+      "status": "PASS",
+      "elapsed_ms": 19957,
+      "grounding": "관리자 연구형 자유 대화 응답",
+      "content": "저는 Qwen이라는 이름의 관리자 멀티 오케스트레이터입니다. 무엇을 도와드릴까요?"
+    },
+    {
+      "id": "TC-03",
+      "status": "PASS",
+      "elapsed_warning": true,
+      "elapsed_ms": 71543,
+      "grounding": "관리자 연구형 자유 대화 응답",
+      "content": "요청 이해했습니다. (general 단계)\n핵심은 '지금 오케스트레이터 자율대화 기능이 정상적으로 작동하고 있는지 알려줘' 입니다.\n원하면 바로 실행형으로 좁혀서 진행할게요. 수정 파일, 원하는 결과, 유지 조건만 알려주세요.\n지금 기준 제안 순서는 다음과 같습니다.\n- 지금 오케스트레이터 자율대화 기능이 정상적으로 작동하고 있는지 알려줘"
+    },
+    {
+      "id": "TC-04",
+      "status": "OK",
+      "content": "안녕하세요. 네, 자유 질문·잡담·구현 지시 모두 가능합니다. 편하게 이어서 말씀해 주세요."
+    }
+  ]
+}

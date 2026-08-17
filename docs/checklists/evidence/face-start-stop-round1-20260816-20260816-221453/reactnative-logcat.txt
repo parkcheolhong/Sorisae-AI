@@ -1,0 +1,7 @@
+--------- beginning of main
+08-16 22:14:53.091 I/ReactNativeJS(13564): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_background","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"has_pending_call":false,"has_active_call":false}'
+08-16 22:14:53.144 I/ReactNativeJS(13564): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_background","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"status":200,"ok":true}'
+08-16 22:14:53.162 I/ReactNativeJS(13564): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 22:14:53.166 I/ReactNativeJS(13564): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_background","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"has_pending_call":false,"has_active_call":false}'
+08-16 22:14:53.177 I/ReactNativeJS(13564): '[MISSED_CALL]', '{"event":"fetch","count":0}'
+08-16 22:14:53.206 I/ReactNativeJS(13564): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_background","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"status":200,"ok":true}'

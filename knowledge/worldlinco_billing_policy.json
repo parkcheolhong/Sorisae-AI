@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "updated_at": "2026-07-01T00:00:00Z",
+  "updated_by": "system",
+  "access_mode": "free",
+  "billing_collection_paused": false,
+  "promo_label": "베타 무료 기간",
+  "promo_starts_at": null,
+  "promo_ends_at": null,
+  "auto_switch_to_paid_on_promo_end": false,
+  "show_pricing_ui": false,
+  "note": "베타 테스터 무료 이용 중. 유료 전환 시 access_mode를 paid로 변경하세요."
+}

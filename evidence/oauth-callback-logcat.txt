@@ -1,0 +1,479 @@
+--------- beginning of main
+08-17 23:10:37.427 I/adbd    ( 7994): adbd service requested 'shell,v2,TERM=xterm-256color,raw:am start -W -a android.intent.action.VIEW -d worldlingo://auth/callback?provider=google&access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6IlpJX0NkZ18wN3JiaU9ORW1ncGVHWTFtYm83ODZvUUkzIn0.fo2ZDGVtHAywN-pWPdAJsmnmivNky9qUvyJft0lFoNw&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe'
+08-17 23:10:37.486 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-17 23:10:37.487 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+08-17 23:10:37.488 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-17 23:10:37.489 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+--------- beginning of system
+08-17 23:10:37.490 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=14715) has no WPC
+08-17 23:10:37.492 I/libPowerHal( 1177): [perfLockAcq] idx:0 hdl:42883 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42883
+08-17 23:10:37.493 I/mtkpower_client( 1170): ret_hdl:42883
+08-17 23:10:37.494 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.495 I/mtkpower_client( 1170): ret_hdl:42884
+08-17 23:10:37.495 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.496 D/WindowManager( 1673): Transition is created, t=TransitionRecord{3958e3 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-17 23:10:37.497 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-17 23:10:37.497 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:42884 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42884
+08-17 23:10:37.497 D/WindowManager( 1673): SyncGroup is created, id=2310, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-17 23:10:37.498 I/mtkpower_client( 1170): ret_hdl:42885
+08-17 23:10:37.498 W/WindowManager( 1673): setSyncMethod, id=2310, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-17 23:10:37.498 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.498 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:42885 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42885
+08-17 23:10:37.499 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-17 23:10:37.499 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{3958e3 id=2310 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-17 23:10:37.500 V/WindowManager( 1673): Collecting in transition 2310: ActivityRecord{41232e0 u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-17 23:10:37.500 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{41232e0 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-17 23:10:37.501 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{37924d #11174 type=standard A=10518:com.parkcheolhong.worldlinco} activity=ActivityRecord{41232e0 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-17 23:10:37.501 I/mtkpower_client( 1170): ret_hdl:42886
+08-17 23:10:37.501 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.501 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:42886 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42886
+08-17 23:10:37.501 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-17 23:10:37.501 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-17 23:10:37.501 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_START/1673@17, type = -999
+08-17 23:10:37.502 D/ActivityManagerPerformance( 1673): AMP_acquire() ACT_START
+08-17 23:10:37.502 I/mtkpower_client( 1170): ret_hdl:42887
+08-17 23:10:37.502 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1428912  [1673 / 17]    HINT : AMS_ACT_START    list : 
+08-17 23:10:37.502 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:42887 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42887
+08-17 23:10:37.502 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:37.502 I/mtkpower_client( 1170): perf_lock_rel, hdl:42885, tid:1201
+08-17 23:10:37.503 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.503 I/libPowerHal( 1177): [perfLockRel] hdl:42885, idx:2
+08-17 23:10:37.504 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{3958e3 id=2310 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-17 23:10:37.505 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-17 23:10:37.505 I/Pageboost( 1673): stop alp
+08-17 23:10:37.506 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@afe4c7 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11174 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=484705923 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@b833af4} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{f8ea21d com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10518:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-17 23:10:37.506 W/unknown:BridgelessReact(14547): ReactHost{0}.onHostPause(activity)
+08-17 23:10:37.507 W/unknown:BridgelessReact(14547): ReactHost{0}.ReactContext.onHostPause()
+08-17 23:10:37.507 V/WindowManager( 1673): Starting Transition 2310, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-17 23:10:37.507 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-17 23:10:37.508 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-17 23:10:37.509 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-17 23:10:37.509 E/pageboostd( 3280): Received HALT command code 2
+08-17 23:10:37.509 I/mtkpower_client( 1170): ret_hdl:42888
+08-17 23:10:37.510 I/mtkpower_client( 1170): perf_lock_rel, hdl:42884, tid:1201
+08-17 23:10:37.510 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.510 D/WorldlincoDeepLink(14547): MainActivity.onNewIntent action=android.intent.action.VIEW data=worldlingo://auth/callback?provider=google flags=268435456 extras=null
+08-17 23:10:37.511 I/mtkpower_client( 1170): ret_hdl:42889
+08-17 23:10:37.511 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.512 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:42888 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42888
+08-17 23:10:37.512 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:37.512 W/unknown:BridgelessReact(14547): ReactHost{0}.onHostResume(activity)
+08-17 23:10:37.512 W/unknown:BridgelessReact(14547): ReactHost{0}.ReactContext.onHostResume()
+08-17 23:10:37.512 V/WindowManager( 1673): SyncGroup 2310: Finished!
+08-17 23:10:37.513 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{3958e3 id=2310 type=OPEN flags=0x0}
+08-17 23:10:37.513 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{41232e0 u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-17 23:10:37.513 V/WindowManager( 1673):   Final targets: []
+08-17 23:10:37.513 V/WindowManager( 1673): Calling onTransitionReady: {id=2310 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-17 23:10:37.514 V/WindowManager( 1673): Sent Transition #2310 createdAt=08-17 23:10:37.495 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11174 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=484705923 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{4aa7fc8 Task{37924d #11174 type=standard A=10518:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{c378861 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10518:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-17 23:10:37.515 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-17 23:10:37.515 V/WindowManager( 1673):     info={id=2310 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-17 23:10:37.516 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@afe4c7: {id=2310 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-17 23:10:37.516 V/WindowManagerShell( 2424): No transition roots in (#2310)android.os.BinderProxy@afe4c7@0 so abort
+08-17 23:10:37.516 I/BpBinder( 1209): onLastStrongRef automatically unlinking death recipients: 
+08-17 23:10:37.517 I/libPowerHal( 1177): [perfLockRel] hdl:42884, idx:1
+08-17 23:10:37.517 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<2310>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-17 23:10:37.517 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-17 23:10:37.517 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#2310)android.os.BinderProxy@afe4c7@0
+08-17 23:10:37.517 I/BLASTBufferQueue_Java(14547): update, w= 800 h= 1340 mName = ViewRootImpl@d4ebc7[MainActivity] mNativeObject= 0xb4000077a3ecaf00 sc.mNativeObject= 0xb4000077a3dcb400 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3017 android.view.ViewRootImpl.relayoutWindow:10131 android.view.ViewRootImpl.performTraversals:4110 android.view.ViewRootImpl.doTraversal:3288 android.view.ViewRootImpl$TraversalRunnable.run:11344 android.view.Choreographer$CallbackRecord.run:1689 
+08-17 23:10:37.517 V/WindowManager( 1673): Relayout Window{57a18ca u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=800x1340 ty=1 d0
+08-17 23:10:37.517 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-17 23:10:37.517 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:42889 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42889
+08-17 23:10:37.517 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<2310>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-17 23:10:37.518 I/ViewRootImpl@d4ebc7[MainActivity](14547): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=true req=(800,1340)0 dur=0 res=0x0 s={true 0xb400007780e6b800} ch=false seqId=0
+08-17 23:10:37.518 I/mtkpower_client( 1170): ret_hdl:42890
+08-17 23:10:37.518 I/mtkpower_client( 1170): perf_lock_rel, hdl:42886, tid:1201
+08-17 23:10:37.519 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.519 I/ViewRootImpl@d4ebc7[MainActivity](14547): registerCallbackForPendingTransactions
+08-17 23:10:37.520 I/libPowerHal( 1177): [perfLockAcq] idx:6 hdl:42890 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42890
+08-17 23:10:37.520 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 1
+08-17 23:10:37.521 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-17 23:10:37.521 I/ViewRootImpl@d4ebc7[MainActivity](14547): mWNT: t=0xb40000762b1e1400 mBlastBufferQueue=0xb4000077a3ecaf00 fn= 7 mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$6.onFrameDraw:5635 android.view.ViewRootImpl$2.onFrameDraw:2146 android.view.ThreadedRenderer$1.onFrameDraw:792 
+08-17 23:10:37.521 I/libPowerHal( 1177): [perfLockRel] hdl:42886, idx:3
+08-17 23:10:37.521 V/WindowManager( 1673): Relayout hash=57a18ca, pid=0, syncId=-1: mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030303
+08-17 23:10:37.521 V/WindowManager( 1673):   fl=81810100
+08-17 23:10:37.521 V/WindowManager( 1673):   pfl=16008040
+08-17 23:10:37.521 V/WindowManager( 1673):   vsysui=1100
+08-17 23:10:37.521 V/WindowManager( 1673):   apr=LIGHT_STATUS_BARS
+08-17 23:10:37.521 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:37.521 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:37.522 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-17 23:10:37.522 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-17 23:10:37.523 I/mtkpower_client( 1170): ret_hdl:42891
+08-17 23:10:37.523 I/mtkpower_client( 1170): perf_lock_rel, hdl:42887, tid:1201
+08-17 23:10:37.523 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:37.524 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:42891 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42891
+08-17 23:10:37.524 V/WindowManager( 1673): Finish Transition: TransitionRecord{3958e3 id=2310 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-17 23:10:37.525 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-17 23:10:37.525 V/WindowManager( 1673): Finish Transition #2310: created at 08-17 23:10:37.495 collect-started=2.653ms request-sent=9.215ms started=11.899ms ready=11.843ms sent=17.687ms finished=29.125ms
+08-17 23:10:37.525 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-17 23:10:37.526 I/libPowerHal( 1177): [perfLockRel] hdl:42887, idx:4
+08-17 23:10:37.526 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-17 23:10:37.527 V/WindowManagerShell( 2424): Track 0 became idle
+08-17 23:10:37.527 V/WindowManagerShell( 2424): All active transition animations finished
+08-17 23:10:37.528 I/mtkpower_client( 1170): ret_hdl:42892
+08-17 23:10:37.531 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:42892 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42892
+08-17 23:10:37.531 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:37.533 I/BufferQueueProducer( 1209): [com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity$_14547#32677](this:0xb400007bc4cce790,id:-1,api:0,p:-1,c:1209) queueBuffer: fps=0.72 dur=8322.00 max=7325.45 min=16.11
+08-17 23:10:37.535 I/hwcomposer( 1161): [HWCDisplay] [Display_0 (type:1)] fps:1.430104,dur:7691.75,max:7289.92,min:13.98  
+08-17 23:10:37.543 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-17 23:10:37.554 I/ReactNativeJS(14547): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 23:10:38.175 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 160782, isSameBssidAndFreq true
+08-17 23:10:38.176 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (40) / 390 / -38.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-17 23:10:38.303 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-72, periodicAdvInt=0x0
+08-17 23:10:38.504 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:38.551 I/adbd    ( 7994): adbd service requested 'shell,v2,TERM=xterm-256color,raw:am start -W -a android.intent.action.VIEW -d worldlingo://auth/callback?provider=google&access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6IlpJX0NkZ18wN3JiaU9ORW1ncGVHWTFtYm83ODZvUUkzIn0.fo2ZDGVtHAywN-pWPdAJsmnmivNky9qUvyJft0lFoNw&email=119cash%40naver.com&user_id=6&username=119cash%40naver.com&display_name=Passkey%20Device%20Probe'
+08-17 23:10:38.580 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:38.599 I/SemDvfsHyPerManager( 1673): acquire hyper - APP_LAUNCH/1673@13, type = -999
+08-17 23:10:38.599 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1422154  [1673 / 13]    HINT : APP_LAUNCH    list : 
+08-17 23:10:38.600 I/ChimeraSystemEventListener( 1673): Not an effective intent: Intent { act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 }
+08-17 23:10:38.601 W/ActivityTaskManager( 1673): callingPackage for (uid=2000, pid=14737) has no WPC
+08-17 23:10:38.602 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265464455; UID 10518; state: DISABLED
+08-17 23:10:38.602 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265452344; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 266124927; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265451093; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 265456536; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 255940284; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 236283604; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 263959004; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 264304459; UID 10518; state: DISABLED
+08-17 23:10:38.603 D/CompatibilityChangeReporter( 1673): Compat change id reported: 264301586; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 254631730; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 273509367; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 263259275; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 174042980; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 174042936; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 181136395; UID 10518; state: DISABLED
+08-17 23:10:38.604 D/CompatibilityChangeReporter( 1673): Compat change id reported: 194480991; UID 10518; state: ENABLED
+08-17 23:10:38.605 D/WindowManager( 1673): Transition is created, t=TransitionRecord{5a59db1 id=-1 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1765 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-17 23:10:38.605 D/WindowManager( 1673): SyncGroup is created, id=2311, name=Transition, caller=com.android.server.wm.BLASTSyncEngine$SyncGroup.<init>:0 com.android.server.wm.BLASTSyncEngine.prepareSyncSet:513 com.android.server.wm.BLASTSyncEngine.startSyncSet:518 com.android.server.wm.Transition.startCollecting:710 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 
+08-17 23:10:38.605 W/WindowManager( 1673): setSyncMethod, id=2311, method=0, caller=com.android.server.wm.Transition.startCollecting:712 com.android.server.wm.TransitionController.moveToCollecting:360 com.android.server.wm.TransitionController.createAndStartCollecting:1766 
+08-17 23:10:38.606 V/WindowManager( 1673): Start collecting in Transition: TransitionRecord{5a59db1 id=2311 type=OPEN flags=0x0}, caller=com.android.server.wm.TransitionController.createAndStartCollecting:1766 com.android.server.wm.ActivityStarter.startActivityUnchecked:2360 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-17 23:10:38.606 V/WindowManager( 1673): Collecting in transition 2311: ActivityRecord{5764296 u0 com.parkcheolhong.worldlinco/.MainActivity, caller=com.android.server.wm.Transition.collect:759 com.android.server.wm.TransitionController.collect:935 com.android.server.wm.ActivityStarter.startActivityUnchecked:2376 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 
+08-17 23:10:38.606 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=null activity=ActivityRecord{5764296 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840
+08-17 23:10:38.606 D/ActivityTaskManager( 1673): TaskLaunchParamsModifier:task=Task{37924d #11174 type=standard A=10518:com.parkcheolhong.worldlinco} activity=ActivityRecord{5764296 u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@106241840 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@106241840 activity-requested-portrait freeform-size-mismatch=Rect(199, 366 - 601, 942)
+08-17 23:10:38.608 V/WindowManager( 1673): Requesting StartTransition: TransitionRecord{5a59db1 id=2311 type=OPEN flags=0x0}, caller=com.android.server.wm.ActivityStarter.handleStartResult:2591 com.android.server.wm.ActivityStarter.startActivityUnchecked:2384 com.android.server.wm.ActivityStarter.executeRequest:1953 com.android.server.wm.ActivityStarter.execute:1093 com.android.server.wm.ActivityTaskManagerService.startActivityAndWait:2254 
+08-17 23:10:38.609 W/unknown:BridgelessReact(14547): ReactHost{0}.onHostPause(activity)
+08-17 23:10:38.609 W/unknown:BridgelessReact(14547): ReactHost{0}.ReactContext.onHostPause()
+08-17 23:10:38.609 I/ActivityTaskManager( 1673): START u0 {act=android.intent.action.VIEW dat=worldlingo://auth/... flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+08-17 23:10:38.609 I/Pageboost( 1673): stop alp
+08-17 23:10:38.610 V/WindowManagerShell( 2424): Transition requested: android.os.BinderProxy@48e0c92 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11174 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=484705923 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@33c0663} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{e131260 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10518:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-17 23:10:38.610 E/pageboostd( 3280): Received HALT command code 2
+08-17 23:10:38.611 V/WindowManager( 1673): Starting Transition 2311, caller=com.android.server.wm.WindowOrganizerController.startTransition:384 com.android.server.wm.WindowOrganizerController.startTransition:315 android.window.IWindowOrganizerController$Stub.onTransact:257 
+08-17 23:10:38.611 V/Transition( 1673):  allReady query: used=true, override=false, defer=0, states=Display{#0 state=ON size=800x1340 ROTATION_0}:true
+08-17 23:10:38.611 D/WorldlincoDeepLink(14547): MainActivity.onNewIntent action=android.intent.action.VIEW data=worldlingo://auth/callback?provider=google flags=268435456 extras=null
+08-17 23:10:38.612 D/WindowManagerShell( 2424): onActivityRestartAttempt: ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}
+08-17 23:10:38.612 W/unknown:BridgelessReact(14547): ReactHost{0}.onHostResume(activity)
+08-17 23:10:38.612 W/unknown:BridgelessReact(14547): ReactHost{0}.ReactContext.onHostResume()
+08-17 23:10:38.614 V/WindowManager( 1673): SyncGroup 2311: Finished!
+08-17 23:10:38.614 D/ChangeTransitionController( 1673): onTransactionReady: TransitionRecord{5a59db1 id=2311 type=OPEN flags=0x0}
+08-17 23:10:38.615 V/WindowManager( 1673): Start calculating TransitionInfo based on participants: {ActivityRecord{5764296 u0 com.parkcheolhong.worldlinco/.MainActivity t-1}}
+08-17 23:10:38.615 V/WindowManager( 1673):   Final targets: []
+08-17 23:10:38.615 I/BpBinder( 1209): onLastStrongRef automatically unlinking death recipients: 
+08-17 23:10:38.615 V/WindowManager( 1673): Calling onTransitionReady: {id=2311 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-17 23:10:38.616 V/WindowManagerShell( 2424): onTransitionReady android.os.BinderProxy@48e0c92: {id=2311 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-17 23:10:38.616 V/WindowManagerShell( 2424): No transition roots in (#2311)android.os.BinderProxy@48e0c92@0 so abort
+08-17 23:10:38.616 I/SurfaceControl( 2424): apply is called, name=StartTransaction_SyncId<2311>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.processReadyQueue:188 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda0.run:13 
+08-17 23:10:38.617 V/WindowManager( 1673): Sent Transition #2311 createdAt=08-17 23:10:38.605 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=11174 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.parkcheolhong.worldlinco/.MainActivity } baseActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} topActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} origActivity=null realActivity=ComponentInfo{com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity} numActivities=1 lastActiveTime=484705923 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{4aa7fc8 Task{37924d #11174 type=standard A=10518:com.parkcheolhong.worldlinco}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=null topActivityInfo=ActivityInfo{c378861 com.parkcheolhong.worldlinco.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden originallySupportedMultiWindow=true hasWallpaper=false topActivityInFixedAspectRatio=false rootAffinity=10518:com.parkcheolhong.worldlinco topActivityInDisplayCompat=false topActivityInBoundsCompat=false topActivityBounds=null singleTapFromLetterbox=false isTopTaskInStage=false topActivityUiMode=33 CoverLauncherWidgetTask=false CoverScreenTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false hasPopOver=false}, remoteTransition = null, displayChange = null }
+08-17 23:10:38.618 V/WindowManager( 1673):     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+08-17 23:10:38.618 V/WindowManager( 1673):     info={id=2311 t=OPEN f=0x0 trk=0 r=[] c=[]}
+08-17 23:10:38.618 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (0 -> 1)
+08-17 23:10:38.620 V/WindowManagerShell( 2424): Transition animation finished (aborted=true), notifying core (#2311)android.os.BinderProxy@48e0c92@0
+08-17 23:10:38.620 I/SurfaceControl( 2424): apply is called, name=FinishTransaction_SyncId<2311>, caller=android.view.SurfaceControl$Transaction.apply:2921 com.android.wm.shell.transition.Transitions.onFinish:302 com.android.wm.shell.transition.Transitions.processReadyQueue:191 com.android.wm.shell.transition.Transitions.onAbort:72 com.android.wm.shell.transition.Transitions.dispatchReady:213 com.android.wm.shell.transition.Transitions.onTransitionReady:119 
+08-17 23:10:38.621 V/WindowManager( 1673): Finish Transition: TransitionRecord{5a59db1 id=2311 type=OPEN flags=0x0}, caller=com.android.server.wm.WindowOrganizerController.finishTransition:456 android.window.IWindowOrganizerController$Stub.onTransact:286 com.android.server.wm.WindowOrganizerController.onTransact:219 
+08-17 23:10:38.622 V/WindowManager( 1673): Finish Transition #2311: created at 08-17 23:10:38.605 collect-started=0.561ms request-sent=3.655ms started=6.505ms ready=6.432ms sent=10.313ms finished=16.286ms
+08-17 23:10:38.622 V/WindowManagerShell( 2424): Track 0 became idle
+08-17 23:10:38.622 V/WindowManagerShell( 2424): All active transition animations finished
+08-17 23:10:38.629 W/ProcessStats( 1673): Tracking association SourceState{153b389 com.google.android.gms.persistent/10184 BTop #333199} whose proc state 2 is better than process ProcessState{5b1308a com.google.android.adservices.api/10226 pkg=com.google.android.adservices.api} proc state 4 (14 skipped)
+08-17 23:10:38.634 I/CameraService( 1320): onUidStateChanged: uid=10048, procState is changed. (1 -> 0)
+08-17 23:10:38.644 I/ReactNativeJS(14547): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-17 23:10:39.135 D/io_stats(  565): !@ 179,0 r 6320089 155271618 w 6175439 51773148 d 540126 62840596 f 0 0 iot 5010052 0 th 0 0 0 pt 0 inp 0 0 484716.252
+08-17 23:10:39.265 V/WindowManager( 1673): Relayout Window{5c24bf7 u0 com.sec.android.app.camera/com.sec.android.app.camera.Camera}: viewVisibility=8 req=800x1340 ty=1 d0
+08-17 23:10:39.270 V/WindowManager( 1673): Relayout hash=5c24bf7, pid=20027, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan} layoutInDisplayCutoutMode=shortEdges ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x10302fc rotAnim=CROSSFADE
+08-17 23:10:39.270 V/WindowManager( 1673):   fl=81810500
+08-17 23:10:39.270 V/WindowManager( 1673):   pfl=12008040
+08-17 23:10:39.270 V/WindowManager( 1673):   sysui=300
+08-17 23:10:39.270 V/WindowManager( 1673):   vsysui=405
+08-17 23:10:39.270 V/WindowManager( 1673):   apr=LOW_PROFILE_BARS
+08-17 23:10:39.270 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:39.270 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:39.271 I/ViewRootImpl@560183[Camera](20027): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=false req=(800,1340)8 dur=6 res=0x400 s={false 0x0} ch=false seqId=0
+08-17 23:10:39.271 I/SurfaceView@db9bebb(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:39.272 I/SurfaceView@5f7e7c5(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:39.503 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_RESUME_TAIL/1673@19, type = -999
+08-17 23:10:39.503 I/SemDvfsHyPerManager( 1673): acquire hyper - AMS_ACT_LAZY/1673@20, type = -999
+08-17 23:10:39.503 D/ActivityManagerPerformance( 1673): AMP_acquire() TAIL
+08-17 23:10:39.503 D/ActivityManagerPerformance( 1673): AMP_release() ACT_START
+08-17 23:10:39.503 I/HYPER-HAL( 1170): [RequestManager.cpp]acquire(): Acquired ID : 1432297  [1673 / 19]    HINT : AMS_RESUME_TAIL    list : 
+08-17 23:10:39.504 I/mtkpower_client( 1170): perf_lock_rel, hdl:42888, tid:1201
+08-17 23:10:39.504 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.505 I/libPowerHal( 1177): [perfLockRel] hdl:42888, idx:5
+08-17 23:10:39.505 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-17 23:10:39.505 I/mtkpower_client( 1170): ret_hdl:42893
+08-17 23:10:39.506 I/mtkpower_client( 1170): perf_lock_rel, hdl:42889, tid:1201
+08-17 23:10:39.506 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:42893 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42893
+08-17 23:10:39.506 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:39.506 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.506 I/libPowerHal( 1177): [perfLockRel] hdl:42889, idx:2
+08-17 23:10:39.507 I/mtkpower_client( 1170): ret_hdl:42894
+08-17 23:10:39.507 I/mtkpower_client( 1170): perf_lock_rel, hdl:42891, tid:1201
+08-17 23:10:39.507 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-17 23:10:39.507 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:42894 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42894
+08-17 23:10:39.507 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.508 I/mtkpower_client( 1170): ret_hdl:42895
+08-17 23:10:39.508 I/mtkpower_client( 1170): perf_lock_rel, hdl:42892, tid:1201
+08-17 23:10:39.508 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.508 I/libPowerHal( 1177): [perfLockRel] hdl:42891, idx:1
+08-17 23:10:39.508 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-17 23:10:39.509 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-17 23:10:39.509 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:42895 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42895
+08-17 23:10:39.509 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-17 23:10:39.509 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-17 23:10:39.509 I/libPowerHal( 1177): [perfLockRel] hdl:42892, idx:3
+08-17 23:10:39.509 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-17 23:10:39.510 I/mtkpower_client( 1170): ret_hdl:42896
+08-17 23:10:39.510 I/libPowerHal( 1177): [perfLockAcq] idx:7 hdl:42896 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42896
+08-17 23:10:39.510 I/mtkpower_client( 1170): perf_lock_rel, hdl:42893, tid:1201
+08-17 23:10:39.510 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:39.510 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.510 I/libPowerHal( 1177): [perfLockRel] hdl:42893, idx:4
+08-17 23:10:39.511 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-17 23:10:39.511 I/mtkpower_client( 1170): ret_hdl:42897
+08-17 23:10:39.511 I/mtkpower_client( 1170): perf_lock_rel, hdl:42894, tid:1201
+08-17 23:10:39.511 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:42897 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42897
+08-17 23:10:39.512 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:39.512 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.512 I/libPowerHal( 1177): [perfLockRel] hdl:42894, idx:5
+08-17 23:10:39.513 I/mtkpower_client( 1170): ret_hdl:42898
+08-17 23:10:39.513 I/mtkpower_client( 1170): perf_lock_rel, hdl:42890, tid:1201
+08-17 23:10:39.513 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-17 23:10:39.513 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:42898 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42898
+08-17 23:10:39.513 I/libPowerHal( 1177): [perfLockRel] hdl:42890, idx:6
+08-17 23:10:39.513 I/mtkpower_client( 1170): perf_lock_rel, hdl:42895, tid:1201
+08-17 23:10:39.513 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level: 2
+08-17 23:10:39.513 I/libPowerHal( 1177): vendor.samsung.: set gpu opp level max: 0
+08-17 23:10:39.514 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.514 I/libPowerHal( 1177): [perfLockRel] hdl:42895, idx:2
+08-17 23:10:39.514 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-17 23:10:39.515 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-17 23:10:39.515 I/mtkpower_client( 1170): ret_hdl:42899
+08-17 23:10:39.515 I/mtkpower_client( 1170): perf_lock_rel, hdl:42896, tid:1201
+08-17 23:10:39.515 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:42899 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42899
+08-17 23:10:39.515 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-17 23:10:39.516 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-17 23:10:39.516 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:1201
+08-17 23:10:39.516 I/libPowerHal( 1177): [perfLockRel] hdl:42896, idx:7
+08-17 23:10:39.516 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-17 23:10:39.517 I/mtkpower_client( 1170): ret_hdl:42900
+08-17 23:10:39.517 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1428912
+08-17 23:10:39.517 I/libPowerHal( 1177): [perfLockAcq] idx:4 hdl:42900 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42900
+08-17 23:10:39.517 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:39.810 I/mtkpower_client( 1170): perf_lock_rel, hdl:42897, tid:14743
+08-17 23:10:39.811 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:14743
+08-17 23:10:39.811 I/libPowerHal( 1177): [perfLockRel] hdl:42897, idx:1
+08-17 23:10:39.811 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-17 23:10:39.812 I/mtkpower_client( 1170): ret_hdl:42901
+08-17 23:10:39.812 I/mtkpower_client( 1170): perf_lock_rel, hdl:42898, tid:14743
+08-17 23:10:39.812 I/libPowerHal( 1177): [perfLockAcq] idx:5 hdl:42901 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42901
+08-17 23:10:39.812 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:39.813 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:14743
+08-17 23:10:39.813 I/libPowerHal( 1177): [perfLockRel] hdl:42898, idx:3
+08-17 23:10:39.814 I/mtkpower_client( 1170): ret_hdl:42902
+08-17 23:10:39.814 I/mtkpower_client( 1170): perf_lock_rel, hdl:42899, tid:14743
+08-17 23:10:39.814 I/libPowerHal( 1177): cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+08-17 23:10:39.814 I/libPowerHal( 1177): [perfLockAcq] idx:1 hdl:42902 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42902
+08-17 23:10:39.814 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:14743
+08-17 23:10:39.815 I/libPowerHal( 1177): [perfLockRel] hdl:42899, idx:2
+08-17 23:10:39.815 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-17 23:10:39.815 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-17 23:10:39.815 I/mtkpower_client( 1170): ret_hdl:42903
+08-17 23:10:39.816 I/mtkpower_client( 1170): perf_lock_rel, hdl:42900, tid:14743
+08-17 23:10:39.816 I/libPowerHal( 1177): [perfLockAcq] idx:2 hdl:42903 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42903
+08-17 23:10:39.816 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000, param:0
+08-17 23:10:39.816 I/libPowerHal( 1177): [PE] vendor.samsung. update cmd:1000000 param:0
+08-17 23:10:39.816 I/mtkpower_client( 1170): perf_lock_acq, hdl:0, dur:0, num:2, tid:14743
+08-17 23:10:39.816 I/libPowerHal( 1177): [perfLockRel] hdl:42900, idx:4
+08-17 23:10:39.817 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 1800000 -1
+08-17 23:10:39.817 I/mtkpower_client( 1170): ret_hdl:42904
+08-17 23:10:39.817 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1432297
+08-17 23:10:39.817 I/libPowerHal( 1177): [perfLockAcq] idx:3 hdl:42904 hint:-1 pid:1170 duration:0 lock_user:vendor.samsung. => ret_hdl:42904
+08-17 23:10:39.818 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 1800000 -1
+08-17 23:10:39.862 D/ULogGuard( 1375): Monitoring: 7 threads, 0 requests, 0 time-bombs; 1 guards. ResetFlags = 0x7
+08-17 23:10:39.865 I/hong.worldlinco(14547): Background concurrent copying GC freed 8032KB AllocSpace bytes, 41(2072KB) LOS objects, 51% free, 5803KB/11MB, paused 231us,78us total 101.008ms
+08-17 23:10:39.868 W/hong.worldlinco(14547): ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/SamsungTTS_tiny_only/SamsungTTS_tiny_only.apk' with 1 weak references
+08-17 23:10:39.868 W/hong.worldlinco(14547): ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/base.apk' with 1 weak references
+08-17 23:10:39.869 W/hong.worldlinco(14547): ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/split_config.arm64_v8a.apk' with 1 weak references
+08-17 23:10:39.869 W/hong.worldlinco(14547): ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/split_config.ko.apk' with 1 weak references
+08-17 23:10:39.869 W/hong.worldlinco(14547): ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~u1cTVgOs91rPchhDBvBKCw==/com.google.android.tts-HLDphEgnvHCC9DV48jCyMA==/split_config.tvdpi.apk' with 1 weak references
+08-17 23:10:40.100 I/mtkpower_client( 1170): perf_lock_rel, hdl:42883, tid:14719
+08-17 23:10:40.100 I/libPowerHal( 1177): [perfLockRel] hdl:42883, idx:0
+08-17 23:10:40.100 I/mtkpower_client( 1170): perf_lock_rel, hdl:42902, tid:14719
+08-17 23:10:40.101 I/mtkpower_client( 1170): perf_lock_rel, hdl:42901, tid:14719
+08-17 23:10:40.101 I/mtkpower_client( 1170): perf_lock_rel, hdl:42903, tid:14719
+08-17 23:10:40.101 I/libPowerHal( 1177): [perfLockRel] hdl:42902, idx:1
+08-17 23:10:40.102 I/libPowerHal( 1177): [perfLockRel] hdl:42901, idx:5
+08-17 23:10:40.102 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: 2301000 -1 -1 -1
+08-17 23:10:40.102 I/mtkpower_client( 1170): perf_lock_rel, hdl:42904, tid:14719
+08-17 23:10:40.103 I/libPowerHal( 1177): [perfLockRel] hdl:42903, idx:2
+08-17 23:10:40.103 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000, param:-1
+08-17 23:10:40.103 I/libPowerHal( 1177): [PD] vendor.samsung. update cmd:1000000 param:-1
+08-17 23:10:40.103 I/HYPER-HAL( 1170): [RequestManager.cpp]releaseLocked(): Released ID : 1422154
+08-17 23:10:40.104 I/libPowerHal( 1177): [perfLockRel] hdl:42904, idx:3
+08-17 23:10:40.105 I/libPowerHal( 1177): vendor.samsung.: cpu_ctrl set cpu freq: -1 -1 -1 -1
+08-17 23:10:40.147 D/ScanFilter( 3198): manu data matches
+08-17 23:10:40.147 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:A4:99, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-90, periodicAdvInt=0x0
+08-17 23:10:40.304 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-76, periodicAdvInt=0x0
+08-17 23:10:40.672 I/wpa_supplicant( 2197): Heartbeat 48412
+08-17 23:10:40.909 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:41.005 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:41.192 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 160783, isSameBssidAndFreq true
+08-17 23:10:41.194 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (52) / 390 / -38.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-17 23:10:41.510 I/thermal_repeater( 1385): socket -1
+08-17 23:10:41.728 E/Watchdog( 1673): !@Sync: 16144 heap: 100 / 120 FD: 967 [2026-08-17 23:10:41.727]
+08-17 23:10:42.060 D/ScanFilter( 3198): manu data matches
+08-17 23:10:42.061 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:A4:99, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-88, periodicAdvInt=0x0
+08-17 23:10:42.108 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x1a, addressType=1, address=XX:XX:XX:XX:87:0E, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-67, periodicAdvInt=0x0
+08-17 23:10:42.111 I/NearbyConnections( 6049): Found BleAdvertisement [ 0x23 0x5a 0x35 0x49 0x49 0x11 0x32 0xd6 0xc1 0xa5 0x73 0x19 0xca 0x81 0x2b 0xb6 0x0b 0xa0 0x75 0x8c 0x3a 0xe4 0x55 ] (with EndpointId Z5II and EndpointInfo [ 0x32 0xd6 0xc1 0xa5 0x73 0x19 0xca 0x81 0x2b 0xb6 0x0b 0xa0 0x75 0x8c 0x3a 0xe4 0x55 ])
+08-17 23:10:42.121 I/NearbySharing( 6049): NearbySharing Internal event EndpointDiscovered(endpointId=Z5II)
+08-17 23:10:42.121 I/NearbyConnections( 6049): ClientProxy(124815375 0p:com.google.android.gms.nearby.sharing) reporting onEndpointFound(Z5II)
+08-17 23:10:42.122 I/NearbyConnections( 6049): ClientProxy(124815375) reporting onEndpointDistanceChanged(Z5II, UNKNOWN)
+08-17 23:10:42.142 I/NearbySharing( 6049): [NS_DISCOVERY] DiscoveryController reported Discovered(endpointId=Z5II, metadata=DeviceMetadata(version=1, deviceType=1, deviceName=SUAMI KOREA의 스마트폰, displayName=SUAMI KOREA, modelName=Galaxy S10, imageUri=content://com.google.android.gms.fileprovider/nearby_share_images/-419403791.jpg, isSelfShare=true, isFamilyShare=false, isKnown=true, bluetoothMacAddress=[-88, 43, -71, -57, 31, 93], vendorId=1, matchesLocalQrCode=false, devicePairingBindingIds=[]))
+08-17 23:10:42.142 I/NearbySharing( 6049): [NS_DEBUG] Dedupped: same endpoint ID Z5II
+08-17 23:10:42.143 I/NearbySharing( 6049): [NS_DEBUG] previous receiver info ReceiverInfo(endpointIds=[DiscoveryEndpoint(id=Z5II, origin=NEARBY_CONNECTIONS)], metadata=DeviceMetadata(version=1, deviceType=1, deviceName=SUAMI KOREA의 스마트폰, displayName=SUAMI KOREA, modelName=Galaxy S10, imageUri=content://com.google.android.gms.fileprovider/nearby_share_images/-419403791.jpg, isSelfShare=true, isFamilyShare=false, isKnown=true, bluetoothMacAddress=[-88, 43, -71, -57, 31, 93], vendorId=1, matchesLocalQrCode=false, devicePairingBindingIds=[]), state=Tomb(delayedStateChangeJob=jqkv{Active}@77377e6))
+08-17 23:10:42.143 I/NearbySharing( 6049): NearbySharing Internal event ReceiverEndpointMapping(endpointId=Z5II, receiverId=13)
+08-17 23:10:42.144 I/NearbySharing( 6049): [NS_CONTROL] DiscoveryStateManager emitted ReportDiscovered(id=13, metadata=DeviceMetadata(version=1, deviceType=1, deviceName=SUAMI KOREA의 스마트폰, displayName=SUAMI KOREA, modelName=Galaxy S10, imageUri=content://com.google.android.gms.fileprovider/nearby_share_images/-419403791.jpg, isSelfShare=true, isFamilyShare=false, isKnown=true, bluetoothMacAddress=[-88, 43, -71, -57, 31, 93], vendorId=1, matchesLocalQrCode=false, devicePairingBindingIds=[])).
+08-17 23:10:42.144 I/NearbySharing( 6049): NearbySharing Internal event ReceiverDiscovered(receiverId=13, deviceName=SUAMI KOREA의 스마트폰, isKnown=true, isSelfShare=true, deviceType=1, hasMatchingQrCode=false, isExternal=false, providerName=null, providerId=null, cloudReceiverSessionId=null, cloudSharingId=null)
+08-17 23:10:42.144 I/NearbySharing( 6049): SendProvider: SendManager event Discovered(receiverId=13, receiverMetadata=DeviceMetadata(version=1, deviceType=1, deviceName=SUAMI KOREA의 스마트폰, displayName=SUAMI KOREA, modelName=Galaxy S10, imageUri=content://com.google.android.gms.fileprovider/nearby_share_images/-419403791.jpg, isSelfShare=true, isFamilyShare=false, isKnown=true, bluetoothMacAddress=[-88, 43, -71, -57, 31, 93], vendorId=1, matchesLocalQrCode=false, devicePairingBindingIds=[]))
+08-17 23:10:42.145 I/NearbySharing( 6049): SendProvider: SendManager event DistanceChanged(receiverId=13, distance=1, rangingData=null)
+08-17 23:10:42.145 I/NearbySharing( 6049): ShareTargetDiscoveredCallback: onShareTargetDiscovered()
+08-17 23:10:42.145 I/NearbySharing( 6049): ShareTargetDiscoveredCallback: onShareTargetDistanceChanged() with distance: 1, rangingData: null
+08-17 23:10:42.154 W/droid.bluetooth( 3198): Reducing the number of considered missed Gc histogram windows from 104 to 100
+08-17 23:10:42.167 I/NearbySharing( 6049): ShortcutInfoManager added shortcut SUAMI KOREA의 스마트폰
+08-17 23:10:42.266 I/SemExecuteManagerService( 1673): onShortcutChanged: com.google.android.gms0
+08-17 23:10:42.278 I/HoneySpace.PackageOperationTracker( 3068): onShortcutsChanged com.google.android.gms - 2 UserHandle{0}
+08-17 23:10:42.279 V/WindowManager( 1673): Relayout Window{5c24bf7 u0 com.sec.android.app.camera/com.sec.android.app.camera.Camera}: viewVisibility=8 req=800x1340 ty=1 d0
+08-17 23:10:42.280 I/HoneySpace.ShortcutDataSourceImpl( 3068): shortcut updated. ShortcutInfo {id=***, flags=0xa481 [DynIc-uStrRetsLiv], packageName=com.google.android.gms, activity=ComponentInfo{com.google.android.gms/com.google.android.gms.nearby.sharing.main.MainActivity}, shortLabel=***, resId=0[null], longLabel=***, resId=0[null], disabledMessage=***, resId=0[null], disabledReason=[Not disabled], categories={com.google.android.gms.nearby.sharing.main.SHARE_TARGET}, persons=null, icon=null, rank=1, timestamp=1786975842165, intents=null, extras=PersistableBundle[mParcelledData.dataSize=1316]}
+08-17 23:10:42.280 I/HoneySpace.ShortcutDataSourceImpl( 3068): shortcut updated. ShortcutInfo {id=***, flags=0xa481 [DynIc-uStrRetsLiv], packageName=com.google.android.gms, activity=ComponentInfo{com.google.android.gms/com.google.android.gms.nearby.sharing.main.MainActivity}, shortLabel=***, resId=0[null], longLabel=***, resId=0[null], disabledMessage=***, resId=0[null], disabledReason=[Not disabled], categories={com.google.android.gms.nearby.sharing.main.SHARE_TARGET}, persons=null, icon=null, rank=0, timestamp=1786975277354, intents=null, extras=PersistableBundle[mParcelledData.dataSize=1308]}
+08-17 23:10:42.281 I/HoneySpace.HoneySpaceManagerContainer( 3068): packageUpdateEvent - com.honeyspace.sdk.source.entity.PackageOperation$ShortcutChanged@a2a793
+08-17 23:10:42.287 V/WindowManager( 1673): Relayout hash=5c24bf7, pid=20027, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan} layoutInDisplayCutoutMode=shortEdges ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x10302fc rotAnim=CROSSFADE
+08-17 23:10:42.287 V/WindowManager( 1673):   fl=81810500
+08-17 23:10:42.287 V/WindowManager( 1673):   pfl=12008040
+08-17 23:10:42.287 V/WindowManager( 1673):   sysui=300
+08-17 23:10:42.287 V/WindowManager( 1673):   vsysui=405
+08-17 23:10:42.287 V/WindowManager( 1673):   apr=LOW_PROFILE_BARS
+08-17 23:10:42.287 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:42.287 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:42.289 I/ViewRootImpl@560183[Camera](20027): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=false req=(800,1340)8 dur=10 res=0x400 s={false 0x0} ch=false seqId=0
+08-17 23:10:42.289 I/SurfaceView@db9bebb(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:42.290 I/SurfaceView@5f7e7c5(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:42.518 D/SGM:GameManager( 1673): identifyForegroundApp. com.parkcheolhong.worldlinco, mCurrentUserId: 0, callerUserId: 0
+08-17 23:10:42.518 D/SGM:PkgDataHelper( 1673): getGamePkgData(). com.parkcheolhong.worldlinco
+08-17 23:10:42.519 I/PolicyManager(24650): [#CMH#] Is foreground game app: false
+08-17 23:10:42.662 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time' 'ReactNativeJS:I' '*:S''
+08-17 23:10:42.863 D/ULogGuard( 1375): Monitoring: 7 threads, 0 requests, 0 time-bombs; 1 guards. ResetFlags = 0x7
+08-17 23:10:43.137 D/io_stats(  565): !@ 179,0 r 6320092 155271658 w 6175452 51773200 d 540126 62840596 f 0 0 iot 5010056 0 th 0 0 0 pt 0 inp 0 0 484720.254
+08-17 23:10:43.984 D/ScanFilter( 3198): manu data matches
+08-17 23:10:43.984 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:A4:99, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-83, periodicAdvInt=0x0
+08-17 23:10:44.006 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-67, periodicAdvInt=0x0
+08-17 23:10:44.085 I/NearbyMediums( 6049): Found Fast Ble Advertisements :
+08-17 23:10:44.085 I/NearbyMediums( 6049): BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x39 0x30 0x4f 0x36 0x11 0x32 0x65 0x68 0x41 0xc5 0xf7 0xc3 0xf6 0x98 0x1c 0xf7 0x42 0xf4 0xe8 0x3c 0x05 0x4f ], deviceToken=[ 0x6b 0xac ], rxAdvertisement=null } : 4 times.
+08-17 23:10:44.085 I/NearbyMediums( 6049): BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x5a 0x35 0x49 0x49 0x11 0x32 0xd6 0xc1 0xa5 0x73 0x19 0xca 0x81 0x2b 0xb6 0x0b 0xa0 0x75 0x8c 0x3a 0xe4 0x55 ], deviceToken=[ 0x4a 0xc5 ], rxAdvertisement=null } : 1 times.
+08-17 23:10:44.085 I/NearbyMediums( 6049): Total 5 fast advertisements from 2 unique advertisers.
+08-17 23:10:44.086 I/NearbyMediums( 6049): Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+08-17 23:10:44.215 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 160784, isSameBssidAndFreq true
+08-17 23:10:44.216 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (12) / 390 / -37.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-17 23:10:45.280 V/WindowManager( 1673): Relayout Window{5c24bf7 u0 com.sec.android.app.camera/com.sec.android.app.camera.Camera}: viewVisibility=8 req=800x1340 ty=1 d0
+08-17 23:10:45.296 V/WindowManager( 1673): Relayout hash=5c24bf7, pid=20027, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan} layoutInDisplayCutoutMode=shortEdges ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x10302fc rotAnim=CROSSFADE
+08-17 23:10:45.296 V/WindowManager( 1673):   fl=81810500
+08-17 23:10:45.296 V/WindowManager( 1673):   pfl=12008040
+08-17 23:10:45.296 V/WindowManager( 1673):   sysui=300
+08-17 23:10:45.296 V/WindowManager( 1673):   vsysui=405
+08-17 23:10:45.296 V/WindowManager( 1673):   apr=LOW_PROFILE_BARS
+08-17 23:10:45.296 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:45.296 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:45.300 I/ViewRootImpl@560183[Camera](20027): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=false req=(800,1340)8 dur=20 res=0x400 s={false 0x0} ch=false seqId=0
+08-17 23:10:45.300 I/SurfaceView@db9bebb(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:45.302 I/SurfaceView@5f7e7c5(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:45.488 D/WifiConnectivityMonitor.DnsThread( 1673):  [|205] []
+08-17 23:10:45.489 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 1673): DNS resultType : 0, responseTime : 205
+08-17 23:10:45.489 D/OpenNetworkQos[4.00]( 1673): updateBssidLatestDnsResultType - result: 0
+08-17 23:10:45.489 D/OpenNetworkQos[4.00]( 1673): updateBssidNoInternet: mBssidNoInternet = false
+08-17 23:10:45.490 D/OpenNetworkQos[4.00]( 1673): getOpenNetworkQosNoInternetStatus: false
+08-17 23:10:45.490 D/OpenNetworkQos[4.00]( 1673): getOpenNetworkQosScores: 26 0 0 
+08-17 23:10:45.490 D/KNOX_MDM_SettingsProvider( 1673): isChangeAllowed() : name = wifi_wcm_qos_sharing_score_summary
+08-17 23:10:45.571 D/SensorService( 1673): [SO] 3.867 -0.020 8.982
+08-17 23:10:45.720 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-67, periodicAdvInt=0x0
+08-17 23:10:45.864 D/ULogGuard( 1375): Monitoring: 7 threads, 0 requests, 0 time-bombs; 1 guards. ResetFlags = 0x7
+08-17 23:10:46.109 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:46.279 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:46.510 I/thermal_repeater( 1385): socket -1
+08-17 23:10:47.232 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 160785, isSameBssidAndFreq true
+08-17 23:10:47.234 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (19) / 390 / -37.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-17 23:10:47.711 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-67, periodicAdvInt=0x0
+08-17 23:10:47.759 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''
+08-17 23:10:48.292 V/WindowManager( 1673): Relayout Window{5c24bf7 u0 com.sec.android.app.camera/com.sec.android.app.camera.Camera}: viewVisibility=8 req=800x1340 ty=1 d0
+08-17 23:10:48.306 V/WindowManager( 1673): Relayout hash=5c24bf7, pid=20027, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan} layoutInDisplayCutoutMode=shortEdges ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x10302fc rotAnim=CROSSFADE
+08-17 23:10:48.306 V/WindowManager( 1673):   fl=81810500
+08-17 23:10:48.306 V/WindowManager( 1673):   pfl=12008040
+08-17 23:10:48.306 V/WindowManager( 1673):   sysui=300
+08-17 23:10:48.306 V/WindowManager( 1673):   vsysui=405
+08-17 23:10:48.306 V/WindowManager( 1673):   apr=LOW_PROFILE_BARS
+08-17 23:10:48.306 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:48.306 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:48.309 I/ViewRootImpl@560183[Camera](20027): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=false req=(800,1340)8 dur=17 res=0x400 s={false 0x0} ch=false seqId=0
+08-17 23:10:48.309 I/SurfaceView@db9bebb(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:48.310 I/SurfaceView@5f7e7c5(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:48.865 D/ULogGuard( 1375): Monitoring: 7 threads, 0 requests, 0 time-bombs; 1 guards. ResetFlags = 0x7
+08-17 23:10:49.469 D/ScanFilter( 3198): manu data matches
+08-17 23:10:49.469 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:A4:99, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-83, periodicAdvInt=0x0
+08-17 23:10:50.254 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 160786, isSameBssidAndFreq true
+08-17 23:10:50.256 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (73) / 390 / -37.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-17 23:10:50.682 I/wpa_supplicant( 2197): Heartbeat 48413
+08-17 23:10:50.976 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''
+08-17 23:10:51.141 D/io_stats(  565): !@ 179,0 r 6320092 155271658 w 6175463 51773324 d 540159 62840996 f 0 0 iot 5010072 0 th 0 0 0 pt 0 inp 0 0 484728.258
+08-17 23:10:51.289 V/WindowManager( 1673): Relayout Window{5c24bf7 u0 com.sec.android.app.camera/com.sec.android.app.camera.Camera}: viewVisibility=8 req=800x1340 ty=1 d0
+08-17 23:10:51.301 I/SurfaceFlinger( 1209): SFWD update time=484728418302352
+08-17 23:10:51.304 V/WindowManager( 1673): Relayout hash=5c24bf7, pid=20027, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan} layoutInDisplayCutoutMode=shortEdges ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x10302fc rotAnim=CROSSFADE
+08-17 23:10:51.304 V/WindowManager( 1673):   fl=81810500
+08-17 23:10:51.304 V/WindowManager( 1673):   pfl=12008040
+08-17 23:10:51.304 V/WindowManager( 1673):   sysui=300
+08-17 23:10:51.304 V/WindowManager( 1673):   vsysui=405
+08-17 23:10:51.304 V/WindowManager( 1673):   apr=LOW_PROFILE_BARS
+08-17 23:10:51.304 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:51.304 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:51.307 I/ViewRootImpl@560183[Camera](20027): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=false req=(800,1340)8 dur=18 res=0x400 s={false 0x0} ch=false seqId=0
+08-17 23:10:51.308 I/SurfaceView@db9bebb(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:51.309 I/SurfaceView@5f7e7c5(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:51.386 D/ScanFilter( 3198): manu data matches
+08-17 23:10:51.386 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:A4:99, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-92, periodicAdvInt=0x0
+08-17 23:10:51.426 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-76, periodicAdvInt=0x0
+08-17 23:10:51.447 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x1a, addressType=1, address=XX:XX:XX:XX:87:0E, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-74, periodicAdvInt=0x0
+08-17 23:10:51.511 I/thermal_repeater( 1385): socket -1
+08-17 23:10:51.714 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:51.809 I/adbd    ( 7994): adbd service requested 'shell,v2,raw:echo ping'
+08-17 23:10:51.866 D/ULogGuard( 1375): Monitoring: 7 threads, 0 requests, 0 time-bombs; 1 guards. ResetFlags = 0x7
+08-17 23:10:53.134 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-67, periodicAdvInt=0x0
+08-17 23:10:53.278 D/SemWifiUsabilityStatsMonitor( 1673): onWifiUsabilityStats - seqNum 160787, isSameBssidAndFreq true
+08-17 23:10:53.280 I/SemWifiLinkQualityMonitor( 1673): Link stat: 0 / 0 / 1.00 (87) / 390 / -37.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.30 / G (G) || 0.12 ms / 64.85 Mbps / D || 0 / N / 0 Y / 0 Y
+08-17 23:10:53.316 D/ScanFilter( 3198): manu data matches
+08-17 23:10:53.316 D/BtGatt.GattService( 3198): onScanResult to scannerId: 4- eventType=0x1b, addressType=1, address=XX:XX:XX:XX:A4:99, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-87, periodicAdvInt=0x0
+08-17 23:10:54.089 I/NearbyMediums( 6049): Found Fast Ble Advertisements :
+08-17 23:10:54.089 I/NearbyMediums( 6049): BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x39 0x30 0x4f 0x36 0x11 0x32 0x65 0x68 0x41 0xc5 0xf7 0xc3 0xf6 0x98 0x1c 0xf7 0x42 0xf4 0xe8 0x3c 0x05 0x4f ], deviceToken=[ 0x6b 0xac ], rxAdvertisement=null } : 4 times.
+08-17 23:10:54.089 I/NearbyMediums( 6049): BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x5a 0x35 0x49 0x49 0x11 0x32 0xd6 0xc1 0xa5 0x73 0x19 0xca 0x81 0x2b 0xb6 0x0b 0xa0 0x75 0x8c 0x3a 0xe4 0x55 ], deviceToken=[ 0x4a 0xc5 ], rxAdvertisement=null } : 1 times.
+08-17 23:10:54.089 I/NearbyMediums( 6049): Total 5 fast advertisements from 2 unique advertisers.
+08-17 23:10:54.091 I/NearbyMediums( 6049): Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+08-17 23:10:54.288 V/WindowManager( 1673): Relayout Window{5c24bf7 u0 com.sec.android.app.camera/com.sec.android.app.camera.Camera}: viewVisibility=8 req=800x1340 ty=1 d0
+08-17 23:10:54.303 V/WindowManager( 1673): Relayout hash=5c24bf7, pid=20027, syncId=-1: mAttrs={(0,0)(fillxfill) sim={state=always_hidden adjust=pan} layoutInDisplayCutoutMode=shortEdges ty=BASE_APPLICATION fmt=TRANSLUCENT wanim=0x10302fc rotAnim=CROSSFADE
+08-17 23:10:54.303 V/WindowManager( 1673):   fl=81810500
+08-17 23:10:54.303 V/WindowManager( 1673):   pfl=12008040
+08-17 23:10:54.303 V/WindowManager( 1673):   sysui=300
+08-17 23:10:54.303 V/WindowManager( 1673):   vsysui=405
+08-17 23:10:54.303 V/WindowManager( 1673):   apr=LOW_PROFILE_BARS
+08-17 23:10:54.303 V/WindowManager( 1673):   bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+08-17 23:10:54.303 V/WindowManager( 1673):   fitSides= naviIconColor=0}
+08-17 23:10:54.306 I/ViewRootImpl@560183[Camera](20027): Relayout returned: old=(0,0,800,1340) new=(0,0,800,1340) relayoutAsync=false req=(800,1340)8 dur=20 res=0x400 s={false 0x0} ch=false seqId=0
+08-17 23:10:54.307 I/SurfaceView@db9bebb(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:54.309 I/SurfaceView@5f7e7c5(20027): releaseSurfaces: viewRoot = ViewRootImpl@560183[Camera]
+08-17 23:10:54.560 D/SensorService( 1673): [SO] 3.867 -0.020 8.982
+08-17 23:10:54.868 D/ULogGuard( 1375): Monitoring: 7 threads, 0 requests, 0 time-bombs; 1 guards. ResetFlags = 0x7
+08-17 23:10:55.145 D/BtGatt.GattService( 3198): onScanResult to scannerId: 6- eventType=0x10, addressType=1, address=XX:XX:XX:XX:F3:76, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-76, periodicAdvInt=0x0
+08-17 23:10:55.420 I/adbd    ( 7994): adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time''

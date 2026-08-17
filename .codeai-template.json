@@ -1,0 +1,143 @@
+{
+  "project_name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4",
+  "mode": "full",
+  "validation_profile": "nextjs_app",
+  "entrypoints": [
+    "app/main.py",
+    "app/routes.py",
+    "app/services/__init__.py",
+    "app/services/runtime_service.py"
+  ],
+  "target_patch_registry": {
+    "registry_version": 1,
+    "capability_ids": [
+      "code-generator",
+      "self-healing-engine",
+      "project-scanner"
+    ],
+    "candidate_paths": [
+      "README.md",
+      "package.json",
+      "tsconfig.json",
+      "next-env.d.ts",
+      "app/page.tsx",
+      "app/layout.tsx",
+      "configs/app.env.example",
+      "scripts/check.sh",
+      "docs/architecture.md",
+      "docs/order_profile.md",
+      "docs/flow_map.md",
+      "docs/flow_registry.json",
+      "docs/usage.md",
+      "docs/runtime.md",
+      "docs/deployment.md",
+      "docs/testing.md",
+      "docs/scaffold_inventory.md",
+      "docs/stage_progress.md",
+      "docs/stage_progress.json",
+      ".gitignore",
+      "next.config.js",
+      "app/loading.tsx",
+      "app/dashboard/page.tsx",
+      "app/api/health/route.ts",
+      "app/api/brief/route.ts",
+      "app/globals.css",
+      "components/dashboardclient.tsx",
+      "components/heropanel.tsx",
+      "components/metriccluster.tsx",
+      "components/signalmatrix.tsx",
+      "components/focusrail.tsx",
+      "components/insighttimeline.tsx",
+      "components/executionboard.tsx",
+      "components/themetoggle.tsx",
+      "lib/types.ts",
+      "lib/data.ts",
+      "addons/node_service/README.md",
+      "addons/node_service/package.json",
+      "addons/node_service/tsconfig.json",
+      "addons/node_service/src/types.ts",
+      "addons/node_service/src/config.ts",
+      "addons/node_service/src/lib/runtimeStore.ts",
+      "addons/node_service/src/repositories/orderRepository.ts",
+      "addons/node_service/src/services/orderService.ts",
+      "addons/node_service/src/http/handlers/health.go",
+      "addons/node_service/src/http/handlers/inventory.go",
+      "addons/node_service/src/http/router.go",
+      "docs/multi_generator_matrix.json",
+      "backend/llm/admin_capabilities.py",
+      "frontend/frontend/app/admin/llm/page.tsx"
+    ],
+    "matched_entries": [
+      {
+        "file_id": "FILE-ADMIN-CAPABILITIES",
+        "path": "backend/llm/admin_capabilities.py",
+        "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "summary": "capability가 output audit / traceability / hard gate evidence를 읽어 수정 대상 ID를 노출하는 조각입니다.",
+        "reuse_ready": true,
+        "capability_ids": [
+          "code-generator",
+          "self-healing-engine",
+          "project-scanner"
+        ]
+      },
+      {
+        "file_id": "FILE-ADMIN-LLM-PAGE",
+        "path": "frontend/frontend/app/admin/llm/page.tsx",
+        "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+        "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+        "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+        "summary": "관리자 오케스트레이터 화면에서 AI 추론, hard gate, evidence, 타겟 수정 힌트를 보여주는 조각입니다.",
+        "reuse_ready": true,
+        "capability_ids": [
+          "code-generator",
+          "self-healing-engine",
+          "admin-command-interface"
+        ]
+      }
+    ],
+    "reusable_patch_units": [
+      {
+        "file_id": "FILE-ADMIN-CAPABILITIES",
+        "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "path": "backend/llm/admin_capabilities.py",
+        "failure_tags": [],
+        "repair_tags": []
+      },
+      {
+        "file_id": "FILE-ADMIN-LLM-PAGE",
+        "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+        "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+        "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+        "path": "frontend/frontend/app/admin/llm/page.tsx",
+        "failure_tags": [],
+        "repair_tags": []
+      }
+    ],
+    "target_file_ids": [
+      "FILE-ADMIN-CAPABILITIES",
+      "FILE-ADMIN-LLM-PAGE"
+    ],
+    "target_section_ids": [
+      "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+      "SECTION-CHAT-ADVISORY-PANEL"
+    ],
+    "target_feature_ids": [
+      "FEATURE-ID-BASED-TARGET-EXPOSURE",
+      "FEATURE-EVIDENCE-FIRST-UX"
+    ],
+    "target_chunk_ids": [
+      "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+      "CHUNK-ADMIN-CHAT-UI-001"
+    ],
+    "failure_tags": [],
+    "repair_tags": [],
+    "matched_count": 2,
+    "reusable_count": 2,
+    "selective_apply_ready": true
+  },
+  "generated_at": "2026-04-23T04:53:34.924695"
+}

@@ -1,0 +1,5 @@
+mobile-nadotongryoksa@1.0.3 typecheck
+command: npm run typecheck
+result: PASS
+compiler: tsc --noEmit
+notes: second verification pass

@@ -1,0 +1,18 @@
+﻿[
+    {
+        "round":  1,
+        "has_passkey_callback_success":  true,
+        "has_social_callback_success":  true,
+        "has_error_activity":  true,
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=passkey_device_probe_token_331\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe\u0026round=1\u0026ts=1786818698719",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=passkey_device_probe_token_331\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe\u0026round=1\u0026ts=1786818698719\u0027"
+    },
+    {
+        "round":  2,
+        "has_passkey_callback_success":  true,
+        "has_social_callback_success":  true,
+        "has_error_activity":  false,
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=passkey_device_probe_token_331\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe\u0026round=2\u0026ts=1786818708220",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=passkey_device_probe_token_331\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe\u0026round=2\u0026ts=1786818708220\u0027"
+    }
+]

@@ -1,0 +1,9 @@
+﻿Nonexistent flag: --non-interactive
+See more help with --help
+node.exe :     Error: build:view command failed.
+At C:\Users\WORK\AppData\Roaming\npm\eas.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/eas-cli/bin/run" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Error: build:view 
+    command failed.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError

@@ -1,0 +1,27 @@
+﻿{
+    "deviceId":  "R83W70QY11H",
+    "packageName":  "com.parkcheolhong.worldlinco",
+    "tap":  {
+                "y":  256,
+                "x":  400
+            },
+    "runDir":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-pass2-postreinstall-20260813-060213",
+    "rawLogPath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-pass2-postreinstall-20260813-060213\\reactnative-logcat.txt",
+    "tracePath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-pass2-postreinstall-20260813-060213\\face-capture-trace.txt",
+    "requiredEvents":  [
+                           "start_tap",
+                           "capture_started",
+                           "payload_prepared",
+                           "post_start",
+                           "response_received"
+                       ],
+    "missingEvents":  [
+                          "start_tap",
+                          "capture_started",
+                          "payload_prepared",
+                          "post_start",
+                          "response_received"
+                      ],
+    "pass":  false,
+    "capturedAtUtc":  "2026-08-12T21:02:39.7764767Z"
+}

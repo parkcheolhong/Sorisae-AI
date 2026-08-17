@@ -1,0 +1,22 @@
+[verify-mobile-login] device=172.30.1.15:5555 package=com.parkcheolhong.worldlinco rounds=1 reset_session=True strict_reset_session_mode=True
+[verify-mobile-login] looking for admin password in .runtime/secrets/fixed_admin_password.txt
+--- round 1/1 ---
+[33;1mWARNING: Round 1 failed: Round 1 login automation failed: ensure_reason=login_409_cleared_but_not_authenticated, auth_debug_state=[0m
+--- manifest ---
+{
+  "device": "172.30.1.15:5555",
+  "package": "com.parkcheolhong.worldlinco",
+  "rounds": 1,
+  "reset_session_applied": true,
+  "strict_reset_session_mode": true,
+  "results": [
+    {
+      "round": 1,
+      "success": false,
+      "error": "Round 1 login automation failed: ensure_reason=login_409_cleared_but_not_authenticated, auth_debug_state="
+    }
+  ],
+  "all_passed": false,
+  "generated_at": "2026-08-17T22:07:18.3261018+09:00"
+}
+

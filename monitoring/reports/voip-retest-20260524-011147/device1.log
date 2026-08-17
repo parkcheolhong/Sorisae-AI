@@ -1,0 +1,697 @@
+--------- beginning of main
+05-24 01:11:50.356 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.008942061]
+05-24 01:11:50.357 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.97039807]
+05-24 01:11:50.357 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.055281058]
+05-24 01:11:50.357 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.263424 msecs
+05-24 01:11:50.359 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.055692 msecs
+05-24 01:11:50.361 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.579961 msecs
+05-24 01:11:50.836 D/AndroidRuntime(24377): >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+05-24 01:11:50.841 I/AndroidRuntime(24377): Using default boot image
+05-24 01:11:50.841 I/AndroidRuntime(24377): Leaving lock profiling enabled
+05-24 01:11:50.841 D/SecNativeFeatureCppIf(24377): encoded
+05-24 01:11:50.841 D/SecNativeFeatureCppIf(24377): decoding and unzip finish
+05-24 01:11:50.841 D/SecNativeFeatureCppIf(24377): use unCompDataBuff. encoded
+05-24 01:11:50.842 D/SecNativeFeatureCppIf(24377): Free unCompDataBuff
+05-24 01:11:50.842 D/AndroidRuntime(24377): addProductProperty: pBrand1 is not null
+05-24 01:11:50.842 D/AndroidRuntime(24377): addProductProperty: not brand or 7
+05-24 01:11:50.845 W/app_process(24377): ART APEX data files are untrusted.
+05-24 01:11:50.864 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.0061062756]
+05-24 01:11:50.866 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.95440376]
+05-24 01:11:50.867 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.046900038]
+05-24 01:11:50.867 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.771807 msecs
+05-24 01:11:50.868 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.005769 msecs
+05-24 01:11:50.869 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 0.842308 msecs
+05-24 01:11:50.957 D/app_process(24377): Time zone override file found: /data/misc/zoneinfo/current/icu/icu_tzdata.dat
+05-24 01:11:50.957 D/app_process(24377): Time zone APEX ICU file found: /apex/com.android.tzdata/etc/icu/icu_tzdata.dat
+05-24 01:11:50.957 D/app_process(24377): I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt68l.dat
+05-24 01:11:50.982 E/SemDvfsManager_JNI(24377): SemDvfsManager: registerfunction enter
+05-24 01:11:50.982 E/SemAffinityControl(24377): SemAffinityControl: registerfunction enter
+05-24 01:11:50.988 D/ProcessState(24377): Binder ioctl to enable oneway spam detection failed: Invalid argument
+05-24 01:11:50.990 D/AndroidRuntime(24377): Calling main entry com.android.commands.monkey.Monkey
+05-24 01:11:50.991 W/Monkey  (24377): args: [-p, com.parkcheolhong.worldlinco, -c, android.intent.category.LAUNCHER, 1]
+05-24 01:11:50.991 W/Monkey  (24377):  arg: "-p"
+05-24 01:11:50.991 W/Monkey  (24377):  arg: "com.parkcheolhong.worldlinco"
+05-24 01:11:50.991 W/Monkey  (24377):  arg: "-c"
+05-24 01:11:50.991 W/Monkey  (24377):  arg: "android.intent.category.LAUNCHER"
+05-24 01:11:50.991 W/Monkey  (24377):  arg: "1"
+05-24 01:11:50.991 W/Monkey  (24377): data="com.parkcheolhong.worldlinco"
+05-24 01:11:50.991 W/Monkey  (24377): data="android.intent.category.LAUNCHER"
+--------- beginning of system
+05-24 01:11:51.004 W/BroadcastQueue( 1005): Skipping deliver [background] BroadcastRecord{a3a1803 u-1 android.net.conn.CONNECTIVITY_CHANGE} to ReceiverList{35f5380 24377 (unknown name)/2000/u-1 remote:cadb2bd}: process gone or crashing
+05-24 01:11:51.023 D/SemCscFeature(24377): Encoded
+05-24 01:11:51.040 D/ActivityTaskManager( 1005): startActivityAsUser: callingPid=24377, callingUid=2000, caller=com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:1757 com.android.server.am.ActivityManagerService.startActivityAsUserWithFeature:3543 android.app.IActivityManager$Stub.onTransact:4515 com.android.server.am.ActivityManagerService.onTransact:3034 android.os.Binder.execTransactInternal:1215 android.os.Binder.execTransact:1179 <bottom of call stack> 
+05-24 01:11:51.042 I/ActivityTaskManager( 1005): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.parkcheolhong.worldlinco/.MainActivity} from uid 2000
+05-24 01:11:51.043 D/ActivityTaskManager( 1005): TaskLaunchParamsModifier:task=null activity=ActivityRecord{53055fe u0 com.parkcheolhong.worldlinco/.MainActivity display-from-process=0 display-id=0 display-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@73352149
+05-24 01:11:51.043 D/ActivityTaskManager( 1005): TaskLaunchParamsModifier:task=Task{6a6c14e #3167 type=standard A=10463:com.parkcheolhong.worldlinco U=0 visible=true mode=fullscreen translucent=false sz=1} activity=ActivityRecord{53055fe u0 com.parkcheolhong.worldlinco/.MainActivity t-1} display-from-task=0 display-id=0 display-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@73352149 non-freeform-display display-area=DefaultTaskDisplayArea@73352149 maximized-bounds
+05-24 01:11:51.044 I/SemDvfsHyPerManager( 1005): acquire hyper - AMS_ACT_START/1005@17, type = -999
+05-24 01:11:51.044 D/ActivityManagerPerformance( 1005): AMP_acquire() ACT_START
+05-24 01:11:51.044 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 522770  [1005 / 17]    HINT : AMS_ACT_START    list : 
+05-24 01:11:51.047 I/MediaFocusControl( 1005): abandonAudioFocus() from uid/pid 10463/21020 clientId=android.media.AudioManager@bdc0f1dexpo.modules.av.AVManager@7fe8723
+05-24 01:11:51.047 D/MediaFocusControl( 1005): selectFocusStack, uid = 10463, appDevice = 0, device = 2
+05-24 01:11:51.048 I/ViewRootImpl@dd1510f[MainActivity](21020): stopped(false) old=false
+05-24 01:11:51.048 I/Monkey  (24377): Events injected: 1
+05-24 01:11:51.049 I/DecorView(21020): notifyKeepScreenOnChanged: keepScreenOn=false
+05-24 01:11:51.049 V/WindowManager( 1005): Relayout Window{8eff482 u0 com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity}: viewVisibility=0 req=1080x2280 d0
+05-24 01:11:51.051 D/SettingsProvider( 1005): isChangeAllowed() : name = accelerometer_rotation
+05-24 01:11:51.051 V/WindowManager( 1005): Relayout hash=8eff482, pid=21020: mAttrs={(0,0)(fillxfill) sim={state=visible adjust=resize forwardNavigation} ty=BASE_APPLICATION wanim=0x1030303
+05-24 01:11:51.051 V/WindowManager( 1005):   fl=81810900
+05-24 01:11:51.051 V/WindowManager( 1005):   pfl=16020040
+05-24 01:11:51.051 V/WindowManager( 1005):   apr=LIGHT_NAVIGATION_BARS
+05-24 01:11:51.051 V/WindowManager( 1005):   bhv=DEFAULT
+05-24 01:11:51.051 V/WindowManager( 1005):   fitSides= naviIconColor=0
+05-24 01:11:51.051 V/WindowManager( 1005):   sfl=100000}
+05-24 01:11:51.051 I/GenerationRegistry( 1005): mBackingStore.isClosed() : false
+05-24 01:11:51.051 D/SettingsProvider( 1005): isChangeAllowed() : name = user_rotation
+05-24 01:11:51.052 V/WindowManager( 1005): rotationForOrientation(orient=SCREEN_ORIENTATION_PORTRAIT (1), last=ROTATION_0 (0)); user=ROTATION_0 (0) 
+05-24 01:11:51.052 D/WindowManager( 1005): rotationForOrientation, orientationSource=ActivityRecord{2f5da50 u0 com.parkcheolhong.worldlinco/.MainActivity t3167}
+05-24 01:11:51.052 V/WindowManager( 1005): Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.DisplayContent.updateRotationUnchecked:2339 com.android.server.wm.WindowManagerService.updateRotationUnchecked:4535 com.android.server.wm.WindowManagerService.freezeDisplayRotation:4435 com.android.server.wm.WindowManagerService.freezeRotation:4394 android.view.IWindowManager$Stub.onTransact:2456 com.android.server.wm.WindowManagerService.onTransact:1621 
+05-24 01:11:51.052 I/ViewRootImpl@dd1510f[MainActivity](21020): Relayout returned: old=(0,0,1080,2280) new=(0,0,1080,2280) req=(1080,2280)0 dur=3 res=0x1 s={true 480521714928} ch=false fn=1089
+05-24 01:11:51.053 D/SettingsHelper( 1415): onChange() COMPLETED elapsed= 1
+05-24 01:11:51.054 V/SettingsHelper( 1415): *** broadcastChange for content://settings/system/accelerometer_rotation
+05-24 01:11:51.054 D/Tile.RotationLockTile( 1415):  OnChangedCallback : 
+05-24 01:11:51.054 I/RecentsOrientedState( 1885): current RecentsOrientedState: [this=RecentsOrientedState@155492986 mOrientationHandler=PortraitPagedViewHandler@254177592 mDisplayRotation=0 mTouchRotation=0 mRecentsActivityRotation=0 mRecentsRotation=0 isRecentsActivityRotationAllowed=false mSystemRotation=false mStateId=38272 mFlags=291]
+05-24 01:11:51.054 I/RecentsOrientedState( 1885): current RecentsOrientedState: [this=RecentsOrientedState@155492986 mOrientationHandler=PortraitPagedViewHandler@254177592 mDisplayRotation=0 mTouchRotation=0 mRecentsActivityRotation=0 mRecentsRotation=0 isRecentsActivityRotationAllowed=false mSystemRotation=false mStateId=37248 mFlags=291]
+05-24 01:11:51.054 V/WindowManager( 1005): rotationForOrientation(orient=SCREEN_ORIENTATION_PORTRAIT (1), last=ROTATION_0 (0)); user=ROTATION_0 (0) USER_ROTATION_LOCKED
+05-24 01:11:51.054 D/WindowManager( 1005): rotationForOrientation, orientationSource=ActivityRecord{2f5da50 u0 com.parkcheolhong.worldlinco/.MainActivity t3167}
+05-24 01:11:51.054 D/SettingsHelper( 1415): onChange() COMPLETED elapsed= 0
+05-24 01:11:51.054 V/SettingsHelper( 1415): *** broadcastChange for content://settings/system/accelerometer_rotation
+05-24 01:11:51.054 V/WindowManager( 1005): Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.DisplayContent.updateRotationUnchecked:2339 com.android.server.wm.WindowManagerService.updateRotationUnchecked:4535 com.android.server.wm.WindowManagerService.updateRotation:4516 com.android.server.wm.DisplayRotation$SettingsObserver.onChange:1912 android.database.ContentObserver.onChange:153 android.database.ContentObserver.onChange:169 
+05-24 01:11:51.055 D/TspStateManager( 1005): updateCustomValue customSetting=
+05-24 01:11:51.056 D/TspStateManager( 1005): updateCustomValue customSetting=
+05-24 01:11:51.056 D/TspStateManager( 1005): updateCustomValue customSetting=
+05-24 01:11:51.057 D/Tile.RotationLockTile( 1415):  handleUpdateState: false orientation = true
+05-24 01:11:51.057 D/SettingsProvider( 1005): isChangeAllowed() : name = accelerometer_rotation
+05-24 01:11:51.058 I/GenerationRegistry( 1005): mBackingStore.isClosed() : false
+05-24 01:11:51.058 D/SettingsProvider( 1005): isChangeAllowed() : name = user_rotation
+05-24 01:11:51.059 V/WindowManager( 1005): rotationForOrientation(orient=SCREEN_ORIENTATION_PORTRAIT (1), last=ROTATION_0 (0)); user=ROTATION_0 (0) USER_ROTATION_LOCKED
+05-24 01:11:51.059 D/WindowManager( 1005): rotationForOrientation, orientationSource=ActivityRecord{2f5da50 u0 com.parkcheolhong.worldlinco/.MainActivity t3167}
+05-24 01:11:51.059 V/WindowManager( 1005): Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.DisplayContent.updateRotationUnchecked:2339 com.android.server.wm.WindowManagerService.updateRotationUnchecked:4535 com.android.server.wm.WindowManagerService.thawDisplayRotation:4476 com.android.server.wm.WindowManagerService.thawRotation:4440 android.view.IWindowManager$Stub.onTransact:2463 com.android.server.wm.WindowManagerService.onTransact:1621 
+05-24 01:11:51.063 I/RecentsOrientedState( 1885): current RecentsOrientedState: [this=RecentsOrientedState@155492986 mOrientationHandler=PortraitPagedViewHandler@254177592 mDisplayRotation=0 mTouchRotation=0 mRecentsActivityRotation=0 mRecentsRotation=0 isRecentsActivityRotationAllowed=false mSystemRotation=true mStateId=37248 mFlags=299]
+05-24 01:11:51.064 V/WindowManager( 1005): rotationForOrientation(orient=SCREEN_ORIENTATION_PORTRAIT (1), last=ROTATION_0 (0)); user=ROTATION_0 (0) 
+05-24 01:11:51.064 D/WindowManager( 1005): rotationForOrientation, orientationSource=ActivityRecord{2f5da50 u0 com.parkcheolhong.worldlinco/.MainActivity t3167}
+05-24 01:11:51.064 I/RecentsOrientedState( 1885): current RecentsOrientedState: [this=RecentsOrientedState@155492986 mOrientationHandler=PortraitPagedViewHandler@254177592 mDisplayRotation=0 mTouchRotation=0 mRecentsActivityRotation=0 mRecentsRotation=0 isRecentsActivityRotationAllowed=false mSystemRotation=true mStateId=38272 mFlags=299]
+05-24 01:11:51.064 I/Monkey  (24377): ## Network stats: elapsed time=22ms (0ms mobile, 0ms wifi, 22ms not connected)
+05-24 01:11:51.064 V/WindowManager( 1005): Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.DisplayContent.updateRotationUnchecked:2339 com.android.server.wm.WindowManagerService.updateRotationUnchecked:4535 com.android.server.wm.WindowManagerService.updateRotation:4516 com.android.server.wm.DisplayRotation$SettingsObserver.onChange:1912 android.database.ContentObserver.onChange:153 android.database.ContentObserver.onChange:169 
+05-24 01:11:51.064 D/TspStateManager( 1005): updateCustomValue customSetting=
+05-24 01:11:51.065 D/TspStateManager( 1005): updateCustomValue customSetting=
+05-24 01:11:51.065 I/app_process(24377): System.exit called, status: 0
+05-24 01:11:51.065 I/AndroidRuntime(24377): VM exiting with result code 0.
+05-24 01:11:51.065 D/TspStateManager( 1005): updateCustomValue customSetting=
+05-24 01:11:51.067 I/ChimeraAggressivePolicyHandler( 1005): executePolicy() - triggerSource: TRIGGER_SOURCE_LMKD
+05-24 01:11:51.067 I/ChimeraAggressivePolicyHandler( 1005): available memory: 3270232, free memory target: 2201600, quit chimera
+05-24 01:11:51.072 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:11:51.073 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:11:51.073 V/SecQSFragmentAnimatorBase( 1415): setQsExpansionPosition 0.0
+05-24 01:11:51.073 V/QsExpandAnimator( 1415): setQsExpansionPosition 0.0 0
+05-24 01:11:51.073 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:11:51.075 D/SettingsHelper( 1415): onChange() COMPLETED elapsed= 1
+05-24 01:11:51.075 V/SettingsHelper( 1415): *** broadcastChange for content://settings/system/accelerometer_rotation
+05-24 01:11:51.076 D/SettingsHelper( 1415): onChange() COMPLETED elapsed= 0
+05-24 01:11:51.076 V/SettingsHelper( 1415): *** broadcastChange for content://settings/system/accelerometer_rotation
+05-24 01:11:51.076 D/Tile.RotationLockTile( 1415):  OnChangedCallback : 
+05-24 01:11:51.077 V/QsExpandAnimator( 1415): updateAnimators
+05-24 01:11:51.077 V/QsExpandAnimator( 1415): clearAnimationState 
+05-24 01:11:51.077 V/QsExpandAnimator( 1415): setQsExpansionPosition 0.0 0
+05-24 01:11:51.077 D/Tile.RotationLockTile( 1415):  handleUpdateState: true orientation = true
+05-24 01:11:51.099 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:11:51.099 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:11:51.099 V/SecQSFragmentAnimatorBase( 1415): setQsExpansionPosition 0.0
+05-24 01:11:51.099 V/QsExpandAnimator( 1415): setQsExpansionPosition 0.0 0
+05-24 01:11:51.100 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:11:51.100 V/QsExpandAnimator( 1415): updateAnimators
+05-24 01:11:51.100 V/QsExpandAnimator( 1415): clearAnimationState 
+05-24 01:11:51.100 V/QsExpandAnimator( 1415): setQsExpansionPosition 0.0 0
+05-24 01:11:51.239 D/NetdEventListenerService( 1005): DNS Requested by : 100, 10463, 0
+05-24 01:11:51.369 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.011068893]
+05-24 01:11:51.369 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.8586306]
+05-24 01:11:51.369 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.36526504]
+05-24 01:11:51.369 D/SemNscXgbMsL1( 1005): 1 sample inference time: 0.1555 msecs
+05-24 01:11:51.369 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 0.280077 msecs
+05-24 01:11:51.370 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 0.240116 msecs
+05-24 01:11:51.411 D/io_stats(  457): !@   8,0 r 2459968 96151660 w 2029799 53840168 d 0 0 f 0 0 iot 1482952 0 th 0 0 0 pt 0 inp 0 0 193077.808
+05-24 01:11:51.870 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.0093483]
+05-24 01:11:51.870 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.61268175]
+05-24 01:11:51.870 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.04795425]
+05-24 01:11:51.870 D/SemNscXgbMsL1( 1005): 1 sample inference time: 0.15323 msecs
+05-24 01:11:51.871 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 0.279307 msecs
+05-24 01:11:51.871 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 0.254462 msecs
+05-24 01:11:52.372 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.021421846]
+05-24 01:11:52.372 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.83743817]
+05-24 01:11:52.372 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.83834416]
+05-24 01:11:52.372 D/SemNscXgbMsL1( 1005): 1 sample inference time: 0.175384 msecs
+05-24 01:11:52.372 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 0.300846 msecs
+05-24 01:11:52.373 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 0.249039 msecs
+05-24 01:11:52.497 E/Tethering( 1005): [api31.BpfCoordinatorShimImpl] ERROR Fail to fetch tethering stats from BPF map: : getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:11:52.497 E/Tethering( 1005): android.system.ErrnoException: getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextMapKey(Native Method)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextRawKey(BpfMap.java:199)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextKeyInternal(BpfMap.java:177)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getFirstKey(BpfMap.java:206)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.forEach(BpfMap.java:243)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.apishim.api31.BpfCoordinatorShimImpl.tetherOffloadGetStats(BpfCoordinatorShimImpl.java:241)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.updateForwardedStats(BpfCoordinator.java:1844)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.lambda$new$0(BpfCoordinator.java:249)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.$r8$lambda$11zi2so53-tPlRpKnlSkWOpxReo(Unknown Source:0)
+05-24 01:11:52.497 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator$$ExternalSyntheticLambda0.run(Unknown Source:2)
+05-24 01:11:52.497 E/Tethering( 1005): 	at android.os.Handler.handleCallback(Handler.java:938)
+05-24 01:11:52.497 E/Tethering( 1005): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+05-24 01:11:52.497 E/Tethering( 1005): 	at android.os.Looper.loopOnce(Looper.java:226)
+05-24 01:11:52.497 E/Tethering( 1005): 	at android.os.Looper.loop(Looper.java:313)
+05-24 01:11:52.497 E/Tethering( 1005): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+05-24 01:11:52.497 E/Tethering( 1005): [BpfCoordinator] ERROR Problem fetching tethering stats
+05-24 01:11:52.874 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.010164907]
+05-24 01:11:52.874 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.83567256]
+05-24 01:11:52.874 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.2620675]
+05-24 01:11:52.874 D/SemNscXgbMsL1( 1005): 1 sample inference time: 0.183577 msecs
+05-24 01:11:52.874 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 0.3035 msecs
+05-24 01:11:52.874 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 0.252846 msecs
+05-24 01:11:53.046 I/SemDvfsHyPerManager( 1005): acquire hyper - AMS_RESUME_TAIL/1005@19, type = -999
+05-24 01:11:53.047 I/SemDvfsHyPerManager( 1005): acquire hyper - AMS_ACT_LAZY/1005@20, type = -999
+05-24 01:11:53.047 D/ActivityManagerPerformance( 1005): AMP_acquire() TAIL
+05-24 01:11:53.047 D/ActivityManagerPerformance( 1005): AMP_release() ACT_START
+05-24 01:11:53.047 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 524819  [1005 / 19]    HINT : AMS_RESUME_TAIL    list : 
+05-24 01:11:53.050 I/HYPER-HAL(  562): [RequestManager.cpp]releaseLocked(): Released ID : 522770
+05-24 01:11:53.353 I/HYPER-HAL(  562): [RequestManager.cpp]releaseLocked(): Released ID : 524819
+05-24 01:11:53.379 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.024481555]
+05-24 01:11:53.380 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.75584334]
+05-24 01:11:53.380 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.7553891]
+05-24 01:11:53.381 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.461461 msecs
+05-24 01:11:53.383 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.447193 msecs
+05-24 01:11:53.385 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.971808 msecs
+05-24 01:11:53.542 I/wpa_supplicant( 1392): Heartbeat 19303
+05-24 01:11:53.889 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.02516032]
+05-24 01:11:53.890 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.50854623]
+05-24 01:11:53.890 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.76251614]
+05-24 01:11:53.890 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.5585 msecs
+05-24 01:11:53.893 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.350731 msecs
+05-24 01:11:53.895 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.9895 msecs
+05-24 01:11:54.383 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:11:54.384 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-79 ber=99 rscp=-78 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:11:54.388 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:11:54.397 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.039033268]
+05-24 01:11:54.398 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.6395864]
+05-24 01:11:54.398 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.5008698]
+05-24 01:11:54.399 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.413307 msecs
+05-24 01:11:54.402 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 3.046538 msecs
+05-24 01:11:54.404 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.025808 msecs
+05-24 01:11:54.683 D/UsbStatsMonitor( 1005): 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17703855194138
+05-24 01:11:54.907 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.014966743]
+05-24 01:11:54.908 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.4868659]
+05-24 01:11:54.908 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.3827637]
+05-24 01:11:54.908 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.441153 msecs
+05-24 01:11:54.910 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.889692 msecs
+05-24 01:11:54.912 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.752346 msecs
+05-24 01:11:55.414 D/io_stats(  457): !@   8,0 r 2459968 96151660 w 2029821 53840268 d 0 0 f 0 0 iot 1482956 0 th 0 0 0 pt 0 inp 0 0 193081.810
+05-24 01:11:55.416 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.013002151]
+05-24 01:11:55.416 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.7542639]
+05-24 01:11:55.416 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.05180815]
+05-24 01:11:55.416 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.369538 msecs
+05-24 01:11:55.419 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.7935 msecs
+05-24 01:11:55.420 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.58 msecs
+05-24 01:11:55.520 W/ProcessCpuTracker( 1005): Failed to stat(/proc/24433): android.system.ErrnoException: stat failed: ENOENT (No such file or directory)
+05-24 01:11:55.520 W/ProcessCpuTracker( 1005): Skipping unknown process pid 24433
+05-24 01:11:55.670 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:11:55.671 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-81 ber=99 rscp=-80 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:11:55.675 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:11:55.762 E/audit   (  514): type=1400 audit(1779552715.755:30657): avc:  denied  { write } for  pid=15725 comm="ThreadPoolForeg" name="traced_producer" dev="tmpfs" ino=26790 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 SEPF_SM-G973N_12_0001 audit_filtered
+05-24 01:11:55.762 E/audit   (  514): type=1300 audit(1779552715.755:30657): arch=c00000b7 syscall=203 success=no exit=-13 a0=8b a1=6e815b95b0 a2=1e a3=ffffffff95f1206e items=0 ppid=534 pid=15725 auid=4294967295 uid=10076 gid=10076 euid=10076 suid=10076 fsuid=10076 egid=10076 sgid=10076 fsgid=10076 tty=(none) ses=4294967295 comm="ThreadPoolForeg" exe="/system/bin/app_process64" subj=u:r:gmscore_app:s0:c512,c768 key=(null)
+05-24 01:11:55.762 E/audit   (  514): type=1327 audit(1779552715.755:30657): proctitle="com.google.android.gms.persistent"
+05-24 01:11:55.924 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.011492743]
+05-24 01:11:55.924 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.8338897]
+05-24 01:11:55.925 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.122034095]
+05-24 01:11:55.925 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.861462 msecs
+05-24 01:11:55.928 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.284808 msecs
+05-24 01:11:55.930 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.008077 msecs
+05-24 01:11:56.036 D/BatteryDump(  552): wait_for_battery_event : occurred : change@/devices/platform/battery/power_supply/battery 
+05-24 01:11:56.051 I/android.hardware.health@2.1-service-samsung(  552): updateLrpSysfs: write: 270
+05-24 01:11:56.086 I/NearbyMediums(15725): No BLE Fast/GATT advertisements found in the latest cycle.
+05-24 01:11:56.088 I/NearbyMediums(15725): Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+05-24 01:11:56.432 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.0859554]
+05-24 01:11:56.435 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.6737672]
+05-24 01:11:56.435 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.57019985]
+05-24 01:11:56.435 D/SemNscXgbMsL1( 1005): 1 sample inference time: 3.024538 msecs
+05-24 01:11:56.438 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.2595 msecs
+05-24 01:11:56.440 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.374077 msecs
+05-24 01:11:56.881 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 1005): Backhaul result - RSSI:-127, CE:8, PE:7, TI:46, PTI:45, TW:1, PTW:1, Tx:104, Rx:314, TxS:88, RxS:74, RESULT:true, IC:0, ICT:2, WC:0, WCT:2, R:0, RC:0, IE:0, EC:0
+05-24 01:11:56.940 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:11:56.941 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-79 ber=99 rscp=-78 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:11:56.947 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.084850006]
+05-24 01:11:56.947 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.95922077]
+05-24 01:11:56.948 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.055134144]
+05-24 01:11:56.948 D/SemNscXgbMsL1( 1005): 1 sample inference time: 3.358769 msecs
+05-24 01:11:56.950 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.213 msecs
+05-24 01:11:56.952 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.936808 msecs
+05-24 01:11:56.955 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:11:57.416 D/io_stats(  457): !@   8,0 r 2459968 96151660 w 2029826 53840440 d 0 0 f 0 0 iot 1482960 0 th 0 0 0 pt 0 inp 0 0 193083.812
+05-24 01:11:57.456 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.04868463]
+05-24 01:11:57.457 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.9312216]
+05-24 01:11:57.457 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.33570123]
+05-24 01:11:57.457 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.285039 msecs
+05-24 01:11:57.460 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.246038 msecs
+05-24 01:11:57.462 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.856962 msecs
+05-24 01:11:57.499 E/Tethering( 1005): [api31.BpfCoordinatorShimImpl] ERROR Fail to fetch tethering stats from BPF map: : getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:11:57.499 E/Tethering( 1005): android.system.ErrnoException: getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextMapKey(Native Method)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextRawKey(BpfMap.java:199)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextKeyInternal(BpfMap.java:177)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getFirstKey(BpfMap.java:206)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.forEach(BpfMap.java:243)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.apishim.api31.BpfCoordinatorShimImpl.tetherOffloadGetStats(BpfCoordinatorShimImpl.java:241)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.updateForwardedStats(BpfCoordinator.java:1844)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.lambda$new$0(BpfCoordinator.java:249)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.$r8$lambda$11zi2so53-tPlRpKnlSkWOpxReo(Unknown Source:0)
+05-24 01:11:57.499 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator$$ExternalSyntheticLambda0.run(Unknown Source:2)
+05-24 01:11:57.499 E/Tethering( 1005): 	at android.os.Handler.handleCallback(Handler.java:938)
+05-24 01:11:57.499 E/Tethering( 1005): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+05-24 01:11:57.499 E/Tethering( 1005): 	at android.os.Looper.loopOnce(Looper.java:226)
+05-24 01:11:57.499 E/Tethering( 1005): 	at android.os.Looper.loop(Looper.java:313)
+05-24 01:11:57.499 E/Tethering( 1005): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+05-24 01:11:57.499 E/Tethering( 1005): [BpfCoordinator] ERROR Problem fetching tethering stats
+05-24 01:11:57.812 E/audit   (  514): type=1400 audit(1779552717.807:30658): avc:  denied  { write } for  pid=11264 comm="ThreadPoolForeg" name="traced_producer" dev="tmpfs" ino=26790 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 SEPF_SM-G973N_12_0001 audit_filtered
+05-24 01:11:57.812 E/audit   (  514): type=1300 audit(1779552717.807:30658): arch=c00000b7 syscall=203 success=no exit=-13 a0=62 a1=6e815bf490 a2=1e a3=ffffffff95f1206e items=0 ppid=534 pid=11264 auid=4294967295 uid=10076 gid=10076 euid=10076 suid=10076 fsuid=10076 egid=10076 sgid=10076 fsgid=10076 tty=(none) ses=4294967295 comm="ThreadPoolForeg" exe="/system/bin/app_process64" subj=u:r:gmscore_app:s0:c512,c768 key=(null)
+05-24 01:11:57.812 E/audit   (  514): type=1327 audit(1779552717.807:30658): proctitle="com.google.android.gms.unstable"
+05-24 01:11:57.966 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.022867993]
+05-24 01:11:57.967 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.6932172]
+05-24 01:11:57.967 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.46272627]
+05-24 01:11:57.968 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.592539 msecs
+05-24 01:11:57.970 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.308577 msecs
+05-24 01:11:57.972 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.930038 msecs
+05-24 01:11:58.474 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.04033177]
+05-24 01:11:58.475 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.70634186]
+05-24 01:11:58.475 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.7089553]
+05-24 01:11:58.475 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.2495 msecs
+05-24 01:11:58.477 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.795885 msecs
+05-24 01:11:58.479 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.678885 msecs
+05-24 01:11:58.981 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.07831917]
+05-24 01:11:58.982 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.4384458]
+05-24 01:11:58.982 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.6604027]
+05-24 01:11:58.983 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.337615 msecs
+05-24 01:11:58.985 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.081769 msecs
+05-24 01:11:58.987 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.876577 msecs
+05-24 01:11:59.491 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.021794511]
+05-24 01:11:59.492 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.6077295]
+05-24 01:11:59.492 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.8279556]
+05-24 01:11:59.492 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.678231 msecs
+05-24 01:11:59.495 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.574 msecs
+05-24 01:11:59.498 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.138269 msecs
+05-24 01:11:59.509 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:11:59.511 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-81 ber=99 rscp=-80 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:11:59.513 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:12:00.000 D/SamsungAlarmManager( 1005): Expired : 8
+05-24 01:12:00.000 V/SamsungAlarmManager( 1005): Sending to uid : 1000 L=abb6da0:TIME_TICK alarm=Alarm{5bea012 type 3 origWhen 193086397 whenElapsed 193086397 android}
+05-24 01:12:00.001 D/SamsungAlarmManager( 1005): setExact (T:3/F:9/AC:false) 20260524T011300 now=193086398 - CU:1000/CP:1005/L:abb6da0:TIME_TICK
+05-24 01:12:00.003 V/SamsungAlarmManager( 1005): setLocked to kernel - W:193171670 / NW:193146397, now=193086400
+05-24 01:12:00.004 D/QSClockBellTower( 1415): onReceive(android.intent.action.TIME_TICK) mTimeZoneString:null
+05-24 01:12:00.004 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.020081593]
+05-24 01:12:00.005 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.34159967]
+05-24 01:12:00.005 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.81314635]
+05-24 01:12:00.005 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.089731 msecs
+05-24 01:12:00.006 V/SamsungAlarmManager( 1005): setLocked to kernel - W:193171670 / NW:193146397, now=193086403
+05-24 01:12:00.006 D/KeyguardUpdateMonitor( 1415): received broadcast android.intent.action.TIME_TICK
+05-24 01:12:00.012 I/EyeComfortSolutionService( 1005): action  :  android.intent.action.TIME_TICK
+05-24 01:12:00.014 I/EyeComfortSolutionService( 1005): Week : Sun , Hour : 01 , Minute : 12 , TimeValue : 72 , sleep state, defaultWakeupTime : 360 , start wakeup : 180
+05-24 01:12:00.019 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 14.211115 msecs
+05-24 01:12:00.021 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.828692 msecs
+05-24 01:12:00.038 D/QSClockBellTower( 1415): He is ready to ring the bell. (((QSClockBellSound - TimeText:01:12, TimeContentDescription:01:12, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demofalse)))
+05-24 01:12:00.038 D/QSClockHomeIndicatorView( 1415): Home Indicator status_bar_clock notifyTimeChanged(QSClockBellSound - TimeText:01:12, TimeContentDescription:01:12, DateText:5월 24일 일요일, ShortDateText:5월 24일 (일), Demofalse) ClockVisibleByPolicy:true, ClockVisibleByUser:true, visible?true, parent:android.widget.LinearLayout{bea6838 V.E...... ......ID 0,0-130,88 #7f0b0472 app:id/left_clock_container}
+05-24 01:12:00.039 D/QSClockBellTower( 1415): Everyone heard the bell. run(currentTime:1779552720036,   getTime():Sun May 24 01:12:00 GMT+09:00 2026,   getTimeZone():libcore.util.ZoneInfo[mDstSavings=0,mUseDst=false,mDelegate=[id="Asia/Seoul",mRawOffset=32400000,mEarliestRawOffset=30472000,transitions=29]])
+05-24 01:12:00.039 D/KeyguardUpdateMonitor( 1415): handleTimeUpdate
+05-24 01:12:00.041 D/FaceWidgetPagesController( 1415): onTimeChanged()
+05-24 01:12:00.051 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:12:00.054 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:12:00.054 V/SecQSFragmentAnimatorBase( 1415): setQsExpansionPosition 0.0
+05-24 01:12:00.054 V/QsExpandAnimator( 1415): setQsExpansionPosition 0.0 0
+05-24 01:12:00.054 D/QS      ( 1415): setQSExpansion 0.0 -128.45
+05-24 01:12:00.056 D/IndicatorGardenInputProperty( 1415): updateRotation() prv:-1 >> new:0
+05-24 01:12:00.056 D/DeviceState( 1415): getDeviceResolutionPixelSize - currentDensity = 540 deviceDensity = 540 initialDisplaySizeFactor = 1440 currentDisplaySizeFactor = 1080 initialDisplayDensity = 560 proportionalDensity = 420 proportionalPixel = 66
+05-24 01:12:00.056 D/DeviceState( 1415): getDeviceResolutionPixelSize - currentDensity = 540 deviceDensity = 540 initialDisplaySizeFactor = 1440 currentDisplaySizeFactor = 1080 initialDisplayDensity = 560 proportionalDensity = 420 proportionalPixel = 27
+05-24 01:12:00.056 D/DeviceState( 1415): getDeviceResolutionPixelSize - currentDensity = 540 deviceDensity = 540 initialDisplaySizeFactor = 1440 currentDisplaySizeFactor = 1080 initialDisplayDensity = 560 proportionalDensity = 420 proportionalPixel = 24
+05-24 01:12:00.058 V/QsExpandAnimator( 1415): updateAnimators
+05-24 01:12:00.058 V/QsExpandAnimator( 1415): clearAnimationState 
+05-24 01:12:00.060 V/QsExpandAnimator( 1415): setQsExpansionPosition 0.0 0
+05-24 01:12:00.221 D/vendor.samsung.hardware.thermal@1.0-service(  574): timer callback!
+05-24 01:12:00.526 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.010768911]
+05-24 01:12:00.527 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.40172726]
+05-24 01:12:00.527 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.45984074]
+05-24 01:12:00.528 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.044885 msecs
+05-24 01:12:00.531 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 3.498615 msecs
+05-24 01:12:00.535 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.818808 msecs
+05-24 01:12:01.038 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.024452774]
+05-24 01:12:01.038 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.56810915]
+05-24 01:12:01.039 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.4076674]
+05-24 01:12:01.039 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.567577 msecs
+05-24 01:12:01.041 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.076154 msecs
+05-24 01:12:01.043 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.550847 msecs
+05-24 01:12:01.419 D/io_stats(  457): !@   8,0 r 2459969 96151664 w 2029872 53840836 d 0 0 f 0 0 iot 1482968 0 th 0 0 0 pt 0 inp 0 0 193087.815
+05-24 01:12:01.548 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.012642568]
+05-24 01:12:01.549 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.40583378]
+05-24 01:12:01.549 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.17373258]
+05-24 01:12:01.549 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.025577 msecs
+05-24 01:12:01.551 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.634615 msecs
+05-24 01:12:01.552 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.316731 msecs
+05-24 01:12:02.056 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.013161237]
+05-24 01:12:02.057 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.8216345]
+05-24 01:12:02.058 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.28427157]
+05-24 01:12:02.058 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.6775 msecs
+05-24 01:12:02.061 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.439 msecs
+05-24 01:12:02.063 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.21623 msecs
+05-24 01:12:02.503 E/Tethering( 1005): [api31.BpfCoordinatorShimImpl] ERROR Fail to fetch tethering stats from BPF map: : getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:02.503 E/Tethering( 1005): android.system.ErrnoException: getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextMapKey(Native Method)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextRawKey(BpfMap.java:199)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextKeyInternal(BpfMap.java:177)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getFirstKey(BpfMap.java:206)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.forEach(BpfMap.java:243)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.apishim.api31.BpfCoordinatorShimImpl.tetherOffloadGetStats(BpfCoordinatorShimImpl.java:241)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.updateForwardedStats(BpfCoordinator.java:1844)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.lambda$new$0(BpfCoordinator.java:249)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.$r8$lambda$11zi2so53-tPlRpKnlSkWOpxReo(Unknown Source:0)
+05-24 01:12:02.503 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator$$ExternalSyntheticLambda0.run(Unknown Source:2)
+05-24 01:12:02.503 E/Tethering( 1005): 	at android.os.Handler.handleCallback(Handler.java:938)
+05-24 01:12:02.503 E/Tethering( 1005): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+05-24 01:12:02.503 E/Tethering( 1005): 	at android.os.Looper.loopOnce(Looper.java:226)
+05-24 01:12:02.503 E/Tethering( 1005): 	at android.os.Looper.loop(Looper.java:313)
+05-24 01:12:02.503 E/Tethering( 1005): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+05-24 01:12:02.503 E/Tethering( 1005): [BpfCoordinator] ERROR Problem fetching tethering stats
+05-24 01:12:02.566 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.042262893]
+05-24 01:12:02.567 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.45848137]
+05-24 01:12:02.567 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.31765717]
+05-24 01:12:02.567 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.433269 msecs
+05-24 01:12:02.570 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.534616 msecs
+05-24 01:12:02.572 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.889769 msecs
+05-24 01:12:02.901 E/audit   (  514): type=1400 audit(1779552722.895:30659): avc:  denied  { write } for  pid=13696 comm="PerfettoTrace" name="traced_producer" dev="tmpfs" ino=26790 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 SEPF_SM-G973N_12_0001 audit_filtered
+05-24 01:12:02.901 E/audit   (  514): type=1300 audit(1779552722.895:30659): arch=c00000b7 syscall=203 success=no exit=-13 a0=bf a1=6a007bfec0 a2=1e a3=ffffffff95f1206e items=0 ppid=534 pid=13696 auid=4294967295 uid=10076 gid=10076 euid=10076 suid=10076 fsuid=10076 egid=10076 sgid=10076 fsgid=10076 tty=(none) ses=4294967295 comm="PerfettoTrace" exe="/system/bin/app_process64" subj=u:r:gmscore_app:s0:c512,c768 key=(null)
+05-24 01:12:02.901 E/audit   (  514): type=1327 audit(1779552722.895:30659): proctitle="com.google.android.gms"
+05-24 01:12:03.076 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.053454746]
+05-24 01:12:03.077 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.69877267]
+05-24 01:12:03.077 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.41406363]
+05-24 01:12:03.077 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.409154 msecs
+05-24 01:12:03.079 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.36327 msecs
+05-24 01:12:03.082 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.984615 msecs
+05-24 01:12:03.191 D/DeviceStorageMonitorService( 1005): check() STORAGE TOTAL > 64G
+05-24 01:12:03.192 W/DeviceStorageMonitorService( 1005): updateBroadcasts(/data) oldLevel:0, newLevel:0, seq:1
+05-24 01:12:03.194 E/vold    (  426): getUsedF2fsFileNode -> Cannot Get Used FileNode Number (errno=25 Inappropriate ioctl for device)
+05-24 01:12:03.195 D/DeviceStorageMonitorService( 1005): Cannot get USED FILE NODE NUMBER!!!
+05-24 01:12:03.195 D/DeviceStorageMonitorService( 1005): Available File Node Number is [-1]
+05-24 01:12:03.195 W/DeviceStorageMonitorService( 1005): updateBroadcasts_filenode(/data) fn_oldLevel:0, fn_newLevel:0, seq:1
+05-24 01:12:03.344 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:12:03.345 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-79 ber=99 rscp=-78 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:12:03.349 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:12:03.543 I/wpa_supplicant( 1392): Heartbeat 19304
+05-24 01:12:03.585 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.015484154]
+05-24 01:12:03.586 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.8894493]
+05-24 01:12:03.586 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.39514503]
+05-24 01:12:03.586 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.327615 msecs
+05-24 01:12:03.588 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.130461 msecs
+05-24 01:12:03.591 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.982731 msecs
+05-24 01:12:04.094 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.011259913]
+05-24 01:12:04.095 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.47132763]
+05-24 01:12:04.095 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.2683691]
+05-24 01:12:04.095 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.449923 msecs
+05-24 01:12:04.098 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.138692 msecs
+05-24 01:12:04.100 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.967423 msecs
+05-24 01:12:04.603 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.010747546]
+05-24 01:12:04.604 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.8313644]
+05-24 01:12:04.604 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.8022928]
+05-24 01:12:04.604 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.341923 msecs
+05-24 01:12:04.607 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.996 msecs
+05-24 01:12:04.609 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.848077 msecs
+05-24 01:12:05.112 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.017430263]
+05-24 01:12:05.113 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.3837774]
+05-24 01:12:05.113 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.3567474]
+05-24 01:12:05.114 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.571 msecs
+05-24 01:12:05.116 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.324769 msecs
+05-24 01:12:05.118 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.743808 msecs
+05-24 01:12:05.621 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.030728467]
+05-24 01:12:05.622 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.5810976]
+05-24 01:12:05.622 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.19609961]
+05-24 01:12:05.622 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.816039 msecs
+05-24 01:12:05.625 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.098346 msecs
+05-24 01:12:05.627 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.129346 msecs
+05-24 01:12:06.092 I/NearbyMediums(15725): No BLE Fast/GATT advertisements found in the latest cycle.
+05-24 01:12:06.092 I/NearbyMediums(15725): Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+05-24 01:12:06.130 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.016496481]
+05-24 01:12:06.131 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.774859]
+05-24 01:12:06.132 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.35151142]
+05-24 01:12:06.132 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.121423 msecs
+05-24 01:12:06.136 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 3.469923 msecs
+05-24 01:12:06.138 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.477462 msecs
+05-24 01:12:06.480 I/id.gms.unstabl(11264): Explicit concurrent copying GC freed 662(146KB) AllocSpace objects, 0(0B) LOS objects, 56% free, 4711KB/10MB, paused 284us,240us total 88.022ms
+05-24 01:12:06.642 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.015215555]
+05-24 01:12:06.643 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.42972532]
+05-24 01:12:06.644 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.42290175]
+05-24 01:12:06.644 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.675693 msecs
+05-24 01:12:06.648 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 4.062115 msecs
+05-24 01:12:06.650 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.898039 msecs
+05-24 01:12:06.885 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 1005): Backhaul result - RSSI:-127, CE:8, PE:8, TI:46, PTI:46, TW:1, PTW:1, Tx:73, Rx:180, TxS:63, RxS:56, RESULT:true, IC:0, ICT:2, WC:0, WCT:2, R:0, RC:0, IE:0, EC:0
+05-24 01:12:07.152 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.014270621]
+05-24 01:12:07.153 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.87957776]
+05-24 01:12:07.153 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.17590564]
+05-24 01:12:07.153 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.294384 msecs
+05-24 01:12:07.156 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.514846 msecs
+05-24 01:12:07.158 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.944077 msecs
+05-24 01:12:07.423 D/io_stats(  457): !@   8,0 r 2459969 96151664 w 2029894 53841008 d 0 0 f 0 0 iot 1482972 0 th 0 0 0 pt 0 inp 0 0 193093.820
+05-24 01:12:07.507 E/Tethering( 1005): [api31.BpfCoordinatorShimImpl] ERROR Fail to fetch tethering stats from BPF map: : getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:07.507 E/Tethering( 1005): android.system.ErrnoException: getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextMapKey(Native Method)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextRawKey(BpfMap.java:199)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextKeyInternal(BpfMap.java:177)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getFirstKey(BpfMap.java:206)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.forEach(BpfMap.java:243)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.apishim.api31.BpfCoordinatorShimImpl.tetherOffloadGetStats(BpfCoordinatorShimImpl.java:241)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.updateForwardedStats(BpfCoordinator.java:1844)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.lambda$new$0(BpfCoordinator.java:249)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.$r8$lambda$11zi2so53-tPlRpKnlSkWOpxReo(Unknown Source:0)
+05-24 01:12:07.507 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator$$ExternalSyntheticLambda0.run(Unknown Source:2)
+05-24 01:12:07.507 E/Tethering( 1005): 	at android.os.Handler.handleCallback(Handler.java:938)
+05-24 01:12:07.507 E/Tethering( 1005): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+05-24 01:12:07.507 E/Tethering( 1005): 	at android.os.Looper.loopOnce(Looper.java:226)
+05-24 01:12:07.507 E/Tethering( 1005): 	at android.os.Looper.loop(Looper.java:313)
+05-24 01:12:07.507 E/Tethering( 1005): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+05-24 01:12:07.507 E/Tethering( 1005): [BpfCoordinator] ERROR Problem fetching tethering stats
+05-24 01:12:07.663 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.011332988]
+05-24 01:12:07.664 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.9324479]
+05-24 01:12:07.665 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.036956172]
+05-24 01:12:07.665 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.012039 msecs
+05-24 01:12:07.668 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.620577 msecs
+05-24 01:12:07.671 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.5155 msecs
+05-24 01:12:08.175 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.017015375]
+05-24 01:12:08.176 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.85968]
+05-24 01:12:08.176 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.17694326]
+05-24 01:12:08.176 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.535731 msecs
+05-24 01:12:08.179 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.156346 msecs
+05-24 01:12:08.181 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.997923 msecs
+05-24 01:12:08.684 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.026340581]
+05-24 01:12:08.685 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.56742]
+05-24 01:12:08.685 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.24193019]
+05-24 01:12:08.685 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.488731 msecs
+05-24 01:12:08.688 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.357923 msecs
+05-24 01:12:08.690 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.000346 msecs
+05-24 01:12:09.193 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.012264782]
+05-24 01:12:09.194 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.95775497]
+05-24 01:12:09.195 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.19888343]
+05-24 01:12:09.195 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.079384 msecs
+05-24 01:12:09.198 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.741538 msecs
+05-24 01:12:09.201 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.652154 msecs
+05-24 01:12:09.705 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.0076098545]
+05-24 01:12:09.706 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.9884631]
+05-24 01:12:09.706 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.056627136]
+05-24 01:12:09.706 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.636 msecs
+05-24 01:12:09.708 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.128346 msecs
+05-24 01:12:09.710 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.699461 msecs
+05-24 01:12:10.214 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.009836695]
+05-24 01:12:10.215 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.9127938]
+05-24 01:12:10.215 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.48745874]
+05-24 01:12:10.215 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.825115 msecs
+05-24 01:12:10.217 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.082462 msecs
+05-24 01:12:10.220 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.005616 msecs
+05-24 01:12:10.222 D/vendor.samsung.hardware.thermal@1.0-service(  574): timer callback!
+05-24 01:12:10.724 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.009634085]
+05-24 01:12:10.725 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.502726]
+05-24 01:12:10.726 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.4367476]
+05-24 01:12:10.726 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.5195 msecs
+05-24 01:12:10.729 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.955 msecs
+05-24 01:12:10.732 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.364615 msecs
+05-24 01:12:11.019 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:12:11.020 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-81 ber=99 rscp=-81 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:12:11.023 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:12:11.236 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.016488314]
+05-24 01:12:11.236 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.66394573]
+05-24 01:12:11.237 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.7361787]
+05-24 01:12:11.237 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.3985 msecs
+05-24 01:12:11.240 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.440385 msecs
+05-24 01:12:11.242 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.969923 msecs
+05-24 01:12:11.746 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.014331526]
+05-24 01:12:11.747 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.65650016]
+05-24 01:12:11.747 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.6899704]
+05-24 01:12:11.748 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.658192 msecs
+05-24 01:12:11.750 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.168539 msecs
+05-24 01:12:11.752 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.957807 msecs
+05-24 01:12:11.986 E/Watchdog( 1005): !@Sync: 6434 heap: 105 / 116 [2026-05-24 01:12:11.985] sdogWay: softdog FD: 1018
+05-24 01:12:12.255 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.018231556]
+05-24 01:12:12.256 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.43319392]
+05-24 01:12:12.257 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.27757555]
+05-24 01:12:12.257 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.348692 msecs
+05-24 01:12:12.259 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.200115 msecs
+05-24 01:12:12.261 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.945885 msecs
+05-24 01:12:12.302 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:12:12.306 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-79 ber=99 rscp=-78 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:12:12.309 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:12:12.510 E/Tethering( 1005): [api31.BpfCoordinatorShimImpl] ERROR Fail to fetch tethering stats from BPF map: : getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:12.510 E/Tethering( 1005): android.system.ErrnoException: getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextMapKey(Native Method)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextRawKey(BpfMap.java:199)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextKeyInternal(BpfMap.java:177)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getFirstKey(BpfMap.java:206)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.forEach(BpfMap.java:243)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.apishim.api31.BpfCoordinatorShimImpl.tetherOffloadGetStats(BpfCoordinatorShimImpl.java:241)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.updateForwardedStats(BpfCoordinator.java:1844)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.lambda$new$0(BpfCoordinator.java:249)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.$r8$lambda$11zi2so53-tPlRpKnlSkWOpxReo(Unknown Source:0)
+05-24 01:12:12.510 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator$$ExternalSyntheticLambda0.run(Unknown Source:2)
+05-24 01:12:12.510 E/Tethering( 1005): 	at android.os.Handler.handleCallback(Handler.java:938)
+05-24 01:12:12.510 E/Tethering( 1005): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+05-24 01:12:12.510 E/Tethering( 1005): 	at android.os.Looper.loopOnce(Looper.java:226)
+05-24 01:12:12.510 E/Tethering( 1005): 	at android.os.Looper.loop(Looper.java:313)
+05-24 01:12:12.510 E/Tethering( 1005): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+05-24 01:12:12.510 E/Tethering( 1005): [BpfCoordinator] ERROR Problem fetching tethering stats
+05-24 01:12:12.765 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.037450373]
+05-24 01:12:12.766 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.24620959]
+05-24 01:12:12.767 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.8051897]
+05-24 01:12:12.767 D/SemNscXgbMsL1( 1005): 1 sample inference time: 2.077692 msecs
+05-24 01:12:12.769 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.080115 msecs
+05-24 01:12:12.771 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.833539 msecs
+05-24 01:12:13.275 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.013179011]
+05-24 01:12:13.275 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.07129668]
+05-24 01:12:13.276 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.17948641]
+05-24 01:12:13.276 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.508654 msecs
+05-24 01:12:13.278 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.840308 msecs
+05-24 01:12:13.280 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.716231 msecs
+05-24 01:12:13.423 D/ProcessState(24513): Binder ioctl to enable oneway spam detection failed: Invalid argument
+05-24 01:12:13.428 D/io_stats(  457): !@   8,0 r 2459969 96151664 w 2029911 53841300 d 0 0 f 0 0 iot 1482980 0 th 0 0 0 pt 0 inp 0 0 193099.825
+05-24 01:12:13.431 D/InputDispatcher( 1005): Inject motion (24513): action=0x0, time=193099828000000, f=0x0, d=0
+05-24 01:12:13.432 I/InputDispatcher( 1005): Delivering touch to (1415): action: 0x4, f=0x0, d=0, 'd79db0e', t=1 
+05-24 01:12:13.432 I/InputDispatcher( 1005): Delivering touch to (21020): action: 0x0, f=0x0, d=0, '8eff482', t=1 
+05-24 01:12:13.434 I/GestureDetector( 1005): obtain mCurrentDownEvent. id: -1059733226 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:179 com.android.server.wm.PointerEventDispatcher.onInputEvent:71 android.view.InputEventReceiver.dispatchInputEvent:259 
+05-24 01:12:13.434 I/ViewRootImpl@dd1510f[MainActivity](21020): ViewPostIme pointer 0
+05-24 01:12:13.434 D/PowerManagerService( 1005): UserActivityStateListenerState: 1
+05-24 01:12:13.434 I/GestureDetector( 1005): obtain mCurrentDownEvent. id: -1059733226 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:71 android.view.InputEventReceiver.dispatchInputEvent:259 
+05-24 01:12:13.438 I/SemDvfsHyPerManager( 3236): acquire hyper - BaseTABoost/3236@22, type = 1090523139
+05-24 01:12:13.438 I/SemDvfsHyPerManager( 3236): acquire hyper - BaseTAToouchBoost/3236@24, type = 1090523139
+05-24 01:12:13.439 D/InputDispatcher( 1005): Inject motion (24513): action=0x1, time=193099828000000, f=0x0, d=0
+05-24 01:12:13.439 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 5308933  [3236 / 22]    HINT :      list : [TABoost / 5] 
+05-24 01:12:13.439 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 5315454  [3236 / 24]    HINT :      list : [TABoost / 20] [TIMEOUT / 1500] 
+05-24 01:12:13.441 I/InputDispatcher( 1005): Delivering touch to (21020): action: 0x1, f=0x0, d=0, '8eff482', t=1 
+05-24 01:12:13.441 I/ViewRootImpl@dd1510f[MainActivity](21020): ViewPostIme pointer 1
+05-24 01:12:13.442 I/GestureDetector( 1005): obtain mCurrentMotionEventRaw. action: 1 id: -1042792684
+05-24 01:12:13.442 I/GestureDetector( 1005): obtain mCurrentMotionEventRaw. action: 1 id: -1042792684
+05-24 01:12:13.543 I/wpa_supplicant( 1392): Heartbeat 19305
+05-24 01:12:13.547 D/ProcessState(24521): Binder ioctl to enable oneway spam detection failed: Invalid argument
+05-24 01:12:13.554 D/InputDispatcher( 1005): Inject motion (24521): action=0x0, time=193099950000000, f=0x0, d=0
+05-24 01:12:13.554 I/InputDispatcher( 1005): Delivering touch to (1415): action: 0x4, f=0x0, d=0, 'd79db0e', t=1 
+05-24 01:12:13.554 I/InputDispatcher( 1005): Delivering touch to (21020): action: 0x0, f=0x0, d=0, '8eff482', t=1 
+05-24 01:12:13.555 I/ViewRootImpl@dd1510f[MainActivity](21020): ViewPostIme pointer 0
+05-24 01:12:13.555 I/GestureDetector( 1005): obtain mCurrentDownEvent. id: -453323214 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:179 com.android.server.wm.PointerEventDispatcher.onInputEvent:71 android.view.InputEventReceiver.dispatchInputEvent:259 
+05-24 01:12:13.555 I/GestureDetector( 1005): obtain mCurrentDownEvent. id: -453323214 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:71 android.view.InputEventReceiver.dispatchInputEvent:259 
+05-24 01:12:13.557 I/SemDvfsHyPerManager( 3236): acquire hyper - BaseTABoost/3236@22, type = 1090523139
+05-24 01:12:13.557 I/SemDvfsHyPerManager( 3236): acquire hyper - BaseTAToouchBoost/3236@24, type = 1090523139
+05-24 01:12:13.557 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 5308933  [3236 / 22]    HINT :      list : [TABoost / 5] 
+05-24 01:12:13.557 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 5315454  [3236 / 24]    HINT :      list : [TABoost / 20] [TIMEOUT / 1500] 
+05-24 01:12:13.560 D/InputDispatcher( 1005): Inject motion (24521): action=0x1, time=193099950000000, f=0x0, d=0
+05-24 01:12:13.560 I/InputDispatcher( 1005): Delivering touch to (21020): action: 0x1, f=0x0, d=0, '8eff482', t=1 
+05-24 01:12:13.561 I/GestureDetector( 1005): obtain mCurrentMotionEventRaw. action: 1 id: -679707331
+05-24 01:12:13.561 I/ViewRootImpl@dd1510f[MainActivity](21020): ViewPostIme pointer 1
+05-24 01:12:13.561 I/GestureDetector( 1005): obtain mCurrentMotionEventRaw. action: 1 id: -679707331
+05-24 01:12:13.583 D/SemCellularStateManager( 1005): onSignalStrengthsChanged: mCellularSignalLevel=3
+05-24 01:12:13.585 D/MobileStatusTracker(0/1)( 1415): onSignalStrengthsChanged signalStrength=SignalStrength:{mCdma=Invalid,mGsm=Invalid,mWcdma=CellSignalStrengthWcdma: ss=-81 ber=99 rscp=-81 ecno=0 level=3,mTdscdma=Invalid,mLte=Invalid,mNr=Invalid,SignalBarInfo{ wcdmaLevel=4 },rat=3,primary=CellSignalStrengthWcdma} level=4
+05-24 01:12:13.587 D/NetworkController( 1415): SignalStrength from intent slotId=0
+05-24 01:12:13.675 D/ProcessState(24528): Binder ioctl to enable oneway spam detection failed: Invalid argument
+05-24 01:12:13.688 D/InputDispatcher( 1005): Inject motion (24528): action=0x0, time=193100085000000, f=0x0, d=0
+05-24 01:12:13.688 I/InputDispatcher( 1005): Delivering touch to (1415): action: 0x4, f=0x0, d=0, 'd79db0e', t=1 
+05-24 01:12:13.688 I/InputDispatcher( 1005): Delivering touch to (21020): action: 0x0, f=0x0, d=0, '8eff482', t=1 
+05-24 01:12:13.688 I/ViewRootImpl@dd1510f[MainActivity](21020): ViewPostIme pointer 0
+05-24 01:12:13.689 I/GestureDetector( 1005): obtain mCurrentDownEvent. id: -238300633 caller: com.android.server.wm.SystemGesturesPointerEventListener.onPointerEvent:179 com.android.server.wm.PointerEventDispatcher.onInputEvent:71 android.view.InputEventReceiver.dispatchInputEvent:259 
+05-24 01:12:13.689 I/GestureDetector( 1005): obtain mCurrentDownEvent. id: -238300633 caller: com.android.server.wm.SystemPerformancePointerEventListener.onPointerEvent:89 com.android.server.wm.PointerEventDispatcher.onInputEvent:71 android.view.InputEventReceiver.dispatchInputEvent:259 
+05-24 01:12:13.690 I/SemDvfsHyPerManager( 3236): acquire hyper - BaseTABoost/3236@22, type = 1090523139
+05-24 01:12:13.690 I/SemDvfsHyPerManager( 3236): acquire hyper - BaseTAToouchBoost/3236@24, type = 1090523139
+05-24 01:12:13.690 D/InputDispatcher( 1005): Inject motion (24528): action=0x1, time=193100085000000, f=0x0, d=0
+05-24 01:12:13.690 I/InputDispatcher( 1005): Delivering touch to (21020): action: 0x1, f=0x0, d=0, '8eff482', t=1 
+05-24 01:12:13.690 I/ViewRootImpl@dd1510f[MainActivity](21020): ViewPostIme pointer 1
+05-24 01:12:13.690 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 5308933  [3236 / 22]    HINT :      list : [TABoost / 5] 
+05-24 01:12:13.690 I/HYPER-HAL(  562): [RequestManager.cpp]acquire(): Acquired ID : 5315454  [3236 / 24]    HINT :      list : [TABoost / 20] [TIMEOUT / 1500] 
+05-24 01:12:13.691 I/GestureDetector( 1005): obtain mCurrentMotionEventRaw. action: 1 id: -773441532
+05-24 01:12:13.691 I/GestureDetector( 1005): obtain mCurrentMotionEventRaw. action: 1 id: -773441532
+05-24 01:12:13.784 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.02158074]
+05-24 01:12:13.784 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.7068778]
+05-24 01:12:13.785 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.20920946]
+05-24 01:12:13.785 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.245769 msecs
+05-24 01:12:13.787 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 1.940807 msecs
+05-24 01:12:13.789 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.719039 msecs
+05-24 01:12:13.989 I/GestureDetector( 1005): handleMessage TAP
+05-24 01:12:13.990 I/GestureDetector( 1005): handleMessage TAP
+05-24 01:12:14.292 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.033287887]
+05-24 01:12:14.292 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.62436014]
+05-24 01:12:14.293 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.28320125]
+05-24 01:12:14.293 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.284807 msecs
+05-24 01:12:14.295 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.0965 msecs
+05-24 01:12:14.297 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.812731 msecs
+05-24 01:12:14.799 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.09259727]
+05-24 01:12:14.800 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.78035843]
+05-24 01:12:14.800 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.34395015]
+05-24 01:12:14.800 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.305538 msecs
+05-24 01:12:14.803 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.567846 msecs
+05-24 01:12:14.805 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.504038 msecs
+05-24 01:12:15.191 I/HYPER-HAL(  562): [RequestManager.cpp]releaseLocked(): Released ID : 5315454
+05-24 01:12:15.309 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.08071849]
+05-24 01:12:15.310 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.87670296]
+05-24 01:12:15.311 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.5888209]
+05-24 01:12:15.311 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.597462 msecs
+05-24 01:12:15.313 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.055923 msecs
+05-24 01:12:15.315 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.106885 msecs
+05-24 01:12:15.818 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.020694667]
+05-24 01:12:15.821 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.7751443]
+05-24 01:12:15.821 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.2494466]
+05-24 01:12:15.821 D/SemNscXgbMsL1( 1005): 1 sample inference time: 3.613692 msecs
+05-24 01:12:15.823 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.290539 msecs
+05-24 01:12:15.825 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.738423 msecs
+05-24 01:12:16.095 I/NearbyMediums(15725): No BLE Fast/GATT advertisements found in the latest cycle.
+05-24 01:12:16.096 I/NearbyMediums(15725): Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+05-24 01:12:16.329 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.034602795]
+05-24 01:12:16.330 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.75831044]
+05-24 01:12:16.331 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.18581088]
+05-24 01:12:16.331 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.694307 msecs
+05-24 01:12:16.334 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.525808 msecs
+05-24 01:12:16.336 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 2.196346 msecs
+05-24 01:12:16.690 D/PowerManagerService( 1005): UserActivityStateListenerState: 0
+05-24 01:12:16.838 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.12352872]
+05-24 01:12:16.839 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.77134824]
+05-24 01:12:16.839 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.79902047]
+05-24 01:12:16.839 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.319307 msecs
+05-24 01:12:16.841 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.099192 msecs
+05-24 01:12:16.844 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.999269 msecs
+05-24 01:12:16.895 D/WifiConnectivityMonitor.NetworkStatsAnalyzer( 1005): Backhaul result - RSSI:-127, CE:8, PE:8, TI:46, PTI:46, TW:1, PTW:1, Tx:65, Rx:159, TxS:57, RxS:52, RESULT:true, IC:0, ICT:2, WC:0, WCT:2, R:0, RC:0, IE:0, EC:0
+05-24 01:12:17.347 D/SemNscXgbMsL1( 1005): Probability - Cloud gaming: [0.04346667]
+05-24 01:12:17.348 D/SemNscXgbMsL1( 1005): Probability - Real time: [0.74629104]
+05-24 01:12:17.349 D/SemNscXgbMsL1( 1005): Probability - Non real time: [0.77983993]
+05-24 01:12:17.349 D/SemNscXgbMsL1( 1005): 1 sample inference time: 1.614885 msecs
+05-24 01:12:17.351 D/SemNscXgbL2Rt( 1005): L2 RT 1 sample inference time: 2.380192 msecs
+05-24 01:12:17.353 D/SemNscXgbL2Nrt( 1005): L2 NRT 1 sample inference time: 1.995769 msecs
+05-24 01:12:17.432 D/io_stats(  457): !@   8,0 r 2459969 96151664 w 2029922 53841348 d 0 0 f 0 0 iot 1482984 0 th 0 0 0 pt 0 inp 0 0 193103.828
+05-24 01:12:17.514 E/Tethering( 1005): [api31.BpfCoordinatorShimImpl] ERROR Fail to fetch tethering stats from BPF map: : getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:17.514 E/Tethering( 1005): android.system.ErrnoException: getNextMapKey failed: EBADF (Bad file descriptor)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextMapKey(Native Method)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextRawKey(BpfMap.java:199)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getNextKeyInternal(BpfMap.java:177)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.getFirstKey(BpfMap.java:206)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfMap.forEach(BpfMap.java:243)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.apishim.api31.BpfCoordinatorShimImpl.tetherOffloadGetStats(BpfCoordinatorShimImpl.java:241)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.updateForwardedStats(BpfCoordinator.java:1844)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.lambda$new$0(BpfCoordinator.java:249)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator.$r8$lambda$11zi2so53-tPlRpKnlSkWOpxReo(Unknown Source:0)
+05-24 01:12:17.514 E/Tethering( 1005): 	at com.android.networkstack.tethering.BpfCoordinator$$ExternalSyntheticLambda0.run(Unknown Source:2)
+05-24 01:12:17.514 E/Tethering( 1005): 	at android.os.Handler.handleCallback(Handler.java:938)
+05-24 01:12:17.514 E/Tethering( 1005): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+05-24 01:12:17.514 E/Tethering( 1005): 	at android.os.Looper.loopOnce(Looper.java:226)
+05-24 01:12:17.514 E/Tethering( 1005): 	at android.os.Looper.loop(Looper.java:313)
+05-24 01:12:17.514 E/Tethering( 1005): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+05-24 01:12:17.514 E/Tethering( 1005): [BpfCoordina

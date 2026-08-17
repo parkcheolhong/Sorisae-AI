@@ -1,0 +1,116 @@
+{
+  "attempt": 1,
+  "captured_at": "2026-08-16T11:04:25.785Z",
+  "email": "119cash@naver.com",
+  "db_before": {
+    "email": "119cash@naver.com",
+    "passkey_enabled": false,
+    "passkey_registered": false,
+    "passkey_registered_at": null,
+    "passkey_sign_count": 0,
+    "credential_id_length": 0,
+    "active_sessions": 0
+  },
+  "db_after_register": {
+    "email": "119cash@naver.com",
+    "passkey_enabled": true,
+    "passkey_registered": true,
+    "passkey_registered_at": "2026-08-16 11:04:26.788982",
+    "passkey_sign_count": 1,
+    "credential_id_length": 43,
+    "active_sessions": 0
+  },
+  "db_after_login": {
+    "email": "119cash@naver.com",
+    "passkey_enabled": true,
+    "passkey_registered": true,
+    "passkey_registered_at": "2026-08-16 11:04:26.788982",
+    "passkey_sign_count": 3,
+    "credential_id_length": 43,
+    "active_sessions": 1
+  },
+  "db_after_logout": {
+    "email": "119cash@naver.com",
+    "passkey_enabled": true,
+    "passkey_registered": true,
+    "passkey_registered_at": "2026-08-16 11:04:26.788982",
+    "passkey_sign_count": 3,
+    "credential_id_length": 43,
+    "active_sessions": 0
+  },
+  "register": {
+    "dialog_message": "패스키 등록이 완료되었습니다.",
+    "error_message": "",
+    "requests": [
+      {
+        "phase": "register",
+        "kind": "request",
+        "action": "passkey-register-start",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-register-start",
+        "method": "PATCH",
+        "body": "{\"email\":\"119cash@naver.com\",\"device_label\":\"이 기기 패스키\",\"password\":\"MetaNova!2026\"}"
+      },
+      {
+        "phase": "register",
+        "kind": "request",
+        "action": "passkey-register-finish",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-register-finish",
+        "method": "PATCH",
+        "body": "{\"registration_token\":\"pkreg_-gWiXXz5u1TicoKKkBXjRlY1_1Ah6Epa\",\"credential\":{\"id\":\"ve10sYRmcluRVRG_xb9wEneIfqjhuvnnwoijG7kAzYA\",\"rawId\":\"ve10sYRmcluRVRG_xb9wEneIfqjhuvnnwoijG7kAzYA\",\"type\":\"public-key\",\"response\":{\"clientDataJSON\":\"eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoibHpjOGhsbXhaWmlaTlF1aHNNSTRVSnItemRNY0gweS1tQ2FDNi1kYlotQTdLUDhXdloyeWlvenFtT3RLcWNMV3dTMFdPMWM5SlJPdWc2UGxYZG9tdGciLCJvcmlnaW4iOiJodHRwczovL21ldGFub3ZhMTAwNC5jb20iLCJjcm9zc09yaWdpbiI6ZmFsc2V9\",\"attestationObject\":\"o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSosdrf5K8lgpPU-iJDdkY7c5MDzjvzM4ojWjebwiiRRFAAAAAQECAwQFBgcIAQIDBAUGBwgAIL3tdLGEZnJbkVURv8W_cBJ3iH6o4br558KIoxu5AM2ApQECAyYgASFYIGpvxpoUvyFT98cStNHetwNnktXgz0OxWQxVZq-8ksfzIlggsNGnUVvURbsdmqXpuAIq71rWvAdqNctx_j-d6oBerF8\"}}}"
+      },
+      {
+        "phase": "register",
+        "kind": "response",
+        "action": "passkey-register-start",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-register-start",
+        "status": 200,
+        "body": "{\"registration_token\":\"pkreg_-gWiXXz5u1TicoKKkBXjRlY1_1Ah6Epa\",\"options\":{\"rp\":{\"name\":\"DevAnalysis114 Admin\",\"id\":\"metanova1004.com\"},\"user\":{\"id\":\"NA\",\"name\":\"119cash@naver.com\",\"displayName\":\"119cash@naver.com\"},\"challenge\":\"lzc8hlmxZZiZNQuhsMI4UJr-zdMcH0y-mCaC6-dbZ-A7KP8WvZ2yiozqmOtKqcLWwS0WO1c9JROug6PlXdomtg\",\"pubKeyCredParams\":[{\"type\":\"public-key\",\"alg\":-7},{\"type\":\"public-key\",\"alg\":-8},{\"type\":\"public-key\",\"alg\":-36},{\"type\":\"public-key\",\"alg\":-37},{\"type\":\"public-key\",\"alg\":-38},{\"type\":\"public-key\",\"alg\":-39},{\"type\":\"public-key\",\"alg\":-257},{\"type\":\"public-key\",\"alg\":-258},{\"type\":\"public-key\",\"alg\":-259}],\"timeout\":60000,\"excludeCredentials\":[],\"authenticatorSelection\":{\"residentKey\":\"preferred\",\"requireResidentKey\":false,\"userVerification\":\"preferred\"},\"attestation\":\"none\"},\"device_label\":\"이 기기 패스키\"}"
+      },
+      {
+        "phase": "register",
+        "kind": "response",
+        "action": "passkey-register-finish",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-register-finish",
+        "status": 200,
+        "body": "{\"registered\":true,\"device_label\":\"이 기기 패스키\"}"
+      }
+    ]
+  },
+  "login": {
+    "error_message": "",
+    "requests": [
+      {
+        "phase": "login",
+        "kind": "request",
+        "action": "passkey-login-start",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-login-start",
+        "method": "PATCH",
+        "body": "{\"email\":\"119cash@naver.com\"}"
+      },
+      {
+        "phase": "login",
+        "kind": "request",
+        "action": "passkey-login-finish",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-login-finish",
+        "method": "PATCH",
+        "body": "{\"email\":\"119cash@naver.com\",\"credential\":{\"id\":\"ve10sYRmcluRVRG_xb9wEneIfqjhuvnnwoijG7kAzYA\",\"rawId\":\"ve10sYRmcluRVRG_xb9wEneIfqjhuvnnwoijG7kAzYA\",\"type\":\"public-key\",\"response\":{\"clientDataJSON\":\"eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoid2g2cDNHTnZTZFJWeXNrT0hXNmF2TThJdGFMakJvOE1kbU9qdnJlUm50UDJncGVCMzdlTUlPTldYVkYwVXc3R2h2QUpLWDZjVXVfNjE4d3pJSkNvWkEiLCJvcmlnaW4iOiJodHRwczovL21ldGFub3ZhMTAwNC5jb20iLCJjcm9zc09yaWdpbiI6ZmFsc2UsIm90aGVyX2tleXNfY2FuX2JlX2FkZGVkX2hlcmUiOiJkbyBub3QgY29tcGFyZSBjbGllbnREYXRhSlNPTiBhZ2FpbnN0IGEgdGVtcGxhdGUuIFNlZSBodHRwczovL2dvby5nbC95YWJQZXgifQ\",\"authenticatorData\":\"Sosdrf5K8lgpPU-iJDdkY7c5MDzjvzM4ojWjebwiiRQFAAAAAw\",\"signature\":\"MEYCIQC82xUyjSewesQU_2s1KSAKDaqZYrvuNSPXFLK9XQ7sIgIhAOYUybFZ0QAnJAIPmcRxc_mIruSbEUR2k5vc7QuHLo95\",\"userHandle\":\"NA\"}}}"
+      },
+      {
+        "phase": "login",
+        "kind": "response",
+        "action": "passkey-login-start",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-login-start",
+        "status": 200,
+        "body": "{\"options\":{\"challenge\":\"wh6p3GNvSdRVyskOHW6avM8ItaLjBo8MdmOjvreRntP2gpeB37eMIONWXVF0Uw7GhvAJKX6cUu_618wzIJCoZA\",\"timeout\":60000,\"rpId\":\"metanova1004.com\",\"allowCredentials\":[{\"id\":\"wnIq4sUIpFdrAMdoxIfVhQ\",\"type\":\"public-key\",\"transports\":[\"hybrid\",\"internal\",\"usb\",\"nfc\",\"ble\"]},{\"id\":\"0M28-mIyFHdqszIy9oNq3yK16VsXPzFd3lohbzLNWFc\",\"type\":\"public-key\",\"transports\":[\"hybrid\",\"internal\",\"usb\",\"nfc\",\"ble\"]},{\"id\":\"omdPWqDthrsEbjVuFTyfGBdo82a3wrx5SLy_Q0Y4AR4\",\"type\":\"public-key\",\"transports\":[\"hybrid\",\"internal\",\"usb\",\"nfc\",\"ble\"]},{\"id\":\"WEbv5ohJmMy3rvV61OTwEg7i6g-nu2lq-6cs7oaNsbg\",\"type\":\"public-key\",\"transports\":[\"hybrid\",\"internal\",\"usb\",\"nfc\",\"ble\"]},{\"id\":\"bV7HQZr6SQQEq8NUacbg0VS62fnx9HwVhpIMkJGkV28\",\"type\":\"public-key\",\"transports\":[\"hybrid\",\"internal\",\"usb\",\"nfc\",\"ble\"]},{\"id\":\"ve10sYRmcluRVRG_xb9wEneIfqjhuvnnwoijG7kAzYA\",\"type\":\"public-key\",\"transports\":[\"hybrid\",\"internal\",\"usb\",\"nfc\",\"ble\"]}],\"userVerification\":\"preferred\"}}"
+      },
+      {
+        "phase": "login",
+        "kind": "response",
+        "action": "passkey-login-finish",
+        "url": "https://metanova1004.com/api/proxy?action=passkey-login-finish",
+        "status": 200,
+        "body": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6IjNLU2lJZUNyUzcyNy1TSm5RclhSZEZJeDdUTFN1Tk9pIn0.wbNgdTn70YxVdt6cfcP81t8Y92Lpwj3ivaeVu0vLMeU\",\"token_type\":\"bearer\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+
+> devanalysis114-frontend@1.0.0 e2e
+> playwright test -c playwright.config.ts tests/admin-passkey-operational.playwright.spec.ts --project chromium
+
+
+Running 3 tests using 1 worker
+

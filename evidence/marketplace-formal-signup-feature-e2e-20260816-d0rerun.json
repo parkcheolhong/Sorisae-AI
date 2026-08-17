@@ -1,0 +1,412 @@
+{
+  "generated_at": "2026-08-16T12:41:38.057623+00:00",
+  "base_url": "https://metanova1004.com",
+  "signup": {
+    "request_code": {
+      "status": 200,
+      "ok": true
+    },
+    "session_token_issued": true,
+    "dev_otp_hint_available": true,
+    "otp_source": "dev_hint",
+    "confirm": {
+      "status": 201,
+      "ok": true,
+      "detail": null
+    }
+  },
+  "login": {
+    "status": 200,
+    "ok": true,
+    "passkey_only_blocked": false,
+    "detail": ""
+  },
+  "public_feature_checks": {
+    "apk_manifest": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "downloadPath": "/api/marketplace/apk/nadotongryoksa-v1.apk",
+        "publishedAt": "2026-08-16T10:29:55.3703091Z",
+        "versionName": "1.0.246",
+        "apkFilename": "nadotongryoksa-v1.apk",
+        "versionCode": 331,
+        "sizeBytes": 127965746,
+        "package": "com.parkcheolhong.worldlinco",
+        "versionedFilename": "nadotongryoksa-v1.0.246-build331-current.apk"
+      }
+    },
+    "marketplace_categories": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "raw": "[{'id': 3, 'name': 'AI/ML', 'description': '인공지능, 머신러닝 프로젝트'}, {'id': 5, 'name': '게임', 'description': '게임 개발 프로젝트'}, {'id': 6, 'name': '기타', 'description': '기타 프로젝트'}, {'id': 4, 'name': '데이터 분석', 'description': '데이터 분석, 시각화'}, {'id': 2, 'name': '모바일 앱', 'description': 'iOS, Android 앱'}, {'id': 1, 'n"
+      }
+    },
+    "marketplace_projects": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "projects": [
+          {
+            "title": "daytrade-ai — AI 주식 단타(스캘핑) 자동매매 시스템 [실험 빌드]",
+            "description": "오더북·체결 흐름을 실시간 분석해 밀리초 단위로 시그널을 생성하고 자동 주문하는 AI 단타(스캘핑·초단타) 자동매매 파이프라인 — Python 완제품. (실험 빌드 v0.9)\n\n• Feature(OBI·OBI z-score·거래량 급증·마이크로 모멘텀·VWAP·스프레드) → Detection → AI 추론 → Risk → Execution(OrderRouter) → Monitoring 전 구간 모듈화\n• 기본 모의투자(paper)·백테스트 모드 — 실거래는 코드 레벨 이중 안전 게이트로 차단\n• 리스크 한도(포지션·총노출·레버리지) + 레이턴시/손익 서킷브레이커 + 슬리피지 가드 + 주문 라우터 예외 흡수(브로커 단절 내성)\n• AI 추론 플러거블(휴리스틱 / ONNX) + 강화학습(PPO·연속 포지션 사이징) + 워크포워드 OOS 검증 + Optuna 하이퍼파라미터 튜닝\n• MLOps 피드백 루프: 자동 재학습·검증·핫스왑(블루그린)·KPI 악화 시 자동 롤백·롤백 쿨다운/블랙리스트·스케줄러 (Prometheus/Grafana/Alertmanager 관측성)\n• 고속 바이너리 틱 스토어(.dts, KDB+ 경량 대안)·실데이터 일별 캡처·Backtrader 교차검증 어댑터\n• C++ 저지연 코어(FeatureEngine/DetectionEngine, Python과 1e-9 수치 동일성 골든 테스트)\n• 백테스트 리포트 고도화(Sortino·Calmar·VaR/CVaR·수익팩터·HTML 스파크라인)\n• 단위/통합 테스트 286건 통과 · CLI(`python -m daytrade.cli sim`) 즉시 실행\n\n주의: 실거래는 증권사 API 계약(KIS/키움 등) + 초저지연 인프라(DPDK/FPGA/코로케이션) 확장 영역이며, 거래소·금융 규제 준수와 사전 승인이 필요합니다. 본 빌드는 모의/백테스트용입니다.",
+            "price": 349000.0,
+            "demo_url": null,
+            "github_url": "https://github.com/parkcheolhong/codeAI/tree/main/apps/daytrade-ai",
+            "image_url": null,
+            "id": 2,
+            "category_id": 3,
+            "author_id": 2,
+            "file_key": "local:samples/daytrade-ai-v1.zip",
+            "downloads": 0,
+            "rating": 0.0,
+            "is_active": true,
+            "created_at": "2026-08-14T19:05:22.788446",
+            "updated_at": "2026-08-14T19:05:22.788451",
+            "category": {
+              "name": "AI/ML",
+              "description": "인공지능, 머신러닝 프로젝트",
+              "id": 3
+            },
+            "tags": [
+              {
+                "name": "주식",
+                "id": 11
+              },
+              {
+                "name": "단타",
+                "id": 12
+              },
+              {
+                "name": "스캘핑",
+                "id": 13
+              },
+              {
+                "name": "자동매매",
+                "id": 14
+              },
+              {
+                "name": "퀀트",
+                "id": 15
+              },
+              {
+                "name": "백테스트",
+                "id": 16
+              },
+              {
+                "name": "AI",
+                "id": 17
+              },
+              {
+                "name": "강화학습",
+                "id": 18
+              },
+              {
+                "name": "MLOps",
+                "id": 19
+              },
+              {
+                "name": "실험빌드",
+                "id": 20
+              }
+            ],
+            "subscription": {
+              "product_code": "stock-ai-suite",
+              "product_name": "Stock AI Suite",
+              "product_description": "주식 AI 분석/리포트 기능군 월정액",
+              "plan_code": "stock-ai-monthly",
+              "plan_name": "Monthly",
+              "currency": "KRW",
+              "amount_minor": 39000,
+              "provider": "stripe"
+            }
+          },
+          {
+            "title": "나도통역사 - 신세계소리새 통번역",
+            "description": "WorldLinco(나도통역사) — 소리새 AI 기반 실시간 통번역 슈퍼앱. Android APK 완제품 (v1.0.150).\n\n• 소리새 하늘색 UI 적용 — 전 화면 통일된 스카이블루 배경(신규 디자인)\n• 대면통역·VoIP 통역통화·채팅 번역·노래 번역·여행 예약 통합 채널\n• 소리새 AI 동반자 — 웨이크워드 호출·기억/성격을 가진 개인 통역 비서\n• 한국어↔영어/중국어/일본어/스페인어 실시간 음성 통역\n• 인앱 자동 업데이트(expo-updates) — 신규 빌드 배포 시 기기에서 자동 수신\n• APK 직접 설치 후 바로 사용 가능 (Android 8.0+)\n\n소리새 마스터 하이브리드 시스템의 통역 엔진을 모바일에 이식한 완전 독립 실행형 앱입니다.",
+            "price": 0.0,
+            "demo_url": "/api/marketplace/apk/nadotongryoksa-v1.apk",
+            "github_url": "/marketplace/nadotongryoksa",
+            "image_url": null,
+            "id": 1,
+            "category_id": 2,
+            "author_id": 2,
+            "file_key": "local:samples/nadotongryoksa-v1.zip",
+            "downloads": 0,
+            "rating": 0.0,
+            "is_active": true,
+            "created_at": "2026-08-14T19:05:22.767589",
+            "updated_at": "2026-08-14T19:05:22.767595",
+            "category": {
+              "name": "모바일 앱",
+              "description": "iOS, Android 앱",
+              "id": 2
+            },
+            "tags": [
+              {
+                "name": "통역",
+                "id": 1
+              },
+              {
+                "name": "번역",
+                "id": 2
+              },
+              {
+                "name": "음성인식",
+                "id": 3
+              },
+              {
+                "name": "android",
+                "id": 4
+              },
+              {
+                "name": "apk",
+                "id": 5
+              },
+              {
+                "name": "무료",
+                "id": 6
+              },
+              {
+                "name": "WorldLinco",
+                "id": 7
+              },
+              {
+                "name": "소리새",
+                "id": 8
+              },
+              {
+                "name": "실시간통역",
+                "id": 9
+              },
+              {
+                "name": "AI동반자",
+                "id": 10
+              }
+            ],
+            "subscription": null
+          }
+        ],
+        "total": 2,
+        "skip": 0,
+        "limit": 6
+      }
+    },
+    "ml_detectors_status": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "gpu_available": true,
+        "gpu_name": "NVIDIA GeForce RTX 5090",
+        "device": "cuda",
+        "detectors": {
+          "face_consistency": "face-consistency-detector-ml",
+          "hand_anatomy": "hand-anatomy-detector-ml",
+          "body_ratio": "body-ratio-detector-ml",
+          "temporal_flicker": "temporal-flicker-detector-ml"
+        },
+        "model_source": "torchvision-pretrained"
+      }
+    },
+    "extras_health": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "status": "ok",
+        "engines": {
+          "iot": "ok",
+          "game": "ok"
+        },
+        "circuit_breakers": {
+          "iot": {
+            "name": "iot-engine",
+            "state": "CLOSED",
+            "failures": 0,
+            "threshold": 3
+          },
+          "game": {
+            "name": "game-economy-engine",
+            "state": "CLOSED",
+            "failures": 0,
+            "threshold": 3
+          }
+        },
+        "addon_path": "/app/addons/shinsegye_extras/src",
+        "addon_exists": true
+      }
+    }
+  },
+  "auth_feature_checks": {
+    "auth_me": {
+      "status": 200,
+      "ok": true,
+      "email": "apibase55d0smoke216@worldlinco.dev"
+    },
+    "voip_health": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "status": "ok",
+        "active_calls": 0,
+        "connected_clients": 0,
+        "online_voice_clients": 0,
+        "registered_device_users": 1,
+        "fcm_delivery_ready": false,
+        "fcm_v1_ready": false,
+        "fcm_project_id": "studio-9080238625-9cec3",
+        "network_test_matrix": {
+          "required_combinations": [
+            "wifi_wifi",
+            "wifi_lte",
+            "lte_lte"
+          ],
+          "min_runs_per_combination": 2,
+          "client_audit_field": "metadata.client_network",
+          "wifi_only_insufficient": true,
+          "guidance_ko": "WiFi만으로는 LTE/5G NAT·전환·지연 버그를 놓칩니다. 단말 A/B에서 셀룰러 데이터를 켠 뒤 WiFi↔LTE 매트릭스로 VoIP initiate audit를 수집하세요."
+        },
+        "app_call_participants": 0
+      }
+    },
+    "chat_rooms": {
+      "status": 200,
+      "ok": true,
+      "room_count": null
+    },
+    "interpreter_health": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "status": "ok",
+        "supported_languages": {
+          "ko": "한국어 (Korean)",
+          "en": "영어 (English)",
+          "ja": "일본어 (Japanese)",
+          "zh": "중국어 (Chinese)",
+          "es": "스페인어 (Spanish)",
+          "fr": "프랑스어 (French)",
+          "de": "독일어 (German)",
+          "ru": "러시아어 (Russian)",
+          "ar": "아랍어 (Arabic)",
+          "vi": "베트남어 (Vietnamese)",
+          "th": "태국어 (Thai)",
+          "id": "인도네시아어 (Indonesian)",
+          "sorisae": "소리새어 (Sorisae Language)"
+        },
+        "mode": "service"
+      }
+    },
+    "sorisae_health": {
+      "status": 200,
+      "ok": true,
+      "detail": {
+        "status": "ok",
+        "registered_engines": 89,
+        "engine_types": [
+          "decision",
+          "divine",
+          "transcendent",
+          "master",
+          "master_hybrid",
+          "integrated",
+          "dual_brain",
+          "consciousness",
+          "consciousness_engine",
+          "ethics",
+          "ethics_simple",
+          "quantum",
+          "spacetime",
+          "spatiotemporal",
+          "core_features",
+          "voice_movie",
+          "voice_processor",
+          "voice_tuner",
+          "voice_reactive",
+          "voice_calling",
+          "voice_hybrid",
+          "voice_command",
+          "voice_fallback",
+          "interpreter",
+          "hybrid_interpreter",
+          "multilingual",
+          "multilingual_support",
+          "translator",
+          "southeast_asia",
+          "music",
+          "music_chat",
+          "music_chat_web",
+          "music_chat_friend",
+          "emotion_music",
+          "animation_theme",
+          "animation",
+          "movie",
+          "game",
+          "game_concept",
+          "game_economy",
+          "earning_game",
+          "vr",
+          "emotion_therapy",
+          "dream",
+          "ethical_gps",
+          "future_prediction",
+          "stock",
+          "stock_prediction",
+          "investment",
+          "iot",
+          "iot_core",
+          "iot_voice",
+          "iot_discovery",
+          "hybrid_iot",
+          "smarthome",
+          "smart_car",
+          "satellite",
+          "security",
+          "hybrid_security",
+          "biometric",
+          "security_key",
+          "detective",
+          "detective_dashboard",
+          "visual_monitor",
+          "cyber_future_tech",
+          "cyber_investigator",
+          "global_cyber_monitor",
+          "gps_investigation",
+          "cyber_realtime",
+          "marketing",
+          "shopping",
+          "shopping_tutor",
+          "civil_engineering",
+          "plugin",
+          "virtual_team",
+          "analyzer",
+          "project_organizer",
+          "caching",
+          "async_performance",
+          "integrated_dashboard",
+          "movie_server",
+          "movie_web",
+          "calling",
+          "hybrid_voice",
+          "music_friend",
+          "iot_voice_control",
+          "stock_200",
+          "security_key_manager",
+          "realtime_monitor"
+        ]
+      }
+    }
+  },
+  "playwright_ui_checks": {
+    "requested": false,
+    "ok": false,
+    "exit_code": null
+  },
+  "playwright_summary": {
+    "requested": false,
+    "passed": false,
+    "failed": false,
+    "duration_seconds": 0.0
+  },
+  "notes": []
+}

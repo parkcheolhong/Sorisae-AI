@@ -1,0 +1,3 @@
+Command: npm test -- --runInBand src/__tests__/chatVoiceInput.test.ts
+Result: PASS
+Notes: Focused runtime smoke test passed after data-layer standardization changes.

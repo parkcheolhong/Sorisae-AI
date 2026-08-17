@@ -1,0 +1,7 @@
+Starting: Intent { act=android.intent.action.VIEW dat=exp://10.202.94.134:8081/... }
+Status: ok
+LaunchState: COLD
+Activity: host.exp.exponent/.experience.ExperienceActivity
+TotalTime: 3557
+WaitTime: 3588
+Complete

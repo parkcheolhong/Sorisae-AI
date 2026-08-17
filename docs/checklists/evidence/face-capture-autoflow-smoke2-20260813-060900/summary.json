@@ -1,0 +1,38 @@
+﻿{
+    "deviceId":  "R83W70QY11H",
+    "packageName":  "com.parkcheolhong.worldlinco",
+    "tap":  {
+                "y":  256,
+                "x":  400
+            },
+    "login":  {
+                  "ok":  false,
+                  "attempted":  false,
+                  "reason":  "ui_surface_unrecognized"
+              },
+    "flow":  {
+                 "faceHomeOpened":  false,
+                 "faceMicTapped":  false,
+                 "langPickerOpened":  false,
+                 "peerLangSelected":  false
+             },
+    "runDir":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-autoflow-smoke2-20260813-060900",
+    "rawLogPath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-autoflow-smoke2-20260813-060900\\reactnative-logcat.txt",
+    "tracePath":  "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-autoflow-smoke2-20260813-060900\\face-capture-trace.txt",
+    "requiredEvents":  [
+                           "start_tap",
+                           "capture_started",
+                           "payload_prepared",
+                           "post_start",
+                           "response_received"
+                       ],
+    "missingEvents":  [
+                          "start_tap",
+                          "capture_started",
+                          "payload_prepared",
+                          "post_start",
+                          "response_received"
+                      ],
+    "pass":  false,
+    "capturedAtUtc":  "2026-08-12T21:10:55.1249670Z"
+}

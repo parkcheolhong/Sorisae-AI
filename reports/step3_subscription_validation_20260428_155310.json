@@ -1,0 +1,100 @@
+{
+  "user": "step3_a94b5237@example.com",
+  "executed_at": "2026-04-28T15:53:25.805825",
+  "scenarios": {
+    "new_subscription_success": [
+      {
+        "run": 1,
+        "reason": "purchase_verified",
+        "status": "active"
+      },
+      {
+        "run": 2,
+        "reason": "purchase_verified",
+        "status": "active"
+      }
+    ],
+    "renewal_success": [
+      {
+        "run": 1,
+        "reason": "renewal_succeeded",
+        "status": "active"
+      },
+      {
+        "run": 2,
+        "reason": "renewal_succeeded",
+        "status": "active"
+      }
+    ],
+    "failed_grace_recover": [
+      {
+        "run": 1,
+        "failed_status": "grace_period",
+        "recover_status": "active",
+        "failed_reason": "renewal_failed",
+        "recover_reason": "renewal_succeeded"
+      },
+      {
+        "run": 2,
+        "failed_status": "grace_period",
+        "recover_status": "active",
+        "failed_reason": "renewal_failed",
+        "recover_reason": "renewal_succeeded"
+      }
+    ],
+    "cancel_then_period_end": [
+      {
+        "run": 1,
+        "after_end": "canceled",
+        "reason": "period_ended"
+      },
+      {
+        "run": 2,
+        "after_end": "canceled",
+        "reason": "period_ended"
+      }
+    ],
+    "refund_revoke_entitlement": [
+      {
+        "run": 1,
+        "after_refund": "refunded",
+        "after_restore": "active",
+        "reason": "refund_applied"
+      },
+      {
+        "run": 2,
+        "after_refund": "refunded",
+        "after_restore": "active",
+        "reason": "refund_applied"
+      }
+    ],
+    "device_limit": [
+      {
+        "run": 1,
+        "primary_register": 200,
+        "secondary_register": 409,
+        "secondary_detail": "기기 제한을 초과했습니다."
+      },
+      {
+        "run": 2,
+        "primary_register": 200,
+        "secondary_register": 409,
+        "secondary_detail": "기기 제한을 초과했습니다."
+      }
+    ]
+  },
+  "final_status": {
+    "user_id": 17,
+    "subscription_status": "active",
+    "product_code": "marketplace-suite",
+    "plan_code": "pro",
+    "entitlement_set": [
+      "marketplace_access"
+    ],
+    "period_end": "2026-05-28T15:55:41.224560",
+    "cancel_at_period_end": false,
+    "device_limit": 1,
+    "active_device_count": 0,
+    "source": "google"
+  }
+}

@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Marketplace Workspace 탐색" [ref=e3]:
+      - generic [ref=e4]: MA
+      - navigation [ref=e5]:
+        - link "홈" [ref=e6] [cursor=pointer]:
+          - /url: /marketplace
+          - generic [ref=e8]: 홈
+        - link "주문" [ref=e9] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e11]: 주문
+        - link "관리" [ref=e12] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e14]: 관리
+        - link "안내" [ref=e15] [cursor=pointer]:
+          - /url: /marketplace/orchestrator
+          - generic [ref=e17]: 안내
+      - generic [ref=e18]: LIVE
+    - generic [ref=e19]:
+      - banner [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: 고객 거래 워크스페이스
+          - heading "Marketplace Workspace" [level=1] [ref=e23]
+          - paragraph [ref=e24]: 관리자 대시보드와 동일한 디자인 시스템으로 마켓 탐색/주문/운영 통계를 통합합니다.
+        - generic [ref=e25]:
+          - link "고객용 오케스트레이터" [ref=e26] [cursor=pointer]:
+            - /url: /marketplace/orchestrator
+          - link "내 Marketplace" [ref=e27] [cursor=pointer]:
+            - /url: /marketplace
+          - button "로그아웃" [ref=e28] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: 실데이터 프로젝트 거래소
+            - generic [ref=e33]: 운영 API 연결 완료
+          - paragraph [ref=e34]: 프로젝트 탐색 · 주문 · 리뷰 · 통계 API 연결형 메인 화면
+          - heading "프로젝트 탐색 · 주문 · 계정을 한 화면에서 처리하는 메인 마켓" [level=2] [ref=e35]
+          - paragraph [ref=e36]: 헤더를 얇게 줄이고, 좌측 레일 + 중앙 상품 그리드 + 우측 계정/Top 패널 고정 구조로 재설계했습니다. 히어로 문구는 축소하고 상품 카드와 주문 버튼의 존재감을 높였습니다.
+          - generic [ref=e37]:
+            - link "맞춤 제작 바로 시작" [ref=e38] [cursor=pointer]:
+              - /url: /marketplace/orchestrator
+            - link "관리자 상품 관리" [ref=e39] [cursor=pointer]:
+              - /url: /admin
+            - link "운영형 주문 안내 열기" [ref=e40] [cursor=pointer]:
+              - /url: /marketplace/orchestrator
+        - generic "핵심 기능 바로가기" [ref=e41]:
+          - generic [ref=e42]: 실제 등록 프로젝트 탐색
+          - generic [ref=e43]: 카테고리/정렬/검색 필터
+          - generic [ref=e44]: 오케스트레이터 주문 진입
+          - generic [ref=e45]: Top 프로젝트/매출 통계
+          - generic [ref=e46]: 회원가입 / 내정보 패널
+          - generic [ref=e47]: 프로젝트 상세 / 데모 / GitHub 진입
+      - generic [ref=e48]:
+        - main [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]
+            - generic [ref=e68]
+            - generic [ref=e80]
+            - generic [ref=e87]
+            - generic [ref=e150]
+        - complementary [ref=e160]:
+          - generic [ref=e161]:
+            - generic [ref=e162]
+            - generic [ref=e172]
+  - button "Open Next.js Dev Tools" [ref=e180] [cursor=pointer]:
+    - img [ref=e181]
+  - alert [ref=e256]

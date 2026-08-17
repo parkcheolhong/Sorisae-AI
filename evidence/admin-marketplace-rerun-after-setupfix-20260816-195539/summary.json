@@ -1,0 +1,12 @@
+[
+  {
+    "round": 1,
+    "admin_passkey_e2e_exit": 1,
+    "marketplace_passkey_chain_exit": 1
+  },
+  {
+    "round": 2,
+    "admin_passkey_e2e_exit": 1,
+    "marketplace_passkey_chain_exit": 1
+  }
+]

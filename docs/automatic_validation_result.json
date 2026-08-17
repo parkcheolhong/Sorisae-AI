@@ -1,0 +1,3928 @@
+{
+  "task": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+  "project_name": "오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4",
+  "mode": "full",
+  "validation_profile": "nextjs_app",
+  "status": "failed",
+  "completion_gate_ok": false,
+  "self_run_status": "not_applicable",
+  "selective_apply": {
+    "target_file_ids": [
+      "FILE-ADMIN-CAPABILITIES",
+      "FILE-ADMIN-LLM-PAGE"
+    ],
+    "target_section_ids": [
+      "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+      "SECTION-CHAT-ADVISORY-PANEL"
+    ],
+    "target_feature_ids": [
+      "FEATURE-ID-BASED-TARGET-EXPOSURE",
+      "FEATURE-EVIDENCE-FIRST-UX"
+    ],
+    "target_chunk_ids": [
+      "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+      "CHUNK-ADMIN-CHAT-UI-001"
+    ],
+    "failure_tags": [],
+    "repair_tags": [],
+    "target_patch_entries": [
+      {
+        "file_id": "FILE-ADMIN-CAPABILITIES",
+        "path": "backend/llm/admin_capabilities.py",
+        "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "summary": "capability가 output audit / traceability / hard gate evidence를 읽어 수정 대상 ID를 노출하는 조각입니다.",
+        "reuse_ready": true,
+        "capability_ids": [
+          "code-generator",
+          "self-healing-engine",
+          "project-scanner"
+        ]
+      },
+      {
+        "file_id": "FILE-ADMIN-LLM-PAGE",
+        "path": "frontend/frontend/app/admin/llm/page.tsx",
+        "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+        "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+        "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+        "summary": "관리자 오케스트레이터 화면에서 AI 추론, hard gate, evidence, 타겟 수정 힌트를 보여주는 조각입니다.",
+        "reuse_ready": true,
+        "capability_ids": [
+          "code-generator",
+          "self-healing-engine",
+          "admin-command-interface"
+        ]
+      }
+    ],
+    "record_scope_links": [
+      {
+        "record_scope_id": "phase-d-hard-gate",
+        "applies_to": {
+          "target_file_ids": [
+            "FILE-ADMIN-CAPABILITIES",
+            "FILE-ADMIN-LLM-PAGE"
+          ],
+          "target_section_ids": [
+            "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+            "SECTION-CHAT-ADVISORY-PANEL"
+          ],
+          "target_feature_ids": [
+            "FEATURE-ID-BASED-TARGET-EXPOSURE",
+            "FEATURE-EVIDENCE-FIRST-UX"
+          ],
+          "target_chunk_ids": [
+            "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+            "CHUNK-ADMIN-CHAT-UI-001"
+          ]
+        },
+        "result_status": "blocked",
+        "applied_to_source_evidence": {
+          "status": "not_applicable_in_customer_generation",
+          "required_for_pass": false
+        }
+      },
+      {
+        "record_scope_id": "phase-f-self-run-terminal-state",
+        "applies_to": {
+          "target_file_ids": [
+            "FILE-ADMIN-CAPABILITIES",
+            "FILE-ADMIN-LLM-PAGE"
+          ],
+          "target_section_ids": [
+            "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+            "SECTION-CHAT-ADVISORY-PANEL"
+          ],
+          "target_feature_ids": [
+            "FEATURE-ID-BASED-TARGET-EXPOSURE",
+            "FEATURE-EVIDENCE-FIRST-UX"
+          ],
+          "target_chunk_ids": [
+            "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+            "CHUNK-ADMIN-CHAT-UI-001"
+          ]
+        },
+        "result_status": "pass",
+        "applied_to_source_evidence": {
+          "status": "closed_in_latest_session_records",
+          "required_for_pass": false
+        }
+      },
+      {
+        "record_scope_id": "phase-f-focused-self-healing-apply",
+        "applies_to": {
+          "target_file_ids": [
+            "FILE-ADMIN-CAPABILITIES",
+            "FILE-ADMIN-LLM-PAGE"
+          ],
+          "target_section_ids": [
+            "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+            "SECTION-CHAT-ADVISORY-PANEL"
+          ],
+          "target_feature_ids": [
+            "FEATURE-ID-BASED-TARGET-EXPOSURE",
+            "FEATURE-EVIDENCE-FIRST-UX"
+          ],
+          "target_chunk_ids": [
+            "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+            "CHUNK-ADMIN-CHAT-UI-001"
+          ]
+        },
+        "result_status": "pass",
+        "applied_to_source_evidence": {
+          "status": "closed_in_latest_session_records",
+          "required_for_pass": false
+        }
+      }
+    ],
+    "target_file_id_count": 2,
+    "failure_tag_count": 0
+  },
+  "failed_reasons": [
+    "semantic gate failed",
+    "shipping zip reproduction validation failed",
+    "test coverage too small: 0",
+    "commerce backend implementation too small: 0",
+    "runtime scenario marker missing: catalog flow",
+    "runtime scenario marker missing: marketplace publish payload",
+    "thin implementation files detected: scripts/check.sh"
+  ],
+  "document_stale_scan": {
+    "ok": false,
+    "axes": {
+      "operational_paths": {
+        "axis": "operational_paths",
+        "axis_label": "운영 경로",
+        "ok": true,
+        "stale_count": 0,
+        "matches": []
+      },
+      "judgement": {
+        "axis": "judgement",
+        "axis_label": "판정",
+        "ok": false,
+        "stale_count": 1,
+        "matches": [
+          {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "readme_status_completion_sync",
+            "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+            "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+          }
+        ]
+      },
+      "latest_verification_round": {
+        "axis": "latest_verification_round",
+        "axis_label": "최근 실검증 회차",
+        "ok": false,
+        "stale_count": 1,
+        "matches": [
+          {
+            "axis": "latest_verification_round",
+            "axis_label": "최근 실검증 회차",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "latest_record_document_sync_ok",
+            "match": "no-known-keyword",
+            "note": "최신 실검증 회차와 문서 반영 상태가 현재 기준으로 충돌하지 않습니다."
+          }
+        ]
+      },
+      "localhost_usage": {
+        "axis": "localhost_usage",
+        "axis_label": "localhost 사용 여부",
+        "ok": false,
+        "stale_count": 1,
+        "matches": [
+          {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+            "rule": "localhost_performance_baseline_forbidden",
+            "match": "http://localhost",
+            "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+          }
+        ]
+      },
+      "legacy_contract": {
+        "axis": "legacy_contract",
+        "axis_label": "레거시 계약 문자열",
+        "ok": true,
+        "stale_count": 0,
+        "matches": []
+      }
+    },
+    "matches": [
+      {
+        "axis": "localhost_usage",
+        "axis_label": "localhost 사용 여부",
+        "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+        "rule": "localhost_performance_baseline_forbidden",
+        "match": "http://localhost",
+        "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+      },
+      {
+        "axis": "judgement",
+        "axis_label": "판정",
+        "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+        "rule": "readme_status_completion_sync",
+        "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+        "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+      }
+    ],
+    "latest_verification_record": {
+      "round": "77",
+      "captured_at": "REC-077",
+      "topic": "phase-r7-workspace-build-basis",
+      "command": "2",
+      "result": "pass",
+      "evidence": "2026-04-08 현재 세션"
+    },
+    "documentation_sync": {
+      "schema_version": "v1",
+      "overall_status": "reflection_required",
+      "stale_count": 2,
+      "axes": {
+        "operational_paths": {
+          "ok": true,
+          "stale_count": 0
+        },
+        "judgement": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "latest_verification_round": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "localhost_usage": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "legacy_contract": {
+          "ok": true,
+          "stale_count": 0
+        }
+      },
+      "latest_verification_record": {
+        "round": "77",
+        "captured_at": "REC-077",
+        "topic": "phase-r7-workspace-build-basis",
+        "command": "2",
+        "result": "pass",
+        "evidence": "2026-04-08 현재 세션"
+      },
+      "latest_record_link_table": [
+        {
+          "record_keyword": "system-settings",
+          "record_scope_id": "phase-f-system-settings-504-recurrence",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+        },
+        {
+          "record_keyword": "ws=open",
+          "record_scope_id": "phase-f-websocket-recovery",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+        },
+        {
+          "record_keyword": "customer_summary_ok=200",
+          "record_scope_id": "phase-f-marketplace-route-recovery",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+        },
+        {
+          "record_keyword": "반영 필요/완료됨",
+          "record_scope_id": "phase-g-documentation-sync",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+        },
+        {
+          "record_keyword": "app/services.py",
+          "record_scope_id": "phase-g-service-package-contract",
+          "document_paths": [
+            "README.md",
+            "docs/**/*"
+          ],
+          "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+        }
+      ],
+      "readme_status_sync": {
+        "readme_reflection_required": false,
+        "status_reflection_required": false,
+        "readme_completed": false,
+        "status_completed": true
+      },
+      "stale_matches": [
+        {
+          "axis": "localhost_usage",
+          "axis_label": "localhost 사용 여부",
+          "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+          "rule": "localhost_performance_baseline_forbidden",
+          "match": "http://localhost",
+          "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+        },
+        {
+          "axis": "judgement",
+          "axis_label": "판정",
+          "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+          "rule": "readme_status_completion_sync",
+          "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+          "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+        }
+      ]
+    }
+  },
+  "documentation_sync": {
+    "schema_version": "v1",
+    "overall_status": "reflection_required",
+    "stale_count": 2,
+    "axes": {
+      "operational_paths": {
+        "ok": true,
+        "stale_count": 0
+      },
+      "judgement": {
+        "ok": false,
+        "stale_count": 1
+      },
+      "latest_verification_round": {
+        "ok": false,
+        "stale_count": 1
+      },
+      "localhost_usage": {
+        "ok": false,
+        "stale_count": 1
+      },
+      "legacy_contract": {
+        "ok": true,
+        "stale_count": 0
+      }
+    },
+    "latest_verification_record": {
+      "round": "77",
+      "captured_at": "REC-077",
+      "topic": "phase-r7-workspace-build-basis",
+      "command": "2",
+      "result": "pass",
+      "evidence": "2026-04-08 현재 세션"
+    },
+    "latest_record_link_table": [
+      {
+        "record_keyword": "system-settings",
+        "record_scope_id": "phase-f-system-settings-504-recurrence",
+        "document_paths": [
+          "README.md",
+          "docs/orchestrator-multigenerator-upgrade-status.md"
+        ],
+        "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+      },
+      {
+        "record_keyword": "ws=open",
+        "record_scope_id": "phase-f-websocket-recovery",
+        "document_paths": [
+          "README.md",
+          "docs/orchestrator-multigenerator-upgrade-status.md"
+        ],
+        "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+      },
+      {
+        "record_keyword": "customer_summary_ok=200",
+        "record_scope_id": "phase-f-marketplace-route-recovery",
+        "document_paths": [
+          "README.md",
+          "docs/orchestrator-multigenerator-upgrade-status.md"
+        ],
+        "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+      },
+      {
+        "record_keyword": "반영 필요/완료됨",
+        "record_scope_id": "phase-g-documentation-sync",
+        "document_paths": [
+          "README.md",
+          "docs/orchestrator-multigenerator-upgrade-status.md"
+        ],
+        "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+      },
+      {
+        "record_keyword": "app/services.py",
+        "record_scope_id": "phase-g-service-package-contract",
+        "document_paths": [
+          "README.md",
+          "docs/**/*"
+        ],
+        "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+      }
+    ],
+    "readme_status_sync": {
+      "readme_reflection_required": false,
+      "status_reflection_required": false,
+      "readme_completed": false,
+      "status_completed": true
+    },
+    "stale_matches": [
+      {
+        "axis": "localhost_usage",
+        "axis_label": "localhost 사용 여부",
+        "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+        "rule": "localhost_performance_baseline_forbidden",
+        "match": "http://localhost",
+        "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+      },
+      {
+        "axis": "judgement",
+        "axis_label": "판정",
+        "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+        "rule": "readme_status_completion_sync",
+        "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+        "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+      }
+    ]
+  },
+  "checklist_record_mappings": [
+    {
+      "checklist_item": "Phase D hard gate",
+      "record_scope_id": "phase-d-hard-gate",
+      "result_status": "blocked",
+      "evidence_paths": [
+        "docs/automatic_validation_result.json",
+        "docs/final_readiness_checklist.md"
+      ]
+    },
+    {
+      "checklist_item": "Phase F self-run terminal state",
+      "record_scope_id": "phase-f-self-run-terminal-state",
+      "result_status": "pass",
+      "evidence_paths": [
+        "docs/orchestrator-multigenerator-upgrade-status.md#10-1"
+      ]
+    },
+    {
+      "checklist_item": "Phase F focused self-healing apply",
+      "record_scope_id": "phase-f-focused-self-healing-apply",
+      "result_status": "pass",
+      "evidence_paths": [
+        "docs/orchestrator-multigenerator-upgrade-status.md#10-1"
+      ]
+    },
+    {
+      "checklist_item": "Phase F route manifest / nginx / cached path",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "result_status": "pass",
+      "evidence_paths": [
+        "backend/admin_router.py",
+        "nginx/nginx.conf/nginx.conf",
+        "backend/llm/loader.py",
+        "docs/automatic_validation_result.json"
+      ]
+    }
+  ],
+  "execution_steps": [
+    "pip install -r requirements.delivery.lock.txt",
+    "uvicorn app.main:create_application --factory --host 0.0.0.0 --port 8000",
+    "pytest -q",
+    "unzip 오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip && rerun scripts/check.sh"
+  ],
+  "validation_engines": {
+    "semantic_gate": {
+      "ok": false,
+      "score": 82,
+      "summary": "profile mismatch: expected trading_system for task/project context, got commerce_platform",
+      "checklist": [
+        "profile mismatch: expected trading_system for task/project context, got commerce_platform"
+      ],
+      "checklist_items": [
+        {
+          "title": "profile mismatch: expected trading_system for task/project context, got commerce_platform",
+          "status": "failed",
+          "detail": "profile mismatch: expected trading_system for task/project context, got commerce_platform"
+        }
+      ],
+      "required_files": [
+        "README.md",
+        "package.json",
+        "tsconfig.json",
+        "next-env.d.ts",
+        "app/page.tsx",
+        "app/layout.tsx",
+        "configs/app.env.example",
+        "scripts/check.sh",
+        "docs/architecture.md",
+        "docs/order_profile.md",
+        "docs/flow_map.md",
+        "docs/flow_registry.json",
+        "docs/usage.md",
+        "docs/runtime.md",
+        "docs/deployment.md",
+        "docs/testing.md",
+        "docs/scaffold_inventory.md",
+        "docs/stage_progress.md",
+        "docs/stage_progress.json"
+      ]
+    },
+    "integration_test_engine": {
+      "engine": "automatic-domain-integration-test-engine",
+      "validation_profile": "nextjs_app",
+      "required_tests": [
+        "package.json",
+        "app/layout.tsx",
+        "app/page.tsx",
+        "scripts/check.sh",
+        "tests/test_ai_pipeline.py"
+      ],
+      "checks_run": [
+        "exists:package.json",
+        "exists:app/layout.tsx",
+        "exists:app/page.tsx",
+        "exists:scripts/check.sh",
+        "exists:tests/test_ai_pipeline.py",
+        "exists:README.md",
+        "exists:docs/runtime.md",
+        "exists:docs/deployment.md",
+        "exists:docs/testing.md",
+        "exists:configs/app.env.example",
+        "exists:scripts/check.sh",
+        "exists:requirements.delivery.lock.txt",
+        "exists:package.json",
+        "exists:app/page.tsx",
+        "exists:app/layout.tsx",
+        "npm-build-contract-ready"
+      ],
+      "ok": true,
+      "failures": []
+    },
+    "framework_e2e_validation": {
+      "engine": "framework-live-e2e-validator",
+      "validation_profile": "nextjs_app",
+      "commands_run": [
+        "package.json contract inspection",
+        "exists:app/layout.tsx",
+        "exists:app/page.tsx",
+        "exists:scripts/check.sh"
+      ],
+      "ok": true,
+      "failures": []
+    },
+    "external_integration_validation": {
+      "engine": "external-integration-validator",
+      "profile_id": "commerce_platform",
+      "checks_run": [
+        "exists:backend/app/external_adapters/status_client.py",
+        "exists:backend/app/connectors/base.py"
+      ],
+      "ok": true,
+      "failures": []
+    },
+    "shipping_zip_validation": {
+      "engine": "shipping-zip-reproduction-validator",
+      "validation_profile": "nextjs_app",
+      "ok": false,
+      "checks_run": [
+        "extract_zip",
+        "validation_profile_unsupported"
+      ],
+      "failures": [
+        "zip reproduction validator not implemented for profile: nextjs_app"
+      ],
+      "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376",
+      "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+    },
+    "product_readiness_hard_gate": {
+      "validation_profile": "nextjs_app",
+      "ok": false,
+      "stages": [
+        {
+          "id": "packaging_audit",
+          "ok": true,
+          "summary": "패키징 필수 파일이 준비되었는지 확인합니다.",
+          "evidence": {
+            "missing_packaging_files": [],
+            "required_packaging_files": [
+              "README.md",
+              "docs/usage.md",
+              "docs/deployment.md",
+              "docs/testing.md",
+              "configs/app.env.example",
+              "docs/runbook.md",
+              "infra/prometheus.yml",
+              "infra/deploy/security.md"
+            ]
+          }
+        },
+        {
+          "id": "dependency_install",
+          "ok": false,
+          "summary": "생성 직후 의존성 설치와 가상환경 구성이 성공해야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "standalone_boot",
+          "ok": false,
+          "summary": "생성 산출물이 단독 기동되어야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "api_smoke",
+          "ok": false,
+          "summary": "핵심 API 스모크 검증이 성공해야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "pytest",
+          "ok": false,
+          "summary": "핵심 테스트가 통과해야 합니다.",
+          "evidence": {
+            "checks_run": [],
+            "failures": []
+          }
+        },
+        {
+          "id": "framework_contract",
+          "ok": true,
+          "summary": "프레임워크 구조와 실행 계약이 맞아야 합니다.",
+          "evidence": {
+            "checks_run": [
+              "package.json contract inspection",
+              "exists:app/layout.tsx",
+              "exists:app/page.tsx",
+              "exists:scripts/check.sh"
+            ],
+            "failures": []
+          }
+        },
+        {
+          "id": "external_integration",
+          "ok": true,
+          "summary": "외부 연동 경계 파일과 커넥터가 존재해야 합니다.",
+          "evidence": {
+            "checks_run": [
+              "exists:backend/app/external_adapters/status_client.py",
+              "exists:backend/app/connectors/base.py"
+            ],
+            "failures": []
+          }
+        },
+        {
+          "id": "zip_reproduction",
+          "ok": false,
+          "summary": "출고 ZIP 압축 해제 후 재현 검증이 성공해야 합니다.",
+          "evidence": {
+            "checks_run": [
+              "extract_zip",
+              "validation_profile_unsupported"
+            ],
+            "failures": [
+              "zip reproduction validator not implemented for profile: nextjs_app"
+            ],
+            "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+            "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376"
+          }
+        }
+      ],
+      "failed_stages": [
+        "dependency_install",
+        "standalone_boot",
+        "api_smoke",
+        "pytest",
+        "zip_reproduction"
+      ],
+      "summary": "product readiness hard gate failed: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+      "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+    }
+  },
+  "output_archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+  "closed_evidence": {
+    "dependency_install": {
+      "id": "dependency_install",
+      "ok": false,
+      "summary": "생성 직후 의존성 설치와 가상환경 구성이 성공해야 합니다.",
+      "evidence": {
+        "checks_run": [],
+        "failures": []
+      }
+    },
+    "standalone_boot": {
+      "id": "standalone_boot",
+      "ok": false,
+      "summary": "생성 산출물이 단독 기동되어야 합니다.",
+      "evidence": {
+        "checks_run": [],
+        "failures": []
+      }
+    },
+    "api_smoke": {
+      "id": "api_smoke",
+      "ok": false,
+      "summary": "핵심 API 스모크 검증이 성공해야 합니다.",
+      "evidence": {
+        "checks_run": [],
+        "failures": []
+      }
+    },
+    "pytest": {
+      "id": "pytest",
+      "ok": false,
+      "summary": "핵심 테스트가 통과해야 합니다.",
+      "evidence": {
+        "checks_run": [],
+        "failures": []
+      }
+    },
+    "zip_reproduction": {
+      "id": "zip_reproduction",
+      "ok": false,
+      "summary": "출고 ZIP 압축 해제 후 재현 검증이 성공해야 합니다.",
+      "evidence": {
+        "checks_run": [
+          "extract_zip",
+          "validation_profile_unsupported"
+        ],
+        "failures": [
+          "zip reproduction validator not implemented for profile: nextjs_app"
+        ],
+        "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+        "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376"
+      }
+    }
+  },
+  "evidence_snapshot": {
+    "evidence_schema_version": "v1",
+    "contract": {
+      "evidence_schema_version": "v1",
+      "profile_id": "nextjs_app"
+    },
+    "execution": {
+      "evidence_run_id": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+      "evidence_generated_at": "2026-04-22T19:53:34.966900Z",
+      "self_run_status": "not_applicable",
+      "completion_gate_ok": false,
+      "completion_gate_error": "semantic gate failed; shipping zip reproduction validation failed; test coverage too small: 0; commerce backend implementation too small: 0; runtime scenario marker missing: catalog flow; runtime scenario marker missing: marketplace publish payload; thin implementation files detected: scripts/check.sh",
+      "semantic_audit_ok": false,
+      "semantic_audit_score": 82,
+      "post_validation_analysis": {
+        "analysis_summary": "검증 통과 후 AI 정밀 분석: 아직 게이트 차단이 남아 있어 실패 stage 제거와 selective apply 범위 축소가 우선입니다.",
+        "quality_findings": [
+          "semantic audit score=82",
+          "semantic audit 보강이 필요합니다.",
+          "failure tags=0 / repair tags=0"
+        ],
+        "architecture_findings": [
+          "reusable patch units=2",
+          "고유 ID registry 기반 selective apply ready 상태입니다.",
+          "target ids files=2, sections=2, features=2, chunks=2"
+        ],
+        "ops_findings": [
+          "operational evidence integration=partial",
+          "실도메인 운영 경로 증거를 hard gate evidence 체계와 연결해야 합니다.",
+          "verified targets=websocket, system_settings, workspace_self_run_record",
+          "차단된 hard gate stage: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+          "추가 검증 필요 targets: admin, marketplace"
+        ],
+        "new_technology_candidates": [
+          "evidence replay validator",
+          "post-validation proposal ranking",
+          "selective apply safety scorer",
+          "target-id impact graph"
+        ],
+        "recommended_expansion_actions": [
+          "selective apply 대상으로 매칭된 file/section/chunk id를 기준으로 후속 self-improvement 작업문을 생성합니다. (files=2, sections=2, chunks=2)",
+          "운영 실도메인 evidence 결과를 approval/completion judge와 같은 증거 체계로 연결합니다. (verified=3/5)",
+          "failure_tags 와 repair_tags 우선순위를 기준으로 후속 개선 액션을 재정렬합니다. (failure_tags=0, repair_tags=0)"
+        ],
+        "artifact_source": {
+          "target_file_ids": [
+            "FILE-ADMIN-CAPABILITIES",
+            "FILE-ADMIN-LLM-PAGE"
+          ],
+          "target_section_ids": [
+            "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+            "SECTION-CHAT-ADVISORY-PANEL"
+          ],
+          "target_feature_ids": [
+            "FEATURE-ID-BASED-TARGET-EXPOSURE",
+            "FEATURE-EVIDENCE-FIRST-UX"
+          ],
+          "target_chunk_ids": [
+            "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+            "CHUNK-ADMIN-CHAT-UI-001"
+          ],
+          "failure_tags": [],
+          "repair_tags": [],
+          "verified_operational_targets": [
+            "websocket",
+            "system_settings",
+            "workspace_self_run_record"
+          ],
+          "missing_operational_targets": [
+            "admin",
+            "marketplace"
+          ],
+          "failed_hard_gate_stages": [
+            "dependency_install",
+            "standalone_boot",
+            "api_smoke",
+            "pytest",
+            "zip_reproduction"
+          ]
+        }
+      },
+      "evidence_snapshot_version": "v1"
+    },
+    "readiness": {
+      "artifact_paths": {
+        "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+        "automatic_validation_result_path": "docs/automatic_validation_result.json",
+        "automatic_validation_markdown_path": "docs/automatic_validation_result.md",
+        "failure_report_path": "docs/failure_report.md",
+        "root_cause_report_path": "docs/root_cause_analysis.md",
+        "output_audit_path": "docs/output_audit.json",
+        "traceability_map_path": "docs/traceability_map.json"
+      },
+      "operational_targets_by_id": {
+        "websocket": {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        "admin": {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        "marketplace": {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        "system_settings": {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        "workspace_self_run_record": {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        }
+      },
+      "operational_evidence_summary": {
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "max_latency_ms": 185.8
+      },
+      "operational_latency_summary": {
+        "latency_warning": true,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "warning_threshold_ms": {
+          "websocket": 150.0,
+          "admin": 150.0,
+          "marketplace": 200.0,
+          "system_settings": 120.0,
+          "workspace_self_run_record": 120.0
+        },
+        "max_latency_ms": 185.8,
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5
+      },
+      "documentation_sync": {
+        "schema_version": "v1",
+        "overall_status": "reflection_required",
+        "stale_count": 2,
+        "axes": {
+          "operational_paths": {
+            "ok": true,
+            "stale_count": 0
+          },
+          "judgement": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "latest_verification_round": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "localhost_usage": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "legacy_contract": {
+            "ok": true,
+            "stale_count": 0
+          }
+        },
+        "latest_verification_record": {
+          "round": "77",
+          "captured_at": "REC-077",
+          "topic": "phase-r7-workspace-build-basis",
+          "command": "2",
+          "result": "pass",
+          "evidence": "2026-04-08 현재 세션"
+        },
+        "latest_record_link_table": [
+          {
+            "record_keyword": "system-settings",
+            "record_scope_id": "phase-f-system-settings-504-recurrence",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+          },
+          {
+            "record_keyword": "ws=open",
+            "record_scope_id": "phase-f-websocket-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "customer_summary_ok=200",
+            "record_scope_id": "phase-f-marketplace-route-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "반영 필요/완료됨",
+            "record_scope_id": "phase-g-documentation-sync",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+          },
+          {
+            "record_keyword": "app/services.py",
+            "record_scope_id": "phase-g-service-package-contract",
+            "document_paths": [
+              "README.md",
+              "docs/**/*"
+            ],
+            "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+          }
+        ],
+        "readme_status_sync": {
+          "readme_reflection_required": false,
+          "status_reflection_required": false,
+          "readme_completed": false,
+          "status_completed": true
+        },
+        "stale_matches": [
+          {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+            "rule": "localhost_performance_baseline_forbidden",
+            "match": "http://localhost",
+            "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+          },
+          {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "readme_status_completion_sync",
+            "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+            "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+          }
+        ]
+      }
+    },
+    "operations": {
+      "canonical_source": "evidence_bundle.readiness.operational_evidence_snapshot",
+      "operational_evidence_deprecated": true
+    },
+    "selective_apply": {
+      "self_run_status": "not_applicable",
+      "target_file_ids": [
+        "FILE-ADMIN-CAPABILITIES",
+        "FILE-ADMIN-LLM-PAGE"
+      ],
+      "target_section_ids": [
+        "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "SECTION-CHAT-ADVISORY-PANEL"
+      ],
+      "target_feature_ids": [
+        "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "FEATURE-EVIDENCE-FIRST-UX"
+      ],
+      "target_chunk_ids": [
+        "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "CHUNK-ADMIN-CHAT-UI-001"
+      ],
+      "failure_tags": [],
+      "repair_tags": [],
+      "target_file_id_count": 2,
+      "failure_tag_count": 0
+    },
+    "legacy_contract_scan": {
+      "ok": false,
+      "matches": [
+        {
+          "path": ".github/copilot-instructions.md",
+          "match": "app/services.py"
+        },
+        {
+          "path": "backend/llm/orchestrator.py",
+          "match": "app/services.py"
+        }
+      ]
+    },
+    "document_stale_scan": {
+      "ok": false,
+      "axes": {
+        "operational_paths": {
+          "axis": "operational_paths",
+          "axis_label": "운영 경로",
+          "ok": true,
+          "stale_count": 0,
+          "matches": []
+        },
+        "judgement": {
+          "axis": "judgement",
+          "axis_label": "판정",
+          "ok": false,
+          "stale_count": 1,
+          "matches": [
+            {
+              "axis": "judgement",
+              "axis_label": "판정",
+              "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+              "rule": "readme_status_completion_sync",
+              "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+              "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+            }
+          ]
+        },
+        "latest_verification_round": {
+          "axis": "latest_verification_round",
+          "axis_label": "최근 실검증 회차",
+          "ok": false,
+          "stale_count": 1,
+          "matches": [
+            {
+              "axis": "latest_verification_round",
+              "axis_label": "최근 실검증 회차",
+              "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+              "rule": "latest_record_document_sync_ok",
+              "match": "no-known-keyword",
+              "note": "최신 실검증 회차와 문서 반영 상태가 현재 기준으로 충돌하지 않습니다."
+            }
+          ]
+        },
+        "localhost_usage": {
+          "axis": "localhost_usage",
+          "axis_label": "localhost 사용 여부",
+          "ok": false,
+          "stale_count": 1,
+          "matches": [
+            {
+              "axis": "localhost_usage",
+              "axis_label": "localhost 사용 여부",
+              "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+              "rule": "localhost_performance_baseline_forbidden",
+              "match": "http://localhost",
+              "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+            }
+          ]
+        },
+        "legacy_contract": {
+          "axis": "legacy_contract",
+          "axis_label": "레거시 계약 문자열",
+          "ok": true,
+          "stale_count": 0,
+          "matches": []
+        }
+      },
+      "matches": [
+        {
+          "axis": "localhost_usage",
+          "axis_label": "localhost 사용 여부",
+          "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+          "rule": "localhost_performance_baseline_forbidden",
+          "match": "http://localhost",
+          "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+        },
+        {
+          "axis": "judgement",
+          "axis_label": "판정",
+          "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+          "rule": "readme_status_completion_sync",
+          "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+          "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+        }
+      ],
+      "latest_verification_record": {
+        "round": "77",
+        "captured_at": "REC-077",
+        "topic": "phase-r7-workspace-build-basis",
+        "command": "2",
+        "result": "pass",
+        "evidence": "2026-04-08 현재 세션"
+      },
+      "documentation_sync": {
+        "schema_version": "v1",
+        "overall_status": "reflection_required",
+        "stale_count": 2,
+        "axes": {
+          "operational_paths": {
+            "ok": true,
+            "stale_count": 0
+          },
+          "judgement": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "latest_verification_round": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "localhost_usage": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "legacy_contract": {
+            "ok": true,
+            "stale_count": 0
+          }
+        },
+        "latest_verification_record": {
+          "round": "77",
+          "captured_at": "REC-077",
+          "topic": "phase-r7-workspace-build-basis",
+          "command": "2",
+          "result": "pass",
+          "evidence": "2026-04-08 현재 세션"
+        },
+        "latest_record_link_table": [
+          {
+            "record_keyword": "system-settings",
+            "record_scope_id": "phase-f-system-settings-504-recurrence",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+          },
+          {
+            "record_keyword": "ws=open",
+            "record_scope_id": "phase-f-websocket-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "customer_summary_ok=200",
+            "record_scope_id": "phase-f-marketplace-route-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "반영 필요/완료됨",
+            "record_scope_id": "phase-g-documentation-sync",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+          },
+          {
+            "record_keyword": "app/services.py",
+            "record_scope_id": "phase-g-service-package-contract",
+            "document_paths": [
+              "README.md",
+              "docs/**/*"
+            ],
+            "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+          }
+        ],
+        "readme_status_sync": {
+          "readme_reflection_required": false,
+          "status_reflection_required": false,
+          "readme_completed": false,
+          "status_completed": true
+        },
+        "stale_matches": [
+          {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+            "rule": "localhost_performance_baseline_forbidden",
+            "match": "http://localhost",
+            "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+          },
+          {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "readme_status_completion_sync",
+            "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+            "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+          }
+        ]
+      }
+    },
+    "checklist_record_mappings": [
+      {
+        "checklist_item": "Phase D hard gate",
+        "record_scope_id": "phase-d-hard-gate",
+        "result_status": "blocked",
+        "evidence_paths": [
+          "docs/automatic_validation_result.json",
+          "docs/final_readiness_checklist.md"
+        ]
+      },
+      {
+        "checklist_item": "Phase F self-run terminal state",
+        "record_scope_id": "phase-f-self-run-terminal-state",
+        "result_status": "pass",
+        "evidence_paths": [
+          "docs/orchestrator-multigenerator-upgrade-status.md#10-1"
+        ]
+      },
+      {
+        "checklist_item": "Phase F focused self-healing apply",
+        "record_scope_id": "phase-f-focused-self-healing-apply",
+        "result_status": "pass",
+        "evidence_paths": [
+          "docs/orchestrator-multigenerator-upgrade-status.md#10-1"
+        ]
+      },
+      {
+        "checklist_item": "Phase F route manifest / nginx / cached path",
+        "record_scope_id": "phase-f-system-settings-504-recurrence",
+        "result_status": "pass",
+        "evidence_paths": [
+          "backend/admin_router.py",
+          "nginx/nginx.conf/nginx.conf",
+          "backend/llm/loader.py",
+          "docs/automatic_validation_result.json"
+        ]
+      }
+    ],
+    "route_manifest_validation": {
+      "ok": true,
+      "required_routes": [
+        "/api/admin/system-settings",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/code-generator",
+        "/api/llm/ws"
+      ],
+      "existing_routes": [
+        "/api/admin/system-settings",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/code-generator",
+        "/api/llm/ws"
+      ],
+      "missing_routes": [],
+      "declared_routes": [
+        "/api/admin/identity-provider-settings",
+        "/api/admin/account/password",
+        "/api/admin/orchestrator/project-context",
+        "/api/admin/orchestrator/project-memory",
+        "/api/admin/orchestrator/experiments",
+        "/api/admin/orchestrator/approval-gate",
+        "/api/admin/orchestrator/global-approval-policy",
+        "/api/admin/orchestrator/debug-validation-profile",
+        "/api/admin/orchestrator/debug-validation-profile/{job_id}",
+        "/api/admin/orchestrator/runtime-verification",
+        "/api/admin/auto-connect-graph/logs",
+        "/api/admin/auto-connect-graph/completions",
+        "/api/admin/auto-connect-graph/retry-queue",
+        "/api/admin/ad-video-orders",
+        "/api/admin/ad-video-orders/monitor-summary",
+        "/api/admin/ad-video-orders/settlement-dashboard",
+        "/api/admin/projects",
+        "/api/admin/system-settings",
+        "/api/admin/system-settings/postgres-password",
+        "/api/admin/system-settings/global-automatic-mode",
+        "/api/admin/workspace-text-file",
+        "/api/admin/workspace-text-files",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/workspace-experiment-clone",
+        "/api/admin/workspace-self-prepare",
+        "/api/admin/workspace-self-run",
+        "/api/admin/workspace-self-run/approve",
+        "/api/admin/workspace-self-run-record/normalize",
+        "/api/admin/workspace-self-run-record/retry",
+        "/api/admin/focused-self-healing/plan",
+        "/api/admin/focused-self-healing/apply",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/{capability_id}",
+        "/api/llm/health",
+        "/api/llm/train",
+        "/api/llm/inference",
+        "/api/llm/evaluate",
+        "/api/llm/runtime-config",
+        "/api/llm/ws",
+        "/api/llm/config",
+        "/api/llm/catalog",
+        "/api/llm/order-workflow",
+        "/api/llm/publish-readiness",
+        "/api/llm/ops/catalog",
+        "/api/llm/order-profile",
+        "/api/llm/flow-map",
+        "/api/llm/flow-map/{step_id}",
+        "/api/llm/workspace",
+        "/api/llm/report",
+        "/api/llm/diagnose",
+        "/api/llm/orchestrate",
+        "/api/llm/orchestrate/accepted",
+        "/api/llm/orchestrate/progress/{run_id}",
+        "/api/llm/orchestrate/chat",
+        "/api/llm/orchestrate/chat/light"
+      ],
+      "declared_route_count": 55,
+      "route_manifest_source": [
+        "backend/admin_router.py",
+        "backend/llm/admin_capabilities.py",
+        "backend/llm/orchestrator.py"
+      ],
+      "validation_summary": "required=5, existing=5, missing=0, declared_route_count=55",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-admin-route-recovery",
+      "source_path": "backend/admin_router.py"
+    },
+    "nginx_target_validation": {
+      "ok": true,
+      "required_targets": {
+        "admin_system_settings_backend": "/api/admin/system-settings",
+        "api_proxy_backend": "location /api/",
+        "websocket_proxy": "/api/llm/ws"
+      },
+      "matched_targets": {
+        "admin_system_settings_backend": "/api/admin/system-settings",
+        "api_proxy_backend": "location /api/",
+        "websocket_proxy": "/api/llm/ws"
+      },
+      "missing_targets": [],
+      "validation_summary": "required=3, matched=3, missing=0",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "source_path": "nginx/nginx.conf/nginx.conf"
+    },
+    "cached_path_validation": {
+      "ok": true,
+      "checks": {
+        "loader_cached_status": true,
+        "system_settings_cached_path": true
+      },
+      "missing_checks": [],
+      "validation_summary": "checks=2, passed=2, missing=0",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "source_paths": [
+        "backend/llm/loader.py",
+        "backend/admin_router.py"
+      ]
+    },
+    "documentation_sync": {
+      "schema_version": "v1",
+      "overall_status": "reflection_required",
+      "stale_count": 2,
+      "axes": {
+        "operational_paths": {
+          "ok": true,
+          "stale_count": 0
+        },
+        "judgement": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "latest_verification_round": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "localhost_usage": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "legacy_contract": {
+          "ok": true,
+          "stale_count": 0
+        }
+      },
+      "latest_verification_record": {
+        "round": "77",
+        "captured_at": "REC-077",
+        "topic": "phase-r7-workspace-build-basis",
+        "command": "2",
+        "result": "pass",
+        "evidence": "2026-04-08 현재 세션"
+      },
+      "latest_record_link_table": [
+        {
+          "record_keyword": "system-settings",
+          "record_scope_id": "phase-f-system-settings-504-recurrence",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+        },
+        {
+          "record_keyword": "ws=open",
+          "record_scope_id": "phase-f-websocket-recovery",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+        },
+        {
+          "record_keyword": "customer_summary_ok=200",
+          "record_scope_id": "phase-f-marketplace-route-recovery",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+        },
+        {
+          "record_keyword": "반영 필요/완료됨",
+          "record_scope_id": "phase-g-documentation-sync",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+        },
+        {
+          "record_keyword": "app/services.py",
+          "record_scope_id": "phase-g-service-package-contract",
+          "document_paths": [
+            "README.md",
+            "docs/**/*"
+          ],
+          "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+        }
+      ],
+      "readme_status_sync": {
+        "readme_reflection_required": false,
+        "status_reflection_required": false,
+        "readme_completed": false,
+        "status_completed": true
+      },
+      "stale_matches": [
+        {
+          "axis": "localhost_usage",
+          "axis_label": "localhost 사용 여부",
+          "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+          "rule": "localhost_performance_baseline_forbidden",
+          "match": "http://localhost",
+          "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+        },
+        {
+          "axis": "judgement",
+          "axis_label": "판정",
+          "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+          "rule": "readme_status_completion_sync",
+          "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+          "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+        }
+      ]
+    }
+  },
+  "evidence_bundle": {
+    "contract": {
+      "evidence_schema_version": "v1",
+      "profile_id": "nextjs_app"
+    },
+    "execution": {
+      "evidence_run_id": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+      "evidence_generated_at": "2026-04-22T19:53:34.966900Z",
+      "self_run_status": "not_applicable",
+      "completion_gate_ok": false,
+      "completion_gate_error": "semantic gate failed; shipping zip reproduction validation failed; test coverage too small: 0; commerce backend implementation too small: 0; runtime scenario marker missing: catalog flow; runtime scenario marker missing: marketplace publish payload; thin implementation files detected: scripts/check.sh",
+      "semantic_audit_ok": false,
+      "semantic_audit_score": 82,
+      "post_validation_analysis": {
+        "analysis_summary": "검증 통과 후 AI 정밀 분석: 아직 게이트 차단이 남아 있어 실패 stage 제거와 selective apply 범위 축소가 우선입니다.",
+        "quality_findings": [
+          "semantic audit score=82",
+          "semantic audit 보강이 필요합니다.",
+          "failure tags=0 / repair tags=0"
+        ],
+        "architecture_findings": [
+          "reusable patch units=2",
+          "고유 ID registry 기반 selective apply ready 상태입니다.",
+          "target ids files=2, sections=2, features=2, chunks=2"
+        ],
+        "ops_findings": [
+          "operational evidence integration=partial",
+          "실도메인 운영 경로 증거를 hard gate evidence 체계와 연결해야 합니다.",
+          "verified targets=websocket, system_settings, workspace_self_run_record",
+          "차단된 hard gate stage: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+          "추가 검증 필요 targets: admin, marketplace"
+        ],
+        "new_technology_candidates": [
+          "evidence replay validator",
+          "post-validation proposal ranking",
+          "selective apply safety scorer",
+          "target-id impact graph"
+        ],
+        "recommended_expansion_actions": [
+          "selective apply 대상으로 매칭된 file/section/chunk id를 기준으로 후속 self-improvement 작업문을 생성합니다. (files=2, sections=2, chunks=2)",
+          "운영 실도메인 evidence 결과를 approval/completion judge와 같은 증거 체계로 연결합니다. (verified=3/5)",
+          "failure_tags 와 repair_tags 우선순위를 기준으로 후속 개선 액션을 재정렬합니다. (failure_tags=0, repair_tags=0)"
+        ],
+        "artifact_source": {
+          "target_file_ids": [
+            "FILE-ADMIN-CAPABILITIES",
+            "FILE-ADMIN-LLM-PAGE"
+          ],
+          "target_section_ids": [
+            "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+            "SECTION-CHAT-ADVISORY-PANEL"
+          ],
+          "target_feature_ids": [
+            "FEATURE-ID-BASED-TARGET-EXPOSURE",
+            "FEATURE-EVIDENCE-FIRST-UX"
+          ],
+          "target_chunk_ids": [
+            "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+            "CHUNK-ADMIN-CHAT-UI-001"
+          ],
+          "failure_tags": [],
+          "repair_tags": [],
+          "verified_operational_targets": [
+            "websocket",
+            "system_settings",
+            "workspace_self_run_record"
+          ],
+          "missing_operational_targets": [
+            "admin",
+            "marketplace"
+          ],
+          "failed_hard_gate_stages": [
+            "dependency_install",
+            "standalone_boot",
+            "api_smoke",
+            "pytest",
+            "zip_reproduction"
+          ]
+        }
+      },
+      "evidence_snapshot_version": "v1"
+    },
+    "readiness": {
+      "product_readiness_hard_gate": {
+        "validation_profile": "nextjs_app",
+        "ok": false,
+        "stages": [
+          {
+            "id": "packaging_audit",
+            "ok": true,
+            "summary": "패키징 필수 파일이 준비되었는지 확인합니다.",
+            "evidence": {
+              "missing_packaging_files": [],
+              "required_packaging_files": [
+                "README.md",
+                "docs/usage.md",
+                "docs/deployment.md",
+                "docs/testing.md",
+                "configs/app.env.example",
+                "docs/runbook.md",
+                "infra/prometheus.yml",
+                "infra/deploy/security.md"
+              ]
+            }
+          },
+          {
+            "id": "dependency_install",
+            "ok": false,
+            "summary": "생성 직후 의존성 설치와 가상환경 구성이 성공해야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "standalone_boot",
+            "ok": false,
+            "summary": "생성 산출물이 단독 기동되어야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "api_smoke",
+            "ok": false,
+            "summary": "핵심 API 스모크 검증이 성공해야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "pytest",
+            "ok": false,
+            "summary": "핵심 테스트가 통과해야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "framework_contract",
+            "ok": true,
+            "summary": "프레임워크 구조와 실행 계약이 맞아야 합니다.",
+            "evidence": {
+              "checks_run": [
+                "package.json contract inspection",
+                "exists:app/layout.tsx",
+                "exists:app/page.tsx",
+                "exists:scripts/check.sh"
+              ],
+              "failures": []
+            }
+          },
+          {
+            "id": "external_integration",
+            "ok": true,
+            "summary": "외부 연동 경계 파일과 커넥터가 존재해야 합니다.",
+            "evidence": {
+              "checks_run": [
+                "exists:backend/app/external_adapters/status_client.py",
+                "exists:backend/app/connectors/base.py"
+              ],
+              "failures": []
+            }
+          },
+          {
+            "id": "zip_reproduction",
+            "ok": false,
+            "summary": "출고 ZIP 압축 해제 후 재현 검증이 성공해야 합니다.",
+            "evidence": {
+              "checks_run": [
+                "extract_zip",
+                "validation_profile_unsupported"
+              ],
+              "failures": [
+                "zip reproduction validator not implemented for profile: nextjs_app"
+              ],
+              "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+              "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376"
+            }
+          }
+        ],
+        "failed_stages": [
+          "dependency_install",
+          "standalone_boot",
+          "api_smoke",
+          "pytest",
+          "zip_reproduction"
+        ],
+        "summary": "product readiness hard gate failed: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+        "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+      },
+      "shipping_zip_validation": {
+        "engine": "shipping-zip-reproduction-validator",
+        "validation_profile": "nextjs_app",
+        "ok": false,
+        "checks_run": [
+          "extract_zip",
+          "validation_profile_unsupported"
+        ],
+        "failures": [
+          "zip reproduction validator not implemented for profile: nextjs_app"
+        ],
+        "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376",
+        "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+      },
+      "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+      "output_audit_path": "docs/output_audit.json",
+      "automatic_validation_result_path": "docs/automatic_validation_result.json",
+      "operational_evidence_snapshot": {
+        "profile_id": "commerce_platform",
+        "integration_status": "partial",
+        "verified_target_count": 3,
+        "required_target_count": 5,
+        "warning_target_count": 0,
+        "failed_target_count": 2,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "max_latency_ms": 185.8,
+        "summary": {
+          "verified_count": 3,
+          "warning_count": 0,
+          "failed_count": 2,
+          "required_count": 5,
+          "warning_targets": [
+            "system_settings",
+            "workspace_self_run_record"
+          ],
+          "max_latency_ms": 185.8
+        },
+        "targets_by_id": {
+          "websocket": {
+            "id": "websocket",
+            "target": "/api/llm/ws",
+            "protocol": "websocket",
+            "verification_method": "websocket-handshake-and-ping-pong",
+            "note": "runtime websocket probe ok",
+            "warning_threshold_ms": 150.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 101,
+            "latency_ms": 23.9,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:36.805495Z",
+            "source": "runtime-probe"
+          },
+          "admin": {
+            "id": "admin",
+            "target": "/admin/llm",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 150.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:39.511079Z",
+            "source": "runtime-probe"
+          },
+          "marketplace": {
+            "id": "marketplace",
+            "target": "/marketplace/orchestrator",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 200.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:42.210471Z",
+            "source": "runtime-probe"
+          },
+          "system_settings": {
+            "id": "system_settings",
+            "target": "/api/admin/system-settings",
+            "protocol": "https",
+            "verification_method": "http-response-json",
+            "note": "body-bytes=15382",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 168.6,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.379221Z",
+            "source": "runtime-probe"
+          },
+          "workspace_self_run_record": {
+            "id": "workspace_self_run_record",
+            "target": "/api/admin/workspace-self-run-record?latest=true",
+            "protocol": "https",
+            "verification_method": "http-response-latest-record",
+            "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 185.8,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.565062Z",
+            "source": "runtime-probe"
+          }
+        },
+        "websocket": {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        "admin": {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        "marketplace": {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        "system_settings": {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        "workspace_self_run_record": {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        },
+        "targets": [
+          {
+            "id": "websocket",
+            "target": "/api/llm/ws",
+            "protocol": "websocket",
+            "verification_method": "websocket-handshake-and-ping-pong",
+            "note": "runtime websocket probe ok",
+            "warning_threshold_ms": 150.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 101,
+            "latency_ms": 23.9,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:36.805495Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "admin",
+            "target": "/admin/llm",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 150.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:39.511079Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "marketplace",
+            "target": "/marketplace/orchestrator",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 200.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:42.210471Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "system_settings",
+            "target": "/api/admin/system-settings",
+            "protocol": "https",
+            "verification_method": "http-response-json",
+            "note": "body-bytes=15382",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 168.6,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.379221Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "workspace_self_run_record",
+            "target": "/api/admin/workspace-self-run-record?latest=true",
+            "protocol": "https",
+            "verification_method": "http-response-latest-record",
+            "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 185.8,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.565062Z",
+            "source": "runtime-probe"
+          }
+        ]
+      },
+      "operational_targets_by_id": {
+        "websocket": {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        "admin": {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        "marketplace": {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        "system_settings": {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        "workspace_self_run_record": {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        }
+      },
+      "operational_evidence_summary": {
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "max_latency_ms": 185.8
+      },
+      "operational_latency_summary": {
+        "latency_warning": true,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "warning_threshold_ms": {
+          "websocket": 150.0,
+          "admin": 150.0,
+          "marketplace": 200.0,
+          "system_settings": 120.0,
+          "workspace_self_run_record": 120.0
+        },
+        "max_latency_ms": 185.8,
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5
+      },
+      "documentation_sync": {
+        "schema_version": "v1",
+        "overall_status": "reflection_required",
+        "stale_count": 2,
+        "axes": {
+          "operational_paths": {
+            "ok": true,
+            "stale_count": 0
+          },
+          "judgement": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "latest_verification_round": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "localhost_usage": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "legacy_contract": {
+            "ok": true,
+            "stale_count": 0
+          }
+        },
+        "latest_verification_record": {
+          "round": "77",
+          "captured_at": "REC-077",
+          "topic": "phase-r7-workspace-build-basis",
+          "command": "2",
+          "result": "pass",
+          "evidence": "2026-04-08 현재 세션"
+        },
+        "latest_record_link_table": [
+          {
+            "record_keyword": "system-settings",
+            "record_scope_id": "phase-f-system-settings-504-recurrence",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+          },
+          {
+            "record_keyword": "ws=open",
+            "record_scope_id": "phase-f-websocket-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "customer_summary_ok=200",
+            "record_scope_id": "phase-f-marketplace-route-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "반영 필요/완료됨",
+            "record_scope_id": "phase-g-documentation-sync",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+          },
+          {
+            "record_keyword": "app/services.py",
+            "record_scope_id": "phase-g-service-package-contract",
+            "document_paths": [
+              "README.md",
+              "docs/**/*"
+            ],
+            "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+          }
+        ],
+        "readme_status_sync": {
+          "readme_reflection_required": false,
+          "status_reflection_required": false,
+          "readme_completed": false,
+          "status_completed": true
+        },
+        "stale_matches": [
+          {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+            "rule": "localhost_performance_baseline_forbidden",
+            "match": "http://localhost",
+            "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+          },
+          {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "readme_status_completion_sync",
+            "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+            "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+          }
+        ]
+      },
+      "artifact_paths": {
+        "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+        "automatic_validation_result_path": "docs/automatic_validation_result.json",
+        "automatic_validation_markdown_path": "docs/automatic_validation_result.md",
+        "failure_report_path": "docs/failure_report.md",
+        "root_cause_report_path": "docs/root_cause_analysis.md",
+        "output_audit_path": "docs/output_audit.json",
+        "traceability_map_path": "docs/traceability_map.json"
+      }
+    },
+    "operations": {
+      "canonical_source": "evidence_bundle.readiness.operational_evidence_snapshot",
+      "operational_evidence_deprecated": true
+    },
+    "selective_apply": {
+      "target_file_ids": [
+        "FILE-ADMIN-CAPABILITIES",
+        "FILE-ADMIN-LLM-PAGE"
+      ],
+      "target_section_ids": [
+        "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+        "SECTION-CHAT-ADVISORY-PANEL"
+      ],
+      "target_feature_ids": [
+        "FEATURE-ID-BASED-TARGET-EXPOSURE",
+        "FEATURE-EVIDENCE-FIRST-UX"
+      ],
+      "target_chunk_ids": [
+        "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+        "CHUNK-ADMIN-CHAT-UI-001"
+      ],
+      "failure_tags": [],
+      "repair_tags": [],
+      "target_patch_entries": [
+        {
+          "file_id": "FILE-ADMIN-CAPABILITIES",
+          "path": "backend/llm/admin_capabilities.py",
+          "section_id": "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+          "feature_id": "FEATURE-ID-BASED-TARGET-EXPOSURE",
+          "chunk_id": "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+          "summary": "capability가 output audit / traceability / hard gate evidence를 읽어 수정 대상 ID를 노출하는 조각입니다.",
+          "reuse_ready": true,
+          "capability_ids": [
+            "code-generator",
+            "self-healing-engine",
+            "project-scanner"
+          ]
+        },
+        {
+          "file_id": "FILE-ADMIN-LLM-PAGE",
+          "path": "frontend/frontend/app/admin/llm/page.tsx",
+          "section_id": "SECTION-CHAT-ADVISORY-PANEL",
+          "feature_id": "FEATURE-EVIDENCE-FIRST-UX",
+          "chunk_id": "CHUNK-ADMIN-CHAT-UI-001",
+          "summary": "관리자 오케스트레이터 화면에서 AI 추론, hard gate, evidence, 타겟 수정 힌트를 보여주는 조각입니다.",
+          "reuse_ready": true,
+          "capability_ids": [
+            "code-generator",
+            "self-healing-engine",
+            "admin-command-interface"
+          ]
+        }
+      ],
+      "record_scope_links": [
+        {
+          "record_scope_id": "phase-d-hard-gate",
+          "applies_to": {
+            "target_file_ids": [
+              "FILE-ADMIN-CAPABILITIES",
+              "FILE-ADMIN-LLM-PAGE"
+            ],
+            "target_section_ids": [
+              "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+              "SECTION-CHAT-ADVISORY-PANEL"
+            ],
+            "target_feature_ids": [
+              "FEATURE-ID-BASED-TARGET-EXPOSURE",
+              "FEATURE-EVIDENCE-FIRST-UX"
+            ],
+            "target_chunk_ids": [
+              "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+              "CHUNK-ADMIN-CHAT-UI-001"
+            ]
+          },
+          "result_status": "blocked",
+          "applied_to_source_evidence": {
+            "status": "not_applicable_in_customer_generation",
+            "required_for_pass": false
+          }
+        },
+        {
+          "record_scope_id": "phase-f-self-run-terminal-state",
+          "applies_to": {
+            "target_file_ids": [
+              "FILE-ADMIN-CAPABILITIES",
+              "FILE-ADMIN-LLM-PAGE"
+            ],
+            "target_section_ids": [
+              "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+              "SECTION-CHAT-ADVISORY-PANEL"
+            ],
+            "target_feature_ids": [
+              "FEATURE-ID-BASED-TARGET-EXPOSURE",
+              "FEATURE-EVIDENCE-FIRST-UX"
+            ],
+            "target_chunk_ids": [
+              "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+              "CHUNK-ADMIN-CHAT-UI-001"
+            ]
+          },
+          "result_status": "pass",
+          "applied_to_source_evidence": {
+            "status": "closed_in_latest_session_records",
+            "required_for_pass": false
+          }
+        },
+        {
+          "record_scope_id": "phase-f-focused-self-healing-apply",
+          "applies_to": {
+            "target_file_ids": [
+              "FILE-ADMIN-CAPABILITIES",
+              "FILE-ADMIN-LLM-PAGE"
+            ],
+            "target_section_ids": [
+              "SECTION-CAPABILITY-EVIDENCE-AGGREGATOR",
+              "SECTION-CHAT-ADVISORY-PANEL"
+            ],
+            "target_feature_ids": [
+              "FEATURE-ID-BASED-TARGET-EXPOSURE",
+              "FEATURE-EVIDENCE-FIRST-UX"
+            ],
+            "target_chunk_ids": [
+              "CHUNK-CAPABILITY-TARGET-REGISTRY-001",
+              "CHUNK-ADMIN-CHAT-UI-001"
+            ]
+          },
+          "result_status": "pass",
+          "applied_to_source_evidence": {
+            "status": "closed_in_latest_session_records",
+            "required_for_pass": false
+          }
+        }
+      ],
+      "target_file_id_count": 2,
+      "failure_tag_count": 0
+    },
+    "snapshot": {
+      "evidence_schema_version": "v1",
+      "evidence_snapshot_version": "v1",
+      "evidence_generated_at": "2026-04-22T19:53:34.966900Z",
+      "evidence_run_id": "오케스트레이터 자가개선 실험 즉시 실행\n\n원본 대상 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\n실험 복제본 경로: C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\n실행 모드: full\n\n[반드시 지킬 원칙]\n- 1. 대상 폴더 전체 구조와 핵심 파일 연결을 먼저 분석\n- 2. 실험 복제본에서 실제 수정과 검증을 수행\n- 3. 검증을 통과한 개선 결과물만 승인 대기 대상으로 남김\n- 4. 원본 폴더는 승인 전까지 절대 직접 수정하지 않음\n- 최종 응답에는 진단 요약, 실험 결과, 검증 결과, 승인 대기용 핵심 변경점을 모두 포함\n- 승인 전 단계에서는 원본 폴더를 직접 수정했다고 주장하지 말 것\n\n[선택 주문]\n- 주문 템플릿: 디버깅 기반 결함 교정 루프\n- 실행 범위: 지정 범위만 구현\n- 사용자 주문: INSPECT-023 second live verification\n- 위 주문은 현재 self-run 목적보다 우선순위를 침범하지 않는 범위에서 반영할 것\n\n[디버깅 시스템 표준 프로토콜]\n- 1단계 결함 식별 및 제거: validation_findings, runtime diagnostics, 보안 위반을 근거로 실제 결함만 식별하고 즉시 제거할 것\n- 2단계 시스템 이해도 향상: 결함이 연결된 라우터, 상태, 저장 경로, 호출 체인을 설명 가능한 수준으로 재구성할 것\n- 3단계 리스크 관리: 수정 파급 범위, 잠재 회귀, 미검증 영역, 승인 전 위험을 분리 기록할 것\n- 4단계 성능 최적화: 결함 제거 후 남는 병목과 자원 낭비만 최적화하고, 기능 회귀를 만들지 말 것\n\n[교정 조치 명령]\nINSPECT-023 second live verification\n\n[대상 구조 요약]\n- 디렉터리 수: 407\n- 파일 수: 1848\n- 텍스트/코드 파일 수: 1126\n- 분석 컨텍스트 포함 파일 수: 108\n- 분석 컨텍스트 문자 수: 179830\n\n[스킵 디렉터리]\n- .git\n- .playwright-mcp\n- .pytest_cache\n- .runtime\n- .tmp\n- .venv\n- .venv-arcface310\n- .venv.py313\n- .venv.py313.20260409_200600.4823f7\n- .venv.py313.20260409_201228.6ea186\n- .venv.py313.20260418_205442.0184f1\n- .venv.py313.cpu-2.10.0.20260418_210038\n- .venv.py313.cpu-latest.20260418_205950\n- .venv.py313.pypi-2.10.0.20260418_210125\n- .venv.torchcheck313\n- .venv312\n- .venv313\n- .vs\n- __pycache__\n- ai/__pycache__\n\n[구조 프리뷰]\ncodeAI/\n  .git/ [skip]\n  .github/\n    copilot-instructions.md\n  .playwright-mcp/ [skip]\n  .pytest_cache/ [skip]\n  .runtime/ [skip]\n  .tmp/ [skip]\n  .venv/ [skip]\n  .venv-arcface310/ [skip]\n  .venv.py313/ [skip]\n  .venv.py313.20260409_200600.4823f7/ [skip]\n  .venv.py313.20260409_201228.6ea186/ [skip]\n  .venv.py313.20260418_205442.0184f1/ [skip]\n  .venv.py313.cpu-2.10.0.20260418_210038/ [skip]\n  .venv.py313.cpu-latest.20260418_205950/ [skip]\n  .venv.py313.pypi-2.10.0.20260418_210125/ [skip]\n  .venv.torchcheck313/ [skip]\n  .venv312/ [skip]\n  .venv313/ [skip]\n  .vs/ [skip]\n  __pycache__/ [skip]\n  addons/\n    go_service/\n      cmd/\n        app/\n          main.go\n      internal/\n        app/\n          app.go\n        domain/\n          inventory.go\n        http/\n          handlers/\n            health.go\n            inventory.go\n          router.go\n        platform/\n          runtime_store.go\n        repository/\n          inventory_repository.go\n        service/\n          inventory_service.go\n      go.mod\n      README.md\n    nextjs_react/\n      app/\n        api/\n          brief/\n            route.ts\n          health/\n            route.ts\n        dashboard/\n          page.tsx\n        globals.css\n        layout.tsx\n        loading.tsx\n        page.tsx\n      components/\n        dashboardclient.tsx\n        executionboard.tsx\n        focusrail.tsx\n        heropanel.tsx\n        insighttimeline.tsx\n        metriccluster.tsx\n        signalmatrix.tsx\n        themetoggle.tsx\n      lib/\n        data.ts\n        types.ts\n      .gitignore\n      next-env.d.ts\n      next.config.js\n      package.json\n      README.md\n      tsconfig.json\n    node_service/\n      src/\n        http/\n          handlers/\n...[중략: 구조 프리뷰가 길어 일부만 포함]\n\n[핵심 텍스트 파일]\n- .github/copilot-instructions.md (11698 bytes)\n- addons/go_service/README.md (6647 bytes)\n- addons/nextjs_react/app/api/brief/route.ts (153 bytes)\n- addons/nextjs_react/app/api/health/route.ts (124 bytes)\n- addons/nextjs_react/app/dashboard/page.tsx (257 bytes)\n- addons/nextjs_react/app/globals.css (7117 bytes)\n- addons/nextjs_react/app/layout.tsx (861 bytes)\n- addons/nextjs_react/app/loading.tsx (256 bytes)\n- addons/nextjs_react/app/page.tsx (248 bytes)\n- addons/nextjs_react/components/dashboardclient.tsx (3759 bytes)\n- addons/nextjs_react/components/executionboard.tsx (499 bytes)\n- addons/nextjs_react/components/focusrail.tsx (648 bytes)\n- addons/nextjs_react/components/heropanel.tsx (931 bytes)\n- addons/nextjs_react/components/insighttimeline.tsx (502 bytes)\n- addons/nextjs_react/components/metriccluster.tsx (590 bytes)\n- addons/nextjs_react/components/signalmatrix.tsx (639 bytes)\n- addons/nextjs_react/components/themetoggle.tsx (1030 bytes)\n- addons/nextjs_react/lib/data.ts (3361 bytes)\n- addons/nextjs_react/lib/types.ts (805 bytes)\n- addons/nextjs_react/.gitignore (37 bytes)\n- ...[중략: 핵심 텍스트 파일 목록이 길어 일부만 포함]\n\n[분석용 파일 본문 컨텍스트 요약]\n- 포함 파일 수: 108\n- 누락 파일 수: 1\n- 원본 컨텍스트 문자 수: 179830\n- 컨텍스트 포함 파일에는 실행에 필요한 최소한의 소스 코드만 담길 것\n- 주문 의도에 따라 실제 파일 본문 수정은 오케스트레이터 내부 코드 컨텍스트 조회로 보완할 것\n\n[실행용 작업문 제약]\n- 실행용 작업문에는 구조/컨텍스트를 요약본만 유지할 것\n- 긴 산출물 파일명에 task 전문을 재사용하지 말 것\n- 출고 아카이브 파일명은 output_dir 이름 또는 짧은 project_name 기준으로 생성할 것",
+      "profile_id": "nextjs_app",
+      "hard_gate": {
+        "validation_profile": "nextjs_app",
+        "ok": false,
+        "stages": [
+          {
+            "id": "packaging_audit",
+            "ok": true,
+            "summary": "패키징 필수 파일이 준비되었는지 확인합니다.",
+            "evidence": {
+              "missing_packaging_files": [],
+              "required_packaging_files": [
+                "README.md",
+                "docs/usage.md",
+                "docs/deployment.md",
+                "docs/testing.md",
+                "configs/app.env.example",
+                "docs/runbook.md",
+                "infra/prometheus.yml",
+                "infra/deploy/security.md"
+              ]
+            }
+          },
+          {
+            "id": "dependency_install",
+            "ok": false,
+            "summary": "생성 직후 의존성 설치와 가상환경 구성이 성공해야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "standalone_boot",
+            "ok": false,
+            "summary": "생성 산출물이 단독 기동되어야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "api_smoke",
+            "ok": false,
+            "summary": "핵심 API 스모크 검증이 성공해야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "pytest",
+            "ok": false,
+            "summary": "핵심 테스트가 통과해야 합니다.",
+            "evidence": {
+              "checks_run": [],
+              "failures": []
+            }
+          },
+          {
+            "id": "framework_contract",
+            "ok": true,
+            "summary": "프레임워크 구조와 실행 계약이 맞아야 합니다.",
+            "evidence": {
+              "checks_run": [
+                "package.json contract inspection",
+                "exists:app/layout.tsx",
+                "exists:app/page.tsx",
+                "exists:scripts/check.sh"
+              ],
+              "failures": []
+            }
+          },
+          {
+            "id": "external_integration",
+            "ok": true,
+            "summary": "외부 연동 경계 파일과 커넥터가 존재해야 합니다.",
+            "evidence": {
+              "checks_run": [
+                "exists:backend/app/external_adapters/status_client.py",
+                "exists:backend/app/connectors/base.py"
+              ],
+              "failures": []
+            }
+          },
+          {
+            "id": "zip_reproduction",
+            "ok": false,
+            "summary": "출고 ZIP 압축 해제 후 재현 검증이 성공해야 합니다.",
+            "evidence": {
+              "checks_run": [
+                "extract_zip",
+                "validation_profile_unsupported"
+              ],
+              "failures": [
+                "zip reproduction validator not implemented for profile: nextjs_app"
+              ],
+              "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip",
+              "extracted_root": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\orchestrator_validation\\zip_repro_10faff34e376"
+            }
+          }
+        ],
+        "failed_stages": [
+          "dependency_install",
+          "standalone_boot",
+          "api_smoke",
+          "pytest",
+          "zip_reproduction"
+        ],
+        "summary": "product readiness hard gate failed: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+        "archive_path": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\uploads\\tmp\\codeai_admin_runtime\\admin_self_experiments\\codeAI_20260423_045333\\오케스트레이터-자가개선-실험-즉시-실행-원본-대상-경로-C-Use-9b4c2cd6f4_shipment.zip"
+      },
+      "readiness_checklist": {
+        "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+        "automatic_validation_result_path": "docs/automatic_validation_result.json"
+      },
+      "output_audit": {
+        "path": "docs/output_audit.json",
+        "completion_gate_ok": false,
+        "semantic_audit_ok": false,
+        "semantic_audit_score": 82
+      },
+      "artifact_paths": {
+        "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+        "automatic_validation_result_path": "docs/automatic_validation_result.json",
+        "output_audit_path": "docs/output_audit.json",
+        "traceability_map_path": "docs/traceability_map.json"
+      },
+      "operational_evidence": {
+        "profile_id": "commerce_platform",
+        "integration_status": "partial",
+        "verified_target_count": 3,
+        "required_target_count": 5,
+        "warning_target_count": 0,
+        "failed_target_count": 2,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "max_latency_ms": 185.8,
+        "summary": {
+          "verified_count": 3,
+          "warning_count": 0,
+          "failed_count": 2,
+          "required_count": 5,
+          "warning_targets": [
+            "system_settings",
+            "workspace_self_run_record"
+          ],
+          "max_latency_ms": 185.8
+        },
+        "targets_by_id": {
+          "websocket": {
+            "id": "websocket",
+            "target": "/api/llm/ws",
+            "protocol": "websocket",
+            "verification_method": "websocket-handshake-and-ping-pong",
+            "note": "runtime websocket probe ok",
+            "warning_threshold_ms": 150.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 101,
+            "latency_ms": 23.9,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:36.805495Z",
+            "source": "runtime-probe"
+          },
+          "admin": {
+            "id": "admin",
+            "target": "/admin/llm",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 150.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:39.511079Z",
+            "source": "runtime-probe"
+          },
+          "marketplace": {
+            "id": "marketplace",
+            "target": "/marketplace/orchestrator",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 200.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:42.210471Z",
+            "source": "runtime-probe"
+          },
+          "system_settings": {
+            "id": "system_settings",
+            "target": "/api/admin/system-settings",
+            "protocol": "https",
+            "verification_method": "http-response-json",
+            "note": "body-bytes=15382",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 168.6,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.379221Z",
+            "source": "runtime-probe"
+          },
+          "workspace_self_run_record": {
+            "id": "workspace_self_run_record",
+            "target": "/api/admin/workspace-self-run-record?latest=true",
+            "protocol": "https",
+            "verification_method": "http-response-latest-record",
+            "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 185.8,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.565062Z",
+            "source": "runtime-probe"
+          }
+        },
+        "websocket": {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        "admin": {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        "marketplace": {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        "system_settings": {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        "workspace_self_run_record": {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        },
+        "targets": [
+          {
+            "id": "websocket",
+            "target": "/api/llm/ws",
+            "protocol": "websocket",
+            "verification_method": "websocket-handshake-and-ping-pong",
+            "note": "runtime websocket probe ok",
+            "warning_threshold_ms": 150.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 101,
+            "latency_ms": 23.9,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:36.805495Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "admin",
+            "target": "/admin/llm",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 150.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:39.511079Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "marketplace",
+            "target": "/marketplace/orchestrator",
+            "protocol": "https",
+            "verification_method": "http-response-and-page-render",
+            "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+            "warning_threshold_ms": 200.0,
+            "ok": false,
+            "status": "failed",
+            "status_code": null,
+            "latency_ms": null,
+            "latency_warning": false,
+            "verified_at": "2026-04-19T18:49:42.210471Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "system_settings",
+            "target": "/api/admin/system-settings",
+            "protocol": "https",
+            "verification_method": "http-response-json",
+            "note": "body-bytes=15382",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 168.6,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.379221Z",
+            "source": "runtime-probe"
+          },
+          {
+            "id": "workspace_self_run_record",
+            "target": "/api/admin/workspace-self-run-record?latest=true",
+            "protocol": "https",
+            "verification_method": "http-response-latest-record",
+            "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+            "warning_threshold_ms": 120.0,
+            "ok": true,
+            "status": "verified",
+            "status_code": 200,
+            "latency_ms": 185.8,
+            "latency_warning": true,
+            "verified_at": "2026-04-19T18:49:42.565062Z",
+            "source": "runtime-probe"
+          }
+        ]
+      },
+      "operational_latency_summary": {
+        "latency_warning": true,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "warning_threshold_ms": {
+          "websocket": 150.0,
+          "admin": 150.0,
+          "marketplace": 200.0,
+          "system_settings": 120.0,
+          "workspace_self_run_record": 120.0
+        },
+        "max_latency_ms": 185.8,
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5
+      },
+      "document_stale_scan": {
+        "ok": false,
+        "axes": {
+          "operational_paths": {
+            "axis": "operational_paths",
+            "axis_label": "운영 경로",
+            "ok": true,
+            "stale_count": 0,
+            "matches": []
+          },
+          "judgement": {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "ok": false,
+            "stale_count": 1,
+            "matches": [
+              {
+                "axis": "judgement",
+                "axis_label": "판정",
+                "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+                "rule": "readme_status_completion_sync",
+                "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+                "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+              }
+            ]
+          },
+          "latest_verification_round": {
+            "axis": "latest_verification_round",
+            "axis_label": "최근 실검증 회차",
+            "ok": false,
+            "stale_count": 1,
+            "matches": [
+              {
+                "axis": "latest_verification_round",
+                "axis_label": "최근 실검증 회차",
+                "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+                "rule": "latest_record_document_sync_ok",
+                "match": "no-known-keyword",
+                "note": "최신 실검증 회차와 문서 반영 상태가 현재 기준으로 충돌하지 않습니다."
+              }
+            ]
+          },
+          "localhost_usage": {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "ok": false,
+            "stale_count": 1,
+            "matches": [
+              {
+                "axis": "localhost_usage",
+                "axis_label": "localhost 사용 여부",
+                "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+                "rule": "localhost_performance_baseline_forbidden",
+                "match": "http://localhost",
+                "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+              }
+            ]
+          },
+          "legacy_contract": {
+            "axis": "legacy_contract",
+            "axis_label": "레거시 계약 문자열",
+            "ok": true,
+            "stale_count": 0,
+            "matches": []
+          }
+        },
+        "matches": [
+          {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+            "rule": "localhost_performance_baseline_forbidden",
+            "match": "http://localhost",
+            "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+          },
+          {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "readme_status_completion_sync",
+            "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+            "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+          }
+        ],
+        "latest_verification_record": {
+          "round": "77",
+          "captured_at": "REC-077",
+          "topic": "phase-r7-workspace-build-basis",
+          "command": "2",
+          "result": "pass",
+          "evidence": "2026-04-08 현재 세션"
+        },
+        "documentation_sync": {
+          "schema_version": "v1",
+          "overall_status": "reflection_required",
+          "stale_count": 2,
+          "axes": {
+            "operational_paths": {
+              "ok": true,
+              "stale_count": 0
+            },
+            "judgement": {
+              "ok": false,
+              "stale_count": 1
+            },
+            "latest_verification_round": {
+              "ok": false,
+              "stale_count": 1
+            },
+            "localhost_usage": {
+              "ok": false,
+              "stale_count": 1
+            },
+            "legacy_contract": {
+              "ok": true,
+              "stale_count": 0
+            }
+          },
+          "latest_verification_record": {
+            "round": "77",
+            "captured_at": "REC-077",
+            "topic": "phase-r7-workspace-build-basis",
+            "command": "2",
+            "result": "pass",
+            "evidence": "2026-04-08 현재 세션"
+          },
+          "latest_record_link_table": [
+            {
+              "record_keyword": "system-settings",
+              "record_scope_id": "phase-f-system-settings-504-recurrence",
+              "document_paths": [
+                "README.md",
+                "docs/orchestrator-multigenerator-upgrade-status.md"
+              ],
+              "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+            },
+            {
+              "record_keyword": "ws=open",
+              "record_scope_id": "phase-f-websocket-recovery",
+              "document_paths": [
+                "README.md",
+                "docs/orchestrator-multigenerator-upgrade-status.md"
+              ],
+              "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+            },
+            {
+              "record_keyword": "customer_summary_ok=200",
+              "record_scope_id": "phase-f-marketplace-route-recovery",
+              "document_paths": [
+                "README.md",
+                "docs/orchestrator-multigenerator-upgrade-status.md"
+              ],
+              "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+            },
+            {
+              "record_keyword": "반영 필요/완료됨",
+              "record_scope_id": "phase-g-documentation-sync",
+              "document_paths": [
+                "README.md",
+                "docs/orchestrator-multigenerator-upgrade-status.md"
+              ],
+              "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+            },
+            {
+              "record_keyword": "app/services.py",
+              "record_scope_id": "phase-g-service-package-contract",
+              "document_paths": [
+                "README.md",
+                "docs/**/*"
+              ],
+              "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+            }
+          ],
+          "readme_status_sync": {
+            "readme_reflection_required": false,
+            "status_reflection_required": false,
+            "readme_completed": false,
+            "status_completed": true
+          },
+          "stale_matches": [
+            {
+              "axis": "localhost_usage",
+              "axis_label": "localhost 사용 여부",
+              "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+              "rule": "localhost_performance_baseline_forbidden",
+              "match": "http://localhost",
+              "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+            },
+            {
+              "axis": "judgement",
+              "axis_label": "판정",
+              "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+              "rule": "readme_status_completion_sync",
+              "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+              "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+            }
+          ]
+        }
+      },
+      "documentation_sync": {
+        "schema_version": "v1",
+        "overall_status": "reflection_required",
+        "stale_count": 2,
+        "axes": {
+          "operational_paths": {
+            "ok": true,
+            "stale_count": 0
+          },
+          "judgement": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "latest_verification_round": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "localhost_usage": {
+            "ok": false,
+            "stale_count": 1
+          },
+          "legacy_contract": {
+            "ok": true,
+            "stale_count": 0
+          }
+        },
+        "latest_verification_record": {
+          "round": "77",
+          "captured_at": "REC-077",
+          "topic": "phase-r7-workspace-build-basis",
+          "command": "2",
+          "result": "pass",
+          "evidence": "2026-04-08 현재 세션"
+        },
+        "latest_record_link_table": [
+          {
+            "record_keyword": "system-settings",
+            "record_scope_id": "phase-f-system-settings-504-recurrence",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+          },
+          {
+            "record_keyword": "ws=open",
+            "record_scope_id": "phase-f-websocket-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "customer_summary_ok=200",
+            "record_scope_id": "phase-f-marketplace-route-recovery",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+          },
+          {
+            "record_keyword": "반영 필요/완료됨",
+            "record_scope_id": "phase-g-documentation-sync",
+            "document_paths": [
+              "README.md",
+              "docs/orchestrator-multigenerator-upgrade-status.md"
+            ],
+            "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+          },
+          {
+            "record_keyword": "app/services.py",
+            "record_scope_id": "phase-g-service-package-contract",
+            "document_paths": [
+              "README.md",
+              "docs/**/*"
+            ],
+            "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+          }
+        ],
+        "readme_status_sync": {
+          "readme_reflection_required": false,
+          "status_reflection_required": false,
+          "readme_completed": false,
+          "status_completed": true
+        },
+        "stale_matches": [
+          {
+            "axis": "localhost_usage",
+            "axis_label": "localhost 사용 여부",
+            "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+            "rule": "localhost_performance_baseline_forbidden",
+            "match": "http://localhost",
+            "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+          },
+          {
+            "axis": "judgement",
+            "axis_label": "판정",
+            "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+            "rule": "readme_status_completion_sync",
+            "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+            "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+          }
+        ]
+      }
+    }
+  },
+  "record_table_schema": {
+    "required_fields": [
+      "record_id",
+      "record_scope_id",
+      "attempt_no",
+      "result_status",
+      "evidence_paths",
+      "blocking_reason"
+    ],
+    "allowed_result_statuses": [
+      "pass",
+      "partial",
+      "blocked",
+      "fail"
+    ]
+  },
+  "route_guardrails": {
+    "route_manifest_validation": {
+      "ok": true,
+      "required_routes": [
+        "/api/admin/system-settings",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/code-generator",
+        "/api/llm/ws"
+      ],
+      "existing_routes": [
+        "/api/admin/system-settings",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/code-generator",
+        "/api/llm/ws"
+      ],
+      "missing_routes": [],
+      "declared_routes": [
+        "/api/admin/identity-provider-settings",
+        "/api/admin/account/password",
+        "/api/admin/orchestrator/project-context",
+        "/api/admin/orchestrator/project-memory",
+        "/api/admin/orchestrator/experiments",
+        "/api/admin/orchestrator/approval-gate",
+        "/api/admin/orchestrator/global-approval-policy",
+        "/api/admin/orchestrator/debug-validation-profile",
+        "/api/admin/orchestrator/debug-validation-profile/{job_id}",
+        "/api/admin/orchestrator/runtime-verification",
+        "/api/admin/auto-connect-graph/logs",
+        "/api/admin/auto-connect-graph/completions",
+        "/api/admin/auto-connect-graph/retry-queue",
+        "/api/admin/ad-video-orders",
+        "/api/admin/ad-video-orders/monitor-summary",
+        "/api/admin/ad-video-orders/settlement-dashboard",
+        "/api/admin/projects",
+        "/api/admin/system-settings",
+        "/api/admin/system-settings/postgres-password",
+        "/api/admin/system-settings/global-automatic-mode",
+        "/api/admin/workspace-text-file",
+        "/api/admin/workspace-text-files",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/workspace-experiment-clone",
+        "/api/admin/workspace-self-prepare",
+        "/api/admin/workspace-self-run",
+        "/api/admin/workspace-self-run/approve",
+        "/api/admin/workspace-self-run-record/normalize",
+        "/api/admin/workspace-self-run-record/retry",
+        "/api/admin/focused-self-healing/plan",
+        "/api/admin/focused-self-healing/apply",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/{capability_id}",
+        "/api/llm/health",
+        "/api/llm/train",
+        "/api/llm/inference",
+        "/api/llm/evaluate",
+        "/api/llm/runtime-config",
+        "/api/llm/ws",
+        "/api/llm/config",
+        "/api/llm/catalog",
+        "/api/llm/order-workflow",
+        "/api/llm/publish-readiness",
+        "/api/llm/ops/catalog",
+        "/api/llm/order-profile",
+        "/api/llm/flow-map",
+        "/api/llm/flow-map/{step_id}",
+        "/api/llm/workspace",
+        "/api/llm/report",
+        "/api/llm/diagnose",
+        "/api/llm/orchestrate",
+        "/api/llm/orchestrate/accepted",
+        "/api/llm/orchestrate/progress/{run_id}",
+        "/api/llm/orchestrate/chat",
+        "/api/llm/orchestrate/chat/light"
+      ],
+      "declared_route_count": 55,
+      "route_manifest_source": [
+        "backend/admin_router.py",
+        "backend/llm/admin_capabilities.py",
+        "backend/llm/orchestrator.py"
+      ],
+      "validation_summary": "required=5, existing=5, missing=0, declared_route_count=55",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-admin-route-recovery",
+      "source_path": "backend/admin_router.py"
+    },
+    "nginx_target_validation": {
+      "ok": true,
+      "required_targets": {
+        "admin_system_settings_backend": "/api/admin/system-settings",
+        "api_proxy_backend": "location /api/",
+        "websocket_proxy": "/api/llm/ws"
+      },
+      "matched_targets": {
+        "admin_system_settings_backend": "/api/admin/system-settings",
+        "api_proxy_backend": "location /api/",
+        "websocket_proxy": "/api/llm/ws"
+      },
+      "missing_targets": [],
+      "validation_summary": "required=3, matched=3, missing=0",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "source_path": "nginx/nginx.conf/nginx.conf"
+    },
+    "cached_path_validation": {
+      "ok": true,
+      "checks": {
+        "loader_cached_status": true,
+        "system_settings_cached_path": true
+      },
+      "missing_checks": [],
+      "validation_summary": "checks=2, passed=2, missing=0",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "source_paths": [
+        "backend/llm/loader.py",
+        "backend/admin_router.py"
+      ]
+    }
+  },
+  "readiness_artifacts": {
+    "final_readiness_checklist_path": "docs/final_readiness_checklist.md",
+    "validation_result_json_path": "docs/automatic_validation_result.json",
+    "validation_result_md_path": "docs/automatic_validation_result.md",
+    "failure_report_path": "docs/failure_report.md",
+    "root_cause_report_path": "docs/root_cause_analysis.md",
+    "output_audit_path": "docs/output_audit.json",
+    "traceability_map_path": "docs/traceability_map.json",
+    "evidence_schema_version": "v1",
+    "latency_warning": true,
+    "warning_threshold_ms": {
+      "websocket": 150.0,
+      "admin": 150.0,
+      "marketplace": 200.0,
+      "system_settings": 120.0,
+      "workspace_self_run_record": 120.0
+    },
+    "warning_targets": [
+      "system_settings",
+      "workspace_self_run_record"
+    ],
+    "max_latency_ms": 185.8,
+    "operational_evidence_snapshot": {
+      "profile_id": "commerce_platform",
+      "integration_status": "partial",
+      "verified_target_count": 3,
+      "required_target_count": 5,
+      "warning_target_count": 0,
+      "failed_target_count": 2,
+      "warning_targets": [
+        "system_settings",
+        "workspace_self_run_record"
+      ],
+      "max_latency_ms": 185.8,
+      "summary": {
+        "verified_count": 3,
+        "warning_count": 0,
+        "failed_count": 2,
+        "required_count": 5,
+        "warning_targets": [
+          "system_settings",
+          "workspace_self_run_record"
+        ],
+        "max_latency_ms": 185.8
+      },
+      "targets_by_id": {
+        "websocket": {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        "admin": {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        "marketplace": {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        "system_settings": {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        "workspace_self_run_record": {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        }
+      },
+      "websocket": {
+        "id": "websocket",
+        "target": "/api/llm/ws",
+        "protocol": "websocket",
+        "verification_method": "websocket-handshake-and-ping-pong",
+        "note": "runtime websocket probe ok",
+        "warning_threshold_ms": 150.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 101,
+        "latency_ms": 23.9,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:36.805495Z",
+        "source": "runtime-probe"
+      },
+      "admin": {
+        "id": "admin",
+        "target": "/admin/llm",
+        "protocol": "https",
+        "verification_method": "http-response-and-page-render",
+        "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+        "warning_threshold_ms": 150.0,
+        "ok": false,
+        "status": "failed",
+        "status_code": null,
+        "latency_ms": null,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:39.511079Z",
+        "source": "runtime-probe"
+      },
+      "marketplace": {
+        "id": "marketplace",
+        "target": "/marketplace/orchestrator",
+        "protocol": "https",
+        "verification_method": "http-response-and-page-render",
+        "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+        "warning_threshold_ms": 200.0,
+        "ok": false,
+        "status": "failed",
+        "status_code": null,
+        "latency_ms": null,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:42.210471Z",
+        "source": "runtime-probe"
+      },
+      "system_settings": {
+        "id": "system_settings",
+        "target": "/api/admin/system-settings",
+        "protocol": "https",
+        "verification_method": "http-response-json",
+        "note": "body-bytes=15382",
+        "warning_threshold_ms": 120.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 200,
+        "latency_ms": 168.6,
+        "latency_warning": true,
+        "verified_at": "2026-04-19T18:49:42.379221Z",
+        "source": "runtime-probe"
+      },
+      "workspace_self_run_record": {
+        "id": "workspace_self_run_record",
+        "target": "/api/admin/workspace-self-run-record?latest=true",
+        "protocol": "https",
+        "verification_method": "http-response-latest-record",
+        "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+        "warning_threshold_ms": 120.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 200,
+        "latency_ms": 185.8,
+        "latency_warning": true,
+        "verified_at": "2026-04-19T18:49:42.565062Z",
+        "source": "runtime-probe"
+      },
+      "targets": [
+        {
+          "id": "websocket",
+          "target": "/api/llm/ws",
+          "protocol": "websocket",
+          "verification_method": "websocket-handshake-and-ping-pong",
+          "note": "runtime websocket probe ok",
+          "warning_threshold_ms": 150.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 101,
+          "latency_ms": 23.9,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:36.805495Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "admin",
+          "target": "/admin/llm",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 150.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:39.511079Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "marketplace",
+          "target": "/marketplace/orchestrator",
+          "protocol": "https",
+          "verification_method": "http-response-and-page-render",
+          "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+          "warning_threshold_ms": 200.0,
+          "ok": false,
+          "status": "failed",
+          "status_code": null,
+          "latency_ms": null,
+          "latency_warning": false,
+          "verified_at": "2026-04-19T18:49:42.210471Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "system_settings",
+          "target": "/api/admin/system-settings",
+          "protocol": "https",
+          "verification_method": "http-response-json",
+          "note": "body-bytes=15382",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 168.6,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.379221Z",
+          "source": "runtime-probe"
+        },
+        {
+          "id": "workspace_self_run_record",
+          "target": "/api/admin/workspace-self-run-record?latest=true",
+          "protocol": "https",
+          "verification_method": "http-response-latest-record",
+          "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+          "warning_threshold_ms": 120.0,
+          "ok": true,
+          "status": "verified",
+          "status_code": 200,
+          "latency_ms": 185.8,
+          "latency_warning": true,
+          "verified_at": "2026-04-19T18:49:42.565062Z",
+          "source": "runtime-probe"
+        }
+      ]
+    },
+    "operational_targets_by_id": {
+      "websocket": {
+        "id": "websocket",
+        "target": "/api/llm/ws",
+        "protocol": "websocket",
+        "verification_method": "websocket-handshake-and-ping-pong",
+        "note": "runtime websocket probe ok",
+        "warning_threshold_ms": 150.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 101,
+        "latency_ms": 23.9,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:36.805495Z",
+        "source": "runtime-probe"
+      },
+      "admin": {
+        "id": "admin",
+        "target": "/admin/llm",
+        "protocol": "https",
+        "verification_method": "http-response-and-page-render",
+        "note": "runtime probe failed via https://nginx/admin/llm: [Errno 11001] getaddrinfo failed",
+        "warning_threshold_ms": 150.0,
+        "ok": false,
+        "status": "failed",
+        "status_code": null,
+        "latency_ms": null,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:39.511079Z",
+        "source": "runtime-probe"
+      },
+      "marketplace": {
+        "id": "marketplace",
+        "target": "/marketplace/orchestrator",
+        "protocol": "https",
+        "verification_method": "http-response-and-page-render",
+        "note": "runtime probe failed via https://nginx/marketplace/orchestrator: [Errno 11001] getaddrinfo failed",
+        "warning_threshold_ms": 200.0,
+        "ok": false,
+        "status": "failed",
+        "status_code": null,
+        "latency_ms": null,
+        "latency_warning": false,
+        "verified_at": "2026-04-19T18:49:42.210471Z",
+        "source": "runtime-probe"
+      },
+      "system_settings": {
+        "id": "system_settings",
+        "target": "/api/admin/system-settings",
+        "protocol": "https",
+        "verification_method": "http-response-json",
+        "note": "body-bytes=15382",
+        "warning_threshold_ms": 120.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 200,
+        "latency_ms": 168.6,
+        "latency_warning": true,
+        "verified_at": "2026-04-19T18:49:42.379221Z",
+        "source": "runtime-probe"
+      },
+      "workspace_self_run_record": {
+        "id": "workspace_self_run_record",
+        "target": "/api/admin/workspace-self-run-record?latest=true",
+        "protocol": "https",
+        "verification_method": "http-response-latest-record",
+        "note": "runtime probe ok via http://127.0.0.1:8000/api/admin/workspace-self-run-record?latest=true",
+        "warning_threshold_ms": 120.0,
+        "ok": true,
+        "status": "verified",
+        "status_code": 200,
+        "latency_ms": 185.8,
+        "latency_warning": true,
+        "verified_at": "2026-04-19T18:49:42.565062Z",
+        "source": "runtime-probe"
+      }
+    },
+    "operational_evidence_summary": {
+      "verified_count": 3,
+      "warning_count": 0,
+      "failed_count": 2,
+      "required_count": 5,
+      "warning_targets": [
+        "system_settings",
+        "workspace_self_run_record"
+      ],
+      "max_latency_ms": 185.8
+    },
+    "operational_latency_summary": {
+      "latency_warning": true,
+      "warning_targets": [
+        "system_settings",
+        "workspace_self_run_record"
+      ],
+      "warning_threshold_ms": {
+        "websocket": 150.0,
+        "admin": 150.0,
+        "marketplace": 200.0,
+        "system_settings": 120.0,
+        "workspace_self_run_record": 120.0
+      },
+      "max_latency_ms": 185.8,
+      "verified_count": 3,
+      "warning_count": 0,
+      "failed_count": 2,
+      "required_count": 5
+    },
+    "legacy_contract_scan_ok": false,
+    "document_stale_scan_ok": false,
+    "checklist_record_mappings": [
+      {
+        "checklist_item": "Phase D hard gate",
+        "record_scope_id": "phase-d-hard-gate",
+        "result_status": "blocked",
+        "evidence_paths": [
+          "docs/automatic_validation_result.json",
+          "docs/final_readiness_checklist.md"
+        ]
+      },
+      {
+        "checklist_item": "Phase F self-run terminal state",
+        "record_scope_id": "phase-f-self-run-terminal-state",
+        "result_status": "pass",
+        "evidence_paths": [
+          "docs/orchestrator-multigenerator-upgrade-status.md#10-1"
+        ]
+      },
+      {
+        "checklist_item": "Phase F focused self-healing apply",
+        "record_scope_id": "phase-f-focused-self-healing-apply",
+        "result_status": "pass",
+        "evidence_paths": [
+          "docs/orchestrator-multigenerator-upgrade-status.md#10-1"
+        ]
+      },
+      {
+        "checklist_item": "Phase F route manifest / nginx / cached path",
+        "record_scope_id": "phase-f-system-settings-504-recurrence",
+        "result_status": "pass",
+        "evidence_paths": [
+          "backend/admin_router.py",
+          "nginx/nginx.conf/nginx.conf",
+          "backend/llm/loader.py",
+          "docs/automatic_validation_result.json"
+        ]
+      }
+    ],
+    "route_manifest_validation": {
+      "ok": true,
+      "required_routes": [
+        "/api/admin/system-settings",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/code-generator",
+        "/api/llm/ws"
+      ],
+      "existing_routes": [
+        "/api/admin/system-settings",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/code-generator",
+        "/api/llm/ws"
+      ],
+      "missing_routes": [],
+      "declared_routes": [
+        "/api/admin/identity-provider-settings",
+        "/api/admin/account/password",
+        "/api/admin/orchestrator/project-context",
+        "/api/admin/orchestrator/project-memory",
+        "/api/admin/orchestrator/experiments",
+        "/api/admin/orchestrator/approval-gate",
+        "/api/admin/orchestrator/global-approval-policy",
+        "/api/admin/orchestrator/debug-validation-profile",
+        "/api/admin/orchestrator/debug-validation-profile/{job_id}",
+        "/api/admin/orchestrator/runtime-verification",
+        "/api/admin/auto-connect-graph/logs",
+        "/api/admin/auto-connect-graph/completions",
+        "/api/admin/auto-connect-graph/retry-queue",
+        "/api/admin/ad-video-orders",
+        "/api/admin/ad-video-orders/monitor-summary",
+        "/api/admin/ad-video-orders/settlement-dashboard",
+        "/api/admin/projects",
+        "/api/admin/system-settings",
+        "/api/admin/system-settings/postgres-password",
+        "/api/admin/system-settings/global-automatic-mode",
+        "/api/admin/workspace-text-file",
+        "/api/admin/workspace-text-files",
+        "/api/admin/workspace-self-run-record",
+        "/api/admin/workspace-experiment-clone",
+        "/api/admin/workspace-self-prepare",
+        "/api/admin/workspace-self-run",
+        "/api/admin/workspace-self-run/approve",
+        "/api/admin/workspace-self-run-record/normalize",
+        "/api/admin/workspace-self-run-record/retry",
+        "/api/admin/focused-self-healing/plan",
+        "/api/admin/focused-self-healing/apply",
+        "/api/admin/orchestrator/capabilities/summary",
+        "/api/admin/orchestrator/capabilities/{capability_id}",
+        "/api/llm/health",
+        "/api/llm/train",
+        "/api/llm/inference",
+        "/api/llm/evaluate",
+        "/api/llm/runtime-config",
+        "/api/llm/ws",
+        "/api/llm/config",
+        "/api/llm/catalog",
+        "/api/llm/order-workflow",
+        "/api/llm/publish-readiness",
+        "/api/llm/ops/catalog",
+        "/api/llm/order-profile",
+        "/api/llm/flow-map",
+        "/api/llm/flow-map/{step_id}",
+        "/api/llm/workspace",
+        "/api/llm/report",
+        "/api/llm/diagnose",
+        "/api/llm/orchestrate",
+        "/api/llm/orchestrate/accepted",
+        "/api/llm/orchestrate/progress/{run_id}",
+        "/api/llm/orchestrate/chat",
+        "/api/llm/orchestrate/chat/light"
+      ],
+      "declared_route_count": 55,
+      "route_manifest_source": [
+        "backend/admin_router.py",
+        "backend/llm/admin_capabilities.py",
+        "backend/llm/orchestrator.py"
+      ],
+      "validation_summary": "required=5, existing=5, missing=0, declared_route_count=55",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-admin-route-recovery",
+      "source_path": "backend/admin_router.py"
+    },
+    "nginx_target_validation": {
+      "ok": true,
+      "required_targets": {
+        "admin_system_settings_backend": "/api/admin/system-settings",
+        "api_proxy_backend": "location /api/",
+        "websocket_proxy": "/api/llm/ws"
+      },
+      "matched_targets": {
+        "admin_system_settings_backend": "/api/admin/system-settings",
+        "api_proxy_backend": "location /api/",
+        "websocket_proxy": "/api/llm/ws"
+      },
+      "missing_targets": [],
+      "validation_summary": "required=3, matched=3, missing=0",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "source_path": "nginx/nginx.conf/nginx.conf"
+    },
+    "cached_path_validation": {
+      "ok": true,
+      "checks": {
+        "loader_cached_status": true,
+        "system_settings_cached_path": true
+      },
+      "missing_checks": [],
+      "validation_summary": "checks=2, passed=2, missing=0",
+      "result_status": "pass",
+      "record_scope_id": "phase-f-system-settings-504-recurrence",
+      "source_paths": [
+        "backend/llm/loader.py",
+        "backend/admin_router.py"
+      ]
+    },
+    "documentation_sync": {
+      "schema_version": "v1",
+      "overall_status": "reflection_required",
+      "stale_count": 2,
+      "axes": {
+        "operational_paths": {
+          "ok": true,
+          "stale_count": 0
+        },
+        "judgement": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "latest_verification_round": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "localhost_usage": {
+          "ok": false,
+          "stale_count": 1
+        },
+        "legacy_contract": {
+          "ok": true,
+          "stale_count": 0
+        }
+      },
+      "latest_verification_record": {
+        "round": "77",
+        "captured_at": "REC-077",
+        "topic": "phase-r7-workspace-build-basis",
+        "command": "2",
+        "result": "pass",
+        "evidence": "2026-04-08 현재 세션"
+      },
+      "latest_record_link_table": [
+        {
+          "record_keyword": "system-settings",
+          "record_scope_id": "phase-f-system-settings-504-recurrence",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "system-settings 504 재발 차단 결과가 README/상태 문서에 stale 없이 반영돼야 합니다."
+        },
+        {
+          "record_keyword": "ws=open",
+          "record_scope_id": "phase-f-websocket-recovery",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "websocket 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+        },
+        {
+          "record_keyword": "customer_summary_ok=200",
+          "record_scope_id": "phase-f-marketplace-route-recovery",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "marketplace/customer summary 운영 경로 통과 상태가 README/상태 문서에 동기화돼야 합니다."
+        },
+        {
+          "record_keyword": "반영 필요/완료됨",
+          "record_scope_id": "phase-g-documentation-sync",
+          "document_paths": [
+            "README.md",
+            "docs/orchestrator-multigenerator-upgrade-status.md"
+          ],
+          "expected_reflection": "반영 필요/완료됨 판정이 두 문서에서 동일해야 합니다."
+        },
+        {
+          "record_keyword": "app/services.py",
+          "record_scope_id": "phase-g-service-package-contract",
+          "document_paths": [
+            "README.md",
+            "docs/**/*"
+          ],
+          "expected_reflection": "서비스 패키지 계약은 app/services/__init__.py + runtime_service.py 기준만 유지해야 합니다."
+        }
+      ],
+      "readme_status_sync": {
+        "readme_reflection_required": false,
+        "status_reflection_required": false,
+        "readme_completed": false,
+        "status_completed": true
+      },
+      "stale_matches": [
+        {
+          "axis": "localhost_usage",
+          "axis_label": "localhost 사용 여부",
+          "path": "docs/checklists/repo-full-inspection-master-checklist.md",
+          "rule": "localhost_performance_baseline_forbidden",
+          "match": "http://localhost",
+          "note": "성능 기준은 127.0.0.1 또는 운영 도메인만 허용됩니다."
+        },
+        {
+          "axis": "judgement",
+          "axis_label": "판정",
+          "path": "README.md <-> docs/orchestrator-multigenerator-upgrade-status.md",
+          "rule": "readme_status_completion_sync",
+          "match": "readme_reflection_required=False, status_reflection_required=False, readme_completed=False, status_completed=True",
+          "note": "README와 상태 문서의 반영 필요/완료됨 판정이 불일치합니다."
+        }
+      ]
+    }
+  },
+  "post_validation_analysis": {
+    "analysis_summary": "검증 통과 후 AI 정밀 분석: 아직 게이트 차단이 남아 있어 실패 stage 제거와 selective apply 범위 축소가 우선입니다.",
+    "quality_findings": [
+      "semantic audit score=82",
+      "semantic audit 보강이 필요합니다.",
+      "failure tags=0 / repair tags=0"
+    ],
+    "architecture_findings": [
+      "reusable patch units=2",
+      "고유 ID registry 기반 selective apply ready 상태입니다.",
+      "target ids files=2, sections=2, features=2, chunks=2"
+    ],
+    "ops_findings": [
+      "operational evidence integration=partial",
+      "실도메인 운영 경로 증거를 hard gate evidence 체계와 연결해야 합니다.",
+      "verified targets=websocket, system_settings, workspace_self_run_record",
+      "차단된 hard gate stage: dependency_install, standalone_boot, api_smoke, pytest, zip_reproduction",
+      "추가 검증 필요 targets: admin, marketplace"
+    ],
+    "recommended_expansion_actions": [
+      "selective apply 대상으로 매칭된 file/section/chunk id를 기준으로 후속 self-improvement 작업문을 생성합니다. (files=2, sections=2, chunks=2)",
+      "운영 실도메인 evidence 결과를 approval/completion judge와 같은 증거 체계로 연결합니다. (verified=3/5)",
+      "failure_tags 와 repair_tags 우선순위를 기준으로 후속 개선 액션을 재정렬합니다. (failure_tags=0, repair_tags=0)"
+    ],
+    "new_technology_candidates": [
+      "evidence replay validator",
+      "post-validation proposal ranking",
+      "selective apply safety scorer",
+      "target-id impact graph"
+    ]
+  }
+}

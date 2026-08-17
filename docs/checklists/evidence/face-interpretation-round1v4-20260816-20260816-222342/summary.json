@@ -1,0 +1,46 @@
+{
+  "deviceId": "R83W70QY11H",
+  "packageName": "com.parkcheolhong.worldlinco",
+  "tap": {
+    "x": 400,
+    "y": 256
+  },
+  "login": {
+    "attempted": false,
+    "reason": "already_logged_in",
+    "ok": true
+  },
+  "flow": {
+    "faceHomeOpened": true,
+    "langPickerOpened": true,
+    "peerLangSelected": true,
+    "faceMicTapped": true
+  },
+  "runDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-interpretation-round1v4-20260816-20260816-222342",
+  "lastDumpPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-interpretation-round1v4-20260816-20260816-222342\\last-window-dump.xml",
+  "rawLogPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-interpretation-round1v4-20260816-20260816-222342\\reactnative-logcat.txt",
+  "tracePath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-interpretation-round1v4-20260816-20260816-222342\\face-capture-trace.txt",
+  "gateVersion": "face-events-v2",
+  "requiredLegacy": [
+    "start_tap",
+    "capture_started",
+    "payload_prepared",
+    "post_start",
+    "response_received"
+  ],
+  "missingLegacy": [
+    "start_tap",
+    "capture_started",
+    "payload_prepared",
+    "post_start",
+    "response_received"
+  ],
+  "checks": {
+    "hasStartSignal": false,
+    "hasNetworkSignal": false,
+    "passLegacy": false,
+    "passLatest": false
+  },
+  "pass": false,
+  "capturedAtUtc": "2026-08-16T13:24:45.5423612Z"
+}

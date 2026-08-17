@@ -1,0 +1,2 @@
+--------- beginning of main
+08-13 05:55:55.194 I/ReactNativeJS( 2639): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:196:eyJhbG...RAAsMU","user_id":6,"has_pending_call":false,"has_active_call":false}'

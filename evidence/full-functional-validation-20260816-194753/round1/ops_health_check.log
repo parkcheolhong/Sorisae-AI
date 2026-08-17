@@ -1,0 +1,34 @@
+
+=== Compose configuration ===
+
+=== Backend health endpoints ===
+
+=== Gateway health and UI routes ===
+
+=== Operational domain routes ===
+
+=== Health Summary ===
+
+Check                           Passed Detail                                  
+-----                           ------ ------                                  
+docker compose config             True OK                                      
+compose service postgres          True state=running, health=healthy, status...
+compose service redis             True state=running, health=healthy, status...
+compose service qdrant            True state=running, health=n/a, status=Up ...
+compose service minio             True state=running, health=n/a, status=Up ...
+compose service backend           True state=running, health=healthy, status...
+compose service video-worker     False 서비스 정보 없음                               
+compose service frontend-admin    True state=running, health=healthy, status...
+compose service nginx            False 서비스 정보 없음                               
+backend /health                   True HTTP 200                                
+backend /docs                     True HTTP 200                                
+backend /openapi.json             True HTTP 200                                
+nginx http port 8080 listening    True skipped: port 8080 not published on host
+nginx https port 8443 listening   True skipped: port 8443 not published on host
+ops admin /health                 True HTTP 200                                
+ops admin ui /admin/llm           True HTTP 200                                
+ops marketplace /marketplace      True HTTP 200                                
+
+
+
+[health] failed checks: 2

@@ -1,0 +1,62 @@
+[
+  {
+    "Pass": 1,
+    "Flow": "Login",
+    "Start": "2026-08-12T06:48:56.0527985+09:00",
+    "End": "2026-08-12T06:48:56.2214282+09:00",
+    "ElapsedMs": 169,
+    "Success": "Y",
+    "Error": "",
+    "Evidence": "docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064855/Login-output.txt"
+  },
+  {
+    "Pass": 1,
+    "Flow": "FaceInterpretation",
+    "Start": "2026-08-12T06:48:56.2230211+09:00",
+    "End": "2026-08-12T06:48:56.3138614+09:00",
+    "ElapsedMs": 91,
+    "Success": "Y",
+    "Error": "",
+    "Evidence": "docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064855/FaceInterpretation-output.txt"
+  },
+  {
+    "Pass": 1,
+    "Flow": "VoIP",
+    "Start": "2026-08-12T06:48:56.3156888+09:00",
+    "End": "2026-08-12T06:48:56.4153288+09:00",
+    "ElapsedMs": 100,
+    "Success": "Y",
+    "Error": "",
+    "Evidence": "docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064855/VoIP-output.txt"
+  },
+  {
+    "Pass": 1,
+    "Flow": "Chat",
+    "Start": "2026-08-12T06:48:56.4169217+09:00",
+    "End": "2026-08-12T06:48:56.5115031+09:00",
+    "ElapsedMs": 95,
+    "Success": "Y",
+    "Error": "",
+    "Evidence": "docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064855/Chat-output.txt"
+  },
+  {
+    "Pass": 1,
+    "Flow": "TravelSearch",
+    "Start": "2026-08-12T06:48:56.5130881+09:00",
+    "End": "2026-08-12T06:48:56.6124082+09:00",
+    "ElapsedMs": 99,
+    "Success": "Y",
+    "Error": "",
+    "Evidence": "docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064855/TravelSearch-output.txt"
+  },
+  {
+    "Pass": 1,
+    "Flow": "Song",
+    "Start": "2026-08-12T06:48:56.6141481+09:00",
+    "End": "2026-08-12T06:48:56.7279835+09:00",
+    "ElapsedMs": 114,
+    "Success": "Y",
+    "Error": "",
+    "Evidence": "docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064855/Song-output.txt"
+  }
+]

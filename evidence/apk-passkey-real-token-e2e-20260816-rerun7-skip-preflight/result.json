@@ -1,0 +1,38 @@
+﻿[
+    {
+        "round":  1,
+        "has_passkey_callback_success":  false,
+        "has_social_callback_success":  false,
+        "has_error_activity":  false,
+        "passkey_success_count":  0,
+        "passkey_fail_count":  1,
+        "social_success_count":  0,
+        "social_fail_count":  1,
+        "show_login_true_count":  0,
+        "show_login_false_count":  5,
+        "sorisae_fab_eval_count":  1,
+        "sorisae_fab_alt_score":  1,
+        "sorisae_fab_alt_evidence_ok":  false,
+        "sorisae_fab_gate_status":  "PASS",
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=1\u0026ts=1786892262444",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=1\u0026ts=1786892262444\u0027"
+    },
+    {
+        "round":  2,
+        "has_passkey_callback_success":  false,
+        "has_social_callback_success":  false,
+        "has_error_activity":  false,
+        "passkey_success_count":  0,
+        "passkey_fail_count":  2,
+        "social_success_count":  0,
+        "social_fail_count":  2,
+        "show_login_true_count":  0,
+        "show_login_false_count":  8,
+        "sorisae_fab_eval_count":  0,
+        "sorisae_fab_alt_score":  1,
+        "sorisae_fab_alt_evidence_ok":  false,
+        "sorisae_fab_gate_status":  "BLOCKED",
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=2\u0026ts=1786892271939",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=6\u0026username=119cash%40naver.com\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=2\u0026ts=1786892271939\u0027"
+    }
+]

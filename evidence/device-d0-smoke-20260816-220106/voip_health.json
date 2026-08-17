@@ -1,0 +1,22 @@
+{
+  "status": "ok",
+  "active_calls": 0,
+  "connected_clients": 0,
+  "online_voice_clients": 1,
+  "registered_device_users": 2,
+  "fcm_delivery_ready": false,
+  "fcm_v1_ready": false,
+  "fcm_project_id": "studio-9080238625-9cec3",
+  "network_test_matrix": {
+    "required_combinations": [
+      "wifi_wifi",
+      "wifi_lte",
+      "lte_lte"
+    ],
+    "min_runs_per_combination": 2,
+    "client_audit_field": "metadata.client_network",
+    "wifi_only_insufficient": true,
+    "guidance_ko": "WiFi만으로는 LTE/5G NAT·전환·지연 버그를 놓칩니다. 단말 A/B에서 셀룰러 데이터를 켠 뒤 WiFi↔LTE 매트릭스로 VoIP initiate audit를 수집하세요."
+  },
+  "app_call_participants": 0
+}

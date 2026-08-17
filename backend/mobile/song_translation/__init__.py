@@ -1,0 +1,10 @@
+# FILE-ID: FILE-BACKEND-MOBILE-SONG-TRANSLATION-INIT-PY
+# SECTION-ID: SECTION-BACKEND-MOBILE-SONG-TRANSLATION-INIT-MAIN
+# FEATURE-ID: FEATURE-NADOTONGRYOKSA-SONG-TRANSLATION-BACKEND
+# CHUNK-ID: CHUNK-BACKEND-MOBILE-SONG-TRANSLATION-INIT-001
+
+"""Song file translation and subtitle timeline APIs for NadoTongryoksa."""
+
+from backend.mobile.song_translation.router import router
+
+__all__ = ["router"]

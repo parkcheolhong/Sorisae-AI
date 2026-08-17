@@ -1,0 +1,58 @@
+﻿node.exe : - Fetching the build…\ Fetching the build…✔ Found a matc
+hing build for the project @parkcheolhong/nadotongryoksa
+At C:\Users\WORK\AppData\Roaming\npm\eas.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/eas-cli/bin/run" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (- Fetching the .../na 
+   dotongryoksa:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+{
+  "id": "bd968eb2-9176-4060-8b34-4b2d5d10ca7d",
+  "status": "FINISHED",
+  "platform": "ANDROID",
+  "artifacts": {
+    "buildUrl": "https://expo.dev/artifacts/eas/N5bL9ZuyqQmMRTpBD6_CDoVqaHVSsqN9Jx6ptDoVhl4.aab",
+    "applicationArchiveUrl": "https://expo.dev/artifacts/eas/N5bL9ZuyqQmMRTpBD6_CDoVqaHVSsqN9Jx6ptDoVhl4.aab"
+  },
+  "fingerprint": {
+    "id": "019ff749-a26f-7757-85b6-2cf2322351db",
+    "hash": "89f9ce3577aaaa170f060b22f4ac50b98d150886"
+  },
+  "initiatingActor": {
+    "id": "40137e61-333c-4eae-8ff3-c08221b4ffa6",
+    "displayName": "parkcheolhong"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/25954146-4067-4c4f-9835-24382678e4b2/bd968eb2-9176-4060-8b34-4b2d5d10ca7d/2026-08-12T18%3A54%3A17Z-3e1327e0-1c04-4230-ac0e-a76fc85523d0.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260812%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260812T191815Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=4feb850e49cc50c87d0257c9ba110d910d3d527b9324baadc4194d0b88c188b6938bf4f183d38de5a5c16fc20495ef9102f74ded6a235ca9939295958a6c369afd36c3468ae543e8b87c1fd1f626ec39a3bc41aef2e4885324341a334b168133057346153392e17dfdb7e0ceffecea44a5a94f362e8e9e82b05126b4cd43237f4b0407547363d3d0391d1e25fa6415cd27c60fae6e896a4b8986de9c9ab242b8bffa492c7bcd082443b56a6de5479811b68c2783d4cca4554f9d73a70e924f3541104609670365c5cdde9f99a337daa0be3a19fd5c10170feaa2f5a92b92b32b3460562ecfa39398cf2b3d6a98e7cfd384173ad3963df48e6028b111a472c82c"
+  ],
+  "project": {
+    "id": "25954146-4067-4c4f-9835-24382678e4b2",
+    "name": "World Linco",
+    "slug": "nadotongryoksa",
+    "ownerAccount": {
+      "id": "0115dacd-6667-42e2-80e8-cef7533bfa21",
+      "name": "parkcheolhong"
+    }
+  },
+  "channel": "production",
+  "distribution": "STORE",
+  "buildProfile": "production",
+  "sdkVersion": "56.0.0",
+  "appVersion": "1.0.246",
+  "appBuildVersion": "331",
+  "runtimeVersion": "1.0.76",
+  "gitCommitHash": "2494f4c6fe37ac794be7d292659d60f2d2d04864",
+  "gitCommitMessage": "ci(pr111): make admin build step cross-platform in pipeline script",
+  "priority": "NORMAL",
+  "createdAt": "2026-08-12T18:43:45.850Z",
+  "updatedAt": "2026-08-12T19:03:46.407Z",
+  "completedAt": "2026-08-12T19:03:46.217Z",
+  "expirationDate": "2026-09-11T18:43:45.897Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 479,
+    "buildQueueTime": 636036,
+    "buildDuration": 563852
+  }
+}

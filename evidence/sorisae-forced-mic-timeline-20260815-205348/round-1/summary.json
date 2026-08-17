@@ -1,0 +1,16 @@
+{
+  "device": "172.30.1.15:5555",
+  "mic_tap": {
+    "selector_used": false,
+    "x": 400,
+    "y": 1000
+  },
+  "analysis": {
+    "post_start_present": false,
+    "segment_response_present": false,
+    "segment_response_ok_true": false,
+    "segment_response_sorisae_ok_true": false,
+    "segment_response_lines": []
+  },
+  "pass": false
+}

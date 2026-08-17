@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-08-16T15:36:55.5009894+09:00",
+  "device": "R83W70QY11H",
+  "installed_version": "versionCode=331 minSdk=24 targetSdk=36",
+  "probe_report": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-rerun3-20260816-153649\\sorisae_probe_report.json",
+  "logcat": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-rerun3-20260816-153649\\device_reactnative_logcat.txt",
+  "screenshot": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-rerun3-20260816-153649\\device_validation_screen.png",
+  "ui_dump": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-rerun3-20260816-153649\\device_validation_ui.xml",
+  "auth_e2e": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\evidence\\device-validation-rerun3-20260816-153649\\auth_duplicate_login_e2e.json"
+}

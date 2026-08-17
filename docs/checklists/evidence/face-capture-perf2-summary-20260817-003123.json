@@ -1,0 +1,46 @@
+{
+  "metric": "foreground confirmed -> login state",
+  "runs": [
+    {
+      "run": 1,
+      "label": "face-capture-perf2-r1-20260817-002240",
+      "parsed": true,
+      "login_reason": "login_timeout_probe",
+      "login_sec": 155,
+      "log": "docs\\checklists\\evidence\\face-capture-perf2-r1-20260817-002240.log"
+    },
+    {
+      "run": 2,
+      "label": "face-capture-perf2-r2-20260817-002543",
+      "parsed": true,
+      "login_reason": "login_timeout_probe",
+      "login_sec": 135,
+      "log": "docs\\checklists\\evidence\\face-capture-perf2-r2-20260817-002543.log"
+    },
+    {
+      "run": 3,
+      "label": "face-capture-perf2-r3-20260817-002823",
+      "parsed": true,
+      "login_reason": "login_timeout_probe",
+      "login_sec": 160,
+      "log": "docs\\checklists\\evidence\\face-capture-perf2-r3-20260817-002823.log"
+    }
+  ],
+  "login_latency_sec": {
+    "samples": [
+      135,
+      155,
+      160
+    ],
+    "p50": 155,
+    "p95": 160
+  },
+  "baseline_login_latency_sec": {
+    "p50": 143,
+    "p95": 150
+  },
+  "delta_vs_baseline_sec": {
+    "p50": 12,
+    "p95": 10
+  }
+}

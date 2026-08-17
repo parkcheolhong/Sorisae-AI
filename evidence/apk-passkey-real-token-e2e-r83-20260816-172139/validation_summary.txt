@@ -1,0 +1,13 @@
+﻿status: PASS
+objective: same real-token callback reinjection x2 with PASSKEY_LOGIN_CALLBACK_SUCCESS and SOCIAL_LOGIN_CALLBACK_SUCCESS
+run_dir: evidence/apk-passkey-real-token-e2e-r83-20260816-172139
+
+round_results:
+- round 1: passkey_success=True social_success=True error_activity=False
+- round 2: passkey_success=True social_success=True error_activity=False
+
+notes:
+- callback path: worldlingo://auth/callback
+- app launch path: am start -W -n com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity
+- runtime_ready_before_rounds: True
+- callback reinjection policy: per-round double start (initial + retry)

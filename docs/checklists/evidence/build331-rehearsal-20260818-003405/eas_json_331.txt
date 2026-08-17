@@ -1,0 +1,83 @@
+{
+  "cli": {
+    "version": ">= 10.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "preview",
+        "EXPO_PUBLIC_API_BASE_URL": "https://metanova1004.com"
+      }
+    },
+    "container-dev": {
+      "distribution": "internal",
+      "channel": "container-dev",
+      "node": "22.22.2",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "container-dev",
+        "EXPO_PUBLIC_API_BASE_URL": "http://172.30.1.41:8000",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+      }
+    },
+    "staging": {
+      "distribution": "internal",
+      "channel": "staging",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "staging",
+        "EXPO_PUBLIC_API_BASE_URL": "https://metanova1004.com"
+      }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "channel": "production",
+      "node": "22.22.2",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "production",
+        "EXPO_PUBLIC_API_BASE_URL": "https://metanova1004.com",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_USE_COMMUNITY_AUTOLINKING": "1",
+        "NODE_ENV": "production"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "channel": "production",
+      "android": {
+        "buildType": "app-bundle",
+        "applicationArchivePath": "android/app/build/outputs/bundle/release/app-release.aab"
+      },
+      "env": {
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "production",
+        "EXPO_PUBLIC_API_BASE_URL": "https://metanova1004.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

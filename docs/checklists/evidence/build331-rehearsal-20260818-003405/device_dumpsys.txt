@@ -1,0 +1,500 @@
+Activity Resolver Table:
+  Schemes:
+      exp+nadotongryoksa:
+        b21f05b com.parkcheolhong.worldlinco/.MainActivity filter ef469d1
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "worldlingo"
+          Scheme: "exp+nadotongryoksa"
+      worldlingo:
+        b21f05b com.parkcheolhong.worldlinco/.MainActivity filter ef469d1
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "worldlingo"
+          Scheme: "exp+nadotongryoksa"
+
+  Non-Data Actions:
+      android.intent.action.MAIN:
+        b21f05b com.parkcheolhong.worldlinco/.MainActivity filter 61140f8
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.LAUNCHER"
+
+Receiver Resolver Table:
+  Non-Data Actions:
+      android.intent.action.QUICKBOOT_POWERON:
+        29574a4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.NotificationsService filter e04d20d
+          Action: "android.intent.action.QUICKBOOT_POWERON"
+          Action: "com.htc.intent.action.QUICKBOOT_POWERON"
+          Action: "expo.modules.notifications.NOTIFICATION_EVENT"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+          Action: "android.intent.action.REBOOT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      com.htc.intent.action.QUICKBOOT_POWERON:
+        29574a4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.NotificationsService filter e04d20d
+          Action: "android.intent.action.QUICKBOOT_POWERON"
+          Action: "com.htc.intent.action.QUICKBOOT_POWERON"
+          Action: "expo.modules.notifications.NOTIFICATION_EVENT"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+          Action: "android.intent.action.REBOOT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      androidx.profileinstaller.action.SAVE_PROFILE:
+        b073710 com.parkcheolhong.worldlinco/androidx.profileinstaller.ProfileInstallReceiver filter 25dd62f
+          Action: "androidx.profileinstaller.action.SAVE_PROFILE"
+      expo.modules.notifications.NOTIFICATION_EVENT:
+        29574a4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.NotificationsService filter e04d20d
+          Action: "android.intent.action.QUICKBOOT_POWERON"
+          Action: "com.htc.intent.action.QUICKBOOT_POWERON"
+          Action: "expo.modules.notifications.NOTIFICATION_EVENT"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+          Action: "android.intent.action.REBOOT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      androidx.profileinstaller.action.INSTALL_PROFILE:
+        b073710 com.parkcheolhong.worldlinco/androidx.profileinstaller.ProfileInstallReceiver filter b398209
+          Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
+      com.google.android.c2dm.intent.RECEIVE:
+        ef4ec36 com.parkcheolhong.worldlinco/io.invertase.firebase.messaging.ReactNativeFirebaseMessagingReceiver filter 6053737
+          Action: "com.google.android.c2dm.intent.RECEIVE"
+        31b95c2 com.parkcheolhong.worldlinco/com.google.firebase.iid.FirebaseInstanceIdReceiver filter 6c0fd3
+          Action: "com.google.android.c2dm.intent.RECEIVE"
+      androidx.profileinstaller.action.SKIP_FILE:
+        b073710 com.parkcheolhong.worldlinco/androidx.profileinstaller.ProfileInstallReceiver filter 9114c0e
+          Action: "androidx.profileinstaller.action.SKIP_FILE"
+      androidx.profileinstaller.action.BENCHMARK_OPERATION:
+        b073710 com.parkcheolhong.worldlinco/androidx.profileinstaller.ProfileInstallReceiver filter 90b43c
+          Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
+      android.intent.action.BOOT_COMPLETED:
+        29574a4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.NotificationsService filter e04d20d
+          Action: "android.intent.action.QUICKBOOT_POWERON"
+          Action: "com.htc.intent.action.QUICKBOOT_POWERON"
+          Action: "expo.modules.notifications.NOTIFICATION_EVENT"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+          Action: "android.intent.action.REBOOT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      android.intent.action.MY_PACKAGE_REPLACED:
+        29574a4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.NotificationsService filter e04d20d
+          Action: "android.intent.action.QUICKBOOT_POWERON"
+          Action: "com.htc.intent.action.QUICKBOOT_POWERON"
+          Action: "expo.modules.notifications.NOTIFICATION_EVENT"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+          Action: "android.intent.action.REBOOT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      android.intent.action.REBOOT:
+        29574a4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.NotificationsService filter e04d20d
+          Action: "android.intent.action.QUICKBOOT_POWERON"
+          Action: "com.htc.intent.action.QUICKBOOT_POWERON"
+          Action: "expo.modules.notifications.NOTIFICATION_EVENT"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+          Action: "android.intent.action.REBOOT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+
+Service Resolver Table:
+  Non-Data Actions:
+      androidx.media3.session.MediaSessionService:
+        19a1b1a com.parkcheolhong.worldlinco/expo.modules.audio.service.AudioControlsService filter 2fba64b
+          Action: "androidx.media3.session.MediaSessionService"
+      com.google.firebase.MESSAGING_EVENT:
+        ad2d828 com.parkcheolhong.worldlinco/io.invertase.firebase.messaging.ReactNativeFirebaseMessagingService filter 926941
+          Action: "com.google.firebase.MESSAGING_EVENT"
+        8914ed4 com.parkcheolhong.worldlinco/expo.modules.notifications.service.ExpoFirebaseMessagingService filter 7db587d
+          Action: "com.google.firebase.MESSAGING_EVENT"
+          mPriority=-1, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+        b08f372 com.parkcheolhong.worldlinco/com.google.firebase.messaging.FirebaseMessagingService filter 92893c3
+          Action: "com.google.firebase.MESSAGING_EVENT"
+          mPriority=-500, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      com.google.android.gms.metadata.MODULE_DEPENDENCIES:
+        3aecee6 com.parkcheolhong.worldlinco/com.google.android.gms.metadata.ModuleDependencies filter 5c5c27
+          Action: "com.google.android.gms.metadata.MODULE_DEPENDENCIES"
+
+Domain verification status:
+
+Permissions:
+  Permission [com.parkcheolhong.worldlinco.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (47590d9):
+    sourcePackage=com.parkcheolhong.worldlinco
+    uid=10518 gids=[] type=0 prot=signature
+    perm=PermissionInfo{d6de867 com.parkcheolhong.worldlinco.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+    flags=0x0
+
+Registered ContentProviders:
+  com.parkcheolhong.worldlinco/com.reactnativecommunity.webview.RNCWebViewFileProvider:
+    Provider{2ec5ebd com.parkcheolhong.worldlinco/com.reactnativecommunity.webview.RNCWebViewFileProvider}
+  com.parkcheolhong.worldlinco/com.google.mlkit.common.internal.MlKitInitProvider:
+    Provider{566a403 com.parkcheolhong.worldlinco/com.google.mlkit.common.internal.MlKitInitProvider}
+  com.parkcheolhong.worldlinco/io.invertase.firebase.app.ReactNativeFirebaseAppInitProvider:
+    Provider{ffeef80 com.parkcheolhong.worldlinco/io.invertase.firebase.app.ReactNativeFirebaseAppInitProvider}
+  com.parkcheolhong.worldlinco/expo.modules.filesystem.FileSystemFileProvider:
+    Provider{e7f51fe com.parkcheolhong.worldlinco/expo.modules.filesystem.FileSystemFileProvider}
+  com.parkcheolhong.worldlinco/com.google.firebase.provider.FirebaseInitProvider:
+    Provider{fa57d5f com.parkcheolhong.worldlinco/com.google.firebase.provider.FirebaseInitProvider}
+  com.parkcheolhong.worldlinco/expo.modules.imagepicker.fileprovider.ImagePickerFileProvider:
+    Provider{c2383ac com.parkcheolhong.worldlinco/expo.modules.imagepicker.fileprovider.ImagePickerFileProvider}
+  com.parkcheolhong.worldlinco/com.canhub.cropper.CropFileProvider:
+    Provider{45a875 com.parkcheolhong.worldlinco/com.canhub.cropper.CropFileProvider}
+  com.parkcheolhong.worldlinco/androidx.startup.InitializationProvider:
+    Provider{67a900a com.parkcheolhong.worldlinco/androidx.startup.InitializationProvider}
+
+ContentProvider Authorities:
+  [com.parkcheolhong.worldlinco.androidx-startup]:
+    Provider{67a900a com.parkcheolhong.worldlinco/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{906fa9e com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.fileprovider]:
+    Provider{2ec5ebd com.parkcheolhong.worldlinco/com.reactnativecommunity.webview.RNCWebViewFileProvider}
+      applicationInfo=ApplicationInfo{c89097f com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.reactnativefirebaseappinitprovider]:
+    Provider{ffeef80 com.parkcheolhong.worldlinco/io.invertase.firebase.app.ReactNativeFirebaseAppInitProvider}
+      applicationInfo=ApplicationInfo{e77ed4c com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.mlkitinitprovider]:
+    Provider{566a403 com.parkcheolhong.worldlinco/com.google.mlkit.common.internal.MlKitInitProvider}
+      applicationInfo=ApplicationInfo{8256195 com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.firebaseinitprovider]:
+    Provider{fa57d5f com.parkcheolhong.worldlinco/com.google.firebase.provider.FirebaseInitProvider}
+      applicationInfo=ApplicationInfo{9e422aa com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.FileSystemFileProvider]:
+    Provider{e7f51fe com.parkcheolhong.worldlinco/expo.modules.filesystem.FileSystemFileProvider}
+      applicationInfo=ApplicationInfo{22ebe9b com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.ImagePickerFileProvider]:
+    Provider{c2383ac com.parkcheolhong.worldlinco/expo.modules.imagepicker.fileprovider.ImagePickerFileProvider}
+      applicationInfo=ApplicationInfo{2dc9238 com.parkcheolhong.worldlinco}
+  [com.parkcheolhong.worldlinco.cropper.fileprovider]:
+    Provider{45a875 com.parkcheolhong.worldlinco/com.canhub.cropper.CropFileProvider}
+      applicationInfo=ApplicationInfo{bc78211 com.parkcheolhong.worldlinco}
+
+Key Set Manager:
+  [com.parkcheolhong.worldlinco]
+      Signing KeySets: 280
+
+Packages:
+  Package [com.parkcheolhong.worldlinco] (e7398c6):
+    appId=10518
+    pkg=Package{7ce7c4f com.parkcheolhong.worldlinco}
+    codePath=/data/app/~~xdX9L7iMiPIVdWdtzZeksA==/com.parkcheolhong.worldlinco-qggVs36YKVB73GZfi4eBEw==
+    resourcePath=/data/app/~~xdX9L7iMiPIVdWdtzZeksA==/com.parkcheolhong.worldlinco-qggVs36YKVB73GZfi4eBEw==
+    legacyNativeLibraryDir=/data/app/~~xdX9L7iMiPIVdWdtzZeksA==/com.parkcheolhong.worldlinco-qggVs36YKVB73GZfi4eBEw==/lib
+    extractNativeLibs=false
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+    cpuAbiOverride=null
+    versionCode=332 minSdk=24 targetSdk=36
+    minExtensionVersions=[]
+    versionName=1.0.247
+    usesNonSdkApi=false
+    splits=[base]
+    apkSigningVersion=2
+    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    privateFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PARTIALLY_DIRECT_BOOT_AWARE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    forceQueryable=false
+    queriesIntents=[Intent { act=android.intent.action.VIEW cat=[android.intent.category.BROWSABLE] dat=https:/... }, Intent { act=org.chromium.intent.action.PAY }, Intent { act=org.chromium.intent.action.IS_READY_TO_PAY }, Intent { act=org.chromium.intent.action.UPDATE_PAYMENT_DETAILS }, Intent { act=android.intent.action.OPEN_DOCUMENT_TREE }, Intent { act=android.intent.action.SEND cat=[android.intent.category.DEFAULT] dat=content://*/... typ=application/octet-stream }, Intent { act=android.intent.action.SEND cat=[android.intent.category.DEFAULT] dat=content://*/... typ=text/x-vcard }, Intent { act=android.intent.action.SEND cat=[android.intent.category.DEFAULT] dat=content://*/... typ=text/vcard }, Intent { act=android.intent.action.EDIT }, Intent { act=android.intent.action.INSERT }, Intent { act=android.intent.action.OPEN_DOCUMENT cat=[android.intent.category.DEFAULT,android.intent.category.OPENABLE] dat=content://*/... typ=*/* }, Intent { act=android.media.action.IMAGE_CAPTURE }, Intent { act=android.media.action.ACTION_VIDEO_CAPTURE }, Intent { act=android.intent.action.TTS_SERVICE }, Intent { act=androidx.camera.extensions.action.VENDOR_ACTION }, Intent { act=android.intent.action.GET_CONTENT cat=[android.intent.category.OPENABLE] dat=content://*/... typ=*/* }]
+    dataDir=/data/user/0/com.parkcheolhong.worldlinco
+    supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+    usesOptionalLibraries:
+      androidx.camera.extensions.impl
+    timeStamp=2026-08-17 22:22:17
+    lastUpdateTime=2026-08-17 22:23:01
+    installerPackageName=null
+    installerPackageUid=-1
+    initiatingPackageName=com.android.shell
+    originatingPackageName=null
+    packageSource=1
+    appMetadataFilePath=null
+    signatures=PackageSignatures{fbe833 version:2, signatures:[51ed3f60], past signatures:[]}
+    installPermissionsFixed=true
+    pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    privatePkgFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PARTIALLY_DIRECT_BOOT_AWARE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    apexModuleName=null
+    declared permissions:
+      com.parkcheolhong.worldlinco.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: prot=signature
+    requested permissions:
+      android.permission.ACCESS_COARSE_LOCATION
+      android.permission.ACCESS_FINE_LOCATION
+      android.permission.ACCESS_NETWORK_STATE
+      android.permission.CAMERA
+      android.permission.FOREGROUND_SERVICE
+      android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
+      android.permission.INTERNET
+      android.permission.MODIFY_AUDIO_SETTINGS
+      android.permission.POST_NOTIFICATIONS
+      android.permission.READ_CONTACTS
+      android.permission.RECORD_AUDIO
+      android.permission.REQUEST_INSTALL_PACKAGES
+      android.permission.SYSTEM_ALERT_WINDOW
+      android.permission.USE_BIOMETRIC
+      android.permission.USE_FINGERPRINT
+      android.permission.VIBRATE
+      android.permission.WRITE_CONTACTS
+      android.permission.ACCESS_WIFI_STATE
+      android.permission.WAKE_LOCK
+      android.permission.RECEIVE_BOOT_COMPLETED
+      com.google.android.c2dm.permission.RECEIVE
+      com.parkcheolhong.worldlinco.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+      com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE
+      com.sec.android.provider.badge.permission.READ
+      com.sec.android.provider.badge.permission.WRITE
+      com.htc.launcher.permission.READ_SETTINGS
+      com.htc.launcher.permission.UPDATE_SHORTCUT
+      com.sonyericsson.home.permission.BROADCAST_BADGE
+      com.sonymobile.home.permission.PROVIDER_INSERT_BADGE
+      com.anddoes.launcher.permission.UPDATE_COUNT
+      com.majeur.launcher.permission.UPDATE_BADGE
+      com.huawei.android.launcher.permission.CHANGE_BADGE
+      com.huawei.android.launcher.permission.READ_SETTINGS
+      com.huawei.android.launcher.permission.WRITE_SETTINGS
+      android.permission.READ_APP_BADGE
+      com.oppo.launcher.permission.READ_SETTINGS
+      com.oppo.launcher.permission.WRITE_SETTINGS
+      me.everything.badger.permission.BADGE_COUNT_READ
+      me.everything.badger.permission.BADGE_COUNT_WRITE
+    install permissions:
+      com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE: granted=true
+      com.google.android.c2dm.permission.RECEIVE: granted=true
+      android.permission.MODIFY_AUDIO_SETTINGS: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=false
+      com.sec.android.provider.badge.permission.READ: granted=true
+      com.parkcheolhong.worldlinco.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
+      android.permission.FOREGROUND_SERVICE: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.INTERNET: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+      android.permission.USE_FINGERPRINT: granted=true
+      com.sec.android.provider.badge.permission.WRITE: granted=false
+      android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK: granted=true
+      android.permission.VIBRATE: granted=true
+      android.permission.ACCESS_WIFI_STATE: granted=true
+      android.permission.USE_BIOMETRIC: granted=true
+      android.permission.REQUEST_INSTALL_PACKAGES: granted=false
+      android.permission.WAKE_LOCK: granted=true
+    User 0: ceDataInode=119142 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false
+      installReason=0
+      firstInstallTime=2026-08-17 21:49:49
+      uninstallReason=0
+      gids=[3003]
+      runtime permissions:
+        android.permission.POST_NOTIFICATIONS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.ACCESS_FINE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.ACCESS_COARSE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.WRITE_CONTACTS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.CAMERA: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.RECORD_AUDIO: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.READ_CONTACTS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+
+Queries:
+  system apps queryable: false
+  queries via forceQueryable:
+  queries via package name:
+  queries via component:
+    com.android.settings.intelligence:
+      com.parkcheolhong.worldlinco
+    com.ss.android.ugc.trill:
+      com.parkcheolhong.worldlinco
+    kr.or.cwma.ecardapp:
+      com.parkcheolhong.worldlinco
+    com.skmc.okcashbag.home_google:
+      com.parkcheolhong.worldlinco
+    com.highone.highoneresort:
+      com.parkcheolhong.worldlinco
+    kr.or.oncredit:
+      com.parkcheolhong.worldlinco
+    com.google.android.apps.accessibility.voiceaccess:
+      com.parkcheolhong.worldlinco
+    com.cultsotry.yanolja.nativeapp:
+      com.parkcheolhong.worldlinco
+    kr.or.ccrs.cyber:
+      com.parkcheolhong.worldlinco
+    com.koreanair.passenger:
+      com.parkcheolhong.worldlinco
+    com.voice.ai.deep.translate:
+      com.parkcheolhong.worldlinco
+    com.hanabank.oqf:
+      com.parkcheolhong.worldlinco
+    go.scourt.mcs:
+      com.parkcheolhong.worldlinco
+    kr.go.mofa.safetravel:
+      com.parkcheolhong.worldlinco
+    com.shinhan.sbanking:
+      com.parkcheolhong.worldlinco
+    com.facebook.katana:
+      com.parkcheolhong.worldlinco
+    kvp.jjy.MispAndroid320:
+      com.parkcheolhong.worldlinco
+    com.kakaopay.app:
+      com.parkcheolhong.worldlinco
+    viva.republica.toss:
+      com.parkcheolhong.worldlinco
+    com.starmakerinteractive.thevoice:
+      com.parkcheolhong.worldlinco
+    com.kakao.talk:
+      com.parkcheolhong.worldlinco
+    com.kakaobank.channel:
+      com.parkcheolhong.worldlinco
+    com.instagram.android:
+      com.parkcheolhong.worldlinco
+    jp.naver.line.android:
+      com.parkcheolhong.worldlinco
+    com.hanaskcard.paycla:
+      com.parkcheolhong.worldlinco
+    com.quicktool.gpstracker:
+      com.parkcheolhong.worldlinco
+    ai.daglo.mobile:
+      com.parkcheolhong.worldlinco
+    com.agoda.mobile.consumer:
+      com.parkcheolhong.worldlinco
+    com.ahnlab.v3mobilesecurity.soda:
+      com.parkcheolhong.worldlinco
+    com.chatproject2019.chattingtalk:
+      com.parkcheolhong.worldlinco
+    com.dho.mobilefax:
+      com.parkcheolhong.worldlinco
+    com.dreamsecurity.skt.usim:
+      com.parkcheolhong.worldlinco
+    com.hpapp:
+      com.parkcheolhong.worldlinco
+    com.infraware.office.link:
+      com.parkcheolhong.worldlinco
+    com.jupiter.army:
+      com.parkcheolhong.worldlinco
+    com.kakao.story:
+      com.parkcheolhong.worldlinco
+    com.kakao.taxi:
+      com.parkcheolhong.worldlinco
+    com.kbankwith.smartbank:
+      com.parkcheolhong.worldlinco
+    com.kbcard.cxh.appcard:
+      com.parkcheolhong.worldlinco
+    com.korail.talk:
+      com.parkcheolhong.worldlinco
+    com.kt.gigagenie.mobile:
+      com.parkcheolhong.worldlinco
+    com.lguplus.smartotp:
+      com.parkcheolhong.worldlinco
+    com.lh.apply:
+      com.parkcheolhong.worldlinco
+    com.locnall.KimGiSa:
+      com.parkcheolhong.worldlinco
+    com.lottemembers.android:
+      com.parkcheolhong.worldlinco
+    com.mcdonalds.mobileapp:
+      com.parkcheolhong.worldlinco
+    com.microsoft.office.outlook:
+      com.parkcheolhong.worldlinco
+    com.mobilestudio.mycreditmanager:
+      com.parkcheolhong.worldlinco
+    com.nhn.android.nmap:
+      com.parkcheolhong.worldlinco
+    com.nhnent.payapp:
+      com.parkcheolhong.worldlinco
+    com.officedocument.word.docx.document.viewer:
+      com.parkcheolhong.worldlinco
+    com.shcard.smartpay:
+      com.parkcheolhong.worldlinco
+    com.skt.prod.dialer:
+      com.parkcheolhong.worldlinco
+    com.skt.tmap.ku:
+      com.parkcheolhong.worldlinco
+    com.starmakerinteractive.starmaker:
+      com.parkcheolhong.worldlinco
+    com.tms:
+      com.parkcheolhong.worldlinco
+    com.towneers.www:
+      com.parkcheolhong.worldlinco
+    com.whatsapp.w4b:
+      com.parkcheolhong.worldlinco
+    kr.co.hanamembers.hmscustomer:
+      com.parkcheolhong.worldlinco
+    kr.co.mobilians.mobilcard:
+      com.parkcheolhong.worldlinco
+    kr.co.tmoney.tia:
+      com.parkcheolhong.worldlinco
+    kr.go.epost.app.findZip:
+      com.parkcheolhong.worldlinco
+    kr.go.kcs.mobile.pubservice:
+      com.parkcheolhong.worldlinco
+    kr.go.mobileid:
+      com.parkcheolhong.worldlinco
+    kr.or.cw.ucm:
+      com.parkcheolhong.worldlinco
+    kr.or.cwma.smrt:
+      com.parkcheolhong.worldlinco
+    kr.or.nps.smart:
+      com.parkcheolhong.worldlinco
+    net.daum.android.map:
+      com.parkcheolhong.worldlinco
+    net.ib.android.smcard:
+      com.parkcheolhong.worldlinco
+    org.khug.ljbs:
+      com.parkcheolhong.worldlinco
+    word.games.puzzle.offline.games:
+      com.parkcheolhong.worldlinco
+    com.parkcheolhong.worldlinco:
+      com.google.android.documentsui
+      com.google.android.googlequicksearchbox
+      com.android.chrome
+      com.google.android.gm
+      com.google.android.setupwizard
+      com.sec.android.app.sbrowser
+      com.google.android.apps.photos
+      kr.com.woochgook1415.sanjae
+      com.facebook.katana
+      com.kakao.talk
+      com.nhn.android.search
+      com.instagram.android
+      com.openai.chatgpt
+      [com.microsoft.office.officehubrow,com.microsoft.office.word,com.microsoft.office.excel,com.microsoft.office.powerpoint]
+      com.alphainventor.filemanager
+      com.nhn.android.band
+      jp.naver.line.android
+      air.kr.paikdabang.android.membership
+      com.chatproject2019.chattingtalk
+      com.dho.mobilefax
+      com.dropbox.android
+      com.google.android.apps.docs
+      com.kakao.story
+      com.mcdonalds.mobileapp
+      com.microsoft.appmanager
+      com.microsoft.emmx
+      com.microsoft.office.outlook
+      com.microsoft.skydrive
+      com.microsoft.teams
+      com.nhn.android.blog
+      com.nhn.android.mail
+      com.nhn.android.ndrive
+      com.rose.wjsterginsu
+      com.sec.app.samsungprintservice
+      com.smmservice.printer
+      com.soomgo
+      com.whatsapp.w4b
+      net.daum.android.map
+      com.google.android.photopicker
+  queryable via interaction:
+    User 0:
+      [com.samsung.android.app.omcagent,com.sec.bcservice,com.sec.android.iaft,com.skms.android.agent,com.wssyncmldm,com.sec.usbsettings,com.sec.android.app.personalization,com.samsung.android.dqagent,com.samsung.android.knox.attestation,com.samsung.android.forest,com.samsung.android.mdecservice,com.sec.android.app.parser,com.samsung.android.lool,com.samsung.SMT,com.samsung.android.keycustomizationinfobackupservice,com.sec.sve,com.sec.android.app.servicemodeapp,com.sec.epdg,com.samsung.accessibility,com.android.wallpaperbackup,com.samsung.android.bbc.bbcagent,com.sec.android.emergencylauncher,com.samsung.aasaservice,com.samsung.android.emergency,com.android.server.telecom,com.sec.android.diagmonagent,com.sec.imsservice,com.android.location.fused,com.sec.imslogger,com.sec.mhs.smarttethering,com.samsung.android.app.dressroom,com.android.inputdevices,com.samsung.android.app.settings.bixby,com.android.keychain,com.samsung.android.fmm,com.ims.dm,com.samsung.android.stickercenter,com.sem.factoryapp,android,com.sec.automation,com.sec.android.app.factorykeystring,com.sec.app.RilErrorNotifier,com.android.providers.settings,com.sec.android.soagent,com.samsung.android.themecenter,com.samsung.android.biometrics.app.setting,com.android.settings,com.android.dynsystem,com.sec.enterprise.mdm.services.simpin,com.val.hardware,com.samsung.android.peripheral.framework,com.sec.android.app.SecSetupWizard,com.samsung.android.smartswitchassistant,com.sec.android.smartfpsadjuster,com.sec.android.app.quicktool,com.android.localtransport,com.sec.android.sdhms]:
+        com.parkcheolhong.worldlinco
+      [com.samsung.android.providers.contacts,com.android.calllogbackup,com.android.providers.userdictionary,com.android.providers.blockednumber]:
+        com.parkcheolhong.worldlinco
+      com.samsung.android.honeyboard:
+        com.parkcheolhong.worldlinco
+      [com.google.android.gms,com.google.android.gsf]:
+        com.parkcheolhong.worldlinco
+      com.google.android.permissioncontroller:
+        com.parkcheolhong.worldlinco
+      com.parkcheolhong.worldlinco:
+        com.google.android.webview
+  queryable via uses-library:
+
+Dexopt state:
+  [com.parkcheolhong.worldlinco]
+    path: /data/app/~~xdX9L7iMiPIVdWdtzZeksA==/com.parkcheolhong.worldlinco-qggVs36YKVB73GZfi4eBEw==/base.apk
+      arm64: [status=verify] [reason=install] [primary-abi]
+        [location is /data/app/~~xdX9L7iMiPIVdWdtzZeksA==/com.parkcheolhong.worldlinco-qggVs36YKVB73GZfi4eBEw==/oat/arm64/base.odex]
+
+Compiler stats:
+  [com.parkcheolhong.worldlinco]
+     base.apk - 3977
+
+HeimdAllFS state:
+  HeimdAllFS does not supported.

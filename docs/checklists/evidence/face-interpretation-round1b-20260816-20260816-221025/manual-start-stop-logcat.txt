@@ -1,0 +1,13 @@
+--------- beginning of main
+08-16 22:11:52.950 I/ReactNativeJS(10024): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_active","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"has_pending_call":false,"has_active_call":false}'
+08-16 22:11:53.002 I/ReactNativeJS(10024): '[WORLDLINGCO_TUNING]', '{"event":"remote_loaded","updated_at":"2026-08-14T06:06:31Z","version":6}'
+08-16 22:11:53.010 I/ReactNativeJS(10024): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_active","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"status":200,"ok":true}'
+08-16 22:11:53.033 I/ReactNativeJS(10024): '[MISSED_CALL]', '{"event":"fetch","count":0}'
+08-16 22:11:53.300 I/ReactNativeJS(10024): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_poll","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"has_pending_call":false,"has_active_call":false}'
+08-16 22:11:53.332 I/ReactNativeJS(10024): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_poll","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"status":200,"ok":true}'
+08-16 22:11:53.452 I/ReactNativeJS(10024): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_ENTER","auto_mode":true,"target":"main","armed":false,"recording":false,"in_flight_start":false,"in_flight_stop":false}'
+08-16 22:11:53.453 I/ReactNativeJS(10024): '[FACE_CAPTURE_TRACE]', '{"trace_id":"face-trace-face.interpret-msvtqiy4-2hpc61","event":"start_tap","from_lang":"ko","to_lang":"en","face_screen_open":true,"sorisae_window_open":false}'
+08-16 22:11:53.549 I/ReactNativeJS(10024): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_ENTER","auto_mode":true,"target":"main","armed":false,"recording":false,"in_flight_start":true,"in_flight_stop":false}'
+08-16 22:11:53.549 I/ReactNativeJS(10024): '[COMPANION_HANDLER]', '{"event":"COMPANION_START_VOICE_BLOCKED","reason":"busy","armed":false,"recording":false,"in_flight_start":true,"in_flight_stop":false}'
+08-16 22:11:53.631 I/ReactNativeJS(10024): '[VoIPPendingIncoming]', '{"event":"REQUEST_START","source":"pending_call_background","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"has_pending_call":false,"has_active_call":false}'
+08-16 22:11:53.686 I/ReactNativeJS(10024): '[VoIPPendingIncoming]', '{"event":"REQUEST_RESULT","source":"pending_call_background","token_summary":"len:193:eyJhbG...UZUPes","user_id":13,"status":200,"ok":true}'

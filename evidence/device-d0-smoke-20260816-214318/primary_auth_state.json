@@ -1,0 +1,15 @@
+{
+  "device": "R83W70QY11H",
+  "auth_ready": false,
+  "blocker": "auth_not_ready",
+  "restore_found": false,
+  "restore_applied": false,
+  "restore_invalid": false,
+  "token_ready": false,
+  "user_ready": false,
+  "presence_connected": false,
+  "login_invalid": false,
+  "session_present": false,
+  "ui_probe_seen": false,
+  "react_log_silent": false
+}

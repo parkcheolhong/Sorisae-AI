@@ -1,0 +1,6 @@
+ui-home.xml
+  실시간 상태: 스피커 OFF · BT 미연결
+ui-settings-after-refresh-1s.xml
+  실시간 상태: 스피커 OFF · BT 미연결
+ui-settings-after-refresh-3s.xml
+  실시간 상태: 스피커 OFF · BT 미연결

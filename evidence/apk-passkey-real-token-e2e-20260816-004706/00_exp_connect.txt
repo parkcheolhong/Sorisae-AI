@@ -1,0 +1,7 @@
+Starting: Intent { act=android.intent.action.VIEW dat=exp://172.30.1.41:8081/... }
+Status: ok
+LaunchState: WARM
+Activity: host.exp.exponent/.experience.ErrorActivity
+TotalTime: 2062
+WaitTime: 2090
+Complete

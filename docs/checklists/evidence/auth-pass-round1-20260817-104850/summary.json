@@ -1,0 +1,43 @@
+{
+  "deviceId": "172.30.1.15:5555",
+  "packageName": "com.parkcheolhong.worldlinco",
+  "tap": {
+    "y": 256,
+    "x": 400
+  },
+  "login": [
+    "[10:49:56] minimal runtime shell detected repeatedly; fast-recovery relaunch once",
+    {
+      "ok": false,
+      "attempted": true,
+      "reason": "devclient_runtime_unready"
+    }
+  ],
+  "flow": {
+    "faceHomeOpened": false,
+    "langPickerOpened": false,
+    "peerLangSelected": false,
+    "faceMicTapped": false
+  },
+  "runDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\auth-pass-round1-20260817-104850",
+  "lastDumpPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\auth-pass-round1-20260817-104850\\last-window-dump.xml",
+  "rawLogPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\auth-pass-round1-20260817-104850\\reactnative-logcat.txt",
+  "tracePath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\auth-pass-round1-20260817-104850\\face-capture-trace.txt",
+  "requiredEvents": [
+    "start_tap",
+    "capture_started",
+    "payload_prepared",
+    "post_start",
+    "response_received"
+  ],
+  "missingEvents": [
+    "start_tap",
+    "capture_started",
+    "payload_prepared",
+    "post_start",
+    "response_received"
+  ],
+  "pass": false,
+  "blocked": "login_not_ready",
+  "capturedAtUtc": "2026-08-17T01:50:09.1841236Z"
+}

@@ -1,0 +1,4 @@
+
+> mobile-nadotongryoksa@1.0.3 test
+> jest --runInBand src/__tests__/travelBooking.test.ts src/__tests__/faceConversationTiming.test.ts
+

@@ -1,0 +1,218 @@
+{
+  "probe": "sorisae-friend-chat",
+  "timestamp_utc": "2026-08-16T10:50:01.694027+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "min_apk_build": 323,
+  "probe_speech_text": "춘천 맛집 추천해줘",
+  "fixture_m4a": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\scripts\\fixtures\\sorisae_probe_ko_speech.m4a",
+  "passed": false,
+  "checks": [
+    {
+      "name": "health",
+      "ok": false,
+      "detail": "status=200",
+      "body": {
+        "status": "warning",
+        "version": "2.2.0",
+        "modules": {
+          "api": "ok",
+          "memory": "ok",
+          "cpu": "ok",
+          "gpu": "ok",
+          "redis_queue": "ok",
+          "ad_worker": "warning"
+        },
+        "runtime": {
+          "bootstrap": {
+            "scheduled_at": "2026-08-16T10:15:44.632073+00:00",
+            "started_at": "2026-08-16T10:15:44.632342+00:00",
+            "completed_at": "2026-08-16T10:15:44.691327+00:00",
+            "duration_ms": 59.0,
+            "stages": {
+              "startup": {
+                "stage_id": "startup",
+                "scheduled_at": "2026-08-16T10:15:44.632036+00:00",
+                "started_at": "2026-08-16T10:15:44.632055+00:00",
+                "completed_at": "2026-08-16T10:15:44.632983+00:00",
+                "duration_ms": 0.9,
+                "blocking_dependencies": [],
+                "state": "completed",
+                "notes": [
+                  "startup stage only performs baseline guards and schedules post_startup_bootstrap",
+                  "startup guard completed and post_startup_bootstrap scheduled"
+                ]
+              },
+              "post_startup_bootstrap": {
+                "stage_id": "post_startup_bootstrap",
+                "scheduled_at": "2026-08-16T10:15:44.632077+00:00",
+                "started_at": "2026-08-16T10:15:44.632328+00:00",
+                "completed_at": "2026-08-16T10:15:44.691365+00:00",
+                "duration_ms": 59.0,
+                "blocking_dependencies": [
+                  "startup"
+                ],
+                "state": "completed",
+                "notes": [
+                  "baseline readiness complete -> post_startup_bootstrap scheduled",
+                  "database schema checks and fixed admin bootstrap only",
+                  "database unavailable: database unavailable via postgresql://admin:***@postgres:5432/devanalysis114?application_name=codeai-backend&connect_timeout=5 :: (psycopg2.OperationalError) connection to server at \"postgres\" (172.19.0.4), port 5432 failed: FATAL:  password authentication failed for user \"admin\"\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+                  "heavy DB schema correction stays in post_startup_bootstrap stage",
+                  "fixed admin account bootstrap runs only after schema bootstrap",
+                  "post-startup bootstrap completed; runtime_recovery and capability_warmup dispatched independently"
+                ]
+              },
+              "capability_warmup": {
+                "stage_id": "capability_warmup",
+                "scheduled_at": "2026-08-16T10:15:44.665776+00:00",
+                "started_at": "2026-08-16T10:15:44.665997+00:00",
+                "completed_at": "2026-08-16T10:15:53.580695+00:00",
+                "duration_ms": 8914.7,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "completed",
+                "notes": [
+                  "admin capability cache warmup scheduled after post-startup bootstrap",
+                  "capability warmup started; cache fill only, no runtime recovery work allowed",
+                  "admin capability cache warmup completed via capability map prebuild"
+                ]
+              },
+              "runtime_recovery": {
+                "stage_id": "runtime_recovery",
+                "scheduled_at": "2026-08-16T10:15:44.665159+00:00",
+                "started_at": null,
+                "completed_at": null,
+                "duration_ms": null,
+                "blocking_dependencies": [
+                  "post_startup_bootstrap"
+                ],
+                "state": "scheduled",
+                "notes": [
+                  "marketplace ad queue recovery and worker bootstrap scheduled after post-startup bootstrap",
+                  "database unavailable -> recovery skipped"
+                ]
+              }
+            }
+          }
+        },
+        "diagnostics": {
+          "generated_at": "2026-08-16T10:49:42.180761+00:00",
+          "resources": {
+            "memory": {
+              "available": true,
+              "state": "ok",
+              "note": "메모리 사용량이 정상 범위입니다.",
+              "total_mb": 63108.1,
+              "used_mb": 13958.1,
+              "available_mb": 49150.0,
+              "usage_percent": 22.1
+            },
+            "cpu": {
+              "available": true,
+              "state": "ok",
+              "note": "CPU 부하가 정상 범위입니다.",
+              "cpu_count": 32,
+              "load_1m": 0.9,
+              "load_ratio_percent": 2.8,
+              "usage_percent": 3.1
+            },
+            "gpu": {
+              "available": true,
+              "state": "ok",
+              "note": "VRAM 상주 비중은 높지만 실제 GPU 연산 부하는 낮습니다. 로드된 모델/캐시 상태로 해석합니다.",
+              "devices": [
+                {
+                  "name": "NVIDIA GeForce RTX 5090",
+                  "memory_total_mb": 32607,
+                  "memory_used_mb": 30104,
+                  "utilization_gpu": 12,
+                  "memory_usage_percent": 92.3
+                }
+              ],
+              "device_count": 1,
+              "peak_memory_usage_percent": 92.3,
+              "peak_utilization_percent": 12.0
+            },
+            "redis_queue": {
+              "available": true,
+              "state": "ok",
+              "note": "redis:video_render_queue 연결 정상, queue=video_render_queue, depth=0",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "error": null
+            },
+            "ad_worker": {
+              "available": false,
+              "state": "warning",
+              "note": "광고 주문 worker heartbeat가 오래됐습니다. 장시간 렌더 중인지와 worker 루프 상태를 확인하세요.",
+              "connection_id": "redis:video_render_queue",
+              "queue_name": "video_render_queue",
+              "queue_depth": 0,
+              "worker_id": "ad-render-worker-001",
+              "bootstrap_enabled": true,
+              "started": false,
+              "heartbeat_age_sec": null,
+              "last_order_id": null
+            }
+          },
+          "alerts": [
+            {
+              "id": "ad_worker",
+              "severity": "warning",
+              "title": "광고 주문 worker 경고",
+              "message": "광고 주문 worker heartbeat가 오래됐습니다. 장시간 렌더 중인지와 worker 루프 상태를 확인하세요.",
+              "action": "worker 실행 진입점과 heartbeat를 점검하세요.",
+              "source_path": "backend.marketplace.router:get_ad_queue_runtime_status",
+              "diagnostic_detail": "worker_id=ad-render-worker-001 connection_id=redis:video_render_queue heartbeat_age_sec=None last_order_id=None",
+              "root_cause": "worker heartbeat가 멈췄거나 주문 소비가 지연돼 실행 파이프라인이 정상 순환하지 못하고 있습니다.",
+              "metrics": {
+                "worker_id": "ad-render-worker-001",
+                "connection_id": "redis:video_render_queue",
+                "heartbeat_age_sec": null,
+                "last_order_id": null
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "marketplace_manifest",
+      "ok": true,
+      "detail": "status=200 build=331 min=323",
+      "versionName": "1.0.246"
+    },
+    {
+      "name": "friend_chat_model_route",
+      "ok": true,
+      "detail": "base=http://host.docker.internal:8008/v1 model=Qwen/Qwen2.5-Coder-14B-Instruct-AWQ served=['Qwen/Qwen2.5-Coder-14B-Instruct-AWQ']"
+    },
+    {
+      "name": "friend_chat_text_llm",
+      "ok": true,
+      "detail": "status=200 response_len=116",
+      "response_preview": "춘천의 맛집으로는 \"김치국밥\"이 추천돼요. 주로 김치와 계란, 돼지고기, 계란 등을 넣은 국밥으로요. 주변에 여러 가지 김치국밥 가게가 있어요. \"김치국밥\"이라는 검색어로 찾아보시면 다양한 곳이 나올 거예요."
+    },
+    {
+      "name": "m4a_normalize_ssot",
+      "ok": true,
+      "detail": "docker normalized_bytes=84042 transcript_len=10",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "stt_trust": "high"
+    },
+    {
+      "name": "friend_chat_audio_silent_graceful",
+      "ok": true,
+      "detail": "status=422 detail=음성이 감지되지 않았습니다. 다시 말씀해 주세요."
+    },
+    {
+      "name": "friend_chat_audio_speech_m4a",
+      "ok": true,
+      "detail": "",
+      "transcript_preview": "춘천 맛집 추천해줘",
+      "response_preview": "춘천에서 맛있는 곳들을 추천해드릴게. 먼저, \"춘천 한옥마을\"이라는 곳은 절대 놓치면 안 되는 곳이야. 한옥 건물들이 모여있고, 여기에는 다양한 맛집들이 있어요. \n\n예를 들어, \"춘천 한옥마을 한식당\"이라는 곳이 "
+    }
+  ]
+}

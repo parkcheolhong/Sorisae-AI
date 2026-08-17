@@ -1,0 +1,11 @@
+# FILE-ID: FILE-INFRA-PROMETHEUS-YML
+# SECTION-ID: SECTION-INFRA-PROMETHEUS-YML-MAIN
+# FEATURE-ID: FEATURE-INFRA-PROMETHEUS-YML-RUNTIME
+# CHUNK-ID: CHUNK-INFRA-PROMETHEUS-YML-001
+
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: 'codeai-app'
+    static_configs:
+      - targets: ['app:8000']

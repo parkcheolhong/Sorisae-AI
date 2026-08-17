@@ -1,0 +1,3 @@
+[20:18:56] Run dir: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\voip-voice-relay-orchestrator\manual_retest_20260816-201856
+[20:18:56] Grant mic + force-stop apps (reset deeplink consume)
+[20:18:56] PreserveCalleeSession: callee app left running for FCM/presence incoming path

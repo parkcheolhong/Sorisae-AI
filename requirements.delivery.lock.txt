@@ -1,0 +1,30 @@
+# FILE-ID: FILE-REQUIREMENTS-DELIVERY-LOCK-TXT
+# SECTION-ID: SECTION-REQUIREMENTS-DELIVERY-LOCK-TXT-MAIN
+# FEATURE-ID: FEATURE-REQUIREMENTS-DELIVERY-LOCK-TXT-RUNTIME
+# CHUNK-ID: CHUNK-REQUIREMENTS-DELIVERY-LOCK-TXT-001
+
+fastapi==0.136.3
+uvicorn==0.48.0
+pytest==9.0.3
+pydantic==2.13.4
+httpx==0.28.1
+python-multipart==0.0.31
+email-validator==2.3.0
+sqlalchemy==2.0.50
+psycopg2-binary==2.9.12
+redis==5.3.1
+python-jose==3.5.0
+bcrypt==4.3.0
+boto3==1.43.18
+qdrant-client==1.18.0
+Pillow==12.2.0
+prometheus-client==0.25.0
+requests==2.34.2
+webauthn==2.7.1
+faster-whisper==1.2.1
+mpmath==1.3.0
+setuptools==82.0.1
+# 서버 미디어 브리지(MCU, 체크리스트 §13). 빌드된 이미지 실측 버전으로 고정.
+aiortc==1.14.0
+av==16.1.0
+numpy==2.5.0

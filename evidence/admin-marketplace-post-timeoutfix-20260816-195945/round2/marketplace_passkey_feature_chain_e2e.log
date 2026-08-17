@@ -1,0 +1,18 @@
+
+> devanalysis114-frontend@1.0.0 e2e
+> playwright test -c playwright.config.ts tests/marketplace-passkey-login.playwright.spec.ts tests/marketplace-passkey-feature-experience.playwright.spec.ts --project chromium
+
+
+Running 4 tests using 2 workers
+
+  ✓  1 [setup] › tests\admin.setup.playwright.spec.ts:133:5 › create admin storage state (1.2s)
+  ✓  2 [chromium] › tests\marketplace-passkey-login.playwright.spec.ts:7:9 › @marketplace-operational @passkey marketplace passkey login flow › auto passkey_login deep-link mode applies session and shows user profile (567ms)
+  ✓  3 [chromium] › tests\marketplace-passkey-feature-experience.playwright.spec.ts:11:13 › @marketplace-operational @passkey marketplace post-passkey feature experience › passkey login then main marketplace and orchestrator flow are usable (741ms)
+  ✓  4 [chromium] › tests\marketplace-passkey-login.playwright.spec.ts:81:9 › @marketplace-operational @passkey marketplace passkey login flow › passkey_login with mobile_return_uri redirects to callback with auth payload (358ms)
+
+  4 passed (3.2s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m

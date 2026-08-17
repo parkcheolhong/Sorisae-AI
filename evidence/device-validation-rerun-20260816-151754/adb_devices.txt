@@ -1,0 +1,5 @@
+List of devices attached
+R83W70QY11H            device product:gta7litekx model:SM_T225N device:gta7lite transport_id:86
+10.202.94.167:5555     device product:gta7litekx model:SM_T225N device:gta7lite transport_id:85
+172.30.1.15:5555       device product:gta7litekx model:SM_T225N device:gta7lite transport_id:2
+

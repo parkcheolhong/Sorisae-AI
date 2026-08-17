@@ -1,0 +1,31 @@
+# docker-compose.nogpu.yml
+# GPU 없는 환경에서 사용하는 오버라이드 파일
+# 사용법: docker compose -f docker-compose.yml -f docker-compose.nogpu.yml up -d
+#
+# 변경사항:
+# 1. backend/video-worker의 NVIDIA GPU 예약 제거
+# 2. GPU 관련 환경변수 비활성화
+# 3. 비디오 렌더링을 CPU-only FFmpeg로 폴백
+
+services:
+  backend:
+    environment:
+      NVIDIA_VISIBLE_DEVICES: ""
+      NVIDIA_DRIVER_CAPABILITIES: ""
+      CUDA_MPS_ACTIVE_THREAD_PERCENTAGE: "0"
+      VIDEO_REQUIRE_GENERATIVE_ENGINE: "false"
+      VIDEO_ENGINE_FALLBACK_TO_INTERNAL: "true"
+      VIDEO_ALLOW_LOCAL_DEDICATED_ENGINE: "false"
+      ENABLE_SELF_RUN_VIDEO_WORKER_BOOTSTRAP: "false"
+    deploy:
+      resources:
+        reservations: {}
+
+  video-worker:
+    environment:
+      CUDA_MPS_ACTIVE_THREAD_PERCENTAGE: "0"
+      VIDEO_REQUIRE_GENERATIVE_ENGINE: "false"
+      VIDEO_ENGINE_FALLBACK_TO_INTERNAL: "true"
+    deploy:
+      resources:
+        reservations: {}

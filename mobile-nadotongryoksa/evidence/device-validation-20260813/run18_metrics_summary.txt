@@ -1,0 +1,27 @@
+Run18 Metrics Summary
+GeneratedAt=2026-08-13T20:42:00+09:00
+
+Source Files
+- run18_launch_timing.txt
+- run18_logcat_after_sound_fix.txt
+- run18_post_fix_state.png
+- run17_metrics_summary.txt
+
+Measured Values
+- Launch.TotalTimeMs=8211
+- Launch.WaitTimeMs=8239
+
+Login Delay Metric (real-account session apply)
+- Method: AUTH_STORAGE_RESTORE_FOUND -> AUTH_STORAGE_RESTORE_APPLIED samples from latest stable auth run
+- SamplesMs: 43, 41, 48
+- AverageMs: 44
+- ResultMs: 44
+
+Custom Sound Warning Verification
+- Scan target: run18_logcat_after_sound_fix.txt
+- Match pattern: expo-notifications / Custom sound 'default' not found
+- MatchCount: 0
+
+Conclusion
+- Login session-apply latency metric is recorded as 44ms.
+- Custom sound warning is not reproduced in run18 post-fix log capture.

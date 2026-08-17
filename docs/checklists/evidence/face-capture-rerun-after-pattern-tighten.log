@@ -1,0 +1,16 @@
+[23:47:26] logcat cleared
+[23:47:36] pre-reset complete: force-stop + cooldown + home
+[23:47:42] app launch requested: com.parkcheolhong.worldlinco
+[23:47:46] foreground confirmed: com.parkcheolhong.worldlinco
+[23:47:50] permission dialog handled if present
+ERROR: null root node returned by UiTestAutomationBridge.
+[23:49:03] login state: ok=True attempted=False reason=already_logged_in
+[23:49:08] face home open: True
+[23:50:29] peer lang picker open: False
+[23:50:29] peer lang selected: False
+[23:51:02] face mic tapped: True
+[23:51:20] capture wait complete (18s)
+[23:51:20] result: FAIL missingLegacy=capture_started,payload_prepared,post_start,response_received
+FAIL: missing legacy events -> capture_started, payload_prepared, post_start, response_received
+TRACE: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-20260816-234724\face-capture-trace.txt
+SUMMARY: C:\Users\WORK\source\repos\parkcheolhong\codeAI\docs\checklists\evidence\face-capture-20260816-234724\summary.json

@@ -1,0 +1,40 @@
+{
+  "deviceId": "10.202.94.167:5555",
+  "packageName": "com.parkcheolhong.worldlinco",
+  "tap": {
+    "x": 400,
+    "y": 256
+  },
+  "login": {
+    "ok": false,
+    "reason": "login_timeout_probe",
+    "attempted": true
+  },
+  "flow": {
+    "faceHomeOpened": false,
+    "langPickerOpened": false,
+    "peerLangSelected": false,
+    "faceMicTapped": false
+  },
+  "runDir": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-perf2-r2-20260817-002543-20260817-002544",
+  "lastDumpPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-perf2-r2-20260817-002543-20260817-002544\\last-window-dump.xml",
+  "rawLogPath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-perf2-r2-20260817-002543-20260817-002544\\reactnative-logcat.txt",
+  "tracePath": "C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI\\docs\\checklists\\evidence\\face-capture-perf2-r2-20260817-002543-20260817-002544\\face-capture-trace.txt",
+  "requiredEvents": [
+    "start_tap",
+    "capture_started",
+    "payload_prepared",
+    "post_start",
+    "response_received"
+  ],
+  "missingEvents": [
+    "start_tap",
+    "capture_started",
+    "payload_prepared",
+    "post_start",
+    "response_received"
+  ],
+  "pass": false,
+  "blocked": "login_not_ready",
+  "capturedAtUtc": "2026-08-16T15:28:21.3485697Z"
+}

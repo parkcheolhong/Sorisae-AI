@@ -1,0 +1,3 @@
+Command: npm run typecheck
+Result: PASS
+Notes: TypeScript compilation completed after moving stored auth state to SecureStore-backed appStorage helpers.

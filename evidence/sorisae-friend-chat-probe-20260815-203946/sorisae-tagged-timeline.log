@@ -1,0 +1,13 @@
+08-16 05:40:23.712 31493 31493 I SamsungTTS: unloadEngine : kor-KOR-f00
+08-16 05:40:23.745 31493 31493 I SamsungTTS:JNI: [closeEngine][ID:175749972] Finalized done.
+08-16 05:40:23.745 31493 31493 I SamsungTTS:JNI: [closeEngine][ID:175749972] Delete done.
+08-16 05:40:25.599  9580  9617 I ReactNativeJS: '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'
+08-16 05:40:25.633 31493 31493 I SamsungTTS: [LoadLanguage] : kor-KOR-[f00]
+08-16 05:40:25.635 31493 31493 I SamsungTTS: [Engine] Preparing the engine v482403151 from SYSTEM.
+08-16 05:40:25.636 31493 31493 I SamsungTTS: [Engine] Loading success. [SmtTTS][V:482403151][com.samsung.SMT][M][ID:175749972]
+08-16 05:40:25.758 31493 31493 I SamsungTTS: Loading vData files: [CACHE][CFG][LNG][IVC]
+08-16 05:40:26.018 31493 31493 I SamsungTTS:NATIVE: AM model type : FLOAT
+08-16 05:40:26.018 31493 31493 I SamsungTTS:NATIVE: LPCNet model precision: 4
+08-16 05:40:26.021 31493 31493 I SamsungTTS: Loading is succeed.
+08-16 05:40:26.021 31493 31493 I SamsungTTS: [LoadLanguage] done.
+08-16 05:40:26.027 31493 31504 I SamsungTTS: [IsAvailable] kor-KOR-null is LANG_COUNTRY_AVAILABLE

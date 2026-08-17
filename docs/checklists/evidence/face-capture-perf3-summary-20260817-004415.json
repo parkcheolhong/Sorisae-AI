@@ -1,0 +1,46 @@
+{
+  "metric": "foreground confirmed -> login state",
+  "runs": [
+    {
+      "run": 1,
+      "label": "face-capture-perf3-r1-20260817-003555",
+      "parsed": true,
+      "login_reason": "session_restored",
+      "login_sec": 60,
+      "log": "docs\\checklists\\evidence\\face-capture-perf3-r1-20260817-003555.log"
+    },
+    {
+      "run": 2,
+      "label": "face-capture-perf3-r2-20260817-003925",
+      "parsed": true,
+      "login_reason": "session_restored",
+      "login_sec": 7,
+      "log": "docs\\checklists\\evidence\\face-capture-perf3-r2-20260817-003925.log"
+    },
+    {
+      "run": 3,
+      "label": "face-capture-perf3-r3-20260817-004150",
+      "parsed": true,
+      "login_reason": "session_restored",
+      "login_sec": 7,
+      "log": "docs\\checklists\\evidence\\face-capture-perf3-r3-20260817-004150.log"
+    }
+  ],
+  "login_latency_sec": {
+    "samples": [
+      7,
+      7,
+      60
+    ],
+    "p50": 7,
+    "p95": 60
+  },
+  "baseline_v2_login_latency_sec": {
+    "p50": 155,
+    "p95": 160
+  },
+  "delta_vs_v2_sec": {
+    "p50": -148,
+    "p95": -100
+  }
+}

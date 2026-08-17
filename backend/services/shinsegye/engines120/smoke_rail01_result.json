@@ -1,0 +1,177 @@
+{
+  "status": "ok",
+  "rail": {
+    "rail_id": "RAIL-01",
+    "slot_range": "1-20",
+    "total": 20,
+    "passed": 14,
+    "failed": 6,
+    "not_found": 0,
+    "timeout": 0,
+    "pass_rate_pct": 70.0,
+    "dry_run": true,
+    "results": [
+      {
+        "slot": 1,
+        "file": "slot001_sorisae_voice_movie_server.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 2,
+        "file": "slot002_sorisae_iot_voice_control.py",
+        "status": "failed",
+        "error": "No module named 'pyttsx3'",
+        "imported": false,
+        "executed": false
+      },
+      {
+        "slot": 3,
+        "file": "slot003_hybrid_conversation_translator.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 4,
+        "file": "slot004_sorisae_voice_processor.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 5,
+        "file": "slot005_voice_tuner.py",
+        "status": "failed",
+        "error": "No module named 'pyttsx3'",
+        "imported": false,
+        "executed": false
+      },
+      {
+        "slot": 6,
+        "file": "slot006_sorisae_voice_reactive.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 7,
+        "file": "slot007_voice_calling_system.py",
+        "status": "failed",
+        "error": "No module named 'pyttsx3'",
+        "imported": false,
+        "executed": false
+      },
+      {
+        "slot": 8,
+        "file": "slot008_hybrid_interpreter_system.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 9,
+        "file": "slot009_music_chat_web.py",
+        "status": "failed",
+        "error": "No module named 'flask'",
+        "imported": false,
+        "executed": false
+      },
+      {
+        "slot": 10,
+        "file": "slot010_dream_interpreter.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 11,
+        "file": "slot011_ai_music_composer.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 12,
+        "file": "slot012_hybrid_voice_processor.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 13,
+        "file": "slot013_multilingual_system.py",
+        "status": "failed",
+        "error": "No module named 'pyttsx3'",
+        "imported": false,
+        "executed": false
+      },
+      {
+        "slot": 14,
+        "file": "slot014_sorisae_iot_voice_control.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 15,
+        "file": "slot015_sorisae_interpreter.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 16,
+        "file": "slot016_sorisae_southeast_asia_translator.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 17,
+        "file": "slot017_music_chat_system.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 18,
+        "file": "slot018_test_voice_reactive.py",
+        "status": "failed",
+        "error": "No module named 'sorisae_voice_reactive'",
+        "imported": false,
+        "executed": false
+      },
+      {
+        "slot": 19,
+        "file": "slot019_music_chat_friend_system.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      },
+      {
+        "slot": 20,
+        "file": "slot020_voice_command_processor.py",
+        "status": "passed",
+        "error": null,
+        "imported": true,
+        "executed": false
+      }
+    ],
+    "run_at": "2026-05-02T12:24:04.464507+00:00"
+  }
+}

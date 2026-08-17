@@ -1,0 +1,1055 @@
+{
+  "status": "ok",
+  "total_slots": 120,
+  "total_passed": 94,
+  "total_failed": 26,
+  "pass_rate_pct": 78.3,
+  "dry_run": true,
+  "run_at": "2026-05-02T12:24:21.125410+00:00",
+  "rails": [
+    {
+      "rail_id": "RAIL-01",
+      "slot_range": "1-20",
+      "total": 20,
+      "passed": 14,
+      "failed": 6,
+      "not_found": 0,
+      "timeout": 0,
+      "pass_rate_pct": 70.0,
+      "dry_run": true,
+      "results": [
+        {
+          "slot": 1,
+          "file": "slot001_sorisae_voice_movie_server.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 2,
+          "file": "slot002_sorisae_iot_voice_control.py",
+          "status": "failed",
+          "error": "No module named 'pyttsx3'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 3,
+          "file": "slot003_hybrid_conversation_translator.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 4,
+          "file": "slot004_sorisae_voice_processor.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 5,
+          "file": "slot005_voice_tuner.py",
+          "status": "failed",
+          "error": "No module named 'pyttsx3'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 6,
+          "file": "slot006_sorisae_voice_reactive.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 7,
+          "file": "slot007_voice_calling_system.py",
+          "status": "failed",
+          "error": "No module named 'pyttsx3'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 8,
+          "file": "slot008_hybrid_interpreter_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 9,
+          "file": "slot009_music_chat_web.py",
+          "status": "failed",
+          "error": "No module named 'flask'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 10,
+          "file": "slot010_dream_interpreter.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 11,
+          "file": "slot011_ai_music_composer.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 12,
+          "file": "slot012_hybrid_voice_processor.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 13,
+          "file": "slot013_multilingual_system.py",
+          "status": "failed",
+          "error": "No module named 'pyttsx3'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 14,
+          "file": "slot014_sorisae_iot_voice_control.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 15,
+          "file": "slot015_sorisae_interpreter.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 16,
+          "file": "slot016_sorisae_southeast_asia_translator.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 17,
+          "file": "slot017_music_chat_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 18,
+          "file": "slot018_test_voice_reactive.py",
+          "status": "failed",
+          "error": "No module named 'sorisae_voice_reactive'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 19,
+          "file": "slot019_music_chat_friend_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 20,
+          "file": "slot020_voice_command_processor.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        }
+      ],
+      "run_at": "2026-05-02T12:24:17.996694+00:00"
+    },
+    {
+      "rail_id": "RAIL-02",
+      "slot_range": "21-40",
+      "total": 20,
+      "passed": 16,
+      "failed": 4,
+      "not_found": 0,
+      "timeout": 0,
+      "pass_rate_pct": 80.0,
+      "dry_run": true,
+      "results": [
+        {
+          "slot": 21,
+          "file": "slot021_test_animation_voice_integration.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 22,
+          "file": "slot022_demo_animation_voice_integration.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 23,
+          "file": "slot023_sorisae_multilingual_support.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 24,
+          "file": "slot024_voice_response_fallback.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 25,
+          "file": "slot025_test_socket_voice_fixes.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 26,
+          "file": "slot026_test_voice_double_utterance_fix.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 27,
+          "file": "slot027_test_integration_voice_error_handling.py",
+          "status": "failed",
+          "error": "No module named 'api_rate_limit_handler'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 28,
+          "file": "slot028_emotion_based_music_generator.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 29,
+          "file": "slot029_animation_studio_theme_song_demo.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 30,
+          "file": "slot030_enhanced_voice_exit.py",
+          "status": "failed",
+          "error": "signal only works in main thread of the main interpreter",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 31,
+          "file": "slot031_ai_speech_tts.py",
+          "status": "failed",
+          "error": "No module named 'pyttsx3'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 32,
+          "file": "slot032_start_music_chat_server.py",
+          "status": "failed",
+          "error": "No module named 'modules'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 33,
+          "file": "slot033_run_interpreter.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 34,
+          "file": "slot034_run_music_composer.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 35,
+          "file": "slot035_run_voice_processing.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 36,
+          "file": "slot036_spatiotemporal_learning_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 37,
+          "file": "slot037_sorisae_enhanced_consciousness.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 38,
+          "file": "slot038_sorisae_ethical_consciousness_engine.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 39,
+          "file": "slot039_hybrid_cyber_security_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 40,
+          "file": "slot040_sorisae_ai_decision_engine.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        }
+      ],
+      "run_at": "2026-05-02T12:24:18.088189+00:00"
+    },
+    {
+      "rail_id": "RAIL-03",
+      "slot_range": "41-60",
+      "total": 20,
+      "passed": 17,
+      "failed": 3,
+      "not_found": 0,
+      "timeout": 0,
+      "pass_rate_pct": 85.0,
+      "dry_run": true,
+      "results": [
+        {
+          "slot": 41,
+          "file": "slot041_cyber_detective_dashboard.py",
+          "status": "failed",
+          "error": "No module named 'flask'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 42,
+          "file": "slot042_hybrid_iot_controller.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 43,
+          "file": "slot043_sorisae_iot_integration.py",
+          "status": "failed",
+          "error": "No module named 'multi_ego_engine'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 44,
+          "file": "slot044_sorisae_iot_smarthome.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 45,
+          "file": "slot045_sorisae_dual_brain_stock_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 46,
+          "file": "slot046_cyber_detective_visual_monitoring.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 47,
+          "file": "slot047_sorisae_ethical_consciousness_simple.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 48,
+          "file": "slot048_sorisae_dual_brain_stock_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 49,
+          "file": "slot049_advanced_security_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 50,
+          "file": "slot050_cyber_detective_ai.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 51,
+          "file": "slot051_sorisae_dual_brain_comparison.py",
+          "status": "failed",
+          "error": "unterminated string literal (detected at line 205) (slot051_sorisae_dual_brain_comparison.py, line 205)",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 52,
+          "file": "slot052_cyber_detective_future_tech.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 53,
+          "file": "slot053_sorisae_iot_smarthome.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 54,
+          "file": "slot054_sorisae_cyber_investigator.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 55,
+          "file": "slot055_sorisae_iot_integration.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 56,
+          "file": "slot056_sorisae_iot_auto_discovery.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 57,
+          "file": "slot057_cyber_detective_global_server_analysis.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 58,
+          "file": "slot058_cyber_detective_global_network.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 59,
+          "file": "slot059_cyber_detective_gps_radius.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 60,
+          "file": "slot060_cyber_detective_detailed_analysis.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        }
+      ],
+      "run_at": "2026-05-02T12:24:19.393279+00:00"
+    },
+    {
+      "rail_id": "RAIL-04",
+      "slot_range": "61-80",
+      "total": 20,
+      "passed": 17,
+      "failed": 3,
+      "not_found": 0,
+      "timeout": 0,
+      "pass_rate_pct": 85.0,
+      "dry_run": true,
+      "results": [
+        {
+          "slot": 61,
+          "file": "slot061_spatiotemporal_learning_system_new.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 62,
+          "file": "slot062_cyber_realtime_monitor.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 63,
+          "file": "slot063_biometric_security_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 64,
+          "file": "slot064_cyber_investigation_report.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 65,
+          "file": "slot065_cyber_detective_methodology.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 66,
+          "file": "slot066_security_key_manager.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 67,
+          "file": "slot067_security_demo_20251019_070650.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 68,
+          "file": "slot068_security_demo.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 69,
+          "file": "slot069_consciousness_engine.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 70,
+          "file": "slot070_run_iot_smarthome.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 71,
+          "file": "slot071_run_cyber_detective.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 72,
+          "file": "slot072_run_security.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 73,
+          "file": "slot073_sorisae_fantasy_vr_infinite_universe_game.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 74,
+          "file": "slot074_sorisae_game_economy_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 75,
+          "file": "slot075_sorisae_investment_advisor_200.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 76,
+          "file": "slot076_stock_prediction_200_percent.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 77,
+          "file": "slot077_stock_prediction_200_percent.py",
+          "status": "failed",
+          "error": "unterminated string literal (detected at line 449) (slot077_stock_prediction_200_percent.py, line 449)",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 78,
+          "file": "slot078_game_earning_analysis.py",
+          "status": "failed",
+          "error": "unterminated string literal (detected at line 203) (slot078_game_earning_analysis.py, line 203)",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 79,
+          "file": "slot079_sorisae_investment_advisor_200.py",
+          "status": "failed",
+          "error": "No module named 'stock_prediction_200_percent'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 80,
+          "file": "slot080_realtime_game_generator_20251019_182012.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        }
+      ],
+      "run_at": "2026-05-02T12:24:19.834116+00:00"
+    },
+    {
+      "rail_id": "RAIL-05",
+      "slot_range": "81-100",
+      "total": 20,
+      "passed": 13,
+      "failed": 7,
+      "not_found": 0,
+      "timeout": 0,
+      "pass_rate_pct": 65.0,
+      "dry_run": true,
+      "results": [
+        {
+          "slot": 81,
+          "file": "slot081_realtime_game_generator.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 82,
+          "file": "slot082_sorisae_game_concept_design.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 83,
+          "file": "slot083_sorisae_earning_game.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 84,
+          "file": "slot084_sorisae_vr_launcher.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 85,
+          "file": "slot085_run_investment_advisor.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 86,
+          "file": "slot086_run_game_economy.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 87,
+          "file": "slot087_run_vr_games.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 88,
+          "file": "slot088_sorisae_core_new_features_20251019_182012.py",
+          "status": "failed",
+          "error": "No module named 'speech_recognition'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 89,
+          "file": "slot089_sorisae_integrated_dashboard.py",
+          "status": "failed",
+          "error": "No module named 'flask'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 90,
+          "file": "slot090_sorisae_core_controller_exit_fix_20251019_174426.py",
+          "status": "failed",
+          "error": "No module named 'speech_recognition'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 91,
+          "file": "slot091_sorisae_animation_studio_ultra.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 92,
+          "file": "slot092_ethical_gps_system.py",
+          "status": "failed",
+          "error": "No module named 'geopy'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 93,
+          "file": "slot093_emotion_color_therapist.py",
+          "status": "failed",
+          "error": "unterminated string literal (detected at line 813) (slot093_emotion_color_therapist.py, line 813)",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 94,
+          "file": "slot094_sorisae_dashboard_web.py",
+          "status": "failed",
+          "error": "No module named 'flask'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 95,
+          "file": "slot095_integrated_shopping_tutor_designer.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 96,
+          "file": "slot096_run_all_shinsegye.py",
+          "status": "failed",
+          "error": "No module named 'modules'",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 97,
+          "file": "slot097_sorisae_master_hybrid_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 98,
+          "file": "slot098_virtual_dev_team.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 99,
+          "file": "slot099_detailed_technical_report.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 100,
+          "file": "slot100_sorisae_divine_intelligence_105.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        }
+      ],
+      "run_at": "2026-05-02T12:24:19.920288+00:00"
+    },
+    {
+      "rail_id": "RAIL-06",
+      "slot_range": "101-120",
+      "total": 20,
+      "passed": 17,
+      "failed": 3,
+      "not_found": 0,
+      "timeout": 0,
+      "pass_rate_pct": 85.0,
+      "dry_run": true,
+      "results": [
+        {
+          "slot": 101,
+          "file": "slot101_organize_projects_into_folders.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 102,
+          "file": "slot102_app_Sorisay.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 103,
+          "file": "slot103_sorisae_movie_web_server.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 104,
+          "file": "slot104_future_prediction_engine.py",
+          "status": "failed",
+          "error": "unterminated string literal (detected at line 497) (slot104_future_prediction_engine.py, line 497)",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 105,
+          "file": "slot105_next_gen_caching_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 106,
+          "file": "slot106_sorisae_master_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 107,
+          "file": "slot107_run_complete_sorisae_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 108,
+          "file": "slot108_sorisae_civil_engineering_bidding.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 109,
+          "file": "slot109_autonomous_marketing_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 110,
+          "file": "slot110_sorisae_transcendent_102.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 111,
+          "file": "slot111_smart_plugin_generator.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 112,
+          "file": "slot112_ethical_gps_system_simple.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 113,
+          "file": "slot113_comprehensive_project_analyzer.py",
+          "status": "failed",
+          "error": "unterminated string literal (detected at line 339) (slot113_comprehensive_project_analyzer.py, line 339)",
+          "imported": false,
+          "executed": false
+        },
+        {
+          "slot": 114,
+          "file": "slot114_sorisae_smart_car_control.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 115,
+          "file": "slot115_sorisae_satellite_wifi_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 116,
+          "file": "slot116_async_performance_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 117,
+          "file": "slot117_analyze_all_shinsegye_projects.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 118,
+          "file": "slot118_sorisae_nextgen_features.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 119,
+          "file": "slot119_sorisae_integrated_hybrid_system.py",
+          "status": "passed",
+          "error": null,
+          "imported": true,
+          "executed": false
+        },
+        {
+          "slot": 120,
+          "file": "slot120_shopping_mall_dashboard.py",
+          "status": "failed",
+          "error": "No module named 'flask'",
+          "imported": false,
+          "executed": false
+        }
+      ],
+      "run_at": "2026-05-02T12:24:21.125410+00:00"
+    }
+  ]
+}

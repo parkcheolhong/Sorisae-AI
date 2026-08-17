@@ -1,0 +1,125 @@
+name: pr111-followup-pipeline
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_pr111_followup_pipeline.ps1"
+      - "scripts/verify_admin_travel_kpi_playwright_once.ps1"
+      - "scripts/verify_travel_partner_funnel_section7.py"
+      - "frontend/frontend/tests/admin-travel-kpi-live-once.playwright.spec.ts"
+      - "docs/checklists/sorisae-travel-partner-api-integration-checklist-20260630.md"
+      - ".github/workflows/pr111-followup-pipeline.yml"
+  workflow_dispatch:
+    inputs:
+      run_funnel:
+        description: "Run live funnel API verification (requires reachable backend and valid admin credentials)"
+        required: true
+        default: false
+        type: boolean
+      run_playwright:
+        description: "Run admin KPI Playwright one-shot"
+        required: true
+        default: true
+        type: boolean
+      run_build:
+        description: "Run admin frontend build"
+        required: true
+        default: true
+        type: boolean
+      start_webserver:
+        description: "Start Playwright webserver in verify script"
+        required: true
+        default: true
+        type: boolean
+      base_url:
+        description: "Backend base URL for live checks"
+        required: false
+        default: "http://127.0.0.1:8000"
+        type: string
+      admin_base_url:
+        description: "Admin base URL for Playwright"
+        required: false
+        default: "http://127.0.0.1:3005"
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  followup-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend/frontend
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests
+
+      - name: Install Playwright browser
+        if: ${{ github.event_name == 'pull_request' || inputs.run_playwright }}
+        working-directory: frontend/frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run PR111 follow-up pipeline
+        shell: pwsh
+        env:
+          FIXED_ADMIN_PASSWORD: ${{ secrets.FIXED_ADMIN_PASSWORD }}
+          ADMIN_REGRESSION_MOCK_BACKEND: "1"
+          BACKEND_PROXY_TARGET: "http://127.0.0.1:8000"
+        run: |
+          $isPr = "${{ github.event_name }}" -eq "pull_request"
+
+          $baseUrl = if ($isPr) { "http://127.0.0.1:8000" } else { "${{ inputs.base_url }}" }
+          $adminBaseUrl = if ($isPr) { "http://127.0.0.1:3005" } else { "${{ inputs.admin_base_url }}" }
+
+          $skipFunnel = if ($isPr) { $true } else { -not [System.Convert]::ToBoolean("${{ inputs.run_funnel }}") }
+          $skipPlaywright = if ($isPr) { $false } else { -not [System.Convert]::ToBoolean("${{ inputs.run_playwright }}") }
+          $skipBuild = if ($isPr) { $false } else { -not [System.Convert]::ToBoolean("${{ inputs.run_build }}") }
+          $startWebServer = if ($isPr) { $true } else { [System.Convert]::ToBoolean("${{ inputs.start_webserver }}") }
+
+          ./scripts/run_pr111_followup_pipeline.ps1 `
+            -BaseUrl $baseUrl `
+            -AdminBaseUrl $adminBaseUrl `
+            -SkipFunnel:$skipFunnel `
+            -SkipPlaywright:$skipPlaywright `
+            -SkipBuild:$skipBuild `
+            -StartWebServer:$startWebServer
+
+      - name: Upload pipeline reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr111-followup-reports
+          path: reports/pr111-followup-pipeline-*.md
+
+      - name: Upload pipeline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr111-followup-evidence
+          path: evidence/section7-travel-partner-funnel-*.json
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr111-followup-playwright-report
+          path: frontend/frontend/playwright-report

@@ -1,0 +1,1 @@
+﻿08-13 15:04:38.493 I/ReactNativeJS(10070): '[FACE_CONVERSATION]', '{"event":"silero_probe","supported":false}'

@@ -1,0 +1,26 @@
+[KWS-VERIFY] Checking adb availability...
+[KWS-VERIFY] Online devices:
+  172.30.1.15:5555	device
+[KWS-VERIFY] Target device: 172.30.1.15:5555
+[KWS-VERIFY] Launching app...
+[KWS-VERIFY] Launch attempt #1: am start -n com.parkcheolhong.worldlinco/com.parkcheolhong.worldlinco.MainActivity
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+[KWS-VERIFY] Clearing old logs...
+[KWS-VERIFY] Capturing logs for 120 seconds
+[KWS-VERIFY] Watch for: native_started, native_wake, native_error, scan_idle
+[KWS-VERIFY] Running companion preflow (login/session entry)...
+[KWS-VERIFY] Tap 'worldlinco-inline-open-login-button' at (476,451)
+[KWS-VERIFY] Tap 'worldlinco-demo-session-start-button' at (401,1273)
+[KWS-VERIFY] Companion preflow complete.
+[KWS-VERIFY] Triggering companion arm via accessibility id: worldlinco-companion-voicecall-toggle
+[KWS-VERIFY] Companion toggle not visible. Trying lobby fallback: demo session start.
+[KWS-VERIFY] Tap 'worldlinco-demo-session-start-button' at (401,1340)
+[KWS-VERIFY] Trigger FAILED: companion toggle not found after fallback flow.
+[KWS-VERIFY] Trigger scenario could not toggle companion arm.
+[KWS-VERIFY] ---- filtered output ----
+[KWS-VERIFY] No KWS markers found.
+[KWS-VERIFY] ---- gate summary ----
+[KWS-VERIFY] has_companion_kws=False has_companion_voice_call=False has_native_started=False has_native_skip=False has_native_wake=False has_native_error=False has_scan_idle=False
+[KWS-VERIFY] GATE: FAIL (no companion marker observed - trigger path may not be reached)
+[KWS-VERIFY] Raw log saved: C:\Users\WORK\AppData\Local\Temp\kws_verify_log.txt
+[KWS-VERIFY] PASS condition example: native_started -> native_wake sequence appears.

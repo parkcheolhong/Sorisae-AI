@@ -1,0 +1,32 @@
+﻿[
+    {
+        "round":  1,
+        "has_passkey_callback_success":  true,
+        "has_social_callback_success":  true,
+        "has_error_activity":  false,
+        "passkey_success_count":  2,
+        "passkey_fail_count":  0,
+        "social_success_count":  1,
+        "social_fail_count":  0,
+        "show_login_true_count":  4,
+        "show_login_false_count":  17,
+        "sorisae_fab_eval_count":  0,
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=4\u0026username=nado_119cash_recover\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=1\u0026ts=1786875419607",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=4\u0026username=nado_119cash_recover\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=1\u0026ts=1786875419607\u0027"
+    },
+    {
+        "round":  2,
+        "has_passkey_callback_success":  true,
+        "has_social_callback_success":  true,
+        "has_error_activity":  false,
+        "passkey_success_count":  2,
+        "passkey_fail_count":  0,
+        "social_success_count":  1,
+        "social_fail_count":  0,
+        "show_login_true_count":  0,
+        "show_login_false_count":  16,
+        "sorisae_fab_eval_count":  0,
+        "callback_url":  "worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=4\u0026username=nado_119cash_recover\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=2\u0026ts=1786875429121",
+        "callback_url_for_shell":  "\u0027worldlingo://auth/callback?provider=passkey\u0026auth_mode=passkey_login\u0026access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTljYXNoQG5hdmVyLmNvbSIsInNpZCI6InZ1cFo1cEpTVEw3MFVDaDZzVkFqZFdQN2pZYWJYaG9WIn0.Omfc0lo7BJ6CRKj4ZijTXggCmOoZn-SgX2ID1K6EwKg\u0026email=119cash%40naver.com\u0026user_id=4\u0026username=nado_119cash_recover\u0026display_name=Passkey%20Device%20Probe%20Local\u0026round=2\u0026ts=1786875429121\u0027"
+    }
+]

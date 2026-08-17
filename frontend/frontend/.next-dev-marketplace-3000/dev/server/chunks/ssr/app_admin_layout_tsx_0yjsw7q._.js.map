@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/WORK/source/repos/parkcheolhong/codeAI/frontend/frontend/app/admin/layout.tsx"],"sourcesContent":["import type { ReactNode } from 'react';\n\nexport const dynamic = 'force-dynamic';\nexport const revalidate = 0;\nexport const fetchCache = 'force-no-store';\nexport const runtime = 'nodejs';\n\nexport default function AdminLayout({ children }: { children: ReactNode }) {\n    return <>{children}</>;\n}\n"],"names":["dynamic","revalidate","fetchCache","runtime","AdminLayout","children"],"mappings":";;;;;;;;;;;;;;AAEO,MAAMA,UAAU;AAChB,MAAMC,aAAa;AACnB,MAAMC,aAAa;AACnB,MAAMC,UAAU;AAER,SAASC,YAAY,EAAEC,QAAQ,EAA2B;IACrE,qBAAO;kBAAGA;;AACd"}}]
+}

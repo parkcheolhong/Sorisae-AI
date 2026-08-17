@@ -1,0 +1,22 @@
+﻿{
+    "status":  "ok",
+    "active_calls":  0,
+    "connected_clients":  0,
+    "online_voice_clients":  0,
+    "registered_device_users":  0,
+    "fcm_delivery_ready":  false,
+    "fcm_v1_ready":  false,
+    "fcm_project_id":  "studio-9080238625-9cec3",
+    "network_test_matrix":  {
+                                "required_combinations":  [
+                                                              "wifi_wifi",
+                                                              "wifi_lte",
+                                                              "lte_lte"
+                                                          ],
+                                "min_runs_per_combination":  2,
+                                "client_audit_field":  "metadata.client_network",
+                                "wifi_only_insufficient":  true,
+                                "guidance_ko":  "WiFië§ì¼ë¡ë LTE/5G NATÂ·ì íÂ·ì§ì° ë²ê·¸ë¥¼ ëì¹©ëë¤. ë¨ë§ A/Bìì ì\u0085ë£°ë¬ ë°ì´í°ë¥¼ ì¼  ë¤ WiFiâLTE ë§¤í¸ë¦­ì¤ë¡ VoIP initiate auditë¥¼ ìì§íì¸ì."
+                            },
+    "app_call_participants":  0
+}

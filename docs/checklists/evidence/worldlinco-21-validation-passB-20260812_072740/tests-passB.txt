@@ -1,0 +1,14 @@
+mobile-nadotongryoksa 2-1 validation passB
+Command: npm run test -- --runInBand src/__tests__/chatVoiceInput.test.ts src/__tests__/travelBooking.test.ts src/__tests__/songLang.test.ts
+Result: PASS
+Output:
+> mobile-nadotongryoksa@1.0.3 test
+> jest --runInBand src/__tests__/chatVoiceInput.test.ts src/__tests__/travelBooking.test.ts src/__tests__/songLang.test.ts
+
+PASS src/__tests__/songLang.test.ts
+PASS src/__tests__/chatVoiceInput.test.ts
+PASS src/__tests__/travelBooking.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests: 27 passed, 27 total
+Snapshots: 0 total

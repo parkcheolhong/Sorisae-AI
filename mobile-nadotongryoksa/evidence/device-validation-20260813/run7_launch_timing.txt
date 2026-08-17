@@ -1,0 +1,7 @@
+Starting: Intent { cmp=com.parkcheolhong.worldlinco/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.parkcheolhong.worldlinco/expo.modules.devlauncher.launcher.DevLauncherActivity
+TotalTime: 8196
+WaitTime: 8213
+Complete

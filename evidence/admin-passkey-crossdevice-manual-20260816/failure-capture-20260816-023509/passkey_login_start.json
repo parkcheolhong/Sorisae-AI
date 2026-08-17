@@ -1,0 +1,17 @@
+﻿{
+    "name":  "passkey_login_start",
+    "method":  "POST",
+    "url":  "https://xn--114-2p7l635dz3bh5j.com/api/auth/passkey/login/start",
+    "timestamp":  "2026-08-16T02:35:17.3270566+09:00",
+    "status":  200,
+    "headers":  {
+                    "Server":  "uvicorn",
+                    "Alt-Svc":  "h3=\":443\"; ma=2592000",
+                    "Content-Length":  "291",
+                    "Content-Type":  "application/json",
+                    "Date":  "Sat, 15 Aug 2026 17:35:16 GMT",
+                    "Via":  "1.1 Caddy"
+                },
+    "body":  "{\"options\":{\"challenge\":\"cU4AKoyhlaMDnaB4qsyK_es8wPXXdd237BdxAzWoh09PKxjN7z-F72hwZFU9hdHycgEsR7LHkExeboJaeobmIw\",\"timeout\":60000,\"rpId\":\"xn--114-2p7l635dz3bh5j.com\",\"allowCredentials\":[{\"id\":\"_TJmgEFKXBvucAzOD24p-EXQd4lCRl4NP_60E3bWeoM\",\"type\":\"public-key\"}],\"userVerification\":\"preferred\"}}",
+    "error":  null
+}

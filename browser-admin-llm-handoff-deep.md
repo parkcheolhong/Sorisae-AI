@@ -1,0 +1,128 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary "Admin Workspace 탐색" [ref=e5]:
+      - generic [ref=e6]: AD
+      - navigation [ref=e7]:
+        - link "관리" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e10]: 관리
+        - link "LLM" [ref=e11] [cursor=pointer]:
+          - /url: /admin/llm
+          - generic [ref=e13]: LLM
+        - link "실행" [ref=e14] [cursor=pointer]:
+          - /url: /admin/runs
+          - generic [ref=e16]: 실행
+        - link "승인" [ref=e17] [cursor=pointer]:
+          - /url: /admin/approvals
+          - generic [ref=e19]: 승인
+        - link "배포" [ref=e20] [cursor=pointer]:
+          - /url: /admin/publish
+          - generic [ref=e22]: 배포
+        - link "관측" [ref=e23] [cursor=pointer]:
+          - /url: /admin/observability
+          - generic [ref=e25]: 관측
+      - generic [ref=e26]: LIVE
+    - generic [ref=e27]:
+      - banner [ref=e28]:
+        - generic [ref=e29]:
+          - paragraph [ref=e30]: 관리자 오케스트레이터
+          - heading "Admin Workspace" [level=1] [ref=e31]
+          - paragraph [ref=e32]: 관리자에서 marketplace full-page orchestrator 와 AI sheet popup flow 를 실제로 열 수 있는 실행 페이지입니다.
+        - generic [ref=e33]:
+          - link "Marketplace" [ref=e34] [cursor=pointer]:
+            - /url: /marketplace
+          - link "관측 보드" [ref=e35] [cursor=pointer]:
+            - /url: /admin/observability
+          - link "관리 홈" [ref=e36] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 실행 페이지
+            - generic [ref=e41]: bridge ready
+          - paragraph [ref=e42]: admin llm orchestration
+          - heading "관리자 요청을 실제 오케스트레이터로 넘깁니다" [level=2] [ref=e43]
+          - paragraph [ref=e44]: 단순 라벨이 아니라, 관리자 입력을 marketplace full-page orchestrator 또는 AI sheet popup 흐름으로 실제 전달하도록 구성했습니다.
+          - generic [ref=e45]:
+            - link "Marketplace 열기" [ref=e46] [cursor=pointer]:
+              - /url: /marketplace
+            - link "관측 보드" [ref=e47] [cursor=pointer]:
+              - /url: /admin/observability
+        - generic "핵심 기능 바로가기" [ref=e48]:
+          - generic [ref=e49]: full-page handoff
+          - generic [ref=e50]: AI sheet popup handoff
+          - generic [ref=e51]: localStorage bridge payload
+          - generic [ref=e52]: admin to marketplace routing
+      - generic [ref=e53]:
+        - main [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - paragraph [ref=e57]: Admin Task
+              - heading "관리자 실행 입력" [level=2] [ref=e58]
+              - generic [ref=e59]:
+                - textbox "프로젝트명" [ref=e60]: 운영형 생성기 실행
+                - combobox "상품 선택" [ref=e61]:
+                  - option "코드 생성기 배포 키트" [selected]
+                  - option "자가 치유 운영 제품군"
+                  - option "보안 강화 패키지"
+                  - option "프로젝트 스캐너 스타터 팩"
+              - textbox "관리자 요청, 실패 원인, 원하는 결과, 검증 기준을 입력하세요." [ref=e62]: "[관리자 수동 오케스트레이터 실행] - 현재 문제/목표를 구체적으로 적고, 구현과 검증 순서를 포함해 실행해줘."
+              - generic [ref=e63]:
+                - button "Full Page 오케스트레이터 열기" [ref=e64] [cursor=pointer]
+                - button "AI 엑셀 시트 popup 열기" [ref=e65] [cursor=pointer]
+                - link "Marketplace 홈" [ref=e66] [cursor=pointer]:
+                  - /url: /marketplace
+            - generic [ref=e67]:
+              - generic [ref=e68]:
+                - generic [ref=e69]:
+                  - heading "AI Sheet Flow" [level=2] [ref=e70]
+                  - generic [ref=e71]: "관리 목적: 실행 검증"
+                  - generic [ref=e72]: 버튼형 창 열기
+                - paragraph [ref=e73]: 엑셀 시트 요청은 popup orchestrator로 넘겨 preview schema 와 workbook package 를 확인합니다.
+              - button "창 닫기" [ref=e75] [cursor=pointer]
+            - dialog "AI Sheet Flow" [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]:
+                  - paragraph [ref=e79]: WINDOW PANEL
+                  - heading "AI Sheet Flow" [level=2] [ref=e80]
+                  - paragraph [ref=e81]: 엑셀 시트 요청은 popup orchestrator로 넘겨 preview schema 와 workbook package 를 확인합니다.
+                - generic [ref=e82]:
+                  - generic [ref=e83]: 실행 검증
+                  - button "닫기" [ref=e84] [cursor=pointer]
+              - generic [ref=e86]:
+                - generic [ref=e87]:
+                  - paragraph [ref=e88]: Popup Bridge
+                  - heading "AI Sheet Popup" [level=3] [ref=e89]
+                  - paragraph [ref=e90]: "관리자 입력을 `ai-sheet` feature 로 전달해 popup에서 preview schema, final workbook, xlsx/csv 다운로드까지 이어집니다."
+                - generic [ref=e91]:
+                  - paragraph [ref=e92]: Full Page Bridge
+                  - heading "Generator Marketplace" [level=3] [ref=e93]
+                  - paragraph [ref=e94]: 상품 ID와 작업 본문을 full-page orchestrator로 넘겨 stage run, retry queue, 결과 요약까지 이어집니다.
+        - complementary [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - paragraph [ref=e98]: Bridge Targets
+              - heading "실행 경로" [level=3] [ref=e99]
+              - generic [ref=e100]:
+                - generic [ref=e101]:
+                  - strong [ref=e102]: Full Page
+                  - generic [ref=e103]: /marketplace/orchestrator
+                - generic [ref=e104]:
+                  - strong [ref=e105]: Popup
+                  - generic [ref=e106]: /marketplace
+                - generic [ref=e107]:
+                  - strong [ref=e108]: 현재 선택 상품
+                  - generic [ref=e109]: code-generator-deployment-kit
+            - generic [ref=e110]:
+              - paragraph [ref=e111]: Quick Links
+              - heading "관리 이동" [level=3] [ref=e112]
+              - generic [ref=e113]:
+                - link "관리자 홈 운영 보드와 관측 보드로 돌아갑니다." [ref=e114] [cursor=pointer]:
+                  - /url: /admin
+                  - paragraph [ref=e115]: 관리자 홈
+                  - paragraph [ref=e116]: 운영 보드와 관측 보드로 돌아갑니다.
+                - link "Marketplace Full Page 고객용 오케스트레이터 전체 화면으로 이동합니다." [ref=e117] [cursor=pointer]:
+                  - /url: /marketplace/orchestrator
+                  - paragraph [ref=e118]: Marketplace Full Page
+                  - paragraph [ref=e119]: 고객용 오케스트레이터 전체 화면으로 이동합니다.
+  - alert [ref=e120]

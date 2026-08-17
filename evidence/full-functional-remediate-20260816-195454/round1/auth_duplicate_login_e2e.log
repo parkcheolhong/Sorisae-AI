@@ -1,0 +1,24 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "email": "119cash@naver.com",
+  "precheck": {
+    "auto_clear_active_session": true,
+    "cleared_active_sessions": 1
+  },
+  "login_1": {
+    "status": 200,
+    "token_issued": true
+  },
+  "login_2_duplicate_blocked": {
+    "status": 409,
+    "detail": "이미 다른 기기 또는 세션에서 로그인 상태가 남아 있습니다. 현재 사용 중인 기기가 없다면 계정 복구(본인확인) 후 세션 해제 뒤 다시 시도해 주세요.",
+    "matches_mobile_ux": true
+  },
+  "logout": {
+    "status": 204
+  },
+  "login_3_after_logout": {
+    "status": 200,
+    "token_issued": true
+  }
+}

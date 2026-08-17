@@ -1,0 +1,204 @@
+{
+  "generated_at": "2025-12-05T10:04:34.614175",
+  "total_projects": 18,
+  "projects": {
+    "sorisae-core": {
+      "name_ko": "소리새 핵심",
+      "name_en": "Sorisae Core System",
+      "category": "Core Systems",
+      "description": "Two-Cycle Brain AI 핵심 시스템",
+      "port": 5050,
+      "file_count": 25,
+      "has_docs": true,
+      "has_data": true,
+      "path": "projects_separated/sorisae-core"
+    },
+    "interpreter": {
+      "name_ko": "나도 통역사",
+      "name_en": "Multi-Language Interpreter",
+      "category": "Language Processing",
+      "description": "실시간 13개 언어 통역 시스템",
+      "port": 5051,
+      "file_count": 6,
+      "has_docs": true,
+      "has_data": true,
+      "path": "projects_separated/interpreter"
+    },
+    "cyber-detective": {
+      "name_ko": "사이버 탐정",
+      "name_en": "Cyber Detective",
+      "category": "Security & Analysis",
+      "description": "AI 기반 사이버 수사 시스템",
+      "port": 5052,
+      "file_count": 12,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/cyber-detective"
+    },
+    "movie-studio": {
+      "name_ko": "4D 영화 제작",
+      "name_en": "4D Movie Studio",
+      "category": "Creative Tools",
+      "description": "음성 기반 4D 영화 제작 시스템",
+      "port": 5000,
+      "file_count": 4,
+      "has_docs": true,
+      "has_data": true,
+      "path": "projects_separated/movie-studio"
+    },
+    "iot-smarthome": {
+      "name_ko": "IoT 스마트홈",
+      "name_en": "IoT Smart Home",
+      "category": "IoT",
+      "description": "스마트홈 디바이스 제어 시스템",
+      "port": 5053,
+      "file_count": 6,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/iot-smarthome"
+    },
+    "investment-advisor": {
+      "name_ko": "투자 어드바이저",
+      "name_en": "Investment Advisor",
+      "category": "Finance",
+      "description": "듀얼브레인 AI 투자 조언 (200% 수익률)",
+      "port": 5058,
+      "file_count": 2,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/investment-advisor"
+    },
+    "music-composer": {
+      "name_ko": "작사/작곡",
+      "name_en": "Music Composer",
+      "category": "Creative Tools",
+      "description": "AI 기반 음악 작곡 및 작사 시스템",
+      "port": 5061,
+      "file_count": 4,
+      "has_docs": true,
+      "has_data": false,
+      "path": "projects_separated/music-composer"
+    },
+    "animation-studio": {
+      "name_ko": "애니메이션 스튜디오",
+      "name_en": "Animation Studio",
+      "category": "Creative Tools",
+      "description": "AI 기반 애니메이션 제작",
+      "port": 5062,
+      "file_count": 4,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/animation-studio"
+    },
+    "civil-bidding": {
+      "name_ko": "토목 입찰 시스템",
+      "name_en": "Civil Engineering Bidding",
+      "category": "Business",
+      "description": "AI 기반 건설 프로젝트 입찰 분석",
+      "port": 5055,
+      "file_count": 2,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/civil-bidding"
+    },
+    "game-economy": {
+      "name_ko": "게임 경제 시스템",
+      "name_en": "Game Economy System",
+      "category": "Gaming",
+      "description": "세계 최초 '게임으로 먹고살기' 플랫폼",
+      "port": 5056,
+      "file_count": 4,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/game-economy"
+    },
+    "shopping-mall": {
+      "name_ko": "쇼핑몰 시스템",
+      "name_en": "Shopping Mall System",
+      "category": "Business",
+      "description": "7개 AI 에이전트 자율 쇼핑몰 (소피움 에이아이)",
+      "port": 5057,
+      "file_count": 3,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/shopping-mall"
+    },
+    "gps-police": {
+      "name_ko": "GPS & 경찰 시스템",
+      "name_en": "GPS & Police System",
+      "category": "Security & Analysis",
+      "description": "윤리적 GPS 추적 및 경찰 시스템",
+      "port": 5063,
+      "file_count": 5,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/gps-police"
+    },
+    "security": {
+      "name_ko": "보안 시스템",
+      "name_en": "Security System",
+      "category": "Security & Analysis",
+      "description": "다층 보안 시스템",
+      "port": 5064,
+      "file_count": 5,
+      "has_docs": true,
+      "has_data": false,
+      "path": "projects_separated/security"
+    },
+    "satellite": {
+      "name_ko": "위성 시스템",
+      "name_en": "Satellite System",
+      "category": "Infrastructure",
+      "description": "차세대 인공위성 WiFi 시스템",
+      "port": 5059,
+      "file_count": 4,
+      "has_docs": false,
+      "has_data": true,
+      "path": "projects_separated/satellite"
+    },
+    "vr-games": {
+      "name_ko": "VR/게임",
+      "name_en": "VR & Games",
+      "category": "Gaming",
+      "description": "VR 및 게임 생성 시스템",
+      "port": 5065,
+      "file_count": 3,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/vr-games"
+    },
+    "dev-tools": {
+      "name_ko": "개발 도구",
+      "name_en": "Development Tools",
+      "category": "Development Support",
+      "description": "코드 분석 및 개선 도구",
+      "port": null,
+      "file_count": 18,
+      "has_docs": true,
+      "has_data": false,
+      "path": "projects_separated/dev-tools"
+    },
+    "testing": {
+      "name_ko": "테스트/검증",
+      "name_en": "Testing & Validation",
+      "category": "Development Support",
+      "description": "테스트 및 검증 도구",
+      "port": null,
+      "file_count": 16,
+      "has_docs": true,
+      "has_data": false,
+      "path": "projects_separated/testing"
+    },
+    "voice-processing": {
+      "name_ko": "음성 처리",
+      "name_en": "Voice Processing",
+      "category": "Core Systems",
+      "description": "음성 인식 및 처리 시스템",
+      "port": null,
+      "file_count": 7,
+      "has_docs": false,
+      "has_data": false,
+      "path": "projects_separated/voice-processing"
+    }
+  }
+}

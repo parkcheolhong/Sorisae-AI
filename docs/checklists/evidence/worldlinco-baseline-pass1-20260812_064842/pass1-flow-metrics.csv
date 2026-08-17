@@ -1,0 +1,7 @@
+"Pass","Flow","Start","End","ElapsedMs","Success","Error","Evidence"
+"1","Login","2026-08-12T06:48:42.8263397+09:00","2026-08-12T06:48:42.8592317+09:00","33","N","adb.exe: more than one device/emulator","docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064842/Login-output.txt"
+"1","FaceInterpretation","2026-08-12T06:48:42.8725161+09:00","2026-08-12T06:48:42.9042343+09:00","32","N","adb.exe: more than one device/emulator","docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064842/FaceInterpretation-output.txt"
+"1","VoIP","2026-08-12T06:48:42.9057632+09:00","2026-08-12T06:48:42.9334876+09:00","28","N","adb.exe: more than one device/emulator","docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064842/VoIP-output.txt"
+"1","Chat","2026-08-12T06:48:42.9348149+09:00","2026-08-12T06:48:42.9625873+09:00","28","N","adb.exe: more than one device/emulator","docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064842/Chat-output.txt"
+"1","TravelSearch","2026-08-12T06:48:42.9636974+09:00","2026-08-12T06:48:42.9915764+09:00","28","N","adb.exe: more than one device/emulator","docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064842/TravelSearch-output.txt"
+"1","Song","2026-08-12T06:48:42.9927506+09:00","2026-08-12T06:48:43.0231032+09:00","30","N","adb.exe: more than one device/emulator","docs/checklists/evidence/worldlinco-baseline-pass1-20260812_064842/Song-output.txt"

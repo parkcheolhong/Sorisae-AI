@@ -1,0 +1,9 @@
+[22:01:02] D-0 device smoke -> C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\device-d0-smoke-20260816-220102
+[22:01:02] Devices: primary=R83W70QY11H secondary=172.30.1.15:5555
+[22:01:02] adb devices:
+R83W70QY11H
+10.202.94.167:5555
+172.30.1.15:5555
+[22:01:03] R83W70QY11H package:     versionCode=331 minSdk=24 targetSdk=36
+[22:01:03] 172.30.1.15:5555 package:     versionCode=331 minSdk=24 targetSdk=36
+[22:01:03] Launch + auth wait on R83W70QY11H

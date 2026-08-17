@@ -1,0 +1,14 @@
+[19:47:44] D-0 device smoke -> C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\device-d0-smoke-20260815-194744
+[19:47:44] Devices: primary=172.30.1.15:5555 secondary=172.30.1.15:5555
+[19:47:44] adb devices:
+172.30.1.15:5555
+[19:47:44] 172.30.1.15:5555 package:     versionCode=331 minSdk=24 targetSdk=36
+[19:47:44] 172.30.1.15:5555 package:     versionCode=331 minSdk=24 targetSdk=36
+[19:47:45] Launch + auth wait on 172.30.1.15:5555
+[19:50:57] Primary auth ready: False
+[19:51:04] Primary auth state: ready=False blocker=react_log_silent restore_applied=False restore_invalid=False token_ready=False user_ready=False presence_connected=False session_present=False ui_probe_seen=False react_log_silent=True
+[19:51:04] Secondary auth state: ready=False blocker=login_api_error restore_applied=False restore_invalid=False token_ready=False user_ready=False presence_connected=False session_present=False ui_probe_seen=False react_log_silent=True
+[19:51:04] Open friend folder via validation deeplink (build 76 hub)
+[19:51:19] Friend hub visible in UI dump: False
+[19:51:19] Friend hub blocker: friend_folder_not_detected
+[19:51:19] Summary written: C:\Users\WORK\source\repos\parkcheolhong\codeAI\evidence\device-d0-smoke-20260815-194744\summary.json

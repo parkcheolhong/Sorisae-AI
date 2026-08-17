@@ -1,0 +1,19 @@
+{
+  "step": "step6_admin_subscription_deeplink_stabilization",
+  "status": "pass",
+  "pass": 2,
+  "validated_at": "2026-04-29T01:39:03+09:00",
+  "route": "http://127.0.0.1:3005/admin/subscription-monitor?period_days=90&status=all",
+  "checks": {
+    "standalone_page_loaded": true,
+    "period_filter_selected": "90",
+    "status_filter_selected": "all",
+    "summary_label_contains_recent_90_days": true
+  },
+  "evidence": {
+    "snapshot_source": "navigate_page/read_page pageId=28790761-bb61-42b6-b03a-8a5b73de85ac",
+    "observed_page_title": "💳 구독 결제 운영 모니터링",
+    "observed_period_option": "최근 90일",
+    "observed_summary_text": "최근 90일 실패 결제"
+  }
+}
