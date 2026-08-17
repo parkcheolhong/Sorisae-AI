@@ -1037,6 +1037,40 @@
 				"$ErrorActionPreference='Stop'; $src='C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI'; $snap='C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI-full-validation-temp\\repo-full-featured-20260818-051557'; $log='C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI-full-validation-temp\\source-vs-snapshot-dryrun.log'; robocopy $snap $src /MIR /L /R:1 /W:1 /XJ /MT:32 /LOG:$log | Out-Null; Write-Host \"ROBOCOPY_EXIT=$LASTEXITCODE\"; Get-Content $log -Tail 40"
 			],
 			"isBackground": false
+		},
+		{
+			"label": "git-clean-check-2",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--short"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "git-diff-tasks-json",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--",
+				".vscode/tasks.json"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "git-commit-final-sync",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"Set-Location 'C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI'; git add .vscode/tasks.json; git commit -m \"chore(vscode): sync tasks metadata\"; git push origin feat/worldlinco-build331-i18n"
+			],
+			"isBackground": false
 		}
 	]
 }
