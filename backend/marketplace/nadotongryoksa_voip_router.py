@@ -1923,6 +1923,39 @@ async def initiate_voip_call(
         ),
     )
 
+    # Store initial call log in database
+    try:
+        call_log = models.CallLog(
+            call_id=call_id,
+            session_id=request.session_id,
+            caller_user_id=int(current_user.id),
+            callee_user_id=int(app_callee.id) if app_callee is not None else None,
+            callee_phone=request.callee_phone,
+            status="initiated",
+            call_mode=resolved_mode,
+            call_route=(
+                "native_phone_dialer"
+                if phone_dialer_required
+                else "pstn_gateway"
+            ),
+            started_at=utcnow(),
+        )
+        db.add(call_log)
+        db.commit()
+        logger.info(
+            "[VoIP] Initial call log created | call_id=%s | caller=%s | callee=%s",
+            call_id,
+            current_user.id,
+            request.callee_phone,
+        )
+    except Exception as exc:
+        logger.error(
+            "[VoIP] Failed to create initial call log | call_id=%s | error=%s",
+            call_id,
+            exc,
+        )
+        db.rollback()
+
     return CallInitiateResponse(
         call_id=call_id,
         signaling_server=_with_signal_role(signaling_server, "caller"),
