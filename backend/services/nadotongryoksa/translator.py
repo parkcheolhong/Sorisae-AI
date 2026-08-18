@@ -240,7 +240,6 @@ _LLM_LANG_NAMES: Dict[str, str] = {
     "ja": "Japanese",
     "zh": "Chinese (Simplified)",
     "zh-tw": "Chinese (Traditional, Taiwan)",
-    "zh-hk": "Chinese (Cantonese, Hong Kong)",
     "es": "Spanish",
     "fr": "French",
     "de": "German",
