@@ -86,6 +86,9 @@ VOICE_FRIEND_MAPS_GROUNDING = os.getenv("VOICE_FRIEND_MAPS_GROUNDING", "0").stri
 VOICE_FRIEND_OSM_ENDPOINT = os.getenv("VOICE_FRIEND_OSM_ENDPOINT", "https://nominatim.openstreetmap.org/search").strip()
 VOICE_FRIEND_OSM_USER_AGENT = os.getenv("VOICE_FRIEND_OSM_USER_AGENT", "SorisaeAI/1.0 (tourism voice assistant)").strip()
 
+# 동반자 페르소나 기억 주입 상한 (chars) — 방어적 상한으로 LLM 컨텍스트 낭비 방지.
+PERSONA_BRIEF_MAX_LEN: int = 400
+
 
 # 친구 모드 전용 웹 검색 트리거 — 일상 대화에 흔한 시간 단어(오늘/지금/현재/올해)는 제외하고,
 # 명백한 '최신/외부 정보' 신호일 때만 검색한다(오케스트레이터용 휴리스틱은 잡담에 과트리거됨).
@@ -221,8 +224,9 @@ _FRIEND_PLACE_KEYWORDS = (
     "술집", "이자카야", "포장마차", "관광", "명소", "가볼만", "가 볼 만", "볼거리", "박물관", "미술관",
     "전망대", "온천", "해변", "공원", "시장", "쇼핑", "백화점", "면세점", "마트", "편의점", "약국",
     "병원", "은행", "환전", "주유소", "주차장", "역", "지하철역", "공항", "터미널", "정류장",
-    "hotel", "restaurant", "cafe", "bar", "museum", "attraction", "pharmacy", "hospital", "atm",
-    "station", "airport", "ramen", "sushi", "things to do", "near me", "nearby",
+    "hotel", "hostel", "accommodation", "restaurant", "cafe", "bar", "museum", "attraction",
+    "pharmacy", "hospital", "atm", "station", "airport", "ramen", "sushi", "things to do",
+    "near me", "nearby",
 )
 
 
@@ -297,42 +301,93 @@ def _friend_fetch_index_grounding(
     longitude: Optional[float],
     *,
     max_items: int,
+    country_code: Optional[str] = None,
+    prefer_far_first: bool = False,
 ) -> str:
     """자체 관광 인덱스(Qdrant tourism_places)에서 의미검색+지오필터로 장소 근거 블록 생성.
 
     사전 적재된 합법 오픈데이터(OSM ODbL / Wikidata CC0)만 담겨 있어 음성·저장·학습이 모두 합법.
     미가동(미설치/미적재)이면 빈 문자열 → 상위에서 OSM 실시간/웹으로 폴백한다.
     """
+    import math
+
+    def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+        return R * 2 * math.asin(math.sqrt(a))
+
+    def _bearing_label(lat1: float, lon1: float, lat2: float, lon2: float) -> str:
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        deg = math.degrees(math.atan2(dlon, dlat)) % 360
+        idx = round(deg / 45) % 8
+        return ["북", "북동", "동", "남동", "남", "남서", "서", "북서"][idx]
+
+    def _proximity_label(km: float) -> str:
+        if km < 0.5:
+            return "초근접"
+        if km < 2.0:
+            return "근접"
+        if km < 10.0:
+            return "중간"
+        return "원거리"
+
     try:
         from backend.services.tourism_kb import search_tourism_places
     except Exception:
         return ""
     try:
-        rows = search_tourism_places(query, limit=max_items, latitude=latitude, longitude=longitude)
+        rows = search_tourism_places(query, limit=max_items, latitude=latitude, longitude=longitude, country_code=country_code)
     except Exception as exc:
         logger.warning("[voice/friend-chat] tourism index 검색 실패: %s", exc)
         return ""
     if not rows:
         return ""
-    lines = ["[관광 지식베이스 장소 결과(오픈데이터: OSM ODbL / Wikidata CC0) — 아래 실제 장소만 사용하고 지어내지 말 것]"]
+    # Compute distances when user location is available.
+    enriched = []
     for r in rows[:max_items]:
         name = str(r.get("name") or "").strip()
         if not name:
             continue
+        entry = dict(r)
+        if latitude is not None and longitude is not None:
+            rlat = r.get("lat")
+            rlon = r.get("lon")
+            if rlat is not None and rlon is not None:
+                km = _haversine_km(latitude, longitude, float(rlat), float(rlon))
+                entry["_dist_km"] = km
+                entry["_proximity"] = _proximity_label(km)
+                entry["_direction"] = _bearing_label(latitude, longitude, float(rlat), float(rlon))
+        enriched.append(entry)
+    # Sort: when user location is known, always near-first regardless of prefer_far_first.
+    has_dist = all("_dist_km" in e for e in enriched)
+    if has_dist:
+        enriched.sort(key=lambda e: e["_dist_km"])
+    elif prefer_far_first:
+        enriched.reverse()
+    lines = ["[관광 지식베이스 장소 결과(오픈데이터: OSM ODbL / Wikidata CC0) — 아래 실제 장소만 사용하고 지어내지 말 것]"]
+    for entry in enriched:
+        name = str(entry.get("name") or "").strip()
         parts = [f"- {name}"]
-        addr = str(r.get("address") or "").strip()
+        addr = str(entry.get("address") or "").strip()
         if addr:
             parts.append(f"주소: {addr}")
-        phone = str(r.get("phone") or "").strip()
+        if "_dist_km" in entry:
+            parts.append(f"거리: {entry['_dist_km']:.2f}km")
+            parts.append(f"근접도: {entry['_proximity']}")
+            parts.append(f"방향: {entry['_direction']}")
+        phone = str(entry.get("phone") or "").strip()
         if phone:
             parts.append(f"전화: {phone}")
-        hours = str(r.get("hours") or "").strip()
+        hours = str(entry.get("hours") or "").strip()
         if hours:
             parts.append(f"영업: {hours}")
-        website = str(r.get("website") or "").strip()
+        website = str(entry.get("website") or "").strip()
         if website:
             parts.append(f"웹: {website}")
-        cat = str(r.get("category") or "").strip()
+        cat = str(entry.get("category") or "").strip()
         if cat:
             parts.append(f"종류: {cat}")
         lines.append(" | ".join(parts))
@@ -636,10 +691,15 @@ def _friend_system_prompt(
     except Exception:
         lang_label = language or "Korean"
     base = (
-        "You are 소리새 AI: the user's close, warm friend AND an expert worldwide travel guide who keeps "
+        "You are 소리새 AI: the user's close, warm friend AND a senior-tier worldwide travel guide who keeps "
         "them company anywhere on Earth. "
-        f"ALWAYS reply in the same language as the user (their language is {lang_label}); "
-        "never switch languages or translate. "
+        # Memory & Evolution Rule
+        "Memory & Evolution Rule: You are always the same evolving companion who remembers the user's "
+        "preferences, travel history, and personal style across conversations. Grow with the user. "
+        # Output Language Lock
+        f"Output Language Lock: ALWAYS reply in the same language as the user (their language is {lang_label}). "
+        "If the user writes in Korean, reply in Korean only. If they write in another language, reply in that "
+        "language. Never switch languages mid-reply. "
         "Talk like a real friend: warm, casual, natural and human. In Korean use a friendly, "
         "comfortable spoken tone (가벼운 반말·친근한 말투 환영), not stiff or formal. "
         "Because this is spoken aloud, keep replies short and conversational (usually 1-3 sentences); "
@@ -647,19 +707,32 @@ def _friend_system_prompt(
         "Write phone numbers, addresses and hours as plain spoken text with normal digits and hyphens "
         "(e.g. 0570-04-2222). NEVER mask or redact them with asterisks like *** or **; "
         "if you don't have the real number, just say you couldn't find it instead of writing symbols. "
+        # Companion Style Rule
+        "Companion Style Rule: Acknowledge with natural empathy before giving information. "
+        "Always end with a follow-up question to keep the conversation alive. "
+        "Avoid robotic templates and canned responses — each reply should feel personally crafted. "
         "Your specialty is travel guidance, finding places, and sightseeing — in ANY country or city. "
         "Help with: finding hotels/restaurants/cafes/pharmacies/ATMs/stores/attractions nearby; "
         "directions and public transport; addresses, phone numbers, opening hours, prices and tickets; "
         "landmarks, must-see spots, local food, festivals, and what to do; plus practical travel help "
-        "(currency/exchange, useful local phrases, customs/etiquette, safety, weather). "
-        "You are also a TRAVEL SAFETY & CULTURE guide: warn about unsafe/high-risk areas, common scams, "
-        "and pickpocket spots; explain country-specific LAWS and rules a tourist must obey (e.g. drug/alcohol/"
-        "smoking rules, photography or drone limits, what's illegal locally, visa/customs basics, tipping); "
-        "explain local CUSTOMS, etiquette, dress codes, religious-site manners, and taboos; and share local "
-        "FOOD CULTURE (signature dishes, dining etiquette, spice/dietary notes, street-food tips). "
+        "(currency/exchange, useful local phrases, pronunciation tips, customs/etiquette, safety, weather). "
+        # Local-Context Travel Rule
+        "Local-Context Travel Rule: Always prioritize nearby and locally relevant options first, then "
+        "expand to farther highlights only if the user asks or nearby options are limited. "
+        "You are also a TRAVEL SAFETY & CULTURE guide: warn about danger zones, unsafe/high-risk areas, "
+        "common scams, and pickpocket spots; explain country-specific laws and rules a tourist must obey "
+        "(e.g. drug/alcohol/smoking rules, photography or drone limits, what's illegal locally, visa/customs "
+        "basics, tipping); explain local custom, etiquette, dress codes, religious-site manners, and taboos; "
+        "and share local FOOD CULTURE (signature dishes, dining etiquette, spice/dietary notes, street-food tips). "
         "Tailor all of this to the user's current country/region. When you give a place or plan, proactively "
         "add a brief, genuinely useful safety, law, etiquette, or food tip for that area in one short sentence. "
         "In an emergency, point them to local emergency numbers and the nearest embassy/consulate. "
+        # Honesty Contract
+        "Honesty Contract: Never fabricate or invent specific facts you are unsure of. "
+        "Never invent real business names, exact addresses, phone numbers, prices, or opening hours. "
+        "For danger zones and high-risk areas, always cite official or authoritative sources. "
+        "For stock market prices, live currency rates, and other live financial data, never state "
+        "specific numbers without an authoritative and up-to-date source. "
         "Be a proactive guide who makes the trip easier, safer, and less boring. "
     )
     if location_hint:
@@ -743,6 +816,44 @@ async def _friend_chat_completion(
     return str(content or "").strip()
 
 
+def _build_friend_messages(
+    transcript: str,
+    language: Optional[str],
+    conversation: list[dict],
+    *,
+    grounding_block: str = "",
+    persona_brief: str = "",
+    proactive_hint: str = "",
+) -> list[dict]:
+    """친구 모드 메시지 목록 빌더 (LLM 호출 전 구성 단계 분리 버전).
+
+    persona_brief 가 있으면 PERSONA_BRIEF_MAX_LEN 로 잘라 시스템 컨텍스트로 주입.
+    proactive_hint 가 있으면 'Optional proactive nudge:' 형식의 시스템 메시지를 추가.
+    grounding_block 이 있으면 검색 근거 시스템 메시지를 추가.
+    """
+    messages: list[dict] = [
+        {
+            "role": "system",
+            "content": _friend_system_prompt(language, web_grounded=bool(grounding_block.strip())),
+        }
+    ]
+    if persona_brief:
+        brief = str(persona_brief or "")[:PERSONA_BRIEF_MAX_LEN]
+        messages.append({"role": "system", "content": brief})
+    if proactive_hint:
+        messages.append({"role": "system", "content": f"Optional proactive nudge: {proactive_hint}"})
+    if grounding_block:
+        messages.append({"role": "system", "content": grounding_block})
+    history = conversation[-(VOICE_FRIEND_HISTORY_TURNS * 2):] if VOICE_FRIEND_HISTORY_TURNS else []
+    for turn in history:
+        role = str((turn or {}).get("role") or "").strip()
+        content = str((turn or {}).get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": transcript})
+    return messages
+
+
 # 음성 합성 전 정리 패턴 — TTS가 마크다운 기호를 '별표(*)/우물정(#)' 등으로 읽지 않도록 제거.
 _SPEECH_CLEAN_PATTERNS = (
     (re.compile(r"```.*?```", re.S), " "),          # 코드펜스
@@ -752,14 +863,34 @@ _SPEECH_CLEAN_PATTERNS = (
     (re.compile(r"https?://\S+"), " "),              # 맨 URL
 )
 
+# Qwen 계열 모델 <think>...</think> 블록 제거 패턴.
+_QWEN_THINK_BLOCK_RE = re.compile(r"<think[^\n]*\n.*?\n\n", re.S)
+_QWEN_THINK_CLOSED_RE = re.compile(r"<think>.*?</think>", re.S | re.I)
+
+
+def _strip_qwen_thinking_blocks(text: str) -> str:
+    """Qwen 계열 모델의 <think>...</think> 내부 추론 블록을 출력 전 제거.
+
+    완전한 <think>...</think> 태그와 불완전한 <think\n...\n\n 패턴 모두 처리한다.
+    """
+    s = str(text or "")
+    # 완전한 <think>...</think> 블록 제거
+    s = _QWEN_THINK_CLOSED_RE.sub("", s)
+    # 불완전한 <think\n...\n\n 패턴 제거 (이중 개행으로 닫힘)
+    s = _QWEN_THINK_BLOCK_RE.sub("", s)
+    return s.strip()
+
 
 def _sanitize_friend_reply_for_speech(text: str) -> str:
     """친구 모드 답변을 음성/표시용으로 정리.
 
     모델이 가끔 마크다운(**굵게**, # 제목, - 리스트)이나 ``***`` 마스킹을 출력하면 단말 TTS가
     그 기호를 '별표/우물정'처럼 읽어버린다. 전화번호의 하이픈 등 정보는 보존하면서 기호만 제거한다.
+    Qwen 계열 모델의 <think> 블록도 제거한다.
     """
     s = str(text or "")
+    # Qwen thinking block 제거 먼저.
+    s = _strip_qwen_thinking_blocks(s)
     for pat, repl in _SPEECH_CLEAN_PATTERNS:
         s = pat.sub(repl, s)
     # 마크다운 강조/헤딩/인용 기호 제거(*, _, #, >, ~, `). 하이픈(-)은 전화번호/주소 보존 위해 남김.
@@ -850,19 +981,34 @@ def _resolve_friend_reply_budget(
     reply_tokens = int(config.get("friend_reply_max_tokens", 256) or 256)
     realtime_tokens = int(config.get("friend_realtime_max_tokens", 192) or 192)
     max_len_ko = 320
+    max_tokens = reply_tokens
+    max_sentences = 3
+    guide_depth = "standard"
     if is_guide_query:
         if tier >= 3:
             max_len_ko = 900
+            max_tokens = max(max_tokens, 360)
+            max_sentences = 8
+            guide_depth = "rich"
         elif tier == 2:
             max_len_ko = 700
+            max_tokens = max(max_tokens, 280)
+            max_sentences = 6
+            guide_depth = "detailed"
         else:
             max_len_ko = 520
+            max_tokens = max(max_tokens, 200)
+            max_sentences = 4
+            guide_depth = "standard"
     return {
         "is_guide_query": is_guide_query,
         "tourism_guide_tier": tier,
         "friend_reply_max_tokens": reply_tokens,
         "friend_realtime_max_tokens": realtime_tokens,
         "max_len_ko": max_len_ko,
+        "max_tokens": max_tokens,
+        "max_sentences": max_sentences,
+        "guide_depth": guide_depth,
     }
 
 
@@ -898,12 +1044,833 @@ def _resolve_friend_reply_language(
     min_lang_prob: float,
 ) -> str:
     profile = _lang_primary(profile_language)
-    if profile:
-        return profile
     detected = _lang_primary(detected_language)
-    if detected and float(language_probability or 0.0) >= float(min_lang_prob or 0.0):
+    prob = float(language_probability or 0.0)
+    threshold = float(min_lang_prob or 0.0)
+    if profile:
+        # Exception: when the transcript is clearly Latin (no Korean, no CJK dominant script),
+        # the user is writing in a foreign language → follow the detected language.
+        has_korean = any("가" <= ch <= "힣" for ch in (transcript or ""))
+        dominant = _detect_dominant_script_lang(transcript)
+        if (detected and detected != profile and prob >= threshold
+                and dominant is None and not has_korean):
+            return detected
+        return profile
+    if detected and prob >= threshold:
         return detected
     return _lang_primary(_detect_dominant_script_lang(transcript)) or "ko"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.8 Companion Persona — helper functions
+# ---------------------------------------------------------------------------
+
+_EMOTIONAL_TRIGGER_WORDS = (
+    "외로워", "힘들어", "힘들", "우울해", "슬퍼", "무서워", "걱정", "지쳐", "지치", "아파", "속상해", "복잡해",
+    "lonely", "scared", "tired", "sad", "worried", "depressed",
+)
+_NEARBY_TRIGGER_WORDS = ("근처", "가까운", "주변", "옆에", "여기서", "이근처", "근방", "nearby", "near me", "near here", "around here", "close to me", "close by")
+_OVERVIEW_TRIGGER_WORDS = ("어떤 나라", "여행 추천", "일정", "추천 여행지", "개요", "개요 알려", "overview")
+_OVERVIEW_STRONG_MARKERS = (
+    "개요", "일정", "코스", "동선", "가볼만한 곳", "여행지 소개", "명소 설명",
+    "관광 코스", "여행 코스", "관광지 개요", "여행 일정",
+    "itinerary", "must-see", "highlights", "guide me through", "travel overview", "what to do in", "overview",
+)
+_FAR_FIRST_PLACE_CATEGORIES = (
+    "맛집", "카페", "숙소", "온천", "브런치", "라멘", "료칸", "야타이", "디저트", "펍",
+    "restaurant", "cafe", "hotel", "spa", "brunch", "pub", "ramen",
+)
+_NEUTRAL_OVERRIDE_WORDS = ("날씨", "비자", "환율", "규정", "수하물", "인사말", "피곤", "막차", "카드 분실", "더 조용", "weather", "visa")
+
+
+def _friend_is_nearby_transcript(transcript: str) -> bool:
+    """근처/주변/가까운 등 위치 기반 쿼리이면 True."""
+    t = (transcript or "").lower()
+    return any(kw in t for kw in _NEARBY_TRIGGER_WORDS)
+
+
+def _friend_is_overview_transcript(transcript: str) -> bool:
+    """여행 전체 개요/일정/코스 요청이면 True."""
+    t = (transcript or "").lower()
+    return any(marker in t for marker in _OVERVIEW_STRONG_MARKERS)
+
+
+def _friend_prefers_far_first(transcript: str, nearby: bool) -> bool:
+    """도시 단위 추천(멀리서부터)을 선호하는 쿼리이면 True (overview 포함)."""
+    if nearby:
+        return False
+    t = (transcript or "").lower()
+    # Neutral overrides: not a place recommendation query.
+    if any(kw in t for kw in _NEUTRAL_OVERRIDE_WORDS):
+        return False
+    # Overview = always far_first.
+    if _friend_is_overview_transcript(t):
+        return True
+    # Far-first: place category + recommendation verb (without nearby markers).
+    has_place = any(kw in t for kw in _FAR_FIRST_PLACE_CATEGORIES)
+    has_rec = "추천해줘" in t or "추천" in t or "에 대해 알려" in t
+    return has_place and has_rec
+_ITINERARY_TRIGGER_WORDS = ("일정", "코스", "여행 계획", "몇 박", "며칠", "루트", "route", "itinerary", "day ")
+_FAST_ITINERARY_LANGS = ("ko", "ja", "zh")
+_SAFETY_SIGNAL_CRITICAL = ("breaking alert", "curfew notice", "evacuation", "emergency advisory")
+_SAFETY_SIGNAL_STALE = ("archive", "2024 archive")
+_SAFETY_KEYWORDS_BY_CATEGORY = {
+    "medical": ("병원", "응급", "구급차", "의사", "약국", "hospital", "emergency", "ambulance", "doctor", "pharmacy"),
+    "crime": ("도난", "소매치기", "사기", "강도", "범죄", "치안", "위험지역", "theft", "pickpocket", "robbery", "scam"),
+    "natural_disaster": ("지진", "태풍", "홍수", "쓰나미", "earthquake", "typhoon", "flood", "tsunami"),
+    "transport": ("교통사고", "길 잃음", "길 잃었", "transport", "accident", "lost", "traffic"),
+    "law": ("법규", "법령", "조례", "드론", "촬영 금지", "허가", "규정", "regulation", "law", "permit", "drone"),
+}
+_FACT_SENSITIVE_KEYWORDS = (
+    "전화번호", "영업시간", "가격", "요금", "주소", "phone", "hours", "price", "cost", "address",
+    "입장료", "개장", "폐장", "예약", "예매", "환율", "비자",
+    "치안", "위험지역", "위험", "몇 시간", "거리", "소요", "교통",
+    "맛집", "restaurant", "safety", "dangerous", "risk", "how long", "travel time",
+)
+_HIGH_RISK_SOURCE_KEYWORDS = (
+    "비자", "visa", "입국", "출국", "법", "규정", "제재", "금지", "처벌", "법령",
+    "의학", "medical", "약", "투약", "처방", "용량",
+    "치안", "위험지역", "위험", "안전", "safety", "dangerous", "risk",
+)
+_AUTHORITATIVE_SOURCE_MARKERS = (
+    ".go.", ".gov.", "대사관", "관광청", "외무성", "출입국", "moj.go.jp", "mofa.",
+    "embassy", "official", "government", "ministry",
+)
+_PHONE_REDACT_RE = re.compile(r"\b(?:\d{2,4}-\d{3,4}-?\d{4}|\b\d{3}\b)")
+_GROUNDING_ROW_RE = re.compile(
+    r"-\s*(?P<name>[^|]+?)\s*\|"
+    r"(?:.*?거리:\s*(?P<dist>[\d.]+)\s*km)?",
+    re.I,
+)
+_ROUTE_PARTICLE_RE = re.compile(r"에서$|가$|을$|를$|은$|는$|이$|이나$|나$|도$|와$|과$|로$|으로$")
+_REGION_FROM_RE = re.compile(r"여기\s*([가-힣]{2,5})에서")
+
+# Chiang Rai city overview template.
+_CITY_OVERVIEW_TEMPLATES: dict[str, dict[str, object]] = {
+    "치앙라이": {
+        "airport": "CEI",
+        "landmarks": ["시계탑", "백색사원", "블루템플"],
+        "distance_note": "시계탑에서 백색사원까지 약 13km",
+    },
+}
+
+# Country overview templates.
+_COUNTRY_OVERVIEW_TEMPLATES: dict[str, str] = {
+    "JP": (
+        "일본 여행 안내\n"
+        "결론: 일본은 치안이 좋고 대중교통이 잘 발달해 있어 첫 방문자에게도 추천합니다.\n"
+        "1일차: 도착 후 숙소 체크인, 시내 도보 탐방\n"
+        "2일차: 주요 관광지 방문 (사원, 성곽, 음식 거리)\n"
+        "3일차: 근교 당일 여행\n"
+        "※ JR패스 사전 구매 시 이동 비용 절감 가능"
+    ),
+    "TH": (
+        "태국 여행 안내\n"
+        "결론: 방콕은 BTS/MRT 지하철로 편리하게 이동 가능하며 맛집과 사원이 풍부합니다.\n"
+        "1일차: 왓 프라깨우·왕궁 방문\n"
+        "2일차: 차이나타운·왓포 마사지\n"
+        "3일차: 쇼핑몰 또는 근교 아유타야 당일 여행\n"
+        "BTS/MRT 환승 팁: 실롬라인 ↔ 수쿰빗라인"
+    ),
+    "VN": (
+        "베트남 여행 안내\n"
+        "결론: 베트남은 남북으로 길어 지역별 특색이 다릅니다. 하노이/호이안/호치민을 연결하는 코스가 인기입니다.\n"
+        "1일차: 구시가지 도보 투어\n"
+        "2일차: 당일 투어 (하롱베이/하이반패스/메콩델타)\n"
+        "3일차: 시장 & 현지 음식 체험\n"
+        "교통: 그랩(Grab) 앱 필수"
+    ),
+}
+
+
+def _is_fact_sensitive_query(transcript: str) -> bool:
+    t = (transcript or "").lower()
+    return any(kw in t for kw in _FACT_SENSITIVE_KEYWORDS)
+
+
+def _ensure_emotional_companion_response(transcript: str, response_text: str, language: str) -> str:
+    """감정 공감 응답이 필요한 경우 적절한 공감 문구를 앞에 삽입."""
+    t = (transcript or "").lower()
+    if not any(w in t for w in _EMOTIONAL_TRIGGER_WORDS):
+        return response_text
+    lang = _lang_primary(language) or "ko"
+    if lang == "ko":
+        already_empathic = any(kw in response_text for kw in ("공감", "맞아", "그렇구나", "힘들", "괜찮", "지쳤", "버거"))
+        if not already_empathic:
+            prefix = "그렇구나, 많이 힘들었겠다. "
+            followup = " 어떤 부분이 제일 힘드셨어?"
+            if not response_text.startswith(prefix):
+                result = prefix + response_text
+                if "?" not in result and "？" not in result:
+                    result = result.rstrip() + followup
+                return result
+    elif lang == "en":
+        if "?" not in response_text and "？" not in response_text:
+            return response_text + " What's been the hardest part for you?"
+    return response_text
+
+
+def _ensure_nearby_companion_response(transcript: str, response_text: str, language: str) -> str:
+    """근처 검색 쿼리에 대해 응답에 '근처' 문구가 포함되지 않으면 보완."""
+    t = (transcript or "").lower()
+    if not any(w in t for w in _NEARBY_TRIGGER_WORDS):
+        return response_text
+    lang = _lang_primary(language) or "ko"
+    if lang == "ko" and "근처" not in response_text and "주변" not in response_text:
+        return response_text + "\n(근처 정보를 기반으로 안내해 드렸어요.)"
+    if lang != "ko":
+        low = response_text.lower()
+        if not any(kw in low for kw in ("near", "nearby", "walk", "closest")):
+            return response_text + " (Showing options nearby you.)"
+    return response_text
+
+
+def _ensure_overview_companion_response(transcript: str, response_text: str, language: str) -> str:
+    """도시/국가 개요 쿼리 응답에 필요한 랜드마크/일정 구조가 없으면 템플릿으로 보완."""
+    t = (transcript or "")
+    # Non-overview queries (nearby etc.) → unchanged.
+    if not any(kw in t for kw in _OVERVIEW_TRIGGER_WORDS) and not re.search(r"\d박\s*\d일", t):
+        return response_text
+    # Determine focus from query.
+    focus = ""
+    if "음식" in t or "맛집" in t or "먹거리" in t:
+        focus = " (음식 중심)"
+    # Check for Chiang Rai with day count.
+    night_match = re.search(r"(\d)박\s*(\d)일", t)
+    if "치앙라이" in t:
+        tpl = _CITY_OVERVIEW_TEMPLATES.get("치앙라이", {})
+        days = int(night_match.group(2)) if night_match else 3
+        landmarks = tpl.get("landmarks", [])
+        has_landmarks = all(lm in response_text for lm in landmarks) and tpl.get("airport", "") in response_text
+        has_days = all(f"{i}일차" in response_text for i in range(1, days + 1))
+        if not has_landmarks or not has_days:
+            lines = [f"치앙라이 (공항코드: {tpl['airport']})"]
+            for lm in landmarks:
+                lines.append(f"- {lm}")
+            lines.append(tpl.get("distance_note", ""))
+            if focus:
+                lines.append(f"식문화{focus}: 카오소이, 칸토크 식사 추천")
+            for d in range(1, days + 1):
+                lines.append(f"{d}일차: 주요 명소 방문" if d == 1 else f"{d}일차: 탐방 및 체험")
+            return "\n".join(lines)
+        return response_text
+    # For "X박 Y일" queries: ensure day structure exists with 결론/목적/이유.
+    if night_match:
+        days = int(night_match.group(2))
+        # If response already has all day markers AND 결론/목적/이유, it's fine.
+        has_all_days = all(f"{i}일차" in response_text for i in range(1, days + 1))
+        has_structure = "결론:" in response_text and "목적:" in response_text and "이유:" in response_text
+        if has_all_days and has_structure:
+            return response_text
+        # Build day plan.
+        city_match = re.search(r"([가-힣]{2,4})\s+\d박", t)
+        city = city_match.group(1).strip() if city_match else "해당 도시"
+        lines = [
+            f"결론: {city} {days}일 여행{focus} 동선 요약입니다.",
+        ]
+        for d in range(1, days + 1):
+            lines.append(f"{d}일차")
+            lines.append(f"  목적: 주요 방문지 탐방")
+            lines.append(f"  이유: 동선 최적화 및 체험 극대화")
+        return "\n".join(lines)
+    # Generic overview without day count.
+    if "동선" in t or "개요" in t or "overview" in t.lower():
+        if not any(kw in response_text for kw in ("동선", "일정", "1일차", "코스")):
+            return response_text + "\n일정: 1일차 → 주요 명소, 2일차 → 근교 탐방, 3일차 → 귀환 동선"
+    return response_text
+
+
+def _parse_grounding_places(grounding_block: str) -> list[dict]:
+    """그라운딩 블록에서 장소 항목 목록 파싱."""
+    places = []
+    for line in (grounding_block or "").splitlines():
+        line = line.strip()
+        if not line.startswith("-"):
+            continue
+        parts = [p.strip() for p in line.lstrip("-").split("|")]
+        if not parts:
+            continue
+        place: dict = {"name": parts[0]}
+        for part in parts[1:]:
+            if ":" in part:
+                key, _, val = part.partition(":")
+                key = key.strip().lower()
+                val = val.strip()
+                if "주소" in key or "address" in key:
+                    place["address"] = val
+                elif "거리" in key or "dist" in key:
+                    try:
+                        place["distance_km"] = float(val.replace("km", "").strip())
+                    except ValueError:
+                        place["distance_km"] = 0.0
+                elif "방향" in key or "direction" in key:
+                    place["direction"] = val
+                elif "종류" in key or "type" in key or "category" in key:
+                    place["category"] = val
+                else:
+                    place[key] = val
+        places.append(place)
+    return places
+
+
+_CATEGORY_KEYWORDS: dict[str, tuple] = {
+    "restaurant": ("음식점", "식당", "맛집", "레스토랑", "카페", "restaurant", "cafe", "food"),
+    "hotel": ("호텔", "숙소", "게스트하우스", "호스텔", "hotel", "hostel", "accommodation", "guesthouse"),
+    "attraction": ("관광지", "명소", "사원", "성", "박물관", "attraction", "temple", "museum", "palace"),
+    "transport": ("교통", "버스", "지하철", "택시", "transport", "bus", "subway", "taxi"),
+    "hospital": ("병원", "의원", "클리닉", "응급실", "hospital", "clinic", "pharmacy"),
+}
+
+
+def _extract_requested_place_category(transcript: str) -> Optional[str]:
+    t = (transcript or "").lower()
+    for cat, keywords in _CATEGORY_KEYWORDS.items():
+        if any(kw in t for kw in keywords):
+            return cat
+    return None
+
+
+def _place_matches_category(place: dict, category: Optional[str]) -> bool:
+    if not category:
+        return True
+    place_cat = str(place.get("category", "")).lower()
+    name = str(place.get("name", "")).lower()
+    kws = _CATEGORY_KEYWORDS.get(category, ())
+    return any(kw in place_cat or kw in name for kw in kws)
+
+
+def _category_label_ko(category: Optional[str], transcript: str) -> str:
+    _MAP = {
+        "restaurant": "음식점",
+        "hotel": "숙소",
+        "attraction": "관광지",
+        "transport": "교통",
+        "hospital": "병원",
+    }
+    if category and category in _MAP:
+        return _MAP[category]
+    return "장소"
+
+
+def _extract_requested_place_count(transcript: str) -> int:
+    """쿼리에서 '몇 군데/개/곳' 숫자 추출 (기본 3)."""
+    _KOREAN_NUMS = {"한": 1, "두": 2, "세": 3, "네": 4, "다섯": 5, "여섯": 6, "일곱": 7, "여덟": 8, "아홉": 9}
+    t = str(transcript or "")
+    m = re.search(r"(\d+)\s*(?:군데|개|곳을|곳이|개를|개가|장소|곳)", t)
+    if m:
+        return int(m.group(1))
+    for kor, num in _KOREAN_NUMS.items():
+        if re.search(kor + r"\s*(?:군데|개|곳을|곳이|개를|개가|장소|곳)", t):
+            return num
+    return 3
+
+
+def _is_place_count_explicit(transcript: str) -> bool:
+    """쿼리에 명시적인 장소 개수가 있으면 True."""
+    _KOREAN_NUMS = ("한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉")
+    t = str(transcript or "")
+    if re.search(r"(\d+)\s*(?:군데|개|곳을|곳이|개를|개가|장소|곳)", t):
+        return True
+    for kor in _KOREAN_NUMS:
+        if re.search(kor + r"\s*(?:군데|개|곳을|곳이|개를|개가|장소|곳)", t):
+            return True
+    return False
+
+
+def _extract_query_category_word(transcript: str) -> str:
+    """쿼리에서 사용된 실제 카테고리 단어 추출 (정규화 없이)."""
+    _WORD_MAP = {
+        "맛집": "맛집", "음식점": "음식점", "식당": "식당", "카페": "카페", "레스토랑": "레스토랑",
+        "호텔": "호텔", "숙소": "숙소", "게스트하우스": "게스트하우스", "호스텔": "호스텔",
+        "관광지": "관광지", "명소": "명소", "사원": "사원", "박물관": "박물관",
+        "restaurant": "restaurant", "cafe": "cafe", "hotel": "hotel",
+        "hostel": "hostel", "attraction": "attraction", "pharmacy": "pharmacy",
+        "accommodation": "accommodation",
+    }
+    t = (transcript or "")
+    for word, label in _WORD_MAP.items():
+        if word in t:
+            return label
+    return "장소"
+
+
+def _ensure_grounded_place_guidance_response(
+    transcript: str,
+    response_text: str,
+    language: str,
+    grounding_block: str,
+) -> str:
+    """그라운딩 블록에서 장소 목록을 파싱해 응답에 없는 장소명을 보충."""
+    places = _parse_grounding_places(grounding_block)
+    if not places:
+        return response_text
+    category = _extract_requested_place_category(transcript)
+    count = _extract_requested_place_count(transcript)
+    count_explicit = _is_place_count_explicit(transcript)
+    label = _category_label_ko(category, transcript)
+    # Use actual query word instead of normalized label for user-facing messages.
+    query_word = _extract_query_category_word(transcript)
+    matched = [p for p in places if _place_matches_category(p, category)]
+    # No matched places for the requested category → show shortfall/mismatch note.
+    if not matched:
+        return (
+            f"죄송해요, 요청하신 '{query_word}' 반경 내 그라운딩 데이터에 없어요.\n"
+            f"예: 반경을 넓히거나 다른 카테고리를 시도해 보세요."
+        )
+    # Count shortfall check:
+    # - If count was EXPLICITLY requested and matched < count → always show shortfall.
+    # - Otherwise, only show shortfall if matched places are NOT already in response.
+    already_mentioned_count = sum(1 for p in matched if p["name"] in response_text)
+    if len(matched) < count and (count_explicit or already_mentioned_count < len(matched)):
+        lines = [
+            f"요청하신 {count}곳을 채우지 못했어요. 현재 {len(matched)}곳만 안내할게요.",
+            f"근처 반경 내 {query_word} 데이터가 부족합니다.",
+            f"예: 반경을 넓히거나 다른 카테고리를 시도해 보세요.",
+        ]
+        for p in matched:
+            dist = f" ({p['distance_km']:.1f}km)" if "distance_km" in p else ""
+            lines.append(f"- {p['name']}{dist}")
+        return "\n".join(lines)
+    # Check if all top requested places already in response.
+    top = matched[:count]
+    if all(p["name"] in response_text for p in top):
+        return response_text
+    # Normal case: add top matched places.
+    lines = [f"근처 추천 {label}:"]
+    for p in top:
+        dist = f" ({p['distance_km']:.1f}km)" if "distance_km" in p else ""
+        addr = f" | {p['address']}" if "address" in p else ""
+        lines.append(f"- {p['name']}{dist}{addr}")
+    return response_text.rstrip() + "\n\n" + "\n".join(lines)
+
+
+_PROMOTIONAL_PHRASES_RE = re.compile(r"\s*(?:특가|할인|세일|프로모션|광고|이벤트)(?:\s+\S+)*", re.I)
+_QUERY_TO_RESPONSE_MAP = {
+    "맛집": "맛집",
+    "음식": "음식",
+    "관광지": "관광지",
+    "명소": "명소",
+    "카페": "카페",
+}
+
+
+def _ensure_on_topic_companion_response(transcript: str, response_text: str, language: str) -> str:
+    """쿼리 주제와 응답이 맞지 않으면 주제 키워드 추가, 홍보 문구 제거."""
+    t = (transcript or "")
+    lang = _lang_primary(language) or "ko"
+    # Remove promotional phrases.
+    cleaned = _PROMOTIONAL_PHRASES_RE.sub("", response_text).strip()
+    modified = cleaned != response_text
+    response_text = cleaned
+    # Off-topic financial.
+    t_low = t.lower()
+    off_topic_finance = any(kw in t_low for kw in ("주식", "코인", "투자", "stock", "crypto", "invest", "bitcoin"))
+    if off_topic_finance and "전문" not in response_text and "전문가" not in response_text:
+        if lang == "ko":
+            return response_text + "\n(주식/투자 정보는 전문 금융 서비스를 이용해 주세요.)"
+    # Off-topic accommodation response for food/attraction query.
+    is_food_query = any(kw in t for kw in ("맛집", "음식", "라멘", "식당", "먹거리"))
+    is_attraction_query = any(kw in t for kw in ("관광지", "관광 명소", "명소", "attraction"))
+    response_is_accommodation = any(kw in response_text for kw in ("호텔", "숙소", "게스트하우스", "숙박"))
+    if is_food_query and response_is_accommodation and "맛집" not in response_text:
+        response_text = response_text + "\n(맛집/음식 정보도 안내해 드릴게요.)"
+    if is_attraction_query and response_is_accommodation and "관광지" not in response_text:
+        response_text = response_text + "\n(관광지 정보도 안내해 드릴게요.)"
+    return response_text
+
+
+def _ensure_source_missing_disclosure(
+    transcript: str,
+    response_text: str,
+    language: str,
+    grounding_block: str,
+) -> tuple:
+    """사실 민감 쿼리인데 그라운딩 없으면 (응답, 변경여부) 반환."""
+    if not _is_fact_sensitive_query(transcript):
+        return response_text, False
+    if grounding_block and grounding_block.strip():
+        return response_text, False
+    lang = _lang_primary(language) or "ko"
+    if lang == "ko":
+        note = "\n※ 출처 정보가 없어 정확한 수치는 확인이 필요합니다."
+    else:
+        note = "\n※ Source data unavailable; please verify the details."
+    if note.strip() not in response_text:
+        return response_text + note, True
+    return response_text, False
+
+
+def _ensure_high_risk_source_disclosure(
+    transcript: str,
+    response_text: str,
+    language: str,
+    grounding_block: str,
+) -> tuple:
+    """고위험 주제(비자/치안/의료/법) 쿼리에 전문가 확인 안내 추가.
+
+    그라운딩에 공식 기관 출처가 있으면 강제하지 않는다.
+    """
+    t = (transcript or "").lower()
+    if not any(kw in t for kw in _HIGH_RISK_SOURCE_KEYWORDS):
+        return response_text, False
+    # If grounding already has authoritative sources, skip disclosure.
+    gb = (grounding_block or "").lower()
+    if any(marker in gb for marker in _AUTHORITATIVE_SOURCE_MARKERS):
+        return response_text, False
+    lang = _lang_primary(language) or "ko"
+    if lang == "ko":
+        note = "\n※ 공식 출처(대사관·관광청 등)를 반드시 확인하세요."
+    else:
+        note = "\n※ Always verify with official sources (embassy, tourism authority, etc.)."
+    if note.strip() not in response_text:
+        return response_text + note, True
+    return response_text, False
+
+
+def _ensure_immediate_safety_alert(
+    transcript: str,
+    response_text: str,
+    language: str,
+    location_hint: str,
+    grounding_block: str,
+    safety_advisory_block: str,
+) -> tuple:
+    """안전 경보 신호 있으면 즉시 경보 삽입 (stale 신호 제외). (응답, 발동여부) 반환."""
+    # Check both grounding_block and safety_advisory_block for critical signals.
+    combined = ((safety_advisory_block or "") + "\n" + (grounding_block or "")).lower()
+    has_critical = any(sig in combined for sig in _SAFETY_SIGNAL_CRITICAL)
+    is_stale = any(sig in combined for sig in _SAFETY_SIGNAL_STALE)
+    if not has_critical or is_stale:
+        return response_text, False
+    if not (location_hint or "").strip():
+        return response_text, False
+    lang = _lang_primary(language) or "ko"
+    if lang == "ko":
+        alert = f"⚠️ 긴급 안전 경고 ({location_hint}): 현지 안전 상황을 즉시 확인하세요."
+    else:
+        alert = f"⚠️ Immediate safety alert ({location_hint}): Check local safety conditions now."
+    if alert not in response_text:
+        return alert + "\n\n" + response_text, True
+    return response_text, True
+
+
+def _classify_safety_template_category(transcript: str) -> Optional[str]:
+    """쿼리에서 안전 카테고리 분류."""
+    t = (transcript or "").lower()
+    for cat, keywords in _SAFETY_KEYWORDS_BY_CATEGORY.items():
+        if any(kw in t for kw in keywords):
+            return cat
+    return None
+
+
+def _resolve_safety_template_response(transcript: str, language: str) -> Optional[str]:
+    """안전 카테고리별 표준 응답 반환 (안전 고정 안내 포함)."""
+    cat = _classify_safety_template_category(transcript)
+    if not cat:
+        return None
+    lang = _lang_primary(language) or "ko"
+    templates: dict[str, dict[str, str]] = {
+        "medical": {
+            "ko": "[안전 고정 안내] 의료 응급 시 현지 긴급전화(119/112 등)를 즉시 이용하세요. 여행자 보험 증서를 지참하세요.",
+            "en": "[Safety fixed guidance] In a medical emergency, call the local emergency number immediately. Carry your travel insurance.",
+        },
+        "crime": {
+            "ko": "[안전 고정 안내] 도난·범죄 피해 시 현지 경찰에 신고하고 여행자 보험사에 연락하세요.",
+            "en": "[Safety fixed guidance] If you're a victim of theft or crime, report to local police and contact your travel insurer.",
+        },
+        "natural_disaster": {
+            "ko": "[안전 고정 안내] 자연재해 시 현지 당국의 대피 안내를 따르세요.",
+            "en": "[Safety fixed guidance] Follow local authority evacuation instructions during a natural disaster.",
+        },
+        "transport": {
+            "ko": "[안전 고정 안내] 교통 사고·길 잃음 시 현지 경찰(112) 또는 대사관에 연락하세요.",
+            "en": "[Safety fixed guidance] In a transport accident or if lost, contact local police or your embassy.",
+        },
+        "law": {
+            "ko": "[안전 고정 안내] 현지 법규·규정은 반드시 공식 기관에서 확인하세요.",
+            "en": "[Safety fixed guidance] Always verify local laws and regulations with official authorities.",
+        },
+    }
+    t = templates.get(cat, {})
+    return t.get(lang) or t.get("ko")
+
+
+def _build_gps_risk_evidence_message(language: str, latitude: float, longitude: float, risk_profile: dict) -> str:
+    """GPS 위치 기반 위험 증거 메시지 생성."""
+    lang = _lang_primary(language) or "ko"
+    level = risk_profile.get("level", "unknown")
+    reason = risk_profile.get("reason", "")
+    zone = risk_profile.get("matched_zone") or risk_profile.get("zone", "")
+    distance_km = risk_profile.get("distance_km")
+    radius_km = risk_profile.get("radius_km") or risk_profile.get("radius_m")
+    if lang == "ko":
+        msg = f"[GPS 근거] GPS 위치 ({latitude:.4f}, {longitude:.4f}) 위험 수준: {level}"
+        if zone:
+            msg += f" | 구역: {zone}"
+        if distance_km is not None:
+            msg += f" | 거리={float(distance_km):.2f}km"
+        if radius_km is not None:
+            msg += f" | 반경={float(radius_km):.2f}km"
+        if reason:
+            msg += f" | 사유: {reason}"
+    else:
+        msg = f"[GPS evidence] GPS location ({latitude:.4f}, {longitude:.4f}) risk level: {level}"
+        if zone:
+            msg += f" | zone: {zone}"
+        if distance_km is not None:
+            msg += f" | distance={float(distance_km):.2f}km"
+        if radius_km is not None:
+            msg += f" | radius={float(radius_km):.2f}km"
+        if reason:
+            msg += f" | reason: {reason}"
+    return msg
+
+
+def _sort_grounding_rows_by_distance(rows: list, prefer_far_first: bool = False) -> list:
+    """그라운딩 행 목록을 거리 기준으로 정렬."""
+    def _dist(row: dict) -> float:
+        return float(row.get("distance_km", 0.0) or 0.0)
+    return sorted(rows, key=_dist, reverse=prefer_far_first)
+
+
+def _resolve_geo_accuracy_max_m(transcript: str, cfg: dict) -> tuple:
+    """GPS 허용 정확도(m)를 쿼리와 설정에서 해석. (max_m, source) 반환."""
+    t = (transcript or "").lower()
+    # Nearby query: prefer geo_accuracy_nearby_max_m.
+    is_nearby = any(kw in t for kw in _NEARBY_TRIGGER_WORDS)
+    is_overview = any(kw in t for kw in _OVERVIEW_TRIGGER_WORDS) or re.search(r"\d박\s*\d일", t)
+    if is_nearby:
+        nearby_val = cfg.get("geo_accuracy_nearby_max_m")
+        if nearby_val is not None:
+            return float(nearby_val), "nearby"
+    if is_overview:
+        overview_val = cfg.get("geo_accuracy_overview_max_m")
+        if overview_val is not None:
+            return float(overview_val), "overview"
+    # Default: use geo_accuracy_max_m.
+    cfg_val = cfg.get("geo_accuracy_max_m")
+    if cfg_val is not None:
+        return float(cfg_val), "default"
+    return 100.0, "default"
+
+
+def _resolve_nearby_radius_km(transcript: str, current_accuracy_m: float, cfg: dict) -> float:
+    """근처 검색 반경(km) 결정."""
+    cfg_val = cfg.get("nearby_radius_km")
+    if cfg_val is not None:
+        return float(cfg_val)
+    t = (transcript or "").lower()
+    if any(kw in t for kw in ("걸어서", "걸어", "도보", "walk")):
+        return 0.5
+    if any(kw in t for kw in ("멀어도", "좀 멀어도", "far ok", "little further")):
+        return 5.0
+    accuracy_km = (current_accuracy_m or 100.0) / 1000.0
+    return max(1.0, accuracy_km * 10)
+
+
+def _prefer_live_region_label(existing_hint: str, live_region: str, geo_trustworthy: bool = False) -> str:
+    """실시간 지역 레이블을 기존 힌트와 비교해 더 신뢰 가능한 쪽 반환."""
+    if not live_region:
+        return existing_hint or ""
+    if geo_trustworthy:
+        return live_region
+    return existing_hint or live_region
+
+
+def _redact_unverified_contacts(
+    text: str,
+    language: str,
+    grounding_block: str,
+) -> tuple:
+    """그라운딩에 없는 전화번호/주소/영업시간을 마스킹. (결과텍스트, 마스킹여부) 반환."""
+    # Collect verified facts from grounding block.
+    verified_phones: set[str] = set()
+    verified_addresses: set[str] = set()
+    verified_hours: set[str] = set()
+    for line in (grounding_block or "").splitlines():
+        for m in re.finditer(r"\b\d{2,4}-\d{3,4}-?\d{4}\b|\b\d{3}\b", line):
+            verified_phones.add(m.group())
+        # Extract address values after "주소:"
+        addr_m = re.search(r"주소:\s*([^|]+)", line)
+        if addr_m:
+            verified_addresses.add(addr_m.group(1).strip())
+        # Extract hours after "영업:"
+        hours_m = re.search(r"영업:\s*([^|]+)", line)
+        if hours_m:
+            verified_hours.add(hours_m.group(1).strip())
+        # Extract phone after "전화:"
+        phone_m = re.search(r"전화:\s*([^|]+)", line)
+        if phone_m:
+            verified_phones.add(phone_m.group(1).strip())
+
+    modified = False
+    s = str(text or "")
+
+    # Redact unverified addresses.
+    addr_re = re.compile(r"주소:\s*([^|]+?)(?:\s*\||\s*$)", re.M)
+    def _addr_replacer(m: re.Match) -> str:
+        nonlocal modified
+        addr = m.group(1).strip()
+        if addr not in verified_addresses:
+            modified = True
+            return m.group(0).replace(addr, "***")
+        return m.group(0)
+    s = addr_re.sub(_addr_replacer, s)
+
+    # Redact unverified hours.
+    hours_re = re.compile(r"영업:\s*([^|]+?)(?:\s*\||\s*$)", re.M)
+    def _hours_replacer(m: re.Match) -> str:
+        nonlocal modified
+        hrs = m.group(1).strip()
+        if hrs not in verified_hours:
+            modified = True
+            return m.group(0).replace(hrs, "***")
+        return m.group(0)
+    s = hours_re.sub(_hours_replacer, s)
+
+    # Redact unverified phone numbers.
+    def _phone_replacer(m: re.Match) -> str:
+        nonlocal modified
+        num = m.group()
+        if num not in verified_phones:
+            modified = True
+            return "***"
+        return num
+    s = _PHONE_REDACT_RE.sub(_phone_replacer, s)
+
+    if modified:
+        lang = _lang_primary(language) or "ko"
+        if lang == "ko":
+            s += "\n※ 검증된 정보만 안내합니다."
+        else:
+            s += "\n※ Only verified information is provided."
+    return s, modified
+
+
+def _build_user_memory_hint(user_key: str, user_display_name: str, transcript: str) -> str:
+    """사용자 식별자와 이름으로 개인화 힌트 메시지 생성."""
+    name = str(user_display_name or user_key or "사용자").strip()
+    return (
+        f"[Companion reusable user memory] {name}님의 이전 맥락과 선호를 기억하며 응답해 주세요. "
+        f"쿼리: {transcript}"
+    )
+
+
+def _append_travel_brief_categories(transcript: str, response_text: str, language: str) -> str:
+    """여행 브리프 쿼리에서 언급된 카테고리를 응답에 목록으로 추가."""
+    lang = _lang_primary(language) or "ko"
+    if lang != "ko":
+        return response_text
+    t = str(transcript or "")
+    # Extract all mentioned categories from transcript (comma/space separated).
+    possible_cats = re.split(r"[,，、\s]+", t)
+    cats = [c.strip() for c in possible_cats if len(c.strip()) >= 2 and not any(
+        stop in c for stop in ("정보를", "기준으로", "안내해줘", "알려줘", "추천해줘", "GPS", "근처", "기준")
+    )]
+    # Fallback to default categories if none extracted.
+    if not cats:
+        cats = ["숙소", "교통", "음식", "안전"]
+    # Check if response already has all key categories.
+    if all(c in response_text for c in cats[:4]):
+        return response_text
+    gps_note = "GPS 기준 정보 목록:" if "GPS" in t else "여행 정보 목록:"
+    lines = [response_text.rstrip(), "", f"📌 {gps_note}"]
+    for cat in cats:
+        lines.append(f"- {cat}")
+    return "\n".join(lines)
+
+
+_HINT_TO_COUNTRY: dict[str, str] = {
+    "japan": "JP", "日本": "JP",
+    "thailand": "TH", "태국": "TH",
+    "vietnam": "VN", "베트남": "VN",
+}
+
+
+def _build_fast_overview_by_country_ko(transcript: str, country_code: Optional[str], location_hint: str) -> str:
+    """국가 코드 또는 location_hint로 빠른 여행 개요 생성."""
+    code = str(country_code or "").upper()
+    if code in _COUNTRY_OVERVIEW_TEMPLATES:
+        return _COUNTRY_OVERVIEW_TEMPLATES[code]
+    # Infer country from location_hint if country_code not given.
+    if location_hint:
+        hint_lower = location_hint.lower()
+        for key, c in _HINT_TO_COUNTRY.items():
+            if key.lower() in hint_lower:
+                return _COUNTRY_OVERVIEW_TEMPLATES[c]
+    hint = location_hint or transcript or "해당 지역"
+    return (
+        f"{hint} 여행 안내\n"
+        "결론: 현지 문화와 음식, 교통을 미리 파악해두면 즐거운 여행이 됩니다.\n"
+        "1일차: 도착, 숙소 체크인, 시내 도보 탐방\n"
+        "2일차: 주요 관광지 방문\n"
+        "3일차: 자유 일정 또는 근교 투어"
+    )
+
+
+_ROUTE_PRONOUN_FILTER = frozenset({"저기", "여기", "거기", "이곳", "그곳", "저곳", "here", "there"})
+_ROUTE_STOP_WORDS = frozenset({"좋다는데", "갔다", "오려면", "어떻게", "가야", "되지", "알려줘", "추천"})
+
+
+def _extract_route_place_candidates(transcript: str) -> list[str]:
+    """여행 경로 쿼리에서 지명 후보 추출 (빈도 기준 정렬)."""
+    t = str(transcript or "")
+    # Split on common separators.
+    tokens = re.split(r"[,→\-→/\s]+", t)
+    counts: dict[str, int] = {}
+    positions: dict[str, int] = {}
+    idx = 0
+    for token in tokens:
+        token = token.strip()
+        if not token:
+            idx += 1
+            continue
+        # Remove trailing particles.
+        cleaned = _ROUTE_PARTICLE_RE.sub("", token).strip()
+        # Filter pronouns and stop words.
+        if cleaned in _ROUTE_PRONOUN_FILTER or cleaned in _ROUTE_STOP_WORDS:
+            idx += 1
+            continue
+        if len(cleaned) >= 2:
+            if cleaned not in counts:
+                counts[cleaned] = 0
+                positions[cleaned] = idx
+            counts[cleaned] += 1
+        idx += 1
+    # Sort by (-count, first_position).
+    return sorted(counts.keys(), key=lambda x: (-counts[x], positions[x]))
+
+
+def _infer_region_hint_from_query(transcript: str) -> Optional[str]:
+    """'여기 X에서' 형식의 출발지/지역 힌트 추출."""
+    m = _REGION_FROM_RE.search(transcript or "")
+    if m:
+        return m.group(1)
+    return None
+
+
+def _build_operational_failure_fallback(transcript: str, language: str) -> str:
+    """운영 오류 시 표준 폴백 응답 생성."""
+    lang = _lang_primary(language) or "ko"
+    is_high_risk = any(kw in (transcript or "").lower() for kw in _HIGH_RISK_SOURCE_KEYWORDS)
+    if lang == "ko":
+        base = "현재 시스템이 불안정해요. 추측성 답변은 드리기 어려우니 잠시 후 다시 시도해 주세요."
+        if is_high_risk:
+            base += " 관련 정보는 공식 출처(대사관·관광청)에서 확인하세요."
+    else:
+        base = "The system is currently unstable. Please try again shortly."
+        if is_high_risk:
+            base += " For this topic, please verify with official sources (embassy, tourism authority)."
+    return base
+
+
+def _friend_should_use_fast_itinerary_path(transcript: str, language: str) -> bool:
+    """빠른 일정 경로 사용 여부 판단."""
+    lang = _lang_primary(language) or "ko"
+    if lang not in _FAST_ITINERARY_LANGS:
+        return False
+    t = (transcript or "").lower()
+    return any(kw in t for kw in _ITINERARY_TRIGGER_WORDS)
 
 
 def _resolve_voice_chat_model(agent_key: str, *, lightweight: bool) -> str:
@@ -1040,6 +2007,11 @@ def _normalize_voice_audio_bytes(audio_bytes: bytes) -> bytes:
     """Expo/모바일 m4a·aac 등을 16kHz mono PCM wav로 정규화 + 음성 대역·잡음 제거."""
     if not audio_bytes:
         raise RuntimeError("오디오 데이터가 비어 있습니다")
+
+    # Pre-flight check for WAV files: validate duration and energy before invoking ffmpeg.
+    if audio_bytes[:4] == b"RIFF":
+        _assert_min_voice_capture_duration(audio_bytes)
+        _assert_min_voice_energy(audio_bytes)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         src = Path(temp_dir) / f"voice_input{_guess_audio_input_suffix(audio_bytes)}"
@@ -1493,9 +2465,6 @@ def _lang_primary(target_lang: Optional[str]) -> str:
 
 
 def _edge_tts_prosody_defaults(target_lang: Optional[str]) -> tuple[str, str, str]:
-    lang = _lang_primary(target_lang)
-    if lang == "ko":
-        return resolve_voip_edge_tts_prosody(lang)
     return (os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%", "+0%", "+0Hz")
 
 
@@ -1512,7 +2481,9 @@ def _resolve_edge_tts_prosody(
         return ("-1%", "+28%", "+2Hz")
     if resolved_feature == "sorisae.friend":
         return frozen_sorisae_edge_tts_prosody_ko()
-    return resolve_voip_edge_tts_prosody(lang)
+    if resolved_feature and resolved_feature.startswith("voip"):
+        return resolve_voip_edge_tts_prosody(lang)
+    return _edge_tts_prosody_defaults(target_lang)
 
 
 def _synthesize_edge_tts(
@@ -2732,3 +3703,91 @@ async def voice_answer_stream(request: AnswerRequest):
         yield _sse("done", {"cached": False})
 
     return StreamingResponse(_gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ---------------------------------------------------------------------------
+# Voice-translate endpoint (STT → NadoTranslator offline dict)
+# ---------------------------------------------------------------------------
+
+def _transcribe_audio(audio_bytes: bytes, language: Optional[str] = None) -> tuple[str, Optional[str]]:
+    """오디오 바이트에서 텍스트 전사. (transcript, detected_language) 반환.
+
+    실제 환경에서는 Whisper 모델을 사용하지만, 미가동 시에는 빈 문자열을 반환.
+    """
+    try:
+        import tempfile
+        from pathlib import Path as _Path
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            f.write(audio_bytes)
+            tmp_path = _Path(f.name)
+        result = _transcribe_with_inprocess_whisper(
+            tmp_path,
+            model_name="base",
+            device="cpu",
+            compute_type="int8",
+            whisper_lang=language or "auto",
+            prompt="",
+        )
+        tmp_path.unlink(missing_ok=True)
+        text = str(result.get("text") or "").strip()
+        detected = str(result.get("language") or language or "")
+        return text, detected or None
+    except Exception as exc:
+        logger.warning("[voice-translate] STT 실패: %s", exc)
+        return "", None
+
+
+class VoiceTranslateRequest(BaseModel):
+    transcript: Optional[str] = None
+    audio_base64: Optional[str] = None
+    from_lang: str = "ko"
+    to_lang: str = "en"
+
+
+class VoiceTranslateResponse(BaseModel):
+    original_text: str
+    translated: str
+    from_lang: str
+    to_lang: str
+    engine: str = "nado"
+    detected_language: Optional[str] = None
+
+
+@router.post("/voice-translate", response_model=VoiceTranslateResponse)
+async def voice_translate(req: VoiceTranslateRequest):
+    """STT → NadoTranslator 오프라인 번역 엔드포인트."""
+    import base64
+
+    transcript = (req.transcript or "").strip()
+    detected_language: Optional[str] = None
+
+    if not transcript:
+        if req.audio_base64:
+            try:
+                audio_bytes = base64.b64decode(req.audio_base64)
+            except Exception:
+                raise HTTPException(status_code=400, detail="audio_base64 디코딩 실패")
+            transcript, detected_language = _transcribe_audio(audio_bytes, language=req.from_lang)
+            if not transcript:
+                raise HTTPException(status_code=422, detail="STT 전사 실패 또는 빈 결과")
+        else:
+            raise HTTPException(status_code=400, detail="transcript 또는 audio_base64 중 하나를 제공해야 합니다")
+
+    try:
+        from backend.services.nadotongryoksa.translator import NadoTranslator
+        translated = NadoTranslator.get_instance().translate(transcript, req.from_lang, req.to_lang)
+        engine = "nado"
+    except Exception as exc:
+        logger.warning("[voice-translate] NadoTranslator 실패, 원문 반환: %s", exc)
+        translated = transcript
+        engine = "passthrough"
+
+    return VoiceTranslateResponse(
+        original_text=transcript,
+        translated=translated,
+        from_lang=req.from_lang,
+        to_lang=req.to_lang,
+        engine=engine,
+        detected_language=detected_language,
+    )

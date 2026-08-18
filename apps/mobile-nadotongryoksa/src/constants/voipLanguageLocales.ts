@@ -6,7 +6,6 @@ export const VOIP_TTS_LOCALE_MAP: Record<string, string> = {
   en: 'en-US',
   zh: 'zh-CN',
   'zh-tw': 'zh-TW',
-  'zh-hk': 'zh-HK',
   ja: 'ja-JP',
   es: 'es-ES',
   fr: 'fr-FR',

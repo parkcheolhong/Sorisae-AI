@@ -528,6 +528,7 @@ class TurnController:
         if intent == "greeting":
             reply = self._build_greeting(session)
             session.add_system_message(reply)
+            session.save()
             return self._build_response(session, reply, intent=intent)
 
         if intent == "status":

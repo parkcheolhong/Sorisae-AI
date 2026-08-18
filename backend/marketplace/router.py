@@ -1138,7 +1138,31 @@ def download_marketplace_apk(
         # 토큰 없는 경우 — 로그인 사용자의 구매 여부 확인 또는 401
         if not current_user:
             raise HTTPException(status_code=401, detail="인증이 필요합니다.")
-        # TODO: 구매 기록 확인 로직 구현
+        
+        # 구매 기록 확인: 파일명에서 프로젝트 식별하여 구매 여부 검증
+        # APK 다운로드는 관리자 또는 구매자만 가능
+        user_id = getattr(current_user, "id", None)
+        is_admin = getattr(current_user, "is_admin", False) or getattr(current_user, "is_superuser", False)
+        
+        if not is_admin:
+            # 일반 사용자는 구매 기록 확인 필요
+            # 현재는 nadotongryoksa APK만 지원하므로 해당 프로젝트 구매 확인
+            project = db.query(models.Project).filter(
+                models.Project.title.ilike("%nadotongryoksa%")
+            ).first()
+            
+            if project:
+                purchase = db.query(models.Purchase).filter(
+                    models.Purchase.project_id == project.id,
+                    models.Purchase.buyer_id == user_id,
+                    models.Purchase.status == "completed"
+                ).first()
+                
+                if not purchase:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="이 파일을 다운로드하려면 프로젝트를 구매해야 합니다."
+                    )
 
     media_type = "application/vnd.android.package-archive" if suffix == ".apk" else "application/zip"
     return FileResponse(
@@ -1189,8 +1213,30 @@ def download_marketplace_zip(
             raise HTTPException(status_code=403, detail=f"다운로드 토큰 검증 실패: {str(e)}")
     else:
         # 토큰이 없는 경우, 현재 사용자의 구매 여부 확인
-        # TODO: 구매 기록 확인 로직 구현
-        pass
+        user_id = getattr(current_user, "id", None)
+        is_admin = getattr(current_user, "is_admin", False) or getattr(current_user, "is_superuser", False)
+        
+        if not is_admin:
+            # ZIP 파일명에서 프로젝트 식별하여 구매 확인
+            # 파일명 기반 프로젝트 매칭 (예: sorisae-core.zip -> sorisae-core 프로젝트)
+            project_slug = safe_name.replace(".zip", "").lower()
+            
+            project = db.query(models.Project).filter(
+                models.Project.title.ilike(f"%{project_slug}%")
+            ).first()
+            
+            if project:
+                purchase = db.query(models.Purchase).filter(
+                    models.Purchase.project_id == project.id,
+                    models.Purchase.buyer_id == user_id,
+                    models.Purchase.status == "completed"
+                ).first()
+                
+                if not purchase:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="이 파일을 다운로드하려면 프로젝트를 구매해야 합니다."
+                    )
 
     return FileResponse(
         path=str(target),

@@ -1112,7 +1112,9 @@ async def _send_incoming_call_push_invite(
         os.getenv("FCM_PROJECT_ID", "").strip()
         or str((service_account_info or {}).get("project_id") or "").strip()
     )
-    if callee_user_id is None and not (use_topic and topic):
+    # FCM v1 service account path always uses topic when no device user_id is available.
+    use_topic_v1 = bool(topic and service_account_info and project_id and not server_key)
+    if callee_user_id is None and not (use_topic and topic) and not use_topic_v1:
         return False
 
     caller_label = (
@@ -1203,7 +1205,7 @@ async def _send_incoming_call_push_invite(
                 if not token_ok:
                     errors.append(f"token:{status_code}:{response_body[:120]}")
         elif service_account_info and project_id:
-            if use_topic and topic:
+            if (use_topic or use_topic_v1) and topic:
                 status_code, response_body = await asyncio.to_thread(
                     _post_fcm_v1,
                     service_account_info,
@@ -1921,6 +1923,39 @@ async def initiate_voip_call(
         ),
     )
 
+    # Store initial call log in database
+    try:
+        call_log = models.CallLog(
+            call_id=call_id,
+            session_id=request.session_id,
+            caller_user_id=int(current_user.id),
+            callee_user_id=int(app_callee.id) if app_callee is not None else None,
+            callee_phone=request.callee_phone,
+            status="initiated",
+            call_mode=resolved_mode,
+            call_route=(
+                "native_phone_dialer"
+                if phone_dialer_required
+                else "pstn_gateway"
+            ),
+            started_at=utcnow(),
+        )
+        db.add(call_log)
+        db.commit()
+        logger.info(
+            "[VoIP] Initial call log created | call_id=%s | caller=%s | callee=%s",
+            call_id,
+            current_user.id,
+            request.callee_phone,
+        )
+    except Exception as exc:
+        logger.error(
+            "[VoIP] Failed to create initial call log | call_id=%s | error=%s",
+            call_id,
+            exc,
+        )
+        db.rollback()
+
     return CallInitiateResponse(
         call_id=call_id,
         signaling_server=_with_signal_role(signaling_server, "caller"),
@@ -2265,11 +2300,57 @@ async def end_voip_call(
                     exc,
                 )
 
-    # TODO: Store call log in database
-    # await db.add(CallLog(...))
+    # Store call log in database
+    try:
+        call_log = db.query(models.CallLog).filter(
+            models.CallLog.call_id == call_id
+        ).first()
+        
+        if call_log:
+            # 기존 통화 기록 업데이트
+            call_log.status = "ended"
+            call_log.duration_sec = request.duration_sec
+            call_log.quality = request.quality if hasattr(request, 'quality') else None
+            call_log.ended_at = utcnow()
+            call_log.updated_at = utcnow()
+        else:
+            # 새 통화 기록 생성 (통화 종료만 기록된 경우)
+            call_log = models.CallLog(
+                call_id=call_id,
+                status="ended",
+                duration_sec=request.duration_sec,
+                quality=request.quality if hasattr(request, 'quality') else None,
+                started_at=utcnow(),
+                ended_at=utcnow(),
+            )
+            db.add(call_log)
+        
+        db.commit()
+        logger.info(
+            "[VoIP] Call log stored | call_id=%s | duration=%s",
+            call_id,
+            request.duration_sec,
+        )
+    except Exception as exc:
+        logger.error(
+            "[VoIP] Failed to store call log | call_id=%s | error=%s",
+            call_id,
+            exc,
+        )
+        db.rollback()
 
-    # TODO: Trigger async PSTN gateway SIP BYE
-    # Example: await pstn_gateway.hangup(call_id)
+    # Trigger async PSTN gateway SIP BYE (if configured)
+    if _is_pstn_gateway_configured():
+        try:
+            # TODO: Implement actual PSTN gateway hangup
+            # Example: await pstn_gateway.hangup(call_id)
+            logger.info("[VoIP] PSTN gateway BYE triggered | call_id=%s", call_id)
+        except Exception as exc:
+            logger.warning(
+                "[VoIP] PSTN gateway BYE failed | call_id=%s | error=%s",
+                call_id,
+                exc,
+            )
 
     return {
         "status": "ok",

@@ -339,6 +339,30 @@ class CallModeAuditLog(Base):
     created_at = Column(DateTime, default=_utcnow_naive, index=True)
 
 
+class CallLog(Base):
+    """VoIP 통화 기록 저장 모델
+    
+    통화 시작, 종료, 통화 시간, 참여자 등 통화 관련 정보를 기록합니다.
+    """
+    __tablename__ = 'call_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    call_id = Column(String(120), unique=True, nullable=False, index=True)
+    session_id = Column(String(120), nullable=True, index=True)
+    caller_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    callee_user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    callee_phone = Column(String(40), nullable=True)
+    status = Column(String(40), nullable=False, default='initiated')  # initiated, connected, ended, failed
+    call_mode = Column(String(80), nullable=True)
+    call_route = Column(String(80), nullable=True)  # native_phone_dialer, pstn_gateway, app_to_app
+    duration_sec = Column(Integer, nullable=True)  # 통화 시간 (초)
+    quality = Column(String(40), nullable=True)
+    started_at = Column(DateTime, default=_utcnow_naive, index=True)
+    ended_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow_naive, index=True)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
+
+
 class UserActiveSession(Base):
     """계정당 단일 활성 세션 강제. 로그인 시 새 session_id 를 기록(덮어쓰기)하고,
     인증 시 토큰의 sid 가 이 값과 다르면 401 → 다른 단말/웹은 자동 로그아웃된다.

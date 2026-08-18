@@ -18,14 +18,13 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger("nado.translator")
 
 # ──────────────────────────────────────────────
-# 51개국어 (모바일 languageCatalog.ts LANGS 와 동기화 — zh-hk 포함)
+# 50개국어 (모바일 App.tsx LANGS 와 동기화)
 # ──────────────────────────────────────────────
 SUPPORTED_LANGUAGES: Dict[str, str] = {
     "ko": "한국어",
     "en": "영어",
     "zh": "중국어(간체)",
     "zh-tw": "중국어(번체·台灣)",
-    "zh-hk": "중국어(粵語·香港)",
     "ja": "일본어",
     "es": "스페인어",
     "fr": "프랑스어",
@@ -79,8 +78,8 @@ MOBILE_SUPPORTED_LANGUAGE_CODES: Tuple[str, ...] = tuple(SUPPORTED_LANGUAGES.key
 
 SUPPORTED_DIALECT_COUNTRY_PROFILES: Dict[str, Dict[str, str]] = {
     "jeju": {"language": "ko", "label": "제주"},
-    "guangdong": {"language": "zh-hk", "label": "광둥"},
-    "hongkong": {"language": "zh-hk", "label": "香港"},
+    "guangdong": {"language": "zh-tw", "label": "광둥"},
+    "hongkong": {"language": "zh-tw", "label": "香港"},
     "taiwan": {"language": "zh-tw", "label": "台灣"},
     "kansai": {"language": "ja", "label": "간사이"},
     "bihar": {"language": "hi", "label": "비하르"},
@@ -96,12 +95,12 @@ _DIALECT_REPLACEMENTS: Dict[Tuple[str, str], List[Tuple[re.Pattern[str], str]]] 
         (re.compile(r"唔该"), "谢谢"),
         (re.compile(r"喺边度食饭"), "在哪里吃饭"),
     ],
-    ("zh-hk", "guangdong"): [
+    ("zh-tw", "guangdong"): [
         (re.compile(r"唔该"), "多謝"),
         (re.compile(r"喺边度食饭"), "喺邊度食飯"),
         (re.compile(r"谢谢"), "多謝"),
     ],
-    ("zh-hk", "hongkong"): [
+    ("zh-tw", "hongkong"): [
         (re.compile(r"谢谢"), "多謝"),
         (re.compile(r"在哪里"), "喺邊度"),
         (re.compile(r"医院"), "醫院"),
@@ -241,7 +240,6 @@ _LLM_LANG_NAMES: Dict[str, str] = {
     "ja": "Japanese",
     "zh": "Chinese (Simplified)",
     "zh-tw": "Chinese (Traditional, Taiwan)",
-    "zh-hk": "Chinese (Cantonese, Hong Kong)",
     "es": "Spanish",
     "fr": "French",
     "de": "German",
