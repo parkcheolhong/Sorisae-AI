@@ -602,7 +602,7 @@ def _serialize_viewer_translation(
         "translation_status": translation_row.translation_status,
         "failure_code": translation_row.failure_code,
         "failure_detail": (
-            TRANSLATION_FAILURE_PUBLIC_DETAIL
+            translation_row.failure_detail or TRANSLATION_FAILURE_PUBLIC_DETAIL
             if translation_row.failure_code
             else None
         ),
@@ -762,7 +762,7 @@ def _append_group_message_translations(
                 )
                 translation_status = "failed"
                 failure_code = "translation_error"
-                failure_detail = TRANSLATION_FAILURE_PUBLIC_DETAIL
+                failure_detail = str(exc)
                 delivered_at = None
 
         translation_rows.append(

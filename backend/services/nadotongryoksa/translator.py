@@ -18,14 +18,13 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger("nado.translator")
 
 # ──────────────────────────────────────────────
-# 51개국어 (모바일 languageCatalog.ts LANGS 와 동기화 — zh-hk 포함)
+# 50개국어 (모바일 App.tsx LANGS 와 동기화)
 # ──────────────────────────────────────────────
 SUPPORTED_LANGUAGES: Dict[str, str] = {
     "ko": "한국어",
     "en": "영어",
     "zh": "중국어(간체)",
     "zh-tw": "중국어(번체·台灣)",
-    "zh-hk": "중국어(粵語·香港)",
     "ja": "일본어",
     "es": "스페인어",
     "fr": "프랑스어",

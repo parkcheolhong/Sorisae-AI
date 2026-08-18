@@ -1112,7 +1112,9 @@ async def _send_incoming_call_push_invite(
         os.getenv("FCM_PROJECT_ID", "").strip()
         or str((service_account_info or {}).get("project_id") or "").strip()
     )
-    if callee_user_id is None and not (use_topic and topic):
+    # FCM v1 service account path always uses topic when no device user_id is available.
+    use_topic_v1 = bool(topic and service_account_info and project_id and not server_key)
+    if callee_user_id is None and not (use_topic and topic) and not use_topic_v1:
         return False
 
     caller_label = (
@@ -1203,7 +1205,7 @@ async def _send_incoming_call_push_invite(
                 if not token_ok:
                     errors.append(f"token:{status_code}:{response_body[:120]}")
         elif service_account_info and project_id:
-            if use_topic and topic:
+            if (use_topic or use_topic_v1) and topic:
                 status_code, response_body = await asyncio.to_thread(
                     _post_fcm_v1,
                     service_account_info,
