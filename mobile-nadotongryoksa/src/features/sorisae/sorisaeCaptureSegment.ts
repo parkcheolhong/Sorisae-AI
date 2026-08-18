@@ -48,8 +48,8 @@ export const COMPANION_DORMANT_MIN_SEGMENT_MS = 1700;
  */
 export const SORISAE_WINDOW_MIN_SEGMENT_MS = 1700;
 // 6초 안팎의 자연 질문은 Silero miss 단말에서도 살려야 한다.
-// 너무 낮은 상한(5s)은 정상 질문까지 전송 전 단계에서 버린다.
-export const SORISAE_WINDOW_SILERO_MISS_MAX_UPLOAD_MS = 14000;
+// 8초를 넘는 fallback 업로드는 장시간 무음/오탐을 줄이기 위해 차단한다.
+export const SORISAE_WINDOW_SILERO_MISS_MAX_UPLOAD_MS = 8000;
 export const FACE_CONTEXT_SESSION_GAP_MS = 18_000;
 
 /** expo m4a 빈/손상 업로드 차단 — VoIPCallScreen VOICE_RELAY_MIN_AUDIO_BASE64_LEN 과 동일. */
@@ -130,7 +130,7 @@ export function shouldUploadSorisaeWindowSegment(params: {
     }
     const durationMs = typeof params.durationMs === 'number' ? params.durationMs : 0;
     // Silero speech_start 없이 길게 열린 세그먼트는 meter-dead/file-growth 오탐일 가능성이 높다.
-    // 소리새 창에서는 이런 장시간 fallback 업로드를 막아 자연어 오인식과 422 왕복을 줄인다.
+    // 소리새 창에서는 8초를 넘는 fallback 업로드를 막아 자연어 오인식과 422 왕복을 줄인다.
     if (durationMs >= SORISAE_WINDOW_SILERO_MISS_MAX_UPLOAD_MS) {
         return false;
     }
@@ -138,7 +138,7 @@ export function shouldUploadSorisaeWindowSegment(params: {
         return true;
     }
     // 녹음 길이만으로 업로드 금지 — max_duration 무음 10초가 Whisper 환각→422 루프를 만든다.
-    if (typeof params.rmsDb === 'number' && params.rmsDb > -60) {
+    if (typeof params.rmsDb === 'number' && params.rmsDb >= -55) {
         return true;
     }
     return false;

@@ -1,5 +1,14 @@
 (globalThis as typeof globalThis & { __DEV__?: boolean }).__DEV__ = true;
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    __esModule: true,
+    default: {
+        getItem: jest.fn(),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+    },
+}));
+
 jest.mock('expo-file-system/legacy', () => ({
     FileSystemUploadType: { MULTIPART: 1, BINARY_CONTENT: 0 },
     cacheDirectory: 'file:///cache/',

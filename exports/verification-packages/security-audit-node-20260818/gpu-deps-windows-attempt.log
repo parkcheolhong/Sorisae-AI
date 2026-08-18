@@ -1,0 +1,10 @@
+[Windows attempt]
+Date: 2026-08-18T06:55:32.3537182+09:00
+Command: .\\.venv\\Scripts\\python.exe -m pip install --no-cache-dir auto-gptq==0.7.1 autoawq==0.2.9 xformers==0.0.35 bitsandbytes==0.50.1
+Collecting auto-gptq==0.7.1
+  Downloading auto_gptq-0.7.1.tar.gz (126 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'error'
+Result: SUCCESS

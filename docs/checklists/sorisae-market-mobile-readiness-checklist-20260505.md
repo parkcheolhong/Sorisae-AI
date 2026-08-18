@@ -9,6 +9,24 @@
 - 보고 상태는 `구현됨`, `완료됨`, `실패`만 사용한다.
 - 자동 검증 또는 운영 검증이 하나라도 실패하면 `완료됨`으로 보고하지 않는다.
 
+## Wave 2 고정 계획
+
+기준:
+- 기존 Expo 빌드 분석은 `apps/mobile-nadotongryoksa`의 EAS 성공 빌드 증적과 `CRITICAL_2_CHECKLIST.md`를 우선 참고한다.
+- 호환 매트릭스는 Expo 57 계열 기준으로 고정한다.
+- 단위는 프로젝트 1개씩만 올리고, 실패 시 해당 프로젝트만 즉시 롤백한다.
+
+| 순서 | 프로젝트 | 현재 핵심 버전 | Wave 2 목표 버전 | 검증 포인트 | 롤백 경계 |
+|---|---|---|---|---|---|
+| 1 | `mobile-nadotongryoksa` | `expo ~56.0.12`, `react-native 0.85.3`, `react 19.2.3` | `expo ~57.0.0`, `react-native 0.86.0`, `@react-native/jest-preset 0.86.2` | `npm run eas:android:preview`, `npm test`, `npm audit --omit=dev --json` | `mobile-nadotongryoksa/package.json` + lockfile |
+| 2 | `apps/mobile-nadotongryoksa` | `expo ~56.0.12`, `react-native 0.85.3`, `react 19.2.3` | `expo ~57.0.0`, `react-native 0.86.0`, `@react-native/jest-preset 0.86.2` | `npm run eas:android:preview`, `npm test`, `npm audit --omit=dev --json` | `apps/mobile-nadotongryoksa/package.json` + lockfile |
+| 3 | `apps/mobile-stock-ai` | `expo ~56.0.8`, `react-native 0.76.5`, `react 18.3.1` | `expo ~57.0.0`, `react-native 0.86.0`, `react 19.2.3` | `npm run eas:android:preview`, `npm run typecheck`, `npm audit --omit=dev --json` | `apps/mobile-stock-ai/package.json` + lockfile |
+
+실행 규칙:
+- 한 프로젝트의 빌드/테스트/감사 재검증이 모두 통과한 뒤에만 다음 프로젝트로 이동한다.
+- 실패하면 해당 프로젝트의 package.json/lockfile 변경만 되돌리고 다음 프로젝트로 넘어가지 않는다.
+- 브레이킹 영향 최소화를 위해 Expo/RN 메이저 업그레이드는 project-by-project로만 진행한다.
+
 ## 게이트 항목
 
 ### 1) 슬롯별 입출력 계약 고정

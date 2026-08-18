@@ -1,0 +1,58 @@
+
+added 9 packages, removed 416 packages, changed 50 packages, and audited 629 packages in 15s
+
+52 packages are looking for funding
+  run `npm fund` for details
+
+# npm audit report
+
+image-size  *
+Severity: high
+image-size: ICNS parser allows denial of service through an infinite loop - https://github.com/advisories/GHSA-w3rx-r6r6-pgpr
+image-size: JXL and HEIF parsers allow denial of service through infinite loops - https://github.com/advisories/GHSA-5p2g-fcmc-qvqq
+fix available via `npm audit fix --force`
+Will install expo@53.0.27, which is a breaking change
+node_modules/image-size
+  metro  >=0.22.1
+  Depends on vulnerable versions of image-size
+  Depends on vulnerable versions of metro-config
+  Depends on vulnerable versions of metro-transform-worker
+  node_modules/metro
+    @expo/metro  *
+    Depends on vulnerable versions of metro
+    Depends on vulnerable versions of metro-config
+    Depends on vulnerable versions of metro-transform-worker
+    node_modules/@expo/metro
+      @expo/cli  >=0.25.0-canary-20250612-338ef55
+      Depends on vulnerable versions of @expo/metro
+      Depends on vulnerable versions of @expo/metro-config
+      node_modules/@expo/cli
+      @expo/metro-config  >=0.21.0-canary-20250630-547cd82
+      Depends on vulnerable versions of @expo/metro
+      node_modules/@expo/metro-config
+        expo  52.0.0-canary-20240625-2333e70 - 52.0.0-canary-20241018-f71b3e0 || >=54.0.0-canary-20250611-f0afe80
+        Depends on vulnerable versions of @expo/cli
+        Depends on vulnerable versions of @expo/metro
+        Depends on vulnerable versions of @expo/metro-config
+        node_modules/expo
+    @react-native/community-cli-plugin  *
+    Depends on vulnerable versions of metro
+    Depends on vulnerable versions of metro-config
+    node_modules/@react-native/community-cli-plugin
+      react-native  >=0.73.0-nightly-20230506-1af868c52
+      Depends on vulnerable versions of @react-native/community-cli-plugin
+      node_modules/react-native
+    metro-config  *
+    Depends on vulnerable versions of metro
+    node_modules/metro-config
+    metro-transform-worker  >=0.60.0
+    Depends on vulnerable versions of metro
+    node_modules/metro-transform-worker
+
+10 high severity vulnerabilities
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
