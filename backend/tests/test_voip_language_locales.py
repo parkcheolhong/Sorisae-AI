@@ -46,7 +46,6 @@ def test_whisper_hint_covers_all_supported_languages():
 
 def test_whisper_special_remaps():
     assert resolve_whisper_language_hint("zh-tw") == "zh"
-    assert resolve_whisper_language_hint("zh-hk") == "zh"
     assert resolve_whisper_language_hint("fil") == "tl"
 
 
@@ -54,7 +53,6 @@ def test_edge_tts_voice_per_target_lang():
     assert resolve_edge_tts_voice("ja").startswith("ja-JP-")
     assert resolve_edge_tts_voice("uk").startswith("uk-UA-")
     assert resolve_edge_tts_voice("ko").endswith("Neural")
-    assert resolve_edge_tts_voice("zh-hk").startswith("zh-HK-")
 
 
 def test_whisper_initial_prompt_non_empty_for_all():

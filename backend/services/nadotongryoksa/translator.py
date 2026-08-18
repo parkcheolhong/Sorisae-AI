@@ -78,8 +78,8 @@ MOBILE_SUPPORTED_LANGUAGE_CODES: Tuple[str, ...] = tuple(SUPPORTED_LANGUAGES.key
 
 SUPPORTED_DIALECT_COUNTRY_PROFILES: Dict[str, Dict[str, str]] = {
     "jeju": {"language": "ko", "label": "제주"},
-    "guangdong": {"language": "zh-hk", "label": "광둥"},
-    "hongkong": {"language": "zh-hk", "label": "香港"},
+    "guangdong": {"language": "zh-tw", "label": "광둥"},
+    "hongkong": {"language": "zh-tw", "label": "香港"},
     "taiwan": {"language": "zh-tw", "label": "台灣"},
     "kansai": {"language": "ja", "label": "간사이"},
     "bihar": {"language": "hi", "label": "비하르"},
@@ -95,12 +95,12 @@ _DIALECT_REPLACEMENTS: Dict[Tuple[str, str], List[Tuple[re.Pattern[str], str]]] 
         (re.compile(r"唔该"), "谢谢"),
         (re.compile(r"喺边度食饭"), "在哪里吃饭"),
     ],
-    ("zh-hk", "guangdong"): [
+    ("zh-tw", "guangdong"): [
         (re.compile(r"唔该"), "多謝"),
         (re.compile(r"喺边度食饭"), "喺邊度食飯"),
         (re.compile(r"谢谢"), "多謝"),
     ],
-    ("zh-hk", "hongkong"): [
+    ("zh-tw", "hongkong"): [
         (re.compile(r"谢谢"), "多謝"),
         (re.compile(r"在哪里"), "喺邊度"),
         (re.compile(r"医院"), "醫院"),

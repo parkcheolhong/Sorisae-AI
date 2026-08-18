@@ -2465,9 +2465,6 @@ def _lang_primary(target_lang: Optional[str]) -> str:
 
 
 def _edge_tts_prosody_defaults(target_lang: Optional[str]) -> tuple[str, str, str]:
-    lang = _lang_primary(target_lang)
-    if lang == "ko":
-        return resolve_voip_edge_tts_prosody(lang)
     return (os.getenv("VOICE_EDGE_TTS_RATE", "-6%").strip() or "-6%", "+0%", "+0Hz")
 
 
