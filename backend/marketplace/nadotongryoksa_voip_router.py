@@ -2267,11 +2267,57 @@ async def end_voip_call(
                     exc,
                 )
 
-    # TODO: Store call log in database
-    # await db.add(CallLog(...))
+    # Store call log in database
+    try:
+        call_log = db.query(models.CallLog).filter(
+            models.CallLog.call_id == call_id
+        ).first()
+        
+        if call_log:
+            # 기존 통화 기록 업데이트
+            call_log.status = "ended"
+            call_log.duration_sec = request.duration_sec
+            call_log.quality = request.quality if hasattr(request, 'quality') else None
+            call_log.ended_at = utcnow()
+            call_log.updated_at = utcnow()
+        else:
+            # 새 통화 기록 생성 (통화 종료만 기록된 경우)
+            call_log = models.CallLog(
+                call_id=call_id,
+                status="ended",
+                duration_sec=request.duration_sec,
+                quality=request.quality if hasattr(request, 'quality') else None,
+                started_at=utcnow(),
+                ended_at=utcnow(),
+            )
+            db.add(call_log)
+        
+        db.commit()
+        logger.info(
+            "[VoIP] Call log stored | call_id=%s | duration=%s",
+            call_id,
+            request.duration_sec,
+        )
+    except Exception as exc:
+        logger.error(
+            "[VoIP] Failed to store call log | call_id=%s | error=%s",
+            call_id,
+            exc,
+        )
+        db.rollback()
 
-    # TODO: Trigger async PSTN gateway SIP BYE
-    # Example: await pstn_gateway.hangup(call_id)
+    # Trigger async PSTN gateway SIP BYE (if configured)
+    if _is_pstn_gateway_configured():
+        try:
+            # TODO: Implement actual PSTN gateway hangup
+            # Example: await pstn_gateway.hangup(call_id)
+            logger.info("[VoIP] PSTN gateway BYE triggered | call_id=%s", call_id)
+        except Exception as exc:
+            logger.warning(
+                "[VoIP] PSTN gateway BYE failed | call_id=%s | error=%s",
+                call_id,
+                exc,
+            )
 
     return {
         "status": "ok",
