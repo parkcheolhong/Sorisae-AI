@@ -25,6 +25,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from backend.auth import get_current_user
+from backend.time_utils import utcnow
 from backend.voip_language_locales import (
     resolve_edge_tts_voice,
     resolve_whisper_initial_prompt,
@@ -209,6 +210,18 @@ def _friend_location_hint(
     return label
 
 
+def _friend_time_context(location_hint: str = "") -> str:
+    """친구 가이드가 사용할 현재 시간/날짜 컨텍스트 문자열."""
+    now = utcnow()
+    date_str = now.strftime("%Y-%m-%d")
+    time_str = now.strftime("%H:%M")
+    weekday_str = now.strftime("%A")
+    loc = str(location_hint or "").strip()
+    if loc:
+        return f"Current context: date={date_str}, time={time_str} UTC, weekday={weekday_str}, location={loc}."
+    return f"Current context: date={date_str}, time={time_str} UTC, weekday={weekday_str}."
+
+
 # ── 로그 익명화(PIPA/GDPR 데이터 최소화) ───────────────────────────────────
 # 운영 로그에 정밀좌표·발화 원문을 남기지 않는다. 좌표는 소수 1자리(≈11km)로 거칠게,
 # 발화는 길이+sha256 앞 8자리(추적용 비가역 지문)만 남긴다.
@@ -259,7 +272,9 @@ _FRIEND_PLACE_KEYWORDS = (
     "술집", "이자카야", "포장마차", "관광", "명소", "가볼만", "가 볼 만", "볼거리", "박물관", "미술관",
     "전망대", "온천", "해변", "공원", "시장", "쇼핑", "백화점", "면세점", "마트", "편의점", "약국",
     "병원", "은행", "환전", "주유소", "주차장", "역", "지하철역", "공항", "터미널", "정류장",
+    "항공", "항공편", "비행기", "출발", "도착", "지연", "결항", "탑승",
     "hotel", "restaurant", "cafe", "bar", "museum", "attraction", "pharmacy", "hospital", "atm",
+    "flight", "flights", "airline", "departure", "arrival", "delay", "delayed", "cancelled",
     "station", "airport", "ramen", "sushi", "things to do", "near me", "nearby",
 )
 
@@ -659,7 +674,7 @@ def _resolve_friend_chat_model(base_url: Optional[str] = None, served_models: Op
 
 
 def _friend_system_prompt(
-    language: Optional[str], *, web_grounded: bool = False, location_hint: str = ""
+    language: Optional[str], *, web_grounded: bool = False, location_hint: str = "", time_context: str = ""
 ) -> str:
     """아주 자연스러운 '친구 모드' 페르소나. 사용자 언어로 따뜻하고 편하게 대화.
 
@@ -706,6 +721,13 @@ def _friend_system_prompt(
             "Treat this as their current location for any 'nearby / here / around here' question, "
             "and tailor recommendations and directions to this area. "
         )
+    if time_context:
+        base += (
+            f"{time_context} "
+            "Use this date/time context for user questions about today, now, date, weekdays, schedules, "
+            "and time-sensitive guidance. If the user asks for local-time precision that may differ from UTC, "
+            "briefly mention the timezone assumption and continue with best-effort guidance. "
+        )
     if web_grounded:
         return base + (
             "Fresh web search results are provided below as context. "
@@ -731,6 +753,7 @@ async def _friend_chat_completion(
     conversation: list[dict],
     grounding_block: str = "",
     location_hint: str = "",
+    time_context: str = "",
 ) -> str:
     """vLLM /chat/completions 직접 호출로 친구 모드 답변 생성.
 
@@ -744,7 +767,10 @@ async def _friend_chat_completion(
         {
             "role": "system",
             "content": _friend_system_prompt(
-                language, web_grounded=web_grounded, location_hint=location_hint
+                language,
+                web_grounded=web_grounded,
+                location_hint=location_hint,
+                time_context=time_context,
             ),
         }
     ]
@@ -2004,6 +2030,7 @@ async def voice_friend_chat(request: FriendChatRequest):
         request.latitude,
         request.longitude,
     )
+    time_context = _friend_time_context(location_hint)
 
     # 실시간 웹 검색 근거(최신 정보) — 자동/강제 판단 후 주입. urllib 블로킹이라 스레드로.
     grounding_block = ""
@@ -2026,6 +2053,7 @@ async def voice_friend_chat(request: FriendChatRequest):
             conversation,
             grounding_block,
             location_hint,
+            time_context,
         )
     except Exception as exc:
         logger.warning("[voice/friend-chat] LLM 실패: %s", exc)

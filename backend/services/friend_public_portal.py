@@ -181,6 +181,43 @@ _MEDICAL_WEEKEND_KEYWORDS = (
     "휴일",
 )
 
+_FLIGHT_AIRPORT_CODE_ALIASES = {
+    "icn": "ICN",
+    "gmp": "GMP",
+    "pus": "PUS",
+    "cju": "CJU",
+    "tae": "TAE",
+    "kwj": "KWJ",
+    "rsu": "RSU",
+    "usn": "USN",
+    "CJU": "CJU",
+    "ICN": "ICN",
+    "GMP": "GMP",
+    "PUS": "PUS",
+    "TAE": "TAE",
+    "KWJ": "KWJ",
+    "RSU": "RSU",
+    "USN": "USN",
+    "인천": "ICN",
+    "인천공항": "ICN",
+    "김포": "GMP",
+    "김포공항": "GMP",
+    "부산": "PUS",
+    "부산공항": "PUS",
+    "김해": "PUS",
+    "김해공항": "PUS",
+    "제주": "CJU",
+    "제주공항": "CJU",
+    "대구": "TAE",
+    "대구공항": "TAE",
+    "광주": "KWJ",
+    "광주공항": "KWJ",
+    "여수": "RSU",
+    "여수공항": "RSU",
+    "울산": "USN",
+    "울산공항": "USN",
+}
+
 
 def _strip_empty_query_params(url: str) -> str:
     rendered = str(url or "").strip()
@@ -425,6 +462,83 @@ def _extract_query_terms(query: str) -> list[str]:
     return terms
 
 
+def _infer_flight_query_context(query: str) -> dict[str, str]:
+    raw_query = str(query or "").strip()
+    normalized = " ".join(raw_query.split())
+    upper_query = normalized.upper()
+
+    flight_no_match = re.search(r"\b([A-Z]{2,3}\s?-?\s?\d{2,4})\b", upper_query)
+    flight_no = ""
+    if flight_no_match:
+        flight_no = re.sub(r"[^A-Z0-9]", "", flight_no_match.group(1))
+
+    airport_code = ""
+    dep_airport_code = ""
+    arr_airport_code = ""
+
+    # 공항코드/지역명 별칭을 질의에서 찾아 코드로 변환한다.
+    for token, code in _FLIGHT_AIRPORT_CODE_ALIASES.items():
+        if token in normalized or token in upper_query:
+            if not airport_code:
+                airport_code = code
+            if not dep_airport_code and any(marker in normalized for marker in (f"{token}에서", f"{token} 출발", f"from {token.lower()}")):
+                dep_airport_code = code
+            if not arr_airport_code and any(marker in normalized for marker in (f"{token}행", f"{token} 도착", f"to {token.lower()}")):
+                arr_airport_code = code
+
+    # 'A -> B' 형태, 'A에서 B' 형태 간단 해석.
+    route_match = re.search(r"([A-Z]{3}|[가-힣]{2,10})\s*(?:->|→|에서)\s*([A-Z]{3}|[가-힣]{2,10})", normalized, flags=re.IGNORECASE)
+    if route_match:
+        left = route_match.group(1)
+        right = route_match.group(2)
+        dep_airport_code = dep_airport_code or _FLIGHT_AIRPORT_CODE_ALIASES.get(left, _FLIGHT_AIRPORT_CODE_ALIASES.get(left.upper(), ""))
+        arr_airport_code = arr_airport_code or _FLIGHT_AIRPORT_CODE_ALIASES.get(right, _FLIGHT_AIRPORT_CODE_ALIASES.get(right.upper(), ""))
+        airport_code = airport_code or dep_airport_code or arr_airport_code
+
+    return {
+        "query_flight_no": flight_no,
+        "query_airport_code": airport_code,
+        "query_dep_airport_code": dep_airport_code,
+        "query_arr_airport_code": arr_airport_code,
+    }
+
+
+def _filter_flight_items_by_query(query: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """항공 질의(편명/공항코드)가 있으면 일치하는 행만 남겨 정확도를 높인다."""
+    if not items:
+        return items
+    context = _infer_flight_query_context(query)
+    query_flight_no = str(context.get("query_flight_no") or "").strip().lower()
+    query_airport_code = str(context.get("query_airport_code") or "").strip().lower()
+    query_dep = str(context.get("query_dep_airport_code") or "").strip().lower()
+    query_arr = str(context.get("query_arr_airport_code") or "").strip().lower()
+    if not any((query_flight_no, query_airport_code, query_dep, query_arr)):
+        return items
+
+    filtered: list[dict[str, Any]] = []
+    for item in items:
+        haystack = _build_portal_haystack("flight", item).replace(" ", "").replace("-", "").lower()
+        has_flight_no = bool(query_flight_no and query_flight_no in haystack)
+        has_airport = bool(query_airport_code and query_airport_code in haystack)
+        has_dep = bool(query_dep and query_dep in haystack)
+        has_arr = bool(query_arr and query_arr in haystack)
+
+        if query_flight_no:
+            matched = has_flight_no
+        elif query_dep and query_arr:
+            matched = has_dep and has_arr
+        elif query_dep:
+            matched = has_dep
+        elif query_arr:
+            matched = has_arr
+        else:
+            matched = has_airport
+        if matched:
+            filtered.append(item)
+
+    return filtered
+
+
 def _build_portal_haystack(label: str, item: dict[str, Any]) -> str:
     title = _extract_item_text(
         item,
@@ -644,6 +758,21 @@ def _score_portal_item(
             score += 6
 
     elif label == "flight":
+        flight_ctx = _infer_flight_query_context(query)
+        query_flight_no = str(flight_ctx.get("query_flight_no") or "").lower()
+        if query_flight_no:
+            compact_haystack = haystack.replace(" ", "").replace("-", "")
+            if query_flight_no in compact_haystack:
+                score += 16
+        query_airport_code = str(flight_ctx.get("query_airport_code") or "").lower()
+        if query_airport_code and query_airport_code in haystack:
+            score += 6
+        query_dep = str(flight_ctx.get("query_dep_airport_code") or "").lower()
+        if query_dep and query_dep in haystack:
+            score += 8
+        query_arr = str(flight_ctx.get("query_arr_airport_code") or "").lower()
+        if query_arr and query_arr in haystack:
+            score += 8
         if normalized_query and normalized_query in haystack:
             score += 6
 
@@ -694,12 +823,17 @@ def _build_url(
         query_yyyymmdd = digits_only[:8]
     else:
         query_yyyymmdd = utcnow().strftime("%Y%m%d")
+    flight_context = _infer_flight_query_context(query)
 
     values = {
         "service_key": service_key,
         "query": query,
         "enc_query": enc_query,
         "query_yyyymmdd": query_yyyymmdd,
+        "query_flight_no": flight_context.get("query_flight_no", ""),
+        "query_airport_code": flight_context.get("query_airport_code", ""),
+        "query_dep_airport_code": flight_context.get("query_dep_airport_code", ""),
+        "query_arr_airport_code": flight_context.get("query_arr_airport_code", ""),
         "display": str(display),
         "start": "1",
         "radius_m": str(radius_m),
@@ -729,10 +863,31 @@ def _build_candidate_urls(
     category: str = "",
     country_code: str = "KR",
 ) -> list[str]:
-    candidates = [
-        _build_url(
+    template_candidates = [template]
+
+    if label == "flight":
+        # 기존 템플릿이 질의 파라미터를 받지 않으면, 항공편/공항/날짜 파라미터 후보를 자동 보강한다.
+        enhanced_template = template
+        if "query_flight_no" not in enhanced_template and "schFlightNum=" not in enhanced_template:
+            enhanced_template = f"{enhanced_template}&schFlightNum={{query_flight_no}}"
+        if "query_airport_code" not in enhanced_template and "schAirportCode=" not in enhanced_template:
+            enhanced_template = f"{enhanced_template}&schAirportCode={{query_airport_code}}"
+        if "query_dep_airport_code" not in enhanced_template and "depAirportId=" not in enhanced_template:
+            enhanced_template = f"{enhanced_template}&depAirportId={{query_dep_airport_code}}"
+        if "query_arr_airport_code" not in enhanced_template and "arrAirportId=" not in enhanced_template:
+            enhanced_template = f"{enhanced_template}&arrAirportId={{query_arr_airport_code}}"
+        if "query_yyyymmdd" not in enhanced_template and "schDate=" not in enhanced_template:
+            enhanced_template = f"{enhanced_template}&schDate={{query_yyyymmdd}}"
+        if "enc_query" not in enhanced_template and "keyword=" not in enhanced_template:
+            enhanced_template = f"{enhanced_template}&keyword={{enc_query}}"
+        if enhanced_template not in template_candidates:
+            template_candidates.append(enhanced_template)
+
+    candidates = []
+    for template_candidate in template_candidates:
+        built = _build_url(
             base_url,
-            template,
+            template_candidate,
             query,
             display,
             latitude,
@@ -742,7 +897,8 @@ def _build_candidate_urls(
             category=category,
             country_code=country_code,
         )
-    ]
+        if built not in candidates:
+            candidates.append(built)
     if label != "medical" or "HsptlAsembySearchService" not in template:
         if label == "local" and "locationBasedList2" in template:
             keyword_template = template.replace(
@@ -1023,8 +1179,11 @@ def fetch_friend_public_portal_grounding(
             read_secret_env(
                 "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_URL_TEMPLATE",
                 default=(
-                    "https://apis.data.go.kr/B551178/flight-search?"
-                    "serviceKey={service_key}"
+                    "https://apis.data.go.kr/B551178/flight-search/info?"
+                    "serviceKey={service_key}&_type=json&numOfRows={display}&pageNo=1"
+                    "&schDate={query_yyyymmdd}&schAirportCode={query_airport_code}"
+                    "&schFlightNum={query_flight_no}&depAirportId={query_dep_airport_code}"
+                    "&arrAirportId={query_arr_airport_code}&keyword={enc_query}"
                 ),
             ).strip(),
             flight_service_key,
@@ -1090,6 +1249,8 @@ def fetch_friend_public_portal_grounding(
                     timeout_sec,
                     auth_mode=auth_mode,
                 )
+                if label == "flight":
+                    items = _filter_flight_items_by_query(query, items)
                 items = _rerank_items(
                     label,
                     query,

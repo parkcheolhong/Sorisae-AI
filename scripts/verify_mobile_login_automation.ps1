@@ -1561,6 +1561,11 @@ function Ensure-LoggedIn {
                     Start-Sleep -Milliseconds 450
                 }
             }
+            $retryXmlFinal = Get-UiDump -OutPath $LastDumpPath
+            $loginFormStillVisible = [bool]($retryXmlFinal -match 'worldlinco-auth-email-input|worldlinco-auth-password-input|worldlinco-auth-login-submit-button')
+            if ((Has-AuthReadyLogHint -TailLines 700) -or (-not $loginFormStillVisible)) {
+                return @{ attempted = $true; ok = $true; reason = 'login_success_after_clear_session_async' }
+            }
             return @{ attempted = $true; ok = $false; reason = 'login_409_cleared_but_not_authenticated' }
         }
         return @{ attempted = $true; ok = $false; reason = 'login_409_clear_session_failed' }

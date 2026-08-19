@@ -176,6 +176,18 @@ def _ensure_logged_in(device: str, work_dir: Path, email: str) -> bool:
 
     xml_text = _dump_ui_xml(device, xml_path)
     still_unauth = any(m in xml_text for m in unauth_markers)
+    if still_unauth and "worldlinco-demo-session-start-button" in xml_text:
+        # 실기기에서 duplicate-session(409) 또는 임시 인증 상태일 때
+        # 데모 세션으로 진입하면 소리새 런타임 검증은 진행 가능하다.
+        center = _find_first_center_from_ui(
+            xml_text,
+            ["worldlinco-demo-session-start-button", "worldlinco-demo-session-start-button-inline", "데모 세션 시작"],
+        )
+        if center:
+            _adb(device, "shell", "input", "tap", str(center[0]), str(center[1]))
+            time.sleep(4)
+            xml_text = _dump_ui_xml(device, xml_path)
+            still_unauth = any(m in xml_text for m in unauth_markers)
     return not still_unauth
 
 
@@ -278,6 +290,17 @@ def _single_round(
         open_center = (open_x, open_y)
     _adb(device, "shell", "input", "tap", str(open_center[0]), str(open_center[1]))
     time.sleep(3)
+
+    # 로그인 모달이 남아 있으면 데모 세션 버튼으로 전환한 뒤 다시 마이크 타겟을 찾는다.
+    ui_after_open = _dump_ui_xml(device, out_dir / "ui-after-open.xml")
+    if "worldlinco-demo-session-start-button" in ui_after_open:
+        demo_center = _find_first_center_from_ui(
+            ui_after_open,
+            ["worldlinco-demo-session-start-button", "worldlinco-demo-session-start-button-inline", "데모 세션 시작"],
+        )
+        if demo_center:
+            _adb(device, "shell", "input", "tap", str(demo_center[0]), str(demo_center[1]))
+            time.sleep(4)
 
     ui_text = _dump_ui_xml(device, ui_before)
     mic_center = _find_first_center_from_ui(

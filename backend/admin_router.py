@@ -3252,7 +3252,7 @@ ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
         "id": "worldlinco_public_portal",
         "title": "소리새 공공데이터 / 항공 주입",
         "usage": "항공/관광/문화/식당/약국/병원/교통 API 키와 URL 템플릿 주입",
-        "description": "소리새 AI가 국가별 공공데이터 포털 API와 실시간 항공 조회 API를 직접 조회할 수 있도록 서비스키와 URL 템플릿을 관리자 화면에서 저장합니다. URL 템플릿은 {service_key}, {latitude}, {longitude}, {radius_m}, {category}, {query}, {country_code} 플레이스홀더를 지원합니다.",
+        "description": "소리새 AI가 국가별 공공데이터 포털 API와 실시간 항공 조회 API를 직접 조회할 수 있도록 서비스키와 URL 템플릿을 관리자 화면에서 저장합니다. URL 템플릿은 {service_key}, {latitude}, {longitude}, {radius_m}, {category}, {query}, {country_code}, {query_yyyymmdd}, {query_flight_no}, {query_airport_code}, {query_dep_airport_code}, {query_arr_airport_code}, {enc_query} 플레이스홀더를 지원합니다.",
         "fields": [
             "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING",
             "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE",
@@ -3304,7 +3304,7 @@ ADMIN_SYSTEM_ENV_FIELD_LABELS: Dict[str, str] = {
     "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING": "공공데이터 포털 조회 사용 여부 (0/1)",
     "VOICE_FRIEND_PUBLIC_PORTAL_API_KEY": "공공데이터 공통 서비스키 (항공 API 키 금지)",
     "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE": "공공데이터 포털 URL 템플릿",
-    "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_URL_TEMPLATE": "실시간 항공 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_URL_TEMPLATE": "실시간 항공 포털 URL 템플릿 (query_yyyymmdd/query_flight_no/query_airport_code 권장)",
     "VOICE_FRIEND_PUBLIC_PORTAL_FLIGHT_API_KEY": "실시간 항공 포털 서비스키",
     "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE": "관광/문화/식당/숙소 포털 URL 템플릿",
     "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY": "관광/문화/식당/숙소 포털 서비스키",
@@ -5728,6 +5728,10 @@ def approve_workspace_self_run(payload: WorkspaceSelfApprovalRequest, admin: Use
 
 @router.post("/workspace-self-run-record/normalize")
 async def normalize_workspace_self_run_record(request: WorkspaceSelfRunNormalizeRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    async def _execute_workspace_self_run_adapter(payload: WorkspaceSelfRunRequest, db: Session, admin: User):
+        del db
+        return await execute_workspace_self_run(payload=payload, admin=admin)
+
     return await normalize_workspace_self_run_record_response_service(
         request=request,
         db=db,
@@ -5740,14 +5744,13 @@ async def normalize_workspace_self_run_record(request: WorkspaceSelfRunNormalize
         admin_self_run_root=_admin_self_run_root,
         resolve_admin_workspace_path=_resolve_admin_workspace_path,
         admin_workspace_root=_admin_workspace_root,
-        execute_workspace_self_run=lambda *args, **kwargs: asyncio.sleep(0, result={"queued": True, "message": "self-run 재생성 큐를 등록했습니다."}),
+        execute_workspace_self_run=_execute_workspace_self_run_adapter,
         workspace_self_run_request_type=WorkspaceSelfRunRequest,
     )
 
 
 @router.post("/workspace-self-run-record/retry")
-async def retry_workspace_self_run_record(payload: WorkspaceSelfRunRetryRequest, admin: User = Depends(require_admin)):
-    del admin
+async def retry_workspace_self_run_record(payload: WorkspaceSelfRunRetryRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
     approval_payload = None
     if payload.approval_id:
         record_path = _approval_record_path(payload.approval_id)
@@ -5755,8 +5758,33 @@ async def retry_workspace_self_run_record(payload: WorkspaceSelfRunRetryRequest,
             approval_payload = _load_json_file(record_path)
     target_source_path = str(payload.source_path or (approval_payload or {}).get("source_path") or str(_admin_workspace_root()))
     source_dir = _resolve_admin_workspace_path(target_source_path)
-    context = _prepare_workspace_self_run_context(source_dir, "self-improvement" if payload.target_stage == "remediation" else "self-diagnosis", "debug_remediation_loop" if payload.target_stage == "remediation" else "", "targeted_implementation" if payload.target_stage == "remediation" else "diagnosis_only", str(payload.reason or "관리자 대시보드에서 self-run 재시도를 요청했습니다."))
-    return {"queued": True, "approval_id": str(payload.approval_id or ""), "target_stage": str(payload.target_stage or ""), "source_path": target_source_path, "retry": {"mode": "self-improvement" if payload.target_stage == "remediation" else "self-diagnosis", "context": context}, "message": "self-run 재시도를 큐에 등록했습니다."}
+    if not source_dir.exists() or not source_dir.is_dir():
+        source_dir = _admin_workspace_root()
+    requested_mode = "self-improvement" if payload.target_stage == "remediation" else "self-diagnosis"
+    directive_template = str((approval_payload or {}).get("directive_template") or ("debug_remediation_loop" if payload.target_stage == "remediation" else "")).strip()
+    directive_scope = str((approval_payload or {}).get("directive_scope") or ("targeted_implementation" if payload.target_stage == "remediation" else "diagnosis_only")).strip()
+    directive_request = str(payload.reason or "관리자 대시보드에서 self-run 재시도를 요청했습니다.").strip()
+
+    retry_result = await execute_workspace_self_run(
+        payload=WorkspaceSelfRunRequest(
+            source_path=str(source_dir),
+            mode=requested_mode,
+            self_run_stage=str(payload.target_stage or ""),
+            directive_template=directive_template or None,
+            directive_scope=directive_scope or None,
+            directive_request=directive_request,
+        ),
+        admin=admin,
+    )
+
+    return {
+        "queued": True,
+        "approval_id": str(payload.approval_id or ""),
+        "target_stage": str(payload.target_stage or ""),
+        "source_path": str(source_dir),
+        "retry": retry_result,
+        "message": "self-run 재시도를 시작했습니다.",
+    }
 
 
 class FocusedSelfHealingPlanRequest(BaseModel):
