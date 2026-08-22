@@ -1207,6 +1207,24 @@
 			],
 			"isBackground": false,
 			"group": "test"
+		},
+		{
+			"label": "admin-program-registry-real-deploy",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/run_admin_program_registry_real_deploy.ps1",
+				"-BaseUrl",
+				"http://127.0.0.1:8000",
+				"-VerificationRuns",
+				"2"
+			],
+			"isBackground": false,
+			"group": "test"
 		}
 	]
 }
