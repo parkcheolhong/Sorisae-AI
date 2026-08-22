@@ -1071,6 +1071,142 @@
 				"Set-Location 'C:\\Users\\WORK\\source\\repos\\parkcheolhong\\codeAI'; git add .vscode/tasks.json; git commit -m \"chore(vscode): sync tasks metadata\"; git push origin feat/worldlinco-build331-i18n"
 			],
 			"isBackground": false
+		},
+		{
+			"label": "verify-loggedin-friend-chat",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"scripts\\verify_loggedin_friend_chat.py"
+			]
+		},
+		{
+			"label": "verify-loggedin-friend-chat-from-secret",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"scripts\\verify_loggedin_friend_chat.py"
+			]
+		},
+		{
+			"label": "check-login-candidates",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"-c",
+				"import urllib.parse, urllib.request, urllib.error, json; base='http://127.0.0.1:8000/api/auth/login'; email='119cash@naver.com'; cands=['MetaNova!2026','space0215@','changeme-probe-local','RoundUi!20260426']; out=[]\nfor p in cands:\n d=urllib.parse.urlencode({'username':email,'password':p}).encode(); req=urllib.request.Request(base,data=d,headers={'Content-Type':'application/x-www-form-urlencoded'},method='POST')\n try:\n  with urllib.request.urlopen(req,timeout=15) as r:\n   body=r.read().decode(); out.append({'candidate':p[:2]+'***','status':r.status,'token':('access_token' in body)})\n except urllib.error.HTTPError as e:\n  out.append({'candidate':p[:2]+'***','status':e.code,'token':False})\nprint(json.dumps(out, ensure_ascii=False))"
+			]
+		},
+		{
+			"label": "check-login-candidates-script",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"scripts\\check_login_candidates.py"
+			]
+		},
+		{
+			"label": "reset-fixed-admin-password-for-probe",
+			"type": "shell",
+			"command": "$env:FIXED_ADMIN_EMAIL='119cash@naver.com'; $env:RESET_ADMIN_PASSWORD='MetaNova!2026'; .\\.venv\\Scripts\\python.exe scripts\\reset_fixed_admin_password.py",
+			"group": "none"
+		},
+		{
+			"label": "verify-loggedin-friend-chat-after-reset",
+			"type": "shell",
+			"command": "$env:PROBE_LOGIN_EMAIL='119cash@naver.com'; $env:PROBE_LOGIN_PASSWORD='MetaNova!2026'; .\\.venv\\Scripts\\python.exe scripts\\verify_loggedin_friend_chat.py",
+			"group": "none"
+		},
+		{
+			"label": "inspect-login-user-in-backend-container",
+			"type": "shell",
+			"command": "docker exec -e AUTH_E2E_EMAIL=119cash@naver.com -e AUTH_E2E_PW=MetaNova!2026 devanalysis114-backend python -c \"import os; import backend.marketplace.database as d; d._get_or_create_engine(); from backend.marketplace.models import User; from backend.auth import verify_password; s=d.SessionLocal(); email=os.getenv('AUTH_E2E_EMAIL'); pw=os.getenv('AUTH_E2E_PW'); u=s.query(User).filter(User.email==email).first(); print({'found': bool(u), 'id': getattr(u,'id',None), 'email': getattr(u,'email',None), 'username': getattr(u,'username',None), 'is_active': getattr(u,'is_active',None), 'is_admin': getattr(u,'is_admin',None)}); print({'verify_password': verify_password(pw, u.hashed_password) if u else None}); s.close()\""
+		},
+		{
+			"label": "check-login-matrix",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"scripts\\check_login_matrix.py"
+			]
+		},
+		{
+			"label": "check-backend-container-pwd-now",
+			"type": "shell",
+			"command": "docker exec devanalysis114-backend pwd"
+		},
+		{
+			"label": "reset-admin-password-inside-backend-container",
+			"type": "shell",
+			"command": "docker exec -e FIXED_ADMIN_EMAIL=119cash@naver.com -e RESET_ADMIN_PASSWORD=MetaNova!2026 devanalysis114-backend python /app/scripts/reset_fixed_admin_password.py"
+		},
+		{
+			"label": "verify-loggedin-friend-chat-after-container-reset",
+			"type": "shell",
+			"command": "$env:PROBE_LOGIN_EMAIL='119cash@naver.com'; $env:PROBE_LOGIN_PASSWORD='MetaNova!2026'; .\\.venv\\Scripts\\python.exe scripts\\verify_loggedin_friend_chat.py"
+		},
+		{
+			"label": "verify-loggedin-friend-chat-keyfix",
+			"type": "shell",
+			"command": "$env:PROBE_LOGIN_EMAIL='119cash@naver.com'; $env:PROBE_LOGIN_PASSWORD='MetaNova!2026'; .\\.venv\\Scripts\\python.exe scripts\\verify_loggedin_friend_chat.py"
+		},
+		{
+			"label": "verify-loggedin-friend-chat-keyfix-after-clear",
+			"type": "shell",
+			"command": "$probeEmail='119cash@naver.com'; docker exec -e AUTH_E2E_EMAIL=$probeEmail devanalysis114-backend python -c \"import os; import backend.marketplace.database as d; d._get_or_create_engine(); from backend.models import User; from backend.marketplace.models import UserActiveSession; s=d.SessionLocal(); email=os.getenv('AUTH_E2E_EMAIL','').strip().lower(); u=s.query(User).filter(User.email==email).first(); rows=s.query(UserActiveSession).filter(UserActiveSession.user_id==int(u.id)).all() if u else []; n=len(rows); [s.delete(r) for r in rows]; s.commit(); s.close(); print('cleared_active_sessions', n)\"; $env:PROBE_LOGIN_EMAIL='119cash@naver.com'; $env:PROBE_LOGIN_PASSWORD='MetaNova!2026'; .\\.venv\\Scripts\\python.exe scripts\\verify_loggedin_friend_chat.py"
+		},
+		{
+			"label": "verify-loggedin-friend-chat-final",
+			"type": "shell",
+			"command": "$env:PROBE_LOGIN_EMAIL='119cash@naver.com'; $env:PROBE_LOGIN_PASSWORD='MetaNova!2026'; .\\.venv\\Scripts\\python.exe scripts\\verify_loggedin_friend_chat.py"
+		},
+		{
+			"label": "admin-program-registry-negative-smoke",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/run_admin_program_registry_negative_smoke.ps1",
+				"-BaseUrl",
+				"http://127.0.0.1:8000"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "admin-program-registry-auth-negative-smoke",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/run_admin_program_registry_auth_negative_smoke.ps1",
+				"-BaseUrl",
+				"http://127.0.0.1:8000"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "admin-program-registry-contract-smoke",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/run_admin_program_registry_contract_smoke.ps1",
+				"-BaseUrl",
+				"http://127.0.0.1:8000"
+			],
+			"isBackground": false,
+			"group": "test"
 		}
 	]
 }

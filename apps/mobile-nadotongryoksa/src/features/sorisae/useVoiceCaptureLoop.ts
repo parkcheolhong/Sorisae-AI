@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Alert, Platform, ToastAndroid } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
+import * as Speech from 'expo-speech';
 import { Audio } from '../../compat/expoAvAudio';
 import { getLocationServicesEnabled } from '../../services/locationService';
 
@@ -79,7 +80,16 @@ import { getUiLang, localizeUiString } from '../i18n/uiI18n';
 import { resolveUserOutputLang } from '../i18n/userLanguagePolicy';
 import type { VoiceCaptureBlockReason, VoiceCaptureLoopDeps } from './voiceCaptureLoopTypes';
 
+export function clearVoiceCaptureStartInFlight(
+    voiceInputStartInFlightRef: { current: boolean },
+    startInFlightStartedAtMsRef: { current: number },
+) {
+    voiceInputStartInFlightRef.current = false;
+    startInFlightStartedAtMsRef.current = 0;
+}
+
 export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
+    const SORISAE_RUNTIME_BUNDLE_MARKER = 'SORISAE_RUNTIME_BUNDLE_MARKER_20260819_VOICE_CREATE_LOG_V1';
     const FACE_PLAYBACK_BARGE_IN_ARM_MS = 250;
     const sorisaeServerErrorBlockedUntilRef = useRef(0);
     const sorisaePlaybackBlockedUntilRef = useRef(0);
@@ -95,7 +105,10 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
     const sileroSpeechEndHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const sileroLastSpeechStartAtMsRef = useRef(0);
     const stopInFlightStartedAtMsRef = useRef(0);
+    const startInFlightStartedAtMsRef = useRef(0);
+    const deferredMainAutoStartRef = useRef(false);
     const faceCaptureTraceIdRef = useRef<string | null>(null);
+    const runtimeBundleMarkerLoggedRef = useRef(false);
     // 소리새 홈 대화는 말끝 미세 끊김(글리치)이 잦아 조기 stop/restart 깜박임이 생길 수 있다.
     // 디바운스를 늘려 말끝 판정을 안정화한다.
     const SORISAE_SPEECH_END_SETTLE_MS = 500;
@@ -255,6 +268,18 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
     }, []);
 
     useEffect(() => {
+        if (runtimeBundleMarkerLoggedRef.current) {
+            return;
+        }
+        runtimeBundleMarkerLoggedRef.current = true;
+        console.log('[COMPANION_HANDLER]', JSON.stringify({
+            event: 'SORISAE_RUNTIME_BUNDLE_MARKER',
+            marker: SORISAE_RUNTIME_BUNDLE_MARKER,
+            platform: Platform.OS,
+        }));
+    }, []);
+
+    useEffect(() => {
         if (!autoVoiceModeEnabled) {
             faceConversationSessionIdRef.current = null;
             faceConversationLastTurnRef.current = null;
@@ -262,16 +287,99 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
     }, [autoVoiceModeEnabled]);
 
     const startVoiceInput = useCallback(async (options: { autoMode?: boolean; target?: 'main' | 'inter_call' } = {}) => {
+        const effectiveAutoMode = Boolean(options.autoMode);
+        const inputTarget = options.target ?? 'main';
+        const isMainAutoRequest = effectiveAutoMode && inputTarget === 'main';
+        let recordingCreateStartedAtMs = 0;
+        let recordingCreateFinished = false;
+        const permissionGuardTimeoutMs = 7000;
+        const resolveBooleanWithTimeout = async (promise: Promise<boolean>, stage: string): Promise<boolean> => {
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            try {
+                return await Promise.race<boolean>([
+                    promise,
+                    new Promise<boolean>((resolve) => {
+                        timer = setTimeout(() => {
+                            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                                event: 'COMPANION_START_VOICE_GUARD_TIMEOUT',
+                                stage,
+                                timeout_ms: permissionGuardTimeoutMs,
+                                target: inputTarget,
+                                auto_mode: effectiveAutoMode,
+                            }));
+                            resolve(false);
+                        }, permissionGuardTimeoutMs);
+                    }),
+                ]);
+            } finally {
+                if (timer) {
+                    clearTimeout(timer);
+                }
+            }
+        };
+        const resolveWithTimeout = async <T,>(promise: Promise<T>, stage: string, timeoutMs: number): Promise<T> => {
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            try {
+                return await Promise.race<T>([
+                    promise,
+                    new Promise<T>((_, reject) => {
+                        timer = setTimeout(() => {
+                            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                                event: 'COMPANION_START_VOICE_STAGE_TIMEOUT',
+                                stage,
+                                timeout_ms: timeoutMs,
+                                target: inputTarget,
+                                auto_mode: effectiveAutoMode,
+                            }));
+                            reject(new Error(`start_voice_stage_timeout:${stage}:${timeoutMs}`));
+                        }, timeoutMs);
+                    }),
+                ]);
+            } finally {
+                if (timer) {
+                    clearTimeout(timer);
+                }
+            }
+        };
+        const startInFlightAgeMs = voiceInputStartInFlightRef.current && startInFlightStartedAtMsRef.current > 0
+            ? Date.now() - startInFlightStartedAtMsRef.current
+            : 0;
+        if (
+            voiceInputStartInFlightRef.current
+            && !voiceInputStopInFlightRef.current
+            && !recordingRef.current
+            && startInFlightAgeMs >= 6500
+        ) {
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_STALE_RECOVER',
+                stale_ms: startInFlightAgeMs,
+                target: inputTarget,
+                auto_mode: effectiveAutoMode,
+            }));
+            clearVoiceCaptureStartInFlight(voiceInputStartInFlightRef, startInFlightStartedAtMsRef);
+            deferredMainAutoStartRef.current = false;
+        }
         console.log('[COMPANION_HANDLER]', JSON.stringify({
             event: 'COMPANION_START_VOICE_ENTER',
-            auto_mode: Boolean(options.autoMode),
-            target: options.target ?? 'main',
+            auto_mode: effectiveAutoMode,
+            target: inputTarget,
             armed: companionVoiceCallArmedRef.current,
             recording: Boolean(recordingRef.current),
             in_flight_start: Boolean(voiceInputStartInFlightRef.current),
+            in_flight_start_age_ms: startInFlightAgeMs,
             in_flight_stop: Boolean(voiceInputStopInFlightRef.current),
         }));
         if (voiceInputStartInFlightRef.current || voiceInputStopInFlightRef.current || recordingRef.current) {
+            if (isMainAutoRequest && voiceInputStartInFlightRef.current) {
+                deferredMainAutoStartRef.current = true;
+                console.log('[COMPANION_HANDLER]', JSON.stringify({
+                    event: 'COMPANION_START_VOICE_DEFERRED',
+                    reason: 'start_inflight',
+                    armed: companionVoiceCallArmedRef.current,
+                }));
+                applyVoiceCaptureBlockReason(null);
+                return;
+            }
             console.log('[COMPANION_HANDLER]', JSON.stringify({
                 event: 'COMPANION_START_VOICE_BLOCKED',
                 reason: 'busy',
@@ -283,9 +391,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             applyVoiceCaptureBlockReason(null);
             return;
         }
-        voiceInputStartInFlightRef.current = true;
-        const effectiveAutoMode = Boolean(options.autoMode);
-        const inputTarget = options.target ?? 'main';
+
         if (inputTarget === 'main' && effectiveAutoMode) {
             faceCaptureTraceIdRef.current = `face-trace-${newCorrelationId(FEATURE_IDS.faceInterpret)}`;
             logFaceCaptureTrace('start_tap', {
@@ -298,6 +404,12 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
         applyVoiceCaptureBlockReason(null);
         try {
             voiceInputTargetRef.current = inputTarget;
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_STAGE',
+                stage: 'target_set',
+                target: inputTarget,
+                auto_mode: effectiveAutoMode,
+            }));
             if (
                 inputTarget === 'main'
                 && effectiveAutoMode
@@ -357,9 +469,28 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && inputTarget === 'main'
                 && sorisaeSpeakingRef.current
                 && !sorisaeVoicePlaybackSoundRef.current) {
-                // 재생 핸들이 없는 speaking=true 잔존 상태는 고착으로 보고 즉시 해제한다.
+                // 디바이스 TTS 폴백은 재생 핸들이 없을 수 있어, 실제 speaking 상태를 확인한다.
+                let deviceTtsSpeaking = false;
+                try {
+                    deviceTtsSpeaking = await Speech.isSpeakingAsync();
+                } catch {
+                    deviceTtsSpeaking = false;
+                }
+                if (deviceTtsSpeaking) {
+                    console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'capture_blocked_device_tts_speaking' }));
+                    applyVoiceCaptureBlockReason({
+                        code: 'capture_blocked_speaking',
+                        message: '현재 음성 출력 중이라 캡처를 잠시 보류합니다.',
+                        traceId: faceCaptureTraceIdRef.current ?? undefined,
+                    });
+                    logFaceCaptureTrace('blocked_speaking_device_tts');
+                    scheduleFaceConversationRestartRef.current(null);
+                    return;
+                }
+                // 실제 발화가 아니면 stale 상태로 보고 해제한다.
                 sorisaeSpeakingRef.current = false;
                 setSorisaeSpeakingUi?.(false);
+                console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'sorisae_speaking_gate_stale_cleared_no_sound' }));
             }
             if (effectiveAutoMode
                 && inputTarget === 'main'
@@ -406,6 +537,12 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 scheduleFaceConversationRestartRef.current(null);
                 return;
             }
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_STAGE',
+                stage: 'before_platform_branch',
+                target: inputTarget,
+                auto_mode: effectiveAutoMode,
+            }));
             if (Platform.OS === 'web') {
                 const webAny = globalThis as any;
                 const speechCtor = webAny.window?.SpeechRecognition || webAny.window?.webkitSpeechRecognition;
@@ -464,12 +601,37 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 return;
             }
 
-            // 이미 허용된 마이크 권한은 재요청하지 않아 permission activity 반복 표출을 막는다.
-            let hasPermission = await checkPermissionStatus('RECORD_AUDIO');
-            if (!hasPermission) {
-                hasPermission = await requestPermissions(['RECORD_AUDIO'], '음성 입력', (msg) => {
-                    setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail: msg }));
-                });
+            // 일부 안드로이드 기기에서 권한 조회 브리지(checkPermissionStatus)가 응답 없이 고착되어
+            // start_inflight가 영구 유지되는 사례가 있어, 자동 듣기 main 경로는 권한 조회를 우회하고
+            // 실제 녹음 생성 단계로 직접 진입한다(권한 미허용이면 createAsync에서 즉시 실패하여 catch 경로로 복구).
+            const bypassPermissionProbe = Platform.OS === 'android' && inputTarget === 'main' && effectiveAutoMode;
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_STAGE',
+                stage: 'before_permission_gate',
+                target: inputTarget,
+                auto_mode: effectiveAutoMode,
+                bypass_permission_probe: bypassPermissionProbe,
+            }));
+            let hasPermission = true;
+            if (bypassPermissionProbe) {
+                console.log('[COMPANION_HANDLER]', JSON.stringify({
+                    event: 'COMPANION_START_VOICE_PERMISSION_BYPASS',
+                    target: inputTarget,
+                    auto_mode: effectiveAutoMode,
+                }));
+            } else {
+                hasPermission = await resolveBooleanWithTimeout(
+                    checkPermissionStatus('RECORD_AUDIO'),
+                    'check_permission_status',
+                );
+                if (!hasPermission) {
+                    hasPermission = await resolveBooleanWithTimeout(
+                        requestPermissions(['RECORD_AUDIO'], '음성 입력', (msg) => {
+                            setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail: msg }));
+                        }),
+                        'request_record_audio_permission',
+                    );
+                }
             }
             if (!hasPermission) {
                 applyVoiceCaptureBlockReason({
@@ -495,13 +657,17 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             }
 
             // Android: playThroughEarpieceAndroid: false → STREAM_VOICE_CALL 경로 → BT HFP SCO 자동 활성화
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                shouldDuckAndroid: false,
-                playThroughEarpieceAndroid: false,
-            });
+            await resolveWithTimeout(
+                Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                    staysActiveInBackground: false,
+                    shouldDuckAndroid: false,
+                    playThroughEarpieceAndroid: false,
+                }),
+                'set_audio_mode',
+                4000,
+            );
             const isFaceConversation = inputTarget === 'main' && autoVoiceModeEnabledRef.current;
             const isCompanionVoiceCallCapture = inputTarget === 'main' && companionVoiceCallArmedRef.current;
             const isAutoConversationCapture = effectiveAutoMode && inputTarget === 'main'
@@ -512,7 +678,7 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             // 효과: 자기 스피커로 낸 통역 TTS를 자기 마이크가 다시 줍는 '핑퐁 자기에코'를 하드웨어에서 상쇄.
             if (effectiveAutoMode) {
                 try {
-                    await enableConversationCaptureAudio();
+                    await resolveWithTimeout(enableConversationCaptureAudio(), 'enable_conversation_capture_audio', 3000);
                     faceConversationAudioEnabledRef.current = true;
                     if (inputTarget === 'main') {
                         logFaceCaptureTrace('capture_audio_mode_end', {
@@ -535,29 +701,74 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                     companion_armed: companionVoiceCallArmedRef.current,
                 });
             }
-            const { recording } = await Audio.Recording.createAsync({
-                android: {
-                    extension: '.m4a',
-                    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-                    audioEncoder: Audio.AndroidAudioEncoder.AAC,
-                    sampleRate: 16_000,
-                    numberOfChannels: 1,
-                    bitRate: 64_000,
-                },
-                ios: {
-                    extension: '.m4a',
-                    audioQuality: Audio.IOSAudioQuality.HIGH,
-                    sampleRate: 16_000,
-                    numberOfChannels: 1,
-                    bitRate: 64_000,
-                    linearPCMBitDepth: 16,
-                    linearPCMIsBigEndian: false,
-                    linearPCMIsFloat: false,
-                },
-                web: Audio.RecordingOptionsPresets.HIGH_QUALITY.web,
-                isMeteringEnabled: isAutoConversationCapture || (effectiveAutoMode && inputTarget !== 'main'),
-                keepAudioActiveHint: false,
-            });
+            recordingCreateStartedAtMs = Date.now();
+            const recordingCreateTimeoutMs = 2000;
+            let recordingCreateTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+            voiceInputStartInFlightRef.current = true;
+            startInFlightStartedAtMsRef.current = Date.now();
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_CREATE_BEGIN',
+                started_at_ms: recordingCreateStartedAtMs,
+                auto_mode: effectiveAutoMode,
+                target: inputTarget,
+                trace_id: faceCaptureTraceIdRef.current,
+            }));
+            const recordingCreateResult = await (async () => {
+                try {
+                    return await Promise.race<Awaited<ReturnType<typeof Audio.Recording.createAsync>>>([
+                        Audio.Recording.createAsync({
+                            android: {
+                                extension: '.m4a',
+                                outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+                                audioEncoder: Audio.AndroidAudioEncoder.AAC,
+                                sampleRate: 16_000,
+                                numberOfChannels: 1,
+                                bitRate: 64_000,
+                            },
+                            ios: {
+                                extension: '.m4a',
+                                audioQuality: Audio.IOSAudioQuality.HIGH,
+                                sampleRate: 16_000,
+                                numberOfChannels: 1,
+                                bitRate: 64_000,
+                                linearPCMBitDepth: 16,
+                                linearPCMIsBigEndian: false,
+                                linearPCMIsFloat: false,
+                            },
+                            web: Audio.RecordingOptionsPresets.HIGH_QUALITY.web,
+                            isMeteringEnabled: isAutoConversationCapture || (effectiveAutoMode && inputTarget !== 'main'),
+                            keepAudioActiveHint: false,
+                        }),
+                        new Promise<Awaited<ReturnType<typeof Audio.Recording.createAsync>>>((_, reject) => {
+                            recordingCreateTimeoutHandle = setTimeout(() => {
+                                console.log('[COMPANION_HANDLER]', JSON.stringify({
+                                    event: 'COMPANION_START_VOICE_TIMEOUT',
+                                    timeout_ms: recordingCreateTimeoutMs,
+                                    elapsed_ms: recordingCreateStartedAtMs > 0 ? Date.now() - recordingCreateStartedAtMs : 0,
+                                    target: inputTarget,
+                                    auto_mode: effectiveAutoMode,
+                                }));
+                                reject(new Error(`recording_create_timeout_${recordingCreateTimeoutMs}ms`));
+                            }, recordingCreateTimeoutMs);
+                        }),
+                    ]);
+                } finally {
+                    if (recordingCreateTimeoutHandle) {
+                        clearTimeout(recordingCreateTimeoutHandle);
+                        recordingCreateTimeoutHandle = null;
+                    }
+                }
+            })();
+            const { recording } = recordingCreateResult;
+            recordingCreateFinished = true;
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_CREATE_END',
+                elapsed_ms: recordingCreateStartedAtMs > 0 ? Date.now() - recordingCreateStartedAtMs : 0,
+                has_recording: Boolean(recording),
+                auto_mode: effectiveAutoMode,
+                target: inputTarget,
+                trace_id: faceCaptureTraceIdRef.current,
+            }));
             recordingRef.current = recording;
             if (inputTarget === 'main' && effectiveAutoMode) {
                 logFaceCaptureTrace('capture_create_end', {
@@ -742,6 +953,15 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
             const rawMessage = typeof error?.message === 'string' ? error.message : '';
             const normalized = rawMessage.toLowerCase();
             let detail = rawMessage || '원인 불명';
+            console.log('[COMPANION_HANDLER]', JSON.stringify({
+                event: 'COMPANION_START_VOICE_CREATE_ERROR',
+                stage: recordingCreateStartedAtMs > 0 && !recordingCreateFinished ? 'recording_create' : 'post_create',
+                elapsed_ms: recordingCreateStartedAtMs > 0 ? Date.now() - recordingCreateStartedAtMs : 0,
+                auto_mode: effectiveAutoMode,
+                target: inputTarget,
+                trace_id: faceCaptureTraceIdRef.current,
+                detail,
+            }));
             if (Platform.OS === 'web') {
                 if (normalized.includes('permission') || normalized.includes('denied') || normalized.includes('notallowed')) {
                     detail = '브라우저 마이크 권한이 차단되어 있습니다. 주소창의 사이트 권한에서 마이크를 허용해 주세요.';
@@ -787,7 +1007,27 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 Alert.alert(getFeatureUiText('capture.recordErrorTitle'), detail);
             }
         } finally {
-            voiceInputStartInFlightRef.current = false;
+            clearVoiceCaptureStartInFlight(voiceInputStartInFlightRef, startInFlightStartedAtMsRef);
+            if (
+                deferredMainAutoStartRef.current
+                && !voiceInputStopInFlightRef.current
+                && !recordingRef.current
+                && autoVoiceModeEnabledRef.current
+                && voiceInputTargetRef.current === 'main'
+            ) {
+                deferredMainAutoStartRef.current = false;
+                setTimeout(() => {
+                    if (
+                        !voiceInputStartInFlightRef.current
+                        && !voiceInputStopInFlightRef.current
+                        && !recordingRef.current
+                        && autoVoiceModeEnabledRef.current
+                        && voiceInputTargetRef.current === 'main'
+                    ) {
+                        void startVoiceInput({ autoMode: true, target: 'main' });
+                    }
+                }, 180);
+            }
         }
     }, [autoRelayDelayMs, clearAutoVoiceTimers, requestPermissions, runTranslation, toLang]);
 
@@ -932,6 +1172,26 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 stopInFlightStartedAtMsRef.current = 0;
             }
 
+            // start-in-flight가 예외/네이티브 응답 지연으로 고착되면 deferred 루프에 빠질 수 있다.
+            if (voiceInputStartInFlightRef.current
+                && !voiceInputStopInFlightRef.current
+                && !recordingRef.current
+                && !voiceSttLoadingRef.current) {
+                if (startInFlightStartedAtMsRef.current <= 0) {
+                    startInFlightStartedAtMsRef.current = Date.now();
+                } else if (Date.now() - startInFlightStartedAtMsRef.current >= 7000) {
+                    console.log('[FACE_CONVERSATION]', JSON.stringify({
+                        event: 'start_inflight_stale_recover',
+                        stale_ms: Date.now() - startInFlightStartedAtMsRef.current,
+                    }));
+                    voiceInputStartInFlightRef.current = false;
+                    startInFlightStartedAtMsRef.current = 0;
+                    deferredMainAutoStartRef.current = false;
+                }
+            } else if (!voiceInputStartInFlightRef.current) {
+                startInFlightStartedAtMsRef.current = 0;
+            }
+
             // main 캡처 타겟이 비정상적으로 inter_call 등에 남아 있으면 자동 듣기가 영구 비활성화될 수 있다.
             // 통화가 실제 활성 상태가 아닐 때만 main으로 복구해 안전하게 재시작한다.
             if (autoVoiceModeEnabledRef.current
@@ -996,15 +1256,36 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 && !recordingRef.current
                 && !voiceSttLoadingRef.current
                 && !faceSpeakingRef.current) {
-                sorisaeSpeakingStuckTicks += 1;
-                if (sorisaeSpeakingStuckTicks >= 12) {
-                    sorisaeSpeakingStuckTicks = 0;
-                    console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'sorisae_speaking_stuck_recover' }));
-                    sorisaeSpeakingRef.current = false;
-                    setSorisaeSpeakingUi?.(false);
-                    void startVoiceInput({ autoMode: true });
-                    return;
-                }
+                // 디바이스 TTS 폴백 경로는 재생 핸들이 없어도 실제 발화가 길게 진행될 수 있다.
+                // 발화가 끝나기 전에는 절대 자동 듣기를 재개하지 않는다.
+                void Speech.isSpeakingAsync()
+                    .then((deviceSpeaking: boolean) => {
+                        if (deviceSpeaking) {
+                            sorisaeSpeakingStuckTicks = 0;
+                            return;
+                        }
+                        sorisaeSpeakingStuckTicks += 1;
+                        if (sorisaeSpeakingStuckTicks < 12) {
+                            return;
+                        }
+                        sorisaeSpeakingStuckTicks = 0;
+                        console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'sorisae_speaking_stuck_recover' }));
+                        sorisaeSpeakingRef.current = false;
+                        setSorisaeSpeakingUi?.(false);
+                        void startVoiceInput({ autoMode: true });
+                    })
+                    .catch(() => {
+                        sorisaeSpeakingStuckTicks += 1;
+                        if (sorisaeSpeakingStuckTicks < 12) {
+                            return;
+                        }
+                        sorisaeSpeakingStuckTicks = 0;
+                        console.log('[FACE_CONVERSATION]', JSON.stringify({ event: 'sorisae_speaking_stuck_recover_on_speech_probe_error' }));
+                        sorisaeSpeakingRef.current = false;
+                        setSorisaeSpeakingUi?.(false);
+                        void startVoiceInput({ autoMode: true });
+                    });
+                return;
             } else {
                 sorisaeSpeakingStuckTicks = 0;
             }
@@ -1715,6 +1996,14 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
 
                 let requestPayload = voicePayload;
                 let requestUploadKind: 'm4a' | 'silero_wav' = uploadUri === uri ? 'm4a' : 'silero_wav';
+                if (isFaceGptMode) {
+                    const hasCoords = Number.isFinite(Number((requestPayload as any)?.latitude))
+                        && Number.isFinite(Number((requestPayload as any)?.longitude));
+                    console.log('[FRIEND_CHAT_GPS_PRESEND]', JSON.stringify({
+                        correlation_id: faceCorrelationId,
+                        has_coords: hasCoords,
+                    }));
+                }
                 logFaceCaptureTrace('post_start', {
                     endpoint: voiceEndpoint,
                     upload_kind: requestUploadKind,

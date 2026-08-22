@@ -105,6 +105,39 @@ from backend.admin.llm_gateway_recovery_service import (
     auto_recover_llm_gateway,
     collect_llm_gateway_diagnostics,
 )
+from backend.admin.program_registry_models import (
+    AdminProgramRegistryApproveRequest,
+    AdminProgramRegistryArtifactResponse,
+    AdminProgramRegistryCheckResponse,
+    AdminProgramRegistryCheckRunRequest,
+    AdminProgramRegistryDetailResponse,
+    AdminProgramRegistryRollbackRequest,
+    AdminProgramRegistryStateResponse,
+    AdminProgramRegistryStatusUpdateRequest,
+)
+from backend.admin.program_registry_service import (
+    build_admin_program_registry_approve_payload,
+    build_admin_program_registry_artifacts_payload,
+    build_admin_program_registry_builds_payload,
+    build_admin_program_registry_check_run_payload,
+    build_admin_program_registry_checks_payload,
+    build_admin_program_registry_deployments_payload,
+    build_admin_program_registry_detail_payload,
+    build_admin_program_registry_docs_payload,
+    build_admin_program_registry_rollback_payload,
+    build_admin_program_registry_state_payload,
+    load_admin_program_registry_row,
+    load_admin_program_registry_rows,
+    save_admin_program_registry_row,
+    serialize_admin_program_registry_summary_item,
+)
+from backend.admin.program_registry_validators import (
+    validate_program_id,
+    validate_program_registry_approve_payload,
+    validate_program_registry_check_run_payload,
+    validate_program_registry_rollback_payload,
+    validate_program_registry_status_update_payload,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -331,6 +364,333 @@ def require_admin_or_regional_manager(current_user: User = Depends(get_current_u
     if manager:
         return current_user
     raise HTTPException(status_code=403, detail="지역 관리자 또는 관리자 권한이 필요합니다")
+
+
+@router.get("/program-registry")
+def list_admin_program_registry(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryStateResponse:
+    rows = load_admin_program_registry_rows(db=db)
+    items = [serialize_admin_program_registry_summary_item(row) for row in rows]
+    payload = build_admin_program_registry_state_payload(
+        db=db,
+        rows=rows,
+        items=items,
+    )
+    return AdminProgramRegistryStateResponse(**payload)
+
+
+@router.get("/program-registry/{program_id}")
+def get_admin_program_registry(
+    program_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryDetailResponse:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    payload = build_admin_program_registry_detail_payload(
+        db=db,
+        program_id=normalized_program_id,
+        row=row,
+    )
+    return AdminProgramRegistryDetailResponse(**payload)
+
+
+@router.patch("/program-registry/{program_id}")
+def update_admin_program_registry(
+    program_id: str,
+    payload: AdminProgramRegistryStatusUpdateRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryDetailResponse:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+        validated_payload = validate_program_registry_status_update_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    updated_row = save_admin_program_registry_row(
+        db=db,
+        program_id=normalized_program_id,
+        payload=validated_payload,
+        admin=admin,
+    )
+    detail_payload = build_admin_program_registry_detail_payload(
+        db=db,
+        program_id=normalized_program_id,
+        row=updated_row,
+    )
+    return AdminProgramRegistryDetailResponse(**detail_payload)
+
+
+@router.patch("/program-registry/{program_id}/status")
+def update_admin_program_registry_status(
+    program_id: str,
+    payload: AdminProgramRegistryStatusUpdateRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryDetailResponse:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+        validated_payload = validate_program_registry_status_update_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    updated_row = save_admin_program_registry_row(
+        db=db,
+        program_id=normalized_program_id,
+        payload=validated_payload,
+        admin=admin,
+    )
+    detail_payload = build_admin_program_registry_detail_payload(
+        db=db,
+        program_id=normalized_program_id,
+        row=updated_row,
+    )
+    return AdminProgramRegistryDetailResponse(**detail_payload)
+
+
+@router.get("/program-registry/{program_id}/builds")
+def list_admin_program_registry_builds(
+    program_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    return build_admin_program_registry_builds_payload(
+        db=db,
+        program_id=normalized_program_id,
+    )
+
+
+@router.get("/program-registry/{program_id}/deployments")
+def list_admin_program_registry_deployments(
+    program_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    return build_admin_program_registry_deployments_payload(
+        db=db,
+        program_id=normalized_program_id,
+    )
+
+
+@router.get("/program-registry/{program_id}/checks")
+def list_admin_program_registry_checks(
+    program_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> List[AdminProgramRegistryCheckResponse]:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    items = build_admin_program_registry_checks_payload(
+        db=db,
+        program_id=normalized_program_id,
+    )
+    return [AdminProgramRegistryCheckResponse(**item) for item in items]
+
+
+@router.post("/program-registry/{program_id}/checks/run")
+def post_admin_program_registry_check_run(
+    program_id: str,
+    payload: AdminProgramRegistryCheckRunRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryDetailResponse:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+        validated_payload = validate_program_registry_check_run_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    run_payload = build_admin_program_registry_check_run_payload(
+        db=db,
+        program_id=normalized_program_id,
+        payload=validated_payload,
+        admin=admin,
+    )
+    updated_row = save_admin_program_registry_row(
+        db=db,
+        program_id=normalized_program_id,
+        payload=AdminProgramRegistryStatusUpdateRequest(
+            build_status=run_payload.get("build_status"),
+            verification_status=run_payload.get("verification_status"),
+        ),
+        admin=admin,
+    )
+    detail_payload = build_admin_program_registry_detail_payload(
+        db=db,
+        program_id=normalized_program_id,
+        row=updated_row,
+    )
+    return AdminProgramRegistryDetailResponse(**detail_payload)
+
+
+@router.get("/program-registry/{program_id}/artifacts")
+def list_admin_program_registry_artifacts(
+    program_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> List[AdminProgramRegistryArtifactResponse]:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    items = build_admin_program_registry_artifacts_payload(
+        db=db,
+        program_id=normalized_program_id,
+    )
+    return [AdminProgramRegistryArtifactResponse(**item) for item in items]
+
+
+@router.get("/program-registry/{program_id}/docs")
+def list_admin_program_registry_docs(
+    program_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, str]]:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    return build_admin_program_registry_docs_payload(
+        db=db,
+        program_id=normalized_program_id,
+    )
+
+
+@router.post("/program-registry/{program_id}/approve")
+def approve_admin_program_registry(
+    program_id: str,
+    payload: AdminProgramRegistryApproveRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryDetailResponse:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+        validated_payload = validate_program_registry_approve_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    approve_payload = build_admin_program_registry_approve_payload(
+        db=db,
+        program_id=normalized_program_id,
+        payload=validated_payload,
+        admin=admin,
+    )
+    updated_row = save_admin_program_registry_row(
+        db=db,
+        program_id=normalized_program_id,
+        payload=AdminProgramRegistryStatusUpdateRequest(
+            deploy_status=approve_payload.get("deploy_status"),
+            verification_status=approve_payload.get("verification_status"),
+        ),
+        admin=admin,
+    )
+    detail_payload = build_admin_program_registry_detail_payload(
+        db=db,
+        program_id=normalized_program_id,
+        row=updated_row,
+    )
+    return AdminProgramRegistryDetailResponse(**detail_payload)
+
+
+@router.post("/program-registry/{program_id}/rollback")
+def rollback_admin_program_registry(
+    program_id: str,
+    payload: AdminProgramRegistryRollbackRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminProgramRegistryDetailResponse:
+    try:
+        normalized_program_id = validate_program_id(program_id)
+        validated_payload = validate_program_registry_rollback_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    row = load_admin_program_registry_row(db=db, program_id=normalized_program_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    rollback_payload = build_admin_program_registry_rollback_payload(
+        db=db,
+        program_id=normalized_program_id,
+        payload=validated_payload,
+        admin=admin,
+    )
+    updated_row = save_admin_program_registry_row(
+        db=db,
+        program_id=normalized_program_id,
+        payload=AdminProgramRegistryStatusUpdateRequest(
+            deploy_status=rollback_payload.get("deploy_status"),
+            verification_status=rollback_payload.get("verification_status"),
+        ),
+        admin=admin,
+    )
+    detail_payload = build_admin_program_registry_detail_payload(
+        db=db,
+        program_id=normalized_program_id,
+        row=updated_row,
+    )
+    return AdminProgramRegistryDetailResponse(**detail_payload)
 
 
 assert_debug_validation_job_contract()
@@ -2099,11 +2459,28 @@ def change_admin_account_password(
     db.add(admin)
     db.commit()
     db.refresh(admin)
+
+    env_path = _admin_env_path()
+    env_values = _read_admin_env_values(env_path)
+    secret_host_path = _write_fixed_admin_password_secret(next_password, env_values)
+    file_setting = str(env_values.get("FIXED_ADMIN_PASSWORD_FILE") or "").strip() or secret_host_path
+    _write_admin_env_values(
+        env_path,
+        {
+            "FIXED_ADMIN_PASSWORD": "",
+            "FIXED_ADMIN_PASSWORD_FILE": file_setting,
+        },
+    )
+    os.environ["FIXED_ADMIN_PASSWORD"] = ""
+    os.environ["FIXED_ADMIN_PASSWORD_FILE"] = file_setting
+
     return {
         "changed": True,
         "message": "관리자 비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해 주세요.",
         "username": str(admin.username or ""),
         "email": str(admin.email or ""),
+        "secret_path": secret_host_path,
+        "fixed_admin_password_file": file_setting,
     }
 
 
@@ -3252,7 +3629,7 @@ ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
         "id": "worldlinco_public_portal",
         "title": "소리새 공공데이터 / 항공 주입",
         "usage": "항공/관광/문화/식당/약국/병원/교통 API 키와 URL 템플릿 주입",
-        "description": "소리새 AI가 국가별 공공데이터 포털 API와 실시간 항공 조회 API를 직접 조회할 수 있도록 서비스키와 URL 템플릿을 관리자 화면에서 저장합니다. URL 템플릿은 {service_key}, {latitude}, {longitude}, {radius_m}, {category}, {query}, {country_code}, {query_yyyymmdd}, {query_flight_no}, {query_airport_code}, {query_dep_airport_code}, {query_arr_airport_code}, {enc_query} 플레이스홀더를 지원합니다.",
+        "description": "소리새 AI가 국가별 공공데이터 포털 API와 실시간 항공 조회 API를 직접 조회할 수 있도록 서비스키와 URL 템플릿을 관리자 화면에서 저장합니다. URL 템플릿은 {service_key}, {latitude}, {longitude}, {radius_m}, {category}, {query}, {country_code}, {query_yyyymmdd}, {query_flight_no}, {query_airport_code}, {query_dep_airport_code}, {query_arr_airport_code}, {query_dep_terminal_name}, {query_arr_terminal_name}, {query_dep_terminal_id}, {query_arr_terminal_id}, {enc_query} 플레이스홀더를 지원합니다.",
         "fields": [
             "VOICE_FRIEND_PUBLIC_PORTAL_GROUNDING",
             "VOICE_FRIEND_PUBLIC_PORTAL_URL_TEMPLATE",
@@ -3265,6 +3642,8 @@ ADMIN_SYSTEM_ENV_SECTIONS: List[Dict[str, Any]] = [
             "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY",
             "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE",
             "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY",
+            "VOICE_FRIEND_PUBLIC_PORTAL_FARE_URL_TEMPLATE",
+            "VOICE_FRIEND_PUBLIC_PORTAL_FARE_API_KEY",
             "SORISAE_NAVER_API_ENABLED",
             "SORISAE_NAVER_API_BASE_URL",
             "SORISAE_NAVER_API_CLIENT_ID",
@@ -3287,6 +3666,7 @@ ADMIN_SYSTEM_ENV_SENSITIVE_KEYS = {
     "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_API_KEY",
     "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY",
     "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FARE_API_KEY",
     "SORISAE_NAVER_API_CLIENT_SECRET",
 }
 ADMIN_SYSTEM_ENV_MULTILINE_KEYS = {
@@ -3298,6 +3678,7 @@ ADMIN_SYSTEM_ENV_MULTILINE_KEYS = {
     "VOICE_FRIEND_PUBLIC_PORTAL_TOUR_URL_TEMPLATE",
     "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_URL_TEMPLATE",
     "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FARE_URL_TEMPLATE",
 }
 
 ADMIN_SYSTEM_ENV_FIELD_LABELS: Dict[str, str] = {
@@ -3312,12 +3693,14 @@ ADMIN_SYSTEM_ENV_FIELD_LABELS: Dict[str, str] = {
     "VOICE_FRIEND_PUBLIC_PORTAL_MEDICAL_API_KEY": "약국/병원 포털 서비스키",
     "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_URL_TEMPLATE": "교통/환승 포털 URL 템플릿",
     "VOICE_FRIEND_PUBLIC_PORTAL_TRANSIT_API_KEY": "교통/환승 포털 서비스키",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FARE_URL_TEMPLATE": "항공 운임 포털 URL 템플릿",
+    "VOICE_FRIEND_PUBLIC_PORTAL_FARE_API_KEY": "항공 운임 포털 서비스키",
     "SORISAE_NAVER_API_ENABLED": "네이버 공공데이터 API 사용 여부 (true/false)",
     "SORISAE_NAVER_API_BASE_URL": "네이버 공공데이터 API 기본 URL",
     "SORISAE_NAVER_API_CLIENT_ID": "네이버 공공데이터 API Client ID",
     "SORISAE_NAVER_API_CLIENT_SECRET": "네이버 공공데이터 API Client Secret",
     "SOCIAL_LOGIN_PROVIDERS": "소셜 로그인 제공자 목록 (콤마 구분: google,kakao,naver)",
-    "SOCIAL_LOGIN_CALLBACK_BASE_URL": "소셜 로그인 callback 기준 URL (예: https://metanova1004.com)",
+    "SOCIAL_LOGIN_CALLBACK_BASE_URL": "소셜 로그인 callback 기준 URL (예: https://xn--114-2p7l635dz3bh5j.com)",
     "GOOGLE_CLIENT_ID": "구글 소셜 로그인 Client ID",
     "GOOGLE_CLIENT_SECRET": "구글 소셜 로그인 Client Secret",
     "KAKAO_CLIENT_ID": "카카오 소셜 로그인 Client ID",
@@ -3468,8 +3851,23 @@ def _resolve_windows_postgres_secret_path(env_values: Optional[Dict[str, str]] =
     return (_admin_workspace_root() / ".runtime" / "secrets" / "postgres_password.txt").resolve()
 
 
+def _resolve_fixed_admin_password_secret_path(env_values: Optional[Dict[str, str]] = None) -> Path:
+    values = env_values or (_read_admin_env_values(_admin_env_path()) if _admin_env_path().exists() else {})
+    configured_secret_root = str(values.get("HOST_SECRET_ROOT") or "").strip()
+    if configured_secret_root:
+        return (Path(configured_secret_root).expanduser() / "fixed_admin_password.txt").resolve()
+    return (_admin_workspace_root() / ".runtime" / "secrets" / "fixed_admin_password.txt").resolve()
+
+
 def _write_postgres_password_secret(password: str, env_values: Optional[Dict[str, str]] = None) -> str:
     secret_path = _resolve_windows_postgres_secret_path(env_values)
+    secret_path.parent.mkdir(parents=True, exist_ok=True)
+    secret_path.write_text(password, encoding="utf-8")
+    return str(secret_path)
+
+
+def _write_fixed_admin_password_secret(password: str, env_values: Optional[Dict[str, str]] = None) -> str:
+    secret_path = _resolve_fixed_admin_password_secret_path(env_values)
     secret_path.parent.mkdir(parents=True, exist_ok=True)
     secret_path.write_text(password, encoding="utf-8")
     return str(secret_path)
@@ -3524,7 +3922,7 @@ def _probe_http_reachable(url: str, timeout_sec: float = 5.0) -> Dict[str, Any]:
 
 def _compute_recommended_env_defaults(env_values: Dict[str, str], runtime_config: Dict[str, Any]) -> Dict[str, str]:
     display = _resolve_admin_summary_display_values(env_values)
-    admin_domain = display["admin_domain"] or "metanova1004.com"
+    admin_domain = display["admin_domain"] or "xn--114-2p7l635dz3bh5j.com"
     model_routes = runtime_config.get("model_routes") or {}
     defaults: Dict[str, str] = {
         "LOCAL_API_BASE_URL": display["local_api_base_url"],
