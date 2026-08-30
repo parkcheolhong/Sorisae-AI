@@ -1,6 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    WORLDLINGO_BRAND_NAME,
+    WORLDLINGO_BRAND_NAME_KO,
+    WORLDLINGO_ENGINE_LABEL,
+    WORLDLINGO_MARKETPLACE_API_PREFIX,
+    matchesWorldLincoApkFilename,
+    matchesWorldLincoProjectTitle,
+} from '@/lib/worldlincoBrand';
 import HelpPanel from './HelpPanel';
 import { useHelpLanguage } from './useHelpLanguage';
 

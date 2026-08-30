@@ -17,13 +17,33 @@ const repoRoot = path.resolve(frontendRoot, '..', '..');
 const pageSource = fs.readFileSync(path.join(frontendRoot, 'app/marketplace/nadotongryoksa/page.tsx'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.join(frontendRoot, 'package.json'), 'utf8'));
 const adminWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/admin-regression.yml'), 'utf8');
+const worldlincoBrandImport = pageSource.match(/import\s*\{([\s\S]*?)\}\s*from\s*['"]@\/lib\/worldlincoBrand['"]/);
+
+assert.ok(
+    worldlincoBrandImport,
+    'WorldLinco page must import the shared brand helpers it renders at module scope',
+);
+for (const symbol of [
+    'WORLDLINGO_BRAND_NAME',
+    'WORLDLINGO_BRAND_NAME_KO',
+    'WORLDLINGO_ENGINE_LABEL',
+    'WORLDLINGO_MARKETPLACE_API_PREFIX',
+    'matchesWorldLincoApkFilename',
+    'matchesWorldLincoProjectTitle',
+]) {
+    assert.match(
+        worldlincoBrandImport[1],
+        new RegExp(`\\b${symbol}\\b`),
+        `WorldLinco page must import ${symbol}`,
+    );
+}
 
 assert.ok(
     !pageSource.includes('project_id: 0'),
     'WorldLinco purchases must resolve a real marketplace project id',
 );
 assert.ok(
-    pageSource.includes('resolveNadotongryoksaProjectId'),
+    pageSource.includes('resolveWorldLincoProjectId'),
     'WorldLinco payment flow should resolve the seeded marketplace project',
 );
 assert.ok(
