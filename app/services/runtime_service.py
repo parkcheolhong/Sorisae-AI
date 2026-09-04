@@ -3,7 +3,7 @@
 # FEATURE-ID: FEATURE-APP-SERVICES-RUNTIME-SERVICE-PY-RUNTIME
 # CHUNK-ID: CHUNK-APP-SERVICES-RUNTIME-SERVICE-PY-001
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app.runtime import build_runtime_context, describe_runtime_profile
 from app.order_profile import get_order_profile, get_flow_step, list_flow_steps
 from backend.core.database import ensure_database_ready, get_database_settings
@@ -86,7 +86,7 @@ def build_runtime_payload(runtime_mode: str = 'default') -> dict:
     profile = get_order_profile()
     runtime_context = build_runtime_context()
     record_ops_log('runtime_payload_built', {'runtime_mode': runtime_mode, 'profile_id': profile['profile_id']})
-    return {'service': 'customer-order-generator', 'runtime_mode': runtime_mode, 'started_at': datetime.utcnow().isoformat(), 'order_profile': profile, 'active_trace': build_trace_lookup(), 'feature_matrix': build_feature_matrix(), 'domain_snapshot': build_domain_snapshot(), 'runtime_context': runtime_context, 'profile': describe_runtime_profile(), 'mandatory_engine_contracts': list(profile.get('mandatory_engine_contracts') or []), 'ai_runtime_contract': build_ai_runtime_contract()}
+    return {'service': 'customer-order-generator', 'runtime_mode': runtime_mode, 'started_at': datetime.now(timezone.utc).isoformat(), 'order_profile': profile, 'active_trace': build_trace_lookup(), 'feature_matrix': build_feature_matrix(), 'domain_snapshot': build_domain_snapshot(), 'runtime_context': runtime_context, 'profile': describe_runtime_profile(), 'mandatory_engine_contracts': list(profile.get('mandatory_engine_contracts') or []), 'ai_runtime_contract': build_ai_runtime_contract()}
 
 def list_endpoints() -> list[str]:
     endpoints = ['/', '/runtime', '/health', '/config', '/order-profile', '/flow-map', '/flow-map/{step_id}', '/workspace', '/report', '/diagnose']

@@ -3,14 +3,14 @@
 # FEATURE-ID: FEATURE-APP-RUNTIME-PY-RUNTIME
 # CHUNK-ID: CHUNK-APP-RUNTIME-PY-001
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app.order_profile import get_order_profile
 
 def build_runtime_context() -> dict:
     profile = get_order_profile()
     return {
         'environment': 'compat',
-        'generated_at': datetime.utcnow().isoformat(),
+        'generated_at': datetime.now(timezone.utc).isoformat(),
         'profile_id': profile['profile_id'],
         'requested_stack': profile['requested_stack'],
     }

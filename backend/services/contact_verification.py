@@ -278,6 +278,10 @@ def verify_session_code(session_token: str, verification_code: str) -> Dict[str,
 
 
 def allow_unverified_signup() -> bool:
+    # [보안 이중 방어] 운영/스테이징에서는 플래그가 실수로 설정돼도 즉시 가입을 허용하지 않는다.
+    app_env = str(os.getenv("APP_ENV") or "dev").strip().lower()
+    if app_env in {"prod", "production", "stage", "staging"}:
+        return False
     return str(os.getenv("ALLOW_UNVERIFIED_SIGNUP", "")).strip().lower() in {
         "1",
         "true",

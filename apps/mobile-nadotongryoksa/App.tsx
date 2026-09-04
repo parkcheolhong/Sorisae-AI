@@ -1431,6 +1431,8 @@ function AppInner() {
     const voipPresenceSocketRef = useRef<WebSocket | null>(null);
     const voipTopicRef = useRef<string | null>(null);
     const pendingIncomingPollInFlightRef = useRef(false);
+    // 착신 폴링 실패 연속 횟수 — 서버 장애 시 2.5s 고정 폴링이 배터리/트래픽을 태우지 않게 지수 백오프.
+    const pendingPollFailStreakRef = useRef(0);
     const voipAuditFetchInFlightRef = useRef(false);
     const acceptedIncomingVoipCallIdRef = useRef<string | null>(null);
     const acceptingIncomingVoipCallRef = useRef(false);
@@ -2943,6 +2945,7 @@ function AppInner() {
                 ok: response.ok,
             }));
             if (!response.ok) {
+                pendingPollFailStreakRef.current += 1;
                 if (response.status !== 404) {
                     console.log('[VoIPPendingIncoming] fetch failed', response.status);
                 }
@@ -2968,6 +2971,7 @@ function AppInner() {
             }
 
             const payload = await response.json() as (CallInitResponse & { caller_label?: string; caller_voice_id?: string }) | null;
+            pendingPollFailStreakRef.current = 0;
             if (!payload?.call_id || !payload.signaling_server) {
                 if (pendingIncomingVoipCallRef.current?.call_id) {
                     await resolveStalePendingIncomingCall(source, 'empty_pending_payload');
@@ -3574,9 +3578,22 @@ function AppInner() {
         }
 
         void fetchPendingIncomingVoipCall('pending_call_initial');
-        const pollTimer = setInterval(() => {
-            void fetchPendingIncomingVoipCall('pending_call_poll');
-        }, pendingIncomingVoipCallRef.current?.call_id ? 800 : 2500);
+        // 실패 연속 시 지수 백오프(2.5s→5s→10s→…최대 60s). 착신 대기 중엔 항상 800ms 유지.
+        let pollHandle: ReturnType<typeof setTimeout> | null = null;
+        const scheduleNextPendingPoll = () => {
+            const ringing = Boolean(pendingIncomingVoipCallRef.current?.call_id);
+            const baseMs = ringing ? 800 : 2500;
+            const failStreak = pendingPollFailStreakRef.current;
+            const backoffMs = failStreak > 0 && !ringing
+                ? Math.min(baseMs * 2 ** Math.min(failStreak, 5), 60_000)
+                : baseMs;
+            pollHandle = setTimeout(() => {
+                void fetchPendingIncomingVoipCall('pending_call_poll').finally(() => {
+                    scheduleNextPendingPoll();
+                });
+            }, backoffMs);
+        };
+        scheduleNextPendingPoll();
         const appStateSubscription = AppState.addEventListener('change', (nextState) => {
             if (nextState === 'active') {
                 void fetchPendingIncomingVoipCall('pending_call_active');
@@ -3586,7 +3603,9 @@ function AppInner() {
         });
 
         return () => {
-            clearInterval(pollTimer);
+            if (pollHandle) {
+                clearTimeout(pollHandle);
+            }
             appStateSubscription.remove();
         };
     }, [fetchPendingIncomingVoipCall, token, userInfo, voipCallInitResponse]);

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  네트워크 보안 정책:
+  - 기본: TLS(https)만 허용 (운영 metanova1004.com 등)
+  - 예외: container-dev 개발 채널이 쓰는 로컬/사설망 http 허용
+    (adb reverse localhost, LAN 개발 서버 10/8·172.16/12·192.168/16)
+  참고: 사설망 CIDR 단위 지정은 API 24+에서 도메인 단위만 지원하므로
+  개발 편의상 사설 대역 도메일 판정은 앱 계층(appConstants의
+  normalizeApiBaseUrl 릴리스 강제 규칙)이 이중으로 방어한다.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- container-dev LAN 개발 서버(eas.json EXPO_PUBLIC_API_BASE_URL) -->
+        <domain includeSubdomains="false">172.30.1.41</domain>
+    </domain-config>
+</network-security-config>
