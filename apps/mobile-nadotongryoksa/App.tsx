@@ -649,7 +649,7 @@ async function checkForAppUpdate(apiBase: string) {
 async function callLoginApi(apiBase: string, email: string, password: string): Promise<string> {
     console.log('[AUTH_FLOW]', JSON.stringify({
         event: 'LOGIN_API_REQUEST',
-        endpoint: `${apiBase}/api/auth/login`,
+        configured_base: apiBase,
         email: email.trim().toLowerCase(),
     }));
     const form = new URLSearchParams({ username: email, password });
@@ -661,7 +661,8 @@ async function callLoginApi(apiBase: string, email: string, password: string): P
     const data = await res.json().catch(() => ({}));
     console.log('[AUTH_FLOW]', JSON.stringify({
         event: res.ok ? 'LOGIN_API_SUCCESS' : 'LOGIN_API_FAIL',
-        endpoint: `${apiBase}/api/auth/login`,
+        endpoint: res.url,
+        configured_base: apiBase,
         email: email.trim().toLowerCase(),
         status: res.status,
     }));
@@ -676,6 +677,12 @@ async function callSignupApi(apiBase: string, payload: SignupPayload): Promise<U
         body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
+    console.log('[AUTH_FLOW]', JSON.stringify({
+        event: res.ok ? 'SIGNUP_API_SUCCESS' : 'SIGNUP_API_FAIL',
+        endpoint: res.url,
+        configured_base: apiBase,
+        status: res.status,
+    }));
     if (!res.ok) throw new Error(extractApiErrorMessage(data.detail, `회원가입 실패 (HTTP ${res.status})`));
     return data as UserInfo;
 }
@@ -8380,6 +8387,7 @@ function AppInner() {
                                     여행 통번역·레일 서비스를 쓰려면 로그인하세요. 로그인·회원가입은 전용 화면에서 한 번에 진행됩니다.
                                 </Text>
                                 {demoSessionMessage ? <Text style={styles.inlineAuthStatus}>{demoSessionMessage}</Text> : null}
+                                {demoSessionError ? <Text style={styles.inlineAuthError}>{demoSessionError}</Text> : null}
                                 <View style={styles.inlineAuthActionRow}>
                                     <Pressable
                                         style={[styles.inlineActionBtn, demoSessionLoading && styles.inlineGhostBtnDisabled]}

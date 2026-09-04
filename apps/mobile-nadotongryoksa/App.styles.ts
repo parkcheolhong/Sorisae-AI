@@ -576,6 +576,12 @@ export const styles = StyleSheet.create({
         lineHeight: 18,
         marginBottom: 8,
     },
+    inlineAuthError: {
+        color: '#d64545',
+        fontSize: 12,
+        lineHeight: 18,
+        marginBottom: 8,
+    },
     authDebugPanel: {
         width: '100%',
         marginTop: 10,
