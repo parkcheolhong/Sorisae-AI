@@ -27,14 +27,11 @@ TestResults/
 # Metro/Gradle 빌드 임시 캐시 (자동 재생성, 추적 금지)
 apps/mobile-nadotongryoksa/.gradle-tmp/
 
-# Large generated binaries and local packages (GitHub 100MB limit)
-uploads/marketplace_local/apk/
+# local secrets / build hygiene (recovery 20260905)
+certbot/local-certs/
 evidence/*.apk
-mobile-nadotongryoksa/android/app/build/
-mobile-nadotongryoksa/tmp/device-apk/
-apps/mobile-nadotongryoksa/tmp/device-apk/
-frontend/frontend/.next-admin-3005/
-frontend/frontend/.next-marketplace-3000/
-frontend/frontend/.next-build*/
-exports/bundle-331-featured/
-exports/bundle-331-featured-copy/
+uploads/marketplace_local/apk/
+apps/mobile-nadotongryoksa/tmp/
+mobile-nadotongryoksa/tmp/
+frontend/frontend/.next-*/
+frontend/frontend/test-results/
