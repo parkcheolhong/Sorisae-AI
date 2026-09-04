@@ -20,6 +20,7 @@ import {
   rejectFriendRequest,
 } from '../../api/friends';
 import { getCurrentPosition, getForegroundPermissions, requestForegroundPermissions, reverseGeocode } from '../../services/locationService';
+import { getFeatureUiText } from '../i18n/featureUiCatalog';
 import type {
   AcceptedFriendActionPayload,
   DiscoveryGender,
@@ -248,7 +249,7 @@ export function FriendMapDiscoveryScreen({
               <Text style={styles.userMeta}>상태 {statusLabel(user.friendshipStatus)} · 보이스 ID {user.voiceId || '없음'}</Text>
               <View style={[styles.actionRow, isNarrowWidth && styles.actionRowCompact]}>
                 <Pressable style={[styles.mapBtn, isNarrowWidth && styles.actionButtonCompact]} onPress={() => { void Linking.openURL(user.googleMapsUrl); }}>
-                  <Text style={styles.mapBtnText}>Google 지도</Text>
+                  <Text style={styles.mapBtnText}>{getFeatureUiText('map.openGoogleMaps')}</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.requestBtn, isNarrowWidth && styles.actionButtonCompact, user.friendshipStatus !== 'available' && styles.requestBtnDisabled]}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -12,9 +12,9 @@ import {
 
 import * as Speech from 'expo-speech';
 
-import { resolveVoipTtsLocale } from '../../../constants/voipLanguageLocales';
 import { getFriends } from '../../../api/friends';
 import { getVoIPToneService } from '../../../services/voipToneService';
+import { announceServerVoice } from '../../../utils/voiceAnnounce';
 import {
   sanitizeChatTextForSpeech,
   loadChatReadAloudEnabled,
@@ -24,6 +24,8 @@ import {
 import { useGlobalSettings } from '../../settings/globalSettings';
 import type { Friend } from '../../friends/types';
 import { addChatRoomMembers, connectChatRoomEvents, getChatRoomDetail, listChatRoomMessages, markChatRoomRead, sendChatRoomMessage, updateChatRoomSettings } from '../api';
+import { resolveChatNarratorLang } from '../chatNarratorLanguage';
+import { pickReadAloudContent } from '../chatReadAloud';
 import {
   DESIGNATED_LANGUAGE_MISMATCH_MESSAGE,
   textMatchesDesignatedLanguage,
@@ -147,22 +149,6 @@ function getEffectiveTranslatedBody(message: ChatMessageItem): string | null {
   return message.viewer_translation?.translated_body?.trim() || message.translated_body?.trim() || null;
 }
 
-// [Phase6.0] 수신 채팅 읽어주기 — 뷰어 기준 텍스트(번역본 우선) + 사용자 출력 언어.
-function pickReadAloudContent(
-  message: ChatMessageItem,
-  viewerOutputLang?: string | null,
-): { text: string; lang: string } {
-  const text = getEffectiveTranslatedBody(message) || message.body || '';
-  const lang =
-    message.viewer_translation?.target_lang ||
-    message.body_target_lang ||
-    message.body_source_lang ||
-    viewerOutputLang ||
-    getUiLang() ||
-    'ko';
-  return { text, lang: lang.trim().toLowerCase() };
-}
-
 function getEffectiveTranslationStatus(message: ChatMessageItem): string | null {
   return message.viewer_translation?.translation_status || message.translation_status || null;
 }
@@ -246,6 +232,11 @@ export function ChatRoomScreen({
     detail?.members.find((m) => m.user_id === userId)?.preferred_language,
     getUiLang() as LangCode,
   );
+  const chatNarratorLang = useMemo(() => resolveChatNarratorLang({
+    countryCode: userCountryCode,
+    preferredLanguage: userPreferredLanguage || detail?.members.find((m) => m.user_id === userId)?.preferred_language,
+    viewerOutputLang,
+  }), [detail, userCountryCode, userPreferredLanguage, userId, viewerOutputLang]);
   const myFlag = resolveUserCountryFlag(userCountryCode, userPreferredLanguage || detail?.members.find((m) => m.user_id === userId)?.preferred_language);
   const myDisplayLabel = formatFlagPrefixedName(myFlag, userDisplayName || getFeatureUiText('chat.me'));
 
@@ -482,14 +473,15 @@ export function ChatRoomScreen({
               }
             }, 0);
             // [Phase6.0] 사용자 명령(토글 ON) 시 수신 메시지를 음성으로 읽어준다.
-            const { text, lang } = pickReadAloudContent(event.message, viewerOutputLang);
+            const { text, lang } = pickReadAloudContent(event.message, chatNarratorLang);
             if (shouldReadAloudIncoming({ enabled: readAloudEnabledRef.current, isIncoming: true, text })) {
               const speakText = sanitizeChatTextForSpeech(text);
               setTimeout(() => {
                 try {
-                  // [버그 수정] 2글자 코드(ko/ja/en)를 그대로 넘기면 단말 TTS가 로케일을 못 찾아
-                  // 엉뚱한 음성/무음이 된다. → VoIP/대면과 동일한 BCP-47 SSOT 로 매핑(스크립트 누수 교정 포함).
-                  Speech.speak(speakText, { language: resolveVoipTtsLocale(lang, speakText) });
+                  console.log('[CHAT_READALOUD_AUTO_TRIGGER]', JSON.stringify({ lang, userCountryCode, text_len: speakText.length }));
+                  // 서버 합성(Edge neural) 우선 경로를 사용해 VoIP/Push와 톤을 일치시킨다.
+                  // 실패 시 announceServerVoice 내부에서 단말 TTS로 자동 폴백한다.
+                  void announceServerVoice(speakText, lang, userCountryCode);
                 } catch {
                   // 낭독 실패는 무시(메시지 표시는 계속).
                 }
@@ -775,16 +767,16 @@ export function ChatRoomScreen({
           </View>
           <View style={styles.settingsSection}>
             <Text style={styles.settingsLabel}>{getFeatureUiText('chat.invitePolicy')}</Text>
-          <Pressable style={styles.settingsToggleRow} onPress={() => { void handleToggleInvitePolicy(); }} disabled={settingsSaving}>
-            <View style={[styles.settingsToggleBox, detail?.allow_member_invites && styles.settingsToggleBoxActive]}>
-              <Text style={styles.settingsToggleMark}>{detail?.allow_member_invites ? '✓' : ''}</Text>
-            </View>
-            <View style={styles.settingsTextWrap}>
-              <Text style={styles.settingsLabel}>{getFeatureUiText('chat.membersCanInvite')}</Text>
-              <Text style={styles.settingsMeta}>{getFeatureUiText('chat.membersCanInviteMeta')}</Text>
-            </View>
-          </Pressable>
-          <Text style={styles.settingsStatus}>{settingsSaving ? getFeatureUiText('chat.settingsSaving') : (detail ? buildGroupInviteStatusLabel(detail, room, { currentPrefix: true }) : getFeatureUiText('chat.settingsLoading'))}</Text>
+            <Pressable style={styles.settingsToggleRow} onPress={() => { void handleToggleInvitePolicy(); }} disabled={settingsSaving}>
+              <View style={[styles.settingsToggleBox, detail?.allow_member_invites && styles.settingsToggleBoxActive]}>
+                <Text style={styles.settingsToggleMark}>{detail?.allow_member_invites ? '✓' : ''}</Text>
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <Text style={styles.settingsLabel}>{getFeatureUiText('chat.membersCanInvite')}</Text>
+                <Text style={styles.settingsMeta}>{getFeatureUiText('chat.membersCanInviteMeta')}</Text>
+              </View>
+            </Pressable>
+            <Text style={styles.settingsStatus}>{settingsSaving ? getFeatureUiText('chat.settingsSaving') : (detail ? buildGroupInviteStatusLabel(detail, room, { currentPrefix: true }) : getFeatureUiText('chat.settingsLoading'))}</Text>
           </View>
         </View>
       ) : null}
@@ -842,6 +834,7 @@ export function ChatRoomScreen({
           <Text style={styles.aiChipText}>{getFeatureUiText('chat.aiChip')}</Text>
         </View>
         <BidirectionalLanguagePairBadge fromLang={chatPairFromLang} toLang={chatPairToLang} compact />
+        <Text style={styles.narratorPolicyHint}>{getFeatureUiText('chat.narratorCountryPolicyHint')}</Text>
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -874,12 +867,16 @@ export function ChatRoomScreen({
             }
             // [목업 #4] 텍스트 말풍선: 원문(작게) + 번역(굵게) + 🔊, 시간/읽음표시.
             const translated = getEffectiveTranslatedBody(message);
-            const speakLang = message.viewer_translation?.target_lang || message.body_target_lang || message.body_source_lang || viewerOutputLang;
+            const speakLang = chatNarratorLang;
             const speak = () => {
-              // [버그 수정] speakLang 을 toLowerCase() 만 하면 'ko-KR'→'ko-kr' 로 깨지거나 2글자 코드가
-              // 로케일을 못 잡는다. → BCP-47 SSOT(resolveVoipTtsLocale)로 정규화하고 텍스트 스크립트 누수도 교정.
               const speakBody = translated || message.body;
-              try { Speech.speak(speakBody, { language: resolveVoipTtsLocale(speakLang, speakBody) }); } catch { /* 낭독 실패 무시 */ }
+              try {
+                console.log('[CHAT_READALOUD_MANUAL_TRIGGER]', JSON.stringify({ speakLang, userCountryCode, text_len: String(speakBody || '').length }));
+                // 채팅 수동 읽어주기도 서버 합성 우선으로 통일한다.
+                void announceServerVoice(speakBody, speakLang, userCountryCode);
+              } catch {
+                /* 낭독 실패 무시 */
+              }
             };
             return (
               <View
@@ -1278,6 +1275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   aiChipText: { color: '#1e6fe0', fontSize: 12, fontWeight: '800' },
+  narratorPolicyHint: { color: '#5f6b80', fontSize: 11, textAlign: 'center' },
 
   // ── [목업 #4] 말풍선 페어 ──
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '100%' },

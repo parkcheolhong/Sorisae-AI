@@ -4,7 +4,7 @@
  * Integrates with VoIPCallClient for WebRTC connection
  */
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -60,6 +60,7 @@ import {
     resolveVoiceRelayFixedFlushDelayMs,
     type VoiceRelaySegmentState,
 } from '../features/voip-voice-relay/voiceRelayOrchestrator';
+import { resolveChatNarratorLang } from '../features/chat/chatNarratorLanguage';
 import {
     applyLocalRelayTurn,
     applyRemoteRelayTurn,
@@ -246,6 +247,7 @@ interface VoIPCallScreenProps {
     onHangup: (auditEvents?: CallModeAuditEvent[]) => void;
     apiBaseUrl: string;
     authToken: string;
+    localCountryCode: string;
     localSourceLang: string;
     localTargetLang: string;
     regionHint?: string;
@@ -259,6 +261,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     onHangup,
     apiBaseUrl,
     authToken,
+    localCountryCode,
     localSourceLang,
     localTargetLang,
     regionHint,
@@ -328,6 +331,11 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     const [auditEvents, setAuditEvents] = useState<CallModeAuditEvent[]>([]);
     const [auditManualRefreshing, setAuditManualRefreshing] = useState<boolean>(false);
     const [auditError, setAuditError] = useState<string | null>(null);
+    const voiceRelayNarratorLang = useMemo(() => resolveChatNarratorLang({
+        countryCode: localCountryCode,
+        preferredLanguage: localSourceLang,
+        viewerOutputLang: localSourceLang,
+    }), [localCountryCode, localSourceLang]);
     const auditEventsRef = useRef<CallModeAuditEvent[]>([]);
     const loadAuditEventsRef = useRef<(options?: { showLoading?: boolean; force?: boolean }) => Promise<CallModeAuditEvent[]>>(() => Promise.resolve([]));
     const startVoiceRelaySegmentRef = useRef<() => Promise<void>>(async () => {});
@@ -728,8 +736,8 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
     }, [apiBaseUrl]);
 
     const resolveTtsLanguage = useCallback((langCode: string, text?: string) => {
-        return resolveVoipTtsLocale(langCode, text);
-    }, []);
+        return resolveVoipTtsLocale(langCode, text, localCountryCode);
+    }, [localCountryCode]);
 
     const clearVoiceRelayTimers = useCallback(() => {
         if (voiceRelayStopTimerRef.current) {
@@ -1016,15 +1024,26 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         // 그걸 쓰고, 없으면 수신측이 대상 언어로 직접 합성 요청한다. 실패 시 디바이스 TTS로 폴백(무회귀).
         let serverAudioBase64: string | undefined;
         let serverAudioFormat: string | undefined;
-        if (audioBase64 && String(audioFormat || '').startsWith('audio/')) {
+        const canReuseIncomingAudio = targetLang === voiceRelayNarratorLang;
+        if (audioBase64 && String(audioFormat || '').startsWith('audio/') && canReuseIncomingAudio) {
             serverAudioBase64 = audioBase64;
             serverAudioFormat = audioFormat;
         } else {
+            if (audioBase64 && !canReuseIncomingAudio) {
+                console.log('[UI_PRESS_PROBE]', JSON.stringify({
+                    event: 'VOIP_VOICE_RELAY_REMOTE_AUDIO_SKIPPED',
+                    call_id: callInitResponse.call_id,
+                    relay_target_lang: targetLang,
+                    narrator_lang: voiceRelayNarratorLang,
+                    reason: 'narrator_country_policy',
+                    timestamp: new Date().toISOString(),
+                }));
+            }
             try {
                 // V.2 ID 백본 — 발화 단계가 출처 상관 ID에 스스로 붙도록 전달.
                 const synth = await synthesizeSpeech(
                     normalizedText,
-                    targetLang,
+                    voiceRelayNarratorLang,
                     apiBaseUrlRef.current,
                     undefined,
                     { correlationId, featureId: FEATURE_IDS.voipVoiceRelay },
@@ -1136,7 +1155,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                     resolve();
                 };
                 Speech.speak(normalizedText, {
-                    language: resolveTtsLanguage(targetLang, normalizedText),
+                    language: resolveTtsLanguage(voiceRelayNarratorLang, normalizedText),
                     rate: 1.05,
                     pitch: 1.0,
                     volume: 1.0,
@@ -1155,7 +1174,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
         }
 
         settleOnce();
-    }, [callInitResponse.call_id, finishRemoteVoiceRelayPlayback, resolvePlaybackExtension, resolveTtsLanguage, setRemoteAudioSuppressed, stopVoiceRelayPlayback]);
+    }, [callInitResponse.call_id, finishRemoteVoiceRelayPlayback, resolvePlaybackExtension, resolveTtsLanguage, setRemoteAudioSuppressed, stopVoiceRelayPlayback, voiceRelayNarratorLang]);
 
     const enqueueVoiceRelayPlayback = useCallback((item: VoiceRelayPlaybackItem) => {
         if (!voiceRelayPlaybackQueueRef.current) {
@@ -3740,6 +3759,7 @@ export const VoIPCallScreen: React.FC<VoIPCallScreenProps> = ({
                             <View style={styles.voiceRelayHeaderCopy}>
                                 <Text style={styles.voiceRelayTitle}>실시간 음성 통역</Text>
                                 <Text style={styles.voiceRelayHint}>{getFeatureUiText('voip.voiceRelayHint')}</Text>
+                                <Text style={styles.voiceRelayPolicyHint}>{getFeatureUiText('voip.narratorCountryPolicyHint')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={[styles.voiceRelayToggleButton, voiceRelayEnabled && styles.voiceRelayToggleButtonActive]}
@@ -4059,6 +4079,12 @@ const styles = StyleSheet.create({
         marginTop: 4,
         color: '#8ea3bf',
         fontSize: 12,
+    },
+    voiceRelayPolicyHint: {
+        marginTop: 4,
+        color: '#7f8ea3',
+        fontSize: 11,
+        lineHeight: 16,
     },
     voiceRelayToggleButton: {
         paddingHorizontal: 14,

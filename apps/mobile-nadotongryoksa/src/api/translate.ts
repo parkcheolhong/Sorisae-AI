@@ -373,7 +373,7 @@ export async function synthesizeSpeech(
   // 단말 TTS(붙여 읽기)로 폴백되어 발화 품질이 떨어졌다(대면·VOIP 모두 동일하게 정합).
   timeoutMs = 12000,
   // V.2 ID 백본 — 발화 단계가 출처 상관 ID에 스스로 붙도록 전달/echo.
-  correlation?: { correlationId?: string; featureId?: string },
+  correlation?: { correlationId?: string; featureId?: string; countryCode?: string },
 ): Promise<SynthesizeResult | null> {
   const trimmed = (text || '').trim();
   if (!trimmed) return null;
@@ -388,6 +388,7 @@ export async function synthesizeSpeech(
       body: JSON.stringify({
         text: trimmed,
         target_lang: targetLang,
+        country_code: correlation?.countryCode,
         correlation_id: correlationId,
         feature_id: featureId,
       }),

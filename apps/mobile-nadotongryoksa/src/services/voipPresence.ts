@@ -158,7 +158,7 @@ export async function acceptIncomingCall(
     apiBaseUrl: string,
     authToken: string,
     callId: string,
-    options: { timeoutMs?: number } = {},
+    options: { timeoutMs?: number; source?: string } = {},
 ): Promise<CallInitResponse> {
     const normalizedToken = normalizeAuthToken(authToken);
     if (!normalizedToken) {
@@ -166,10 +166,12 @@ export async function acceptIncomingCall(
     }
 
     const timeoutMs = options.timeoutMs ?? ACCEPT_INCOMING_TIMEOUT_MS;
+    const source = String(options.source ?? '').trim();
+    const sourceQuery = source ? `?source=${encodeURIComponent(source)}` : '';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const res = await fetch(`${apiBaseUrl}/api/v1/voip/calls/${callId}/accept`, {
+        const res = await fetch(`${apiBaseUrl}/api/v1/voip/calls/${callId}/accept${sourceQuery}`, {
             method: 'POST',
             headers: {
                 Authorization: buildBearerAuthHeader(normalizedToken),
