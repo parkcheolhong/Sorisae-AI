@@ -197,10 +197,10 @@ assert.ok(
     'Marketplace main page should not expose direct /admin links',
 );
 
-// 10. Marketplace main page must keep 5-engine legacy section label
+// 10. Marketplace main page must keep the integrated AI services section label
 assert.ok(
-    marketplaceMainPageSource.includes('5가지 AI 엔진 상품'),
-    'Marketplace main page should keep 5-engine legacy section label',
+    marketplaceMainPageSource.includes('3개 AI 서비스 통합 진열'),
+    'Marketplace main page should keep the 3-service integrated section label',
 );
 
 console.log('✓ rail-labels snapshot: PASS');

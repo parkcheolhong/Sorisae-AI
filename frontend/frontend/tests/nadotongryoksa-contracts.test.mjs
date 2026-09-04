@@ -23,7 +23,7 @@ assert.ok(
     'WorldLinco purchases must resolve a real marketplace project id',
 );
 assert.ok(
-    pageSource.includes('resolveNadotongryoksaProjectId'),
+    pageSource.includes('resolveWorldLincoProjectId'),
     'WorldLinco payment flow should resolve the seeded marketplace project',
 );
 assert.ok(
@@ -35,8 +35,8 @@ assert.ok(
     'Interpreter call mode must consume the backend translated response key',
 );
 assert.ok(
-    pageSource.includes("const NADO_APK_FILENAME = 'nadotongryoksa-v1.apk'"),
-    'APK download should target the seeded Nadotongryoksa artifact',
+    pageSource.includes('matchesWorldLincoApkFilename'),
+    'APK download should resolve the seeded artifact via the WorldLinco APK manifest matcher',
 );
 assert.ok(
     !pageSource.includes('nadotongryoksa-v8.apk'),
