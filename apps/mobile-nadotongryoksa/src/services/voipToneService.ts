@@ -84,8 +84,8 @@ export class VoIPToneService {
         this.isWebEnvironment = false;
       }
     } else {
-      // React Native or non-web environment
-      console.log('[VoIPToneService] AudioContext not available (React Native environment)');
+      // React Native or non-web environment — 네이티브 경로(expo-audio 합성 WAV)가 실제 재생을 담당한다.
+      console.log('[VoIPToneService] native tone path active (expo-audio); Web Audio oscillator path skipped');
       this.isWebEnvironment = false;
     }
   }

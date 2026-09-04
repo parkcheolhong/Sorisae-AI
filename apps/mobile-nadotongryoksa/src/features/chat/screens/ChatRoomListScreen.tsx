@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -172,9 +173,12 @@ export function ChatRoomListScreen({
   const latestRoomAlert = latestRoom ? getRoomAlertLabel(latestRoom) : null;
   const maxSelectableMembers = Math.max(groupMemberLimit - 1, 0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
       const [nextRooms, friendPayload] = await Promise.all([
         listChatRooms(apiBaseUrl, token),
@@ -183,9 +187,14 @@ export function ChatRoomListScreen({
       setRooms(nextRooms);
       setFriends(friendPayload.friends.filter((friend: Friend) => friend.friendUserId !== null));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : getFeatureUiText('chat.list.loadFailed'));
+      if (!silent) {
+        setError(e instanceof Error ? e.message : getFeatureUiText('chat.list.loadFailed'));
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
+      hasLoadedOnceRef.current = true;
     }
   }, [apiBaseUrl, token, userId]);
 
@@ -195,6 +204,33 @@ export function ChatRoomListScreen({
     }
     void load();
   }, [load, refreshKey, visible]);
+
+  // [초대 수신 감지] 방 목록은 최초 로드 후 재패치 트리거가 없어 초대받은 방을 사용자가
+  // 발견하지 못하는 문제가 있었다. ChatRoomScreen과 동일하게 ①백그라운드 복귀 시
+  // ②가시 중 주기적(60s)으로 조용히 재로드한다.
+  const appStateRef = useRef(AppState.currentState);
+  const hasLoadedOnceRef = useRef(false);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextAppState) => {
+      const wasBackgrounded = appStateRef.current.match(/background|inactive/);
+      appStateRef.current = nextAppState;
+      if (wasBackgrounded && nextAppState === 'active' && visible && hasLoadedOnceRef.current) {
+        void load({ silent: true });
+      }
+    });
+    return () => sub.remove();
+  }, [load, visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    const timer = setInterval(() => {
+      void load({ silent: true });
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [load, visible]);
 
   const handleOpenSelfRoom = useCallback(async () => {
     setBusyAction('self-room');

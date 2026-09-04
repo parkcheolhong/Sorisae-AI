@@ -6,7 +6,7 @@
  * - 알림 탭 cold/warm start: getInitialNotification / onNotificationOpenedApp
  */
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Vibration } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import type { CallInitResponse } from '../../services/voipCallClient';
 import { parseIncomingCallFcmData } from '../../services/voipIncomingPushBridge';
@@ -62,10 +62,18 @@ async function dispatchIncomingPush(
     if (!incoming) {
         return;
     }
+    // 착신 인지 즉시 진동(푸시 사운드가 음소거/Doze에서 누락되는 경우의 보강). 통화 화면 오픈/실패 시 정지.
+    try {
+        Vibration.vibrate([0, 600, 400], true);
+    } catch {
+        /* 진동 미지원 기기 무시 */
+    }
     try {
         const callInit = await acceptIncomingCall(apiBaseUrl, authToken, incoming.callId);
+        Vibration.cancel();
         onIncomingCall(callInit, incoming.callerLabel);
     } catch (err) {
+        Vibration.cancel();
         console.warn(`[VoIP] 착신 수락 실패 (${source})`, err);
         if (parsedPayload && onIncomingCallPayload) {
             onIncomingCallPayload(parsedPayload, `${source}_accept_fallback`);

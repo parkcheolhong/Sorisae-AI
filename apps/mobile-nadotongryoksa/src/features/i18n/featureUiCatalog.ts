@@ -101,6 +101,7 @@ export type FeatureUiKey =
     | 'travel.nearbyRecommend' | 'travel.nearbyRecommendSub' | 'travel.searchSectionTitle' | 'travel.searchSectionSub'
     | 'travel.latLabel' | 'travel.lonLabel' | 'travel.categoryLabel' | 'travel.radiusLabel' | 'travel.searchBtn'
     | 'travel.mapPreview' | 'travel.searchResults' | 'travel.viewOnMap' | 'travel.googleMaps' | 'travel.bookingSelect'
+    | 'map.openGoogleMaps'
     | 'travel.selectedPlace' | 'travel.selectedPlaceMeta' | 'travel.selectedPlaceDone'
     | 'travel.bookingSection' | 'travel.bookingSectionSub' | 'travel.interCallPlaceholder' | 'travel.openDialpad'
     | 'travel.catAll' | 'travel.catHotel' | 'travel.catAirport' | 'travel.catRestaurant' | 'travel.catAttraction'
@@ -439,6 +440,7 @@ const ROWS: Record<FeatureUiKey, CatalogRow> = {
     'travel.searchResults': { ko: '검색 결과', en: 'Search results', ja: '検索結果', zh: '搜索结果' },
     'travel.viewOnMap': { ko: '지도에서 보기', en: 'View on map', ja: '地図で見る', zh: '在地图中查看' },
     'travel.googleMaps': { ko: 'Google 지도', en: 'Google Maps', ja: 'Googleマップ', zh: 'Google 地图' },
+    'map.openGoogleMaps': { ko: 'Google 지도', en: 'Google Maps', ja: 'Googleマップ', zh: 'Google 地图' },
     'travel.bookingSelect': { ko: '예약 선택', en: 'Select for booking', ja: '予約に選択', zh: '选择预订' },
     'travel.selectedPlace': { ko: '선택된 예약 장소', en: 'Selected booking place', ja: '選択した予約場所', zh: '已选预订地点' },
     'travel.selectedPlaceMeta': { ko: '{category} · {distance} · 예약 폼 반영됨', en: '{category} · {distance} · Applied to booking form', ja: '{category} · {distance} · 予約フォームに反映', zh: '{category} · {distance} · 已同步到预订表单' },
