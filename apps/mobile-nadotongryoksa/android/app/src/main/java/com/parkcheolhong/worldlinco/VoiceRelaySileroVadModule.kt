@@ -77,9 +77,11 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
 
     @ReactMethod
     fun isSupported(promise: Promise) {
-        // 마이크 권한은 startMonitor 시점에 판정한다(앱 시작 프롭이 권한 허가 전에 와도
-        // false로 캐시되는 문제 방지). 모듈이 로드됐다는 것 자체가 지원 가능 신호.
-        promise.resolve(true)
+        // [휴면] 345 빌드 실측: expo-audio(m4a) 녹음과 병행 시 본 모듈의 AudioRecord가
+        // 풀스케일 가비지를 수신(rms 0dB 고정) → STT 422("음성 인식 안 됨").
+        // 단독 마이크 소유·임계값 튜닝이 끝나기 전까지 false를 반환해 앱이 검증된
+        // 폴백(expo m4a + 파일성장 VAD)을 쓰게 한다. startMonitor도 이 게이트 뒤에서만 동작.
+        promise.resolve(false)
     }
 
     @ReactMethod
@@ -122,8 +124,10 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
             resetVadState()
             record.startRecording()
             monitorRunning.set(true)
+            Log.i(TAG, "monitor started: source=VOICE_COMMUNICATION rate=$SAMPLE_RATE enterDb=$SPEECH_ENTER_DB exitDb=$SPEECH_EXIT_DB silenceMs=$silenceMs speechMs=$speechMs")
             monitorThread = Thread {
                 val pcm = ByteArray(FRAME_BYTES)
+                var frameCount = 0L
                 while (monitorRunning.get()) {
                     val read = try {
                         audioRecord?.read(pcm, 0, FRAME_BYTES) ?: -1
@@ -132,9 +136,13 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
                         -1
                     }
                     if (read <= 0) {
+                        if (++frameCount % 250 == 1L) {
+                            Log.w(TAG, "audio read returned $read (mic unavailable?)")
+                        }
                         continue
                     }
-                    processFrame(pcm, read)
+                    frameCount++
+                    processFrame(pcm, read, frameCount)
                 }
             }.also { it.start() }
             true
@@ -196,19 +204,24 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
         captureBuffer.clear()
         captureBytes = 0L
         if (chunks.isEmpty()) {
+            Log.i(TAG, "endCapture: no PCM captured (monitor was idle or mic dead)")
             promise.resolve(null)
             return
         }
         try {
-            val out = File(outputPath)
+            // 방어: 호출자가 file:// URI를 그대로 넘겨도 실제 경로로 정규화한다.
+            val normalizedPath = outputPath.removePrefix("file://")
+            val out = File(normalizedPath)
             out.parentFile?.mkdirs()
             FileOutputStream(out).use { fos ->
                 writeWavHeader(fos, total)
                 for (chunk in chunks) fos.write(chunk)
             }
-            promise.resolve(buildCaptureResult(out.absolutePath, chunks))
+            val result = buildCaptureResult(out.absolutePath, chunks)
+            Log.i(TAG, "endCapture: wrote ${total}B -> $normalizedPath rmsDb=${"%.1f".format(result.getDouble("rmsDb"))} durMs=${result.getDouble("durationMs").toInt()}")
+            promise.resolve(result)
         } catch (e: Exception) {
-            Log.w(TAG, "endCapture failed", e)
+            Log.w(TAG, "endCapture failed path=$outputPath", e)
             promise.resolve(null)
         }
     }
@@ -254,7 +267,7 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
         audioRecord = null
     }
 
-    private fun processFrame(pcm: ByteArray, len: Int) {
+    private fun processFrame(pcm: ByteArray, len: Int, frameCount: Long = 0) {
         if (captureActive.get()) {
             val copy = pcm.copyOf(len)
             captureBuffer.add(copy)
@@ -263,6 +276,11 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
         val rmsDb = computeRmsDb(pcm, len)
         val isVoicedEnter = rmsDb >= SPEECH_ENTER_DB
         val isVoicedStay = rmsDb >= SPEECH_EXIT_DB
+
+        // 진단: 1초(50프레임)마다 마이크 레벨과 VAD 상태를 남긴다(임계값 튜닝·무음 디버깅).
+        if (frameCount > 0 && frameCount % 50 == 0L) {
+            Log.i(TAG, "vad tick: rmsDb=${"%.1f".format(rmsDb)} inSpeech=$inSpeech speechRun=${speechRunMs}ms silenceRun=${silenceRunMs}ms captureBytes=$captureBytes")
+        }
 
         if (!inSpeech) {
             if (isVoicedEnter) {
@@ -318,6 +336,7 @@ class VoiceRelaySileroVadModule(private val reactContext: ReactApplicationContex
                 putDouble("silenceDurationMs", silenceDurationMs.toDouble())
                 putDouble("speechDurationMs", speechDurationMs.toDouble())
             }
+            Log.i(TAG, "emit $event speechMs=${speechDurationMs} silenceMs=${silenceDurationMs}")
             reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                 ?.emit(EVENT_NAME, params)

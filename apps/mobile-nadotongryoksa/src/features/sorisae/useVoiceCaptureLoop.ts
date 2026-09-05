@@ -601,37 +601,18 @@ export function useVoiceCaptureLoop(deps: VoiceCaptureLoopDeps) {
                 return;
             }
 
-            // 일부 안드로이드 기기에서 권한 조회 브리지(checkPermissionStatus)가 응답 없이 고착되어
-            // start_inflight가 영구 유지되는 사례가 있어, 자동 듣기 main 경로는 권한 조회를 우회하고
-            // 실제 녹음 생성 단계로 직접 진입한다(권한 미허용이면 createAsync에서 즉시 실패하여 catch 경로로 복구).
-            const bypassPermissionProbe = Platform.OS === 'android' && inputTarget === 'main' && effectiveAutoMode;
-            console.log('[COMPANION_HANDLER]', JSON.stringify({
-                event: 'COMPANION_START_VOICE_STAGE',
-                stage: 'before_permission_gate',
-                target: inputTarget,
-                auto_mode: effectiveAutoMode,
-                bypass_permission_probe: bypassPermissionProbe,
-            }));
-            let hasPermission = true;
-            if (bypassPermissionProbe) {
-                console.log('[COMPANION_HANDLER]', JSON.stringify({
-                    event: 'COMPANION_START_VOICE_PERMISSION_BYPASS',
-                    target: inputTarget,
-                    auto_mode: effectiveAutoMode,
-                }));
-            } else {
-                hasPermission = await resolveBooleanWithTimeout(
-                    checkPermissionStatus('RECORD_AUDIO'),
-                    'check_permission_status',
-                );
-                if (!hasPermission) {
-                    hasPermission = await resolveBooleanWithTimeout(
-                        requestPermissions(['RECORD_AUDIO'], '음성 입력', (msg) => {
-                            setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail: msg }));
-                        }),
-                        'request_record_audio_permission',
-                    );
-                }
+            // 이미 허용된 마이크 권한은 재요청하지 않아 permission activity 반복 표출을 막는다.
+            // [이중 방어] Android 네이티브 권한 전환(345, 기기 실증) + 원격의 7초 타임아웃 래퍼로
+            // 권한 브리지 고착 시에도 in_flight가 영구 고정되지 않게 한다.
+            logFaceCaptureTrace('perm_check_begin');
+            let hasPermission = await resolveBooleanWithTimeout(checkPermissionStatus('RECORD_AUDIO'), 'check_permission_status');
+            logFaceCaptureTrace('perm_check_end', { has_permission: Boolean(hasPermission) });
+            if (!hasPermission) {
+                hasPermission = await resolveBooleanWithTimeout(requestPermissions(['RECORD_AUDIO'], '음성 입력', (msg) => {
+                    setGpsStatus(getFeatureUiText('capture.voiceInputFailed', { detail: msg }));
+                }), 'request_record_audio_permission');
+            }
+
             }
             if (!hasPermission) {
                 applyVoiceCaptureBlockReason({

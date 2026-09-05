@@ -4,6 +4,18 @@ import { Audio } from '../compat/expoAvAudio';
 import { runExclusivePermissionTask } from './permissionRequestGate';
 import { getForegroundPermissions, requestForegroundPermissions } from '../services/locationService';
 
+/**
+ * expo-audio 권한 promise 방어 래퍼 — 일부 기기에서 getPermissionsAsync가
+ * 영구 미해결되는 현상이 확인됨(대면통역/소리새 음성 입력 전체가 붕괴).
+ * 타임아웃 초과 시 fail-safe 값으로 빠져 파이프라인이 멈추지 않게 한다.
+ */
+async function withPermissionTimeout<T>(task: Promise<T>, fallback: T, timeoutMs = 3_000): Promise<T> {
+    return Promise.race([
+        task,
+        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+    ]);
+}
+
 export type PermissionType = 'RECORD_AUDIO' | 'ACCESS_FINE_LOCATION' | 'ACCESS_COARSE_LOCATION' | 'POST_NOTIFICATIONS';
 
 /**
@@ -74,21 +86,56 @@ export function usePermissionCheck() {
                     switch (permission) {
                         case 'RECORD_AUDIO': {
                             try {
-                                const current = await Audio.getPermissionsAsync();
-                                if (current.granted) {
+                                // [행 방지] Android는 네이티브 동기 체크를 사용한다.
+                                // expo-audio getPermissionsAsync가 기기에 따라 영구 미해결되는
+                                // 사례가 확인됨(SM-T225N, build 341 실측) — 음성 파이프라인 전체가 붕괴.
+                                let grantedNow = false;
+                                let canAskAgain = true;
+                                if (Platform.OS === 'android') {
+                                    grantedNow = await PermissionsAndroid.check(
+                                        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                                    );
+                                    if (!grantedNow) {
+                                        const req = await PermissionsAndroid.request(
+                                            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                                            {
+                                                title: '마이크 권한',
+                                                message: `${featureName}을(를) 위해 마이크 권한이 필요합니다.`,
+                                                buttonPositive: '허용',
+                                                buttonNegative: '거부',
+                                            },
+                                        );
+                                        grantedNow = req === PermissionsAndroid.RESULTS.GRANTED;
+                                        canAskAgain = req !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+                                    }
+                                } else {
+                                    const current = await withPermissionTimeout(
+                                        Audio.getPermissionsAsync(),
+                                        { granted: false, canAskAgain: true } as unknown as Awaited<ReturnType<typeof Audio.getPermissionsAsync>>,
+                                    );
+                                    if (current.granted) {
+                                        grantedNow = true;
+                                    } else {
+                                        const result = await withPermissionTimeout(
+                                            Audio.requestPermissionsAsync(),
+                                            { granted: false, canAskAgain: false } as unknown as Awaited<ReturnType<typeof Audio.requestPermissionsAsync>>,
+                                        );
+                                        grantedNow = result.granted;
+                                        canAskAgain = result.canAskAgain ?? false;
+                                    }
+                                }
+                                if (grantedNow) {
                                     granted = true;
                                     break;
                                 }
-                                const result = await Audio.requestPermissionsAsync();
-                                granted = result.granted;
-                                if (!granted) {
+                                {
                                     const message = `${featureName}을(를) 위해 마이크 권한이 필요합니다.`;
                                     setPermissionError(message);
                                     if (onError) onError(message);
                                     console.log('[PERMISSION_GATE]', JSON.stringify({
                                         event: 'record_audio_denied',
                                         feature: featureName,
-                                        canAskAgain: result.canAskAgain ?? null,
+                                        canAskAgain,
                                     }));
 
                                     // 한 번 이상 거부했으므로 설정 오픈 권유
@@ -198,7 +245,14 @@ export async function checkPermissionStatus(permission: PermissionType): Promise
     try {
         switch (permission) {
             case 'RECORD_AUDIO': {
-                const result = await Audio.getPermissionsAsync();
+                // [행 방지] Android는 네이티브 체크 사용(expo-audio promise가 영구 미해결된 사례 실측).
+                if (Platform.OS === 'android') {
+                    return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+                }
+                const result = await withPermissionTimeout(
+                    Audio.getPermissionsAsync(),
+                    { granted: false } as unknown as Awaited<ReturnType<typeof Audio.getPermissionsAsync>>,
+                );
                 return result.granted;
             }
             case 'ACCESS_FINE_LOCATION': {

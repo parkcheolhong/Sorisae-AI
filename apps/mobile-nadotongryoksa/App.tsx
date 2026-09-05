@@ -196,6 +196,7 @@ import { normalizeSpeakText, inferTtsLanguage } from './src/features/tts/ttsText
 import { playFaceTranslationOutput, stopFaceVoicePlayback } from './src/app/appFaceVoicePlayback';
 import { useAppVoiceCaptureLoop } from './src/app/useAppVoiceCaptureLoop';
 import type { AppVoiceCaptureLoopContext } from './src/app/useAppVoiceCaptureLoop';
+import type { VoiceCaptureBlockReason } from './src/features/sorisae/voiceCaptureLoopTypes';
 import { AppRuntimeProvider, useAppRuntime } from './src/state';
 import { resolveWorldLincoProjectId } from './src/utils/worldlincoProject';
 import {
@@ -1841,6 +1842,12 @@ function AppInner() {
     // GPS/WF 위치 확인
     const [gpsLangLoading, setGpsLangLoading] = useState(false);
     const [gpsStatus, setGpsStatus] = useState('');
+
+    // [음성 캡처 루프 필수 의존] useVoiceCaptureLoop의 무음 게이트/차단 사유 상태.
+    // 누락 시 startVoiceInput 진입부(applyVoiceCaptureBlockReason)에서 TypeError로
+    // 무음 사망 → in_flight 고정 → 음성 입력 전체 불능이 된다(341~343 실측).
+    const [voiceCaptureBlockReason, setVoiceCaptureBlockReason] =
+        useState<VoiceCaptureBlockReason | null>(null);
 
     // 통역 통화 모드
     const [autoRelayDelayMs, setAutoRelayDelayMs] = useState<number>(2500);
@@ -7236,6 +7243,7 @@ function AppInner() {
         setVoiceSttLoading,
         setInputText,
         setGpsStatus,
+        setVoiceCaptureBlockReason,
         setInterCallStatus,
         setInterCallVoiceAssistEnabled,
         setSongModeEnabled,
@@ -10100,6 +10108,7 @@ function AppInner() {
 
                 {/* 대면통역 전용 화면(mockup #2): 상단 상대언어(180° 회전) + 중앙 펄스 마이크 + 하단 내언어 */}
                 <FaceInterpretationScreen
+                    captureBlockMessage={voiceCaptureBlockReason?.message ?? null}
                     visible={faceScreenOpen}
                     skyBg={SKY_BG}
                     styles={styles}

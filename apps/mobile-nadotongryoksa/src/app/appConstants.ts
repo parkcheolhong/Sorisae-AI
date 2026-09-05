@@ -92,6 +92,8 @@ export const APP_ENTRY_CHAT_LINK_PATH = 'chat/open';
 export const APP_ENTRY_INVITE_LINK_PATH = 'invite';
 export const APP_ENTRY_SALES_LINK_PATH = 'sales';
 export const APP_ENTRY_AUTH_LINK_PATH = 'auth/callback';
+/** 데모 세션 임시 계정 이메일 도메인(미지정 시 worldlinco-demo.com 폴백). */
+export const DEMO_SESSION_EMAIL_DOMAIN = 'worldlinco-demo.com';
 export const SOCIAL_LOGIN_REDIRECT_URI = 'worldlingo://auth/callback';
 export const AUTH_DEBUG_MARKER_ENABLED = __DEV__ || (process.env.EXPO_PUBLIC_AUTH_DEBUG_MARKER || '').trim() === '1';
 // 실기기 자동화 검증에서 companion toggle 노출 조건(인증 완료)을 일시 완화하는 테스트 플래그.

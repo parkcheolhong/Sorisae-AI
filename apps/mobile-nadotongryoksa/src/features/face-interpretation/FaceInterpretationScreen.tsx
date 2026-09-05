@@ -24,6 +24,7 @@ type FaceInterpretationScreenProps = {
     autoVoiceModeEnabled: boolean;
     getFeatureUiText: FeatureUiTextGetter;
     peerLanguageHintText?: string;
+    captureBlockMessage?: string | null;
     onOpenPeerLangPicker: () => void;
     onToggleFaceConversation: () => void;
     onRequestClose: () => void;
@@ -108,6 +109,9 @@ export function FaceInterpretationScreen(props: FaceInterpretationScreenProps): 
                             >
                                 <Text style={props.styles.faceMicIconBig}>🎙️</Text>
                             </Pressable>
+                            {props.captureBlockMessage ? (
+                                <Text style={props.styles.faceVadHintText}>{props.captureBlockMessage}</Text>
+                            ) : null}
                         </View>
                     </View>
 
