@@ -41,18 +41,18 @@
   "token_tuning_level": 0,
   "timeout_tuning_level": 1,
   "model_routes": {
-    "default": "qwen2.5-coder:32b",
-    "reasoning": "qwen2.5-coder:32b",
-    "coding": "qwen2.5-coder:32b",
-    "chat": "qwen2.5-coder:32b",
-    "voice_chat": "qwen2.5-coder:32b",
-    "planner": "qwen2.5-coder:32b",
-    "coder": "qwen2.5-coder:32b",
-    "reviewer": "qwen2.5-coder:32b",
-    "designer": "qwen2.5-coder:32b",
-    "smart_planner": "qwen2.5-coder:32b",
-    "smart_executor": "qwen2.5-coder:32b",
-    "smart_designer": "qwen2.5-coder:32b"
+    "default": "qwen3.8-27b:6q",
+    "reasoning": "qwen3.8-27b:8q",
+    "coding": "qwen3.8-27b:6q",
+    "chat": "qwen3.8-27b:6q",
+    "voice_chat": "qwen3.8-27b:4q",
+    "planner": "qwen3.8-27b:8q",
+    "coder": "qwen3.8-27b:8q",
+    "reviewer": "qwen3.8-27b:6q",
+    "designer": "qwen3.8-27b:4q",
+    "smart_planner": "qwen3.8-27b:8q",
+    "smart_executor": "qwen3.8-27b:6q",
+    "smart_designer": "qwen3.8-27b:4q"
   },
   "execution_controls": {
     "default": {
