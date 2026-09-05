@@ -202,11 +202,8 @@ services:
       # 운영자는 .env 에 TURN_SECRET 과 TURN_EXTERNAL_IP(공인 IP)만 넣고
       # `docker compose --profile turn up -d` 하면 coturn 기동 + 백엔드가 자동으로
       # turn:${TURN_DOMAIN}:${TURN_PORT} (udp/tcp) URL 을 클라이언트에 내려준다.
-      TURN_URLS: ${TURN_URLS:-}
-      TURN_SECRET: ${TURN_SECRET:-}
-      TURN_TTL: ${TURN_TTL:-86400}
-      TURN_DOMAIN: ${TURN_DOMAIN:-metanova1004.com}
-      TURN_PORT: ${TURN_PORT:-3478}
+      # [주의] TURN_* 는 env_file(.env/.env)에서 공급한다. 여기서 ${...:-} 치환으로
+      # 덮어쓰면 프로젝트 루트에 .env '파일'이 없어 항상 빈 값이 된다(2026-09-05 실측).
       # VOIP_FORCE_RELAY=1 → 모든 통화가 릴레이 경로만 사용(같은 LAN 테스트도 셀룰러와 동일 경로).
       VOIP_FORCE_RELAY: ${VOIP_FORCE_RELAY:-0}
       # 서버 미디어 브리지(MCU, 체크리스트 §13): 1 이면 폰↔서버↔폰 연속 라이브 음성 +
