@@ -54,7 +54,9 @@ services:
       - --bps-capacity=${TURN_BPS_CAPACITY:-0}
     healthcheck:
       # TURN 시그널 포트 LISTEN 여부로 노드 헬스 판정.
-      test: ["CMD-SHELL", "(ss -lun 2>/dev/null || netstat -lun 2>/dev/null) | grep -q ':${TURN_LISTENING_PORT:-3478}' || exit 1"]
+      # [비고] 이미지에 ss/netstat/python가 없어 /proc/net/udp*의 로컬포트(16진)로 판정한다.
+      # 3478=0x0D96, 3479=0x0D97.
+      test: ["CMD-SHELL", "cat /proc/net/udp /proc/net/udp6 2>/dev/null | grep -qE ':(0D96|0D97) ' || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
