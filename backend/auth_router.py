@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
 import base64
+import hashlib
+import hmac
 import logging
 import os
 
@@ -37,6 +39,7 @@ from webauthn.helpers.structs import (  # pyright: ignore[reportMissingImports]
 )
 
 from backend.auth import (
+    SECRET_KEY,
     create_access_token,
     get_current_user,
     get_password_hash,
@@ -162,6 +165,7 @@ _passkey_login_store: dict[str, dict[str, object]] = {}
 _social_login_providers = {"google", "naver", "kakao"}
 _social_login_callback_path = "auth/callback"
 _social_login_state_store: dict[str, dict[str, object]] = {}
+_SOCIAL_EMAIL_DOMAIN = "worldlinco.social"
 
 
 def _user_may_use_admin_portal(user: Any) -> bool:
@@ -372,6 +376,7 @@ def _fetch_social_provider_userinfo(provider: str, access_token: str, token_payl
         return {
             "id": payload.get("id"),
             "email": account.get("email"),
+            "email_verified": account.get("is_email_verified"),
             "name": profile.get("nickname") or profile.get("name") or account.get("profile_nickname"),
             "nickname": profile.get("nickname"),
             "profile_image": profile.get("profile_image_url") or profile.get("thumbnail_image_url"),
@@ -379,32 +384,70 @@ def _fetch_social_provider_userinfo(provider: str, access_token: str, token_payl
     return payload
 
 
-def _extract_social_identity(provider: str, userinfo: dict[str, Any], token_payload: dict[str, Any]) -> tuple[str, str, str]:
-    provider_user_id = str(
-        userinfo.get("id")
-        or userinfo.get("sub")
-        or userinfo.get("response", {}).get("id")
-        or token_payload.get("id_token")
-        or token_payload.get("access_token")
-        or token_urlsafe(8)
-    ).strip()
-    email = str(
-        userinfo.get("email")
-        or userinfo.get("response", {}).get("email")
-        or f"{provider}.{provider_user_id}@worldlinco.social"
-    ).strip().lower()
+def _truthy_flag(value: Any) -> bool:
+    return value is True or str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _social_email_is_verified(provider: str, userinfo: dict[str, Any]) -> bool:
+    email = str(userinfo.get("email") or userinfo.get("response", {}).get("email") or "").strip()
+    if not email:
+        return False
+    if provider == "google":
+        return _truthy_flag(userinfo.get("email_verified"))
+    if provider == "kakao":
+        return _truthy_flag(userinfo.get("email_verified") or userinfo.get("is_email_verified"))
+    # Naver only returns email after the user grants it on a verified Naver account.
+    return provider == "naver"
+
+
+def _synthetic_social_email(provider: str, provider_user_id: str) -> str:
+    digest = hmac.new(
+        str(SECRET_KEY).encode("utf-8"),
+        f"{provider}:{provider_user_id}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:16]
+    safe_id = re.sub(r"[^a-zA-Z0-9._-]+", "_", str(provider_user_id)).strip("._-")[:64] or "user"
+    return f"{provider}.{safe_id}.{digest}@{_SOCIAL_EMAIL_DOMAIN}".lower()
+
+
+def _legacy_synthetic_social_email(provider: str, provider_user_id: str) -> str:
+    return f"{provider}.{provider_user_id}@{_SOCIAL_EMAIL_DOMAIN}".lower()
+
+
+def _is_synthetic_social_email(email: str) -> bool:
+    return str(email or "").strip().lower().endswith(f"@{_SOCIAL_EMAIL_DOMAIN}")
+
+
+def _allocate_unique_username(db: Session, base_username: str) -> str:
+    candidate = base_username[:96]
+    if db.query(User).filter(User.username == candidate).first() is None:
+        return candidate
+    suffix = token_urlsafe(4).replace("-", "").lower()
+    return f"{base_username[:80]}_{suffix}"
+
+
+def _extract_social_identity(provider: str, userinfo: dict[str, Any], token_payload: dict[str, Any]) -> tuple[str, str, str, str, bool]:
+    del token_payload
+    nested = userinfo.get("response") if isinstance(userinfo.get("response"), dict) else {}
+    provider_user_id = str(userinfo.get("id") or userinfo.get("sub") or nested.get("id") or "").strip()
+    if not provider_user_id or provider_user_id.lower() in {"none", "null"}:
+        raise HTTPException(status_code=502, detail="소셜 로그인 사용자 식별자를 확인할 수 없습니다")
+
+    raw_email = str(userinfo.get("email") or nested.get("email") or "").strip().lower()
+    email_verified = _social_email_is_verified(provider, userinfo) and bool(raw_email) and not _is_synthetic_social_email(raw_email)
+    email = raw_email if email_verified else _synthetic_social_email(provider, provider_user_id)
     display_name = str(
         userinfo.get("name")
         or userinfo.get("nickname")
         or userinfo.get("display_name")
-        or userinfo.get("response", {}).get("name")
-        or userinfo.get("response", {}).get("nickname")
+        or nested.get("name")
+        or nested.get("nickname")
         or provider_user_id
     ).strip()
-    base_username = re.sub(r"[^a-zA-Z0-9_]+", "_", f"{provider}_{provider_user_id or email.split('@')[0]}").strip("_").lower()
+    base_username = re.sub(r"[^a-zA-Z0-9_]+", "_", f"{provider}_{provider_user_id}").strip("_").lower()
     if not base_username:
         base_username = f"{provider}_social_user"
-    return email, base_username[:96], display_name
+    return email, base_username[:96], display_name, provider_user_id, email_verified
 
 
 def _get_or_create_social_login_user(
@@ -413,15 +456,29 @@ def _get_or_create_social_login_user(
     email: str,
     username: str,
     display_name: str,
+    provider_user_id: str,
+    email_verified: bool,
 ) -> User:
-    user = db.query(User).filter((User.email == email) | (User.username == username)).first()
+    hmac_email = _synthetic_social_email(provider, provider_user_id)
+    legacy_email = _legacy_synthetic_social_email(provider, provider_user_id)
+
+    user = db.query(User).filter(User.email == hmac_email).first()
     if user is None:
-        existing_username_count = db.query(User).filter(User.username.like(f"{username}%")).count()
-        if existing_username_count:
-            username = f"{username}{existing_username_count + 1}"
+        # Resume accounts created before HMAC emails, but only when both
+        # legacy synthetic email and expected social username match.
+        user = db.query(User).filter(User.email == legacy_email, User.username == username).first()
+    if user is None and email_verified and not _is_synthetic_social_email(email):
+        user = db.query(User).filter(User.email == email).first()
+
+    if user is None:
+        create_email = email if email_verified and not _is_synthetic_social_email(email) else hmac_email
+        if db.query(User).filter(User.email == create_email).first() is not None:
+            create_email = hmac_email
+            if db.query(User).filter(User.email == create_email).first() is not None:
+                raise HTTPException(status_code=409, detail="소셜 로그인 계정을 생성할 수 없습니다")
         user = User(
-            email=email,
-            username=username,
+            email=create_email,
+            username=_allocate_unique_username(db, username),
             full_name=display_name,
             member_type="individual",
             hashed_password=get_password_hash(token_urlsafe(24)),
@@ -544,8 +601,18 @@ def finish_social_login(
         expires_in = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
     userinfo = _fetch_social_provider_userinfo(normalized_provider, access_token, token_payload)
-    email, username, display_name = _extract_social_identity(normalized_provider, userinfo, token_payload)
-    user = _get_or_create_social_login_user(db, normalized_provider, email=email, username=username, display_name=display_name)
+    email, username, display_name, provider_user_id, email_verified = _extract_social_identity(
+        normalized_provider, userinfo, token_payload
+    )
+    user = _get_or_create_social_login_user(
+        db,
+        normalized_provider,
+        email=email,
+        username=username,
+        display_name=display_name,
+        provider_user_id=provider_user_id,
+        email_verified=email_verified,
+    )
 
     session_id = token_urlsafe(24)
     app_access_token = create_access_token(
@@ -564,7 +631,7 @@ def finish_social_login(
         expires_in=expires_in,
         user=user,
     )
-    logger.info("[%s] 소셜 로그인 완료 → %s", normalized_provider, final_url)
+    logger.info("[%s] 소셜 로그인 완료 user_id=%s", normalized_provider, int(user.id))
     return RedirectResponse(url=final_url, status_code=status.HTTP_302_FOUND)
 
 
@@ -875,6 +942,8 @@ def signup_request_verification_code(
         country_code=payload.country_code,
         phone_number=normalized_phone,
     )
+    if _is_synthetic_social_email(str(signup_payload.email)):
+        raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다")
     if db.query(User).filter(User.email == signup_payload.email).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다")
     if db.query(User).filter(User.username == signup_payload.username).first():
