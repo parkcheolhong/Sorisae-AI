@@ -1409,6 +1409,41 @@ def _finalize_confirmed_marketplace_purchase(
     }
 
 
+def _require_owned_marketplace_purchase(
+    *,
+    db: Session,
+    purchase_id: int,
+    current_user: Any,
+) -> models.Purchase:
+    if not current_user:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    purchase = payment_service.get_purchase_by_id(db, int(purchase_id))
+    if not purchase:
+        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
+    if int(purchase.buyer_id) != int(current_user.id):
+        raise HTTPException(status_code=403, detail="본인의 구매만 결제 확정할 수 있습니다.")
+    return purchase
+
+
+def _payment_callback_response(
+    *,
+    purchase: models.Purchase,
+    txn_id: str,
+    finalized: Dict[str, Any],
+    status_fallback: str = "completed",
+) -> schemas.PaymentCallbackResponse:
+    return schemas.PaymentCallbackResponse(
+        status=str(purchase.status or status_fallback),
+        purchase_id=int(purchase.id),
+        transaction_id=str(purchase.transaction_id or txn_id),
+        payment_mode=str(finalized["payment_mode"]),
+        payment_provider=str(finalized["payment_provider"]),
+        payment_simulation=bool(finalized["payment_simulation"]),
+        payment_message=str(finalized["payment_message"]),
+        worldlinco_settlement=finalized.get("settlement"),
+    )
+
+
 @router.post("/purchase/{purchase_id}/confirm", response_model=schemas.PaymentCallbackResponse)
 def confirm_marketplace_purchase(
     purchase_id: int,
@@ -1417,14 +1452,11 @@ def confirm_marketplace_purchase(
     db: Session = Depends(get_db),
 ) -> schemas.PaymentCallbackResponse:
     """결제 확정 후 WorldLinco referral/settlement 적용 (initiate 시점이 아님)."""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
-
-    purchase = payment_service.get_purchase_by_id(db, purchase_id)
-    if not purchase:
-        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
-    if purchase.buyer_id != current_user.id:
-        raise HTTPException(status_code=403, detail="본인의 구매만 결제 확정할 수 있습니다.")
+    purchase = _require_owned_marketplace_purchase(
+        db=db,
+        purchase_id=purchase_id,
+        current_user=current_user,
+    )
 
     txn_id = str(request.transaction_id or purchase.transaction_id or f"TXN_{uuid4().hex[:12]}")
     finalized = _finalize_confirmed_marketplace_purchase(
@@ -1435,15 +1467,11 @@ def confirm_marketplace_purchase(
         user_country_code=getattr(current_user, "country_code", None),
     )
     purchase = finalized["purchase"]
-    return schemas.PaymentCallbackResponse(
-        status=str(purchase.status or request.status or "completed"),
-        purchase_id=int(purchase.id),
-        transaction_id=str(purchase.transaction_id or txn_id),
-        payment_mode=str(finalized["payment_mode"]),
-        payment_provider=str(finalized["payment_provider"]),
-        payment_simulation=bool(finalized["payment_simulation"]),
-        payment_message=str(finalized["payment_message"]),
-        worldlinco_settlement=finalized.get("settlement"),
+    return _payment_callback_response(
+        purchase=purchase,
+        txn_id=txn_id,
+        finalized=finalized,
+        status_fallback=str(request.status or "completed"),
     )
 
 
@@ -1451,30 +1479,35 @@ def confirm_marketplace_purchase(
 def marketplace_payment_callback(
     order_id: int,
     transaction_id: Optional[str] = None,
+    current_user: Any = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PaymentCallbackResponse:
-    """PG return/webhook — order_id 쿼리 + transaction_id 로 결제 확정."""
-    purchase = payment_service.get_purchase_by_id(db, int(order_id))
-    if not purchase:
-        raise HTTPException(status_code=404, detail="구매 기록을 찾을 수 없습니다.")
+    """PG return URL. Completing a purchase requires the authenticated buyer.
+
+    This endpoint used to accept an unauthenticated `order_id` query and mark
+    the purchase completed. Sequential purchase ids made that a free-checkout
+    and cross-buyer completion hole. A signed PG webhook should be a separate
+    authenticated adapter; until then only the owner may confirm.
+    """
+    purchase = _require_owned_marketplace_purchase(
+        db=db,
+        purchase_id=int(order_id),
+        current_user=current_user,
+    )
 
     txn_id = str(transaction_id or purchase.transaction_id or f"TXN_{uuid4().hex[:12]}")
     finalized = _finalize_confirmed_marketplace_purchase(
         db=db,
         purchase=purchase,
-        buyer_id=int(purchase.buyer_id),
+        buyer_id=int(current_user.id),
         transaction_id=txn_id,
+        user_country_code=getattr(current_user, "country_code", None),
     )
     purchase = finalized["purchase"]
-    return schemas.PaymentCallbackResponse(
-        status=str(purchase.status or "completed"),
-        purchase_id=int(purchase.id),
-        transaction_id=str(purchase.transaction_id or txn_id),
-        payment_mode=str(finalized["payment_mode"]),
-        payment_provider=str(finalized["payment_provider"]),
-        payment_simulation=bool(finalized["payment_simulation"]),
-        payment_message=str(finalized["payment_message"]),
-        worldlinco_settlement=finalized.get("settlement"),
+    return _payment_callback_response(
+        purchase=purchase,
+        txn_id=txn_id,
+        finalized=finalized,
     )
 
 
