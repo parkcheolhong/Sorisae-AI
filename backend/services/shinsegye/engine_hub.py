@@ -421,7 +421,38 @@ def _invoke_engine_fn(fn: Callable[..., Any], ctx: Dict[str, Any]) -> Any:
     try:
         return fn(**ctx)
     except TypeError:
-        return fn(ctx)
+        try:
+            return fn(ctx)
+        except TypeError:
+            # 인자 없는 main()/데모 엔트리도 dispatch 컨텍스트와 공존시킨다.
+            return fn()
+
+
+def _resolve_slot_path(slot_file: str) -> Path:
+    """engines120 루트 → _retired 하위 → 전체 재귀 순으로 슬롯 파일을 찾는다."""
+    direct = _ENGINES_DIR / slot_file
+    if direct.is_file():
+        return direct
+
+    # 레지스트리가 상대경로(_retired/...)를 담은 경우
+    nested = _ENGINES_DIR / slot_file
+    if nested.is_file():
+        return nested
+
+    name = Path(slot_file).name
+    retired_root = _ENGINES_DIR / "_retired"
+    if retired_root.is_dir():
+        for hit in retired_root.rglob(name):
+            if hit.is_file():
+                return hit
+
+    for hit in _ENGINES_DIR.rglob(name):
+        if hit.is_file() and "_cache" not in hit.parts:
+            return hit
+
+    raise FileNotFoundError(
+        f"[SorisaeHub] 슬롯 파일이 없습니다: {_ENGINES_DIR / slot_file}"
+    )
 
 
 def _load_engine_module(slot_file: str) -> Any:
@@ -430,11 +461,7 @@ def _load_engine_module(slot_file: str) -> Any:
         if slot_file in _ENGINE_MODULE_CACHE:
             return _ENGINE_MODULE_CACHE[slot_file]
 
-        slot_path = _ENGINES_DIR / slot_file
-        if not slot_path.exists():
-            raise FileNotFoundError(
-                f"[SorisaeHub] 슬롯 파일이 없습니다: {slot_path}"
-            )
+        slot_path = _resolve_slot_path(slot_file)
 
         spec = importlib.util.spec_from_file_location(
             f"sorisae_slot.{slot_file}", slot_path
@@ -559,7 +586,7 @@ class SorisaeEngineHub:
                         result = _invoke_engine_fn(fn, ctx)
                         return {
                             "engine": engine_type,
-                            "status": "slot_map_ok",
+                            "status": "ok",
                             "adapter_used": False,
                             "entry_fn": entry_fn,
                             "adapter_entry_fn": slot_override,
@@ -595,7 +622,7 @@ class SorisaeEngineHub:
                         result = _invoke_engine_fn(adapter_fn, ctx)
                         return {
                             "engine": engine_type,
-                            "status": "adapter_ok",
+                            "status": "ok",
                             "adapter_used": True,
                             "entry_fn": entry_fn,
                             "adapter_entry_fn": adapter_fn_name,

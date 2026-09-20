@@ -19,8 +19,8 @@ const MUSIC_ENGINES: SorisaeEngineSpec[] = [
         label: 'AI 음악 친구 채팅',
         description: '음악 취향과 감정을 공유하는 AI 친구 캐릭터와 대화하며 플레이리스트 및 추천 곡을 함께 만들어 나갑니다.',
         default_entry_fn: 'main',
-        default_context: { message: '오늘 기분이 업되는 음악 추천해줘' },
-        adapter_entry_candidates: ['get_friend_system', 'run', 'start'],
+        default_context: { message: '오늘 기분이 업되는 음악 추천해줘', user_id: 'user001' },
+        adapter_entry_candidates: ['main', 'get_friend_system', 'run', 'start'],
         badge: '실험적',
     },
     {
@@ -28,7 +28,13 @@ const MUSIC_ENGINES: SorisaeEngineSpec[] = [
         label: '애니메이션 테마곡 생성',
         description: '애니메이션 시나리오·세계관·캐릭터 정보를 바탕으로 오프닝/엔딩 테마곡 구조를 제안합니다.',
         default_entry_fn: 'main',
-        default_context: { scenario: '우주 모험', mood: 'epic', characters: ['소리새', '나달'] },
+        default_context: {
+            title: '소리새 우주 모험',
+            scenario: '우주 모험',
+            mood: 'epic',
+            genre: 'epic_orchestral',
+            characters: ['소리새', '나달'],
+        },
         badge: '실험적',
     },
     {

@@ -193,8 +193,8 @@ export default function SorisaeExpPanel({ engines, categoryLabel, categoryId }: 
                             {result && (
                                 <div className="mt-4 workspace-card bg-[#0e1521]" data-testid="dispatch-result">
                                     <div className="flex flex-wrap gap-2 mb-3">
-                                        <span className={`workspace-chip ${result.status === 'ok' ? 'workspace-chip-active' : 'border-red-500 text-red-400'}`}>
-                                            {result.status === 'ok' ? '✓ 성공' : `✗ ${result.status ?? '오류'}`}
+                                        <span className={`workspace-chip ${['ok', 'slot_map_ok', 'adapter_ok'].includes(String(result.status || '')) ? 'workspace-chip-active' : 'border-red-500 text-red-400'}`}>
+                                            {['ok', 'slot_map_ok', 'adapter_ok'].includes(String(result.status || '')) ? '✓ 성공' : `✗ ${result.status ?? '오류'}`}
                                         </span>
                                         {result.entry_fn && <span className="workspace-chip">fn: {result.entry_fn}</span>}
                                         {result.elapsed_ms != null && (

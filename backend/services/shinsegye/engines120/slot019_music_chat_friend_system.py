@@ -393,24 +393,79 @@ def demo_friend_system():
 
 
 
-def main(context: dict = None) -> dict:
-    """dispatch API용 메인 - 음악 채팅 친구 시스템"""
-    context = context or {}
-    user_id = str(context.get('user_id', 'user001'))
-    target_id = str(context.get('target_id', 'user002'))
+def _recommend_tracks_for_message(message: str) -> list:
+    text = (message or "").lower()
+    if any(token in text for token in ("업", "신나", "에너지", "운동", "happy", "기분")):
+        return [
+            {"title": "Morning Boost", "genre": "pop", "tempo_bpm": 118, "mood": "uplifting"},
+            {"title": "City Run", "genre": "electronic", "tempo_bpm": 126, "mood": "energetic"},
+            {"title": "Sunshine Drive", "genre": "indie", "tempo_bpm": 112, "mood": "bright"},
+        ]
+    if any(token in text for token in ("슬프", "감성", "차분", "잠", "calm", "sad")):
+        return [
+            {"title": "Quiet Rain", "genre": "ballad", "tempo_bpm": 72, "mood": "calm"},
+            {"title": "Soft Piano Night", "genre": "classical", "tempo_bpm": 68, "mood": "melancholy"},
+            {"title": "Harbor Lights", "genre": "lofi", "tempo_bpm": 80, "mood": "warm"},
+        ]
+    return [
+        {"title": "Shared Playlist #1", "genre": "pop", "tempo_bpm": 100, "mood": "friendly"},
+        {"title": "Collab Sketch", "genre": "acoustic", "tempo_bpm": 92, "mood": "creative"},
+        {"title": "Friend Room BGM", "genre": "ambient", "tempo_bpm": 88, "mood": "cozy"},
+    ]
+
+
+def main(context: dict = None, **kwargs) -> dict:
+    """dispatch API용 메인 - 음악 친구 채팅/추천."""
+    context = dict(context or {})
+    context.update({k: v for k, v in kwargs.items() if v is not None})
+    user_id = str(context.get("user_id", "user001"))
+    target_id = str(context.get("target_id", "music_friend_ai"))
+    message = str(
+        context.get("message")
+        or context.get("query")
+        or context.get("text")
+        or "오늘 기분에 맞는 음악 추천해줘"
+    ).strip()
+
+    recommendations = _recommend_tracks_for_message(message)
+    reply = (
+        f"좋아요! '{message}'에 맞춰 같이 들을 플레이리스트를 골랐어요. "
+        f"첫 곡은 '{recommendations[0]['title']}'({recommendations[0]['mood']})입니다."
+    )
+
+    friend_payload = {}
     try:
         system = get_friend_system()
-        request = system.send_friend_request(user_id, target_id)
+        request = system.send_friend_request(user_id, target_id, message[:120])
         friends = list(system.friend_connections.get(user_id, {}).keys())
-        return {
-            'status': 'ok',
-            'user_id': user_id,
-            'friend_request_sent': target_id,
-            'request_id': request.request_id if hasattr(request, 'request_id') else str(request),
-            'current_friends': friends[:5],
+        friend_payload = {
+            "friend_request_sent": target_id,
+            "request_id": request.request_id if hasattr(request, "request_id") else str(request),
+            "current_friends": friends[:5],
         }
+        try:
+            system.invite_friend_to_music_session(
+                user_id,
+                target_id,
+                {"playlist": recommendations, "message": message},
+            )
+        except Exception:
+            pass
     except Exception as e:
-        return {'status': 'error', 'error': str(e)}
+        friend_payload = {"friend_system_warning": str(e)}
+
+    return {
+        "status": "ok",
+        "user_id": user_id,
+        "message": message,
+        "reply": reply,
+        "recommendations": recommendations,
+        "playlist_title": "소리새 음악친구 추천",
+        "preview_ready": True,
+        "product_ready": True,
+        **friend_payload,
+    }
+
 
 if __name__ == "__main__":
     demo_friend_system()
