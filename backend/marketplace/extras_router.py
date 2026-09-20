@@ -102,6 +102,58 @@ def _get_extras_addon_src() -> Path:
     return (Path(__file__).resolve().parents[2] / "addons" / "shinsegye_extras" / "src").resolve()
 
 
+def _engines120_root() -> Path:
+    return (Path(__file__).resolve().parents[1] / "services" / "shinsegye" / "engines120").resolve()
+
+
+def _is_safe_engine_basename(name: str) -> bool:
+    raw = str(name or "").strip()
+    if not raw or raw != Path(raw).name:
+        return False
+    if raw in {".", ".."} or ".." in raw:
+        return False
+    if "/" in raw or "\\" in raw:
+        return False
+    if Path(raw).is_absolute():
+        return False
+    return Path(raw).suffix.lower() == ".py"
+
+
+def _safe_recovery_engine_filename(engine_id: str) -> str:
+    raw = str(engine_id or "").strip()
+    if not raw.endswith(".py"):
+        raw = f"{raw}.py"
+    if not _is_safe_engine_basename(raw):
+        raise HTTPException(status_code=400, detail="잘못된 엔진 파일명입니다.")
+    return raw
+
+
+def _resolve_engines120_target(file_name: Optional[str], slot: int) -> Optional[Path]:
+    """Resolve an engines120 file, rejecting path traversal and absolute paths.
+
+    `Path(dir) / "/tmp/evil.py"` would otherwise become `/tmp/evil.py`, and
+    `../` segments would escape the slot directory. Both experiment and launch
+    import/exec that file, so the target must stay inside engines120.
+    """
+    root = _engines120_root()
+    if file_name:
+        raw = str(file_name).strip()
+        if not _is_safe_engine_basename(raw):
+            raise HTTPException(status_code=400, detail="잘못된 엔진 파일명입니다.")
+        candidate = (root / raw).resolve()
+        if not candidate.is_relative_to(root):
+            raise HTTPException(status_code=400, detail="잘못된 엔진 파일명입니다.")
+        if candidate.is_file():
+            return candidate
+    pattern = f"slot{int(slot):03d}_*.py"
+    matches = [
+        path
+        for path in sorted(root.glob(pattern))
+        if path.is_file() and path.resolve().is_relative_to(root)
+    ]
+    return matches[0] if matches else None
+
+
 def _get_iot_controller():
     global _IOT_CONTROLLER
     if _IOT_CONTROLLER is not None:
@@ -862,15 +914,17 @@ def build_extras_router(contract: Any) -> APIRouter:
 
         src_base = Path(__file__).resolve().parents[2] / "tmp" / "external_migrations" / "run_all_shinsegye.py"
         dst_dir = _get_extras_addon_src()
+        engine_id = _safe_recovery_engine_filename(engine_id)
 
-        if not engine_id.endswith(".py"):
-            engine_id = engine_id + ".py"
-
-        src_file = src_base / engine_id
+        src_root = src_base.resolve()
+        dst_root = dst_dir.resolve()
+        src_file = (src_root / engine_id).resolve()
+        dst_file = (dst_root / engine_id).resolve()
+        if not src_file.is_relative_to(src_root) or not dst_file.is_relative_to(dst_root):
+            raise HTTPException(status_code=400, detail="잘못된 엔진 파일명입니다.")
         if not src_file.exists():
             raise HTTPException(status_code=404, detail=f"소스 파일 없음: {engine_id}")
 
-        dst_file = dst_dir / engine_id
         if dst_file.exists():
             return {"status": "already_integrated", "file": engine_id, "dst": str(dst_file)}
 
@@ -958,19 +1012,7 @@ def build_extras_router(contract: Any) -> APIRouter:
         - 카테고리별 실제 기능 호출(통역/음악/IoT/시뮬레이션)
         - 그 외 엔진은 슬롯 파일을 import 후 demo/main/run 함수를 탐색 실행
         """
-        engines120_dir = Path(__file__).resolve().parents[1] / "services" / "shinsegye" / "engines120"
-        target_file: Optional[Path] = None
-
-        if req.file:
-            candidate = engines120_dir / req.file
-            if candidate.exists():
-                target_file = candidate
-
-        if target_file is None:
-            pattern = f"slot{req.slot:03d}_*.py"
-            matches = sorted(engines120_dir.glob(pattern))
-            if matches:
-                target_file = matches[0]
+        target_file = _resolve_engines120_target(req.file, req.slot)
 
         user_input = (req.experiment_input or "").strip()
         category = (req.category or "general").strip().lower()
@@ -1036,21 +1078,7 @@ def build_extras_router(contract: Any) -> APIRouter:
         import importlib.util
         import traceback
 
-        engines120_dir = Path(__file__).resolve().parents[1] / "services" / "shinsegye" / "engines120"
-        target_file: Optional[Path] = None
-
-        # 파일명이 직접 넘어온 경우
-        if req.file:
-            candidate = engines120_dir / req.file
-            if candidate.exists():
-                target_file = candidate
-
-        # engine_id 또는 slot 번호로 탐색
-        if target_file is None:
-            pattern = f"slot{req.slot:03d}_*.py"
-            matches = sorted(engines120_dir.glob(pattern))
-            if matches:
-                target_file = matches[0]
+        target_file = _resolve_engines120_target(req.file, req.slot)
 
         if target_file is None or not target_file.exists():
             return {
