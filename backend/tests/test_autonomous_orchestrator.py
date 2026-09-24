@@ -241,6 +241,8 @@ class TestTurnController:
         await controller.process_turn("안녕하세요", session)
         loaded = AutonomousSession.load(session.session_id, "user1")
         assert loaded is not None, "인사 턴 이후 세션이 저장되지 않았습니다."
+        assert [turn.role for turn in loaded.conversation] == ["user", "system"]
+        assert loaded.extra.get("last_intent") == "greeting"
 
     @pytest.mark.asyncio
     async def test_process_status(self):
