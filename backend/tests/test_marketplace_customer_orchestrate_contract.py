@@ -1,6 +1,8 @@
+from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi import FastAPI
+import pytest
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 import backend.marketplace.router as marketplace_router_module
@@ -186,6 +188,60 @@ def test_build_customer_orchestrate_request_schedules_cleanup(monkeypatch, tmp_p
     assert payload.output_base_dir == str(run_root)
     assert payload.output_dir == str(allocated_output)
     assert payload.project_name == "contract-check"
+
+
+def test_allow_new_output_dir_stays_inside_user_run_root(monkeypatch, tmp_path):
+    run_root = tmp_path / "customer_7" / "runs"
+    run_root.mkdir(parents=True)
+    outside = tmp_path / "outside-tree" / "pwned"
+
+    monkeypatch.setattr(marketplace_router_module, "_schedule_marketplace_storage_cleanup", lambda: None)
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "_resolve_customer_orchestrator_run_root",
+        lambda user_id: run_root,
+    )
+
+    request = marketplace_router_module.CustomerOrchestrateRequest(
+        task="고객 주문 생성",
+        mode="full",
+        project_name="escape-check",
+        output_dir=str(outside),
+        allow_new_output_dir=True,
+    )
+
+    payload = marketplace_router_module._build_customer_orchestrate_request(request, 7)
+
+    created = (run_root / "pwned").resolve()
+    assert Path(payload.output_dir).resolve() == created
+    assert created.is_dir()
+    assert created.is_relative_to(run_root.resolve())
+    assert not outside.exists()
+    assert not (tmp_path / "outside-tree").exists()
+
+
+def test_allow_new_output_dir_rejects_parent_segment(monkeypatch, tmp_path):
+    run_root = tmp_path / "customer_7" / "runs"
+    run_root.mkdir(parents=True)
+
+    monkeypatch.setattr(marketplace_router_module, "_schedule_marketplace_storage_cleanup", lambda: None)
+    monkeypatch.setattr(
+        marketplace_router_module,
+        "_resolve_customer_orchestrator_run_root",
+        lambda user_id: run_root,
+    )
+
+    request = marketplace_router_module.CustomerOrchestrateRequest(
+        task="고객 주문 생성",
+        output_dir="..",
+        allow_new_output_dir=True,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        marketplace_router_module._build_customer_orchestrate_request(request, 7)
+
+    assert exc_info.value.status_code == 400
+    assert list(run_root.iterdir()) == []
 
 
 def test_customer_orchestrate_stage_run_update_returns_updated_payload(monkeypatch):

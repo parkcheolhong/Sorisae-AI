@@ -2337,6 +2337,35 @@ def _customer_orchestrate_connection_id(trace_id: Optional[str], flow_id: Option
 router.include_router(build_customer_orchestrate_router(sys.modules[__name__]))
 
 
+def _customer_output_dir_is_inside(candidate: Path, run_root: Path) -> bool:
+    resolved_root = run_root.resolve()
+    resolved_candidate = candidate.resolve()
+    return resolved_candidate != resolved_root and resolved_candidate.is_relative_to(resolved_root)
+
+
+def _allocate_named_customer_output_dir(run_root: Path, requested_output_dir: str) -> Path:
+    """Create a new result folder under the caller's run root.
+
+    `allow_new_output_dir` may name that folder. It must not mkdir an arbitrary
+    absolute path or a `..` traversal before the coder writes files there.
+    """
+    folder_name = Path(str(requested_output_dir or "").strip()).name
+    if (
+        not folder_name
+        or folder_name in {".", ".."}
+        or folder_name != Path(folder_name).name
+        or "/" in folder_name
+        or "\\" in folder_name
+    ):
+        raise HTTPException(status_code=400, detail="잘못된 출력 폴더 이름입니다.")
+
+    candidate = (run_root.resolve() / folder_name).resolve()
+    if not _customer_output_dir_is_inside(candidate, run_root):
+        raise HTTPException(status_code=403, detail="허용되지 않은 출력 경로입니다.")
+    candidate.mkdir(parents=True, exist_ok=True)
+    return candidate
+
+
 def _build_customer_orchestrate_request(
     request: CustomerOrchestrateRequest,
     user_id: int,
@@ -2349,19 +2378,18 @@ def _build_customer_orchestrate_request(
     user_dir = str(user_dir_path)
     requested_output_dir = str(request.output_dir or "").strip() or None
     validated_output_dir: Optional[str] = None
-    if requested_output_dir:
-        if bool(request.allow_new_output_dir):
-            requested_path = Path(requested_output_dir)
-            requested_path.mkdir(parents=True, exist_ok=True)
-            validated_output_dir = str(requested_path.resolve())
-        else:
-            # 고객 재실행은 기존 생성 결과 폴더 내부에서만 이어서 수정되도록 경로를 강제 검증한다.
-            validated_output_dir = str(
-                _validate_customer_generated_output_dir(
-                    Path(requested_output_dir),
-                    user_id,
-                )
+    if requested_output_dir and not bool(request.allow_new_output_dir):
+        # 고객 재실행은 기존 생성 결과 폴더 내부에서만 이어서 수정되도록 경로를 강제 검증한다.
+        validated_output_dir = str(
+            _validate_customer_generated_output_dir(
+                Path(requested_output_dir),
+                user_id,
             )
+        )
+    elif requested_output_dir:
+        validated_output_dir = str(
+            _allocate_named_customer_output_dir(user_dir_path, requested_output_dir)
+        )
     else:
         # 고객 신규 실행도 시작 시점에 단일 작업 폴더를 선할당해
         # 내부 강제 재시도가 retry_* 폴더를 연쇄 생성하지 않도록 고정한다.
