@@ -332,6 +332,38 @@ class TestTurnController:
         assert "승인 대기 중인 작업이 없습니다" in result["content"]
 
     @pytest.mark.asyncio
+    async def test_approval_without_pending_persists_session(self, tmp_path, monkeypatch):
+        """승인 대기 없는 '승인' 턴도 세션 파일을 남겨 후속 load 가 대화를 잃지 않게 한다."""
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1")
+        await controller.process_turn("현재 상태 알려줘", session)
+        await controller.process_turn("승인", session)
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None, "승인 턴 이후 세션이 저장되지 않았습니다."
+        assert [turn.role for turn in loaded.conversation] == ["user", "system", "user", "system"]
+        assert loaded.conversation[-2].content == "승인"
+        assert "승인 대기 중인 작업이 없습니다" in loaded.conversation[-1].content
+
+    @pytest.mark.asyncio
+    async def test_rejection_without_pending_persists_session(self, tmp_path, monkeypatch):
+        """거절 대기 없는 '거절' 턴도 세션 파일을 남긴다."""
+        monkeypatch.setattr(
+            "backend.orchestrator.autonomous.session.AUTONOMOUS_SESSION_DIR",
+            str(tmp_path),
+        )
+        controller = TurnController()
+        session = AutonomousSession.create(owner_id="user1")
+        await controller.process_turn("거절", session)
+        loaded = AutonomousSession.load(session.session_id, "user1")
+        assert loaded is not None, "거절 턴 이후 세션이 저장되지 않았습니다."
+        assert [turn.role for turn in loaded.conversation] == ["user", "system"]
+        assert "거절할 승인 대기 작업이 없습니다" in loaded.conversation[-1].content
+
+    @pytest.mark.asyncio
     async def test_agent_results_in_conversation(self):
         controller = TurnController()
         session = AutonomousSession.create(owner_id="user1", mode="advisory")

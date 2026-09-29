@@ -641,7 +641,9 @@ class TurnController:
         if session.approval_state != "pending":
             reply = "현재 승인 대기 중인 작업이 없습니다."
             session.add_system_message(reply)
-            return self._build_response(session, reply, intent="approval")
+            payload = self._build_response(session, reply, intent="approval")
+            session.save()
+            return payload
 
         session.approval_state = "approved"
         session.execution_state = "executing"
@@ -666,7 +668,9 @@ class TurnController:
         if session.approval_state != "pending":
             reply = "현재 거절할 승인 대기 작업이 없습니다."
             session.add_system_message(reply)
-            return self._build_response(session, reply, intent="rejection")
+            payload = self._build_response(session, reply, intent="rejection")
+            session.save()
+            return payload
 
         session.approval_state = "rejected"
         session.execution_state = "planning"
