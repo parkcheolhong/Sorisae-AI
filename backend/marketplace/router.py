@@ -1296,7 +1296,8 @@ def create_marketplace_purchase(
         amount_minor=amount_minor,
         db=db,
     )
-    final_price = float(quote["final_amount_minor"]) / 100.0 if quote.get("eligible") else server_price
+    # Quote amounts are whole KRW won, same unit as project.price (9900 == ₩9,900).
+    final_price = float(quote["final_amount_minor"]) if quote.get("eligible") else server_price
     purchase = payment_service.create_purchase(
         db=db,
         project_id=request.project_id,
