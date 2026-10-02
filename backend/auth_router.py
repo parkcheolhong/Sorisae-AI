@@ -1331,12 +1331,23 @@ def start_password_recovery(
         raise HTTPException(status_code=403, detail="관리자 계정만 이 복구 경로를 사용할 수 있습니다")
 
     verification_channel = str(payload.verification_channel or "email").strip().lower()
-    phone_number = str(payload.phone_number or getattr(user, "phone_number", None) or "").strip() or None
-    if verification_channel == "phone" and not phone_number:
-        raise HTTPException(
-            status_code=400,
-            detail="전화 인증을 위해 phone_number가 필요합니다. 계정에 등록된 번호가 없으면 번호를 입력해주세요.",
-        )
+    # 요청자가 고른 번호로 OTP를 보내면, 이메일만 아는 사람이 자기 전화로 코드를 받아
+    # 비밀번호를 재설정할 수 있다. 전화 복구는 계정에 저장된 번호로만 보낸다.
+    registered_phone = str(getattr(user, "phone_number", None) or "").strip() or None
+    phone_number = None
+    if verification_channel == "phone":
+        if not registered_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="계정에 등록된 전화번호가 없습니다. 이메일로 비밀번호를 복구하세요.",
+            )
+        requested_phone = str(payload.phone_number or "").strip()
+        if requested_phone and re.sub(r"\D", "", requested_phone) != re.sub(r"\D", "", registered_phone):
+            raise HTTPException(
+                status_code=400,
+                detail="등록된 전화번호와 일치하지 않습니다.",
+            )
+        phone_number = registered_phone
 
     try:
         recovery_purpose = "admin_recovery" if payload.scope == "admin" else "user_recovery"
