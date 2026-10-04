@@ -605,7 +605,11 @@ async def run_autonomous_surface_execution(
 
     output_dir = str(getattr(orchestration_request, "output_dir", "") or "").strip()
     if output_dir:
-        session.output_dir = output_dir
+        from pathlib import Path
+
+        from backend.llm.orchestrator import _trusted_orchestration_output_dir
+
+        session.output_dir = str(_trusted_orchestration_output_dir(Path(output_dir)))
 
     llm_call = None
     try:
