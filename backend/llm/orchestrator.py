@@ -191,11 +191,32 @@ from backend.llm.orchestrator_order_profile import (  # noqa: E402
 router = APIRouter(prefix="/api/llm", tags=["orchestrator"])
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# The repository root is not an output root. POST /api/llm/orchestrate copies
+# the caller's output_dir into the autonomous coder, and STAGE-01 writes
+# requirements.txt, README.md, and app/main.py. Trusting the repo root lets any
+# logged-in user overwrite the live tree.
 ORCH_ALLOWED_OUTPUT_ROOTS = [
-    REPO_ROOT.resolve(),
     (REPO_ROOT / "uploads").resolve(),
     Path(tempfile.gettempdir()).resolve(),
 ]
+
+
+def _orchestration_output_roots() -> List[Path]:
+    roots = [path.resolve() for path in ORCH_ALLOWED_OUTPUT_ROOTS]
+    configured = str(os.getenv("MARKETPLACE_UPLOAD_ROOT") or "").strip()
+    if not configured:
+        return roots
+    if os.name != "nt" and re.match(r"^[A-Za-z]:[\\/]", configured):
+        return roots
+    try:
+        resolved = Path(configured).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return roots
+    repo = REPO_ROOT.resolve()
+    if resolved in {repo, Path("/").resolve()} or _is_relative_to(repo, resolved):
+        return roots
+    roots.append(resolved)
+    return roots
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:
@@ -230,7 +251,7 @@ def _resolve_orchestration_output_root(path_text: str) -> Path:
         safe_normalized = "uploads/projects"
     candidate = REPO_ROOT / safe_normalized
     resolved = candidate.resolve()
-    if any(_is_relative_to(resolved, root) for root in ORCH_ALLOWED_OUTPUT_ROOTS):
+    if any(_is_relative_to(resolved, root) for root in _orchestration_output_roots()):
         return resolved
     raise HTTPException(status_code=400, detail="출력 경로는 허용된 루트 내부여야 합니다.")
 
@@ -249,7 +270,7 @@ def _resolve_orchestration_output_child_path(output_dir: Path, relative_path: st
 
 def _trusted_orchestration_output_dir(output_dir: Path) -> Path:
     resolved = output_dir.resolve()
-    if any(_is_relative_to(resolved, root) for root in ORCH_ALLOWED_OUTPUT_ROOTS):
+    if any(_is_relative_to(resolved, root) for root in _orchestration_output_roots()):
         return resolved
     safe_dir_name = re.sub(r"[^a-zA-Z0-9._-]+", "-", str(output_dir.name or "")).strip("-._")
     if not safe_dir_name:

@@ -29,6 +29,10 @@ class CoderAgent(BaseAgent):
                 output="출력 디렉터리가 설정되지 않았습니다.",
                 errors=["output_dir is required"],
             )
+        from backend.llm.orchestrator import _trusted_orchestration_output_dir
+
+        output_dir = str(_trusted_orchestration_output_dir(Path(output_dir)))
+        context.output_dir = output_dir
 
         previous = self._format_previous_results(context)
         revision_hint = ""
