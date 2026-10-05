@@ -372,6 +372,47 @@ def test_process_webhook_signature_failure_retries_then_dead_letter(db_session, 
     assert "dead_letter=true" in str(attempts[2].error_message)
 
 
+def test_process_webhook_apple_untrusted_x5c_does_not_refund(db_session, monkeypatch):
+    seeded = _seed_subscription(db_session)
+    user_id = int(seeded["user"].id)
+    subscription = seeded["subscription"]
+    monkeypatch.delenv("MARKETPLACE_APPLE_WEBHOOK_SIGNING_SECRET", raising=False)
+    monkeypatch.delenv("MARKETPLACE_APPLE_ROOT_CA_PEM", raising=False)
+    monkeypatch.delenv("MARKETPLACE_APPLE_ROOT_CA_PEM_FILE", raising=False)
+    monkeypatch.delenv("MARKETPLACE_APPLE_PINSET_FILE", raising=False)
+    monkeypatch.setenv("MARKETPLACE_APPLE_WEBHOOK_ENABLE_X5C_VERIFY", "true")
+
+    from backend.tests.test_marketplace_webhook_adapter_parsers import _make_es256_jws_with_x5c
+
+    token, _root_pem = _make_es256_jws_with_x5c(
+        {
+            "notificationUUID": "forged-apple-event",
+            "notificationType": "REFUND",
+            "signedDate": int(datetime.now(timezone.utc).timestamp() * 1000),
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        subscription_service.process_webhook(
+            db_session,
+            provider="apple",
+            payload={
+                "event_id": "forged-refund-1",
+                "event_type": "refund_applied",
+                "user_id": user_id,
+                "product_code": "stock-ai-suite",
+                "plan_code": "pro",
+                "payload": {"signedPayload": token},
+            },
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "root ca" in str(exc_info.value.detail).lower()
+    db_session.refresh(subscription)
+    assert subscription.status == SubscriptionStatus.ACTIVE.value
+    assert subscription.source == "stripe"
+
+
 def test_process_webhook_apple_pinset_file_missing_returns_400(db_session, monkeypatch):
     seeded = _seed_subscription(db_session)
     user_id = int(seeded["user"].id)
