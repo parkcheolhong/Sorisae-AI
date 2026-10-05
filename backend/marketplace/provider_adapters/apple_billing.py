@@ -138,11 +138,17 @@ class AppleBillingAdapter:
         for index in range(len(certificates) - 1):
             self._verify_cert_signature(certificates[index], certificates[index + 1])
 
-        if root_ca_pem:
-            root_cert = x509.load_pem_x509_certificate(root_ca_pem.encode("utf-8"))
-            last_cert = certificates[-1]
-            if root_cert.fingerprint(hashes.SHA256()) != last_cert.fingerprint(hashes.SHA256()):
-                self._verify_cert_signature(last_cert, root_cert)
+        # A self-signed x5c chain satisfies the adjacent-signature loop above.
+        # Without a configured Apple root, that chain is not Apple's and must not
+        # be treated as a provider-verified notification.
+        pinned_root_pem = str(root_ca_pem or "").strip()
+        if not pinned_root_pem:
+            raise ValueError("Apple root CA 가 설정되지 않아 signedPayload x5c 체인을 신뢰할 수 없습니다.")
+
+        root_cert = x509.load_pem_x509_certificate(pinned_root_pem.encode("utf-8"))
+        last_cert = certificates[-1]
+        if root_cert.fingerprint(hashes.SHA256()) != last_cert.fingerprint(hashes.SHA256()):
+            self._verify_cert_signature(last_cert, root_cert)
 
         leaf_key = certificates[0].public_key()
         if not isinstance(leaf_key, ec.EllipticCurvePublicKey):

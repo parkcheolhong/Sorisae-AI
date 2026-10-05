@@ -332,6 +332,33 @@ def test_google_parser_requires_issuer_in_production_oidc(monkeypatch):
         )
 
 
+def test_apple_parser_rejects_untrusted_x5c_without_root_ca(monkeypatch):
+    adapter = AppleBillingAdapter()
+    signed_date_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    token, _root_pem = _make_es256_jws_with_x5c(
+        {
+            "notificationUUID": "forged-apple-event",
+            "notificationType": "REFUND",
+            "signedDate": signed_date_ms,
+        }
+    )
+    monkeypatch.delenv("MARKETPLACE_APPLE_WEBHOOK_SIGNING_SECRET", raising=False)
+    monkeypatch.delenv("MARKETPLACE_APPLE_ROOT_CA_PEM", raising=False)
+    monkeypatch.delenv("MARKETPLACE_APPLE_ROOT_CA_PEM_FILE", raising=False)
+    monkeypatch.delenv("MARKETPLACE_APPLE_PINSET_FILE", raising=False)
+    monkeypatch.setenv("MARKETPLACE_APPLE_WEBHOOK_ENABLE_X5C_VERIFY", "true")
+
+    with pytest.raises(ValueError, match="root CA"):
+        adapter.parse_webhook(
+            payload={
+                "event_id": "forged-refund-1",
+                "event_type": "refund_applied",
+                "user_id": 7,
+                "payload": {"signedPayload": token},
+            }
+        )
+
+
 def test_apple_parser_rejects_invalid_jws_signature(monkeypatch):
     adapter = AppleBillingAdapter()
     monkeypatch.setenv("MARKETPLACE_APPLE_WEBHOOK_SIGNING_SECRET", "apple-test-secret")
