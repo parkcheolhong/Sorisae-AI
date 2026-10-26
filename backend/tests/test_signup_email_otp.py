@@ -51,7 +51,13 @@ def test_signup_requires_email_otp_by_default():
     assert blocked.status_code == 428
 
 
+def _enable_dev_otp_hint() -> None:
+    os.environ["APP_ENV"] = "dev"
+    os.environ["CONTACT_VERIFICATION_DEV_OTP_HINT"] = "1"
+
+
 def test_signup_confirm_creates_user_after_email_otp():
+    _enable_dev_otp_hint()
     client = _build_client()
     start = client.post(
         "/api/auth/signup/request-code",
@@ -85,6 +91,7 @@ def test_signup_confirm_creates_user_after_email_otp():
 
 
 def test_signup_confirm_allows_profile_language_country_update_at_verify_step():
+    _enable_dev_otp_hint()
     client = _build_client()
     start = client.post(
         "/api/auth/signup/request-code",
@@ -116,6 +123,7 @@ def test_signup_confirm_allows_profile_language_country_update_at_verify_step():
 
 
 def test_signup_confirm_creates_user_after_phone_otp():
+    _enable_dev_otp_hint()
     client = _build_client()
     start = client.post(
         "/api/auth/signup/request-code",

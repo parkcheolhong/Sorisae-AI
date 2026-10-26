@@ -107,6 +107,20 @@ def _dev_mode() -> bool:
     return app_env not in {"prod", "production", "stage", "staging"}
 
 
+def expose_dev_otp_hint() -> bool:
+    """Return the raw OTP only for an explicit local opt-in.
+
+    ``APP_ENV`` defaults to dev when unset, and the production Compose
+    backend service does not set it. Treating "not production" as permission
+    to put the code in the API response lets any caller of recovery or
+    signup start reset or create the account.
+    """
+    if not _dev_mode():
+        return False
+    flag = str(os.getenv("CONTACT_VERIFICATION_DEV_OTP_HINT") or "").strip().lower()
+    return flag in {"1", "true", "yes", "on"}
+
+
 def _mask_email(email: str) -> str:
     normalized = str(email or "").strip().lower()
     if "@" not in normalized:
@@ -236,7 +250,7 @@ def start_verification_session(
         "expiresAt": expires_at.isoformat(),
         "maskedTarget": _mask_email(email) if normalized_channel == "email" else _mask_phone(phone or ""),
     }
-    if _dev_mode():
+    if expose_dev_otp_hint():
         response["devOtpHint"] = code
     return response
 

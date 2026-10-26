@@ -52,6 +52,7 @@ def _build_client() -> TestClient:
 
 def test_admin_recovery_email_otp_and_password_reset():
     os.environ["APP_ENV"] = "dev"
+    os.environ["CONTACT_VERIFICATION_DEV_OTP_HINT"] = "1"
     client = _build_client()
 
     start = client.post(

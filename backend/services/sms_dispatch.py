@@ -16,6 +16,12 @@ def _dev_mode() -> bool:
     return app_env not in {"prod", "production", "stage", "staging"}
 
 
+def _include_otp_in_logs() -> bool:
+    from backend.services.contact_verification import expose_dev_otp_hint
+
+    return expose_dev_otp_hint()
+
+
 def dispatch_sms_otp(*, phone: str, code: str, purpose: str) -> dict[str, object]:
     """Send signup/friend OTP SMS. Returns delivery metadata for audit."""
     message_body = f"[WorldLinco] {purpose} 인증 코드: {code} (15분 유효)"
@@ -32,12 +38,19 @@ def dispatch_sms_text(*, phone: str, body: str, purpose: str) -> dict[str, objec
         raise ValueError("SMS 본문이 비어 있습니다.")
 
     if not (account_sid and auth_token and from_number):
-        logger.info(
-            "[SMS_TEXT] provider=dev-log purpose=%s target=%s body=%s",
-            purpose,
-            phone,
-            normalized_body[:120],
-        )
+        if _include_otp_in_logs():
+            logger.info(
+                "[SMS_TEXT] provider=dev-log purpose=%s target=%s body=%s",
+                purpose,
+                phone,
+                normalized_body[:120],
+            )
+        else:
+            logger.info(
+                "[SMS_TEXT] provider=dev-log purpose=%s target=%s",
+                purpose,
+                phone,
+            )
         return {
             "provider": "dev-log",
             "delivered": _dev_mode(),
