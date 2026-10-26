@@ -52,6 +52,7 @@ def _build_client() -> TestClient:
 
 def test_user_recovery_email_otp_and_password_reset():
     os.environ["APP_ENV"] = "dev"
+    os.environ["CONTACT_VERIFICATION_DEV_OTP_HINT"] = "1"
     client = _build_client()
 
     start = client.post(
@@ -97,3 +98,32 @@ def test_user_recovery_email_otp_and_password_reset():
         data={"username": "user@example.com", "password": "newpassword456"},
     )
     assert login_new.status_code == 200, login_new.text
+
+
+def test_user_recovery_hides_otp_without_explicit_dev_hint():
+    os.environ.pop("CONTACT_VERIFICATION_DEV_OTP_HINT", None)
+    os.environ.pop("APP_ENV", None)
+    from backend.services.contact_verification import reset_for_test
+
+    reset_for_test()
+    client = _build_client()
+
+    start = client.post(
+        "/api/auth/recovery/start",
+        json={
+            "scope": "user",
+            "user_hint": "user@example.com",
+            "verification_channel": "email",
+        },
+    )
+    assert start.status_code == 200, start.text
+    assert not start.json().get("dev_otp_hint")
+
+    verify = client.post(
+        "/api/auth/recovery/verify-identity",
+        json={
+            "recovery_session_token": start.json()["recovery_session_token"],
+            "verification_code": "000000",
+        },
+    )
+    assert verify.status_code == 401

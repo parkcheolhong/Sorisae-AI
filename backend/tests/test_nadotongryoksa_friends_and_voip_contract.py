@@ -168,6 +168,8 @@ def test_manual_friend_entry_stores_display_name_for_external_contact():
 
 
 def test_friend_invite_requires_otp_in_production_mode():
+    os.environ["APP_ENV"] = "dev"
+    os.environ["CONTACT_VERIFICATION_DEV_OTP_HINT"] = "1"
     client = _build_client(allow_unverified_friend_add=False)
 
     blocked = client.post(

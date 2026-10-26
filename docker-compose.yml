@@ -115,6 +115,9 @@ services:
       - "metanova1004.com:host-gateway"
     environment:
       <<: *video-env
+      # Unset APP_ENV is treated as dev by OTP and auth gates. The backend
+      # service must be production unless the operator explicitly overrides it.
+      APP_ENV: ${APP_ENV:-production}
       SECRET_KEY: ${JWT_SECRET_KEY:-}
       SECRET_KEY_FILE: ${JWT_SECRET_KEY_FILE:-}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}

@@ -14,6 +14,12 @@ def _dev_mode() -> bool:
     return app_env not in {"prod", "production", "stage", "staging"}
 
 
+def _include_otp_in_logs() -> bool:
+    from backend.services.contact_verification import expose_dev_otp_hint
+
+    return expose_dev_otp_hint()
+
+
 def dispatch_email_otp(*, email: str, code: str, purpose: str) -> dict[str, object]:
     """Send signup/friend OTP email. Returns delivery metadata."""
     subject = "[WorldLinco] 인증 코드 안내"
@@ -31,12 +37,19 @@ def dispatch_email_otp(*, email: str, code: str, purpose: str) -> dict[str, obje
     smtp_from = os.getenv("SMTP_FROM", smtp_user).strip()
 
     if not (smtp_host and smtp_from):
-        logger.info(
-            "[EMAIL_OTP] provider=dev-log purpose=%s target=%s code=%s",
-            purpose,
-            email,
-            code,
-        )
+        if _include_otp_in_logs():
+            logger.info(
+                "[EMAIL_OTP] provider=dev-log purpose=%s target=%s code=%s",
+                purpose,
+                email,
+                code,
+            )
+        else:
+            logger.info(
+                "[EMAIL_OTP] provider=dev-log purpose=%s target=%s",
+                purpose,
+                email,
+            )
         return {
             "provider": "dev-log",
             "delivered": _dev_mode(),
