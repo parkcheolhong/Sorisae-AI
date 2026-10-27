@@ -101,6 +101,58 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
+def resolve_user_for_subject(db, subject: str):
+    """Map a token subject to one user.
+
+    Issued tokens use the account email as ``sub``. Email is unique, so an
+    exact email match must win. Falling through to username only when no
+    email row exists keeps a subject that is also someone else's username
+    from selecting that other account.
+    """
+    from backend.models import User
+
+    normalized = str(subject or "").strip()
+    if not normalized:
+        return None
+    by_email = db.query(User).filter(User.email == normalized).first()
+    if by_email is not None:
+        return by_email
+    return db.query(User).filter(User.username == normalized).first()
+
+
+def authenticate_login_identifier(db, identifier: str, password: str):
+    """Authenticate email or username without crossing two different accounts.
+
+    The same string can be one user's email and another user's username.
+    A single OR query with LIMIT 1 binds the password check and the issued
+    token to whichever row the database returns first. Check each candidate
+    and accept the password that matches, preferring the email owner when
+    both passwords match.
+    """
+    from backend.models import User
+
+    normalized = str(identifier or "").strip()
+    if not normalized:
+        return None
+    by_email = db.query(User).filter(User.email == normalized).first()
+    by_username = db.query(User).filter(User.username == normalized).first()
+    candidates = []
+    seen_ids: set[int] = set()
+    for candidate in (by_email, by_username):
+        if candidate is None:
+            continue
+        candidate_id = int(getattr(candidate, "id", 0) or 0)
+        if candidate_id in seen_ids:
+            continue
+        seen_ids.add(candidate_id)
+        candidates.append(candidate)
+    for candidate in candidates:
+        stored_hash = str(getattr(candidate, "hashed_password", "") or "")
+        if stored_hash and verify_password(password, stored_hash):
+            return candidate
+    return None
+
+
 def create_access_token(
     data: dict,
     expires_delta: Optional[timedelta] = None,
@@ -373,13 +425,10 @@ def _resolve_current_user_from_token(token: str):
 
     # DB에서 유저 조회
     from backend.database import SessionLocal
-    from backend.models import User
 
     db = SessionLocal()
     try:
-        user = db.query(User).filter(
-            (User.username == username) | (User.email == username)
-        ).first()
+        user = resolve_user_for_subject(db, username)
         if user is None or not getattr(user, "is_active", False):
             raise credentials_exception
         # 단일 세션 강제: 계정에 활성 sid 가 기록돼 있고 토큰 sid 와 다르면,

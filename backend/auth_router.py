@@ -37,10 +37,12 @@ from webauthn.helpers.structs import (  # pyright: ignore[reportMissingImports]
 )
 
 from backend.auth import (
+    authenticate_login_identifier,
     create_access_token,
     get_current_user,
     get_password_hash,
     register_issued_token,
+    resolve_user_for_subject,
     set_active_session,
     verify_password,
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -1028,15 +1030,9 @@ def login(
     _login_quota: None = Depends(require_login_quota),
 ):
     """username 필드에 email 또는 username 모두 허용"""
-    user = db.query(User).filter(
-        (User.email == form_data.username)
-        | (User.username == form_data.username)
-    ).first()
+    user = authenticate_login_identifier(db, form_data.username, form_data.password)
 
-    if not user or not verify_password(
-        form_data.password,
-        user.hashed_password,
-    ):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 올바르지 않습니다",
@@ -1062,9 +1058,7 @@ def start_passkey_registration(
     payload: PasskeyRegistrationStartRequest,
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(
-        (User.email == payload.email) | (User.username == payload.email)
-    ).first()
+    user = resolve_user_for_subject(db, str(payload.email))
     if not user or not _user_may_use_admin_portal(user):
         raise HTTPException(status_code=404, detail="패스키를 등록할 관리자·지역관리자 계정을 찾을 수 없습니다")
 
@@ -1173,9 +1167,7 @@ def start_passkey_login(
     payload: PasskeyLoginStartRequest,
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(
-        (User.email == payload.email) | (User.username == payload.email)
-    ).first()
+    user = resolve_user_for_subject(db, str(payload.email))
     if user is None or not getattr(user, "passkey_enabled", False) or not getattr(user, "passkey_credential_id", None):
         raise HTTPException(status_code=404, detail="등록된 패스키가 없습니다")
     if not _user_may_use_admin_portal(user):
@@ -1210,9 +1202,7 @@ def finish_passkey_login(
     payload: PasskeyLoginFinishRequest,
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(
-        (User.email == payload.email) | (User.username == payload.email)
-    ).first()
+    user = resolve_user_for_subject(db, str(payload.email))
     if user is None or not getattr(user, "passkey_enabled", False):
         raise HTTPException(status_code=404, detail="패스키 로그인 대상 계정을 찾을 수 없습니다")
     if not _user_may_use_admin_portal(user):
