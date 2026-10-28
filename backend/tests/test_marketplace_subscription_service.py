@@ -399,6 +399,42 @@ def test_process_webhook_apple_pinset_file_missing_returns_400(db_session, monke
     assert "root ca" in str(exc_info.value.detail).lower()
 
 
+def test_process_webhook_google_unpinned_oidc_does_not_refund(db_session, monkeypatch):
+    seeded = _seed_subscription(db_session)
+    user_id = int(seeded["user"].id)
+    subscription = seeded["subscription"]
+    from backend.tests.test_marketplace_webhook_adapter_parsers import _make_google_oidc_token
+    from backend.marketplace.provider_adapters.google_billing import GoogleBillingAdapter
+
+    token, jwks = _make_google_oidc_token("https://attacker.example/not-the-webhook")
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_WEBHOOK_ENABLE_OIDC_VERIFY", "true")
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_WEBHOOK_SIGNING_SECRET", "operator-configured-secret")
+    monkeypatch.delenv("MARKETPLACE_GOOGLE_PUBSUB_AUDIENCE", raising=False)
+    monkeypatch.delenv("MARKETPLACE_GOOGLE_PUBSUB_SERVICE_ACCOUNT", raising=False)
+    monkeypatch.setattr(GoogleBillingAdapter, "_fetch_google_jwks", classmethod(lambda cls, url: jwks))
+
+    with pytest.raises(HTTPException) as exc_info:
+        subscription_service.process_webhook(
+            db_session,
+            provider="google",
+            payload={
+                "event_id": "forged-google-refund-1",
+                "event_type": "refund_applied",
+                "user_id": user_id,
+                "product_code": "stock-ai-suite",
+                "plan_code": "pro",
+                "payload": {"oidc_token": token},
+            },
+        )
+
+    assert exc_info.value.status_code == 503
+    assert "audience" in str(exc_info.value.detail).lower()
+    db_session.refresh(subscription)
+    assert subscription.status == SubscriptionStatus.ACTIVE.value
+    assert subscription.source == "stripe"
+
+
 def test_process_webhook_google_oidc_missing_audience_returns_503_in_production(db_session, monkeypatch):
     seeded = _seed_subscription(db_session)
     user_id = int(seeded["user"].id)

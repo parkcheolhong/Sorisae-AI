@@ -103,9 +103,12 @@ class GoogleBillingAdapter:
         expected_service_account = str(os.getenv("MARKETPLACE_GOOGLE_PUBSUB_SERVICE_ACCOUNT") or "").strip().lower()
         issuer_candidates = self._resolve_expected_issuers()
 
-        if self._is_production_env() and not expected_audience:
+        # APP_ENV defaults to dev and production compose does not set it, so a
+        # production-only guard never runs. An unpinned audience accepts any
+        # Google-signed OIDC token and skips the HMAC signing secret.
+        if not expected_audience:
             raise BillingAdapterConfigurationError(
-                "운영 환경에서는 MARKETPLACE_GOOGLE_PUBSUB_AUDIENCE 값을 필수로 설정해야 합니다."
+                "Google OIDC webhook 검증에는 MARKETPLACE_GOOGLE_PUBSUB_AUDIENCE 값을 필수로 설정해야 합니다."
             )
         if self._is_production_env() and not str(os.getenv("MARKETPLACE_GOOGLE_PUBSUB_ISSUER") or "").strip():
             raise BillingAdapterConfigurationError(
@@ -115,10 +118,9 @@ class GoogleBillingAdapter:
         decode_kwargs = {
             "key": key,
             "algorithms": ["RS256"],
-            "options": {"verify_aud": bool(expected_audience)},
+            "audience": expected_audience,
+            "options": {"verify_aud": True},
         }
-        if expected_audience:
-            decode_kwargs["audience"] = expected_audience
 
         last_error: Exception | None = None
         claims: dict | None = None
