@@ -288,6 +288,48 @@ def test_apple_parser_supports_es256_x5c_chain_with_root_ca_file(monkeypatch, tm
     assert result.verification_mode == "provider"
 
 
+def test_google_parser_rejects_unpinned_oidc_audience_outside_production(monkeypatch):
+    adapter = GoogleBillingAdapter()
+    token, jwks = _make_google_oidc_token("https://attacker.example/not-the-webhook")
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_WEBHOOK_ENABLE_OIDC_VERIFY", "true")
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_WEBHOOK_SIGNING_SECRET", _TEST_GOOGLE_SIGNING_KEY)
+    monkeypatch.delenv("MARKETPLACE_GOOGLE_PUBSUB_AUDIENCE", raising=False)
+    monkeypatch.delenv("MARKETPLACE_GOOGLE_PUBSUB_SERVICE_ACCOUNT", raising=False)
+    monkeypatch.setattr(GoogleBillingAdapter, "_fetch_google_jwks", classmethod(lambda cls, url: jwks))
+
+    with pytest.raises(BillingAdapterConfigurationError, match="AUDIENCE"):
+        adapter.parse_webhook(
+            payload={
+                "event_id": "google-oidc-unpinned-aud",
+                "event_type": "refund_applied",
+                "user_id": 1,
+                "payload": {"oidc_token": token},
+            }
+        )
+
+
+def test_google_parser_rejects_oidc_token_for_other_audience(monkeypatch):
+    adapter = GoogleBillingAdapter()
+    audience = "https://example.com/pubsub/push"
+    token, jwks = _make_google_oidc_token("https://attacker.example/not-the-webhook")
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_WEBHOOK_ENABLE_OIDC_VERIFY", "true")
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_PUBSUB_AUDIENCE", audience)
+    monkeypatch.setenv("MARKETPLACE_GOOGLE_PUBSUB_ISSUER", "https://accounts.google.com")
+    monkeypatch.setattr(GoogleBillingAdapter, "_fetch_google_jwks", classmethod(lambda cls, url: jwks))
+
+    with pytest.raises(ValueError, match="OIDC"):
+        adapter.parse_webhook(
+            payload={
+                "event_id": "google-oidc-wrong-aud",
+                "event_type": "refund_applied",
+                "user_id": 1,
+                "payload": {"oidc_token": token},
+            }
+        )
+
+
 def test_google_parser_requires_audience_in_production_oidc(monkeypatch):
     adapter = GoogleBillingAdapter()
     audience = "https://example.com/pubsub/push"
