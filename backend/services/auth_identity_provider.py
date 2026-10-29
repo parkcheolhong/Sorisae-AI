@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from backend.time_utils import utcnow
 from secrets import token_urlsafe
 from typing import Any, Dict, Mapping
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import os
 
 try:
@@ -55,6 +55,29 @@ class IdentityCompletePayloadContract:
 
 class IdentityProviderConfigurationError(RuntimeError):
     pass
+
+
+def _without_client_secret(value: Any) -> Any:
+    """Drop carrier client secrets before a payload is returned to a caller."""
+    if isinstance(value, dict):
+        return {
+            key: _without_client_secret(item)
+            for key, item in value.items()
+            if key != "client_secret"
+        }
+    if isinstance(value, list):
+        return [_without_client_secret(item) for item in value]
+    return value
+
+
+def _strip_client_secret_from_url(url: str) -> str:
+    parts = urlsplit(str(url or ""))
+    query = [
+        (key, item)
+        for key, item in parse_qsl(parts.query, keep_blank_values=True)
+        if key != "client_secret"
+    ]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 class CarrierIdentityProviderBase:
@@ -195,8 +218,11 @@ class CarrierIdentityProviderBase:
     def start_verification(self, scope: str, purpose: str, user_hint: str) -> IdentityVerificationStartResult:
         expires_at = utcnow() + timedelta(minutes=10)
         session_token = f"identity_{token_urlsafe(24)}"
-        request_payload = self._build_request_payload(scope, purpose, user_hint, session_token)
-        redirect_url = self._build_redirect_url(request_payload)
+        # client_secret 은 서버→공급사 호출에만 쓴다. 브라우저 redirect 와
+        # 익명 /start 응답에 실리면 계약 secret 이 그대로 노출된다.
+        server_payload = self._build_request_payload(scope, purpose, user_hint, session_token)
+        public_payload = _without_client_secret(server_payload)
+        redirect_url = _strip_client_secret_from_url(self._build_redirect_url(public_payload))
 
         configured_live_values = self._resolve_live_configuration()
         if any(configured_live_values.get(key) for key in ("endpoint", "client_id", "client_secret")):
@@ -206,11 +232,11 @@ class CarrierIdentityProviderBase:
         if self._is_live_configured():
             try:
                 api_result = self._call_provider_api(
-                    self._resolve_provider_endpoint(), request_payload,
+                    self._resolve_provider_endpoint(), server_payload,
                 )
                 verification_code = str(api_result.get("verification_code") or api_result.get("tx_id") or token_urlsafe(6))
-                redirect_url = str(api_result.get("redirect_url") or redirect_url)
-                request_payload["tx_id"] = api_result.get("tx_id")
+                redirect_url = _strip_client_secret_from_url(str(api_result.get("redirect_url") or redirect_url))
+                public_payload["tx_id"] = api_result.get("tx_id")
                 logger.info("[%s] 실서비스 본인인증 시작 — session=%s", self.provider_name, session_token)
             except Exception as exc:
                 logger.error("[%s] 통신사 API 호출 실패: %s — Mock 폴백", self.provider_name, exc)
@@ -225,7 +251,7 @@ class CarrierIdentityProviderBase:
             redirect_url=redirect_url,
             expires_at=expires_at,
             verification_code=verification_code,
-            request_payload=request_payload,
+            request_payload=public_payload,
             callback_url=self._resolve_callback_url(),
         )
 
@@ -254,7 +280,7 @@ class CarrierIdentityProviderBase:
                     phone=str(api_result.get("phone") or ""),
                     name=str(api_result.get("name") or ""),
                     birth=str(api_result.get("birth") or ""),
-                    provider_result_payload=api_result,
+                    provider_result_payload=_without_client_secret(api_result),
                 )
             except Exception as exc:
                 logger.error("[%s] 통신사 검증 API 실패: %s", self.provider_name, exc)
